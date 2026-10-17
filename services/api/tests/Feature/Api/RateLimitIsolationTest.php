@@ -78,7 +78,7 @@ final class RateLimitIsolationTest extends TestCase
                 continue;
             }
             $credentialAction = in_array('POST', $route->methods(), true)
-                && preg_match('~/(?:account/(?:reauthentication(?:/email)?|password|email(?:/confirm)?|factor(?:/confirm)?|recovery-codes)|vendors/account/invitations|vendors/onboarding/store-email(?:/confirm)?)$~', $route->uri()) === 1;
+                && preg_match('~/(?:account/(?:reauthentication(?:/email)?|password|email(?:/confirm)?|factor(?:/confirm)?|recovery-codes|two-factor(?:/confirm|/disable)?|deletion)|vendors/account/invitations|vendors/onboarding/store-email(?:/confirm)?)$~', $route->uri()) === 1;
             self::assertSame($credentialAction ? ['throttle:account-security'] : [], $throttles, $route->uri());
             if (preg_match('~^api/v1/(buyers|vendors|vendor|admin)/~', $route->uri()) === 1) {
                 self::assertContains('auth:api', $middleware, $route->uri());

@@ -14,6 +14,11 @@
 
 import * as runtime from '../runtime';
 import {
+    type BuyAgainEnvelope,
+    BuyAgainEnvelopeFromJSON,
+    BuyAgainEnvelopeToJSON,
+} from '../models/BuyAgainEnvelope';
+import {
     type CheckoutSubmissionEnvelope,
     CheckoutSubmissionEnvelopeFromJSON,
     CheckoutSubmissionEnvelopeToJSON,
@@ -48,6 +53,11 @@ import {
     OrderDetailEnvelopeFromJSON,
     OrderDetailEnvelopeToJSON,
 } from '../models/OrderDetailEnvelope';
+import {
+    type OrderFulfillmentConversationEnvelope,
+    OrderFulfillmentConversationEnvelopeFromJSON,
+    OrderFulfillmentConversationEnvelopeToJSON,
+} from '../models/OrderFulfillmentConversationEnvelope';
 import {
     type OrderListEnvelope,
     OrderListEnvelopeFromJSON,
@@ -89,6 +99,17 @@ export interface ApproveBuyerOrderRevisionRequest {
     orderRevisionDecision: OrderRevisionDecision;
 }
 
+export interface BuyBuyerOrderAgainRequest {
+    /**
+     *
+     */
+    idempotencyKey: string;
+    /**
+     *
+     */
+    orderId: string;
+}
+
 export interface FlagBuyerOrderNrpcRequest {
     /**
      *
@@ -126,7 +147,22 @@ export interface ListBuyerOrdersRequest {
     /**
      *
      */
+    procurementType?: ListBuyerOrdersProcurementTypeEnum;
+    /**
+     *
+     */
     page?: number;
+}
+
+export interface OpenBuyerFulfillmentConversationRequest {
+    /**
+     *
+     */
+    idempotencyKey: string;
+    /**
+     *
+     */
+    orderId: string;
 }
 
 export interface RejectBuyerOrderNrpcRequest {
@@ -324,6 +360,70 @@ export class BuyerOrdersApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for buyBuyerOrderAgain without sending the request
+     */
+    async buyBuyerOrderAgainRequestOpts(requestParameters: BuyBuyerOrderAgainRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling buyBuyerOrderAgain().'
+            );
+        }
+
+        if (requestParameters['orderId'] == null) {
+            throw new runtime.RequiredError(
+                'orderId',
+                'Required parameter "orderId" was null or undefined when calling buyBuyerOrderAgain().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/orders/{orderId}/buy-again`;
+        urlPath = urlPath.replace('{orderId}', encodeURIComponent(String(requestParameters['orderId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Buy Again for a completed or cancelled Item-Based order (otherwise 409 BUY_AGAIN_UNAVAILABLE). Each line is added to the cart at today\'s price version and the original quantity, merged into any existing line, using the same eligibility, radius and quantity checks as adding by hand. A line that cannot be added is listed in skipped with its reason; quantities are never reduced to fit stock, so exact inventory is never revealed. Nothing is ordered or reserved. Idempotency-Key makes retries safe; a replay returns the current cart with empty added and skipped lists and meta.replayed true.
+     */
+    async buyBuyerOrderAgainRaw(requestParameters: BuyBuyerOrderAgainRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<BuyAgainEnvelope>> {
+        const requestOptions = await this.buyBuyerOrderAgainRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => BuyAgainEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Buy Again for a completed or cancelled Item-Based order (otherwise 409 BUY_AGAIN_UNAVAILABLE). Each line is added to the cart at today\'s price version and the original quantity, merged into any existing line, using the same eligibility, radius and quantity checks as adding by hand. A line that cannot be added is listed in skipped with its reason; quantities are never reduced to fit stock, so exact inventory is never revealed. Nothing is ordered or reserved. Idempotency-Key makes retries safe; a replay returns the current cart with empty added and skipped lists and meta.replayed true.
+     */
+    async buyBuyerOrderAgain(requestParameters: BuyBuyerOrderAgainRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<BuyAgainEnvelope> {
+        const response = await this.buyBuyerOrderAgainRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for flagBuyerOrderNrpc without sending the request
      */
     async flagBuyerOrderNrpcRequestOpts(requestParameters: FlagBuyerOrderNrpcRequest): Promise<runtime.RequestOpts> {
@@ -513,6 +613,10 @@ export class BuyerOrdersApi extends runtime.BaseAPI {
             queryParameters['group'] = requestParameters['group'];
         }
 
+        if (requestParameters['procurementType'] != null) {
+            queryParameters['procurement_type'] = requestParameters['procurementType'];
+        }
+
         if (requestParameters['page'] != null) {
             queryParameters['page'] = requestParameters['page'];
         }
@@ -539,7 +643,7 @@ export class BuyerOrdersApi extends runtime.BaseAPI {
     }
 
     /**
-     * The Buyer\'s own orders, newest first, grouped by Awaiting Action, Active, Completed, Cancelled and Disputed. Order, payment, fulfillment, refund and dispute states are separate rows. Due windows are resolved before listing.
+     * The Buyer\'s own orders, newest first. Status chips: CONFIRMATION (awaiting the Vendor, the Buyer\'s approval or NRPC acceptance, or payment), PROCESSING (confirmed, preparing, cancellation requested), TO_SHIP (ready for pickup, out for delivery), TO_RECEIVE (delivered or picked up, awaiting receipt confirmation), COMPLETED, CANCELLED (cancelled, declined, expired) and DISPUTED. procurement_type filters the Item and Project tabs; meta.counts follow the same procurement filter. Order, payment, fulfillment, refund and dispute states are separate rows. Due windows are resolved before listing. CANCELLED_REFUNDED is the Profile history of actual CANCELLED orders or orders with PARTIALLY_REFUNDED or REFUNDED refund state, filtered before pagination; declined and expired orders without a completed refund are excluded.
      */
     async listBuyerOrdersRaw(requestParameters: ListBuyerOrdersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<OrderListEnvelope>> {
         const requestOptions = await this.listBuyerOrdersRequestOpts(requestParameters);
@@ -549,10 +653,74 @@ export class BuyerOrdersApi extends runtime.BaseAPI {
     }
 
     /**
-     * The Buyer\'s own orders, newest first, grouped by Awaiting Action, Active, Completed, Cancelled and Disputed. Order, payment, fulfillment, refund and dispute states are separate rows. Due windows are resolved before listing.
+     * The Buyer\'s own orders, newest first. Status chips: CONFIRMATION (awaiting the Vendor, the Buyer\'s approval or NRPC acceptance, or payment), PROCESSING (confirmed, preparing, cancellation requested), TO_SHIP (ready for pickup, out for delivery), TO_RECEIVE (delivered or picked up, awaiting receipt confirmation), COMPLETED, CANCELLED (cancelled, declined, expired) and DISPUTED. procurement_type filters the Item and Project tabs; meta.counts follow the same procurement filter. Order, payment, fulfillment, refund and dispute states are separate rows. Due windows are resolved before listing. CANCELLED_REFUNDED is the Profile history of actual CANCELLED orders or orders with PARTIALLY_REFUNDED or REFUNDED refund state, filtered before pagination; declined and expired orders without a completed refund are excluded.
      */
     async listBuyerOrders(requestParameters: ListBuyerOrdersRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<OrderListEnvelope> {
         const response = await this.listBuyerOrdersRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for openBuyerFulfillmentConversation without sending the request
+     */
+    async openBuyerFulfillmentConversationRequestOpts(requestParameters: OpenBuyerFulfillmentConversationRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling openBuyerFulfillmentConversation().'
+            );
+        }
+
+        if (requestParameters['orderId'] == null) {
+            throw new runtime.RequiredError(
+                'orderId',
+                'Required parameter "orderId" was null or undefined when calling openBuyerFulfillmentConversation().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/orders/{orderId}/fulfillment-conversation`;
+        urlPath = urlPath.replace('{orderId}', encodeURIComponent(String(requestParameters['orderId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Returns the order\'s single Fulfillment Messages thread, separate from inquiry conversations. Threads open at order submission; for an open order submitted before that, this opens it. One thread exists per order, so every retry returns the same thread. A closed order without a thread is 409 FULFILLMENT_THREAD_CLOSED. Another Buyer\'s order is 404.
+     */
+    async openBuyerFulfillmentConversationRaw(requestParameters: OpenBuyerFulfillmentConversationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<OrderFulfillmentConversationEnvelope>> {
+        const requestOptions = await this.openBuyerFulfillmentConversationRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => OrderFulfillmentConversationEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Returns the order\'s single Fulfillment Messages thread, separate from inquiry conversations. Threads open at order submission; for an open order submitted before that, this opens it. One thread exists per order, so every retry returns the same thread. A closed order without a thread is 409 FULFILLMENT_THREAD_CLOSED. Another Buyer\'s order is 404.
+     */
+    async openBuyerFulfillmentConversation(requestParameters: OpenBuyerFulfillmentConversationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<OrderFulfillmentConversationEnvelope> {
+        const response = await this.openBuyerFulfillmentConversationRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -777,10 +945,21 @@ export class BuyerOrdersApi extends runtime.BaseAPI {
  */
 export const ListBuyerOrdersGroupEnum = {
     All: 'ALL',
-    AwaitingAction: 'AWAITING_ACTION',
-    Active: 'ACTIVE',
+    Confirmation: 'CONFIRMATION',
+    Processing: 'PROCESSING',
+    ToShip: 'TO_SHIP',
+    ToReceive: 'TO_RECEIVE',
     Completed: 'COMPLETED',
     Cancelled: 'CANCELLED',
     Disputed: 'DISPUTED',
+    CancelledRefunded: 'CANCELLED_REFUNDED',
 } as const;
 export type ListBuyerOrdersGroupEnum = typeof ListBuyerOrdersGroupEnum[keyof typeof ListBuyerOrdersGroupEnum];
+/**
+ * @export
+ */
+export const ListBuyerOrdersProcurementTypeEnum = {
+    ItemBased: 'ITEM_BASED',
+    ProjectBased: 'PROJECT_BASED',
+} as const;
+export type ListBuyerOrdersProcurementTypeEnum = typeof ListBuyerOrdersProcurementTypeEnum[keyof typeof ListBuyerOrdersProcurementTypeEnum];

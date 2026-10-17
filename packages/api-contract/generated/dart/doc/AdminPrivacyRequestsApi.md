@@ -67,7 +67,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listPrivacyRequests**
-> PrivacyRequestListEnvelope listPrivacyRequests(state, requestType, handler, page)
+> PrivacyRequestListEnvelope listPrivacyRequests(state, requestType, handler, page, from, to)
 
 
 
@@ -90,9 +90,11 @@ final String state = state_example; // String |
 final String requestType = requestType_example; // String |
 final String handler = handler_example; // String |
 final int page = 56; // int |
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Request received_at.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Request received_at.
 
 try {
-    final response = api.listPrivacyRequests(state, requestType, handler, page);
+    final response = api.listPrivacyRequests(state, requestType, handler, page, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling AdminPrivacyRequestsApi->listPrivacyRequests: $e\n');
@@ -107,6 +109,8 @@ Name | Type | Description  | Notes
  **requestType** | **String**|  | [optional]
  **handler** | **String**|  | [optional]
  **page** | **int**|  | [optional]
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Request received_at. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Request received_at. | [optional]
 
 ### Return type
 

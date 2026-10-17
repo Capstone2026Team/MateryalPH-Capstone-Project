@@ -1,9 +1,10 @@
+import { useNavigationRefresh } from '@materyalph/web-ui'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Download, FileDown, Gavel, Handshake, Info, Paperclip, RefreshCw, Scale, Send, ShieldAlert, Upload } from 'lucide-react'
 import {
-  Button, ConfirmDialog, DisputeDeadlines, DisputeStatusBadge, DisputeTimeline, FileSelectionReview, FormDialog, FilterTabs, Toolbar, InfoNote, EmptyState, PageHeader as SharedPageHeader, OriginalPaymentMethodNotice, RefundTimeline, ResponsiveRecordList, StatusBadge, StatusMessage,
-  disputeIssueLabel, disputeRemedyLabel, disputeRoleLabel, formatManilaDateTime, formatPesoCentavos, type RecordColumn,
+  ActiveFilters, ALL_DATES, Button, DateFilter, ConfirmDialog, DisputeDeadlines, DisputeStatusBadge, DisputeTimeline, FileSelectionReview, FormDialog, FilterTabs, Toolbar, InfoNote, EmptyState, PageHeader as SharedPageHeader, OriginalPaymentMethodNotice, Pagination, RefundTimeline, ResponsiveRecordList, StatusBadge, StatusMessage,
+  dateFilterLabel, disputeIssueLabel, disputeRemedyLabel, disputeRoleLabel, formatManilaDateTime, formatPesoCentavos, type RecordColumn,
 } from '@materyalph/web-ui'
 import {
   addEvidence, answerClarification, answerProposal, appeal, disputeApiBasePath, downloadExport, escalate, fileDispute, getDispute, getEligibility, listDisputes, listExports, propose,
@@ -15,6 +16,7 @@ import { newIdempotencyKey } from '../lib/onboarding-api'
 import { storeName } from '../lib/catalog-access'
 import { useOnboardingSnapshot } from '../lib/vendor-status'
 import { ErrorState, LoadingState, PageHeader, VendorShell } from './PhaseThreeVendorPages'
+import { dateRangeFromParams, dateRangePatch } from '../lib/date-filters'
 
 const control = 'min-h-12 w-full min-w-0 rounded-control border border-border-default bg-surface-primary px-3 text-base font-normal'
 const GROUPS: { value: DisputeGroup; label: string }[] = [
@@ -50,12 +52,15 @@ function DisputesWorkspace({ canExport }: { canExport: boolean }) {
   const [params, setParams] = useSearchParams()
   const group = (GROUPS.some(item => item.value === params.get('group')) ? params.get('group') : 'ACTIVE') as DisputeGroup
   const q = params.get('q') ?? ''
+  const range = dateRangeFromParams(params)
   const page = Math.max(1, Number(params.get('page') ?? '1') || 1)
   const [query, setQuery] = useState(q)
+  useEffect(() => { setQuery(q) }, [q])
   const [rows, setRows] = useState<DisputeSummary[] | null>(null)
   const [meta, setMeta] = useState<DisputeListMeta | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
+  useNavigationRefresh(() => setAttempt(value => value + 1))
   const update = (patch: Record<string, string>) => setParams(current => {
     const next = new URLSearchParams(current)
     for (const [key, value] of Object.entries(patch)) { if (value) next.set(key, value); else next.delete(key) }
@@ -64,10 +69,10 @@ function DisputesWorkspace({ canExport }: { canExport: boolean }) {
   }, { replace: true })
   useEffect(() => {
     let active = true
-    setError(null)
-    listDisputes({ group, q, page }).then(result => { if (active) { setRows(result.items); setMeta(result.meta) } }).catch(async cause => { const text = await readableOrderError(cause); if (active) setError(text) })
+    setRows(null); setError(null)
+    listDisputes({ group, q, page, ...(range.from ? { from: range.from } : {}), ...(range.to ? { to: range.to } : {}) }).then(result => { if (active) { setRows(result.items); setMeta(result.meta) } }).catch(async cause => { const text = await readableOrderError(cause); if (active) setError(text) })
     return () => { active = false }
-  }, [group, q, page, attempt])
+  }, [group, q, page, range.from, range.to, attempt])
   const columns: RecordColumn<DisputeSummary>[] = [
     { key: 'case', header: 'Case', cell: row => <CaseIdentity row={row} /> },
     { key: 'issue', header: 'Issue · requested', cell: row => <span className="grid gap-0.5"><span className="font-semibold">{disputeIssueLabel(row.issueType)}</span><span className="text-xs text-text-secondary">{disputeRemedyLabel(row.requestedRemedy)}{row.requestedAmountCentavos ? ` · ${formatPesoCentavos(row.requestedAmountCentavos)}` : ''}</span></span> },
@@ -80,13 +85,16 @@ function DisputesWorkspace({ canExport }: { canExport: boolean }) {
     <PageHeader eyebrow="Store Operations" title="Disputes & Appeals" description="Track cases, respond to requests and follow agreed or decided remedies." />
     <InfoNote>Respond within 48 hours, agree a remedy within 72 hours, answer MateryalPH's clarification requests and follow decided remedies. Filing a case never creates a refund; refunds return only to the Buyer's original payment method.</InfoNote>
     <FilterTabs label="Filter cases" value={group} onChange={value => update({ group: value })} chips={GROUPS.map(item => ({ value: item.value, label: item.label, count: meta?.counts?.[item.value] }))} />
-    <Toolbar search={{ label: 'Search by Case ID or Order ID', placeholder: 'Case ID or Order ID', value: query, onChange: setQuery, maxLength: 120, onSubmit: event => { event.preventDefault(); update({ q: query.trim() }) } }} />
+    <Toolbar searchFirst filters={<DateFilter title="Case filing dates" value={range} onChange={next => update(dateRangePatch(next))} />} search={{ label: 'Search by Case ID or Order ID', placeholder: 'Case ID or Order ID', value: query, onChange: setQuery, maxLength: 120, onSubmit: event => { event.preventDefault(); update({ q: query.trim() }) } }} />
+    <ActiveFilters filters={[
+      ...(q ? [{ key: 'q', label: `Search: ${q}`, onRemove: () => update({ q: '' }) }] : []),
+      ...(range.from || range.to ? [{ key: 'dates', label: dateFilterLabel(range), onRemove: () => update(dateRangePatch(ALL_DATES)) }] : []),
+    ]} onClear={() => { setQuery(''); update({ q: '', ...dateRangePatch(ALL_DATES) }) }} />
     {error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} />
       : rows === null ? <div className="grid gap-3" aria-busy="true" aria-label="Loading cases">{[0, 1, 2].map(index => <div key={index} className="h-20 animate-pulse rounded-surface bg-surface-canvas motion-reduce:animate-none" />)}</div>
-        : rows.length === 0 ? <EmptyState icon={<Scale size={24} aria-hidden="true" />} message={q ? `No case matches “${q}”.` : 'No cases in this view.'} action={<Button variant="secondary" onClick={() => { setQuery(''); update({ group: 'ALL', q: '' }) }}>View all cases</Button>} />
+        : rows.length === 0 ? <EmptyState icon={<Scale size={24} aria-hidden="true" />} message={q || range.from || range.to ? 'No cases match these filters.' : 'No cases in this view.'} action={<Button variant="secondary" onClick={() => { setQuery(''); update({ group: 'ALL', q: '', ...dateRangePatch(ALL_DATES) }) }}>View all cases</Button>} />
           : <div className="grid gap-3"><ResponsiveRecordList caption="Cases" rows={rows} columns={columns} rowKey={row => row.id} cardTitle={row => <CaseIdentity row={row} />} cardAction={row => <Link to={`/disputes/${row.id}`} className="inline-flex min-h-11 items-center font-semibold text-action-primary">Open case</Link>} />
-            {meta && meta.total !== undefined && meta.perPage !== undefined && meta.total > meta.perPage && <nav aria-label="Case pages" className="flex flex-wrap items-center justify-between gap-3 text-sm"><span className="text-text-secondary">Page {meta.page} · {meta.total} cases</span>
-              <span className="flex gap-2"><Button variant="secondary" disabled={page <= 1} onClick={() => update({ page: String(page - 1) })}>Previous</Button><Button variant="secondary" disabled={!meta.hasMore} onClick={() => update({ page: String(page + 1) })}>Next</Button></span></nav>}
+            {meta && meta.total !== undefined && meta.perPage !== undefined && meta.total > meta.perPage && <Pagination page={page} total={meta.total} hasMore={Boolean(meta.hasMore)} busy={rows === null} onChange={next => update({ page: String(next) })} />}
           </div>}
     {canExport && <ExportsPanel group={group} />}
   </div>
@@ -108,7 +116,7 @@ function ExportsPanel({ group }: { group: DisputeGroup }) {
   useEffect(() => { load() }, [load])
   return <section aria-labelledby="exports-heading" className="grid gap-3 border-t border-border-default pt-5">
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <div><h2 id="exports-heading" className="text-base font-semibold">Case exports</h2><p className="text-sm text-text-secondary">A CSV of case headers only — no evidence, contacts or protected finance. Access is checked again when the file is built and downloaded.</p></div>
+      <div><h2 id="exports-heading" className="text-base font-semibold">Case exports</h2><p className="text-sm text-text-secondary">Exports include every case in the selected status group, across all dates and search terms. A CSV of case headers only — no evidence, contacts or protected finance. Access is checked again when the file is built and downloaded.</p></div>
       <Button variant="secondary" disabled={busy} onClick={() => void (async () => { setBusy(true); setMessage(null); try { await requestExport(group); setMessage({ tone: 'success', text: 'Export requested. It appears below when ready.' }); load() } catch (cause) { setMessage({ tone: 'error', text: await readableOrderError(cause) }) } finally { setBusy(false) } })()}>
         <FileDown size={16} aria-hidden="true" />{busy ? 'Requesting…' : 'Export these cases'}</Button>
     </div>

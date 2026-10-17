@@ -34,16 +34,23 @@ class _NotificationScopeState extends State<NotificationScope>
     _sync();
   }
 
-  void _sync() => widget.repository.inbox.setActive(
-    widget.active && _foreground,
-    clear: !widget.active,
-  );
+  void _sync() {
+    widget.repository.inbox.setActive(
+      widget.active && _foreground,
+      clear: !widget.active,
+    );
+    widget.repository.navigation.setActive(
+      widget.active && _foreground,
+      clear: !widget.active,
+    );
+  }
 
   @override
   void didUpdateWidget(NotificationScope oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.repository != widget.repository) {
       oldWidget.repository.inbox.setActive(false, clear: true);
+      oldWidget.repository.navigation.setActive(false, clear: true);
     }
     _sync();
   }
@@ -58,6 +65,7 @@ class _NotificationScopeState extends State<NotificationScope>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     widget.repository.inbox.setActive(false, clear: true);
+    widget.repository.navigation.setActive(false, clear: true);
     super.dispose();
   }
 

@@ -42,11 +42,23 @@ export interface ComplianceRegister {
     /**
      *
      */
+    sourceChannel?: ComplianceRegisterSourceChannelEnum;
+    /**
+     * An ACTIVE snapshot older than the configured age (45 days); the government lists are updated monthly.
+     */
+    stale?: boolean;
+    /**
+     *
+     */
     rowCount: number;
     /**
      *
      */
     rejectedRowCount: number;
+    /**
+     *
+     */
+    serialRangeCount?: number;
     /**
      *
      */
@@ -89,6 +101,15 @@ export const ComplianceRegisterStatusEnum = {
 } as const;
 export type ComplianceRegisterStatusEnum = typeof ComplianceRegisterStatusEnum[keyof typeof ComplianceRegisterStatusEnum];
 
+/**
+ * @export
+ */
+export const ComplianceRegisterSourceChannelEnum = {
+    Upload: 'UPLOAD',
+    Feed: 'FEED',
+} as const;
+export type ComplianceRegisterSourceChannelEnum = typeof ComplianceRegisterSourceChannelEnum[keyof typeof ComplianceRegisterSourceChannelEnum];
+
 
 /**
  * Check if a given object implements the ComplianceRegister interface.
@@ -119,8 +140,11 @@ export function ComplianceRegisterFromJSONTyped(json: any, ignoreDiscriminator: 
         'sourceReference': json['source_reference'],
         'snapshotDate': (json['snapshot_date'] == null ? json['snapshot_date'] : parseDate(json['snapshot_date'])),
         'status': json['status'],
+        'sourceChannel': json['source_channel'] == null ? undefined : json['source_channel'],
+        'stale': json['stale'] == null ? undefined : json['stale'],
         'rowCount': json['row_count'],
         'rejectedRowCount': json['rejected_row_count'],
+        'serialRangeCount': json['serial_range_count'] == null ? undefined : json['serial_range_count'],
         'activatedAt': json['activated_at'] === undefined ? undefined : json['activated_at'] === null ? null : json['activated_at'],
         'supersededAt': json['superseded_at'] === undefined ? undefined : json['superseded_at'] === null ? null : json['superseded_at'],
         'createdAt': json['created_at'] === undefined ? undefined : json['created_at'] === null ? null : json['created_at'],
@@ -145,8 +169,11 @@ export function ComplianceRegisterToJSONTyped(value?: ComplianceRegister | null,
         'source_reference': value['sourceReference'],
         'snapshot_date': value['snapshotDate'] == null ? value['snapshotDate'] : serializeDate(value['snapshotDate']),
         'status': value['status'],
+        'source_channel': value['sourceChannel'],
+        'stale': value['stale'],
         'row_count': value['rowCount'],
         'rejected_row_count': value['rejectedRowCount'],
+        'serial_range_count': value['serialRangeCount'],
         'activated_at': value['activatedAt'],
         'superseded_at': value['supersededAt'],
         'created_at': value['createdAt'],

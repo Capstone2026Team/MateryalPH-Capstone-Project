@@ -103,6 +103,14 @@ export interface FleetVehicleInput {
      *
      */
     maximumDistanceKm?: number;
+    /**
+     * Concrete Mixer Truck / Transit Mixer only (owner decision 2026-10-16). A positive fee needs mobilization_basis. Any change appends a rate version.
+     */
+    mobilizationFeeCentavos?: number | null;
+    /**
+     * PER_TRUCK charges once per truck dispatched; PER_TRIP once per trip.
+     */
+    mobilizationBasis?: FleetVehicleInputMobilizationBasisEnum | null;
 }
 
 
@@ -125,6 +133,15 @@ export const FleetVehicleInputHeavyClassificationEnum = {
     NotHeavy: 'NOT_HEAVY',
 } as const;
 export type FleetVehicleInputHeavyClassificationEnum = typeof FleetVehicleInputHeavyClassificationEnum[keyof typeof FleetVehicleInputHeavyClassificationEnum];
+
+/**
+ * @export
+ */
+export const FleetVehicleInputMobilizationBasisEnum = {
+    PerTruck: 'PER_TRUCK',
+    PerTrip: 'PER_TRIP',
+} as const;
+export type FleetVehicleInputMobilizationBasisEnum = typeof FleetVehicleInputMobilizationBasisEnum[keyof typeof FleetVehicleInputMobilizationBasisEnum];
 
 
 /**
@@ -165,6 +182,8 @@ export function FleetVehicleInputFromJSONTyped(json: any, ignoreDiscriminator: b
         'baseFeeCentavos': json['base_fee_centavos'] == null ? undefined : json['base_fee_centavos'],
         'perKmCentavos': json['per_km_centavos'] == null ? undefined : json['per_km_centavos'],
         'maximumDistanceKm': json['maximum_distance_km'] == null ? undefined : json['maximum_distance_km'],
+        'mobilizationFeeCentavos': json['mobilization_fee_centavos'] === undefined ? undefined : json['mobilization_fee_centavos'] === null ? null : json['mobilization_fee_centavos'],
+        'mobilizationBasis': json['mobilization_basis'] === undefined ? undefined : json['mobilization_basis'] === null ? null : json['mobilization_basis'],
     };
 }
 
@@ -200,6 +219,8 @@ export function FleetVehicleInputToJSONTyped(value?: FleetVehicleInput | null, i
         'base_fee_centavos': value['baseFeeCentavos'],
         'per_km_centavos': value['perKmCentavos'],
         'maximum_distance_km': value['maximumDistanceKm'],
+        'mobilization_fee_centavos': value['mobilizationFeeCentavos'],
+        'mobilization_basis': value['mobilizationBasis'],
     };
 }
 

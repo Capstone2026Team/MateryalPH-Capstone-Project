@@ -19,6 +19,7 @@ part 'compliance_submission_summary.g.dart';
 /// * [path]
 /// * [status]
 /// * [markingType]
+/// * [reviewMode]
 /// * [submittedAt]
 /// * [decidedAt]
 /// * [latestReview]
@@ -40,6 +41,10 @@ abstract class ComplianceSubmissionSummary implements Built<ComplianceSubmission
 
   @BuiltValueField(wireName: r'marking_type')
   String? get markingType;
+
+  @BuiltValueField(wireName: r'review_mode')
+  ComplianceSubmissionSummaryReviewModeEnum? get reviewMode;
+  // enum reviewModeEnum {  AUTOMATIC,  MANUAL_REVIEW,  };
 
   @BuiltValueField(wireName: r'submitted_at')
   String? get submittedAt;
@@ -98,6 +103,13 @@ class _$ComplianceSubmissionSummarySerializer implements PrimitiveSerializer<Com
       yield serializers.serialize(
         object.markingType,
         specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.reviewMode != null) {
+      yield r'review_mode';
+      yield serializers.serialize(
+        object.reviewMode,
+        specifiedType: const FullType(ComplianceSubmissionSummaryReviewModeEnum),
       );
     }
     if (object.submittedAt != null) {
@@ -180,6 +192,14 @@ class _$ComplianceSubmissionSummarySerializer implements PrimitiveSerializer<Com
           if (valueDes == null) continue;
           result.markingType = valueDes;
           break;
+        case r'review_mode':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ComplianceSubmissionSummaryReviewModeEnum),
+          ) as ComplianceSubmissionSummaryReviewModeEnum?;
+          if (valueDes == null) continue;
+          result.reviewMode = valueDes;
+          break;
         case r'submitted_at':
           final valueDes = serializers.deserialize(
             value,
@@ -253,5 +273,20 @@ class ComplianceSubmissionSummaryStatusEnum extends EnumClass {
 
   static BuiltSet<ComplianceSubmissionSummaryStatusEnum> get values => _$complianceSubmissionSummaryStatusEnumValues;
   static ComplianceSubmissionSummaryStatusEnum valueOf(String name) => _$complianceSubmissionSummaryStatusEnumValueOf(name);
+}
+
+class ComplianceSubmissionSummaryReviewModeEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'AUTOMATIC')
+  static const ComplianceSubmissionSummaryReviewModeEnum AUTOMATIC = _$complianceSubmissionSummaryReviewModeEnum_AUTOMATIC;
+  @BuiltValueEnumConst(wireName: r'MANUAL_REVIEW')
+  static const ComplianceSubmissionSummaryReviewModeEnum MANUAL_REVIEW = _$complianceSubmissionSummaryReviewModeEnum_MANUAL_REVIEW;
+
+  static Serializer<ComplianceSubmissionSummaryReviewModeEnum> get serializer => _$complianceSubmissionSummaryReviewModeEnumSerializer;
+
+  const ComplianceSubmissionSummaryReviewModeEnum._(String name): super(name);
+
+  static BuiltSet<ComplianceSubmissionSummaryReviewModeEnum> get values => _$complianceSubmissionSummaryReviewModeEnumValues;
+  static ComplianceSubmissionSummaryReviewModeEnum valueOf(String name) => _$complianceSubmissionSummaryReviewModeEnumValueOf(name);
 }
 

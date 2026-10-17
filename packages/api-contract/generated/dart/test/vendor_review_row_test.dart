@@ -52,6 +52,12 @@ void main() {
       // TODO
     });
 
+    // Purchased-product identity from the immutable order line snapshot; null for Store and Buyer ratings.
+    // ReviewProduct product
+    test('to test the property `product`', () async {
+      // TODO
+    });
+
     // BuiltList<ReviewMediaLink> media
     test('to test the property `media`', () async {
       // TODO

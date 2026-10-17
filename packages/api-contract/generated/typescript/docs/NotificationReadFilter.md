@@ -9,6 +9,8 @@ Name | Type
 `throughId` | string
 `category` | string
 `title` | string
+`from` | Date
+`to` | Date
 
 ## Example
 
@@ -20,6 +22,8 @@ const example = {
   "throughId": null,
   "category": null,
   "title": null,
+  "from": null,
+  "to": null,
 } satisfies NotificationReadFilter
 
 console.log(example)

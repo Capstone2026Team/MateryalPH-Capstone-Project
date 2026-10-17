@@ -181,6 +181,14 @@ export interface ListAdminDisputesRequest {
      *
      */
     page?: number;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Case created_at (filing). Group counts retain their existing unrestricted scope.
+     */
+    from?: Date;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Case created_at (filing). Group counts retain their existing unrestricted scope.
+     */
+    to?: Date;
 }
 
 export interface RequestAdminDisputeClarificationRequest {
@@ -783,6 +791,14 @@ export class AdminDisputesApi extends runtime.BaseAPI {
 
         if (requestParameters['page'] != null) {
             queryParameters['page'] = requestParameters['page'];
+        }
+
+        if (requestParameters['from'] != null) {
+            queryParameters['from'] = runtime.serializeDate(requestParameters['from'] as any);
+        }
+
+        if (requestParameters['to'] != null) {
+            queryParameters['to'] = runtime.serializeDate(requestParameters['to'] as any);
         }
 
         const headerParameters: runtime.HTTPHeaders = {};

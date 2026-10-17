@@ -10,6 +10,7 @@ use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Jobs\ProcessOutboxEvent;
 use App\Jobs\RunOperationalRetry;
+use App\Support\PortalDateRange;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -30,7 +31,7 @@ final class JobHealthService
     /** Outbox deliveries that are safe to replay: each is deduplicated by its notification, delivery or export key. */
     public const RETRYABLE_OUTBOX = ['NOTIFICATION_READY', 'NOTIFICATION_DELIVERY', 'ORDER_NOTICE', 'DISPUTE_NOTICE', 'FINANCE_NOTICE', 'VENDOR_ONBOARDING_NOTICE', 'PRODUCT_COMPLIANCE_NOTICE',
         'VENDOR_INVENTORY_NOTICE', 'ACCOUNT_SECURITY_NOTICE', 'CONVERSATION_CHANGED', 'DISPUTE_CASE_CHANGED', 'DOCUMENT_EXPORT_REQUESTED', 'DISPUTE_EXPORT_REQUESTED',
-        'MARKETPLACE_ELIGIBILITY_CHANGED', 'VENDOR_FLEET_CHANGED', 'VENDOR_TEAM_ACTIVITY_CHANGED', 'ORDER_STATE_CHANGED'];
+        'MARKETPLACE_ELIGIBILITY_CHANGED', 'VENDOR_FLEET_CHANGED', 'VENDOR_TEAM_ACTIVITY_CHANGED', 'ORDER_STATE_CHANGED', 'NOTIFICATIONS_CHANGED'];
 
     public const RETRYABLE_JOBS = [ProcessOutboxEvent::class];
 
@@ -66,18 +67,22 @@ final class JobHealthService
         $page = max(1, min(1000, (int) ($filters['page'] ?? 1)));
         if (($filters['kind'] ?? 'OUTBOX') === 'JOBS') {
             $query = DB::table('failed_jobs');
+            PortalDateRange::apply($query, 'failed_at', $filters);
             $total = (clone $query)->count();
             $items = $query->orderByDesc('failed_at')->offset(($page - 1) * self::PER_PAGE)->limit(self::PER_PAGE)->get(['uuid', 'queue', 'payload', 'exception', 'failed_at'])
-                ->map(static function (object $row): array {
+                ->map(function (object $row): array {
                     $payload = json_decode((string) $row->payload, true) ?: [];
                     $job = (string) ($payload['displayName'] ?? 'Unknown job');
+                    $event = $this->failedOutboxEvent((string) $row->payload);
+                    $retryable = $event !== null && in_array($event->event_type, self::RETRYABLE_OUTBOX, true);
 
                     return ['kind' => 'FAILED_JOB', 'reference' => (string) $row->uuid, 'label' => class_basename($job), 'queue' => (string) $row->queue,
                         'failure' => self::failureClass((string) $row->exception), 'attempts' => null, 'failed_at' => CarbonImmutable::parse((string) $row->failed_at)->toIso8601String(),
-                        'retryable' => in_array($job, self::RETRYABLE_JOBS, true), 'retry_note' => in_array($job, self::RETRYABLE_JOBS, true) ? null : 'Not an allowlisted idempotent job.'];
+                        'retryable' => $retryable, 'retry_note' => $retryable ? null : 'Not an allowlisted idempotent delivery. Use its own reconciliation or a new request.'];
                 })->all();
         } else {
             $query = DB::table('outbox_events')->whereNull('processed_at')->where('attempts', '>=', OutboxProcessor::MAX_ATTEMPTS);
+            PortalDateRange::apply($query, 'updated_at', $filters);
             $total = (clone $query)->count();
             $items = $query->orderByDesc('updated_at')->offset(($page - 1) * self::PER_PAGE)->limit(self::PER_PAGE)->get(['id', 'event_type', 'aggregate_type', 'attempts', 'updated_at'])
                 ->map(static fn (object $row): array => ['kind' => 'OUTBOX_EVENT', 'reference' => (string) $row->id, 'label' => (string) $row->event_type, 'queue' => (string) $row->aggregate_type,
@@ -129,30 +134,69 @@ final class JobHealthService
 
     private function retryJob(string $uuid): string
     {
-        $row = DB::table('failed_jobs')->where('uuid', $uuid)->first(['payload']);
-        if ($row === null) {
-            throw new AuthenticationException('RETRY_TARGET_NOT_FOUND', 'This failed job is no longer listed.', 404);
-        }
-        $job = (string) ((json_decode((string) $row->payload, true) ?: [])['displayName'] ?? '');
-        if (! in_array($job, self::RETRYABLE_JOBS, true)) {
-            throw new AuthenticationException('RETRY_NOT_ALLOWED', 'Only allowlisted idempotent jobs can be retried from the portal.', 409);
-        }
-        Artisan::call('queue:retry', ['id' => [$uuid]]);
+        return DB::transaction(function () use ($uuid): string {
+            $row = DB::table('failed_jobs')->where('uuid', $uuid)->lockForUpdate()->first(['payload']);
+            if ($row === null) {
+                throw new AuthenticationException('RETRY_TARGET_NOT_FOUND', 'This failed job is no longer listed.', 404);
+            }
+            $event = $this->failedOutboxEvent((string) $row->payload, lock: true);
+            if ($event === null || ! in_array($event->event_type, self::RETRYABLE_OUTBOX, true)) {
+                throw new AuthenticationException('RETRY_NOT_ALLOWED', 'Only allowlisted idempotent deliveries can be retried from the portal.', 409);
+            }
+            if ($event->processed_at === null && (int) $event->attempts >= OutboxProcessor::MAX_ATTEMPTS) {
+                $this->resetOutbox($event);
+            }
+            DB::afterCommit(static function () use ($uuid): void {
+                Artisan::call('queue:retry', ['id' => [$uuid]]);
+            });
 
-        return class_basename($job);
+            return class_basename(ProcessOutboxEvent::class);
+        });
+    }
+
+    private function failedOutboxEvent(string $payload, bool $lock = false): ?object
+    {
+        $data = json_decode($payload, true);
+        if (! is_array($data) || ! in_array($data['displayName'] ?? null, self::RETRYABLE_JOBS, true) || ! is_string($data['data']['command'] ?? null)) {
+            return null;
+        }
+        try {
+            $job = @unserialize($data['data']['command'], ['allowed_classes' => [ProcessOutboxEvent::class]]);
+            if (! $job instanceof ProcessOutboxEvent || ! Str::isUuid($job->eventId)) {
+                return null;
+            }
+        } catch (Throwable) {
+            return null;
+        }
+        $query = DB::table('outbox_events')->where('id', $job->eventId);
+        if ($lock) {
+            $query->lockForUpdate();
+        }
+
+        return $query->first(['id', 'event_type', 'aggregate_id', 'attempts', 'processed_at']);
+    }
+
+    private function resetOutbox(object $event): void
+    {
+        DB::table('outbox_events')->where('id', $event->id)->update(['attempts' => 0, 'available_at' => now(), 'updated_at' => now()]);
+        if ($event->event_type === 'DOCUMENT_EXPORT_REQUESTED') {
+            // Retry the original immutable snapshot; processing rechecks the requester's current access.
+            DB::table('data_exports')->where('id', $event->aggregate_id)->where('state', 'FAILED')->where('failure_code', 'GENERATION_FAILED')
+                ->update(['state' => 'QUEUED', 'failure_code' => null, 'updated_at' => now()]);
+        }
     }
 
     private function retryOutbox(string $id): string
     {
         return DB::transaction(function () use ($id): string {
-            $row = Str::isUuid($id) ? DB::table('outbox_events')->where('id', $id)->lockForUpdate()->first(['id', 'event_type', 'attempts', 'processed_at']) : null;
+            $row = Str::isUuid($id) ? DB::table('outbox_events')->where('id', $id)->lockForUpdate()->first(['id', 'event_type', 'aggregate_id', 'attempts', 'processed_at']) : null;
             if ($row === null || $row->processed_at !== null || (int) $row->attempts < OutboxProcessor::MAX_ATTEMPTS) {
                 throw new AuthenticationException('RETRY_TARGET_NOT_FOUND', 'This delivery is not dead-lettered.', 404);
             }
             if (! in_array($row->event_type, self::RETRYABLE_OUTBOX, true)) {
                 throw new AuthenticationException('RETRY_NOT_ALLOWED', 'Payment, refund, credential and invitation work is retried only by its own reconciliation or a new request.', 409);
             }
-            DB::table('outbox_events')->where('id', $row->id)->update(['attempts' => 0, 'available_at' => now(), 'updated_at' => now()]);
+            $this->resetOutbox($row);
             // Dispatch failures are reported, never surfaced: the event stays in the outbox and is visible here again.
             DB::afterCommit(static function () use ($row): void {
                 try {
@@ -186,9 +230,16 @@ final class JobHealthService
         $scanBacklog = DB::table('files')->where('scan_state', 'PENDING')->where('created_at', '<', now()->subHour())->count();
         $quarantined = DB::table('files')->whereNotIn('scan_state', ['CLEAN', 'PENDING'])->where('created_at', '>=', $since)->count();
         $providerErrors = DB::table('vendor_payment_accounts')->whereNotNull('last_error_code')->count();
-        $ocr = app(ComplianceTextExtractor::class)->provider() === 'NONE';
+        $ocr = app(ComplianceTextExtractor::class);
+        $ocrConfigured = $ocr->provider() !== 'NONE';
+        $ocrAvailable = $ocrConfigured && $ocr->available();
         $item = static fn (string $key, string $label, string $status, string $detail, ?string $environment = null, ?string $lastEventAt = null): array => ['key' => $key, 'label' => $label,
             'status' => $status, 'detail' => $detail, 'environment' => $environment, 'last_event_at' => $lastEventAt];
+        // DTI-BPS updates its PS licensee and ICC certificate lists monthly; an old snapshot misses new licences.
+        $registers = DB::table('compliance_reference_registers')->where('status', 'ACTIVE')->pluck('snapshot_date', 'register_kind');
+        $staleBefore = now('Asia/Manila')->subDays((int) config('materyalph.compliance_registers.stale_after_days', 45))->toDateString();
+        $registerState = static fn (string $kind, string $name): string => $name.' '.(isset($registers[$kind]) ? 'snapshot '.$registers[$kind].((string) $registers[$kind] < $staleBefore ? ' (stale)' : '') : 'not loaded');
+        $registersStale = count($registers) < 2 || collect($registers)->contains(static fn (mixed $date): bool => (string) $date < $staleBefore);
 
         return [
             $item('xendit_payments', 'Xendit payments and webhooks', $gateway === 'fake' ? 'SIMULATED' : (! $configured(config('services.xendit.secret_key')) ? 'NOT_CONFIGURED' : ($failedWebhooks > 0 || $stalledWebhooks > 0 ? 'DEGRADED' : 'HEALTHY')),
@@ -204,7 +255,12 @@ final class JobHealthService
                 'Disk: '.self::label((string) config('filesystems.default'))),
             $item('reverb', 'Laravel Reverb realtime', config('broadcasting.default') === 'reverb' && $configured(config('broadcasting.connections.reverb.key')) ? 'HEALTHY' : 'NOT_CONFIGURED',
                 'Clients fall back to REST polling whenever the realtime connection is unavailable.', 'Broadcaster: '.self::label((string) config('broadcasting.default'))),
-            $item('ocr', 'OCR assistance', $ocr ? 'NOT_CONFIGURED' : 'HEALTHY', $ocr ? 'OCR is not enabled. Reviewers enter document values manually; OCR is never authoritative.' : 'OCR suggestions available as review assistance only.'),
+            $item('ocr', 'OCR assistance', ! $ocrConfigured ? 'NOT_CONFIGURED' : ($ocrAvailable ? 'HEALTHY' : 'DEGRADED'),
+                ! $ocrConfigured ? 'OCR is disabled. Vendors enter PS/ICC marking values manually.' : ($ocrAvailable
+                    ? 'Local PS/ICC photo reading is available. Suggestions require Vendor confirmation; OCR never approves compliance.'
+                    : 'The local OCR engine or English language data is unavailable. Vendors can still enter PS/ICC values manually.')),
+            $item('dti_bps_registers', 'DTI-BPS PS and ICC registers', $registers->isEmpty() ? 'NOT_CONFIGURED' : ($registersStale ? 'DEGRADED' : 'HEALTHY'),
+                $registerState('PS_LICENSE', 'PS licensees:').'; '.$registerState('ICC_CERTIFICATE', 'ICC certificate holders:').'. Without a current snapshot, Vendors can still request manual review.'),
         ];
     }
 

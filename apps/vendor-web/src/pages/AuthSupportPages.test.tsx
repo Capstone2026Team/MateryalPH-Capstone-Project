@@ -20,6 +20,7 @@ vi.mock('../lib/auth-api', async (importOriginal) => {
     resendVendorVerification: vi.fn(),
     signOut: vi.fn(),
     startMfaEnrollment: vi.fn(),
+    verifyVendorEmail: vi.fn(),
   }
 })
 
@@ -32,6 +33,28 @@ test('an Owner opening email verification from the dashboard can request a code'
   expect(resend).toBeEnabled()
   fireEvent.click(resend)
   await waitFor(() => expect(authApi.resendVendorVerification).toHaveBeenCalledWith('owner@example.test'))
+})
+
+test('email verification prefills navigation state and submits a pasted six-digit code', async () => {
+  vi.mocked(authApi.verifyVendorEmail).mockResolvedValue({} as never)
+  render(<MemoryRouter initialEntries={[{ pathname: '/verify-email', state: { email: 'employee@example.test' } }]}><Routes><Route path="/verify-email" element={<VendorVerifyEmailPage />} /><Route path="/login" element={<h1>Sign in reached</h1>} /></Routes></MemoryRouter>)
+  expect(screen.getByRole('textbox', { name: 'Email address' })).toHaveValue('employee@example.test')
+  const input = screen.getByRole('textbox', { name: 'Verification code' })
+  fireEvent.paste(input, { clipboardData: { getData: () => '012 345' } })
+  expect(input).toHaveValue('012345')
+  expect(input).toHaveAttribute('autocomplete', 'one-time-code')
+  expect(screen.getByText('Enter the code from your email, or paste all 6 digits.')).toBeVisible()
+  fireEvent.click(screen.getByRole('button', { name: 'Verify email' }))
+  expect(await screen.findByRole('heading', { name: 'Sign in reached' })).toBeVisible()
+  expect(authApi.verifyVendorEmail).toHaveBeenCalledWith('employee@example.test', '012345')
+})
+
+test('changing the verification email clears the previous address code', () => {
+  render(<MemoryRouter initialEntries={['/verify-email?email=old%40example.test']}><VendorVerifyEmailPage /></MemoryRouter>)
+  expect(screen.getByRole('textbox', { name: 'Email address' })).toHaveValue('old@example.test')
+  fireEvent.change(screen.getByRole('textbox', { name: 'Verification code' }), { target: { value: '123456' } })
+  fireEvent.change(screen.getByRole('textbox', { name: 'Email address' }), { target: { value: 'new@example.test' } })
+  expect(screen.getByRole('textbox', { name: 'Verification code' })).toHaveValue('')
 })
 
 describe('Vendor MFA flow', () => {

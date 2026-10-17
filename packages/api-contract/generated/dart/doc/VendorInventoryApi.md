@@ -168,7 +168,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listVendorInventoryMovements**
-> InventoryMovementListEnvelope listVendorInventoryMovements(variantId, page)
+> InventoryMovementListEnvelope listVendorInventoryMovements(variantId, page, from, to)
 
 
 
@@ -185,9 +185,11 @@ import 'package:materyalph_api_client/api.dart';
 final api = MateryalphApiClient().getVendorInventoryApi();
 final String variantId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final int page = 56; // int |
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Append-only movement created_at; filtered before pagination.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Append-only movement created_at; filtered before pagination.
 
 try {
-    final response = api.listVendorInventoryMovements(variantId, page);
+    final response = api.listVendorInventoryMovements(variantId, page, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling VendorInventoryApi->listVendorInventoryMovements: $e\n');
@@ -200,6 +202,8 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **variantId** | **String**|  |
  **page** | **int**|  | [optional]
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Append-only movement created_at; filtered before pagination. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Append-only movement created_at; filtered before pagination. | [optional]
 
 ### Return type
 
@@ -217,7 +221,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listVendorPriceHistory**
-> PriceHistoryEnvelope listVendorPriceHistory(variantId)
+> PriceHistoryEnvelope listVendorPriceHistory(variantId, from, to)
 
 
 
@@ -233,9 +237,11 @@ import 'package:materyalph_api_client/api.dart';
 
 final api = MateryalphApiClient().getVendorInventoryApi();
 final String variantId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Immutable price effective_at; filtered before the existing 50-record bound.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Immutable price effective_at; filtered before the existing 50-record bound.
 
 try {
-    final response = api.listVendorPriceHistory(variantId);
+    final response = api.listVendorPriceHistory(variantId, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling VendorInventoryApi->listVendorPriceHistory: $e\n');
@@ -247,6 +253,8 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **variantId** | **String**|  |
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Immutable price effective_at; filtered before the existing 50-record bound. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Immutable price effective_at; filtered before the existing 50-record bound. | [optional]
 
 ### Return type
 

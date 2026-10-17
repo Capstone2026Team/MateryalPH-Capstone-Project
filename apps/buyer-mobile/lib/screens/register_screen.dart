@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../design_system/components/buyer_app_bar.dart';
 
 import '../widgets/auth_content.dart';
+import '../widgets/password_requirements.dart';
 import '../widgets/phone_number_field.dart';
 
 import '../auth/auth_repository.dart';
@@ -215,8 +216,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     decoration: InputDecoration(
                       labelText: 'Password',
                       prefixIcon: const Icon(LucideIcons.lock),
-                      helperText:
-                          'At least 12 characters with upper/lowercase and a number.',
                       suffixIcon: IconButton(
                         onPressed: () => setState(
                           () => _obscurePassword = !_obscurePassword,
@@ -231,17 +230,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                     ),
-                    validator: (value) {
-                      final password = value ?? '';
-                      if (password.length < 12 ||
-                          !RegExp('[A-Z]').hasMatch(password) ||
-                          !RegExp('[a-z]').hasMatch(password) ||
-                          !RegExp(r'\d').hasMatch(password)) {
-                        return 'Use 12+ characters, mixed case, and a number.';
-                      }
-                      return null;
-                    },
+                    validator: (value) => passwordMeetsRequirements(value ?? '')
+                        ? null
+                        : 'Meet every password requirement below.',
                   ),
+                  PasswordRequirements(controller: _password),
                   const SizedBox(height: 16),
                   TextFormField(
                     enabled: !_submitting,

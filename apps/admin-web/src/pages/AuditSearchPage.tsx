@@ -1,4 +1,6 @@
-import { Button, FactList, InfoNote, SidePanel, StatusBadge } from '@materyalph/web-ui'
+import { DocumentExportButton } from '@materyalph/web-ui'
+import { ActiveFilters, Button, DateFilter, FactList, InfoNote, SearchInput, SidePanel, StatusBadge } from '@materyalph/web-ui'
+import { dateQuery } from '../lib/admin-format'
 import { Download, Search, X } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { control, labelClass, manilaDateTime, useLoad } from '../lib/operations-hooks'
@@ -14,8 +16,7 @@ function request(filters: Filters, cursor?: string) {
     ...(filters.actor ? { actor: filters.actor } : {}), ...(filters.actorRole ? { actorRole: filters.actorRole } : {}), ...(filters.action ? { action: filters.action } : {}),
     ...(filters.resourceType ? { resourceType: filters.resourceType } : {}), ...(filters.resourceId ? { resourceId: filters.resourceId } : {}),
     ...(filters.result ? { result: filters.result as never } : {}), ...(filters.correlationId ? { correlationId: filters.correlationId } : {}), ...(filters.reason ? { reason: filters.reason } : {}),
-    // The API takes Manila calendar dates (Y-m-d); UTC midnight keeps the serialized date unchanged.
-    ...(filters.from ? { from: new Date(`${filters.from}T00:00:00Z`) } : {}), ...(filters.to ? { to: new Date(`${filters.to}T00:00:00Z`) } : {}),
+    ...dateQuery(filters),
     ...(cursor ? { cursor } : {}),
   }
 }
@@ -33,6 +34,7 @@ function exportFilters(filters: Filters): Record<string, string> {
 export function AdminAuditSearchPage() {
   const [draft, setDraft] = useState<Filters>(EMPTY)
   const [applied, setApplied] = useState<Filters>(EMPTY)
+  const [dateLabel, setDateLabel] = useState('All dates')
   const [items, setItems] = useState<AuditEvent[]>([])
   const [cursor, setCursor] = useState<string | null>(null)
   const [flags, setFlags] = useState({ canViewDetail: false, canExport: false })
@@ -66,19 +68,18 @@ export function AdminAuditSearchPage() {
     <InfoNote>Credentials, tokens, OTPs and payment details are never stored in audit entries. Opening an entry's before/after detail is itself audited.</InfoNote>
     <form onSubmit={apply} role="search" aria-label="Audit search" className="grid gap-4 rounded-surface border border-border-default bg-surface-primary p-4">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <label className={labelClass}>Actor name or email<input className={control} value={draft.actor} maxLength={120} onChange={set('actor')} /></label>
+        <div className={labelClass}><span>Actor name or email</span><SearchInput label="Actor name or email" value={draft.actor} maxLength={120} onChange={value => setDraft(current => ({ ...current, actor: value }))} /></div>
         <label className={labelClass}>Actor role<input className={control} value={draft.actorRole} maxLength={48} onChange={set('actorRole')} placeholder="e.g. SUPER_ADMIN" /></label>
         <label className={labelClass}>Action<select className={control} value={draft.action} onChange={set('action')}><option value="">Any action</option>{(actions.data ?? []).map(action => <option key={action} value={action}>{action}</option>)}</select></label>
         <label className={labelClass}>Result<select className={control} value={draft.result} onChange={set('result')}><option value="">Succeeded or failed</option><option value="SUCCEEDED">Succeeded</option><option value="FAILED">Failed</option></select></label>
         <label className={labelClass}>Resource type<input className={control} value={draft.resourceType} maxLength={80} onChange={set('resourceType')} placeholder="e.g. ENFORCEMENT_ACTION" /></label>
         <label className={labelClass}>Resource ID<input className={control} value={draft.resourceId} onChange={set('resourceId')} placeholder="Full UUID" /></label>
         <label className={labelClass}>Correlation ID<input className={control} value={draft.correlationId} maxLength={80} onChange={set('correlationId')} /></label>
-        <label className={labelClass}>Reason contains<input className={control} value={draft.reason} maxLength={120} onChange={set('reason')} /></label>
-        <label className={labelClass}>From (Manila)<input type="date" className={control} value={draft.from} onChange={set('from')} /></label>
-        <label className={labelClass}>To (Manila)<input type="date" className={control} value={draft.to} onChange={set('to')} /></label>
+        <div className={labelClass}><span>Reason contains</span><SearchInput label="Reason contains" value={draft.reason} maxLength={120} onChange={value => setDraft(current => ({ ...current, reason: value }))} /></div>
       </div>
-      <div className="flex flex-wrap gap-2"><Button type="submit"><Search size={16} aria-hidden="true" />Search</Button><Button variant="secondary" onClick={() => { setDraft(EMPTY); setApplied(EMPTY) }}><X size={16} aria-hidden="true" />Clear</Button></div>
+      <div className="flex flex-wrap items-center gap-2"><DateFilter title="Audit event dates" value={{ label: dateLabel, from: applied.from, to: applied.to }} onChange={range => { setDateLabel(range.label); setDraft(current => ({ ...current, from: range.from, to: range.to })); setApplied(current => ({ ...current, from: range.from, to: range.to })) }} /><Button type="submit"><Search size={16} aria-hidden="true" />Search</Button><Button variant="secondary" onClick={() => { setDraft(EMPTY); setApplied(EMPTY); setDateLabel('All dates') }}><X size={16} aria-hidden="true" />Reset filters</Button></div>
     </form>
+    <ActiveFilters filters={Object.entries(applied).filter(([key, value]) => value && !['from', 'to'].includes(key)).map(([key, value]) => ({ key, label: `${key.replace(/([A-Z])/g, ' $1')}: ${value}`, onRemove: () => { setDraft(current => ({ ...current, [key]: '' })); setApplied(current => ({ ...current, [key]: '' })) } }))} onClear={() => { setDraft(EMPTY); setApplied(EMPTY); setDateLabel('All dates') }} />
     {error && <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} />}
     {state === 'loading' ? <LoadingState /> : items.length === 0 && !error ? <p className="rounded-surface border border-dashed border-border-default bg-surface-primary px-6 py-10 text-center text-sm text-text-secondary">No audit entries match these filters.</p> : items.length > 0 && <>
       <div className="overflow-x-auto rounded-surface border border-border-default bg-surface-primary"><table className="w-full min-w-[980px] text-left text-sm">
@@ -129,9 +130,10 @@ function ExportButton({ filters }: { filters: Filters }) {
     catch (cause) { setMessage({ tone: 'error', text: problemText(await apiProblem(cause)) }) } finally { setBusy(false) }
   }
   return <>
+    <DocumentExportButton basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} audience="admin" types={['AUDIT_LOG']} filters={exportFilters(filters)} />
     <Button variant="secondary" onClick={() => setOpen(true)}><Download size={16} aria-hidden="true" />Export CSV</Button>
     {open && <SidePanel open title="Export audit entries" description="Uses the current search filters; up to 5,000 rows without before/after payloads." onClose={() => setOpen(false)}>
-      <form onSubmit={event => void submit(event)} className="grid gap-4">
+      <form onSubmit={event => void submit(event)} className="grid gap-5">
         <label className={labelClass}>Purpose (recorded)<textarea className={`${control} min-h-20 py-2`} maxLength={500} value={purpose} onChange={event => setPurpose(event.target.value)} /></label>
         {message && <p role={message.tone === 'error' ? 'alert' : 'status'} className={`rounded-control border px-4 py-3 text-sm ${message.tone === 'error' ? 'border-status-error/30 bg-red-50 text-red-900' : 'border-status-success/30 bg-green-50 text-green-900'}`}>{message.text}</p>}
         <div className="flex justify-end"><Button type="submit" disabled={busy}>{busy ? 'Generating…' : 'Generate export'}</Button></div>

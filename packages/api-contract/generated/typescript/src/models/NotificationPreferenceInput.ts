@@ -20,7 +20,7 @@ import { mapValues } from '../runtime';
  */
 export interface NotificationPreferenceInput {
     /**
-     *
+     * A supported notification category, including MESSAGES for received Vendor conversation messages. MESSAGES preferences apply to both SALES and FULFILLMENT conversations.
      */
     category: string;
     /**

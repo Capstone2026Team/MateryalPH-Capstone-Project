@@ -65,6 +65,15 @@ assert.deepEqual(schemas.ListingStatus.enum, ['DRAFT', 'PENDING_COMPLIANCE', 'PE
 assert.deepEqual(schemas.TaxCategory.enum, ['VAT_12', 'VAT_ZERO', 'VAT_EXEMPT', 'NON_VAT'])
 assert.deepEqual(schemas.CompliancePath.enum, ['PHOTO_OCR', 'QR', 'MANUAL'])
 assert.deepEqual(schemas.ComplianceReferenceResult.enum, ['MATCHED', 'UNMATCHED', 'UNCERTAIN', 'UNAVAILABLE'])
+assert.deepEqual(schemas.ComplianceExtraction.properties.status.enum, ['EXTRACTED', 'UNAVAILABLE', 'FAILED', 'NOT_REQUESTED'])
+assert.deepEqual(schemas.ComplianceExtraction.properties.provider.type, ['string', 'null'])
+assert.equal(schemas.ComplianceExtraction.properties.confidence.minimum, 0)
+assert.equal(schemas.ComplianceExtraction.properties.confidence.maximum, 1)
+assert.match(schemas.ComplianceExtraction.properties.assistance_only.description, /Always true/)
+assert.ok(!('raw_text' in schemas.ComplianceExtraction.properties), 'Raw OCR text must stay private to the extractor')
+const generatedExtraction = readFileSync(resolve(root, 'generated/typescript/src/models/ComplianceExtraction.ts'), 'utf8')
+assert.match(generatedExtraction, /provider\?: string \| null/)
+assert.match(readFileSync(resolve(root, 'generated/dart/lib/src/model/compliance_extraction.dart'), 'utf8'), /String\? get provider/)
 assert.equal(schemas.CatalogVariantInput.properties.price_centavos.type, 'integer', 'Money must be integer centavos')
 assert.equal(schemas.CatalogPrice.properties.amount_centavos.type, 'integer', 'Money must be integer centavos')
 assert.equal(schemas.CatalogListingUpdate.properties.tag_ids.maxItems, 3)
@@ -76,6 +85,18 @@ assert.equal(schemas.CatalogListingUpdate.properties.status, undefined, 'Clients
 assert.equal(schemas.CatalogListingUpdate.properties.compliance_status, undefined, 'Clients never submit a compliance decision')
 assert.equal(schemas.CatalogListingSummary.properties.inventory, undefined, 'Listing summaries never expose exact inventory')
 assert.equal(schemas.ComplianceEvidenceUpload.properties.file.format, 'binary')
+// PS/ICC register lookup (rule compliance.register-number.v2): only the marking number is required,
+// automatic submission never routes an unmatched number to Admins, and manual review is explicit.
+assert.deepEqual(schemas.ComplianceSubmission.required, ['listing_lock_version', 'path', 'evidence_ids', 'marking_type', 'certificate_number', 'confirmed'])
+assert.deepEqual(schemas.ComplianceSubmission.properties.review_mode.enum, ['AUTOMATIC', 'MANUAL_REVIEW'])
+assert.equal(schemas.ComplianceSubmission.properties.review_mode.default, 'AUTOMATIC')
+assert.match(spec.paths['/vendor/catalog/listings/{listingId}/compliance'].post.description, /COMPLIANCE_REGISTER_NOT_MATCHED/)
+const lookup = spec.paths['/vendor/catalog/listings/{listingId}/compliance/lookup'].post
+assert.equal(lookup.operationId, 'lookupListingCompliance')
+assert.equal(lookup.parameters.some(parameter => parameter.name === 'Idempotency-Key'), false, 'A read-only lookup needs no Idempotency-Key')
+assert.equal(schemas.ComplianceLookup.properties.result.$ref, '#/components/schemas/ComplianceReferenceResult')
+assert.equal(schemas.ComplianceExtraction.properties.register_listed.type, 'boolean')
+assert.deepEqual(schemas.ComplianceRegister.properties.source_channel.enum, ['UPLOAD', 'FEED'])
 
 console.log(`Phase 4 catalog contract passed: ${expected.size} catalog and product-compliance operations match Laravel routes and guards.`)
 

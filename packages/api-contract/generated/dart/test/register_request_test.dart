@@ -32,6 +32,7 @@ void main() {
       // TODO
     });
 
+    // Optional and no longer collected at registration; the Public Store Name is entered in Business Information.
     // String businessName
     test('to test the property `businessName`', () async {
       // TODO

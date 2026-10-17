@@ -21,6 +21,13 @@ void main() {
       // TODO
     });
 
+    // Buy Again for a completed or cancelled Item-Based order (otherwise 409 BUY_AGAIN_UNAVAILABLE). Each line is added to the cart at today's price version and the original quantity, merged into any existing line, using the same eligibility, radius and quantity checks as adding by hand. A line that cannot be added is listed in skipped with its reason; quantities are never reduced to fit stock, so exact inventory is never revealed. Nothing is ordered or reserved. Idempotency-Key makes retries safe; a replay returns the current cart with empty added and skipped lists and meta.replayed true.
+    //
+    //Future<BuyAgainEnvelope> buyBuyerOrderAgain(String idempotencyKey, String orderId) async
+    test('test buyBuyerOrderAgain', () async {
+      // TODO
+    });
+
     // Flags an NRPC as disproportionate for staff review. Separate from acceptance; never accepts, rejects or changes the order. One flag per NRPC.
     //
     //Future<OrderDetailEnvelope> flagBuyerOrderNrpc(String orderId, String idempotencyKey, NrpcFlagRequest nrpcFlagRequest) async
@@ -42,10 +49,17 @@ void main() {
       // TODO
     });
 
-    // The Buyer's own orders, newest first, grouped by Awaiting Action, Active, Completed, Cancelled and Disputed. Order, payment, fulfillment, refund and dispute states are separate rows. Due windows are resolved before listing.
+    // The Buyer's own orders, newest first. Status chips: CONFIRMATION (awaiting the Vendor, the Buyer's approval or NRPC acceptance, or payment), PROCESSING (confirmed, preparing, cancellation requested), TO_SHIP (ready for pickup, out for delivery), TO_RECEIVE (delivered or picked up, awaiting receipt confirmation), COMPLETED, CANCELLED (cancelled, declined, expired) and DISPUTED. procurement_type filters the Item and Project tabs; meta.counts follow the same procurement filter. Order, payment, fulfillment, refund and dispute states are separate rows. Due windows are resolved before listing. CANCELLED_REFUNDED is the Profile history of actual CANCELLED orders or orders with PARTIALLY_REFUNDED or REFUNDED refund state, filtered before pagination; declined and expired orders without a completed refund are excluded.
     //
-    //Future<OrderListEnvelope> listBuyerOrders({ String group, int page }) async
+    //Future<OrderListEnvelope> listBuyerOrders({ String group, String procurementType, int page }) async
     test('test listBuyerOrders', () async {
+      // TODO
+    });
+
+    // Returns the order's single Fulfillment Messages thread, separate from inquiry conversations. Threads open at order submission; for an open order submitted before that, this opens it. One thread exists per order, so every retry returns the same thread. A closed order without a thread is 409 FULFILLMENT_THREAD_CLOSED. Another Buyer's order is 404.
+    //
+    //Future<OrderFulfillmentConversationEnvelope> openBuyerFulfillmentConversation(String idempotencyKey, String orderId) async
+    test('test openBuyerFulfillmentConversation', () async {
       // TODO
     });
 

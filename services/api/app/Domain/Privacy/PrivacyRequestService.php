@@ -8,6 +8,7 @@ use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Notifications\NotificationService;
 use App\Domain\Operations\AdminAccess;
+use App\Support\PortalDateRange;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -46,6 +47,7 @@ final class PrivacyRequestService
             ->when($filters['state'] ?? null, fn ($q, string $state) => $q->where('p.state', $state))
             ->when($filters['request_type'] ?? null, fn ($q, string $type) => $q->where('p.request_type', $type))
             ->when($manage && ($filters['handler'] ?? null) === 'UNASSIGNED', fn ($q) => $q->whereNull('p.handler_user_id'));
+        PortalDateRange::apply($query, 'p.received_at', $filters);
         $total = (clone $query)->count();
         $page = max(1, min(1000, (int) ($filters['page'] ?? 1)));
         $rows = $query->orderByRaw("CASE WHEN p.state IN ('COMPLETED','REJECTED','WITHDRAWN') THEN 1 ELSE 0 END")->orderBy('p.received_at')->orderBy('p.id')

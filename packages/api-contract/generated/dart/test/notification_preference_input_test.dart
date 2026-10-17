@@ -7,6 +7,7 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(NotificationPreferenceInput, () {
+    // A supported notification category, including MESSAGES for received Vendor conversation messages. MESSAGES preferences apply to both SALES and FULFILLMENT conversations.
     // String category
     test('to test the property `category`', () async {
       // TODO

@@ -1,5 +1,5 @@
 import * as catalog from '../lib/catalog-api'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { ResponseError } from '@materyalph/api-client-ts'
@@ -57,7 +57,7 @@ beforeEach(() => {
   vi.mocked(catalog.getCatalogTaxonomy).mockResolvedValue({ categories: [] } as unknown as Awaited<ReturnType<typeof catalog.getCatalogTaxonomy>>)
   vi.mocked(catalog.getListing).mockResolvedValue({
     id: 'listing-1', status: 'ACTIVE', lockVersion: 1, displayName: 'Portland cement', vendorSku: 'CEM-40', materialMatch: 'EXACT',
-    tagIds: [], technicalAttributes: {}, regulated: false, complianceStatus: 'NOT_REQUIRED', publicationVersion: 1,
+    tagIds: [], customTags: [], technicalAttributes: {}, regulated: false, complianceStatus: 'NOT_REQUIRED', publicationVersion: 1,
     variants: [], media: [], complianceSubmissions: [], statusHistory: [], blockers: [],
     completion: { key: 'LISTING', label: 'Listing', steps: [] }, permissions: { canManage: true, canSubmitCompliance: true },
   })
@@ -95,6 +95,25 @@ test('the ledger shows private quantities beside the public label and a stale-st
   expect(within(band).getByText(/Oct 16, 2026/)).toHaveTextContent('(Asia/Manila)')
   expect(within(band).getByText(/Your store is not suspended/)).toBeInTheDocument()
   expect(screen.getByRole('tab', { name: 'Inventory' })).toHaveAttribute('aria-selected', 'true')
+})
+
+test('history date changes filter movement and price timestamps together and reset movement pagination', async () => {
+  HTMLDialogElement.prototype.showModal = function () { this.open = true }
+  HTMLDialogElement.prototype.close = function () { this.open = false }
+  vi.mocked(inventory.listMovements).mockResolvedValue({ items: [], meta: { currentPage: 1, lastPage: 2, total: 30 } })
+  vi.mocked(inventory.listPriceHistory).mockResolvedValue([])
+  open()
+  fireEvent.click(await screen.findByLabelText('View inventory details for Portland cement — 40 kg'))
+  fireEvent.click(await screen.findByRole('button', { name: 'History of Portland cement — 40 kg' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Next' }))
+  await waitFor(() => expect(inventory.listMovements).toHaveBeenLastCalledWith(row().listingVariantId, 2, {}))
+  fireEvent.click(await screen.findByRole('button', { name: 'All dates' }))
+  fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-10-01' } })
+  fireEvent.change(screen.getByLabelText('To'), { target: { value: '2026-10-09' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+  await waitFor(() => expect(inventory.listMovements).toHaveBeenLastCalledWith(row().listingVariantId, 1, { from: '2026-10-01', to: '2026-10-09' }))
+  expect(inventory.listPriceHistory).toHaveBeenLastCalledWith(row().listingVariantId, { from: '2026-10-01', to: '2026-10-09' })
+  expect(await screen.findByText('No movements in this date range.')).toBeInTheDocument()
 })
 
 test('a stale popup edit keeps the typed values and shows the saved row instead of overwriting it', async () => {
@@ -182,6 +201,29 @@ test('staff limited to the allotment grant can save the allotment but not the sa
   await waitFor(() => expect(inventory.updateAllotment).toHaveBeenCalledWith('variant-1', 2, '8'))
   expect(await screen.findByText(/stays paused until the Owner or Store Manager resumes it/)).toBeInTheDocument()
   expect(within(panel).getByText('Paused — the allotment reached zero')).toBeInTheDocument()
+})
+
+test('a delayed policy load preserves an allotment typed immediately after loading', async () => {
+  let resolvePolicy!: (value: AutoAcceptPolicyDetail) => void
+  vi.mocked(inventory.getAutoAccept).mockImplementationOnce(() => new Promise(resolve => { resolvePolicy = resolve }))
+  let resolveSave!: (value: AutoAcceptPolicyDetail) => void
+  vi.mocked(inventory.updateAllotment).mockImplementationOnce(() => new Promise(resolve => { resolveSave = resolve }))
+  open()
+  fireEvent.click(await screen.findByLabelText('View inventory details for Portland cement — 40 kg'))
+  fireEvent.click(screen.getByRole('button', { name: 'Auto-accept settings for Portland cement — 40 kg' }))
+  expect(screen.getByText('Loading auto-accept…')).toHaveAttribute('role', 'status')
+  await act(async () => resolvePolicy(detail({ status: 'PAUSED', enabled: true, paused: true, pauseReason: 'ALLOTMENT_EXHAUSTED', lockVersion: 2 }, false)))
+  const panel = screen.getByRole('region', { name: 'Item-Based auto-accept' })
+  const allotment = within(panel).getByLabelText('Allotment (BAG)')
+  fireEvent.change(allotment, { target: { value: '8' } })
+  expect(allotment).toHaveValue('8')
+  fireEvent.click(within(panel).getByRole('button', { name: 'Save allotment' }))
+  expect(inventory.updateAllotment).toHaveBeenCalledWith('variant-1', 2, '8')
+  expect(allotment).toHaveValue('8')
+  expect(allotment).toBeDisabled()
+  await act(async () => resolveSave(detail({ status: 'PAUSED', enabled: true, paused: true, pauseReason: 'ALLOTMENT_EXHAUSTED', remainingAllotmentQuantity: '8', lockVersion: 3 }, false)))
+  expect(allotment).toHaveValue('8')
+  expect(allotment).not.toBeDisabled()
 })
 
 test('bulk confirmation is all-or-nothing and a conflict refreshes the ledger', async () => {

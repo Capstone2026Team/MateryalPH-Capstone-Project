@@ -11,6 +11,7 @@ use App\Domain\Authorization\ManageMembership;
 use App\Domain\Authorization\ManageVendorTeam;
 use App\Domain\Authorization\VendorTeamActivityQuery;
 use App\Domain\Authorization\VendorTeamMembersQuery;
+use App\Domain\Authorization\VendorTeamPerformanceQuery;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\IssueAdminInvitation;
 use App\Domain\Vendors\IssueVendorInvitation;
@@ -147,5 +148,10 @@ final class AccountAdministrationController extends Controller
         $result = $activity->read($request, $access);
 
         return ApiResponse::success($result['data'], $result['meta']);
+    }
+
+    public function vendorPerformance(Request $request, AccountAccess $access, VendorTeamPerformanceQuery $performance): JsonResponse
+    {
+        return ApiResponse::success($performance->read($request, $access));
     }
 }

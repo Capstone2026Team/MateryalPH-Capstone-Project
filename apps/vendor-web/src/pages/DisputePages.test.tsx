@@ -87,7 +87,7 @@ test('the filing popup reviews local evidence, removes a file, and submits only 
     { orderId: 'order-1', issueType: 'PHYSICAL_PAYMENT_NOT_RECEIVED', requestedRemedy: 'PAYMENT_OF_BALANCE', description: 'The Buyer has not paid the outstanding balance.', affectedLineIds: ['line-1'], files: [pdf] },
     expect.any(String),
   ])
-  expect(revokeObjectURL).toHaveBeenCalledTimes(createObjectURL.mock.calls.length)
+  await waitFor(() => expect(revokeObjectURL).toHaveBeenCalledTimes(createObjectURL.mock.calls.length))
 })
 
 test('filing checks server eligibility inside the popup and links to an existing case', async () => {

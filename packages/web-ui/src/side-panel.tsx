@@ -4,8 +4,8 @@ import { Button } from './button'
 import './side-panel.css'
 
 /** Native modal focus containment, with a persistent header and a scrolling body. */
-export function SidePanel({ open, title, description, children, onClose, closeLabel = 'Close panel' }: {
-  open: boolean; title: string; description?: string; children: ReactNode; onClose: () => void; closeLabel?: string
+export function SidePanel({ open, title, description, children, onClose, closeLabel = 'Close panel', padded = true }: {
+  open: boolean; title: string; description?: string; children: ReactNode; onClose: () => void; closeLabel?: string; padded?: boolean
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
   const titleId = useId()
@@ -38,7 +38,7 @@ export function SidePanel({ open, title, description, children, onClose, closeLa
         <div className="min-w-0"><h2 id={titleId} className="break-words text-lg font-semibold">{title}</h2>{description && <p className="mt-1 text-xs text-text-secondary">{description}</p>}</div>
         <Button variant="quiet" aria-label={closeLabel} onClick={close}><X size={20} aria-hidden="true" /></Button>
       </div>
-      <div className="mp-side-panel__body">{children}</div>
+      <div className={`mp-side-panel__body${padded ? ' mp-side-panel__body--padded' : ''}`}>{children}</div>
     </div>
   </dialog>
 }

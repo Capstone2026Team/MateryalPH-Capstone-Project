@@ -57,8 +57,20 @@ void main() {
       // TODO
     });
 
+    // The category's names for listing and variant technical attributes, in category order; the same labels a Work Package quotation shows.
+    // BuiltList<ListingAttributeLabel> attributeLabels
+    test('to test the property `attributeLabels`', () async {
+      // TODO
+    });
+
     // BuiltList<ListingImage> images
     test('to test the property `images`', () async {
+      // TODO
+    });
+
+    // Present only for ready-mixed concrete; Self-Pickup is then never available.
+    // ReadyMixedConcreteDetail readyMixedConcrete
+    test('to test the property `readyMixedConcrete`', () async {
       // TODO
     });
 

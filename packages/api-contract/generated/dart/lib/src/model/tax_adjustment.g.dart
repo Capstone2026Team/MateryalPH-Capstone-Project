@@ -16,6 +16,8 @@ const TaxAdjustmentStateEnum _$taxAdjustmentStateEnum_POSTED =
     const TaxAdjustmentStateEnum._('POSTED');
 const TaxAdjustmentStateEnum _$taxAdjustmentStateEnum_REJECTED =
     const TaxAdjustmentStateEnum._('REJECTED');
+const TaxAdjustmentStateEnum _$taxAdjustmentStateEnum_NOT_REQUIRED =
+    const TaxAdjustmentStateEnum._('NOT_REQUIRED');
 
 TaxAdjustmentStateEnum _$taxAdjustmentStateEnumValueOf(String name) {
   switch (name) {
@@ -29,6 +31,8 @@ TaxAdjustmentStateEnum _$taxAdjustmentStateEnumValueOf(String name) {
       return _$taxAdjustmentStateEnum_POSTED;
     case 'REJECTED':
       return _$taxAdjustmentStateEnum_REJECTED;
+    case 'NOT_REQUIRED':
+      return _$taxAdjustmentStateEnum_NOT_REQUIRED;
     default:
       throw ArgumentError(name);
   }
@@ -41,6 +45,7 @@ final BuiltSet<TaxAdjustmentStateEnum> _$taxAdjustmentStateEnumValues =
   _$taxAdjustmentStateEnum_APPROVED,
   _$taxAdjustmentStateEnum_POSTED,
   _$taxAdjustmentStateEnum_REJECTED,
+  _$taxAdjustmentStateEnum_NOT_REQUIRED,
 ]);
 
 const TaxAdjustmentOpenedByEnum _$taxAdjustmentOpenedByEnum_USER =
@@ -117,6 +122,7 @@ class _$TaxAdjustmentStateEnumSerializer
     'APPROVED': 'APPROVED',
     'POSTED': 'POSTED',
     'REJECTED': 'REJECTED',
+    'NOT_REQUIRED': 'NOT_REQUIRED',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'ADJUSTMENT_REQUIRED': 'ADJUSTMENT_REQUIRED',
@@ -124,6 +130,7 @@ class _$TaxAdjustmentStateEnumSerializer
     'APPROVED': 'APPROVED',
     'POSTED': 'POSTED',
     'REJECTED': 'REJECTED',
+    'NOT_REQUIRED': 'NOT_REQUIRED',
   };
 
   @override

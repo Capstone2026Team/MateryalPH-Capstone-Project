@@ -62,11 +62,6 @@ void main() {
       // TODO
     });
 
-    // WorkPackageVersionPage versions
-    test('to test the property `versions`', () async {
-      // TODO
-    });
-
     // ProjectBudget budget
     test('to test the property `budget`', () async {
       // TODO
@@ -79,6 +74,18 @@ void main() {
 
     // BuiltMap<String, JsonObject> document
     test('to test the property `document`', () async {
+      // TODO
+    });
+
+    // True when an order, tagged purchase for a missing line or selected Vendor is tied to the package.
+    // bool hasOrder
+    test('to test the property `hasOrder`', () async {
+      // TODO
+    });
+
+    // True while the package has no order and its Project is Active. Clients hide the delete action otherwise; the server enforces the rule.
+    // bool canDelete
+    test('to test the property `canDelete`', () async {
       // TODO
     });
 

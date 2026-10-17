@@ -14,7 +14,7 @@
 
 
 /**
- *
+ * TOP_SELLING ranks by units_sold (quantity on COMPLETED orders in each listing's sale unit), then SRS, distance, price and listing id.
  * @export
  */
 export const ListingSearchSort = {
@@ -26,6 +26,7 @@ export const ListingSearchSort = {
     DistanceDesc: 'DISTANCE_DESC',
     PriceDesc: 'PRICE_DESC',
     RatingAsc: 'RATING_ASC',
+    TopSelling: 'TOP_SELLING',
 } as const;
 export type ListingSearchSort = typeof ListingSearchSort[keyof typeof ListingSearchSort];
 

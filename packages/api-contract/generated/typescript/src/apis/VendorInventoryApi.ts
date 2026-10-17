@@ -112,6 +112,14 @@ export interface ListVendorInventoryMovementsRequest {
      *
      */
     page?: number;
+    /**
+     * Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Append-only movement created_at; filtered before pagination.
+     */
+    from?: Date;
+    /**
+     * Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Append-only movement created_at; filtered before pagination.
+     */
+    to?: Date;
 }
 
 export interface ListVendorPriceHistoryRequest {
@@ -119,6 +127,14 @@ export interface ListVendorPriceHistoryRequest {
      *
      */
     variantId: string;
+    /**
+     * Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Immutable price effective_at; filtered before the existing 50-record bound.
+     */
+    from?: Date;
+    /**
+     * Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Immutable price effective_at; filtered before the existing 50-record bound.
+     */
+    to?: Date;
 }
 
 export interface SaveVendorInventorySettingsRequest {
@@ -308,6 +324,14 @@ export class VendorInventoryApi extends runtime.BaseAPI {
             queryParameters['page'] = requestParameters['page'];
         }
 
+        if (requestParameters['from'] != null) {
+            queryParameters['from'] = runtime.serializeDate(requestParameters['from'] as any);
+        }
+
+        if (requestParameters['to'] != null) {
+            queryParameters['to'] = runtime.serializeDate(requestParameters['to'] as any);
+        }
+
         const headerParameters: runtime.HTTPHeaders = {};
 
 
@@ -352,6 +376,14 @@ export class VendorInventoryApi extends runtime.BaseAPI {
         }
 
         const queryParameters: any = {};
+
+        if (requestParameters['from'] != null) {
+            queryParameters['from'] = runtime.serializeDate(requestParameters['from'] as any);
+        }
+
+        if (requestParameters['to'] != null) {
+            queryParameters['to'] = runtime.serializeDate(requestParameters['to'] as any);
+        }
 
         const headerParameters: runtime.HTTPHeaders = {};
 

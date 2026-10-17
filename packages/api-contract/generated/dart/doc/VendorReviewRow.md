@@ -17,6 +17,7 @@ Name | Type | Description | Notes
 **submittedAt** | [**DateTime**](DateTime.md) |  | [optional]
 **edited** | **bool** |  | [optional]
 **variantLabel** | **String** |  | [optional]
+**product** | [**ReviewProduct**](ReviewProduct.md) | Purchased-product identity from the immutable order line snapshot; null for Store and Buyer ratings. | [optional]
 **media** | [**BuiltList&lt;ReviewMediaLink&gt;**](ReviewMediaLink.md) |  | [optional]
 **visibility** | **String** |  | [optional]
 **orderId** | **String** |  | [optional]

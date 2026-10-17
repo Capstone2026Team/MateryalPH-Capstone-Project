@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`options` | [Array&lt;DeliveryEstimateOption&gt;](DeliveryEstimateOption.md)
 `feeMinCentavos` | number
 `feeMaxCentavos` | number
 `tripsMin` | number
@@ -18,6 +19,7 @@ import type { OrderDeliveryEstimate } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "options": null,
   "feeMinCentavos": null,
   "feeMaxCentavos": null,
   "tripsMin": null,

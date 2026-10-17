@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace App\Domain\Procurement;
 
+use App\Domain\Analytics\Products\ProductViewRecorder;
 use App\Domain\Catalog\ComparableMappingService;
 use App\Domain\Catalog\EligibleOfferQuery;
 use App\Domain\Catalog\ListingTaxPolicy;
+use App\Domain\Catalog\ReadyMixedConcrete;
 use App\Domain\Geography\BuyerProfiles;
 use App\Domain\Geography\GeographyScopeResolver;
 use App\Domain\Geography\PublicVendorProjection;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Inventory\StockAvailability;
+use App\Domain\Messaging\SiteInspectionService;
+use App\Domain\Projects\SpecificationMatch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -33,6 +37,7 @@ final class ListingDetailService
         private readonly MarketplaceSearchService $search,
         private readonly ListingPublicFacts $facts,
         private readonly PublicVendorProjection $vendors,
+        private readonly ProductViewRecorder $views,
     ) {}
 
     /**
@@ -75,6 +80,10 @@ final class ListingDetailService
         $variants = DB::table('listing_variants as v')->join('units as u', 'u.id', '=', 'v.unit_id')->where('v.vendor_listing_id', $listingId)->where('v.active', true)
             ->orderBy('v.sort_order')->orderBy('v.id')->get(['v.id', 'v.sku', 'v.label', 'v.attributes', 'v.pack_quantity', 'u.code as unit_code', 'u.name as unit_name', 'u.precision as unit_precision', 'v.weight_kg', 'v.length_cm', 'v.width_cm', 'v.height_cm']);
         $deliveryMaximum = $vendor['delivery_maximum_km'];
+        $readyMixed = ReadyMixedConcrete::listing($listingId);
+        $this->views->record($buyerId, $listingId, $organizationId);
+        $openInspection = $readyMixed ? DB::table('site_inspection_requests')->where('buyer_profile_id', $buyerId)->where('vendor_organization_id', $organizationId)
+            ->whereIn('status', SiteInspectionService::OPEN)->first(['id', 'status', 'conversation_id']) : null;
 
         return [
             'listing_id' => $listingId,
@@ -84,6 +93,8 @@ final class ListingDetailService
             'brand' => $listing->brand, 'model' => $listing->model, 'manufacturer' => $listing->manufacturer, 'country_of_manufacture' => $listing->country_of_manufacture,
             'category' => $listing->material_category_id === null ? null : ['id' => (string) $listing->material_category_id, 'name' => $listing->category_name],
             'technical_attributes' => ComparableMappingService::decode($listing->technical_attributes),
+            // Category names for listing and variant details, the same labels a Work Package quotation shows.
+            'attribute_labels' => $this->attributeLabels($listing->material_category_id === null ? null : (string) $listing->material_category_id),
             'images' => $this->facts->images([$listingId])[$listingId] ?? [],
             'compliance' => [
                 'regulated' => (bool) $listing->regulated,
@@ -103,8 +114,16 @@ final class ListingDetailService
                 'address' => $vendor['address'], 'open_status' => $vendor['open_status'], 'vacation_mode' => $vendor['vacation_mode'], 'supplier_type' => $vendor['supplier_type'],
                 'badges' => $vendor['badges'],
             ],
+            // Ready-Mixed Concrete (owner decision 2026-10-16): volume in m³, one variant per Required PSI, mixer Site Delivery only.
+            'ready_mixed_concrete' => $readyMixed ? [
+                'quantity_label' => 'Order volume (m³)', 'strength_attribute' => ReadyMixedConcrete::STRENGTH_ATTRIBUTE, 'strength_label' => 'Required PSI (compressive strength)',
+                'delivery_vehicle' => ReadyMixedConcrete::MIXER_TYPE, 'site_delivery_only' => true,
+                'site_inspection' => ['free' => true, 'available' => $withinRadius && ! $vendor['vacation_mode'] && $openInspection === null,
+                    'open_request' => $openInspection === null ? null : ['id' => (string) $openInspection->id, 'status' => (string) $openInspection->status, 'conversation_id' => (string) $openInspection->conversation_id]],
+                'notice' => 'Delivered only by a Concrete Mixer Truck / Transit Mixer. Trucks and trips follow your volume and the mixer capacity; the store confirms them and the fee before you pay.',
+            ] : null,
             'fulfillment' => [
-                'pickup_available' => in_array($vendor['fulfillment_method'], ['SELF_PICKUP', 'BOTH'], true),
+                'pickup_available' => ! $readyMixed && in_array($vendor['fulfillment_method'], ['SELF_PICKUP', 'BOTH'], true),
                 'delivery' => $deliveryMaximum === null ? 'NOT_OFFERED' : ($distance <= $deliveryMaximum * 1000 ? 'WITHIN_STATED_AREA' : 'OUTSIDE_STATED_AREA'),
                 'delivery_maximum_km' => $deliveryMaximum,
                 'basis' => 'STRAIGHT_LINE_ADVISORY',
@@ -140,6 +159,18 @@ final class ListingDetailService
             'current_as_of' => now()->toIso8601String(),
             'eligibility_version' => EligibleOfferQuery::VERSION,
         ];
+    }
+
+    /** @return list<array{code: string, label: string, unit_code: string|null}> */
+    private function attributeLabels(?string $categoryId): array
+    {
+        $labels = [];
+        foreach (SpecificationMatch::definitions([$categoryId])[$categoryId ?? ''] ?? [] as $code => $definition) {
+            $unit = (string) ($definition->unit_code ?? '');
+            $labels[] = ['code' => $code, 'label' => (string) $definition->label, 'unit_code' => $unit === '' ? null : $unit];
+        }
+
+        return $labels;
     }
 
     private function unavailable(): AuthenticationException

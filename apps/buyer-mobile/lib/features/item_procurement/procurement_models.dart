@@ -4,7 +4,8 @@ import 'package:flutter/foundation.dart';
 enum LoadPhase { needsOrigin, loading, ready, failed }
 
 /// Item-Based sorts. Browsing defaults to distance and a text query to Best Deal (SRS); Favorites
-/// First is a separate explicit choice that never changes Best Deal.
+/// First is a separate explicit choice that never changes Best Deal. Top Selling ranks by the card's
+/// "sold" figure (quantity on completed orders) and is offered on a store's own page.
 enum ListingSort {
   bestDeal,
   distance,
@@ -14,6 +15,7 @@ enum ListingSort {
   distanceDescending,
   priceDescending,
   ratingAscending,
+  topSelling,
 }
 
 extension ListingSortWire on ListingSort {
@@ -26,6 +28,7 @@ extension ListingSortWire on ListingSort {
     ListingSort.distanceDescending => 'DISTANCE_DESC',
     ListingSort.priceDescending => 'PRICE_DESC',
     ListingSort.ratingAscending => 'RATING_ASC',
+    ListingSort.topSelling => 'TOP_SELLING',
   };
 
   String get label => switch (this) {
@@ -37,6 +40,7 @@ extension ListingSortWire on ListingSort {
     ListingSort.distanceDescending => 'Distance',
     ListingSort.priceDescending => 'Price',
     ListingSort.ratingAscending => 'Rating',
+    ListingSort.topSelling => 'Top Selling',
   };
 
   ListingSort get family => switch (this) {
@@ -69,6 +73,7 @@ extension ListingSortWire on ListingSort {
     'DISTANCE_DESC' => ListingSort.distanceDescending,
     'PRICE_DESC' => ListingSort.priceDescending,
     'RATING_ASC' => ListingSort.ratingAscending,
+    'TOP_SELLING' => ListingSort.topSelling,
     _ => ListingSort.distance,
   };
 }
@@ -96,6 +101,17 @@ String formatQuantity(String quantity) {
   return trimmed.endsWith('.')
       ? trimmed.substring(0, trimmed.length - 1)
       : trimmed;
+}
+
+/// Advisory line amount for a decimal quantity, rounded half-up to the
+/// centavo like the server; the server's amount stays authoritative.
+int lineAmountCentavos(String quantity, int unitPriceCentavos) {
+  final parts = quantity.trim().split('.');
+  final fraction = (parts.length > 1 ? parts[1] : '').padRight(4, '0');
+  final scaled =
+      int.parse(parts[0].isEmpty ? '0' : parts[0]) * 10000 +
+      int.parse(fraction.substring(0, 4));
+  return (unitPriceCentavos * scaled + 5000) ~/ 10000;
 }
 
 @immutable
@@ -476,7 +492,7 @@ class VariantOfferView {
   final Map<String, String> attributes;
   final String? sku;
 
-  int? priceForQuantity(int quantity) {
+  int? priceForQuantity(num quantity) {
     var price = unitPriceCentavos;
     var threshold = 0.0;
     for (final tier in volumeTiers) {
@@ -490,6 +506,44 @@ class VariantOfferView {
   }
 
   bool get wholeUnits => quantityStep == '1';
+}
+
+/// The Buyer's open free site inspection with a store, if any.
+@immutable
+class OpenSiteInspectionView {
+  const OpenSiteInspectionView({
+    required this.id,
+    required this.status,
+    required this.conversationId,
+  });
+
+  final String id;
+
+  /// REQUESTED or SCHEDULED.
+  final String status;
+  final String conversationId;
+}
+
+/// Ready-Mixed Concrete (owner decision 2026-10-16): the quantity is the order
+/// volume in m³, each option is one Required PSI class, and delivery is Site
+/// Delivery by Concrete Mixer Truck / Transit Mixer only.
+@immutable
+class ReadyMixedConcreteView {
+  const ReadyMixedConcreteView({
+    required this.quantityLabel,
+    required this.strengthAttribute,
+    required this.strengthLabel,
+    required this.notice,
+    required this.siteInspectionAvailable,
+    this.openInspection,
+  });
+
+  final String quantityLabel;
+  final String strengthAttribute;
+  final String strengthLabel;
+  final String notice;
+  final bool siteInspectionAvailable;
+  final OpenSiteInspectionView? openInspection;
 }
 
 @immutable
@@ -524,10 +578,39 @@ class ListingDetailView {
     this.complianceBadge,
     this.notPurchasableReason,
     this.deliveryMaximumKm,
+    this.attributeLabels = const {},
+    this.readyMixed,
   });
 
   final String listingId;
   final String displayName;
+
+  /// Present only for ready-mixed concrete.
+  final ReadyMixedConcreteView? readyMixed;
+
+  /// The category's names (and units) for technical attribute codes.
+  final Map<String, ({String label, String? unit})> attributeLabels;
+
+  /// "Thickness (mm)" for a known code; a readable code otherwise.
+  String attributeLabel(String code) {
+    final known = attributeLabels[code];
+    if (known != null) {
+      return known.unit == null
+          ? known.label
+          : '${known.label} (${known.unit})';
+    }
+    return code
+        .split('_')
+        .map(
+          (word) => word.isEmpty
+              ? word
+              : const {'mm', 'kg', 'cm', 'm'}.contains(word)
+              ? '($word)'
+              : '${word[0].toUpperCase()}${word.substring(1)}',
+        )
+        .join(' ');
+  }
+
   final List<({String url, String? alt})> images;
   final List<VariantOfferView> variants;
   final String vendorId;
@@ -599,10 +682,14 @@ class CartLineView {
     this.volumeTierApplied = false,
     this.stockLabel,
     this.lineTotalCentavos,
+    this.readyMixedConcrete = false,
   });
 
   final String id;
   final String listingId;
+
+  /// Ready-mixed concrete: its store group is Site Delivery only.
+  final bool readyMixedConcrete;
   final String variantId;
   final String vendorId;
   final String displayName;
@@ -734,12 +821,55 @@ class DeliveryOptionView {
     required this.vehicles,
     required this.trips,
     required this.feeCentavos,
+    this.vehicleType,
+    this.mobilizationBasis,
+    this.mobilizationTotalCentavos = 0,
+    this.volumePlan,
   });
 
   final String vehicleName;
   final int vehicles;
   final int trips;
   final int feeCentavos;
+  final String? vehicleType;
+
+  /// PER_TRUCK or PER_TRIP, as the Vendor configured its mixer.
+  final String? mobilizationBasis;
+  final int mobilizationTotalCentavos;
+  final MixerVolumePlanView? volumePlan;
+}
+
+/// How a ready-mixed concrete volume splits into mixer trips.
+@immutable
+class MixerVolumePlanView {
+  const MixerVolumePlanView({
+    required this.totalM3,
+    required this.fullLoadM3,
+    required this.fullTrips,
+    required this.lastTripM3,
+  });
+
+  final num totalM3;
+  final num fullLoadM3;
+  final int fullTrips;
+  final num lastTripM3;
+
+  /// "6 m³ + 1.5 m³" for one full load and a part load.
+  String get tripLoads {
+    String m3(num value) => '${formatVolume(value)} m³';
+    final full = fullTrips + (lastTripM3 == fullLoadM3 ? 1 : 0);
+    return [
+      if (full == 1) m3(fullLoadM3),
+      if (full > 1) '$full × ${m3(fullLoadM3)}',
+      if (lastTripM3 != fullLoadM3) m3(lastTripM3),
+    ].join(' + ');
+  }
+}
+
+/// "7.5" from 7.5, "6" from 6.0: up to three decimals, trailing zeros trimmed.
+String formatVolume(num value) {
+  final text = value.toStringAsFixed(3);
+  return text.contains('.') ? text.replaceFirst(RegExp(r'\.?0+$'), '') : text;
 }
 
 @immutable

@@ -6,7 +6,6 @@
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/work_package_version.dart';
 import 'package:materyalph_api_client/src/model/project_budget.dart';
-import 'package:materyalph_api_client/src/model/work_package_version_page.dart';
 import 'package:built_value/json_object.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -27,10 +26,11 @@ part 'work_package_view.g.dart';
 /// * [selectedVendorId]
 /// * [orderId]
 /// * [version]
-/// * [versions]
 /// * [budget]
 /// * [missingLines]
 /// * [document]
+/// * [hasOrder] - True when an order, tagged purchase for a missing line or selected Vendor is tied to the package.
+/// * [canDelete] - True while the package has no order and its Project is Active. Clients hide the delete action otherwise; the server enforces the rule.
 @BuiltValue()
 abstract class WorkPackageView implements Built<WorkPackageView, WorkPackageViewBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -67,9 +67,6 @@ abstract class WorkPackageView implements Built<WorkPackageView, WorkPackageView
   @BuiltValueField(wireName: r'version')
   WorkPackageVersion? get version;
 
-  @BuiltValueField(wireName: r'versions')
-  WorkPackageVersionPage get versions;
-
   @BuiltValueField(wireName: r'budget')
   ProjectBudget get budget;
 
@@ -78,6 +75,14 @@ abstract class WorkPackageView implements Built<WorkPackageView, WorkPackageView
 
   @BuiltValueField(wireName: r'document')
   BuiltMap<String, JsonObject?> get document;
+
+  /// True when an order, tagged purchase for a missing line or selected Vendor is tied to the package.
+  @BuiltValueField(wireName: r'has_order')
+  bool? get hasOrder;
+
+  /// True while the package has no order and its Project is Active. Clients hide the delete action otherwise; the server enforces the rule.
+  @BuiltValueField(wireName: r'can_delete')
+  bool? get canDelete;
 
   WorkPackageView._();
 
@@ -165,11 +170,6 @@ class _$WorkPackageViewSerializer implements PrimitiveSerializer<WorkPackageView
         specifiedType: const FullType(WorkPackageVersion),
       );
     }
-    yield r'versions';
-    yield serializers.serialize(
-      object.versions,
-      specifiedType: const FullType(WorkPackageVersionPage),
-    );
     yield r'budget';
     yield serializers.serialize(
       object.budget,
@@ -185,6 +185,20 @@ class _$WorkPackageViewSerializer implements PrimitiveSerializer<WorkPackageView
       object.document,
       specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
     );
+    if (object.hasOrder != null) {
+      yield r'has_order';
+      yield serializers.serialize(
+        object.hasOrder,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.canDelete != null) {
+      yield r'can_delete';
+      yield serializers.serialize(
+        object.canDelete,
+        specifiedType: const FullType(bool),
+      );
+    }
   }
 
   @override
@@ -289,13 +303,6 @@ class _$WorkPackageViewSerializer implements PrimitiveSerializer<WorkPackageView
           if (valueDes == null) continue;
           result.version.replace(valueDes);
           break;
-        case r'versions':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(WorkPackageVersionPage),
-          ) as WorkPackageVersionPage;
-          result.versions.replace(valueDes);
-          break;
         case r'budget':
           final valueDes = serializers.deserialize(
             value,
@@ -316,6 +323,22 @@ class _$WorkPackageViewSerializer implements PrimitiveSerializer<WorkPackageView
             specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
           ) as BuiltMap<String, JsonObject?>;
           result.document.replace(valueDes);
+          break;
+        case r'has_order':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.hasOrder = valueDes;
+          break;
+        case r'can_delete':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.canDelete = valueDes;
           break;
         default:
           unhandled.add(key);

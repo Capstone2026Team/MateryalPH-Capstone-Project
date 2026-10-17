@@ -12,6 +12,7 @@ use App\Domain\Reporting\TaxCalendar;
 use App\Domain\Reporting\TaxPackageService;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Support\PortalDateRange;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,8 +23,16 @@ final class ReportingController extends Controller
 {
     public function index(Request $request, DocumentExportService $service): JsonResponse
     {
-        $input = $request->validate(['page' => ['sometimes', 'integer', 'min:1']]);
-        $page = DB::table('data_exports')->where('requested_by_user_id', $request->user()->getKey())->whereIn('export_type', DocumentExportService::TYPES)->orderByDesc('id')->paginate(25, ['*'], 'page', $input['page'] ?? 1);
+        $input = $request->validate(['page' => ['sometimes', 'integer', 'min:1'], 'type' => ['sometimes', Rule::in(DocumentExportService::TYPES)],
+            'resource_id' => ['sometimes', 'uuid'], 'format' => ['sometimes', Rule::in(['PDF', 'CSV'])]] + PortalDateRange::rules($request));
+        $query = DB::table('data_exports')->where('requested_by_user_id', $request->user()->getKey())->whereIn('export_type', DocumentExportService::TYPES)->orderByDesc('id');
+        foreach (['type' => 'export_type', 'resource_id' => 'resource_id', 'format' => 'format'] as $filter => $column) {
+            if (isset($input[$filter])) {
+                $query->where($column, $input[$filter]);
+            }
+        }
+        PortalDateRange::apply($query, 'created_at', $input);
+        $page = $query->paginate(25, ['*'], 'page', $input['page'] ?? 1);
         $rows = [];
         foreach ($page->items() as $export) {
             if ($service->allowed($export)) {
@@ -37,8 +46,8 @@ final class ReportingController extends Controller
     public function request(Request $request, DocumentExportService $service): JsonResponse
     {
         $input = $request->validate(['type' => ['required', Rule::in(DocumentExportService::TYPES)], 'format' => ['required', Rule::in(['PDF', 'CSV'])],
-            'resource_id' => ['nullable', 'uuid', 'required_unless:type,MATERIALS_ANALYTICS,AUDIT_LOG,GEO_ANALYTICS'], 'purpose' => ['required', 'string', 'min:10', 'max:500'],
-            'filters' => ['sometimes', 'array:preset_days,start_date,end_date,radius_km,category_id,q,psgc_code,psgc_version_id,actor,actor_role,action,resource_type,organization_id,result,correlation_id,reason,from,to,dataset,area,granularity,procurement_type,material_id,fulfillment_method,payment_method,order_state'],
+            'resource_id' => ['nullable', 'uuid', 'required_unless:type,MATERIALS_ANALYTICS,AUDIT_LOG,GEO_ANALYTICS,TRANSACTION_HISTORY,EARNINGS'], 'purpose' => ['required', 'string', 'min:10', 'max:500'],
+            'filters' => ['sometimes', 'array:preset_days,start_date,end_date,radius_km,category_id,q,psgc_code,psgc_version_id,actor,actor_role,action,resource_type,organization_id,result,correlation_id,reason,from,to,dataset,area,granularity,procurement_type,material_id,fulfillment_method,payment_method,order_state,tab,status'],
             'filters.preset_days' => ['sometimes', 'integer', Rule::in([7, 30, 90])], 'filters.start_date' => ['sometimes', 'date_format:Y-m-d'], 'filters.end_date' => ['sometimes', 'date_format:Y-m-d'],
             'filters.radius_km' => ['sometimes', 'integer', 'between:1,50'], 'filters.category_id' => ['sometimes', 'uuid'], 'filters.q' => ['sometimes', 'string', 'max:100'],
             'filters.psgc_code' => ['sometimes', 'string', 'max:16'], 'filters.psgc_version_id' => ['sometimes', 'uuid']]);
@@ -54,8 +63,10 @@ final class ReportingController extends Controller
     public function taxList(Request $request): JsonResponse
     {
         app(FinanceAccess::class)->admin($request, 'finance.view');
-        $input = $request->validate(['page' => ['sometimes', 'integer', 'min:1']]);
-        $page = DB::table('tax_report_packages')->orderByDesc('id')->paginate(25, ['id', 'package_type', 'state', 'period_start', 'period_end', 'withholding_entity', 'nominal_due_date', 'actual_due_date', 'due_date_reviewer_id', 'lock_version'], 'page', $input['page'] ?? 1);
+        $input = $request->validate(['page' => ['sometimes', 'integer', 'min:1']] + PortalDateRange::rules($request));
+        $query = DB::table('tax_report_packages')->orderByDesc('id');
+        PortalDateRange::apply($query, 'created_at', $input);
+        $page = $query->paginate(25, ['id', 'package_type', 'state', 'period_start', 'period_end', 'withholding_entity', 'nominal_due_date', 'actual_due_date', 'due_date_reviewer_id', 'lock_version'], 'page', $input['page'] ?? 1);
 
         return ApiResponse::success($page->items(), ['has_more' => $page->hasMorePages()]);
     }

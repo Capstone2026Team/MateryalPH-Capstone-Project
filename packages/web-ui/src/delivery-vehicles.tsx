@@ -9,6 +9,8 @@ export type DeliveryVehicleDraft = {
   key: string; id?: string; category: string; type: string; customType: string; name: string; brand: string;
   count: string; weight: string; mixer: string; length: string; width: string; height: string; heavy: string;
   baseFee: string; perKm: string; imageId: string; active: boolean
+  /** Mixer only: Vendor-set mobilization fee and whether it is charged per truck or per trip. */
+  mobilizationFee: string; mobilizationBasis: string
   /** Operational fleet fields: per-vehicle service limit, temporary availability, removal and optimistic version. */
   maxDistance: string; available: boolean; removed: boolean; lockVersion?: number
 }
@@ -164,7 +166,7 @@ export function DeliveryVehicles({ vehicles, onChange, uploadImage, resolveImage
             <div className="flex flex-wrap gap-2"><Button variant="secondary" disabled={disabled} aria-label={`Edit ${vehicle.name || `vehicle ${index + 1}`}`} onClick={() => edit(vehicle.key)}><Pencil size={16} aria-hidden="true" />Edit</Button><Button variant="quiet" disabled={disabled} aria-label={`Remove vehicle ${index + 1}`} onClick={() => remove(vehicle)}><Trash2 size={16} aria-hidden="true" />Remove</Button></div>
           </div>
           <dl className="grid grid-cols-2 gap-x-5 gap-y-4 xl:grid-cols-4">
-            {([['Capacity per vehicle', vehicle.weight ? `${Number(vehicle.weight).toLocaleString('en-PH')} kg` : 'Not set'], ['Vehicles / max. distance', `${vehicle.count || '—'} / ${vehicle.maxDistance ? `${vehicle.maxDistance} km` : 'Not set'}`], ['Base fee per trip', amount(vehicle.baseFee)], ['Per-kilometer rate', amount(vehicle.perKm, '/km')]]).map(([label, value]) => <div key={label} className="min-w-0"><dt className="text-sm text-text-secondary">{label}</dt><dd className="mt-1 break-words font-semibold">{value}</dd></div>)}
+            {([['Capacity per vehicle', vehicle.weight ? `${Number(vehicle.weight).toLocaleString('en-PH')} kg` : 'Not set'], ['Vehicles / max. distance', `${vehicle.count || '—'} / ${vehicle.maxDistance ? `${vehicle.maxDistance} km` : 'Not set'}`], ['Base fee per trip', amount(vehicle.baseFee)], ['Per-kilometer rate', amount(vehicle.perKm, '/km')], ...(vehicle.type === 'CONCRETE_MIXER' ? [['Mobilization fee', vehicle.mobilizationFee.trim() && Number(vehicle.mobilizationFee) > 0 ? amount(vehicle.mobilizationFee, vehicle.mobilizationBasis === 'PER_TRIP' ? ' per trip' : ' per truck') : 'None']] : [])]).map(([label, value]) => <div key={label} className="min-w-0"><dt className="text-sm text-text-secondary">{label}</dt><dd className="mt-1 break-words font-semibold">{value}</dd></div>)}
           </dl>
           {notices[vehicle.key]}
           {Object.keys(errors[vehicle.key] ?? {}).length > 0 && <p className="text-sm font-semibold text-status-error">Review this vehicle’s highlighted fields before saving.</p>}
@@ -196,7 +198,7 @@ export function DeliveryVehicles({ vehicles, onChange, uploadImage, resolveImage
         {detail && <div className="mt-8 grid min-w-0 grid-cols-1 gap-6">
           <div className="border-t border-border-default pt-5"><h4 className="font-semibold">Capacity and access</h4><div className="mt-4 grid min-w-0 grid-cols-1 gap-5 md:grid-cols-2">{input('Number of Vehicles', 'count', 'number')}{input('Maximum Weight Capacity (kg)', 'weight', 'number')}{mixer ? input('Mixer Capacity (m³)', 'mixer', 'number', 'Ready-mixed concrete volume per vehicle per trip.') : <>{input('Cargo Length (m)', 'length', 'number', 'In meters, e.g. 4.5 (not centimeters).')}{input('Cargo Width (m)', 'width', 'number', 'In meters, e.g. 2.0.')}{input('Cargo Height (m)', 'height', 'number', 'In meters, e.g. 1.5.')}</>}
           <Select id={`${prefix}-heavy`} label="Heavy Vehicle Classification" error={issues.heavy} value={vehicle.heavy} options={[{ value: 'HEAVY', label: 'Heavy vehicle', description: 'Subject to applicable heavy-vehicle or site-access restrictions.' }, { value: 'NOT_HEAVY', label: 'Not a heavy vehicle', description: 'Normal road and site-access checks still apply.' }]} onChange={heavy => update(vehicle.key, { heavy })} /></div>{mixer && <p className="mt-3 text-sm text-text-secondary">Cargo dimensions: Not applicable. Mixer capacity is used for ready-mixed concrete delivery.</p>}</div>
-          <section aria-label={`Vehicle ${index + 1} delivery rates`} className="min-w-0 rounded-surface border border-border-default bg-surface-canvas p-4 sm:p-6"><h4 className="text-lg font-semibold">Delivery rates</h4><p className="mt-2 text-sm leading-6 text-text-secondary">Enter amounts in Philippine pesos. The final delivery charge requires Vendor confirmation of vehicles, trips and the delivery arrangement.</p><div className="mt-4 grid min-w-0 grid-cols-1 gap-5 md:grid-cols-2">{input('Base Fee (₱)', 'baseFee', 'text', 'Fixed delivery amount per applicable trip, e.g. 500.00.')}{input('Per-Kilometer Rate (₱/km)', 'perKm', 'text', 'Distance-based amount, e.g. 25.50.')}{operational && input('Maximum Delivery Distance (km)', 'maxDistance', 'number', 'Farthest drop-off this vehicle serves, 1 to 1,000 km, within your delivery area.')}</div><DeliveryRateCalculator baseFee={vehicle.baseFee} perKm={vehicle.perKm} /></section>
+          <section aria-label={`Vehicle ${index + 1} delivery rates`} className="min-w-0 rounded-surface border border-border-default bg-surface-canvas p-4 sm:p-6"><h4 className="text-lg font-semibold">Delivery rates</h4><p className="mt-2 text-sm leading-6 text-text-secondary">Enter amounts in Philippine pesos. The final delivery charge requires Vendor confirmation of vehicles, trips and the delivery arrangement.</p><div className="mt-4 grid min-w-0 grid-cols-1 gap-5 md:grid-cols-2">{input('Base Fee (₱)', 'baseFee', 'text', 'Fixed delivery amount per applicable trip, e.g. 500.00.')}{input('Per-Kilometer Rate (₱/km)', 'perKm', 'text', 'Distance-based amount, e.g. 25.50.')}{operational && input('Maximum Delivery Distance (km)', 'maxDistance', 'number', 'Farthest drop-off this vehicle serves, 1 to 1,000 km, within your delivery area.')}</div>{mixer && <MobilizationFields prefix={prefix} vehicle={vehicle} issues={issues} onChange={change => update(vehicle.key, change)} />}<DeliveryRateCalculator baseFee={vehicle.baseFee} perKm={vehicle.perKm} mobilizationFee={mixer ? vehicle.mobilizationFee : ''} mobilizationBasis={mixer ? vehicle.mobilizationBasis : ''} /></section>
         </div>}
       </fieldset>
     })}</div>
@@ -205,12 +207,32 @@ export function DeliveryVehicles({ vehicles, onChange, uploadImage, resolveImage
 }
 
 export function emptyDeliveryVehicle(): DeliveryVehicleDraft {
-  return { key: crypto.randomUUID(), category: '', type: '', customType: '', name: '', brand: '', count: '', weight: '', mixer: '', length: '', width: '', height: '', heavy: '', baseFee: '', perKm: '', imageId: '', active: true, maxDistance: '', available: true, removed: false }
+  return { key: crypto.randomUUID(), category: '', type: '', customType: '', name: '', brand: '', count: '', weight: '', mixer: '', length: '', width: '', height: '', heavy: '', baseFee: '', perKm: '', mobilizationFee: '', mobilizationBasis: '', imageId: '', active: true, maxDistance: '', available: true, removed: false }
 }
 
-function DeliveryRateCalculator({ baseFee, perKm }: { baseFee: string; perKm: string }) {
+export const mobilizationBases: Option[] = [
+  { value: 'PER_TRUCK', label: 'Per truck', description: 'Charged once for each mixer truck dispatched to the order, however many trips it makes.' },
+  { value: 'PER_TRIP', label: 'Per trip', description: 'Charged for every mixer trip, on top of the base fee and distance rate.' },
+]
+
+/** Mixer mobilization: each Vendor sets its own fee and chooses whether it is charged per truck or per trip. */
+function MobilizationFields({ prefix, vehicle, issues, onChange }: { prefix: string; vehicle: DeliveryVehicleDraft; issues: Record<string, string>; onChange: (change: Partial<DeliveryVehicleDraft>) => void }) {
+  return <div className="mt-6 grid min-w-0 grid-cols-1 gap-5 border-t border-border-default pt-5 md:grid-cols-2">
+    <div className="grid gap-2 md:col-span-2">
+      <h5 className="font-semibold">Mixer mobilization</h5>
+      <p className="text-sm leading-6 text-text-secondary"><strong className="font-semibold text-text-primary">What it is:</strong> a separate charge for getting a mixer truck ready and out to the site, such as dispatching the truck and driver, preparing the drum and positioning it for the pour. It is on top of the base fee and distance rate, and does not depend on how far the site is.</p>
+      <p className="text-sm leading-6 text-text-secondary"><strong className="font-semibold text-text-primary">Purpose:</strong> it recovers the fixed cost of each truck dispatch so small or short-haul orders do not run at a loss. The Buyer sees it as part of the delivery fee before paying.</p>
+      <p className="text-sm leading-6 text-text-secondary">Optional. Leave blank or 0 to charge none. Choose whether it is charged once per truck dispatched or on every trip.</p>
+    </div>
+    <Field label="Mobilization Fee (₱)" name={`${prefix}-mobilizationFee`} value={vehicle.mobilizationFee} error={issues.mobilizationFee ?? ''} hint="For example 1500.00." onChange={event => onChange({ mobilizationFee: event.target.value })} />
+    <Select id={`${prefix}-mobilizationBasis`} label="Charge mobilization" error={issues.mobilizationBasis} value={vehicle.mobilizationBasis} options={mobilizationBases} onChange={mobilizationBasis => onChange({ mobilizationBasis })} />
+  </div>
+}
+
+function DeliveryRateCalculator({ baseFee, perKm, mobilizationFee = '', mobilizationBasis = '' }: { baseFee: string; perKm: string; mobilizationFee?: string; mobilizationBasis?: string }) {
   const [distance, setDistance] = useState('')
   const [trips, setTrips] = useState('1')
+  const [trucks, setTrucks] = useState('1')
   const prefix = useId()
   const centavos = (value: string) => {
     if (!/^\d+(?:\.\d{1,2})?$/.test(value.trim())) return null
@@ -223,15 +245,20 @@ function DeliveryRateCalculator({ baseFee, perKm }: { baseFee: string; perKm: st
   const meters = Math.round(Number(distance) * 1000)
   const validTrips = /^\d+$/.test(trips) && Number(trips) > 0 && Number(trips) <= 1000000
   const perTrip = base !== null && rate !== null && validDistance ? base + Math.floor((rate * meters + 500) / 1000) : null
-  const total = perTrip !== null && validTrips ? perTrip * Number(trips) : null
+  const mobilization = mobilizationFee.trim() ? centavos(mobilizationFee) : 0
+  const validTrucks = /^\d+$/.test(trucks) && Number(trucks) > 0 && Number(trucks) <= Number(trips)
+  const mobilizationUnits = mobilizationBasis === 'PER_TRIP' ? Number(trips) : mobilizationBasis === 'PER_TRUCK' ? Number(trucks) : 0
+  const mobilizationTotal = mobilization !== null && mobilization > 0 && mobilizationBasis ? mobilization * mobilizationUnits : 0
+  const total = perTrip !== null && validTrips && (mobilizationBasis !== 'PER_TRUCK' || validTrucks) && mobilization !== null ? perTrip * Number(trips) + mobilizationTotal : null
   const money = (value: number) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(value / 100)
   return <div className="mt-6 border-t border-border-default pt-5" onChange={event => event.stopPropagation()}>
     <h4 className="font-semibold">Delivery rate calculator</h4>
-    <p className="mt-2 text-sm text-text-secondary">Try a distance and trip count to compare your rates. Estimate = (base fee + distance × per-kilometer rate) × total vehicle trips. This estimate does not set the final charge.</p>
+    <p className="mt-2 text-sm text-text-secondary">Try a distance and trip count to compare your rates. Estimate = (base fee + distance × per-kilometer rate) × total vehicle trips{mobilizationBasis ? `, plus the mobilization fee ${mobilizationBasis === 'PER_TRIP' ? 'per trip' : 'per truck dispatched'}` : ''}. This estimate does not set the final charge.</p>
     <div className="mt-4 grid gap-5 md:grid-cols-2">
       <Field name={`${prefix}-distance`} label="Sample delivery distance (km)" type="number" min="0" max="50" step="0.001" value={distance} onChange={event => setDistance(event.target.value)} hint="Distance per trip, from 0 to 50 km." error={distance && !validDistance ? 'Enter 0–50 km with up to three decimal places.' : ''} />
       <Field name={`${prefix}-trips`} label="Total vehicle trips" type="number" min="1" max="1000000" step="1" value={trips} onChange={event => setTrips(event.target.value)} hint="Two vehicles making two trips each means four vehicle trips." error={!validTrips ? 'Enter a positive whole number up to 1,000,000.' : ''} />
+      {mobilizationBasis === 'PER_TRUCK' && <Field name={`${prefix}-trucks`} label="Trucks dispatched" type="number" min="1" step="1" value={trucks} onChange={event => setTrucks(event.target.value)} hint="Mobilization is charged once per truck." error={!validTrucks ? 'Enter a whole number from 1 up to the number of trips.' : ''} />}
     </div>
-    <p className="mt-4 font-semibold" role="status">{total !== null && Number.isSafeInteger(total) ? `Estimated delivery charge: ${money(total)} (${money(perTrip!)} per vehicle trip)` : 'Enter valid rates, distance and trips to calculate an estimate.'}</p>
+    <p className="mt-4 font-semibold" role="status">{total !== null && Number.isSafeInteger(total) ? `Estimated delivery charge: ${money(total)} (${money(perTrip!)} per vehicle trip${mobilizationTotal > 0 ? ` + ${money(mobilizationTotal)} mobilization` : ''})` : 'Enter valid rates, distance and trips to calculate an estimate.'}</p>
   </div>
 }

@@ -7,9 +7,9 @@ import 'package:materyalph_api_client/src/model/geo_child.dart';
 import 'package:materyalph_api_client/src/model/geo_kpis.dart';
 import 'package:materyalph_api_client/src/model/geo_scope.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/admin_dashboard_marketplace_disclosure.dart';
 import 'package:materyalph_api_client/src/model/geo_dataset.dart';
 import 'package:materyalph_api_client/src/model/geo_filter_applicability.dart';
-import 'package:materyalph_api_client/src/model/geo_dashboard_disclosure.dart';
 import 'package:materyalph_api_client/src/model/geo_dashboard_period.dart';
 import 'package:materyalph_api_client/src/model/geo_dashboard_unresolved.dart';
 import 'package:materyalph_api_client/src/model/geo_activity_point.dart';
@@ -53,7 +53,7 @@ abstract class GeoDashboard implements Built<GeoDashboard, GeoDashboardBuilder> 
   BuiltList<GeoFilterApplicability> get filterApplicability;
 
   @BuiltValueField(wireName: r'disclosure')
-  GeoDashboardDisclosure get disclosure;
+  AdminDashboardMarketplaceDisclosure get disclosure;
 
   @BuiltValueField(wireName: r'kpis')
   GeoKpis get kpis;
@@ -124,7 +124,7 @@ class _$GeoDashboardSerializer implements PrimitiveSerializer<GeoDashboard> {
     yield r'disclosure';
     yield serializers.serialize(
       object.disclosure,
-      specifiedType: const FullType(GeoDashboardDisclosure),
+      specifiedType: const FullType(AdminDashboardMarketplaceDisclosure),
     );
     yield r'kpis';
     yield serializers.serialize(
@@ -217,8 +217,8 @@ class _$GeoDashboardSerializer implements PrimitiveSerializer<GeoDashboard> {
         case r'disclosure':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(GeoDashboardDisclosure),
-          ) as GeoDashboardDisclosure;
+            specifiedType: const FullType(AdminDashboardMarketplaceDisclosure),
+          ) as AdminDashboardMarketplaceDisclosure;
           result.disclosure.replace(valueDes);
           break;
         case r'kpis':

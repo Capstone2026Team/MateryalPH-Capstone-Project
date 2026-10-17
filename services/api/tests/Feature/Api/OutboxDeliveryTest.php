@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
+use App\Domain\Identity\EmailOtpService;
+use App\Domain\Identity\OtpCodeGenerator;
 use App\Domain\Operations\OutboxProcessor;
 use App\Domain\Operations\OutboxPublisher;
 use App\Jobs\ProcessOutboxEvent;
 use App\Mail\AdminInvitationMail;
 use App\Mail\EmailOtpMail;
+use App\Mail\VendorOnboardingNoticeMail;
 use App\Models\AdminInvitation;
 use Database\Seeders\SystemFoundationSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,20 +26,28 @@ final class OutboxDeliveryTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_onboarding_mail_renders_and_escapes_its_body_through_the_real_mailer(): void
+    {
+        $body = 'Review your setup <script>alert("sample")</script>';
+        $rendered = (new VendorOnboardingNoticeMail($body))->render();
+        self::assertStringContainsString('Review your setup &lt;script&gt;', $rendered);
+        self::assertStringNotContainsString('<script>', $rendered);
+        self::assertStringContainsString('MateryalPH Vendor onboarding update', $rendered);
+    }
+
     public function test_email_otp_event_is_delivered_once_when_a_job_is_processed_more_than_once(): void
     {
         Mail::fake();
-        $eventId = $this->publisher()->publish(
-            'AUTH_EMAIL_OTP_REQUESTED',
-            'EMAIL_OTP',
-            (string) Str::uuid7(),
-            [
-                'recipient' => 'buyer@example.test',
-                'code' => '987654',
-                'purpose' => 'EMAIL_VERIFICATION',
-                'ttl_minutes' => 10,
-            ],
-        );
+        Queue::fake();
+        $this->app->instance(OtpCodeGenerator::class, new class implements OtpCodeGenerator
+        {
+            public function sixDigits(): string
+            {
+                return '987654';
+            }
+        });
+        $otp = app(EmailOtpService::class)->issue('buyer@example.test', 'EMAIL_VERIFICATION', null);
+        $eventId = (string) DB::table('outbox_events')->where('aggregate_id', $otp->id)->value('id');
 
         $processor = $this->app->make(OutboxProcessor::class);
         $processor->process($eventId);

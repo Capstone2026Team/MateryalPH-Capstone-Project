@@ -32,7 +32,7 @@ void main() {
       // TODO
     });
 
-    // GeoDashboardDisclosure disclosure
+    // AdminDashboardMarketplaceDisclosure disclosure
     test('to test the property `disclosure`', () async {
       // TODO
     });

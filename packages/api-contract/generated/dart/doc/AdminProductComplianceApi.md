@@ -269,7 +269,7 @@ Name | Type | Description  | Notes
 
 
 
-Imports a CSV snapshot of the DTI-BPS PS licensee or ICC certificate register as an immutable DRAFT. It is used for matching only after activation.
+Imports an XLSX or CSV snapshot of the DTI-BPS List of PS Licensees or List of ICC Certificate Holders, in the official layout (title rows above the header are skipped; the ICC sticker serial from/to columns become serial ranges), as an immutable DRAFT. It is used for matching only after activation. An ICC file without sticker serial ranges is rejected with REGISTER_SERIALS_NOT_FOUND.
 
 ### Example
 ```dart
@@ -367,7 +367,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listProductComplianceQueue**
-> ProductComplianceQueueEnvelope listProductComplianceQueue(status, path, referenceResult, sort, page)
+> ProductComplianceQueueEnvelope listProductComplianceQueue(status, path, referenceResult, sort, page, from, to)
 
 
 
@@ -385,9 +385,11 @@ final CompliancePath path = ; // CompliancePath |
 final ComplianceReferenceResult referenceResult = ; // ComplianceReferenceResult |
 final String sort = sort_example; // String |
 final int page = 56; // int |
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Immutable submission submitted_at.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Immutable submission submitted_at.
 
 try {
-    final response = api.listProductComplianceQueue(status, path, referenceResult, sort, page);
+    final response = api.listProductComplianceQueue(status, path, referenceResult, sort, page, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling AdminProductComplianceApi->listProductComplianceQueue: $e\n');
@@ -403,6 +405,8 @@ Name | Type | Description  | Notes
  **referenceResult** | [**ComplianceReferenceResult**](.md)|  | [optional]
  **sort** | **String**|  | [optional] [default to 'oldest']
  **page** | **int**|  | [optional]
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Immutable submission submitted_at. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Immutable submission submitted_at. | [optional]
 
 ### Return type
 

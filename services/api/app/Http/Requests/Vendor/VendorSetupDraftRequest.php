@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Vendor;
 
+use App\Domain\Vendors\DeliveryRecommendationService;
 use App\Domain\Vendors\StoreOperatingSchedule;
 use App\Domain\Vendors\VehicleConfiguration;
 use Illuminate\Foundation\Http\FormRequest;
@@ -26,9 +27,12 @@ final class VendorSetupDraftRequest extends FormRequest
             'public_store_name' => ['sometimes', 'string', 'max:180'],
             'form_state' => ['sometimes', 'string', 'json', 'max:65536'],
             'vacation_mode' => ['sometimes', 'boolean'],
+            'vacation_starts_on' => [Rule::requiredIf(fn (): bool => $this->boolean('vacation_mode')), 'nullable', 'date_format:Y-m-d'],
+            'vacation_ends_on' => [Rule::requiredIf(fn (): bool => $this->boolean('vacation_mode')), 'nullable', 'date_format:Y-m-d', 'after_or_equal:vacation_starts_on'],
             'description' => ['sometimes', 'nullable', 'string', 'max:3000'],
             'bulk_capability' => ['sometimes', 'boolean'],
             'fulfillment_method' => ['sometimes', Rule::in(['SELF_PICKUP', 'VENDOR_DELIVERY', 'BOTH'])],
+            'vendor_delivery_enabled' => ['sometimes', 'boolean'],
             'public_email' => ['sometimes', 'nullable', 'email:rfc', 'max:254'],
             'public_phone' => ['sometimes', 'nullable', 'string', 'max:24'],
             'operating_schedule' => ['sometimes', 'array', 'size:7'],
@@ -58,6 +62,8 @@ final class VendorSetupDraftRequest extends FormRequest
             'vehicles.*.base_fee_centavos' => ['sometimes', 'integer', 'min:0', 'max:1000000000'],
             'vehicles.*.per_km_centavos' => ['sometimes', 'integer', 'min:0', 'max:1000000000'],
             'vehicles.*.maximum_distance_km' => ['sometimes', 'integer', 'between:1,1000'],
+            'vehicles.*.mobilization_fee_centavos' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:1000000000'],
+            'vehicles.*.mobilization_basis' => ['sometimes', 'nullable', Rule::in(DeliveryRecommendationService::MOBILIZATION_BASES)],
         ];
     }
 

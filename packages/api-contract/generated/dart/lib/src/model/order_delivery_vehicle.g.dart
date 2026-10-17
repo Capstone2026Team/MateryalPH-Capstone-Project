@@ -6,6 +6,68 @@ part of 'order_delivery_vehicle.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
+const OrderDeliveryVehicleMobilizationBasisEnum
+    _$orderDeliveryVehicleMobilizationBasisEnum_PER_TRUCK =
+    const OrderDeliveryVehicleMobilizationBasisEnum._('PER_TRUCK');
+const OrderDeliveryVehicleMobilizationBasisEnum
+    _$orderDeliveryVehicleMobilizationBasisEnum_PER_TRIP =
+    const OrderDeliveryVehicleMobilizationBasisEnum._('PER_TRIP');
+
+OrderDeliveryVehicleMobilizationBasisEnum
+    _$orderDeliveryVehicleMobilizationBasisEnumValueOf(String name) {
+  switch (name) {
+    case 'PER_TRUCK':
+      return _$orderDeliveryVehicleMobilizationBasisEnum_PER_TRUCK;
+    case 'PER_TRIP':
+      return _$orderDeliveryVehicleMobilizationBasisEnum_PER_TRIP;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<OrderDeliveryVehicleMobilizationBasisEnum>
+    _$orderDeliveryVehicleMobilizationBasisEnumValues = BuiltSet<
+        OrderDeliveryVehicleMobilizationBasisEnum>(const <OrderDeliveryVehicleMobilizationBasisEnum>[
+  _$orderDeliveryVehicleMobilizationBasisEnum_PER_TRUCK,
+  _$orderDeliveryVehicleMobilizationBasisEnum_PER_TRIP,
+]);
+
+Serializer<OrderDeliveryVehicleMobilizationBasisEnum>
+    _$orderDeliveryVehicleMobilizationBasisEnumSerializer =
+    _$OrderDeliveryVehicleMobilizationBasisEnumSerializer();
+
+class _$OrderDeliveryVehicleMobilizationBasisEnumSerializer
+    implements PrimitiveSerializer<OrderDeliveryVehicleMobilizationBasisEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'PER_TRUCK': 'PER_TRUCK',
+    'PER_TRIP': 'PER_TRIP',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'PER_TRUCK': 'PER_TRUCK',
+    'PER_TRIP': 'PER_TRIP',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    OrderDeliveryVehicleMobilizationBasisEnum
+  ];
+  @override
+  final String wireName = 'OrderDeliveryVehicleMobilizationBasisEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          OrderDeliveryVehicleMobilizationBasisEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  OrderDeliveryVehicleMobilizationBasisEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      OrderDeliveryVehicleMobilizationBasisEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$OrderDeliveryVehicle extends OrderDeliveryVehicle {
   @override
   final String? name;
@@ -33,6 +95,12 @@ class _$OrderDeliveryVehicle extends OrderDeliveryVehicle {
   final int perTripCentavos;
   @override
   final int tripTotalCentavos;
+  @override
+  final OrderDeliveryVehicleMobilizationBasisEnum? mobilizationBasis;
+  @override
+  final int? mobilizationFeeCentavos;
+  @override
+  final int? mobilizationTotalCentavos;
 
   factory _$OrderDeliveryVehicle(
           [void Function(OrderDeliveryVehicleBuilder)? updates]) =>
@@ -51,7 +119,10 @@ class _$OrderDeliveryVehicle extends OrderDeliveryVehicle {
       required this.numberOfVehicles,
       required this.totalVehicleTrips,
       required this.perTripCentavos,
-      required this.tripTotalCentavos})
+      required this.tripTotalCentavos,
+      this.mobilizationBasis,
+      this.mobilizationFeeCentavos,
+      this.mobilizationTotalCentavos})
       : super._();
   @override
   OrderDeliveryVehicle rebuild(
@@ -78,7 +149,10 @@ class _$OrderDeliveryVehicle extends OrderDeliveryVehicle {
         numberOfVehicles == other.numberOfVehicles &&
         totalVehicleTrips == other.totalVehicleTrips &&
         perTripCentavos == other.perTripCentavos &&
-        tripTotalCentavos == other.tripTotalCentavos;
+        tripTotalCentavos == other.tripTotalCentavos &&
+        mobilizationBasis == other.mobilizationBasis &&
+        mobilizationFeeCentavos == other.mobilizationFeeCentavos &&
+        mobilizationTotalCentavos == other.mobilizationTotalCentavos;
   }
 
   @override
@@ -97,6 +171,9 @@ class _$OrderDeliveryVehicle extends OrderDeliveryVehicle {
     _$hash = $jc(_$hash, totalVehicleTrips.hashCode);
     _$hash = $jc(_$hash, perTripCentavos.hashCode);
     _$hash = $jc(_$hash, tripTotalCentavos.hashCode);
+    _$hash = $jc(_$hash, mobilizationBasis.hashCode);
+    _$hash = $jc(_$hash, mobilizationFeeCentavos.hashCode);
+    _$hash = $jc(_$hash, mobilizationTotalCentavos.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -116,7 +193,10 @@ class _$OrderDeliveryVehicle extends OrderDeliveryVehicle {
           ..add('numberOfVehicles', numberOfVehicles)
           ..add('totalVehicleTrips', totalVehicleTrips)
           ..add('perTripCentavos', perTripCentavos)
-          ..add('tripTotalCentavos', tripTotalCentavos))
+          ..add('tripTotalCentavos', tripTotalCentavos)
+          ..add('mobilizationBasis', mobilizationBasis)
+          ..add('mobilizationFeeCentavos', mobilizationFeeCentavos)
+          ..add('mobilizationTotalCentavos', mobilizationTotalCentavos))
         .toString();
   }
 }
@@ -185,6 +265,23 @@ class OrderDeliveryVehicleBuilder
   set tripTotalCentavos(int? tripTotalCentavos) =>
       _$this._tripTotalCentavos = tripTotalCentavos;
 
+  OrderDeliveryVehicleMobilizationBasisEnum? _mobilizationBasis;
+  OrderDeliveryVehicleMobilizationBasisEnum? get mobilizationBasis =>
+      _$this._mobilizationBasis;
+  set mobilizationBasis(
+          OrderDeliveryVehicleMobilizationBasisEnum? mobilizationBasis) =>
+      _$this._mobilizationBasis = mobilizationBasis;
+
+  int? _mobilizationFeeCentavos;
+  int? get mobilizationFeeCentavos => _$this._mobilizationFeeCentavos;
+  set mobilizationFeeCentavos(int? mobilizationFeeCentavos) =>
+      _$this._mobilizationFeeCentavos = mobilizationFeeCentavos;
+
+  int? _mobilizationTotalCentavos;
+  int? get mobilizationTotalCentavos => _$this._mobilizationTotalCentavos;
+  set mobilizationTotalCentavos(int? mobilizationTotalCentavos) =>
+      _$this._mobilizationTotalCentavos = mobilizationTotalCentavos;
+
   OrderDeliveryVehicleBuilder() {
     OrderDeliveryVehicle._defaults(this);
   }
@@ -205,6 +302,9 @@ class OrderDeliveryVehicleBuilder
       _totalVehicleTrips = $v.totalVehicleTrips;
       _perTripCentavos = $v.perTripCentavos;
       _tripTotalCentavos = $v.tripTotalCentavos;
+      _mobilizationBasis = $v.mobilizationBasis;
+      _mobilizationFeeCentavos = $v.mobilizationFeeCentavos;
+      _mobilizationTotalCentavos = $v.mobilizationTotalCentavos;
       _$v = null;
     }
     return this;
@@ -243,6 +343,9 @@ class OrderDeliveryVehicleBuilder
               perTripCentavos, r'OrderDeliveryVehicle', 'perTripCentavos'),
           tripTotalCentavos: BuiltValueNullFieldError.checkNotNull(
               tripTotalCentavos, r'OrderDeliveryVehicle', 'tripTotalCentavos'),
+          mobilizationBasis: mobilizationBasis,
+          mobilizationFeeCentavos: mobilizationFeeCentavos,
+          mobilizationTotalCentavos: mobilizationTotalCentavos,
         );
     replace(_$result);
     return _$result;

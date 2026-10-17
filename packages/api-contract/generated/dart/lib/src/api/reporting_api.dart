@@ -9,6 +9,7 @@ import 'package:dio/dio.dart';
 
 import 'dart:typed_data';
 import 'package:materyalph_api_client/src/api_util.dart';
+import 'package:materyalph_api_client/src/model/date.dart';
 import 'package:materyalph_api_client/src/model/document_export_input.dart';
 import 'package:materyalph_api_client/src/model/list_document_exports200_response.dart';
 import 'package:materyalph_api_client/src/model/list_tax_packages200_response.dart';
@@ -189,11 +190,16 @@ class ReportingApi {
   }
 
   /// list Document Exports
-  ///
+  /// Lists the actor&#39;s currently authorized exports, optionally scoped to the document type, source record and format. READY artifacts past their download deadline are returned as EXPIRED.
   ///
   /// Parameters:
   /// * [audience] - Authenticated surface. The server rejects mismatched account types.
   /// * [page]
+  /// * [type]
+  /// * [resourceId]
+  /// * [format]
+  /// * [from] - Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Export requested_at (created_at); each download rechecks current permissions.
+  /// * [to] - Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Export requested_at (created_at); each download rechecks current permissions.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -206,6 +212,11 @@ class ReportingApi {
   Future<Response<ListDocumentExports200Response>> listDocumentExports({
     required String audience,
     int? page,
+    String? type,
+    String? resourceId,
+    String? format,
+    Date? from,
+    Date? to,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -234,6 +245,11 @@ class ReportingApi {
 
     final _queryParameters = <String, dynamic>{
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+      if (type != null) r'type': encodeQueryParameter(_serializers, type, const FullType(String)),
+      if (resourceId != null) r'resource_id': encodeQueryParameter(_serializers, resourceId, const FullType(String)),
+      if (format != null) r'format': encodeQueryParameter(_serializers, format, const FullType(String)),
+      if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
     };
 
     final _response = await _dio.request<Object>(
@@ -281,6 +297,8 @@ class ReportingApi {
   ///
   /// Parameters:
   /// * [page]
+  /// * [from] - Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Report package created_at; statutory reporting periods remain immutable.
+  /// * [to] - Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Report package created_at; statutory reporting periods remain immutable.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -292,6 +310,8 @@ class ReportingApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<ListTaxPackages200Response>> listTaxPackages({
     int? page,
+    Date? from,
+    Date? to,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -320,6 +340,8 @@ class ReportingApi {
 
     final _queryParameters = <String, dynamic>{
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+      if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
     };
 
     final _response = await _dio.request<Object>(

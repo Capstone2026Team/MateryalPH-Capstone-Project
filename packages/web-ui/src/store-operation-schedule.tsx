@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 
 export type StoreOperatingDay = {
   dayOfWeek: number
@@ -29,11 +29,32 @@ export function formatStoreTime(value: string): string {
   return `${hour % 12 || 12}:${String(minute).padStart(2, '0')} ${hour < 12 ? 'AM' : 'PM'}`
 }
 
-export function StoreHours({ days }: { days: StoreOperatingDay[] }) {
-  return <section aria-label="Store Hours"><h3 className="text-lg font-semibold">Store Hours</h3><dl className="mt-3 grid gap-2 text-sm">{days.map(day => <div className="flex flex-wrap justify-between gap-x-4 border-b border-border-default py-2" key={day.dayOfWeek}><dt className="font-semibold">{STORE_WEEKDAYS[day.dayOfWeek - 1]}</dt><dd>{day.status === 'CLOSED' ? 'Closed' : day.status === 'OPEN' && day.opensAt && day.closesAt ? `${formatStoreTime(day.opensAt)} – ${formatStoreTime(day.closesAt)}` : 'Not configured'}</dd></div>)}</dl></section>
+/** Read-only weekly hours. Pass `action` (for example an Edit button) to place it beside the title. */
+export function StoreHours({ days, action }: { days: StoreOperatingDay[]; action?: ReactNode }) {
+  return <section aria-label="Store Hours" className="space-y-5">
+    <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="min-w-0">
+        <h3 className="text-xl font-semibold text-text-strong">Store Hours</h3>
+        <p className="mt-1 text-sm text-text-secondary">The weekly hours Buyers see on your Store Profile.</p>
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="rounded-control bg-surface-canvas px-3 py-2 text-xs font-semibold text-text-secondary">Philippine time · UTC+8</span>
+        {action}
+      </div>
+    </div>
+    <dl className="divide-y divide-border-default overflow-hidden rounded-control border border-border-default">
+      {days.map(day => {
+        const open = day.status === 'OPEN' && day.opensAt && day.closesAt
+        return <div className="flex items-center justify-between gap-4 px-4 py-3.5 text-sm sm:px-5" key={day.dayOfWeek}>
+          <dt className="font-semibold text-text-strong">{STORE_WEEKDAYS[day.dayOfWeek - 1]}</dt>
+          <dd className={`text-right tabular-nums ${open ? 'text-text-strong' : 'text-text-secondary'}`}>{day.status === 'CLOSED' ? 'Closed' : open ? `${formatStoreTime(day.opensAt)} – ${formatStoreTime(day.closesAt)}` : 'Not configured'}</dd>
+        </div>
+      })}
+    </dl>
+  </section>
 }
 
-export function StoreOperationSchedule({ days, onChange, errors = {} }: { days: StoreOperatingDay[]; onChange: (days: StoreOperatingDay[]) => void; errors?: Record<number, string> }) {
+export function StoreOperationSchedule({ days, onChange, errors = {}, showHeading = true }: { days: StoreOperatingDay[]; onChange: (days: StoreOperatingDay[]) => void; errors?: Record<number, string>; showHeading?: boolean }) {
   const [source, setSource] = useState(1)
   const [selected, setSelected] = useState<number[]>([])
   const [notice, setNotice] = useState('')
@@ -46,14 +67,14 @@ export function StoreOperationSchedule({ days, onChange, errors = {} }: { days: 
   const configured = days.filter(day => day.status && !storeScheduleErrors([day])[day.dayOfWeek]).length
   const control = 'min-h-11 w-full min-w-0 rounded-control border border-border-default bg-surface-primary px-3 text-sm text-text-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:bg-surface-canvas disabled:text-text-secondary'
 
-  return <section aria-labelledby="store-operation-title" className="space-y-6">
-    <div className="flex flex-wrap items-start justify-between gap-3">
+  return <section {...(showHeading ? { 'aria-labelledby': 'store-operation-title' } : { 'aria-label': 'Weekly operating schedule' })} className="space-y-6">
+    {showHeading && <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="max-w-xl">
         <h2 id="store-operation-title" className="text-xl font-semibold text-text-strong">Weekly operating schedule</h2>
         <p className="mt-2 text-sm leading-6 text-text-secondary">Let Buyers know when your store normally accepts customers, inquiries and pickups.</p>
       </div>
       <span className="rounded-control bg-surface-canvas px-3 py-2 text-xs font-semibold text-text-secondary">Philippine time · UTC+8</span>
-    </div>
+    </div>}
 
     <div className="overflow-hidden rounded-control border border-border-default">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-default bg-surface-canvas px-4 py-3">

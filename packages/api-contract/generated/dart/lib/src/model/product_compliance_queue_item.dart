@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/compliance_path.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -17,6 +18,7 @@ part 'product_compliance_queue_item.g.dart';
 /// * [path]
 /// * [status]
 /// * [markingType]
+/// * [reviewMode]
 /// * [submittedAt]
 /// * [listingId]
 /// * [displayName]
@@ -43,6 +45,10 @@ abstract class ProductComplianceQueueItem implements Built<ProductComplianceQueu
 
   @BuiltValueField(wireName: r'marking_type')
   String? get markingType;
+
+  @BuiltValueField(wireName: r'review_mode')
+  ProductComplianceQueueItemReviewModeEnum? get reviewMode;
+  // enum reviewModeEnum {  AUTOMATIC,  MANUAL_REVIEW,  };
 
   @BuiltValueField(wireName: r'submitted_at')
   String? get submittedAt;
@@ -119,6 +125,13 @@ class _$ProductComplianceQueueItemSerializer implements PrimitiveSerializer<Prod
       yield serializers.serialize(
         object.markingType,
         specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.reviewMode != null) {
+      yield r'review_mode';
+      yield serializers.serialize(
+        object.reviewMode,
+        specifiedType: const FullType(ProductComplianceQueueItemReviewModeEnum),
       );
     }
     if (object.submittedAt != null) {
@@ -237,6 +250,14 @@ class _$ProductComplianceQueueItemSerializer implements PrimitiveSerializer<Prod
           if (valueDes == null) continue;
           result.markingType = valueDes;
           break;
+        case r'review_mode':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ProductComplianceQueueItemReviewModeEnum),
+          ) as ProductComplianceQueueItemReviewModeEnum?;
+          if (valueDes == null) continue;
+          result.reviewMode = valueDes;
+          break;
         case r'submitted_at':
           final valueDes = serializers.deserialize(
             value,
@@ -335,4 +356,19 @@ class _$ProductComplianceQueueItemSerializer implements PrimitiveSerializer<Prod
   }
 }
 
+
+class ProductComplianceQueueItemReviewModeEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'AUTOMATIC')
+  static const ProductComplianceQueueItemReviewModeEnum AUTOMATIC = _$productComplianceQueueItemReviewModeEnum_AUTOMATIC;
+  @BuiltValueEnumConst(wireName: r'MANUAL_REVIEW')
+  static const ProductComplianceQueueItemReviewModeEnum MANUAL_REVIEW = _$productComplianceQueueItemReviewModeEnum_MANUAL_REVIEW;
+
+  static Serializer<ProductComplianceQueueItemReviewModeEnum> get serializer => _$productComplianceQueueItemReviewModeEnumSerializer;
+
+  const ProductComplianceQueueItemReviewModeEnum._(String name): super(name);
+
+  static BuiltSet<ProductComplianceQueueItemReviewModeEnum> get values => _$productComplianceQueueItemReviewModeEnumValues;
+  static ProductComplianceQueueItemReviewModeEnum valueOf(String name) => _$productComplianceQueueItemReviewModeEnumValueOf(name);
+}
 

@@ -1,20 +1,38 @@
-import { useEffect, useRef, useState } from 'react'
-import { Activity, CheckCircle2, Clock3, ShieldCheck, TriangleAlert, Users, ArrowUpRight, BarChart3 } from 'lucide-react'
-import type { AccountMembership, ListVendorTeamActivityRequest, VendorTeamActivityEnvelope } from '@materyalph/api-client-ts'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Activity, ArrowUpRight, Clock3, MessagesSquare, Package, Scale, ShieldCheck, Truck, Users } from 'lucide-react'
+import { parseDate, type AccountMembership, type GetVendorTeamPerformanceRequest, type ListVendorTeamActivityRequest, type VendorTeamActivityEnvelope, type VendorTeamPerformanceEnvelope } from '@materyalph/api-client-ts'
 import { Button } from './button'
 import { StatusMessage } from './status-message'
 import { StatusBadge } from './portal-shell'
 import { TeamMemberFilters, useTeamMembers, type TeamMemberList } from './vendor-team-members'
-import { TeamAvatar, TeamMetric, TeamActivityDistribution, TeamPagination, teamCategoryLabels, teamDate, teamRoleLabel, teamRoles } from './vendor-team-patterns'
+import { TeamAvatar, TeamPagination, teamCategoryLabels, teamDate, teamRoleLabel, teamRoles } from './vendor-team-patterns'
+import { TeamPerformanceStatistics } from './vendor-team-performance'
 import { useAutomaticRefresh } from './use-automatic-refresh'
 import { useTeamQuery } from './use-team-query'
+import { DateFilter, dateFilterPreset, type DateFilterRange } from './date-filter'
 import './vendor-team-activity.css'
 
 type ActivityQuery = ListVendorTeamActivityRequest
+type View = 'overview' | 'history' | 'scope'
 const readable = (value: string) => value.toLowerCase().replaceAll('_', ' ').replace(/^./, letter => letter.toUpperCase())
+const views: [View, string][] = [['overview', 'Statistics'], ['history', 'Activity history'], ['scope', 'Role responsibilities']]
+const categoryIcons: Record<string, typeof Activity> = { SALES: MessagesSquare, INVENTORY: Package, FULFILLMENT: Truck, DISPUTES: Scale, TEAM: Users, OTHER: Activity }
+const roleAreas: Record<string, string[]> = {
+  OWNER: ['Sales and conversations', 'Quotations', 'Order confirmations', 'Disputes', 'Products and inventory', 'Fulfillment'],
+  STORE_MANAGER: ['Sales and conversations', 'Quotations', 'Order confirmations', 'Disputes', 'Products and inventory', 'Fulfillment'],
+  STORE_STAFF: ['Sales and conversations', 'Quotations', 'Order confirmations', 'Disputes', 'Products and inventory'],
+  CUSTOMER_SERVICE: ['Sales and conversations', 'Quotation drafts', 'Order confirmations', 'Disputes'],
+  INVENTORY: ['Products and inventory'],
+  FULFILLMENT: ['Fulfillment'],
+}
 
-export function VendorTeamActivity({ list, listMembers, canManageManagers, explainError, watchUpdates }: {
+function dateBounds(range: DateFilterRange) {
+  return { ...(range.from ? { from: parseDate(range.from) } : {}), ...(range.to ? { to: parseDate(range.to) } : {}) }
+}
+
+export function VendorTeamActivity({ list, performance, listMembers, canManageManagers, explainError, watchUpdates }: {
   list: (query: ActivityQuery) => Promise<VendorTeamActivityEnvelope>
+  performance: (query: GetVendorTeamPerformanceRequest) => Promise<VendorTeamPerformanceEnvelope>
   listMembers: TeamMemberList
   canManageManagers: boolean
   explainError: (error: unknown) => Promise<string>
@@ -22,9 +40,16 @@ export function VendorTeamActivity({ list, listMembers, canManageManagers, expla
 }) {
   const members = useTeamMembers(listMembers, explainError)
   const [selection, setSelected] = useState<AccountMembership | null>(null)
-  const [query, setQuery] = useState<ActivityQuery>({ page: 1, days: 30 })
-  const [view, setView] = useState<'overview' | 'history' | 'scope'>('overview')
-  const { result, error, loading, updatedAt, blocked, refresh, retry } = useTeamQuery(list, query, explainError, 0, Boolean(query.memberId) && !members.blocked)
+  const [range, setRange] = useState<DateFilterRange>(() => dateFilterPreset(30))
+  const [page, setPage] = useState(1)
+  const [view, setView] = useState<View>('overview')
+  const memberId = selection?.id
+  const historyQuery = useMemo<ActivityQuery>(() => ({ page, ...(memberId ? { memberId } : {}), ...dateBounds(range) }), [page, memberId, range])
+  const statisticsQuery = useMemo<GetVendorTeamPerformanceRequest>(() => ({ memberId: memberId ?? '', ...dateBounds(range) }), [memberId, range])
+  const history = useTeamQuery(list, historyQuery, explainError, 0, Boolean(memberId) && view === 'history' && !members.blocked)
+  const statistics = useTeamQuery(performance, statisticsQuery, explainError, 0, Boolean(memberId) && view === 'overview' && !members.blocked)
+  const blocked = history.blocked || statistics.blocked
+  const active = view === 'history' ? history : statistics
   const visibleMembers = blocked || members.blocked ? null : members.result
   const memberListRef = useRef<HTMLDivElement>(null)
   const [memberCapacity, setMemberCapacity] = useState(20)
@@ -38,6 +63,8 @@ export function VendorTeamActivity({ list, listMembers, canManageManagers, expla
   const [live, setLive] = useState(false)
   const updatesEnabled = !blocked && !members.blocked
   const refreshMembers = members.refresh
+  const refreshHistory = history.refresh
+  const refreshStatistics = statistics.refresh
   useEffect(() => {
     const container = memberListRef.current
     if (!container) return
@@ -57,12 +84,12 @@ export function VendorTeamActivity({ list, listMembers, canManageManagers, expla
     return () => { observer.disconnect(); desktop.removeEventListener('change', fitMembers) }
   }, [visibleMembers, members.loading, members.error])
   const synchronize = async () => {
-    if (document.visibilityState === 'visible' && navigator.onLine) await Promise.all([refresh(), refreshMembers()])
+    if (document.visibilityState === 'visible' && navigator.onLine) await Promise.all([refreshHistory(), refreshStatistics(), refreshMembers()])
   }
-  useAutomaticRefresh(synchronize, { enabled: updatesEnabled && !loading && !members.loading, intervalMs: error || members.error ? 120_000 : live ? 45_000 : 4_000 })
+  useAutomaticRefresh(synchronize, { enabled: updatesEnabled && !active.loading && !members.loading, intervalMs: active.error || members.error ? 120_000 : live ? 45_000 : 4_000 })
   useEffect(() => {
     if (!updatesEnabled) return
-    let active = true
+    let current = true
     let stop: (() => void) | undefined
     let timer: number | undefined
     setLive(false)
@@ -70,20 +97,19 @@ export function VendorTeamActivity({ list, listMembers, canManageManagers, expla
       if (timer !== undefined) return
       timer = window.setTimeout(() => {
         timer = undefined
-        if (active && document.visibilityState === 'visible' && navigator.onLine) void Promise.all([refresh(), refreshMembers()])
+        if (current && document.visibilityState === 'visible' && navigator.onLine) void Promise.all([refreshHistory(), refreshStatistics(), refreshMembers()])
       }, 150)
     }
-    void watchUpdates(invalidate, value => { if (active) setLive(value) }).then(cleanup => { if (active) stop = cleanup; else cleanup() }).catch(() => { if (active) setLive(false) })
+    void watchUpdates(invalidate, value => { if (current) setLive(value) }).then(cleanup => { if (current) stop = cleanup; else cleanup() }).catch(() => { if (current) setLive(false) })
     window.addEventListener('focus', invalidate)
-    return () => { active = false; stop?.(); window.clearTimeout(timer); window.removeEventListener('focus', invalidate) }
-  }, [updatesEnabled, watchUpdates, refresh, refreshMembers])
+    return () => { current = false; stop?.(); window.clearTimeout(timer); window.removeEventListener('focus', invalidate) }
+  }, [updatesEnabled, watchUpdates, refreshHistory, refreshStatistics, refreshMembers])
   function selectMember(member: AccountMembership) {
-    setSelected(member); setQuery(current => ({ days: current.days ?? 30, page: 1, memberId: member.id })); setView('overview')
+    setSelected(member); setPage(1); setView('overview')
   }
   const profile = teamRoles.find(role => role.value === selected?.role)
   const title = selected?.name ?? 'Team member activity'
-  const categoryCounts = result?.meta.categories ?? []
-  const relevantCategories = selected && profile ? categoryCounts.filter(item => (profile.categories as readonly string[]).includes(item.category) || item.count > 0) : categoryCounts
+  const roleLabel = selected ? teamRoleLabel(selected.role) : ''
   return <div className="team-tracking-workspace min-w-0 w-full">
     <h1 className="sr-only">Team Tracking</h1>
     <div className="team-tracking-layout grid min-w-0 grid-cols-1 bg-surface-primary lg:grid-cols-[256px_minmax(0,1fr)]">
@@ -96,25 +122,55 @@ export function VendorTeamActivity({ list, listMembers, canManageManagers, expla
         </div>
         {visibleMembers && (memberChunks > 1 || lastMemberPage > 1) && <div className="team-tracking-member-pages mt-5 flex items-center justify-between gap-1 text-xs"><Button variant="quiet" disabled={members.loading || (memberPage === 1 && currentMemberChunk === 0)} onClick={() => { if (currentMemberChunk > 0) setMemberChunk(currentMemberChunk - 1); else { setMemberChunk(-1); members.setQuery({ ...members.query, page: memberPage - 1 }) } }}>Previous</Button><span className="tabular-nums">{(memberPage - 1) * 20 + currentMemberChunk * memberCapacity + 1}–{(memberPage - 1) * 20 + currentMemberChunk * memberCapacity + shownMembers.length}</span><Button variant="quiet" disabled={members.loading || (memberPage === lastMemberPage && currentMemberChunk === memberChunks - 1)} onClick={() => { if (currentMemberChunk < memberChunks - 1) setMemberChunk(currentMemberChunk + 1); else { setMemberChunk(0); members.setQuery({ ...members.query, page: memberPage + 1 }) } }}>Next</Button></div>}
         <a href="/team" className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-action-primary px-4 text-sm font-semibold text-white">Manage accounts<ArrowUpRight size={16} aria-hidden="true" /></a>
-        <p className="mt-6 border-t border-border-default pt-4 text-xs leading-5 text-text-secondary">{canManageManagers ? 'Select a team member to view their recorded activity.' : 'Delegated access covers non-manager staff only.'} Inactive members retain their recorded history.</p>
+        <p className="mt-6 border-t border-border-default pt-4 text-xs leading-5 text-text-secondary">{canManageManagers ? 'Select a team member to view their statistics and recorded activity.' : 'Delegated access covers non-manager staff only.'} Inactive members retain their recorded history.</p>
       </aside>
-      <section className="team-tracking-panel min-w-0 bg-surface-canvas" aria-label="Selected team activity">
-        <header className="flex flex-wrap items-center justify-between gap-3 bg-surface-primary p-4 sm:px-5"><div className="flex min-w-0 items-center gap-3">{selected && <TeamAvatar name={title} />}<div className="min-w-0"><h2 className="break-words text-xl font-semibold">{title}</h2><p className="mt-1 text-sm text-text-secondary">{selected ? teamRoleLabel(selected.role) : 'Recorded activity for individual team accounts'}</p></div></div>{selected && <StatusBadge label={readable(selected.status)} tone={selected.status === 'ACTIVE' ? 'success' : 'neutral'} />}</header>
-        {selected && <><div className="mx-4 mb-3 flex items-start gap-2 rounded-control border border-border-default bg-surface-canvas p-3 text-xs leading-5 text-text-secondary sm:mx-5"><Clock3 size={16} className="mt-0.5 shrink-0" aria-hidden="true" /><p>Recorded actions, not hours worked or sales totals. {updatedAt && `Updated ${teamDate(updatedAt)}. `}All times use Asia/Manila.</p></div>
-        <nav aria-label="Tracking views" className="flex min-w-0 flex-wrap gap-x-5 border-b border-border-default bg-surface-primary px-4 sm:px-5">{([['overview', 'Statistics'], ['history', 'Activity history'], ['scope', 'Role responsibilities']] as const).map(([key, label]) => <button key={key} type="button" aria-pressed={view === key} onClick={() => { setView(key); if (key === 'overview') setQuery(current => { const next = { ...current, page: 1 }; delete next.category; return next }) }} className={`min-h-12 shrink-0 border-b-2 px-1 text-sm font-medium ${view === key ? 'border-action-primary text-action-primary' : 'border-transparent text-text-secondary'}`}>{label}</button>)}</nav></>}
-        <div className="team-tracking-body min-w-0 space-y-4 p-4 sm:p-5" tabIndex={0} role="region" aria-label="Activity content">
-          {selected && <div className="grid min-w-0 grid-cols-1 gap-3 sm:flex sm:flex-wrap"><label className="grid min-w-0 gap-2 text-xs font-medium text-text-secondary">Activity period<select className="min-h-11 min-w-0 w-full rounded-control border border-border-default bg-surface-primary px-3 text-sm text-text-strong" value={query.days} onChange={event => setQuery({ ...query, page: 1, days: Number(event.target.value) as NonNullable<ActivityQuery['days']> })}><option value={7}>Last 7 days</option><option value={30}>Last 30 days</option><option value={90}>Last 90 days</option></select></label><label className="grid min-w-0 gap-2 text-xs font-medium text-text-secondary">Role at time of action<select className="min-h-11 min-w-0 w-full max-w-full rounded-control border border-border-default bg-surface-primary px-3 text-sm text-text-strong" value={query.role ?? ''} onChange={event => { const next = { ...query, page: 1 }; if (event.target.value) next.role = event.target.value as NonNullable<ActivityQuery['role']>; else delete next.role; setQuery(next) }}><option value="">All authorized roles</option>{canManageManagers && <option value="OWNER">Vendor Owner</option>}{teamRoles.filter(role => canManageManagers || role.value !== 'STORE_MANAGER').map(role => <option key={role.value} value={role.value}>{role.label}</option>)}</select></label>{view === 'history' && <label className="grid min-w-0 gap-2 text-xs font-medium text-text-secondary">Work area<select className="min-h-11 min-w-0 w-full rounded-control border border-border-default bg-surface-primary px-3 text-sm text-text-strong" value={query.category ?? ''} onChange={event => { const next = { ...query, page: 1 }; if (event.target.value) next.category = event.target.value as NonNullable<ActivityQuery['category']>; else delete next.category; setQuery(next) }}><option value="">All work areas</option>{Object.entries(teamCategoryLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>}</div>}
-          {!selected && !error && <div className="py-12 text-center"><Users size={28} className="mx-auto mb-3 text-text-secondary" aria-hidden="true" /><h3 className="font-semibold">Select a team member</h3><p className="mt-2 text-sm text-text-secondary">Choose a member from Your team to view their statistics, activity history and role responsibilities.</p></div>}
-          {error && <div className="space-y-3"><StatusMessage tone="error">{error}</StatusMessage><Button variant="secondary" onClick={() => void retry()}>Retry activity</Button></div>}
-          {selected && (loading ? <p role="status" className="py-12 text-center text-sm text-text-secondary">Loading recorded activity…</p> : updatesEnabled && result && <>
-            {view === 'overview' && <>
-              <div className="grid gap-3 md:grid-cols-3"><TeamMetric label="Recorded actions" value={result.meta.totalEvents} icon={<Activity size={18} aria-hidden="true" />} /><TeamMetric label="Succeeded" value={result.meta.succeededEvents} icon={<CheckCircle2 size={18} aria-hidden="true" />} /><TeamMetric label="Unsuccessful" value={result.meta.failedEvents} icon={<TriangleAlert size={18} aria-hidden="true" />} /></div>
-              <div className="grid gap-3 sm:grid-cols-2">{relevantCategories.slice(0, 2).map(item => <TeamMetric key={item.category} label={teamCategoryLabels[item.category] ?? item.category} value={item.count} icon={<BarChart3 size={18} aria-hidden="true" />} />)}</div>
-              <TeamActivityDistribution categories={categoryCounts} onSelect={category => { setQuery({ ...query, category: category as NonNullable<ActivityQuery['category']>, page: 1 }); setView('history') }} />
-              <p className="text-xs leading-6 text-text-secondary">{profile?.detail ?? 'Select a team member to monitor their role and recorded work.'} Counts cover all matching pages in the selected period.</p>
-            </>}
-            {view === 'scope' ? <div className="space-y-5"><div className="flex items-center gap-2"><ShieldCheck size={20} aria-hidden="true" /><h3 className="font-semibold">{selected ? 'Current role responsibilities' : 'Fixed staff roles'}</h3></div>{(profile ? [profile] : teamRoles.filter(role => canManageManagers || role.value !== 'STORE_MANAGER')).map(role => <div key={role.value} className="border-l-2 border-border-default pl-4"><h4 className="font-semibold">{role.label}</h4><p className="mt-2 text-sm leading-6 text-text-secondary">{role.detail}</p></div>)}<p className="text-sm leading-6 text-text-secondary">Activity keeps the role held when each action occurred. Current access also depends on active membership, store state, Owner settings and assignment.</p></div> : view === 'history' ? <section><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><h3 className="font-semibold">{`Activity history · ${result.meta.total.toLocaleString('en-PH')} events`}</h3></div>{result.data.length === 0 ? <div className="rounded-control border border-dashed border-border-default px-5 py-10 text-center"><Activity size={24} className="mx-auto mb-3 text-text-secondary" aria-hidden="true" /><p className="font-medium">No recorded activity in this view</p><p className="mt-2 text-sm text-text-secondary">Choose another period, role or work area. An empty history does not indicate inactivity outside the recorded system.</p></div> : <ol className="divide-y divide-border-default">{result.data.map(item => <li key={item.id} className="py-5 first:pt-0"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><p className="break-words text-sm font-semibold">{readable(item.action)}</p><p className="mt-1 text-xs leading-5 text-text-secondary">{item.actorName || 'System'} · {teamRoleLabel(item.actorRole)}</p></div><StatusBadge label={item.succeeded ? 'Succeeded' : 'Unsuccessful'} tone={item.succeeded ? 'success' : 'neutral'} /></div><p className="mt-2 text-xs text-text-secondary">{teamDate(item.createdAt)} · {teamCategoryLabels[item.category]}</p><details className="mt-3 text-xs"><summary className="min-h-6 cursor-pointer py-1 text-action-primary">Record details</summary><dl className="mt-2 grid gap-2 rounded-control bg-surface-canvas p-3"><div><dt className="text-text-secondary">Affected resource</dt><dd className="mt-1 break-all">{readable(item.resourceType)} · {item.resourceId || '—'}</dd></div><div><dt className="text-text-secondary">Correlation reference</dt><dd className="mt-1 break-all">{item.correlationId || 'Not recorded'}</dd></div>{Object.entries(item.after).map(([key, value]) => <div key={key}><dt className="text-text-secondary">{readable(key)}</dt><dd className="mt-1 break-words">{String(item.before[key] ?? '—')} → {String(value)}</dd></div>)}</dl></details></li>)}</ol>}{view === 'history' && <TeamPagination page={query.page ?? 1} lastPage={result.meta.lastPage} busy={loading} onPage={page => setQuery({ ...query, page })} />}</section> : null}
-          </>)}
+      <section className="team-tracking-panel min-w-0 bg-surface-canvas" aria-label="Selected team member">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border-default bg-surface-primary px-4 py-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">{selected && <TeamAvatar name={title} />}<div className="min-w-0"><h2 className="break-words text-xl font-semibold">{title}</h2><p className="mt-0.5 text-sm text-text-secondary">{selected ? roleLabel : 'Statistics, activity history and role responsibilities for individual team accounts'}</p></div></div>
+          {selected && <StatusBadge label={readable(selected.status)} tone={selected.status === 'ACTIVE' ? 'success' : 'neutral'} />}
+        </header>
+        {selected && <nav aria-label="Tracking views" className="flex min-w-0 flex-wrap gap-x-6 border-b border-border-default bg-surface-primary px-4 sm:px-6">{views.map(([key, label]) => <button key={key} type="button" aria-pressed={view === key} onClick={() => { setView(key); setPage(1) }} className={`min-h-12 shrink-0 border-b-2 text-sm font-semibold ${view === key ? 'border-action-primary text-action-primary' : 'border-transparent text-text-secondary hover:text-text-strong'}`}>{label}</button>)}</nav>}
+        <div className="team-tracking-body min-w-0 space-y-5 p-4 sm:p-6" tabIndex={0} role="region" aria-label="Team member details">
+          {!selected && <div className="py-16 text-center"><Users size={28} className="mx-auto mb-3 text-text-secondary" aria-hidden="true" /><h3 className="font-semibold">Select a team member</h3><p className="mt-2 text-sm text-text-secondary">Choose a member from Your team to view their statistics, activity history and role responsibilities.</p></div>}
+          {selected && view !== 'scope' && <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="min-w-0"><h3 className="text-base font-semibold text-text-strong">{view === 'overview' ? `${roleLabel} statistics` : 'Activity history'}</h3>
+              <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-text-secondary"><Clock3 size={14} aria-hidden="true" />{active.updatedAt ? `Updated ${teamDate(active.updatedAt)}` : 'Loading'} · Asia/Manila time</p></div>
+            <DateFilter title="Tracking period" value={range} disabled={active.loading} onChange={next => { setRange(next); setPage(1) }} />
+          </div>}
+          {selected && view !== 'scope' && active.error && <div className="space-y-3"><StatusMessage tone="error">{active.error}</StatusMessage><Button variant="secondary" onClick={() => void active.retry()}>Try again</Button></div>}
+          {selected && view === 'overview' && (statistics.loading && !statistics.result ? <p role="status" className="py-16 text-center text-sm text-text-secondary">Loading statistics…</p>
+            : updatesEnabled && statistics.result && <TeamPerformanceStatistics data={statistics.result.data} />)}
+          {selected && view === 'history' && (history.loading && !history.result ? <p role="status" className="py-16 text-center text-sm text-text-secondary">Loading recorded activity…</p>
+            : updatesEnabled && history.result && <section aria-label="Activity history" className="rounded-surface border border-border-default bg-surface-primary">
+              <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border-default px-5 py-3.5"><p className="text-sm font-semibold text-text-strong">{history.result.meta.total.toLocaleString('en-PH')} {history.result.meta.total === 1 ? 'record' : 'records'}</p><p className="text-xs text-text-secondary">Newest first</p></header>
+              {history.result.data.length === 0 ? <div className="px-5 py-12 text-center"><Activity size={24} className="mx-auto mb-3 text-text-secondary" aria-hidden="true" /><p className="font-medium">No recorded activity in this period</p><p className="mt-2 text-sm text-text-secondary">Choose a longer period. An empty history does not indicate inactivity outside the recorded system.</p></div>
+                : <ol className="divide-y divide-border-default">{history.result.data.map(item => {
+                  const Icon = categoryIcons[item.category] ?? Activity
+                  const otherRole = item.actorRole && item.actorRole !== selected.role
+                  return <li key={item.id} className="flex items-start gap-3 px-5 py-4">
+                    <span aria-hidden="true" className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-orange-50 text-action-primary"><Icon size={16} /></span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-start justify-between gap-2"><p className="break-words text-sm font-semibold text-text-strong">{readable(item.action)}</p>{!item.succeeded && <StatusBadge label="Unsuccessful" tone="warning" />}</div>
+                      <p className="mt-1 text-xs leading-5 text-text-secondary">{teamDate(item.createdAt)} · {teamCategoryLabels[item.category] ?? 'Other activity'}{otherRole ? ` · as ${teamRoleLabel(item.actorRole)}` : ''}</p>
+                      <details className="mt-2 text-xs"><summary className="inline-flex min-h-6 cursor-pointer items-center py-1 font-medium text-action-primary">Record details</summary><dl className="mt-2 grid gap-2 rounded-control bg-surface-canvas p-3 sm:grid-cols-2">
+                        <div><dt className="text-text-secondary">Result</dt><dd className="mt-1">{item.succeeded ? 'Succeeded' : 'Unsuccessful'}</dd></div>
+                        <div><dt className="text-text-secondary">Role at the time</dt><dd className="mt-1">{teamRoleLabel(item.actorRole)}</dd></div>
+                        <div><dt className="text-text-secondary">Affected resource</dt><dd className="mt-1 break-all">{readable(item.resourceType)} · {item.resourceId || '—'}</dd></div>
+                        <div><dt className="text-text-secondary">Correlation reference</dt><dd className="mt-1 break-all">{item.correlationId || 'Not recorded'}</dd></div>
+                        {Object.entries(item.after).map(([key, value]) => <div key={key}><dt className="text-text-secondary">{readable(key)}</dt><dd className="mt-1 break-words">{String(item.before[key] ?? '—')} → {String(value)}</dd></div>)}
+                      </dl></details>
+                    </div>
+                  </li>
+                })}</ol>}
+              <div className="px-5 pb-4"><TeamPagination page={page} lastPage={history.result.meta.lastPage} busy={history.loading} onPage={setPage} /></div>
+            </section>)}
+          {selected && view === 'scope' && <section aria-label="Role responsibilities" className="rounded-surface border border-border-default bg-surface-primary p-5 sm:p-6">
+            <div className="flex items-start gap-4"><span aria-hidden="true" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-orange-50 text-action-primary"><ShieldCheck size={20} /></span>
+              <div className="min-w-0"><h3 className="text-base font-semibold text-text-strong">{roleLabel}</h3><p className="mt-2 max-w-3xl text-sm leading-6 text-text-secondary">{profile?.detail ?? 'Holds full store authority, including team management and Owner-only finances.'}</p></div></div>
+            <div className="mt-6 border-t border-border-default pt-5"><h4 className="text-xs font-semibold uppercase tracking-[0.08em] text-text-secondary">Measured in Statistics</h4>
+              <ul className="mt-3 flex flex-wrap gap-2">{(roleAreas[selected.role] ?? []).map(area => <li key={area} className="inline-flex min-h-8 items-center rounded-pill border border-border-default bg-surface-canvas px-3 text-xs font-medium text-text-strong">{area}</li>)}</ul></div>
+            <p className="mt-6 text-sm leading-6 text-text-secondary">Statistics follow this member&apos;s current role. Activity history keeps the role held when each action occurred. Current access also depends on active membership, store state, Owner settings and assignment.</p>
+          </section>}
         </div>
       </section>
     </div>

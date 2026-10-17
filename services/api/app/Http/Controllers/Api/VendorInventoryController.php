@@ -11,6 +11,7 @@ use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Inventory\AutoAcceptPolicyRequest;
 use App\Http\Requests\Inventory\InventoryRowUpdateRequest;
+use App\Support\PortalDateRange;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -55,15 +56,17 @@ final class VendorInventoryController extends Controller
 
     public function movements(Request $request, string $variantId): JsonResponse
     {
-        $input = $request->validate(['page' => ['sometimes', 'integer', 'between:1,1000']]);
-        $result = $this->ledger->movements($request, $variantId, (int) ($input['page'] ?? 1));
+        $input = $request->validate(['page' => ['sometimes', 'integer', 'between:1,1000']] + PortalDateRange::rules($request));
+        $result = $this->ledger->movements($request, $variantId, (int) ($input['page'] ?? 1), $input);
 
         return ApiResponse::success($result['items'], $result['meta']);
     }
 
     public function prices(Request $request, string $variantId): JsonResponse
     {
-        return ApiResponse::success($this->ledger->priceHistory($request, $variantId));
+        $filters = $request->validate(PortalDateRange::rules($request));
+
+        return ApiResponse::success($this->ledger->priceHistory($request, $variantId, $filters));
     }
 
     public function settings(Request $request): JsonResponse

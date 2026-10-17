@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { AlertTriangle, Check, CheckCircle2, CircleDashed, Clock, CreditCard, Hourglass, PackageCheck, Scale, Undo2, XCircle } from 'lucide-react'
-import type { MoneyBreakdown as MoneyBreakdownData, OrderStateRow, OrderSummary } from '@materyalph/api-client-ts'
+import type { MoneyBreakdown as MoneyBreakdownData, OrderStateRow, OrderSummary, OrderTimelineEvent } from '@materyalph/api-client-ts'
 import { StatusBadge } from './portal-shell'
 import { formatManilaDateTime, type DateLike } from './stock-ledger'
 
@@ -13,6 +13,23 @@ export function formatPesoCentavos(centavos: number | null | undefined): string 
 }
 
 const familyLabels: Record<string, string> = { ORDER: 'Order', PAYMENT: 'Payment', FULFILLMENT: 'Fulfillment', REFUND: 'Refund', DISPUTE: 'Dispute' }
+
+/** A fixed heading with an independently scrollable, keyboard-accessible order history. */
+export function OrderHistory({ events }: { events: OrderTimelineEvent[] }) {
+  const headingId = useId()
+  return <section aria-labelledby={headingId} className="grid min-w-0 gap-3 rounded-surface border border-border-default bg-surface-primary p-4">
+    <h2 id={headingId} className="text-base font-semibold">History</h2>
+    <div role="region" aria-label="Order history events" tabIndex={0} className="max-h-[28rem] min-h-0 overflow-y-auto overscroll-contain rounded-control pr-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" style={{ scrollbarGutter: 'stable' }}>
+      {events.length === 0 ? <p className="text-sm text-text-secondary">No order history yet.</p> : <ol className="ml-1.5 grid border-l border-border-default pl-5">
+        {events.map((event, index) => <li key={index} className="relative pb-4 text-sm last:pb-0">
+          <span className="absolute -left-[1.6rem] top-1 h-2.5 w-2.5 rounded-full border-2 border-surface-primary bg-action-primary" aria-hidden="true" />
+          <p className="break-words font-semibold">{event.family === 'ORDER' ? '' : `${familyLabels[event.family] ?? event.family}: `}{orderStateLabel(event.toState)}</p>
+          <p className="mt-1 break-words text-xs leading-5 text-text-secondary">{formatManilaDateTime(event.at)} · {event.source === 'AUTO_ACCEPT' ? 'Automated policy' : event.source === 'SYSTEM' ? 'System' : event.source === 'BUYER' ? 'Buyer' : (event.actorRole ?? 'Vendor').replaceAll('_', ' ').toLowerCase()}</p>
+        </li>)}
+      </ol>}
+    </div>
+  </section>
+}
 
 /** The order journey alone: payment, refund and dispute remain independent state families. */
 export function OrderProgress({ state, fulfillmentMethod }: { state: string; fulfillmentMethod: 'DELIVERY' | 'PICKUP' }) {
@@ -152,8 +169,12 @@ function MoneyRow({ label, value, note, strong = false, muted = false }: { label
  * materials value, processing fee and the total. Vendor commission and withholding never appear here.
  */
 export function MoneyBreakdown({ money, title = 'Payment breakdown', compact = false }: { money: MoneyBreakdownData; title?: string; compact?: boolean }) {
+  const discount = money.discount
+  const deliveryDiscount = discount?.scope === 'DELIVERY' ? discount : null
+  const materialsDiscountLabel = discount?.scope === 'MATERIALS' ? `Vendor discount ${discount.percent}% (materials)` : 'Vendor discount'
+  const deliveryDiscountLabel = deliveryDiscount ? `Vendor discount ${deliveryDiscount.percent}% (delivery fee)` : ''
   const delivery = money.delivery.status === 'NOT_APPLICABLE' ? 'Not applicable (Self-Pickup)'
-    : money.delivery.amountCentavos !== null ? formatPesoCentavos(money.delivery.amountCentavos)
+    : money.delivery.amountCentavos !== null ? formatPesoCentavos(deliveryDiscount?.basisCentavos ?? money.delivery.amountCentavos)
       : money.delivery.estimate ? `Estimate ${formatPesoCentavos(money.delivery.estimate.minCentavos)}${money.delivery.estimate.maxCentavos !== money.delivery.estimate.minCentavos ? ` – ${formatPesoCentavos(money.delivery.estimate.maxCentavos)}` : ''}` : 'Estimate unavailable — delivery review required'
   const estimate = money.commercialTotalCentavos === null ? money.delivery.estimate : null
   const totalLabel = estimate ? 'Estimated total' : money.commercialTotalCentavos === null ? 'Total before delivery' : 'Order total'
@@ -166,9 +187,10 @@ export function MoneyBreakdown({ money, title = 'Payment breakdown', compact = f
     <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-text-secondary">Payment summary</h3>
     <dl className="grid gap-2 border-y-2 border-text-strong py-3">
       <ReviewMoneyRow label="Materials" value={formatPesoCentavos(money.materialsGrossCentavos)} />
-      {money.vendorDiscountCentavos > 0 && <ReviewMoneyRow label="Vendor discount" value={`− ${formatPesoCentavos(money.vendorDiscountCentavos)}`} />}
+      {money.vendorDiscountCentavos > 0 && <ReviewMoneyRow label={materialsDiscountLabel} value={`− ${formatPesoCentavos(money.vendorDiscountCentavos)}`} />}
       {money.includedVatCentavos > 0 && <ReviewMoneyRow label="Included VAT (in materials)" value={formatPesoCentavos(money.includedVatCentavos)} muted />}
-      <ReviewMoneyRow label="Delivery fee" value={delivery} />
+      <ReviewMoneyRow label={deliveryDiscount ? "Delivery before discount" : "Delivery fee"} value={delivery} />
+      {deliveryDiscount && <ReviewMoneyRow label={deliveryDiscountLabel} value={`− ${formatPesoCentavos(deliveryDiscount.deductionCentavos)}`} />}
       {money.nrpc.amountCentavos > 0 && <ReviewMoneyRow label="NRPC (in materials)" value={formatPesoCentavos(money.nrpc.amountCentavos)} muted />}
       <ReviewMoneyRow label="Payment processing fee" value={fee} />
       <div className="mt-1 grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 border-t-2 border-text-strong pt-3 text-xs font-bold text-text-strong">
@@ -184,10 +206,11 @@ export function MoneyBreakdown({ money, title = 'Payment breakdown', compact = f
     <h3 id="money-breakdown-heading" className="text-base font-semibold text-text-strong">{title}</h3>
     <dl className="mt-2 divide-y divide-border-default/70">
       <MoneyRow label="Materials" value={formatPesoCentavos(money.materialsGrossCentavos)} />
-      {money.vendorDiscountCentavos > 0 && <MoneyRow label="Vendor discount" value={`− ${formatPesoCentavos(money.vendorDiscountCentavos)}`} />}
+      {money.vendorDiscountCentavos > 0 && <MoneyRow label={materialsDiscountLabel} value={`− ${formatPesoCentavos(money.vendorDiscountCentavos)}`} />}
       <MoneyRow label="Materials subtotal" value={formatPesoCentavos(money.materialsSubtotalCentavos)} note={money.vatTreatment === 'PRICES_INCLUDE_VAT' ? 'Prices include VAT' : 'No VAT included'} />
       {money.includedVatCentavos > 0 && <MoneyRow muted label="Included VAT (already in the subtotal)" value={formatPesoCentavos(money.includedVatCentavos)} />}
-      <MoneyRow label="Delivery fee" value={delivery} note={money.delivery.status === 'PENDING_VENDOR_CONFIRMATION' ? 'Confirmed by the Vendor before you pay' : undefined} />
+      <MoneyRow label={deliveryDiscount ? "Delivery before discount" : "Delivery fee"} value={delivery} note={money.delivery.status === 'PENDING_VENDOR_CONFIRMATION' ? 'Confirmed by the Vendor before you pay' : undefined} />
+      {deliveryDiscount && <MoneyRow label={deliveryDiscountLabel} value={`− ${formatPesoCentavos(deliveryDiscount.deductionCentavos)}`} />}
       {money.nrpc.amountCentavos > 0 && <MoneyRow muted label="Non-Recoverable Preparation Cost" value={formatPesoCentavos(money.nrpc.amountCentavos)} note="Part of the materials subtotal, not an extra charge" />}
       <MoneyRow label="Payment processing fee" value={fee} note={money.processingFee.status === 'PENDING_PAYMENT_CHANNEL' ? 'Disclosed when a payment channel is chosen' : undefined} />
       <MoneyRow strong label={totalLabel} value={total} note={money.processingFee.status === 'PENDING_PAYMENT_CHANNEL' ? 'Before the processing fee' : undefined} />

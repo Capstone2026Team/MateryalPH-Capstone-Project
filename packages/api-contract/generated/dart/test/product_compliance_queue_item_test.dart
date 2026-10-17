@@ -32,6 +32,11 @@ void main() {
       // TODO
     });
 
+    // String reviewMode
+    test('to test the property `reviewMode`', () async {
+      // TODO
+    });
+
     // String submittedAt
     test('to test the property `submittedAt`', () async {
       // TODO

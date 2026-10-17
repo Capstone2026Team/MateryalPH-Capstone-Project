@@ -21,7 +21,7 @@ const steps = [
 const questions = [
   ['Getting started', [
     ['Who can register as a Vendor?', 'Independent hardware stores and construction-material suppliers can create a Vendor Owner account, subject to the required identity, business, location and verification checks.'],
-    ['What should I prepare before registering?', 'Start with your Owner name, business or store name, email and mobile number. Have access to your email and an authenticator app. Store review later requires the applicable business, ownership and location evidence.'],
+    ['What should I prepare before registering?', 'Start with your Account Owner Name, email and mobile number. Have access to your email and an authenticator app. Store review later requires the applicable business, ownership and location evidence.'],
     ['What happens after I create my store account?', 'Complete email verification and required account security. Your account is the starting point for preparing store information and activation requirements; it does not publish a storefront automatically.'],
     ['Does registration activate my store immediately?', 'No. Registration creates your account. Store activation is reviewed before publication, and the applicable verification and readiness requirements must be completed.'],
   ]],

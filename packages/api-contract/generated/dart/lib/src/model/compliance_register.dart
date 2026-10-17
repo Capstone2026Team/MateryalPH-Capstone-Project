@@ -19,8 +19,11 @@ part 'compliance_register.g.dart';
 /// * [sourceReference]
 /// * [snapshotDate]
 /// * [status]
+/// * [sourceChannel]
+/// * [stale] - An ACTIVE snapshot older than the configured age (45 days); the government lists are updated monthly.
 /// * [rowCount]
 /// * [rejectedRowCount]
+/// * [serialRangeCount]
 /// * [activatedAt]
 /// * [supersededAt]
 /// * [createdAt]
@@ -45,11 +48,22 @@ abstract class ComplianceRegister implements Built<ComplianceRegister, Complianc
   ComplianceRegisterStatusEnum get status;
   // enum statusEnum {  DRAFT,  ACTIVE,  SUPERSEDED,  };
 
+  @BuiltValueField(wireName: r'source_channel')
+  ComplianceRegisterSourceChannelEnum? get sourceChannel;
+  // enum sourceChannelEnum {  UPLOAD,  FEED,  };
+
+  /// An ACTIVE snapshot older than the configured age (45 days); the government lists are updated monthly.
+  @BuiltValueField(wireName: r'stale')
+  bool? get stale;
+
   @BuiltValueField(wireName: r'row_count')
   int get rowCount;
 
   @BuiltValueField(wireName: r'rejected_row_count')
   int get rejectedRowCount;
+
+  @BuiltValueField(wireName: r'serial_range_count')
+  int? get serialRangeCount;
 
   @BuiltValueField(wireName: r'activated_at')
   String? get activatedAt;
@@ -114,6 +128,20 @@ class _$ComplianceRegisterSerializer implements PrimitiveSerializer<ComplianceRe
       object.status,
       specifiedType: const FullType(ComplianceRegisterStatusEnum),
     );
+    if (object.sourceChannel != null) {
+      yield r'source_channel';
+      yield serializers.serialize(
+        object.sourceChannel,
+        specifiedType: const FullType(ComplianceRegisterSourceChannelEnum),
+      );
+    }
+    if (object.stale != null) {
+      yield r'stale';
+      yield serializers.serialize(
+        object.stale,
+        specifiedType: const FullType(bool),
+      );
+    }
     yield r'row_count';
     yield serializers.serialize(
       object.rowCount,
@@ -124,6 +152,13 @@ class _$ComplianceRegisterSerializer implements PrimitiveSerializer<ComplianceRe
       object.rejectedRowCount,
       specifiedType: const FullType(int),
     );
+    if (object.serialRangeCount != null) {
+      yield r'serial_range_count';
+      yield serializers.serialize(
+        object.serialRangeCount,
+        specifiedType: const FullType(int),
+      );
+    }
     if (object.activatedAt != null) {
       yield r'activated_at';
       yield serializers.serialize(
@@ -217,6 +252,22 @@ class _$ComplianceRegisterSerializer implements PrimitiveSerializer<ComplianceRe
           ) as ComplianceRegisterStatusEnum;
           result.status = valueDes;
           break;
+        case r'source_channel':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ComplianceRegisterSourceChannelEnum),
+          ) as ComplianceRegisterSourceChannelEnum?;
+          if (valueDes == null) continue;
+          result.sourceChannel = valueDes;
+          break;
+        case r'stale':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.stale = valueDes;
+          break;
         case r'row_count':
           final valueDes = serializers.deserialize(
             value,
@@ -230,6 +281,14 @@ class _$ComplianceRegisterSerializer implements PrimitiveSerializer<ComplianceRe
             specifiedType: const FullType(int),
           ) as int;
           result.rejectedRowCount = valueDes;
+          break;
+        case r'serial_range_count':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.serialRangeCount = valueDes;
           break;
         case r'activated_at':
           final valueDes = serializers.deserialize(
@@ -331,5 +390,20 @@ class ComplianceRegisterStatusEnum extends EnumClass {
 
   static BuiltSet<ComplianceRegisterStatusEnum> get values => _$complianceRegisterStatusEnumValues;
   static ComplianceRegisterStatusEnum valueOf(String name) => _$complianceRegisterStatusEnumValueOf(name);
+}
+
+class ComplianceRegisterSourceChannelEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'UPLOAD')
+  static const ComplianceRegisterSourceChannelEnum UPLOAD = _$complianceRegisterSourceChannelEnum_UPLOAD;
+  @BuiltValueEnumConst(wireName: r'FEED')
+  static const ComplianceRegisterSourceChannelEnum FEED = _$complianceRegisterSourceChannelEnum_FEED;
+
+  static Serializer<ComplianceRegisterSourceChannelEnum> get serializer => _$complianceRegisterSourceChannelEnumSerializer;
+
+  const ComplianceRegisterSourceChannelEnum._(String name): super(name);
+
+  static BuiltSet<ComplianceRegisterSourceChannelEnum> get values => _$complianceRegisterSourceChannelEnumValues;
+  static ComplianceRegisterSourceChannelEnum valueOf(String name) => _$complianceRegisterSourceChannelEnumValueOf(name);
 }
 

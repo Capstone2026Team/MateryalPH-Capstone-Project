@@ -20,6 +20,13 @@ import {
     ChatDraftLineToJSON,
     ChatDraftLineToJSONTyped,
 } from './ChatDraftLine';
+import type { ChatQuotationDiscount } from './ChatQuotationDiscount';
+import {
+    ChatQuotationDiscountFromJSON,
+    ChatQuotationDiscountFromJSONTyped,
+    ChatQuotationDiscountToJSON,
+    ChatQuotationDiscountToJSONTyped,
+} from './ChatQuotationDiscount';
 
 /**
  *
@@ -48,9 +55,14 @@ export interface ChatDraftContent {
      */
     deadlineHours?: number;
     /**
-     *
+     * Legacy fixed materials discount. Omit when discount is supplied.
+     * @deprecated
      */
     vendorDiscountCentavos?: number;
+    /**
+     *
+     */
+    discount?: ChatQuotationDiscount;
     /**
      *
      */
@@ -109,6 +121,7 @@ export function ChatDraftContentFromJSONTyped(json: any, ignoreDiscriminator: bo
         'fulfillmentDate': json['fulfillment_date'],
         'deadlineHours': json['deadline_hours'] == null ? undefined : json['deadline_hours'],
         'vendorDiscountCentavos': json['vendor_discount_centavos'] == null ? undefined : json['vendor_discount_centavos'],
+        'discount': json['discount'] == null ? undefined : ChatQuotationDiscountFromJSON(json['discount']),
         'delivery': json['delivery'] == null ? undefined : json['delivery'],
         'nrpc': json['nrpc'] == null ? undefined : json['nrpc'],
     };
@@ -131,6 +144,7 @@ export function ChatDraftContentToJSONTyped(value?: ChatDraftContent | null, ign
         'fulfillment_date': value['fulfillmentDate'],
         'deadline_hours': value['deadlineHours'],
         'vendor_discount_centavos': value['vendorDiscountCentavos'],
+        'discount': ChatQuotationDiscountToJSON(value['discount']),
         'delivery': value['delivery'],
         'nrpc': value['nrpc'],
     };

@@ -14,7 +14,7 @@
 
 import { mapValues } from '../runtime';
 /**
- *
+ * MESSAGES is optional; its in_app and push channels default to enabled and email defaults to disabled. Mandatory security, payment, refund, dispute and legal notices remain enabled.
  * @export
  * @interface NotificationPreference
  */

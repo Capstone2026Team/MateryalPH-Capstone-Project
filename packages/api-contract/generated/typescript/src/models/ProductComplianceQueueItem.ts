@@ -50,6 +50,10 @@ export interface ProductComplianceQueueItem {
     /**
      *
      */
+    reviewMode?: ProductComplianceQueueItemReviewModeEnum;
+    /**
+     *
+     */
     submittedAt?: string | null;
     /**
      *
@@ -86,6 +90,15 @@ export interface ProductComplianceQueueItem {
 }
 
 
+/**
+ * @export
+ */
+export const ProductComplianceQueueItemReviewModeEnum = {
+    Automatic: 'AUTOMATIC',
+    ManualReview: 'MANUAL_REVIEW',
+} as const;
+export type ProductComplianceQueueItemReviewModeEnum = typeof ProductComplianceQueueItemReviewModeEnum[keyof typeof ProductComplianceQueueItemReviewModeEnum];
+
 
 /**
  * Check if a given object implements the ProductComplianceQueueItem interface.
@@ -116,6 +129,7 @@ export function ProductComplianceQueueItemFromJSONTyped(json: any, ignoreDiscrim
         'path': CompliancePathFromJSON(json['path']),
         'status': json['status'],
         'markingType': json['marking_type'] === undefined ? undefined : json['marking_type'] === null ? null : json['marking_type'],
+        'reviewMode': json['review_mode'] == null ? undefined : json['review_mode'],
         'submittedAt': json['submitted_at'] === undefined ? undefined : json['submitted_at'] === null ? null : json['submitted_at'],
         'listingId': json['listing_id'],
         'displayName': json['display_name'],
@@ -144,6 +158,7 @@ export function ProductComplianceQueueItemToJSONTyped(value?: ProductComplianceQ
         'path': CompliancePathToJSON(value['path']),
         'status': value['status'],
         'marking_type': value['markingType'],
+        'review_mode': value['reviewMode'],
         'submitted_at': value['submittedAt'],
         'listing_id': value['listingId'],
         'display_name': value['displayName'],

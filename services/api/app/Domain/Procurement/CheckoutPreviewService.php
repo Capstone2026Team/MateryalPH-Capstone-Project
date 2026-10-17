@@ -76,7 +76,8 @@ final class CheckoutPreviewService
     {
         $issues = [];
         $store = DB::table('store_profiles')->where('vendor_organization_id', $vendorId)->first(['public_store_name', 'fulfillment_method', 'vacation_mode']);
-        $options = CartService::fulfillmentOptions((string) ($store->fulfillment_method ?? ''));
+        $options = CartService::groupFulfillmentOptions((string) ($store->fulfillment_method ?? ''), $vendorId, $lines);
+        $readyMixed = array_any($lines, static fn (array $line): bool => $line['ready_mixed_concrete']);
         if (! $discoverable || $vendor === null) {
             $issues[] = ['code' => 'VENDOR_UNAVAILABLE', 'severity' => CartService::BLOCKING, 'message' => 'This store is not accepting new orders right now. Your other Vendor groups are unaffected.'];
         } elseif ($vendor['vacation_mode']) {
@@ -85,6 +86,8 @@ final class CheckoutPreviewService
         $method = $choice ?? (count($options) === 1 ? $options[0] : null);
         if ($method === null) {
             $issues[] = ['code' => 'FULFILLMENT_REQUIRED', 'severity' => CartService::ACTION_REQUIRED, 'message' => 'Choose Site Delivery or Self-Pickup for this store.'];
+        } elseif ($readyMixed && $method === 'PICKUP') {
+            $issues[] = CartService::siteDeliveryIssue();
         } elseif (! in_array($method, $options, true)) {
             $issues[] = ['code' => 'FULFILLMENT_NOT_OFFERED', 'severity' => CartService::ACTION_REQUIRED, 'message' => 'This store no longer offers the selected fulfillment method. Choose another.'];
         }

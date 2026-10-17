@@ -27,6 +27,13 @@ import {
     ChatMessagePageToJSON,
     ChatMessagePageToJSONTyped,
 } from './ChatMessagePage';
+import type { SiteInspection } from './SiteInspection';
+import {
+    SiteInspectionFromJSON,
+    SiteInspectionFromJSONTyped,
+    SiteInspectionToJSON,
+    SiteInspectionToJSONTyped,
+} from './SiteInspection';
 import type { ConversationView } from './ConversationView';
 import {
     ConversationViewFromJSON,
@@ -53,6 +60,10 @@ export interface ConversationDetail {
      *
      */
     quotations: ChatQuotationPage;
+    /**
+     * The Item-Based conversation's ten most recent free site inspection requests, newest first; empty for other conversations.
+     */
+    siteInspections?: Array<SiteInspection>;
 }
 
 /**
@@ -78,6 +89,7 @@ export function ConversationDetailFromJSONTyped(json: any, ignoreDiscriminator: 
         'conversation': ConversationViewFromJSON(json['conversation']),
         'messages': ChatMessagePageFromJSON(json['messages']),
         'quotations': ChatQuotationPageFromJSON(json['quotations']),
+        'siteInspections': json['site_inspections'] == null ? undefined : ((json['site_inspections'] as Array<any>).map(SiteInspectionFromJSON)),
     };
 }
 
@@ -95,6 +107,7 @@ export function ConversationDetailToJSONTyped(value?: ConversationDetail | null,
         'conversation': ConversationViewToJSON(value['conversation']),
         'messages': ChatMessagePageToJSON(value['messages']),
         'quotations': ChatQuotationPageToJSON(value['quotations']),
+        'site_inspections': value['siteInspections'] == null ? undefined : ((value['siteInspections'] as Array<any>).map(SiteInspectionToJSON)),
     };
 }
 

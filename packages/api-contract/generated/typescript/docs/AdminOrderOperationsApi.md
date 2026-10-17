@@ -100,7 +100,7 @@ example().catch(console.error);
 
 
 
-orders.operations.view. Counts of failed and pending refunds, pending reimbursements, open cancellation requests and recent NFR events.
+orders.operations.view. All-record refund and order-linked reimbursement totals, independent of list filters, plus counts of failed and pending refunds, pending reimbursements, open cancellation requests and recent NFR events.
 
 ### Example
 
@@ -163,7 +163,7 @@ This endpoint does not need any parameter.
 
 ## listAdminCancellationRequests
 
-> AdminCancellationRequestListEnvelope listAdminCancellationRequests()
+> AdminCancellationRequestListEnvelope listAdminCancellationRequests(from, to)
 
 
 
@@ -188,8 +188,15 @@ async function example() {
   });
   const api = new AdminOrderOperationsApi(config);
 
+  const body = {
+    // Date | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Open cancellation request created_at; existing 100-record bound retained. (optional)
+    from: 2013-10-20,
+    // Date | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Open cancellation request created_at; existing 100-record bound retained. (optional)
+    to: 2013-10-20,
+  } satisfies ListAdminCancellationRequestsRequest;
+
   try {
-    const data = await api.listAdminCancellationRequests();
+    const data = await api.listAdminCancellationRequests(body);
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -202,7 +209,11 @@ example().catch(console.error);
 
 ### Parameters
 
-This endpoint does not need any parameter.
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **from** | `Date` | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Open cancellation request created_at; existing 100-record bound retained. | [Optional] [Defaults to `undefined`] |
+| **to** | `Date` | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Open cancellation request created_at; existing 100-record bound retained. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 
@@ -230,7 +241,7 @@ This endpoint does not need any parameter.
 
 ## listAdminRefunds
 
-> AdminRefundListEnvelope listAdminRefunds(state, trigger, page)
+> AdminRefundListEnvelope listAdminRefunds(state, trigger, page, from, to)
 
 
 
@@ -262,6 +273,10 @@ async function example() {
     trigger: trigger_example,
     // number (optional)
     page: 56,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Refund requested_at with created_at fallback. (optional)
+    from: 2013-10-20,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Refund requested_at with created_at fallback. (optional)
+    to: 2013-10-20,
   } satisfies ListAdminRefundsRequest;
 
   try {
@@ -284,6 +299,8 @@ example().catch(console.error);
 | **state** | `REFUND_PENDING`, `REFUNDED`, `REFUND_FAILED` |  | [Optional] [Defaults to `undefined`] [Enum: REFUND_PENDING, REFUNDED, REFUND_FAILED] |
 | **trigger** | `CANCELLATION`, `DISPUTE_CONCLUSION`, `TECHNICAL_COMPENSATION`, `FEE_CREDIT` |  | [Optional] [Defaults to `undefined`] [Enum: CANCELLATION, DISPUTE_CONCLUSION, TECHNICAL_COMPENSATION, FEE_CREDIT] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **from** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Refund requested_at with created_at fallback. | [Optional] [Defaults to `undefined`] |
+| **to** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Refund requested_at with created_at fallback. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 
@@ -312,7 +329,7 @@ example().catch(console.error);
 
 ## listAdminReimbursements
 
-> AdminReimbursementListEnvelope listAdminReimbursements()
+> AdminReimbursementListEnvelope listAdminReimbursements(from, to)
 
 
 
@@ -337,8 +354,15 @@ async function example() {
   });
   const api = new AdminOrderOperationsApi(config);
 
+  const body = {
+    // Date | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Reimbursement instruction created_at; existing 100-record bound retained. (optional)
+    from: 2013-10-20,
+    // Date | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Reimbursement instruction created_at; existing 100-record bound retained. (optional)
+    to: 2013-10-20,
+  } satisfies ListAdminReimbursementsRequest;
+
   try {
-    const data = await api.listAdminReimbursements();
+    const data = await api.listAdminReimbursements(body);
     console.log(data);
   } catch (error) {
     console.error(error);
@@ -351,7 +375,11 @@ example().catch(console.error);
 
 ### Parameters
 
-This endpoint does not need any parameter.
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **from** | `Date` | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Reimbursement instruction created_at; existing 100-record bound retained. | [Optional] [Defaults to `undefined`] |
+| **to** | `Date` | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Reimbursement instruction created_at; existing 100-record bound retained. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 

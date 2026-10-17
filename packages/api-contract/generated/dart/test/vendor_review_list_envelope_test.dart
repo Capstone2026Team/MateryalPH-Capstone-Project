@@ -12,7 +12,7 @@ void main() {
       // TODO
     });
 
-    // ReviewListMeta meta
+    // VendorReviewListMeta meta
     test('to test the property `meta`', () async {
       // TODO
     });

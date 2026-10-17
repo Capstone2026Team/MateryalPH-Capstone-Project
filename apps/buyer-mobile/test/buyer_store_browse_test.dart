@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:materyalph/screens/buyer_store_browse_screen.dart';
 import 'package:materyalph/features/item_procurement/procurement_models.dart';
+import 'package:materyalph/features/trust/trust_models.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart';
 
 import 'item_procurement_fakes.dart';
@@ -31,6 +32,7 @@ class _StoreRepository extends BuyerStoreRepository {
     (b) => b
       ..id = id
       ..publicStoreName = 'Sample Store'
+      ..publicPhone = '(0917) 123-4567'
       ..vacationMode = true
       ..operatingSchedule.replace([
         if (hoursAvailable)
@@ -210,7 +212,11 @@ void main() {
 
     expect(find.text('KD Wood Mouldings'), findsOneWidget);
     expect(find.text('SikaGrout 112 PH'), findsOneWidget);
-    expect(sorts, [ListingSort.bestDeal]);
+    expect(sorts, [
+      ListingSort.topSelling,
+      ListingSort.rating,
+      ListingSort.bestDeal,
+    ], reason: 'Shop Front highlights load first; Products keeps Best Deal.');
 
     await tester.tap(find.text('Price'));
     await tester.pumpAndSettle();
@@ -220,6 +226,325 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('KD Wood Mouldings'));
     expect(opened, 'listing-1');
+  });
+
+  testWidgets(
+    'Shop Front shows Top Selling, Top Rated and Cheapest from server sorts',
+    (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      final sorts = <ListingSort>[];
+      String? opened;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BuyerPublicStoreProfileScreen(
+            storeId: 'store-1',
+            repository: _StoreRepository(),
+            loadProducts: (sort, cursor) async {
+              sorts.add(sort);
+              return switch (sort) {
+                ListingSort.topSelling => searchPage([
+                  listingCard('sold-1', name: 'Portland Cement', sold: '120'),
+                  listingCard('unsold-1', name: 'Never Sold Nails'),
+                ]),
+                ListingSort.rating => searchPage([
+                  listingCard('rated-1', name: 'Rated Plywood', rating: '4.80'),
+                  listingCard('unrated-1', name: 'Unrated Tile'),
+                ]),
+                _ => searchPage([
+                  listingCard('cheap-1', name: 'Tie Wire', price: 4500),
+                ]),
+              };
+            },
+            onOpenListing: (context, id) => opened = id,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Top Selling'), findsOneWidget);
+      expect(find.text('Portland Cement'), findsOneWidget);
+      expect(
+        find.text('Never Sold Nails'),
+        findsNothing,
+        reason: 'A product with no completed sales is not "top selling".',
+      );
+      await tester.scrollUntilVisible(
+        find.text('Rated Plywood'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Rated Plywood'), findsOneWidget);
+      expect(find.text('Unrated Tile'), findsNothing);
+
+      await tester.ensureVisible(find.bySemanticsLabel('Sort by Cheapest'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.bySemanticsLabel('Sort by Cheapest'));
+      await tester.pumpAndSettle();
+      expect(sorts.last, ListingSort.price);
+      await tester.ensureVisible(find.text('Tie Wire'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tie Wire'));
+      expect(opened, 'cheap-1');
+
+      await tester.ensureVisible(
+        find.bySemanticsLabel('See all cheapest products'),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.bySemanticsLabel('See all cheapest products'));
+      await tester.pumpAndSettle();
+      expect(sorts.last, ListingSort.price);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics &&
+              widget.properties.selected == true &&
+              widget.properties.label == 'Price',
+        ),
+        findsOneWidget,
+        reason: 'See all opens Products already sorted by price.',
+      );
+    },
+  );
+
+  testWidgets('Shop Front notes a store without sales or ratings', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BuyerPublicStoreProfileScreen(
+          storeId: 'store-1',
+          repository: _StoreRepository(),
+          loadProducts: (sort, cursor) async =>
+              searchPage([listingCard('listing-1', name: 'New Product')]),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('No completed sales yet'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.textContaining('No rated products yet'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.textContaining('No rated products yet'), findsOneWidget);
+  });
+
+  testWidgets(
+    'Store Profile shows the published VCS, rating averages and badges',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BuyerPublicStoreProfileScreen(
+            storeId: 'store-1',
+            repository: _StoreRepository(),
+            loadRating: () async => const StoreRatingView(
+              ratingCount: 12,
+              serviceQuality: '4.70',
+              speed: '4.50',
+              scoreLabel: 'VPS 4.40 of 5',
+              newVendor: false,
+              vcs: '4.62',
+              mqs: '4.66',
+              vps: '4.40',
+              badges: [
+                StoreBadgeView(
+                  code: 'HIGHLY_RATED',
+                  name: 'Highly Rated',
+                  description:
+                      'Vendor Community Score of 4.50 or higher from 10+ verified ratings (last 90 days).',
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Store Profile'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Store rating'), findsOneWidget);
+      expect(find.text('4.62'), findsOneWidget);
+      expect(find.text('Vendor Community Score'), findsOneWidget);
+      expect(find.text('12 verified store ratings'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Service Quality: 4.70 of 5'),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel('Delivery / Processing Speed: 4.50 of 5'),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel('Material Quality Score: 4.66 of 5'),
+        findsOneWidget,
+      );
+      expect(find.text('Highly Rated'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'below the sample gate the store reads New Vendor with no combined score',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BuyerPublicStoreProfileScreen(
+            storeId: 'store-1',
+            repository: _StoreRepository(),
+            loadRating: () async => const StoreRatingView(
+              ratingCount: 2,
+              serviceQuality: '5.00',
+              speed: '4.00',
+              scoreLabel: 'New Vendor — Building Track Record',
+              newVendor: true,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Store Profile'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('New Vendor — Building Track Record'), findsOneWidget);
+      expect(find.text('2 verified store ratings'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Service Quality: 5.00 of 5'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Material Quality Score'), findsNothing);
+      expect(find.textContaining('Vendor Performance Score'), findsNothing);
+    },
+  );
+
+  testWidgets('a failed store rating offers retry and keeps the profile', (
+    tester,
+  ) async {
+    var calls = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BuyerPublicStoreProfileScreen(
+          storeId: 'store-1',
+          repository: _StoreRepository(),
+          loadRating: () async {
+            calls++;
+            if (calls == 1) throw StateError('offline');
+            return const StoreRatingView(
+              ratingCount: 0,
+              scoreLabel: 'New Vendor — Building Track Record',
+              newVendor: true,
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Store Profile'));
+    await tester.pumpAndSettle();
+    expect(find.text('Store rating could not load.'), findsOneWidget);
+    expect(find.text('123 Aurora Boulevard, Quezon City'), findsOneWidget);
+
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+    expect(find.text('0 verified store ratings'), findsOneWidget);
+  });
+
+  testWidgets(
+    'header icons message, show on Map and search; distance comes from the Map',
+    (tester) async {
+      var messaged = 0;
+      var mapped = 0;
+      String? browsed;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BuyerPublicStoreProfileScreen(
+            storeId: 'store-1',
+            repository: _StoreRepository(),
+            distanceMeters: 1900,
+            onMessage: () => messaged++,
+            onShowOnMap: (context) => mapped++,
+            onBrowseProducts: (context, id, name) => browsed = '$id:$name',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('1.9 km away'), findsOneWidget);
+      expect(
+        find.text('Message'),
+        findsNothing,
+        reason: 'Message is an icon in the header, not a Shop Front button.',
+      );
+      await tester.tap(find.byTooltip('Message Sample Store'));
+      await tester.tap(find.byTooltip('Show Sample Store on the Map'));
+      await tester.tap(find.byTooltip('Search Sample Store products'));
+      expect(messaged, 1);
+      expect(mapped, 1);
+      expect(browsed, 'store-1:Sample Store');
+    },
+  );
+
+  testWidgets('without a Map distance the store listings supply it', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BuyerPublicStoreProfileScreen(
+          storeId: 'store-1',
+          repository: _StoreRepository(),
+          loadProducts: (sort, cursor) async =>
+              searchPage([listingCard('listing-1', distance: 2400)]),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('2.4 km away'), findsOneWidget);
+    expect(find.byTooltip('Show Sample Store on the Map'), findsNothing);
+  });
+
+  testWidgets('the public phone number opens Call or Send SMS outside the app', (
+    tester,
+  ) async {
+    final opened = <Uri>[];
+    var canOpen = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BuyerPublicStoreProfileScreen(
+          storeId: 'store-1',
+          repository: _StoreRepository(),
+          openExternal: (uri) async {
+            opened.add(uri);
+            return canOpen;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Store Profile'));
+    await tester.pumpAndSettle();
+
+    Future<void> choose(String action) async {
+      await tester.ensureVisible(find.text('(0917) 123-4567'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('(0917) 123-4567'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(action));
+      await tester.pumpAndSettle();
+    }
+
+    await choose('Call');
+    await choose('Send SMS');
+    expect(opened.map((uri) => uri.toString()), [
+      'tel:09171234567',
+      'sms:09171234567',
+    ]);
+
+    canOpen = false;
+    await choose('Call');
+    expect(
+      find.text('This device cannot place calls. The number is (0917) 123-4567.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Products tab asks for a location when none is chosen', (
@@ -240,4 +565,3 @@ void main() {
     expect(find.text('Choose a location first'), findsOneWidget);
   });
 }
-

@@ -10,10 +10,13 @@ Name | Type
 `organizationLockVersion` | number
 `formState` | string
 `vacationMode` | boolean
+`vacationStartsOn` | string
+`vacationEndsOn` | string
 `publicStoreName` | string
 `description` | string
 `bulkCapability` | boolean
 `fulfillmentMethod` | string
+`vendorDeliveryEnabled` | boolean
 `publicEmail` | string
 `publicPhone` | string
 `operatingSchedule` | [Array&lt;StoreOperatingDay&gt;](StoreOperatingDay.md)
@@ -31,10 +34,13 @@ const example = {
   "organizationLockVersion": null,
   "formState": null,
   "vacationMode": null,
+  "vacationStartsOn": null,
+  "vacationEndsOn": null,
   "publicStoreName": null,
   "description": null,
   "bulkCapability": null,
   "fulfillmentMethod": null,
+  "vendorDeliveryEnabled": null,
   "publicEmail": null,
   "publicPhone": null,
   "operatingSchedule": null,

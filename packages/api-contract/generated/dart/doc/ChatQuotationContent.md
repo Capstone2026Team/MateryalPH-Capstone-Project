@@ -8,6 +8,7 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**discount** | [**ChatQuotationDiscountAssessment**](ChatQuotationDiscountAssessment.md) |  | [optional]
 **lines** | [**BuiltList&lt;ChatQuotationLine&gt;**](ChatQuotationLine.md) |  |
 **commercial** | [**ChatQuotationMoney**](ChatQuotationMoney.md) |  |
 **fulfillmentMethod** | **String** |  |

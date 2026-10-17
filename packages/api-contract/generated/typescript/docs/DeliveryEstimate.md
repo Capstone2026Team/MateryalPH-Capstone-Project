@@ -1,7 +1,7 @@
 
 # DeliveryEstimate
 
-Advisory range across the Vendor\'s eligible vehicles. Not an offer; the Vendor confirms vehicles, trips and the final fee.
+Estimate for the system-recommended vehicle per separate load group. Lowest eligible formula fee, then fewer trips and vehicles, with stable vehicle-ID ties. Historical estimates may contain alternative ranges. Vendor confirmation and Buyer approval precede payment.
 
 ## Properties
 

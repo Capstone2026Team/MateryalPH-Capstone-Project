@@ -28,6 +28,7 @@ Route::prefix('buyers')->middleware($buyer)->group(function (): void {
 
 Route::prefix('vendor')->middleware($web('VENDOR'))->group(function (): void {
     Route::get('/reviews', [R::class, 'vendorIndex']);
+    Route::get('/reviews/{reviewId}', [R::class, 'vendorDetail'])->whereUuid('reviewId');
     Route::patch('/reviews/{reviewId}', [R::class, 'vendorEdit'])->whereUuid('reviewId');
     Route::post('/reviews/{reviewId}/flags', [R::class, 'vendorFlag'])->whereUuid('reviewId');
     Route::get('/orders/{orderId}/reviews', [R::class, 'vendorOrder'])->whereUuid('orderId');

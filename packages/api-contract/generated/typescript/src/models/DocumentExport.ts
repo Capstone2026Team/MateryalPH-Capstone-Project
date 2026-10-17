@@ -32,6 +32,10 @@ export interface DocumentExport {
      */
     id: string;
     /**
+     * Source record for contextual export history; null for aggregate reports.
+     */
+    resourceId?: string | null;
+    /**
      *
      */
     type: string;
@@ -112,6 +116,7 @@ export function DocumentExportFromJSONTyped(json: any, ignoreDiscriminator: bool
     return {
 
         'id': json['id'],
+        'resourceId': json['resource_id'] === undefined ? undefined : json['resource_id'] === null ? null : json['resource_id'],
         'type': json['type'],
         'format': json['format'],
         'state': json['state'],
@@ -139,6 +144,7 @@ export function DocumentExportToJSONTyped(value?: DocumentExport | null, ignoreD
     return {
 
         'id': value['id'],
+        'resource_id': value['resourceId'],
         'type': value['type'],
         'format': value['format'],
         'state': value['state'],

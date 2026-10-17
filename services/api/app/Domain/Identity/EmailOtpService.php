@@ -8,6 +8,7 @@ use App\Domain\Operations\OutboxPublisher;
 use App\Models\EmailOtp;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use SensitiveParameter;
 
 final class EmailOtpService
 {
@@ -67,6 +68,20 @@ final class EmailOtpService
 
             return $otp;
         });
+    }
+
+    public function canDeliver(string $otpId, string $recipient, string $purpose, #[SensitiveParameter] string $code): bool
+    {
+        $otp = EmailOtp::query()->find($otpId);
+
+        return $otp instanceof EmailOtp
+            && $otp->normalized_email === $recipient
+            && $otp->purpose === $purpose
+            && $otp->consumed_at === null
+            && $otp->invalidated_at === null
+            && $otp->expires_at->isFuture()
+            && $otp->attempts < $otp->max_attempts
+            && hash_equals($otp->code_hash, $this->hash($recipient, $purpose, $code));
     }
 
     public function verify(string $email, string $purpose, string $code): EmailOtp

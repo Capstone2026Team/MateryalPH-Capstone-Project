@@ -19,6 +19,6 @@ final class VendorOnboardingNoticeMail extends Mailable
 
     public function content(): Content
     {
-        return new Content(view: 'mail.vendor-onboarding-notice', with: ['message' => $this->message]);
+        return new Content(view: 'mail.vendor-onboarding-notice', with: ['noticeBody' => $this->message]);
     }
 }

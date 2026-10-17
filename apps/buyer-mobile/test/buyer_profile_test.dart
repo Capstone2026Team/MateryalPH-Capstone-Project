@@ -77,7 +77,8 @@ void main() {
           await reveal(tester, 'Account Setting');
           await tester.tap(find.text('Account Setting'));
           await tester.pumpAndSettle();
-          expect(find.byTooltip('Edit profile picture'), findsOneWidget);
+          expect(find.text('Upload photo'), findsNothing);
+          expect(find.bySemanticsLabel('Change profile photo'), findsOneWidget);
           expect(find.text('+639171234567'), findsOneWidget);
           await reveal(tester, 'Edit Account Details');
           await tester.tap(find.text('Edit Account Details'));
@@ -102,7 +103,7 @@ void main() {
   }
 
   testWidgets(
-    'notifications open the inbox and deletion never mutates account',
+    'notifications open the inbox and deletion opens its confirmation page',
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -132,8 +133,13 @@ void main() {
       expect(row.destructive, isTrue);
       await tester.tap(find.text('Delete Account'));
       await tester.pumpAndSettle();
-      expect(find.text('Not yet implemented'), findsOneWidget);
-      expect(find.text('Delete Account'), findsOneWidget);
+      expect(find.text('Not yet implemented'), findsNothing);
+      expect(find.text('Delete your MateryalPH account'), findsOneWidget);
+      // Nothing is deleted from merely opening the page.
+      expect(
+        find.widgetWithText(FilledButton, 'Delete my account'),
+        findsNothing,
+      );
     },
   );
 

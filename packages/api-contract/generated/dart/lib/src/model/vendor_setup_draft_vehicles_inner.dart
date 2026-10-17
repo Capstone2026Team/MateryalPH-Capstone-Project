@@ -29,6 +29,8 @@ part 'vendor_setup_draft_vehicles_inner.g.dart';
 /// * [heavyClassification]
 /// * [baseFeeCentavos]
 /// * [perKmCentavos]
+/// * [mobilizationFeeCentavos] - Concrete Mixer Truck / Transit Mixer only; a positive fee needs mobilization_basis.
+/// * [mobilizationBasis]
 /// * [maximumDistanceKm] - Omission retains the saved limit; new coverage defaults to the approved 50 km procurement limit. New vehicle rates inherit coverage.
 @BuiltValue()
 abstract class VendorSetupDraftVehiclesInner implements Built<VendorSetupDraftVehiclesInner, VendorSetupDraftVehiclesInnerBuilder> {
@@ -86,6 +88,14 @@ abstract class VendorSetupDraftVehiclesInner implements Built<VendorSetupDraftVe
 
   @BuiltValueField(wireName: r'per_km_centavos')
   int? get perKmCentavos;
+
+  /// Concrete Mixer Truck / Transit Mixer only; a positive fee needs mobilization_basis.
+  @BuiltValueField(wireName: r'mobilization_fee_centavos')
+  int? get mobilizationFeeCentavos;
+
+  @BuiltValueField(wireName: r'mobilization_basis')
+  VendorSetupDraftVehiclesInnerMobilizationBasisEnum? get mobilizationBasis;
+  // enum mobilizationBasisEnum {  PER_TRUCK,  PER_TRIP,  ,  };
 
   /// Omission retains the saved limit; new coverage defaults to the approved 50 km procurement limit. New vehicle rates inherit coverage.
   @BuiltValueField(wireName: r'maximum_distance_km')
@@ -231,6 +241,20 @@ class _$VendorSetupDraftVehiclesInnerSerializer implements PrimitiveSerializer<V
       yield serializers.serialize(
         object.perKmCentavos,
         specifiedType: const FullType(int),
+      );
+    }
+    if (object.mobilizationFeeCentavos != null) {
+      yield r'mobilization_fee_centavos';
+      yield serializers.serialize(
+        object.mobilizationFeeCentavos,
+        specifiedType: const FullType.nullable(int),
+      );
+    }
+    if (object.mobilizationBasis != null) {
+      yield r'mobilization_basis';
+      yield serializers.serialize(
+        object.mobilizationBasis,
+        specifiedType: const FullType.nullable(VendorSetupDraftVehiclesInnerMobilizationBasisEnum),
       );
     }
     if (object.maximumDistanceKm != null) {
@@ -399,6 +423,22 @@ class _$VendorSetupDraftVehiclesInnerSerializer implements PrimitiveSerializer<V
           if (valueDes == null) continue;
           result.perKmCentavos = valueDes;
           break;
+        case r'mobilization_fee_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.mobilizationFeeCentavos = valueDes;
+          break;
+        case r'mobilization_basis':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(VendorSetupDraftVehiclesInnerMobilizationBasisEnum),
+          ) as VendorSetupDraftVehiclesInnerMobilizationBasisEnum?;
+          if (valueDes == null) continue;
+          result.mobilizationBasis = valueDes;
+          break;
         case r'maximum_distance_km':
           final valueDes = serializers.deserialize(
             value,
@@ -455,5 +495,20 @@ class VendorSetupDraftVehiclesInnerVehicleCategoryEnum extends EnumClass {
 
   static BuiltSet<VendorSetupDraftVehiclesInnerVehicleCategoryEnum> get values => _$vendorSetupDraftVehiclesInnerVehicleCategoryEnumValues;
   static VendorSetupDraftVehiclesInnerVehicleCategoryEnum valueOf(String name) => _$vendorSetupDraftVehiclesInnerVehicleCategoryEnumValueOf(name);
+}
+
+class VendorSetupDraftVehiclesInnerMobilizationBasisEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'PER_TRUCK')
+  static const VendorSetupDraftVehiclesInnerMobilizationBasisEnum PER_TRUCK = _$vendorSetupDraftVehiclesInnerMobilizationBasisEnum_PER_TRUCK;
+  @BuiltValueEnumConst(wireName: r'PER_TRIP')
+  static const VendorSetupDraftVehiclesInnerMobilizationBasisEnum PER_TRIP = _$vendorSetupDraftVehiclesInnerMobilizationBasisEnum_PER_TRIP;
+
+  static Serializer<VendorSetupDraftVehiclesInnerMobilizationBasisEnum> get serializer => _$vendorSetupDraftVehiclesInnerMobilizationBasisEnumSerializer;
+
+  const VendorSetupDraftVehiclesInnerMobilizationBasisEnum._(String name): super(name);
+
+  static BuiltSet<VendorSetupDraftVehiclesInnerMobilizationBasisEnum> get values => _$vendorSetupDraftVehiclesInnerMobilizationBasisEnumValues;
+  static VendorSetupDraftVehiclesInnerMobilizationBasisEnum valueOf(String name) => _$vendorSetupDraftVehiclesInnerMobilizationBasisEnumValueOf(name);
 }
 

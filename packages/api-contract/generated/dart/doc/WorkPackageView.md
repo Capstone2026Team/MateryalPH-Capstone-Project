@@ -19,10 +19,11 @@ Name | Type | Description | Notes
 **selectedVendorId** | **String** |  | [optional]
 **orderId** | **String** |  | [optional]
 **version** | [**WorkPackageVersion**](WorkPackageVersion.md) |  | [optional]
-**versions** | [**WorkPackageVersionPage**](WorkPackageVersionPage.md) |  |
 **budget** | [**ProjectBudget**](ProjectBudget.md) |  |
 **missingLines** | [**BuiltList&lt;BuiltMap&lt;String, JsonObject&gt;&gt;**](BuiltMap.md) |  |
 **document** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  |
+**hasOrder** | **bool** | True when an order, tagged purchase for a missing line or selected Vendor is tied to the package. | [optional]
+**canDelete** | **bool** | True while the package has no order and its Project is Active. Clients hide the delete action otherwise; the server enforces the rule. | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

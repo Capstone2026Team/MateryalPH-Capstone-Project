@@ -87,6 +87,26 @@ export interface ConversationView {
      */
     canListFulfillmentConversations?: boolean;
     /**
+     * Currently authorized Item-Based main conversation for this Buyer and Store. Null if the viewer cannot access it or this is a fulfillment thread.
+     */
+    mainConversationId?: string;
+    /**
+     * Number of currently authorized project inquiries for this Buyer and Store.
+     */
+    projectInquiryCount?: number;
+    /**
+     * Received unread messages across all currently authorized project inquiries, including every page. Opening the main thread does not mark these messages read.
+     */
+    projectUnreadCount?: number;
+    /**
+     * Work Package name for a project inquiry, or Item inquiry for the main thread.
+     */
+    inquiryLabel?: string;
+    /**
+     * Unread received messages across every fulfillment conversation for this inquiry buyer and store, including history and all pages. Zero unless can_list_fulfillment_conversations is true. Does not include sales messages or mark messages read.
+     */
+    fulfillmentUnreadCount?: number;
+    /**
      *
      */
     fulfillmentEntryEnabled: boolean;
@@ -194,6 +214,11 @@ export function ConversationViewFromJSONTyped(json: any, ignoreDiscriminator: bo
         'updatedAt': json['updated_at'],
         'canTransfer': json['can_transfer'],
         'canListFulfillmentConversations': json['can_list_fulfillment_conversations'] == null ? undefined : json['can_list_fulfillment_conversations'],
+        'mainConversationId': json['main_conversation_id'] == null ? undefined : json['main_conversation_id'],
+        'projectInquiryCount': json['project_inquiry_count'] == null ? undefined : json['project_inquiry_count'],
+        'projectUnreadCount': json['project_unread_count'] == null ? undefined : json['project_unread_count'],
+        'inquiryLabel': json['inquiry_label'] == null ? undefined : json['inquiry_label'],
+        'fulfillmentUnreadCount': json['fulfillment_unread_count'] == null ? undefined : json['fulfillment_unread_count'],
         'fulfillmentEntryEnabled': json['fulfillment_entry_enabled'],
         'readOnly': json['read_only'],
         'readOnlyReason': json['read_only_reason'] == null ? undefined : json['read_only_reason'],
@@ -232,6 +257,11 @@ export function ConversationViewToJSONTyped(value?: ConversationView | null, ign
         'updated_at': value['updatedAt'],
         'can_transfer': value['canTransfer'],
         'can_list_fulfillment_conversations': value['canListFulfillmentConversations'],
+        'main_conversation_id': value['mainConversationId'],
+        'project_inquiry_count': value['projectInquiryCount'],
+        'project_unread_count': value['projectUnreadCount'],
+        'inquiry_label': value['inquiryLabel'],
+        'fulfillment_unread_count': value['fulfillmentUnreadCount'],
         'fulfillment_entry_enabled': value['fulfillmentEntryEnabled'],
         'read_only': value['readOnly'],
         'read_only_reason': value['readOnlyReason'],

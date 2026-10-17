@@ -48,6 +48,13 @@ import {
     FulfillmentTripToJSON,
     FulfillmentTripToJSONTyped,
 } from './FulfillmentTrip';
+import type { DeliveryAssignmentHistory } from './DeliveryAssignmentHistory';
+import {
+    DeliveryAssignmentHistoryFromJSON,
+    DeliveryAssignmentHistoryFromJSONTyped,
+    DeliveryAssignmentHistoryToJSON,
+    DeliveryAssignmentHistoryToJSONTyped,
+} from './DeliveryAssignmentHistory';
 import type { FulfillmentReceipt } from './FulfillmentReceipt';
 import {
     FulfillmentReceiptFromJSON,
@@ -143,6 +150,14 @@ export interface OrderFulfillment {
      *
      */
     nextAction: OrderFulfillmentNextActionEnum;
+    /**
+     *
+     */
+    assignmentHistory?: Array<DeliveryAssignmentHistory>;
+    /**
+     *
+     */
+    proofUploadLimitKb?: number;
 }
 
 
@@ -214,6 +229,8 @@ export function OrderFulfillmentFromJSONTyped(json: any, ignoreDiscriminator: bo
         'vehicleIssues': ((json['vehicle_issues'] as Array<any>).map(FulfillmentVehicleIssueFromJSON)),
         'thread': FulfillmentThreadRefFromJSON(json['thread']),
         'nextAction': json['next_action'],
+        'assignmentHistory': json['assignment_history'] == null ? undefined : ((json['assignment_history'] as Array<any>).map(DeliveryAssignmentHistoryFromJSON)),
+        'proofUploadLimitKb': json['proof_upload_limit_kb'] == null ? undefined : json['proof_upload_limit_kb'],
     };
 }
 
@@ -243,6 +260,8 @@ export function OrderFulfillmentToJSONTyped(value?: OrderFulfillment | null, ign
         'vehicle_issues': ((value['vehicleIssues'] as Array<any>).map(FulfillmentVehicleIssueToJSON)),
         'thread': FulfillmentThreadRefToJSON(value['thread']),
         'next_action': value['nextAction'],
+        'assignment_history': value['assignmentHistory'] == null ? undefined : ((value['assignmentHistory'] as Array<any>).map(DeliveryAssignmentHistoryToJSON)),
+        'proof_upload_limit_kb': value['proofUploadLimitKb'],
     };
 }
 

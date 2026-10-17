@@ -1,4 +1,4 @@
-import { AuthenticationApi, Configuration, ResponseError } from '@materyalph/api-client-ts'
+import { AuthenticationApi, Configuration, FetchError, ResponseError } from '@materyalph/api-client-ts'
 
 type WebApiOptions = {
   refreshSession?: boolean
@@ -9,9 +9,65 @@ const csrfTokens = new Map<string, string>()
 const csrfRequests = new Map<string, Promise<string>>()
 const refreshRequests = new Map<string, Promise<RefreshResult>>()
 const refreshVersions = new Map<string, number>()
+let sessionGeneration = 0
 const reads = new Map<string, Promise<Response>>()
 const mutations = new Set<string>()
 const cooldowns = new Map<string, { until: number; response: Response }>()
+
+const READ_TIMEOUT_MS = 30_000
+
+class WebReadTimeoutError extends Error {
+  constructor() {
+    super('The server is taking too long to respond. Check your connection and try again.')
+    this.name = 'WebReadTimeoutError'
+  }
+}
+
+/** Generated clients wrap transport failures; keep the actionable timeout message available to every portal. */
+export function webRequestErrorMessage(error: unknown): string | null {
+  const cause = error instanceof FetchError ? error.cause : error
+  return cause instanceof WebReadTimeoutError ? cause.message : null
+}
+
+/** Use the local dev proxy without changing API identity, signed URLs or the configured production endpoint. */
+function localRequestInput(basePath: string, input: RequestInfo | URL): RequestInfo | URL {
+  if (!import.meta.env.DEV || typeof window === 'undefined' || window.location.protocol !== 'http:'
+    || window.location.hostname !== 'localhost' || !['5173', '5174'].includes(window.location.port)) return input
+  const base = new URL(basePath, window.location.origin)
+  const url = new URL(input instanceof Request ? input.url : String(input), base)
+  if (base.origin !== 'http://localhost:8080' || url.origin !== base.origin
+    || !url.pathname.startsWith(`${base.pathname.replace(/\/$/, '')}/`)) return input
+  const proxied = `${window.location.origin}${url.pathname}${url.search}`
+  return input instanceof Request ? new Request(proxied, input) : proxied
+}
+
+async function fetchWebRequest(basePath: string, input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const requestInput = localRequestInput(basePath, input)
+  const method = init?.method ?? (input instanceof Request ? input.method : 'GET')
+  const accept = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined)).get('Accept')
+  const bounded = (isSafeMethod(method) || String(input) === `${basePath}/auth/refresh`) && (!accept || accept.includes('application/json'))
+  if (!bounded) return fetch(requestInput, init)
+  const controller = new AbortController()
+  const parentSignal = init?.signal ?? (input instanceof Request ? input.signal : undefined)
+  const signal = parentSignal ? AbortSignal.any([parentSignal, controller.signal]) : controller.signal
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      const error = new WebReadTimeoutError()
+      controller.abort(error)
+      reject(error)
+    }, READ_TIMEOUT_MS)
+  })
+  try {
+    return await Promise.race([fetch(requestInput, { ...init, signal }).then(async response => {
+      // A server can send headers and then stall its JSON body; parsing must be bounded too.
+      if (!response.body || !response.headers.get('Content-Type')?.includes('application/json')) return response
+      return new Response(await response.arrayBuffer(), { status: response.status, statusText: response.statusText, headers: response.headers })
+    }), deadline])
+  } finally {
+    clearTimeout(timer)
+  }
+}
 
 export function rateLimitMessage(response: Response): string {
   const seconds = retryAfterSeconds(response)
@@ -64,6 +120,7 @@ export function getWebCsrfToken(basePath: string, force = false): Promise<string
 }
 
 export function clearWebSessionTransport(basePath?: string): void {
+  sessionGeneration++
   if (typeof window !== 'undefined') window.dispatchEvent(new Event('materyalph:session-cleared'))
   reads.clear()
   cooldowns.clear()
@@ -103,10 +160,11 @@ export async function signOutWebSession(basePath: string): Promise<void> {
   clearWebSessionTransport(basePath)
 }
 
-async function coordinatedFetch(basePath: string, refreshSession: boolean, input: RequestInfo | URL, init?: RequestInit, readOnlyPostPaths: readonly string[] = []): Promise<Response> {
+async function coordinatedFetch(basePath: string, refreshSession: boolean, input: RequestInfo | URL, init?: RequestInit, readOnlyPostPaths: readonly string[] = [], behavior: { localForbidden?: boolean } = {}): Promise<Response> {
+  const generation = sessionGeneration
   const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase()
   const url = input instanceof Request ? input.url : String(input)
-  const key = `${basePath}|${method}|${url}`
+  const key = `${generation}|${basePath}|${method}|${url}`
   const cooldown = cooldowns.get(key)
   if (cooldown && cooldown.until > Date.now()) {
     const headers = new Headers(cooldown.response.headers)
@@ -116,7 +174,7 @@ async function coordinatedFetch(basePath: string, refreshSession: boolean, input
   cooldowns.delete(key)
   // Share only simultaneous ordinary GETs; never cache account/permission data.
   const shareRead = method === 'GET' && !init?.signal && !(input instanceof Request) && !new Headers(init?.headers).has('Authorization')
-  const readKey = `${key}|${refreshSession}|${JSON.stringify(Array.from(new Headers(init?.headers).entries()))}`
+  const readKey = `${key}|${refreshSession}|${Boolean(behavior.localForbidden)}|${JSON.stringify(Array.from(new Headers(init?.headers).entries()))}`
   const current = shareRead ? reads.get(readKey) : undefined
   if (current) return (await current).clone()
   // Lookup POSTs still use CSRF and authentication, but newer lookups must be
@@ -126,10 +184,14 @@ async function coordinatedFetch(basePath: string, refreshSession: boolean, input
   if (mutation && mutations.has(key)) throw new Error('This action is already processing. Please wait for it to finish.')
   if (mutation) mutations.add(key)
   const request = webFetch(basePath, refreshSession, input, init).then(response => {
-    if (typeof window !== 'undefined') {
-      if ([401, 403].includes(response.status)) window.dispatchEvent(new CustomEvent('materyalph:access-denied', { detail: response.clone() }))
+    if (typeof window !== 'undefined' && generation === sessionGeneration) {
+      if (response.status === 401 || (response.status === 403 && !behavior.localForbidden)) window.dispatchEvent(new CustomEvent('materyalph:access-denied', { detail: response.clone() }))
+      if (mutation && response.ok && !isAuthenticationLifecycleRequest(input, basePath) && !/\/(auth|typing)$/.test(url)) {
+        const audience = url.slice(basePath.length).split('/')[1]
+        if (audience === 'vendor' || audience === 'admin') window.dispatchEvent(new CustomEvent('materyalph:navigation-updates', { detail: { basePath, audience } }))
+      }
     }
-    if (response.status === 429 && response.headers.has('Retry-After')) {
+    if (generation === sessionGeneration && response.status === 429 && response.headers.has('Retry-After')) {
       const until = Date.now() + retryAfterSeconds(response) * 1000
       cooldowns.set(key, { until, response: response.clone() })
       if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('materyalph:rate-limited', { detail: { until } }))
@@ -141,13 +203,15 @@ async function coordinatedFetch(basePath: string, refreshSession: boolean, input
 }
 
 async function webFetch(basePath: string, refreshSession: boolean, input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const generation = sessionGeneration
   const version = refreshVersions.get(basePath) ?? 0
-  let response = await fetch(input, init)
+  let response = await fetchWebRequest(basePath, input, init)
+  if (generation !== sessionGeneration) return response
 
   if (response.status === 419 && !isSafeMethod(init?.method)) {
     const token = await getWebCsrfToken(basePath, true)
     init = withCsrf(init, token)
-    response = await fetch(input, init)
+    response = await fetchWebRequest(basePath, input, init)
   }
 
   if (response.status !== 401 || !refreshSession || isAuthenticationLifecycleRequest(input, basePath)) {
@@ -156,12 +220,13 @@ async function webFetch(basePath: string, refreshSession: boolean, input: Reques
 
   // A slower request may return its old-token 401 after another request has
   // already refreshed. Replay once with the new cookie without rotating again.
-  if ((refreshVersions.get(basePath) ?? 0) !== version) return fetch(input, init)
+  if ((refreshVersions.get(basePath) ?? 0) !== version) return fetchWebRequest(basePath, input, init)
 
   const refreshed = await refreshWebSession(basePath)
+  if (generation !== sessionGeneration) return response
   if (refreshed.kind === 'invalid') return response
   if (refreshed.kind === 'response') return refreshed.response.clone()
-  return fetch(input, init)
+  return fetchWebRequest(basePath, input, init)
 }
 
 async function refreshWebSession(basePath: string): Promise<RefreshResult> {
@@ -236,6 +301,22 @@ export async function readOrderEvidenceFile(basePath: string, evidencePath: stri
   return blob
 }
 
+/** Personal photos stay behind the owner-only API and the portal's authenticated transport. */
+export async function readAccountPhoto(basePath: string, portal: 'vendors' | 'admin', signedUrl: string): Promise<Blob> {
+  const base = new URL(basePath, window.location.origin)
+  const url = new URL(signedUrl, base)
+  if (url.origin !== base.origin || url.pathname !== `${base.pathname.replace(/\/$/, '')}/${portal}/account/photo`) {
+    throw new Error('The profile picture URL is invalid. Refresh and try again.')
+  }
+  const response = await coordinatedFetch(normalizedBasePath(base.href), true, url, {
+    credentials: 'include', cache: 'no-store', referrerPolicy: 'origin', headers: { Accept: 'image/png' },
+  })
+  if (!response.ok) throw new ResponseError(response)
+  const blob = await response.blob()
+  if (blob.type.split(';')[0] !== 'image/png') throw new Error('The profile picture cannot be previewed.')
+  return blob
+}
+
 const SIGNED_CASE_CONTENT = [
   /\/(vendor|admin)\/disputes\/[0-9a-f-]{36}\/files\/[0-9a-f-]{36}\/content$/i,
   /\/(vendor|admin)\/invoice-records\/[0-9a-f-]{36}\/content$/i,
@@ -262,10 +343,37 @@ export async function readSignedCaseFile(basePath: string, signedUrl: string): P
   return blob
 }
 
+/** Review photos and videos stay on their exact, viewer-authorized API content route. */
+export async function readReviewMediaFile(basePath: string, signedUrl: string): Promise<Blob> {
+  const base = new URL(basePath, window.location.origin)
+  const url = new URL(signedUrl, base)
+  const apiPath = base.pathname.replace(/\/$/, '')
+  const reviewPath = url.pathname.slice(apiPath.length)
+  if (url.origin !== base.origin || url.username || url.password || !url.pathname.startsWith(`${apiPath}/`)
+    || !/^\/(vendor|admin)\/reviews\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/media\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/content$/i.test(reviewPath)) {
+    throw new Error('The review attachment URL is invalid. Refresh attachments and try again.')
+  }
+  // An expired signature is a local attachment failure, not evidence that the portal session lost its permissions.
+  const response = await coordinatedFetch(normalizedBasePath(base.href), true, url, {
+    credentials: 'include', cache: 'no-store', referrerPolicy: 'origin',
+    headers: { Accept: 'image/jpeg,image/png,video/mp4,video/quicktime' },
+  }, [], { localForbidden: true })
+  if (!response.ok) throw new ResponseError(response)
+  const blob = await response.blob()
+  if (!['image/jpeg', 'image/png', 'video/mp4', 'video/quicktime'].includes(blob.type.split(';')[0] ?? '')) {
+    throw new Error('This review attachment type cannot be previewed.')
+  }
+  return blob
+}
+
+/** Signed private-content routes the evidence previews may read: onboarding documents and catalog files (PS/ICC evidence). */
+const PRIVATE_CONTENT_ROUTES = ['vendor-onboarding-files', 'catalog-files']
+
 export async function readWebPrivateFile(basePath: string, signedUrl: string): Promise<Blob> {
   const base = new URL(basePath, window.location.origin)
   const url = new URL(signedUrl, base)
-  if (url.origin !== base.origin || !url.pathname.startsWith(`${base.pathname.replace(/\/$/, '')}/vendor-onboarding-files/`) || !url.pathname.endsWith('/content')) {
+  const apiPath = base.pathname.replace(/\/$/, '')
+  if (url.origin !== base.origin || !PRIVATE_CONTENT_ROUTES.some(route => url.pathname.startsWith(`${apiPath}/${route}/`)) || !url.pathname.endsWith('/content')) {
     throw new Error('The private evidence URL is invalid. Refresh and try again.')
   }
   const response = await coordinatedFetch(normalizedBasePath(base.href), true, url, {

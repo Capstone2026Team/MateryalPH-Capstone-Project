@@ -10,7 +10,7 @@ All URIs are relative to */api/v1*
 
 ## listBudgetOverrides
 
-> BudgetOverrideListEnvelope listBudgetOverrides(page)
+> BudgetOverrideListEnvelope listBudgetOverrides(page, from, to)
 
 
 
@@ -38,6 +38,10 @@ async function example() {
   const body = {
     // number (optional)
     page: 56,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Decision created_at. (optional)
+    from: 2013-10-20,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Decision created_at. (optional)
+    to: 2013-10-20,
   } satisfies ListBudgetOverridesRequest;
 
   try {
@@ -58,6 +62,8 @@ example().catch(console.error);
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **from** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Decision created_at. | [Optional] [Defaults to `undefined`] |
+| **to** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Decision created_at. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 

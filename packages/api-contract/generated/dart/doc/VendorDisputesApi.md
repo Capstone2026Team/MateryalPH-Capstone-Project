@@ -740,7 +740,7 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listVendorDisputes**
-> DisputeListEnvelope listVendorDisputes(group, q, page)
+> DisputeListEnvelope listVendorDisputes(group, q, page, from, to)
 
 
 
@@ -762,9 +762,11 @@ final api = MateryalphApiClient().getVendorDisputesApi();
 final String group = group_example; // String |
 final String q = q_example; // String |
 final int page = 56; // int |
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Case created_at (filing). Group counts retain their existing unrestricted scope.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Case created_at (filing). Group counts retain their existing unrestricted scope.
 
 try {
-    final response = api.listVendorDisputes(group, q, page);
+    final response = api.listVendorDisputes(group, q, page, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling VendorDisputesApi->listVendorDisputes: $e\n');
@@ -778,6 +780,8 @@ Name | Type | Description  | Notes
  **group** | **String**|  | [optional]
  **q** | **String**|  | [optional]
  **page** | **int**|  | [optional]
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Case created_at (filing). Group counts retain their existing unrestricted scope. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Case created_at (filing). Group counts retain their existing unrestricted scope. | [optional]
 
 ### Return type
 

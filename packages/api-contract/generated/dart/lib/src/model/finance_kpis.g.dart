@@ -6,6 +6,64 @@ part of 'finance_kpis.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
+const FinanceKpisTrendGranularityEnum _$financeKpisTrendGranularityEnum_DAY =
+    const FinanceKpisTrendGranularityEnum._('DAY');
+const FinanceKpisTrendGranularityEnum _$financeKpisTrendGranularityEnum_MONTH =
+    const FinanceKpisTrendGranularityEnum._('MONTH');
+
+FinanceKpisTrendGranularityEnum _$financeKpisTrendGranularityEnumValueOf(
+    String name) {
+  switch (name) {
+    case 'DAY':
+      return _$financeKpisTrendGranularityEnum_DAY;
+    case 'MONTH':
+      return _$financeKpisTrendGranularityEnum_MONTH;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<FinanceKpisTrendGranularityEnum>
+    _$financeKpisTrendGranularityEnumValues = BuiltSet<
+        FinanceKpisTrendGranularityEnum>(const <FinanceKpisTrendGranularityEnum>[
+  _$financeKpisTrendGranularityEnum_DAY,
+  _$financeKpisTrendGranularityEnum_MONTH,
+]);
+
+Serializer<FinanceKpisTrendGranularityEnum>
+    _$financeKpisTrendGranularityEnumSerializer =
+    _$FinanceKpisTrendGranularityEnumSerializer();
+
+class _$FinanceKpisTrendGranularityEnumSerializer
+    implements PrimitiveSerializer<FinanceKpisTrendGranularityEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'DAY': 'DAY',
+    'MONTH': 'MONTH',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'DAY': 'DAY',
+    'MONTH': 'MONTH',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[FinanceKpisTrendGranularityEnum];
+  @override
+  final String wireName = 'FinanceKpisTrendGranularityEnum';
+
+  @override
+  Object serialize(
+          Serializers serializers, FinanceKpisTrendGranularityEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  FinanceKpisTrendGranularityEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      FinanceKpisTrendGranularityEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$FinanceKpis extends FinanceKpis {
   @override
   final String label;
@@ -19,6 +77,10 @@ class _$FinanceKpis extends FinanceKpis {
   final BuiltList<FinanceKpi> finance;
   @override
   final BuiltMap<String, int> counts;
+  @override
+  final BuiltList<CommissionTrendPoint>? trend;
+  @override
+  final FinanceKpisTrendGranularityEnum? trendGranularity;
 
   factory _$FinanceKpis([void Function(FinanceKpisBuilder)? updates]) =>
       (FinanceKpisBuilder()..update(updates))._build();
@@ -29,7 +91,9 @@ class _$FinanceKpis extends FinanceKpis {
       required this.period,
       required this.commerce,
       required this.finance,
-      required this.counts})
+      required this.counts,
+      this.trend,
+      this.trendGranularity})
       : super._();
   @override
   FinanceKpis rebuild(void Function(FinanceKpisBuilder) updates) =>
@@ -47,7 +111,9 @@ class _$FinanceKpis extends FinanceKpis {
         period == other.period &&
         commerce == other.commerce &&
         finance == other.finance &&
-        counts == other.counts;
+        counts == other.counts &&
+        trend == other.trend &&
+        trendGranularity == other.trendGranularity;
   }
 
   @override
@@ -59,6 +125,8 @@ class _$FinanceKpis extends FinanceKpis {
     _$hash = $jc(_$hash, commerce.hashCode);
     _$hash = $jc(_$hash, finance.hashCode);
     _$hash = $jc(_$hash, counts.hashCode);
+    _$hash = $jc(_$hash, trend.hashCode);
+    _$hash = $jc(_$hash, trendGranularity.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -71,7 +139,9 @@ class _$FinanceKpis extends FinanceKpis {
           ..add('period', period)
           ..add('commerce', commerce)
           ..add('finance', finance)
-          ..add('counts', counts))
+          ..add('counts', counts)
+          ..add('trend', trend)
+          ..add('trendGranularity', trendGranularity))
         .toString();
   }
 }
@@ -108,6 +178,17 @@ class FinanceKpisBuilder implements Builder<FinanceKpis, FinanceKpisBuilder> {
       _$this._counts ??= MapBuilder<String, int>();
   set counts(MapBuilder<String, int>? counts) => _$this._counts = counts;
 
+  ListBuilder<CommissionTrendPoint>? _trend;
+  ListBuilder<CommissionTrendPoint> get trend =>
+      _$this._trend ??= ListBuilder<CommissionTrendPoint>();
+  set trend(ListBuilder<CommissionTrendPoint>? trend) => _$this._trend = trend;
+
+  FinanceKpisTrendGranularityEnum? _trendGranularity;
+  FinanceKpisTrendGranularityEnum? get trendGranularity =>
+      _$this._trendGranularity;
+  set trendGranularity(FinanceKpisTrendGranularityEnum? trendGranularity) =>
+      _$this._trendGranularity = trendGranularity;
+
   FinanceKpisBuilder() {
     FinanceKpis._defaults(this);
   }
@@ -121,6 +202,8 @@ class FinanceKpisBuilder implements Builder<FinanceKpis, FinanceKpisBuilder> {
       _commerce = $v.commerce.toBuilder();
       _finance = $v.finance.toBuilder();
       _counts = $v.counts.toBuilder();
+      _trend = $v.trend?.toBuilder();
+      _trendGranularity = $v.trendGranularity;
       _$v = null;
     }
     return this;
@@ -152,6 +235,8 @@ class FinanceKpisBuilder implements Builder<FinanceKpis, FinanceKpisBuilder> {
             commerce: commerce.build(),
             finance: finance.build(),
             counts: counts.build(),
+            trend: _trend?.build(),
+            trendGranularity: trendGranularity,
           );
     } catch (_) {
       late String _$failedField;
@@ -164,6 +249,8 @@ class FinanceKpisBuilder implements Builder<FinanceKpis, FinanceKpisBuilder> {
         finance.build();
         _$failedField = 'counts';
         counts.build();
+        _$failedField = 'trend';
+        _trend?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'FinanceKpis', _$failedField, e.toString());

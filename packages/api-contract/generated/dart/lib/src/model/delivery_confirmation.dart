@@ -14,6 +14,7 @@ part 'delivery_confirmation.g.dart';
 /// DeliveryConfirmation
 ///
 /// Properties:
+/// * [changeReason] - Required if vehicle
 /// * [vehicles]
 /// * [finalFeeCentavos] - Must equal the disclosed formula for the vehicles
 /// * [fulfillmentDate]
@@ -23,6 +24,10 @@ part 'delivery_confirmation.g.dart';
 /// * [manualReviewNote]
 @BuiltValue()
 abstract class DeliveryConfirmation implements Built<DeliveryConfirmation, DeliveryConfirmationBuilder> {
+  /// Required if vehicle
+  @BuiltValueField(wireName: r'change_reason')
+  String? get changeReason;
+
   @BuiltValueField(wireName: r'vehicles')
   BuiltList<DeliveryVehicleSelection> get vehicles;
 
@@ -68,6 +73,13 @@ class _$DeliveryConfirmationSerializer implements PrimitiveSerializer<DeliveryCo
     DeliveryConfirmation object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.changeReason != null) {
+      yield r'change_reason';
+      yield serializers.serialize(
+        object.changeReason,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
     yield r'vehicles';
     yield serializers.serialize(
       object.vehicles,
@@ -130,6 +142,14 @@ class _$DeliveryConfirmationSerializer implements PrimitiveSerializer<DeliveryCo
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'change_reason':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.changeReason = valueDes;
+          break;
         case r'vehicles':
           final valueDes = serializers.deserialize(
             value,

@@ -27,6 +27,13 @@ import {
     ReviewMediaLinkToJSON,
     ReviewMediaLinkToJSONTyped,
 } from './ReviewMediaLink';
+import type { ReviewProduct } from './ReviewProduct';
+import {
+    ReviewProductFromJSON,
+    ReviewProductFromJSONTyped,
+    ReviewProductToJSON,
+    ReviewProductToJSONTyped,
+} from './ReviewProduct';
 
 /**
  *
@@ -70,6 +77,10 @@ export interface VendorReviewRow {
      *
      */
     variantLabel?: string;
+    /**
+     * Purchased-product identity from the immutable order line snapshot; null for Store and Buyer ratings.
+     */
+    product?: ReviewProduct | null;
     /**
      *
      */
@@ -143,6 +154,7 @@ export function VendorReviewRowFromJSONTyped(json: any, ignoreDiscriminator: boo
         'submittedAt': json['submitted_at'] == null ? undefined : (parseDateTime(json['submitted_at'])),
         'edited': json['edited'] == null ? undefined : json['edited'],
         'variantLabel': json['variant_label'] == null ? undefined : json['variant_label'],
+        'product': json['product'] === undefined ? undefined : json['product'] === null ? null : ReviewProductFromJSON(json['product']),
         'media': json['media'] == null ? undefined : ((json['media'] as Array<any>).map(ReviewMediaLinkFromJSON)),
         'visibility': json['visibility'] == null ? undefined : json['visibility'],
         'orderId': json['order_id'] == null ? undefined : json['order_id'],
@@ -171,6 +183,7 @@ export function VendorReviewRowToJSONTyped(value?: VendorReviewRow | null, ignor
         'submitted_at': value['submittedAt'] == null ? value['submittedAt'] : serializeDateTime(value['submittedAt']),
         'edited': value['edited'],
         'variant_label': value['variantLabel'],
+        'product': ReviewProductToJSON(value['product']),
         'media': value['media'] == null ? undefined : ((value['media'] as Array<any>).map(ReviewMediaLinkToJSON)),
         'visibility': value['visibility'],
         'order_id': value['orderId'],

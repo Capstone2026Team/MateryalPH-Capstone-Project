@@ -9,10 +9,10 @@ All URIs are relative to */api/v1*
 | [**compileProjectEstimates**](BuyerProjectsApi.md#compileprojectestimates) | **POST** /buyers/work-packages/{packageId}/estimates |  |
 | [**createProject**](BuyerProjectsApi.md#createproject) | **POST** /buyers/projects |  |
 | [**createWorkPackage**](BuyerProjectsApi.md#createworkpackage) | **POST** /buyers/projects/{projectId}/work-packages |  |
-| [**createWorkPackageVersion**](BuyerProjectsApi.md#createworkpackageversion) | **POST** /buyers/work-packages/{packageId}/versions |  |
 | [**deleteProject**](BuyerProjectsApi.md#deleteproject) | **DELETE** /buyers/projects/{projectId} |  |
 | [**deleteWorkPackage**](BuyerProjectsApi.md#deleteworkpackage) | **DELETE** /buyers/work-packages/{packageId} |  |
 | [**editWorkPackage**](BuyerProjectsApi.md#editworkpackage) | **PUT** /buyers/work-packages/{packageId} |  |
+| [**estimateWorkPackageBudget**](BuyerProjectsApi.md#estimateworkpackagebudget) | **POST** /buyers/projects/{projectId}/work-package-estimate |  |
 | [**getProject**](BuyerProjectsApi.md#getproject) | **GET** /buyers/projects/{projectId} |  |
 | [**getProjectCandidateRoute**](BuyerProjectsApi.md#getprojectcandidateroute) | **POST** /buyers/work-packages/{packageId}/candidates/{candidateId}/route |  |
 | [**getProjectEstimates**](BuyerProjectsApi.md#getprojectestimates) | **GET** /buyers/work-packages/{packageId}/estimates |  |
@@ -20,7 +20,10 @@ All URIs are relative to */api/v1*
 | [**getWorkPackage**](BuyerProjectsApi.md#getworkpackage) | **GET** /buyers/work-packages/{packageId} |  |
 | [**inquireProjectVendor**](BuyerProjectsApi.md#inquireprojectvendor) | **POST** /buyers/work-packages/{packageId}/inquiries |  |
 | [**listProjects**](BuyerProjectsApi.md#listprojects) | **GET** /buyers/projects |  |
+| [**listWorkPackageLineAlternatives**](BuyerProjectsApi.md#listworkpackagelinealternatives) | **GET** /buyers/work-packages/{packageId}/lines/{lineId}/alternatives |  |
+| [**previewProjectSpecificationSelection**](BuyerProjectsApi.md#previewprojectspecificationselection) | **POST** /buyers/work-packages/{packageId}/candidates/{candidateId}/selection-preview |  |
 | [**previewWorkPackageCsv**](BuyerProjectsApi.md#previewworkpackagecsv) | **POST** /buyers/work-packages/import-preview |  |
+| [**reactivateWorkPackage**](BuyerProjectsApi.md#reactivateworkpackage) | **POST** /buyers/work-packages/{packageId}/reactivate |  |
 | [**resetProjectRankingPreferences**](BuyerProjectsApi.md#resetprojectrankingpreferences) | **POST** /buyers/project-ranking-preferences/reset |  |
 | [**resolveProjectMissingLine**](BuyerProjectsApi.md#resolveprojectmissingline) | **PUT** /buyers/work-packages/{packageId}/missing-lines/{lineId} |  |
 | [**saveProjectRankingPreferences**](BuyerProjectsApi.md#saveprojectrankingpreferences) | **PUT** /buyers/project-ranking-preferences |  |
@@ -119,7 +122,7 @@ example().catch(console.error);
 
 
 
-Cancel an unassigned package, retaining every locked version. Selected work follows order cancellation rules.
+Cancel an unassigned package, retaining its saved contents. Selected work follows order cancellation rules.
 
 ### Example
 
@@ -359,7 +362,7 @@ example().catch(console.error);
 
 
 
-Save a Draft. Normalized units, positive quantities, explicit site and access are validated.
+Save a Draft. Normalized units, positive quantities, explicit site and access are validated. The budget is deducted from the Project budget immediately; WORK_PACKAGE_BUDGET_EXCEEDS_PROJECT (422) when non-cancelled allocations would exceed it.
 
 ### Example
 
@@ -426,89 +429,6 @@ example().catch(console.error);
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **201** | Authorized Project procurement result. |  -  |
-| **401** | Authentication required. |  -  |
-| **403** | Current Buyer authorization required. |  -  |
-| **404** | No owned resource or current candidate. |  -  |
-| **409** | Stale version, expired estimate, source change or already selected Vendor; no mutation. |  -  |
-| **422** | Validation, fulfillment review or written budget override required. |  -  |
-| **503** | Provider unavailable; retry without fabricated values. |  -  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
-## createWorkPackageVersion
-
-> WorkPackageViewResponse createWorkPackageVersion(packageId, idempotencyKey, workPackageInput)
-
-
-
-Explicit correction version invalidates estimates and expires inquiries. Selected work requires prior order cancellation.
-
-### Example
-
-```ts
-import {
-  Configuration,
-  BuyerProjectsApi,
-} from '@materyalph/api-client-ts';
-import type { CreateWorkPackageVersionRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // Configure HTTP bearer authorization: passportBearer
-    accessToken: "YOUR BEARER TOKEN",
-  });
-  const api = new BuyerProjectsApi(config);
-
-  const body = {
-    // string
-    packageId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // string
-    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // WorkPackageInput
-    workPackageInput: ...,
-  } satisfies CreateWorkPackageVersionRequest;
-
-  try {
-    const data = await api.createWorkPackageVersion(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **packageId** | `string` |  | [Defaults to `undefined`] |
-| **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
-| **workPackageInput** | [WorkPackageInput](WorkPackageInput.md) |  | |
-
-### Return type
-
-[**WorkPackageViewResponse**](WorkPackageViewResponse.md)
-
-### Authorization
-
-[passportBearer](../README.md#passportBearer)
-
-### HTTP request headers
-
-- **Content-Type**: `application/json`
-- **Accept**: `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Authorized Project procurement result. |  -  |
 | **401** | Authentication required. |  -  |
 | **403** | Current Buyer authorization required. |  -  |
 | **404** | No owned resource or current candidate. |  -  |
@@ -605,7 +525,7 @@ example().catch(console.error);
 
 
 
-Delete only a Draft with no locked historical version. Retain activated evidence.
+Delete a Work Package that has no order, tagged purchase or selected Vendor. A Draft with no locked history is removed; any other package is cancelled and hidden from the Buyer while its saved originals, estimates and quotations are retained. A package with an order returns WORK_PACKAGE_HAS_ORDER.
 
 ### Example
 
@@ -685,7 +605,7 @@ example().catch(console.error);
 
 
 
-Editable Draft only; saves an append-only draft version.
+Edit the Work Package directly, with no new list entry. Allowed until an order, tagged purchase or selected Vendor exists (otherwise WORK_PACKAGE_HAS_ORDER). Estimates and open quotation requests built on the old materials are invalidated; a compared or quoted package returns to Active.
 
 ### Example
 
@@ -758,6 +678,85 @@ example().catch(console.error);
 | **409** | Stale version, expired estimate, source change or already selected Vendor; no mutation. |  -  |
 | **422** | Validation, fulfillment review or written budget override required. |  -  |
 | **503** | Provider unavailable; retry without fabricated values. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## estimateWorkPackageBudget
+
+> WorkPackageBudgetEstimateResponse estimateWorkPackageBudget(projectId, workPackageBudgetEstimateRequest)
+
+
+
+Advisory materials-only budget estimate for a Work Package being drafted. Each catalog line is priced at the half-up average of one price per eligible Vendor (that Vendor\&#39;s lowest exact match) within the radius of the site. Unlisted and unmatched lines carry no price. Excludes delivery fees and labor. Nothing is stored.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  BuyerProjectsApi,
+} from '@materyalph/api-client-ts';
+import type { EstimateWorkPackageBudgetRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new BuyerProjectsApi(config);
+
+  const body = {
+    // string
+    projectId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // WorkPackageBudgetEstimateRequest
+    workPackageBudgetEstimateRequest: ...,
+  } satisfies EstimateWorkPackageBudgetRequest;
+
+  try {
+    const data = await api.estimateWorkPackageBudget(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **projectId** | `string` |  | [Defaults to `undefined`] |
+| **workPackageBudgetEstimateRequest** | [WorkPackageBudgetEstimateRequest](WorkPackageBudgetEstimateRequest.md) |  | |
+
+### Return type
+
+[**WorkPackageBudgetEstimateResponse**](WorkPackageBudgetEstimateResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Advisory estimate. |  -  |
+| **401** | Authentication required. |  -  |
+| **403** | Current Buyer authorization required. |  -  |
+| **404** | No owned resource or current candidate. |  -  |
+| **409** | Stale version, expired estimate, source change or already selected Vendor; no mutation. |  -  |
+| **422** | Validation failed or the site is not part of this Project. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -924,11 +923,11 @@ example().catch(console.error);
 
 ## getProjectEstimates
 
-> ProjectEstimatePageResponse getProjectEstimates(packageId, page)
+> ProjectEstimatePageResponse getProjectEstimates(packageId, page, sort, favoritesOnly, completeOnly, withinBudget)
 
 
 
-Immutable, paginated snapshots. Complete one-Vendor matches first; missing lines explicit. Expiry is exactly 48 hours.
+Immutable, paginated snapshots. Complete one-Vendor matches first by default; missing lines explicit. Expiry is exactly 48 hours. Sorting and filters run on the server so every page is consistent; each ordering ends on the system rank.
 
 ### Example
 
@@ -952,6 +951,14 @@ async function example() {
     packageId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
     // number (optional)
     page: 56,
+    // 'BEST_MATCH' | 'BUDGET_FIT' | 'RATING' | 'PRICE' (optional)
+    sort: sort_example,
+    // boolean (optional)
+    favoritesOnly: true,
+    // boolean (optional)
+    completeOnly: true,
+    // boolean (optional)
+    withinBudget: true,
   } satisfies GetProjectEstimatesRequest;
 
   try {
@@ -973,6 +980,10 @@ example().catch(console.error);
 |------------- | ------------- | ------------- | -------------|
 | **packageId** | `string` |  | [Defaults to `undefined`] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **sort** | `BEST_MATCH`, `BUDGET_FIT`, `RATING`, `PRICE` |  | [Optional] [Defaults to `undefined`] [Enum: BEST_MATCH, BUDGET_FIT, RATING, PRICE] |
+| **favoritesOnly** | `boolean` |  | [Optional] [Defaults to `undefined`] |
+| **completeOnly** | `boolean` |  | [Optional] [Defaults to `undefined`] |
+| **withinBudget** | `boolean` |  | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 
@@ -1077,7 +1088,7 @@ This endpoint does not need any parameter.
 
 
 
-Locked original, paginated version history, missing-item resolution and budget metrics. PDF generation remains Phase 15.
+The package\&#39;s current materials, missing-item resolution, budget metrics and delete/edit availability. PDF generation remains Phase 15.
 
 ### Example
 
@@ -1311,6 +1322,174 @@ example().catch(console.error);
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## listWorkPackageLineAlternatives
+
+> WorkPackageAlternativePageResponse listWorkPackageLineAlternatives(packageId, lineId, page, excludeVendorId)
+
+
+
+Eligible Item-Based offers for the same canonical material and unit within the package radius of its site, for buying a missing line separately. Exact matches first, then price. Unlisted lines return status UNLISTED with no items.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  BuyerProjectsApi,
+} from '@materyalph/api-client-ts';
+import type { ListWorkPackageLineAlternativesRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new BuyerProjectsApi(config);
+
+  const body = {
+    // string
+    packageId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    lineId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // number (optional)
+    page: 56,
+    // string (optional)
+    excludeVendorId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+  } satisfies ListWorkPackageLineAlternativesRequest;
+
+  try {
+    const data = await api.listWorkPackageLineAlternatives(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **packageId** | `string` |  | [Defaults to `undefined`] |
+| **lineId** | `string` |  | [Defaults to `undefined`] |
+| **page** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **excludeVendorId** | `string` |  | [Optional] [Defaults to `undefined`] |
+
+### Return type
+
+[**WorkPackageAlternativePageResponse**](WorkPackageAlternativePageResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Similar Item-Based offers. |  -  |
+| **401** | Authentication required. |  -  |
+| **403** | Current Buyer authorization required. |  -  |
+| **404** | No owned resource or current candidate. |  -  |
+| **409** | Stale version, expired estimate, source change or already selected Vendor; no mutation. |  -  |
+| **422** | Validation failed. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## previewProjectSpecificationSelection
+
+> ProjectCandidateResponse previewProjectSpecificationSelection(packageId, candidateId, projectSelectionPreview)
+
+
+
+Re-price a fresh candidate with the Buyer\&#39;s specification choices (lines, totals, delivery estimate, score and budget label). Nothing is stored; send the same selections when selecting or inquiring. An unknown option is SPECIFICATION_OPTION_INVALID.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  BuyerProjectsApi,
+} from '@materyalph/api-client-ts';
+import type { PreviewProjectSpecificationSelectionRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new BuyerProjectsApi(config);
+
+  const body = {
+    // string
+    packageId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    candidateId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // ProjectSelectionPreview
+    projectSelectionPreview: ...,
+  } satisfies PreviewProjectSpecificationSelectionRequest;
+
+  try {
+    const data = await api.previewProjectSpecificationSelection(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **packageId** | `string` |  | [Defaults to `undefined`] |
+| **candidateId** | `string` |  | [Defaults to `undefined`] |
+| **projectSelectionPreview** | [ProjectSelectionPreview](ProjectSelectionPreview.md) |  | |
+
+### Return type
+
+[**ProjectCandidateResponse**](ProjectCandidateResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | The candidate with the choices applied. |  -  |
+| **401** | Authentication required. |  -  |
+| **403** | Current Buyer authorization required. |  -  |
+| **404** | No owned resource or current candidate. |  -  |
+| **409** | Expired estimate or source change; refresh the estimate. |  -  |
+| **422** | Validation or an option that is not offered for the line. |  -  |
+| **503** | Provider unavailable; retry without fabricated values. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## previewWorkPackageCsv
 
 > ProjectImportPreviewResponse previewWorkPackageCsv(projectImportRequest)
@@ -1384,6 +1563,88 @@ example().catch(console.error);
 | **409** | Stale version, expired estimate, source change or already selected Vendor; no mutation. |  -  |
 | **422** | Validation, fulfillment review or written budget override required. |  -  |
 | **503** | Provider unavailable; retry without fabricated values. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## reactivateWorkPackage
+
+> WorkPackageViewResponse reactivateWorkPackage(packageId, idempotencyKey, projectVersionRequest)
+
+
+
+Return a cancelled Work Package to Active in place; no copy is made. The Project budget is checked again because cancelling released it. A package with an order, selected Vendor or tagged purchase cannot be reactivated.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  BuyerProjectsApi,
+} from '@materyalph/api-client-ts';
+import type { ReactivateWorkPackageRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new BuyerProjectsApi(config);
+
+  const body = {
+    // string
+    packageId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // ProjectVersionRequest
+    projectVersionRequest: ...,
+  } satisfies ReactivateWorkPackageRequest;
+
+  try {
+    const data = await api.reactivateWorkPackage(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **packageId** | `string` |  | [Defaults to `undefined`] |
+| **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
+| **projectVersionRequest** | [ProjectVersionRequest](ProjectVersionRequest.md) |  | |
+
+### Return type
+
+[**WorkPackageViewResponse**](WorkPackageViewResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Authorized Project procurement result. |  -  |
+| **401** | Authentication required. |  -  |
+| **403** | Current Buyer authorization required. |  -  |
+| **404** | No owned package. |  -  |
+| **409** | PROJECT_VERSION_CONFLICT, WORK_PACKAGE_NOT_CANCELLED, WORK_PACKAGE_HAS_ORDER, PROJECT_CLOSED or IDEMPOTENCY_CONFLICT; no mutation. |  -  |
+| **422** | WORK_PACKAGE_BUDGET_EXCEEDS_PROJECT; no mutation. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 

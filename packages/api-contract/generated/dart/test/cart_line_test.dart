@@ -42,6 +42,12 @@ void main() {
       // TODO
     });
 
+    // Work Package line this purchase covers.
+    // String workPackageLineId
+    test('to test the property `workPackageLineId`', () async {
+      // TODO
+    });
+
     // ListingImage image
     test('to test the property `image`', () async {
       // TODO
@@ -95,6 +101,12 @@ void main() {
 
     // String status
     test('to test the property `status`', () async {
+      // TODO
+    });
+
+    // Ready-mixed concrete; its Vendor group is Site Delivery only and Self-Pickup adds a SITE_DELIVERY_REQUIRED issue.
+    // bool readyMixedConcrete
+    test('to test the property `readyMixedConcrete`', () async {
       // TODO
     });
 

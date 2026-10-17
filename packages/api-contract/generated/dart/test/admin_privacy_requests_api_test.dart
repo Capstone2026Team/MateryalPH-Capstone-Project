@@ -16,7 +16,7 @@ void main() {
 
     // privacy.manage sees every request; privacy.handle sees only requests assigned to you.
     //
-    //Future<PrivacyRequestListEnvelope> listPrivacyRequests({ String state, String requestType, String handler, int page }) async
+    //Future<PrivacyRequestListEnvelope> listPrivacyRequests({ String state, String requestType, String handler, int page, Date from, Date to }) async
     test('test listPrivacyRequests', () async {
       // TODO
     });

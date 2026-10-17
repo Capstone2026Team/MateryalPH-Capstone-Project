@@ -15,6 +15,7 @@ use App\Domain\Orders\OrderActor;
 use App\Domain\Orders\OrderNotifier;
 use App\Domain\Orders\OrderStates;
 use App\Domain\Orders\OrderTransitionService;
+use App\Domain\Vendors\VendorDeliveryEligibility;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Crypt;
@@ -27,8 +28,9 @@ use Throwable;
  *
  *   CONFIRMED → PROCESSING → READY_FOR_PICKUP (Self-Pickup) | OUT_FOR_DELIVERY (Site Delivery) → PICKED_UP | DELIVERED
  *
- * Owner and Store Manager act on any order; Fulfillment Staff act only on orders currently assigned to them; other
- * roles never record milestones. Proof belongs to the milestone that requires it: Site Delivery needs a delivery
+ * Owner and Store Manager prepare and dispatch orders; assigned Fulfillment Staff alone complete Site Delivery.
+ * Fulfillment Staff act only on orders currently assigned to them; other roles never record milestones.
+ * Proof belongs to the milestone that requires it: Site Delivery needs a delivery
  * photo and receiver name (signature optional); Self-Pickup needs a confirmed handover with the Buyer or an
  * authorized receiver. Dispatch and trips must name a vehicle and trip of the accepted delivery snapshot; no request
  * here can change a price, fee, vehicle configuration or accepted commercial term. A repeated milestone is an
@@ -69,46 +71,98 @@ final class FulfillmentService
         $current = DB::table('order_fulfillment_assignments')->where('order_id', $order->id)->whereNull('ended_at')->value('user_id');
 
         return DB::table('vendor_memberships as m')->join('users as u', 'u.id', '=', 'm.user_id')->leftJoin('user_profiles as p', 'p.user_id', '=', 'u.id')
-            ->where('m.vendor_organization_id', $scope['organization_id'])->where('m.role', 'FULFILLMENT')->where('m.status', 'ACTIVE')->where('u.account_status', 'ACTIVE')
+            ->where('m.vendor_organization_id', $scope['organization_id'])->where('m.role', 'FULFILLMENT')->where('m.status', 'ACTIVE')->whereNull('m.deleted_at')->where('u.account_status', 'ACTIVE')
             ->orderBy('p.full_name')->orderBy('u.id')->get(['u.id', 'p.full_name'])
             ->map(static fn (object $row): array => ['user_id' => (int) $row->id, 'display_name' => (string) ($row->full_name ?: 'Fulfillment Staff'), 'assigned' => (int) $row->id === (int) $current])->values()->all();
     }
 
-    public function assign(Request $request, string $orderId, int $userId, string $reason): void
+    public function assign(Request $request, string $orderId, int $userId, string $reason, ?int $vehicleIndex = null, ?int $lockVersion = null, bool $dispatch = false): void
     {
         $scope = $this->access->vendorScope($request);
         $this->access->require($scope, OrderAccess::ASSIGN_FULFILLMENT, 'Only the Owner or Store Manager can assign Fulfillment Staff.');
         $key = $this->keys->requireIdempotencyKey($request);
-        DB::transaction(function () use ($request, $scope, $orderId, $userId, $reason, $key): void {
+        DB::transaction(function () use ($request, $scope, $orderId, $userId, $reason, $vehicleIndex, $lockVersion, $dispatch, $key): void {
+            DB::table('vendor_organizations')->where('id', $scope['organization_id'])->lockForUpdate()->first();
+            $request->user()->refresh();
+            $currentScope = $this->access->vendorScope($request);
+            $this->access->require($currentScope, OrderAccess::ASSIGN_FULFILLMENT, 'Only the Owner or Store Manager assigns fulfillment.');
+            $order = $this->access->vendorOrder($currentScope, $orderId, true);
             if ($this->keys->replayed($request, 'FULFILLMENT_ASSIGN', $key, $orderId)) {
                 return;
             }
-            $order = $this->access->vendorOrder($scope, $orderId, true);
-            $previous = $this->threads->assign($order, $request->user(), $userId, $reason);
-            $actor = OrderActor::vendor($request, $scope['role']);
-            $this->records->event($this->records->ensure($order), 'ASSIGNED', $actor, ['user_id' => $userId, 'previous_user_id' => $previous, 'reason' => mb_substr($reason, 0, 500)]);
+            if ($lockVersion !== null && $lockVersion !== (int) $order->lock_version) {
+                throw new AuthenticationException('STALE_VERSION', 'This order changed. Reload and confirm the assignment again.', 409);
+            }
+            if (OrderStates::isClosed((string) $order->order_state) || in_array($order->order_state, [...OrderStates::PENDING_ACCEPTANCE, OrderStates::AWAITING_PAYMENT], true)
+                || in_array($order->fulfillment_state, ['DELIVERED', 'PICKED_UP', 'COMPLETED'], true)) {
+                throw new AuthenticationException('ASSIGNMENT_NOT_AVAILABLE', 'Delivery has already been handed over. Its assignment is kept for the order history.', 409);
+            }
+            if ($order->fulfillment_method === 'DELIVERY' && $vehicleIndex === null) {
+                $existing = DB::table('order_fulfillment_assignments')->where('order_id', $orderId)->whereNull('ended_at')->value('vehicle_index');
+                $choices = app(DeliveryAssignments::class)->vehicles($order);
+                $vehicleIndex = $existing === null ? (count($choices) === 1 ? (int) $choices[0]['vehicle_index'] : null) : (int) $existing;
+                if ($vehicleIndex === null) {
+                    throw new AuthenticationException('DELIVERY_ASSIGNMENT_REQUIRED', 'Choose an accepted delivery vehicle with the staff assignment.', 422);
+                }
+            }
+            $vehicle = $vehicleIndex === null ? null : app(DeliveryAssignments::class)->requireVehicle($order, $vehicleIndex);
+            if ($dispatch && ($vehicle === null || $lockVersion === null)) {
+                throw new AuthenticationException('DELIVERY_ASSIGNMENT_REQUIRED', 'Confirm the staff, accepted vehicle and current order version before dispatch.', 422);
+            }
+            if (mb_strlen(trim($reason)) < 5 || ! app(VendorDeliveryEligibility::class)->staff((string) $order->vendor_organization_id)->where('u.id', $userId)->exists()) {
+                throw new AuthenticationException('HANDLER_UNAVAILABLE', 'Choose active Fulfillment Staff and provide an assignment reason.', 422);
+            }
+            $before = DB::table('order_fulfillment_assignments')->where('order_id', $orderId)->whereNull('ended_at')->first();
+            $beforeIndex = $before?->vehicle_index === null ? null : (int) $before->vehicle_index;
+            $changed = $before === null || (int) $before->user_id !== $userId || $beforeIndex !== $vehicleIndex;
+            if ($changed) {
+                $previous = $this->threads->assign($order, $request->user(), $userId, $reason, true);
+                if ($vehicle !== null) {
+                    DB::table('order_fulfillment_assignments')->where('order_id', $order->id)->whereNull('ended_at')->update([
+                        'vehicle_id' => $vehicle['vehicle_id'], 'vehicle_index' => $vehicleIndex, 'number_of_vehicles' => $vehicle['number_of_vehicles'], 'updated_at' => now(),
+                    ]);
+                }
+                $actor = OrderActor::vendor($request, $currentScope['role']);
+                $this->records->event($this->records->ensure($order), 'ASSIGNED', $actor, ['user_id' => $userId, 'previous_user_id' => $previous, 'vehicle' => $vehicle, 'reason' => mb_substr($reason, 0, 500)]);
+                $this->audit->account($request, 'ORDER_FULFILLMENT_ASSIGNED', 'ORDER', $orderId, before: ['user_id' => $previous, 'vehicle_index' => $beforeIndex], after: ['user_id' => $userId, 'vehicle_index' => $vehicleIndex, 'reason' => $reason]);
+                $this->notifier->assignee($order, 'Order '.$order->reference.' assigned to you', 'You are assigned to prepare and fulfill this order using its accepted vehicles, trips and address. Open the order to record milestones and proof.');
+                $this->notifier->buyer($order, 'Delivery assignment updated for '.$order->reference, 'Your delivery staff or vehicle assignment changed. View the current delivery information in Order Details.');
+                $this->notifier->vendor($order, 'Delivery assignment updated for '.$order->reference, 'The assignment history is available in Order Details.', ['OWNER', 'STORE_MANAGER']);
+                if ($previous !== null && $previous !== $userId) {
+                    $this->notifier->formerAssignee($order, $previous);
+                }
+            }
             $this->keys->claim($request, 'FULFILLMENT_ASSIGN', $key, $orderId, 200);
-            $this->audit->account($request, 'ORDER_FULFILLMENT_ASSIGNED', 'ORDER', $orderId, before: ['user_id' => $previous], after: ['user_id' => $userId, 'reason' => $reason]);
-            $this->notifier->assignee($order, 'Order '.$order->reference.' assigned to you', 'You are assigned to prepare and fulfill this order using its accepted vehicles, trips and address. Open the order to record milestones and proof.');
+            if ($dispatch) {
+                $this->apply($request, $scope, $orderId, ['milestone' => OrderStates::OUT_FOR_DELIVERY, 'lock_version' => $lockVersion, 'vehicle_index' => $vehicleIndex, 'trip_number' => 1], $key, null, null);
+            } elseif ($changed) {
+                DB::table('orders')->where('id', $order->id)->update(['lock_version' => DB::raw('lock_version + 1'), 'updated_at' => now()]);
+            }
         });
     }
 
     /**
      * @param  array{milestone: string, lock_version: int, vehicle_index?: int|null, trip_number?: int|null, receiver_name?: string|null, receiver_kind?: string|null, handover_confirmed?: bool|null, note?: string|null}  $input
+     * @param  list<UploadedFile>  $additional
      */
-    public function record(Request $request, string $orderId, array $input, ?UploadedFile $photo, ?UploadedFile $signature): void
+    public function record(Request $request, string $orderId, array $input, ?UploadedFile $photo, ?UploadedFile $signature, array $additional = []): void
     {
         $scope = $this->access->vendorScope($request);
         $this->access->require($scope, OrderAccess::RECORD_FULFILLMENT, 'Only the Owner, Store Manager or assigned Fulfillment Staff can record fulfillment milestones.');
         $key = $this->keys->requireIdempotencyKey($request);
         $milestone = $input['milestone'];
-        $this->access->vendorOrder($scope, $orderId);
+        $order = $this->access->vendorOrder($scope, $orderId);
+        $this->assertDeliveryRecorder($request, $scope, $order, $milestone);
         $this->validateProofInput($milestone, $input, $photo);
         $stored = [];
         try {
             $photoId = $photo === null ? null : ($stored[] = $this->files->store($photo, $orderId, OrderEvidenceFiles::PROOF, (int) $request->user()->getKey(), true));
             $signatureId = $signature === null ? null : ($stored[] = $this->files->store($signature, $orderId, OrderEvidenceFiles::PROOF, (int) $request->user()->getKey(), true));
-            $applied = DB::transaction(fn (): bool => $this->apply($request, $scope, $orderId, $input, $key, $photoId, $signatureId));
+            $additionalIds = [];
+            foreach ($additional as $image) {
+                $additionalIds[] = $stored[] = $this->files->store($image, $orderId, OrderEvidenceFiles::PROOF, (int) $request->user()->getKey(), true);
+            }
+            $applied = DB::transaction(fn (): bool => $this->apply($request, $scope, $orderId, $input, $key, $photoId, $signatureId, $additionalIds));
         } catch (Throwable $exception) {
             $this->files->discard($stored);
             throw $exception;
@@ -121,14 +175,20 @@ final class FulfillmentService
     /**
      * @param  array{organization_id: string, role: string, permissions: list<string>}  $scope
      * @param  array<string, mixed>  $input
+     * @param  list<string>  $additionalIds
      */
-    private function apply(Request $request, array $scope, string $orderId, array $input, string $key, ?string $photoId, ?string $signatureId): bool
+    private function apply(Request $request, array $scope, string $orderId, array $input, string $key, ?string $photoId, ?string $signatureId, array $additionalIds = []): bool
     {
+        $milestone = (string) $input['milestone'];
+        DB::table('vendor_organizations')->where('id', $scope['organization_id'])->lockForUpdate()->first();
+        $request->user()->refresh();
+        $scope = $this->access->vendorScope($request);
+        $this->access->require($scope, OrderAccess::RECORD_FULFILLMENT, 'Your role cannot record fulfillment.');
+        $order = $this->access->vendorOrder($scope, $orderId, true);
+        $this->assertDeliveryRecorder($request, $scope, $order, $milestone);
         if ($this->keys->replayed($request, 'FULFILLMENT_MILESTONE', $key, $orderId)) {
             return false;
         }
-        $milestone = (string) $input['milestone'];
-        $order = $this->access->vendorOrder($scope, $orderId, true);
         $fulfillment = $this->records->ensure($order);
         if (DB::table('fulfillment_milestones')->where('fulfillment_id', $fulfillment->id)->where('dedupe_key', 'MILESTONE:'.$milestone)->exists()) {
             throw new AuthenticationException('MILESTONE_ALREADY_RECORDED', 'This milestone was already recorded. Refresh to see the current fulfillment status.', 409, ['milestone' => $milestone]);
@@ -145,10 +205,25 @@ final class FulfillmentService
         }
         $actor = OrderActor::vendor($request, $scope['role']);
         $payload = array_filter(['note' => isset($input['note']) ? mb_substr(trim((string) $input['note']), 0, 500) : null], static fn (mixed $value): bool => $value !== null && $value !== '');
+        if ($additionalIds !== []) {
+            $payload['additional_photo_ids'] = $additionalIds;
+        }
         $vehicle = null;
         if ($milestone === OrderStates::OUT_FOR_DELIVERY || ($milestone === OrderStates::DELIVERED && isset($input['vehicle_index']))) {
             $vehicle = $this->acceptedVehicle($order, $input);
             $payload['vehicle'] = $vehicle;
+        }
+        if ($milestone === OrderStates::OUT_FOR_DELIVERY) {
+            $this->assertDispatchReady($order, $input);
+        }
+        if ($milestone === OrderStates::DELIVERED && $vehicle === null) {
+            $assignment = DB::table('order_fulfillment_assignments')->where('order_id', $order->id)->whereNull('ended_at')->first();
+            if ($assignment?->vehicle_index !== null) {
+                $lastTrip = json_decode((string) DB::table('fulfillment_milestones')->where('order_id', $orderId)->where('event_type', 'TRIP_DISPATCHED')
+                    ->where('payload->vehicle->vehicle_index', (int) $assignment->vehicle_index)->orderByDesc('occurred_at')->orderByDesc('id')->value('payload'), true);
+                $vehicle = $this->acceptedVehicle($order, ['vehicle_index' => $assignment->vehicle_index, 'trip_number' => (int) ($lastTrip['vehicle']['trip_number'] ?? 1)]);
+                $payload['vehicle'] = $vehicle;
+            }
         }
         $eventId = (string) $this->records->event($fulfillment, $milestone, $actor, $payload, 'MILESTONE:'.$milestone);
         if ($milestone === OrderStates::OUT_FOR_DELIVERY && $vehicle !== null) {
@@ -174,14 +249,23 @@ final class FulfillmentService
             $order = app(DisputeOrderSync::class)->afterHandover($order, $actor);
         }
         if (in_array($milestone, OrderStates::HANDOVER_STAGE, true)) {
-            // First valid handover-stage milestone enables the one fulfillment thread in this same transaction.
-            $this->threads->ensureForMilestone((string) $order->id, $actor->userId);
+            // Threads open at submission; an order submitted before that change gains its one thread here.
+            $this->threads->ensureForOrder((string) $order->id, $actor->userId);
         }
         $this->keys->claim($request, 'FULFILLMENT_MILESTONE', $key, $orderId, 200);
         $this->audit->account($request, 'ORDER_MILESTONE_RECORDED', 'ORDER', $orderId, after: ['milestone' => $milestone, 'proof' => $photoId !== null || $milestone === OrderStates::PICKED_UP]);
         $this->notify($order, $milestone);
 
         return true;
+    }
+
+    /** @param array{organization_id: string, role: string, permissions: list<string>} $scope */
+    private function assertDeliveryRecorder(Request $request, array $scope, object $order, string $milestone): void
+    {
+        if ($milestone === OrderStates::DELIVERED && $order->fulfillment_method === 'DELIVERY'
+            && ($scope['role'] !== 'FULFILLMENT' || ! OrderAccess::assignedTo((string) $order->id, (int) $request->user()->getKey()))) {
+            throw new AuthenticationException('PERMISSION_DENIED', 'Only the currently assigned Fulfillment Staff member can complete this delivery and submit its proof.', 403);
+        }
     }
 
     /** @param array<string, mixed> $input */
@@ -234,6 +318,30 @@ final class FulfillmentService
         return ['vehicle_index' => $index, 'trip_number' => $trip, 'name' => $vehicle['configuration']['name'] ?? null, 'total_vehicle_trips' => (int) $vehicle['total_vehicle_trips']];
     }
 
+    /** Dispatch checks the current assigned staff and accepted registered vehicle, independent of new-order settings.
+     * @param  array<string, mixed>  $input
+     */
+    private function assertDispatchReady(object $order, array $input): void
+    {
+        $assigned = DB::table('order_fulfillment_assignments')->where('order_id', $order->id)->whereNull('ended_at')->value('user_id');
+        if ($assigned === null || ! app(VendorDeliveryEligibility::class)->staff((string) $order->vendor_organization_id)->where('u.id', $assigned)->exists()) {
+            throw new AuthenticationException('FULFILLMENT_STAFF_REQUIRED', 'Assign an active Fulfillment Staff member before dispatching this delivery.', 422);
+        }
+        $snapshot = json_decode((string) DB::table('order_delivery_snapshots')->where('order_id', $order->id)->value('snapshot'), true);
+        $vehicle = $snapshot['vehicles'][(int) $input['vehicle_index']] ?? [];
+        $id = $vehicle['vehicle_id'] ?? null;
+        if ($id === null || ! DB::table('vendor_vehicles')->where('vendor_organization_id', $order->vendor_organization_id)->where('id', $id)
+            ->where('active', true)->where('available', true)->whereNull('removed_at')->where('number_available', '>=', (int) ($vehicle['number_of_vehicles'] ?? 1))->exists()) {
+            throw new AuthenticationException('DELIVERY_VEHICLE_REQUIRED', 'The accepted delivery vehicle must be active and available before dispatch. Restore its availability or use the existing Buyer-approved revision process.', 422);
+        }
+        $allocation = app(DeliveryAssignments::class)->requireVehicle($order, (int) $input['vehicle_index']);
+        $assignment = DB::table('order_fulfillment_assignments')->where('order_id', $order->id)->whereNull('ended_at')->first();
+        if ($assignment->vehicle_index !== null && (int) $assignment->vehicle_index !== (int) $input['vehicle_index']) {
+            throw new AuthenticationException('DELIVERY_ASSIGNMENT_REQUIRED', 'Dispatch the assigned vehicle or ask the Owner or Store Manager to reassign it.', 422);
+        }
+        DB::table('order_fulfillment_assignments')->where('id', $assignment->id)->update(['vehicle_id' => $id, 'vehicle_index' => (int) $input['vehicle_index'], 'number_of_vehicles' => $allocation['number_of_vehicles'], 'updated_at' => now()]);
+    }
+
     /** @param array{vehicle_index: int, trip_number: int} $input */
     public function recordTrip(Request $request, string $orderId, array $input): void
     {
@@ -241,6 +349,7 @@ final class FulfillmentService
         $this->access->require($scope, OrderAccess::RECORD_FULFILLMENT, 'Only the Owner, Store Manager or assigned Fulfillment Staff can record trips.');
         $key = $this->keys->requireIdempotencyKey($request);
         DB::transaction(function () use ($request, $scope, $orderId, $input, $key): void {
+            DB::table('vendor_organizations')->where('id', $scope['organization_id'])->lockForUpdate()->first();
             if ($this->keys->replayed($request, 'FULFILLMENT_TRIP', $key, $orderId)) {
                 return;
             }
@@ -249,6 +358,7 @@ final class FulfillmentService
                 throw new AuthenticationException('ORDER_STATE_CONFLICT', 'Additional trips are recorded while the order is out for delivery.', 409, ['current_state' => $order->order_state]);
             }
             $vehicle = $this->acceptedVehicle($order, $input);
+            $this->assertDispatchReady($order, $input);
             $event = $this->records->event($this->records->ensure($order), 'TRIP_DISPATCHED', OrderActor::vendor($request, $scope['role']), ['vehicle' => $vehicle], 'TRIP:'.$vehicle['vehicle_index'].':'.$vehicle['trip_number']);
             if ($event === null) {
                 throw new AuthenticationException('TRIP_ALREADY_RECORDED', 'This trip was already recorded.', 409);
@@ -278,6 +388,8 @@ final class FulfillmentService
             $this->audit->account($request, 'ORDER_VEHICLE_ISSUE_REPORTED', 'ORDER', $orderId, after: ['category' => $input['category']]);
             $this->notifier->vendor($order, 'Vehicle issue on order '.$order->reference, 'Fulfillment reported a vehicle issue ('.strtolower(str_replace('_', ' ', $input['category'])).'). The accepted vehicles, trips and fee are unchanged. '
                 .'Any different arrangement needs an authorized revision approved by the Buyer, or a reasoned cancellation.', ['OWNER', 'STORE_MANAGER']);
+            $this->notifier->buyer($order, 'Delivery update for '.$order->reference, 'A delivery concern was reported. View Order Details or message the assigned staff for coordination.');
+            $this->notifier->buyer($order, 'Delivery update for '.$order->reference, 'A delivery concern was reported. View Order Details or message the assigned staff for coordination.');
         });
     }
 
@@ -309,7 +421,7 @@ final class FulfillmentService
             OrderStates::PROCESSING => ['is being prepared', 'The Vendor started preparing your order.'],
             OrderStates::READY_FOR_PICKUP => ['is ready for pickup', 'Your order is ready at the store. Bring your order reference; the Vendor records the handover. Fulfillment Messages are now open on the order.'],
             OrderStates::OUT_FOR_DELIVERY => ['is out for delivery', 'Your order left the store on the accepted vehicle. There is no live GPS tracking. Fulfillment Messages are now open on the order.'],
-            OrderStates::DELIVERED => ['was delivered', 'The Vendor recorded delivery with proof. Review it, then confirm receipt or report a problem within 48 hours; after that receipt is confirmed automatically unless a problem is open.'],
+            OrderStates::DELIVERED => ['was delivered', 'Your assigned Fulfillment Staff recorded delivery with proof. Review it, then confirm receipt or report a problem within 48 hours; after that receipt is confirmed automatically unless a problem is open.'],
             default => ['was picked up', 'The Vendor recorded the handover. Review it, then confirm receipt or report a problem within 48 hours; after that receipt is confirmed automatically unless a problem is open.'],
         };
         $this->notifier->buyer($order, 'Order '.$order->reference.' '.$title, $buyer);

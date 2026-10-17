@@ -176,6 +176,8 @@ class _$VendorReviewRow extends VendorReviewRow {
   @override
   final String? variantLabel;
   @override
+  final ReviewProduct? product;
+  @override
   final BuiltList<ReviewMediaLink>? media;
   @override
   final VendorReviewRowVisibilityEnum? visibility;
@@ -199,6 +201,7 @@ class _$VendorReviewRow extends VendorReviewRow {
       this.submittedAt,
       this.edited,
       this.variantLabel,
+      this.product,
       this.media,
       this.visibility,
       this.orderId,
@@ -225,6 +228,7 @@ class _$VendorReviewRow extends VendorReviewRow {
         submittedAt == other.submittedAt &&
         edited == other.edited &&
         variantLabel == other.variantLabel &&
+        product == other.product &&
         media == other.media &&
         visibility == other.visibility &&
         orderId == other.orderId &&
@@ -244,6 +248,7 @@ class _$VendorReviewRow extends VendorReviewRow {
     _$hash = $jc(_$hash, submittedAt.hashCode);
     _$hash = $jc(_$hash, edited.hashCode);
     _$hash = $jc(_$hash, variantLabel.hashCode);
+    _$hash = $jc(_$hash, product.hashCode);
     _$hash = $jc(_$hash, media.hashCode);
     _$hash = $jc(_$hash, visibility.hashCode);
     _$hash = $jc(_$hash, orderId.hashCode);
@@ -265,6 +270,7 @@ class _$VendorReviewRow extends VendorReviewRow {
           ..add('submittedAt', submittedAt)
           ..add('edited', edited)
           ..add('variantLabel', variantLabel)
+          ..add('product', product)
           ..add('media', media)
           ..add('visibility', visibility)
           ..add('orderId', orderId)
@@ -316,6 +322,11 @@ class VendorReviewRowBuilder
   String? get variantLabel => _$this._variantLabel;
   set variantLabel(String? variantLabel) => _$this._variantLabel = variantLabel;
 
+  ReviewProductBuilder? _product;
+  ReviewProductBuilder get product =>
+      _$this._product ??= ReviewProductBuilder();
+  set product(ReviewProductBuilder? product) => _$this._product = product;
+
   ListBuilder<ReviewMediaLink>? _media;
   ListBuilder<ReviewMediaLink> get media =>
       _$this._media ??= ListBuilder<ReviewMediaLink>();
@@ -355,6 +366,7 @@ class VendorReviewRowBuilder
       _submittedAt = $v.submittedAt;
       _edited = $v.edited;
       _variantLabel = $v.variantLabel;
+      _product = $v.product?.toBuilder();
       _media = $v.media?.toBuilder();
       _visibility = $v.visibility;
       _orderId = $v.orderId;
@@ -392,6 +404,7 @@ class VendorReviewRowBuilder
             submittedAt: submittedAt,
             edited: edited,
             variantLabel: variantLabel,
+            product: _product?.build(),
             media: _media?.build(),
             visibility: visibility,
             orderId: orderId,
@@ -404,6 +417,8 @@ class VendorReviewRowBuilder
         _$failedField = 'ratings';
         _ratings?.build();
 
+        _$failedField = 'product';
+        _product?.build();
         _$failedField = 'media';
         _media?.build();
       } catch (e) {

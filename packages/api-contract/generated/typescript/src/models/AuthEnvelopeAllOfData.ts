@@ -68,6 +68,10 @@ export interface AuthEnvelopeAllOfData {
      */
     challengeExpiresIn?: number;
     /**
+     * MOBILE transport only, present with mfa_required. Opaque single-use login challenge; keep it in memory and never persist or log it.
+     */
+    challengeToken?: string;
+    /**
      * Present only immediately after enrollment or recovery; store offline because these values are not returned again.
      */
     recoveryCodes?: Array<string>;
@@ -100,6 +104,7 @@ export function AuthEnvelopeAllOfDataFromJSONTyped(json: any, ignoreDiscriminato
         'mfaRequired': json['mfa_required'] == null ? undefined : json['mfa_required'],
         'mfaEnrollmentRequired': json['mfa_enrollment_required'] == null ? undefined : json['mfa_enrollment_required'],
         'challengeExpiresIn': json['challenge_expires_in'] == null ? undefined : json['challenge_expires_in'],
+        'challengeToken': json['challenge_token'] == null ? undefined : json['challenge_token'],
         'recoveryCodes': json['recovery_codes'] == null ? undefined : json['recovery_codes'],
     };
 }
@@ -125,6 +130,7 @@ export function AuthEnvelopeAllOfDataToJSONTyped(value?: AuthEnvelopeAllOfData |
         'mfa_required': value['mfaRequired'],
         'mfa_enrollment_required': value['mfaEnrollmentRequired'],
         'challenge_expires_in': value['challengeExpiresIn'],
+        'challenge_token': value['challengeToken'],
         'recovery_codes': value['recoveryCodes'],
     };
 }

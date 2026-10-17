@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Catalog;
 
+use App\Domain\Catalog\CustomTags;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -28,6 +29,8 @@ final class CatalogListingUpdateRequest extends FormRequest
             'material_category_id' => ['sometimes', 'nullable', 'uuid'],
             'tag_ids' => ['sometimes', 'array', 'max:3'],
             'tag_ids.*' => ['uuid'],
+            'custom_tags' => ['sometimes', 'array', 'max:'.CustomTags::MAX],
+            'custom_tags.*' => ['string', 'min:'.CustomTags::MIN_LENGTH, 'max:'.CustomTags::MAX_LENGTH],
             'brand' => ['sometimes', 'nullable', 'string', 'max:180'],
             'model' => ['sometimes', 'nullable', 'string', 'max:180'],
             'manufacturer' => ['sometimes', 'nullable', 'string', 'max:200'],

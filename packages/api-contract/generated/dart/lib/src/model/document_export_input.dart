@@ -22,7 +22,7 @@ part 'document_export_input.g.dart';
 abstract class DocumentExportInput implements Built<DocumentExportInput, DocumentExportInputBuilder> {
   @BuiltValueField(wireName: r'type')
   DocumentExportInputTypeEnum get type;
-  // enum typeEnum {  PURCHASE_ORDER,  PAYMENT_CONFIRMATION,  PROJECT_SUMMARY,  BUDGET_REPORT,  OPERATIONAL_ORDER,  FEE_STATEMENT,  MATERIALS_ANALYTICS,  TAX_PACKAGE,  AUDIT_LOG,  GEO_ANALYTICS,  };
+  // enum typeEnum {  PURCHASE_ORDER,  PAYMENT_CONFIRMATION,  PROJECT_SUMMARY,  BUDGET_REPORT,  OPERATIONAL_ORDER,  FEE_STATEMENT,  MATERIALS_ANALYTICS,  TAX_PACKAGE,  AUDIT_LOG,  GEO_ANALYTICS,  TRANSACTION_HISTORY,  EARNINGS,  };
 
   @BuiltValueField(wireName: r'format')
   DocumentExportInputFormatEnum get format;
@@ -201,6 +201,10 @@ class DocumentExportInputTypeEnum extends EnumClass {
   static const DocumentExportInputTypeEnum AUDIT_LOG = _$documentExportInputTypeEnum_AUDIT_LOG;
   @BuiltValueEnumConst(wireName: r'GEO_ANALYTICS')
   static const DocumentExportInputTypeEnum GEO_ANALYTICS = _$documentExportInputTypeEnum_GEO_ANALYTICS;
+  @BuiltValueEnumConst(wireName: r'TRANSACTION_HISTORY')
+  static const DocumentExportInputTypeEnum TRANSACTION_HISTORY = _$documentExportInputTypeEnum_TRANSACTION_HISTORY;
+  @BuiltValueEnumConst(wireName: r'EARNINGS')
+  static const DocumentExportInputTypeEnum EARNINGS = _$documentExportInputTypeEnum_EARNINGS;
 
   static Serializer<DocumentExportInputTypeEnum> get serializer => _$documentExportInputTypeEnumSerializer;
 

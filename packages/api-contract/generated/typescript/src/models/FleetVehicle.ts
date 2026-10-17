@@ -116,6 +116,14 @@ export interface FleetVehicle {
      */
     maximumDistanceKm?: number | null;
     /**
+     * Mixer mobilization fee on the current rate; zero for other vehicles.
+     */
+    mobilizationFeeCentavos?: number | null;
+    /**
+     *
+     */
+    mobilizationBasis?: FleetVehicleMobilizationBasisEnum | null;
+    /**
      *
      */
     eligibility: FleetVehicleEligibility;
@@ -145,6 +153,15 @@ export const FleetVehicleHeavyClassificationEnum = {
     NotHeavy: 'NOT_HEAVY',
 } as const;
 export type FleetVehicleHeavyClassificationEnum = typeof FleetVehicleHeavyClassificationEnum[keyof typeof FleetVehicleHeavyClassificationEnum];
+
+/**
+ * @export
+ */
+export const FleetVehicleMobilizationBasisEnum = {
+    PerTruck: 'PER_TRUCK',
+    PerTrip: 'PER_TRIP',
+} as const;
+export type FleetVehicleMobilizationBasisEnum = typeof FleetVehicleMobilizationBasisEnum[keyof typeof FleetVehicleMobilizationBasisEnum];
 
 
 /**
@@ -198,6 +215,8 @@ export function FleetVehicleFromJSONTyped(json: any, ignoreDiscriminator: boolea
         'baseFeeCentavos': json['base_fee_centavos'] === undefined ? undefined : json['base_fee_centavos'] === null ? null : json['base_fee_centavos'],
         'perKmCentavos': json['per_km_centavos'] === undefined ? undefined : json['per_km_centavos'] === null ? null : json['per_km_centavos'],
         'maximumDistanceKm': json['maximum_distance_km'] === undefined ? undefined : json['maximum_distance_km'] === null ? null : json['maximum_distance_km'],
+        'mobilizationFeeCentavos': json['mobilization_fee_centavos'] === undefined ? undefined : json['mobilization_fee_centavos'] === null ? null : json['mobilization_fee_centavos'],
+        'mobilizationBasis': json['mobilization_basis'] === undefined ? undefined : json['mobilization_basis'] === null ? null : json['mobilization_basis'],
         'eligibility': FleetVehicleEligibilityFromJSON(json['eligibility']),
         'updatedAt': json['updated_at'] === undefined ? undefined : json['updated_at'] === null ? null : json['updated_at'],
     };
@@ -236,6 +255,8 @@ export function FleetVehicleToJSONTyped(value?: FleetVehicle | null, ignoreDiscr
         'base_fee_centavos': value['baseFeeCentavos'],
         'per_km_centavos': value['perKmCentavos'],
         'maximum_distance_km': value['maximumDistanceKm'],
+        'mobilization_fee_centavos': value['mobilizationFeeCentavos'],
+        'mobilization_basis': value['mobilizationBasis'],
         'eligibility': FleetVehicleEligibilityToJSON(value['eligibility']),
         'updated_at': value['updatedAt'],
     };

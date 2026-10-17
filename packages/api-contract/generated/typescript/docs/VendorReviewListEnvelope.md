@@ -7,7 +7,7 @@
 Name | Type
 ------------ | -------------
 `data` | [Array&lt;VendorReviewRow&gt;](VendorReviewRow.md)
-`meta` | [ReviewListMeta](ReviewListMeta.md)
+`meta` | [VendorReviewListMeta](VendorReviewListMeta.md)
 `errors` | [Array&lt;ApiError&gt;](ApiError.md)
 
 ## Example

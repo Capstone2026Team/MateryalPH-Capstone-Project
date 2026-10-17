@@ -1,9 +1,11 @@
-import { PageHeader as SharedPageHeader, StatCard, InfoNote, FilterTabs, PortalPagePatterns } from '@materyalph/web-ui'
+import { PageHeader as SharedPageHeader, InfoNote, FilterTabs, PortalPagePatterns, FinanceSection, PhysicalPaymentOptions, VendorDeliverySetup } from '@materyalph/web-ui'
 import { useParams } from 'react-router-dom'
-import { ProfileDetails, useAutomaticRefresh, DashboardPanel, DashboardPreviewSection, SectionWorkspace, CustomLabelInput, OnboardingReview, ChecklistPanel, verificationChecklist, checklistProgress, PrivateEvidenceButton, readWebPrivateFile, XenditConnection, StoreOperationSchedule, StoreHours, emptyStoreSchedule, storeScheduleErrors, type StoreOperatingDay } from '@materyalph/web-ui'
+import { VendorInsightsWorkspace } from './VendorDashboardInsights'
+import { VendorStaffDashboard } from './VendorStaffDashboard'
+import { staffDashboardCopy } from '../lib/staff-dashboard'
+import { FormDialog, useAutomaticRefresh, DashboardPanel, SectionWorkspace, CustomLabelInput, OnboardingReview, ChecklistPanel, verificationChecklist, checklistProgress, PrivateEvidenceButton, readWebPrivateFile, XenditConnection, StoreOperationSchedule, StoreHours, emptyStoreSchedule, storeScheduleErrors, type StoreOperatingDay } from '@materyalph/web-ui'
 import {
   Activity,
-  Bell,
   ChartNoAxesCombined,
   LineChart,
   MessageSquare,
@@ -22,6 +24,7 @@ import {
   ImagePlus,
   LayoutDashboard,
   Package,
+  Pencil,
   RefreshCw,
   Store,
   UploadCloud,
@@ -40,7 +43,6 @@ import {
   ProgressBar,
   StatusBadge,
   StatusMessage,
-  type DeliveryVehicleDraft,
   type PortalNavSection,
 } from '@materyalph/web-ui'
 import { QRCodeSVG } from 'qrcode.react'
@@ -55,6 +57,7 @@ import { statusLabel, statusTone, useOnboardingSnapshot } from '../lib/vendor-st
 import { useVendorNavigationUpdates } from '../lib/navigation-updates'
 import { verificationSteps, setupSteps } from '../lib/onboarding-steps'
 import { StoreBusinessInformation, StoreLocation, StoreVacationMode } from '../components/StoreProfileSections'
+import { getFinanceOverview, section, updatePhysicalPayments, type PhysicalPaymentSettings } from '../lib/finance-api'
 import { VendorBusinessAddress } from '../components/VendorBusinessAddress'
 import {
   activateVendorStore, acceptVendorCommission,
@@ -66,7 +69,7 @@ import {
   getVendorOnboarding,
   previewVendorRequirements,
   getVendorPrivateFileUrl,
-  inviteVendorTeamMember, listVendorTeamInvitations, listVendorTeamActivity, changeVendorStaffDisputes,
+  inviteVendorTeamMember, listVendorTeamInvitations, listVendorTeamActivity, getVendorTeamPerformance, changeVendorStaffDisputes,
   teamAccountsApi, listVendorTeamMembers, updateVendorTeamMember, deleteVendorTeamMember, deleteVendorTeamInvitation, changeVendorTeamMemberStatus, changeVendorTeamMemberDelegation,
   readableOnboardingError, onboardingFieldErrors, removePendingVendorDocument,
   removeVendorMedia,
@@ -82,11 +85,11 @@ import {
 type JsonRecord = Record<string, ReactNode>
 type OnboardingSectionKey = 'STORE_VERIFICATION' | 'STORE_SETUP'
 
-const vendorModules: Record<string, string> = { orders: 'Orders', fulfillment: 'Fulfillment', messages: 'Messages', invoices: 'E-Invoices', notifications: 'Notifications', disputes: 'Disputes & Appeals', products: 'My Products', vehicles: 'Vehicles', wallet: 'Transaction History', tracking: 'Team Tracking', performance: 'Store Performance', materials_analytics: 'Materials Analytics', reviews: 'Ratings & Reviews', earnings: 'Earnings' }
-const vendorModuleIcons = { orders: FileText, fulfillment: Truck, messages: MessageSquare, invoices: ReceiptText, notifications: Bell, disputes: Scale, products: Package, vehicles: Truck, wallet: Wallet, performance: ChartNoAxesCombined, materials_analytics: LineChart, reviews: Star, earnings: CreditCard }
+const vendorModules: Record<string, string> = { orders: 'Orders', fulfillment: 'Fulfillment', messages: 'Messages', invoices: 'E-Invoices', notifications: 'Notifications', disputes: 'Disputes & Appeals', products: 'My Products', vehicles: 'Vehicles', wallet: 'Transactions', tracking: 'Team Tracking', performance: 'Store Performance', materials_analytics: 'Materials Analytics', reviews: 'Ratings & Reviews', earnings: 'Earnings' }
+const vendorModuleIcons = { orders: FileText, fulfillment: Truck, messages: MessageSquare, invoices: ReceiptText, disputes: Scale, products: Package, vehicles: Truck, wallet: Wallet, performance: ChartNoAxesCombined, materials_analytics: LineChart, reviews: Star, earnings: CreditCard }
 const vendorNavigation: PortalNavSection[] = [
   { label: 'Overview', items: [{ label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={16} aria-hidden="true" /> }] },
-  ...[['Store Operations', ['orders', 'fulfillment', 'messages', 'invoices', 'notifications', 'disputes', 'reviews']], ['Store Management', ['products', 'vehicles', 'wallet']], ['Analytics', ['performance', 'materials_analytics', 'earnings']]].map(([label, keys]) => ({ label: label as string, items: (keys as string[]).map(key => ({ label: vendorModules[key] ?? key, href: key === 'notifications' ? '/notifications' : key === 'products' ? '/products' : key === 'vehicles' ? '/vehicles' : key === 'orders' ? '/orders' : key === 'disputes' ? '/disputes' : key === 'invoices' ? '/invoices' : key === 'messages' ? '/messages' : key === 'wallet' ? '/finance' : key === 'earnings' ? '/finance/earnings' : key === 'performance' ? '/performance' : key === 'materials_analytics' ? '/analytics/materials' : key === 'reviews' ? '/reviews' : `/preview/${key}`, icon: (() => { const Icon = vendorModuleIcons[key as keyof typeof vendorModuleIcons]; return <Icon size={18} aria-hidden="true" /> })() })) })),
+  ...[['Store Operations', ['orders', 'fulfillment', 'messages', 'invoices', 'disputes', 'reviews']], ['Store Management', ['products', 'vehicles', 'wallet']], ['Analytics', ['performance', 'materials_analytics', 'earnings']]].map(([label, keys]) => ({ label: label as string, items: (keys as string[]).map(key => ({ label: vendorModules[key] ?? key, href: key === 'fulfillment' ? '/fulfillment' : key === 'products' ? '/products' : key === 'vehicles' ? '/vehicles' : key === 'orders' ? '/orders' : key === 'disputes' ? '/disputes' : key === 'invoices' ? '/invoices' : key === 'messages' ? '/messages' : key === 'wallet' ? '/finance' : key === 'earnings' ? '/finance/earnings' : key === 'performance' ? '/performance' : key === 'materials_analytics' ? '/analytics/materials' : key === 'reviews' ? '/reviews' : `/preview/${key}`, icon: (() => { const Icon = vendorModuleIcons[key as keyof typeof vendorModuleIcons]; return <Icon size={18} aria-hidden="true" /> })() })) })),
   { label: 'Vendor Team Accounts', items: [{ label: 'Team Accounts', href: '/team', icon: <Users size={16} aria-hidden="true" /> }, { label: 'Team Tracking', href: '/preview/tracking', icon: <Activity size={16} aria-hidden="true" /> }] },
   { label: 'Store Profile', items: [{ label: 'Store Profile', href: '/store-profile', icon: <Store size={16} aria-hidden="true" /> }] },
 ]
@@ -97,7 +100,7 @@ export function VendorPlaceholderPage() {
   if (loading) return <LoadingState />
   if (error) return <ErrorState message={error} onRetry={() => void refresh()} />
   if (!snapshot) return null
-  if (module === 'tracking' && snapshot.permissions.includes('staff.manage')) return <VendorShell navigationData={snapshot} activeHref="/preview/tracking" accountLabel={stringValue(record(snapshot.organization).storeName, 'Vendor')}><VendorTeamActivity listMembers={listVendorTeamMembers} canManageManagers={snapshot.permissions.includes('managers.manage')} list={listVendorTeamActivity} explainError={readableOnboardingError} watchUpdates={watchTeamActivity} /></VendorShell>
+  if (module === 'tracking' && snapshot.permissions.includes('staff.manage')) return <VendorShell navigationData={snapshot} activeHref="/preview/tracking" accountLabel={stringValue(record(snapshot.organization).storeName, 'Vendor')}><VendorTeamActivity listMembers={listVendorTeamMembers} canManageManagers={snapshot.permissions.includes('managers.manage')} list={listVendorTeamActivity} performance={getVendorTeamPerformance} explainError={readableOnboardingError} watchUpdates={watchTeamActivity} /></VendorShell>
   if (record(snapshot.activation).status !== 'ACTIVE' || !vendorModules[module] || !snapshot.permissions.includes(`portal.${module}`)) return <Navigate to="/dashboard" replace />
   return <VendorShell navigationData={snapshot} activeHref={`/preview/${module}`} accountLabel={stringValue(record(snapshot.organization).storeName, 'Vendor')}><PageHeader eyebrow="Vendor Portal" title={vendorModules[module]} description="This workspace is not yet available." /><p className="mt-6 text-text-secondary">Not yet implemented</p></VendorShell>
 }
@@ -176,6 +179,7 @@ export function VendorShell({ activeHref, accountLabel, accountStatus, children,
   const navigate = useNavigate()
   const { snapshot: shellSnapshot } = useOnboardingSnapshot(navigationData === undefined)
   const navigationSnapshot = navigationData === undefined ? shellSnapshot : navigationData
+  const isFulfillmentStaff = Boolean(navigationSnapshot?.permissions.includes('portal.fulfillment') && !navigationSnapshot?.permissions.includes('fulfillment.assign'))
   const navigationUpdates = useVendorNavigationUpdates(Boolean(navigationSnapshot) && activeHref !== '/welcome' && !activeHref.startsWith('/onboarding'))
   const logoFileId = stringValue(arrayValue(record(navigationSnapshot?.setup).media).filter(item => item.kind === 'LOGO').at(-1)?.fileId)
   const [storeLogoUrl, setStoreLogoUrl] = useState<string | null>(null)
@@ -188,6 +192,9 @@ export function VendorShell({ activeHref, accountLabel, accountStatus, children,
   const navigation = vendorNavigation.map(section => ({
     ...section, items: section.items.filter(item => {
       if (!navigationSnapshot) return item.href === '/dashboard'
+      if (isFulfillmentStaff && (item.href === '/orders' || item.href === '/vehicles')) return false
+      if (item.href === '/store-profile') return navigationSnapshot.permissions.includes('vendor.onboarding.submit') || (navigationSnapshot.permissions.includes('vehicles.manage') && !navigationSnapshot.permissions.includes('organization.legal'))
+      if (item.href === '/fulfillment') return isFulfillmentStaff
       if (item.href === '/team') return navigationSnapshot.permissions.includes('staff.manage')
       if (item.href === '/products') return navigationSnapshot.permissions.includes('portal.products')
       if (item.href === '/vehicles') return navigationSnapshot.permissions.includes('portal.vehicles')
@@ -203,8 +210,11 @@ export function VendorShell({ activeHref, accountLabel, accountStatus, children,
       return true
     }).map(item => ({
       ...(item.href === '/orders' ? { updateCountLabel: 'active order' } : {}),
-      ...(item.href === '/team' ? { updateCountLabel: 'active team member' } : {}),
-      updateCount: item.href === '/store-profile' ? 0 : navigationUpdates?.[item.href] ?? 0,
+      ...(item.href === '/messages' ? { updateCountLabel: 'unread message' } : {}),
+      ...(item.href === '/disputes' ? { updateCountLabel: 'active dispute' } : {}),
+      ...(item.href === '/fulfillment' ? { updateCountLabel: 'pending fulfillment order' } : {}),
+      ...(item.href === '/invoices' ? { updateCountLabel: 'pending invoice request' } : {}),
+      updateCount: ['/orders', '/messages', '/fulfillment', '/disputes', '/invoices', '/products'].includes(item.href) ? navigationUpdates?.[item.href] ?? 0 : 0,
       ...item, disabled: item.disabled || ((item.href.startsWith('/preview/') || item.href.startsWith('/finance') || item.href === '/disputes' || item.href === '/invoices' || item.href === '/performance' || item.href === '/analytics/materials' || item.href === '/reviews' || item.href === '/products' || item.href === '/vehicles') && item.href !== '/preview/tracking' && record(navigationSnapshot?.activation).status !== 'ACTIVE'),
     })),
   })).filter(section => section.items.length > 0)
@@ -217,7 +227,7 @@ export function VendorShell({ activeHref, accountLabel, accountStatus, children,
     finally { setSigningOut(false) }
   }
   if (activeHref === '/welcome' || activeHref.startsWith('/onboarding')) return <div className="min-h-screen bg-surface-canvas text-text-strong"><header className="flex flex-wrap items-center justify-between gap-3 border-b border-border-default bg-surface-primary px-6 py-4"><Link to="/dashboard" className="text-xl font-bold">Materyal<span className="text-action-primary">PH</span></Link><p className="text-xs text-text-secondary" aria-label="System date">{portalDate()}</p><PortalAccountMenu portal="vendors" basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} onNavigate={navigate} onSignOut={logout} /></header><main className="mx-auto max-w-7xl p-5 sm:p-8">{refreshError && <StatusMessage tone="error">{refreshError}</StatusMessage>}{children}</main></div>
-  return <PortalShell contentLayout={activeHref === '/preview/tracking' ? 'full' : 'standard'} apiBasePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} onSignOut={logout} onNavigate={navigate} portalLabel="VENDOR PORTAL" pageTitle={activeHref === '/settings' ? 'Settings' : activeHref === '/store-profile' ? 'Store Profile' : activeHref.includes('onboarding') ? 'Vendor Onboarding' : vendorNavigation.flatMap(section => section.items).find(item => item.href === activeHref)?.label ?? 'Dashboard'} dateLabel={portalDate()} sections={navigation} activeHref={activeHref} accountLabel={accountLabel} accountStatus={accountStatus ?? 'Vendor account'} accountAvatarUrl={storeLogoUrl} headerActions={<><Link className="inline-flex min-h-11 items-center px-3 text-sm font-semibold" to="/settings">Account</Link><Button variant="secondary" disabled={signingOut} onClick={() => void logout()}>{signingOut ? 'Signing out…' : 'Sign out'}</Button></>}>{logoutError && <StatusMessage tone="error">{logoutError}</StatusMessage>}{refreshError && navigationSnapshot && <StatusMessage tone="error">{refreshError}</StatusMessage>}<PortalPagePatterns.Provider value><div className="vendor-page text-sm">{children}</div></PortalPagePatterns.Provider></PortalShell>
+  return <PortalShell contentLayout={activeHref === '/preview/tracking' ? 'full' : 'standard'} apiBasePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} onSignOut={logout} onNavigate={navigate} notificationUnreadCount={navigationUpdates?.['/notifications'] ?? 0} portalLabel="VENDOR PORTAL" pageTitle={activeHref === '/settings' ? 'Settings' : activeHref === '/notifications' ? 'Notifications' : activeHref === '/store-profile' ? 'Store Profile' : activeHref.includes('onboarding') ? 'Vendor Onboarding' : vendorNavigation.flatMap(section => section.items).find(item => item.href === activeHref)?.label ?? 'Dashboard'} dateLabel={portalDate()} sections={navigation} activeHref={activeHref} accountLabel={accountLabel} accountStatus={accountStatus ?? 'Vendor account'} accountAvatarUrl={storeLogoUrl} headerActions={<><Link className="inline-flex min-h-11 items-center px-3 text-sm font-semibold" to="/settings">Account</Link><Button variant="secondary" disabled={signingOut} onClick={() => void logout()}>{signingOut ? 'Signing out…' : 'Sign out'}</Button></>}>{logoutError && <StatusMessage tone="error">{logoutError}</StatusMessage>}{refreshError && navigationSnapshot && <StatusMessage tone="error">{refreshError}</StatusMessage>}<PortalPagePatterns.Provider value><div className="vendor-page text-sm">{children}</div></PortalPagePatterns.Provider></PortalShell>
 }
 
 export function VendorWelcomePage() {
@@ -271,31 +281,23 @@ export function VendorDashboardPage() {
   const setupProgress = checklistProgress(setupSection)
   const activationBlockers = arrayValue(readiness.blockers)
   const accountLabel = stringValue(org.storeName, stringValue(org.legalName, 'Vendor Owner'))
-  if (!snapshot.permissions.includes('vendor.onboarding.submit')) return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/dashboard" accountLabel={accountLabel} accountStatus={activation.status === 'ACTIVE' ? 'Store Active' : 'Limited access'}><div className="space-y-6"><SharedPageHeader eyebrow={accountLabel} title="Your team dashboard" description={activation.status === 'ACTIVE' ? 'Use the sections available for your assigned role.' : 'Your store must complete onboarding and verification before marketplace features become available.'} /><p className="text-sm text-text-secondary">Your individual account is connected to this store. The Vendor Owner manages onboarding and protected store settings.</p><Link to="/settings" className="inline-flex min-h-11 items-center text-action-primary underline">My Account Profile</Link></div></VendorShell>
-  if (activation.status === 'ACTIVE') return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/dashboard" accountLabel={accountLabel} accountStatus="Store Active"><div className="space-y-6"><SharedPageHeader eyebrow={accountLabel} title="Dashboard" description="Your store at a glance. Switch sections to focus on the work that matters today." status={<StatusBadge label="Active" tone="success" />} /><SectionWorkspace dashboard sections={[
-    { label: 'Overview', content: <>
-      <p className="text-xs text-text-secondary">Store status is current. Operational dashboard reporting is not yet available.</p>
-      <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[
-        { label: 'Pending fulfillment', icon: Truck }, { label: 'Sales & revenue', icon: Wallet },
-        { label: 'Response time', icon: MessageSquare }, { label: 'Store visitors', icon: Users },
-      ].map(({ label, icon: Icon }) => <StatCard key={label} label={label} value="—" hint="Reporting not yet available" icon={<Icon size={16} aria-hidden="true" />} />)}</dl>
+  if (!snapshot.permissions.includes('vendor.onboarding.submit')) {
+    const copy = staffDashboardCopy(snapshot.permissions)
+    return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/dashboard" accountLabel={accountLabel} accountStatus={activation.status === 'ACTIVE' ? 'Store Active' : 'Limited access'}><div className="grid min-w-0 gap-6">
+      <SharedPageHeader eyebrow={accountLabel} title={activation.status === 'ACTIVE' ? copy.title : 'Your team dashboard'} description={activation.status === 'ACTIVE' ? copy.description : 'Your store must complete onboarding and verification before marketplace features become available.'} actions={activation.status === 'ACTIVE' && snapshot.permissions.includes('portal.fulfillment') && !snapshot.permissions.includes('fulfillment.assign') ? <Link to="/fulfillment" className="inline-flex min-h-11 items-center gap-2 rounded-control bg-action-primary px-4 text-sm font-semibold text-white hover:bg-action-primary-pressed">Open fulfillment<ArrowRight size={16} aria-hidden="true" /></Link> : undefined} />
+      {activation.status === 'ACTIVE' && <VendorStaffDashboard permissions={snapshot.permissions} />}
+    </div></VendorShell>
+  }
+  if (activation.status === 'ACTIVE') return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/dashboard" accountLabel={accountLabel} accountStatus="Store Active"><div className="space-y-6"><SharedPageHeader eyebrow={accountLabel} title="Dashboard" description="Your store at a glance. Switch sections to focus on the work that matters today." status={<StatusBadge label="Active" tone="success" />} /><VendorInsightsWorkspace canViewProductAnalytics={Array.isArray(snapshot?.permissions) && snapshot.permissions.includes('catalog.manage')} overviewAside={<DashboardPanel title="Marketplace readiness" description="Activation and discoverability are separate."><dl className="space-y-6"><div><dt className="text-xs text-text-secondary">Store activation</dt><dd className="mt-2"><StatusBadge label="Active" tone="success" /></dd></div><div className="border-t border-border-default pt-4"><dt className="text-xs text-text-secondary">Marketplace discoverability</dt><dd className="mt-2 text-sm font-semibold">{statusLabel(stringValue(activation.marketplaceDiscoverabilityStatus, 'NO_ACTIVE_LISTINGS'))}</dd></div></dl><p className="mt-4 text-xs leading-5 text-text-secondary">Eligible published listings remain required for marketplace discovery.</p></DashboardPanel>} overviewFooter={
       <div className="grid items-start gap-5 xl:grid-cols-3">
-        <div className="xl:col-span-2"><DashboardPanel title="Store workspace" description="Keep your store details and requirements up to date.">
+        <div className="xl:col-span-3"><DashboardPanel title="Store workspace" description="Keep your store details and requirements up to date.">
           <div className="divide-y divide-border-default">{[
             { title: 'Store profile', description: 'Manage your public information and store configuration.', href: '/store-profile', icon: Store },
             { title: 'Store Verification', description: `Review status: ${statusLabel(verificationStatus)}`, href: '/onboarding/verification', icon: FileCheck2 },
             { title: 'Store Setup', description: `Setup status: ${statusLabel(setupStatus)}`, href: '/onboarding/setup', icon: Package },
           ].map(({ title, description, href, icon: Icon }) => <Link key={href} to={href} className="group flex min-h-11 items-center gap-3 rounded-control py-4 first:pt-0 last:pb-0"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-control bg-surface-canvas text-action-primary"><Icon size={18} aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className="text-sm font-semibold group-hover:text-action-primary">{title}</span><span className="mt-1 block text-xs leading-5 text-text-secondary">{description}</span></span><ArrowRight size={16} className="shrink-0 text-text-secondary" aria-hidden="true" /></Link>)}</div>
         </DashboardPanel></div>
-        <DashboardPanel title="Marketplace readiness" description="Activation and discoverability are separate."><dl className="space-y-6"><div><dt className="text-xs text-text-secondary">Store activation</dt><dd className="mt-2"><StatusBadge label="Active" tone="success" /></dd></div><div className="border-t border-border-default pt-4"><dt className="text-xs text-text-secondary">Marketplace discoverability</dt><dd className="mt-2 text-sm font-semibold">{statusLabel(stringValue(activation.marketplaceDiscoverabilityStatus, 'NO_ACTIVE_LISTINGS'))}</dd></div></dl><p className="mt-4 text-xs leading-5 text-text-secondary">Eligible published listings remain required for marketplace discovery.</p></DashboardPanel>
-      </div>
-    </> },
-    { label: 'Performance', content: <DashboardPreviewSection title="Store performance" description="Response, processing and service quality." labels={['Response rate / time', 'Order processing time', 'Cancellation rate', 'Return rate']} /> },
-    { label: 'Action Items & Alerts', content: <DashboardPreviewSection title="Priority actions" description="Fulfillment, outstanding tasks and store notifications." labels={['Pending fulfillment', 'To-do checklist', 'System notifications']} /> },
-    { label: 'Sales & Revenue', content: <DashboardPreviewSection title="Revenue overview" description="Sales and earnings reporting for your store." labels={['Earnings', 'Sales', 'Average order value', 'Revenue trend']} /> },
-    { label: 'Traffic & Volume', content: <DashboardPreviewSection title="Store engagement" description="Store visits and product discovery." labels={['Store visitors', 'Listing views', 'Engagement', 'Traffic trend']} /> },
-    { label: 'Disputes & Quality', content: <DashboardPreviewSection title="Quality overview" description="Cases and issues requiring attention." labels={['Open disputes', 'Refund-related cases', 'Returns', 'Complaints', 'Product issues', 'Fulfillment issues']} /> },
-  ]} /></div></VendorShell>
+      </div>} /></div></VendorShell>
 
   return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/dashboard" accountLabel={accountLabel} accountStatus={`${statusLabel(stringValue(activation.status, 'NOT_READY'))} activation`}>
     <div className="phase3-page space-y-6">
@@ -895,6 +897,7 @@ function SetupForm({ snapshot, onSaved, onRefresh }: { snapshot: VendorOnboardin
   const initialStoreName = stringValue(profile.publicStoreName).trim() || (Array.isArray(verificationName) ? stringValue(verificationName[0]).trim() : '') || stringValue(org.storeName)
   const [preview, setPreview] = useState({ name: initialStoreName, description: stringValue(profile.description) })
   const [busy, setBusy] = useState(false)
+  useAutomaticRefresh(onRefresh, { enabled: !dirty && !busy && step === 1 })
   const navigate = useNavigate()
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
 
@@ -910,6 +913,7 @@ function SetupForm({ snapshot, onSaved, onRefresh }: { snapshot: VendorOnboardin
     const fulfillment = stringValue(data.get('fulfillment_method'))
     const draft: import('@materyalph/api-client-ts').VendorSetupDraft = { organizationLockVersion: numberValue(org.lockVersion, 1), draftLockVersion: numberValue(arrayValue(snapshot.drafts).find(item => item.workstream === 'STORE_SETUP')?.lockVersion, 0), publicStoreName: stringValue(data.get('public_store_name')).trim(), description: stringValue(data.get('description')).trim() || null, bulkCapability: data.get('bulk_capability') === 'yes', fulfillmentMethod: fulfillment as NonNullable<import('@materyalph/api-client-ts').VendorSetupDraft['fulfillmentMethod']> }
     if (!fulfillment) delete draft.fulfillmentMethod
+    if (fulfillment !== stringValue(profile.fulfillmentMethod)) draft.vendorDeliveryEnabled = false
     if (!data.has('bulk_capability')) delete draft.bulkCapability
     if (scheduleTouched && !Object.keys(scheduleIssues).length) draft.operatingSchedule = schedule.map(day => ({ dayOfWeek: day.dayOfWeek, status: day.status as 'OPEN' | 'CLOSED', opensAt: day.status === 'OPEN' ? day.opensAt : null, closesAt: day.status === 'OPEN' ? day.closesAt : null }))
     if (['VENDOR_DELIVERY', 'BOTH'].includes(fulfillment)) {
@@ -924,7 +928,7 @@ function SetupForm({ snapshot, onSaved, onRefresh }: { snapshot: VendorOnboardin
       failedRevision.current = revision
       if (cause instanceof ResponseError && cause.response.status === 409) await onRefresh()
       const fields = await onboardingFieldErrors(cause)
-      const mapping: Record<string, string> = { vehicle_category: 'category', vehicle_type: 'type', custom_type_name: 'customType', name: 'name', brand: 'brand', capacity_kg: 'weight', number_available: 'count', mixer_capacity_m3: 'mixer', cargo_length_m: 'length', cargo_width_m: 'width', cargo_height_m: 'height', heavy_classification: 'heavy', base_fee_centavos: 'baseFee', per_km_centavos: 'perKm', image_file_id: 'imageId' }
+      const mapping: Record<string, string> = { vehicle_category: 'category', vehicle_type: 'type', custom_type_name: 'customType', name: 'name', brand: 'brand', capacity_kg: 'weight', number_available: 'count', mixer_capacity_m3: 'mixer', cargo_length_m: 'length', cargo_width_m: 'width', cargo_height_m: 'height', heavy_classification: 'heavy', base_fee_centavos: 'baseFee', per_km_centavos: 'perKm', mobilization_fee_centavos: 'mobilizationFee', mobilization_basis: 'mobilizationBasis', image_file_id: 'imageId' }
       const errors: Record<string, Record<string, string>> = {}
       for (const [field, message] of Object.entries(fields)) {
         const match = /^vehicles\.(\d+)\.(.+)$/.exec(field)
@@ -936,6 +940,16 @@ function SetupForm({ snapshot, onSaved, onRefresh }: { snapshot: VendorOnboardin
       setMessage({ tone: 'error', text: `Failed to save. ${await readableOnboardingError(cause)}` })
       return false
     } finally { saving.current = false; setBusy(false) }
+  }
+
+  async function activateDelivery() {
+    if (dirty || busy || !snapshot.setup.deliverySetup?.ready) return
+    setBusy(true); setMessage(null)
+    try {
+      const updated = await saveVendorSetupDraft({ organizationLockVersion: numberValue(org.lockVersion, 1), draftLockVersion: numberValue(arrayValue(snapshot.drafts).find(item => item.workstream === 'STORE_SETUP')?.lockVersion, 0), vendorDeliveryEnabled: true })
+      onSaved(updated); setMessage({ tone: 'success', text: 'Vendor Delivery activated. New delivery orders still require Store Activation.' })
+    } catch (cause) { setMessage({ tone: 'error', text: await readableOnboardingError(cause) }) }
+    finally { setBusy(false) }
   }
 
   const leave = useRef(save)
@@ -978,10 +992,13 @@ function SetupForm({ snapshot, onSaved, onRefresh }: { snapshot: VendorOnboardin
             <p className="mt-3 text-sm leading-6 text-text-secondary">Changes apply to future procurement eligibility. Accepted orders stay unchanged. Bulk capability does not enable competitive RFQ bidding, auctions or automatic vendor competition.</p>
           </div>
           <div className="border-t border-border-default pt-6">
-            <ChoiceField legend="Services Capability" description="Choose how Buyers can receive their orders." name="fulfillment_method" value={servicesCapability} onChange={setServicesCapability} required options={[
-              { value: 'SELF_PICKUP', label: 'Self-Pickup', description: 'Buyers collect their orders. Delivery Configuration is not applicable.' },
-              { value: 'VENDOR_DELIVERY', label: 'Vendor Delivery', description: 'Your store delivers orders. Delivery Configuration is required.' },
-              { value: 'BOTH', label: 'Both', description: 'Offer pickup and delivery. Delivery Configuration is required.' },
+            <ChoiceField legend="Services Capability" description="Choose how Buyers can receive their orders." name="fulfillment_method" value={servicesCapability} onChange={value => {
+              if (value === 'SELF_PICKUP' && (snapshot.setup.deliverySetup?.activeDeliveryObligations ?? 0) > 0) { setMessage({ tone: 'error', text: 'Complete active delivery obligations before switching to Self-Pickup Only.' }); return }
+              setServicesCapability(value)
+            }} required options={[
+              { value: 'SELF_PICKUP', label: 'Self-Pickup Only', description: 'Buyers collect their orders. Fulfillment Staff and delivery vehicles are not required.' },
+              { value: 'VENDOR_DELIVERY', label: 'Vendor Delivery Only', description: 'Your store delivers orders. Active Fulfillment Staff and an eligible registered vehicle are required.' },
+              { value: 'BOTH', label: 'Both (Self-Pickup & Vendor Delivery)', description: 'Offer pickup and delivery. Vendor Delivery Setup must be complete before delivery activation.' },
             ]} />
             <p className="mt-4 text-sm leading-6 text-text-secondary" role="status">{servicesCapability === 'SELF_PICKUP' ? 'Delivery Configuration: Not applicable for Self-Pickup only.' : deliveryRequired ? 'Complete Delivery Configuration below before Store Activation.' : 'Select a service to see whether Delivery Configuration is required.'}</p>
           </div>
@@ -989,6 +1006,11 @@ function SetupForm({ snapshot, onSaved, onRefresh }: { snapshot: VendorOnboardin
       </OnboardingStepContent>
       <OnboardingStepContent active={step === 1}><fieldset hidden={!deliveryRequired} disabled={!deliveryRequired} className="mt-8 min-w-0"><DeliveryVehicles onImagePending={(key, pending) => { if (pending) pendingImages.current.add(key); else pendingImages.current.delete(key) }} errors={deliveryErrors} vehicles={vehicles} onChange={next => { editRevision.current += 1; setVehicles(next); setVehiclesTouched(true); setDirty(true) }} uploadImage={uploadVehicleImage} resolveImage={resolveVehicleImage} coverageKm={numberValue(delivery.maximumDistanceKm, 50)} /></fieldset></OnboardingStepContent>
     </fieldset></form>
+    <OnboardingStepContent active={step === 1}><VendorDeliverySetup method={servicesCapability} state={snapshot.setup.deliverySetup}
+      staffAction={<Link to="/team" className="inline-flex min-h-11 items-center text-action-primary underline">Manage Fulfillment Staff</Link>}
+      vehicleAction={<Link to="/vehicles" className="inline-flex min-h-11 items-center text-action-primary underline">Manage Vehicles</Link>}
+      locationAction={<Link to="/onboarding/verification" className="inline-flex min-h-11 items-center text-action-primary underline">Update store location</Link>}
+      activationAction={<Button type="button" variant="secondary" disabled={busy || dirty || !snapshot.setup.deliverySetup?.ready || snapshot.setup.deliverySetup.enabled} onClick={() => void activateDelivery()}>{snapshot.setup.deliverySetup?.enabled ? 'Vendor Delivery activated' : 'Activate Vendor Delivery'}</Button>} /></OnboardingStepContent>
 
     <OnboardingStepContent active={step === 2}><XenditConnection
       status={stringValue(payment.connectionStatus, 'NOT_CONNECTED')}
@@ -1005,7 +1027,7 @@ function SetupForm({ snapshot, onSaved, onRefresh }: { snapshot: VendorOnboardin
         try { return await reconcileVendorPaymentConnection() } finally { await onRefresh() }
       }}
     /></OnboardingStepContent>
-    <OnboardingStepContent active={step === 3}><div className="space-y-4"><h3 className="text-lg font-semibold">Team Accounts are optional</h3><p className="text-sm text-text-secondary">Continue setting up your store. You can invite and manage employees in Team Accounts before or after Store Activation.</p>{snapshot.permissions.includes('staff.manage') && <Link to="/team" className="inline-flex min-h-11 items-center text-action-primary underline">Open Team Accounts</Link>}</div></OnboardingStepContent>
+    <OnboardingStepContent active={step === 3}><div className="space-y-4"><h3 className="text-lg font-semibold">Team Accounts</h3><p className="text-sm text-text-secondary">Self-Pickup Only needs no staff accounts. Vendor Delivery Only and Both require at least one active Fulfillment Staff account before delivery activation. Manage employees through the existing Team Accounts module.</p>{snapshot.permissions.includes('staff.manage') && <Link to="/team" className="inline-flex min-h-11 items-center text-action-primary underline">Manage Fulfillment Staff</Link>}</div></OnboardingStepContent>
     <OnboardingStepContent active={step === 4}><StoreOperationSchedule days={schedule} errors={scheduleErrors} onChange={next => { editRevision.current += 1; setSchedule(next); setScheduleTouched(true); setDirty(true); setScheduleErrors({}) }} /></OnboardingStepContent>
     <OnboardingStepContent active={step === 5}><p className="mb-5 text-sm leading-6 text-text-secondary">Review the saved setup below. Completion requires a valid weekly schedule and confirmed TEST payment connection. Store Activation remains a separate gate.</p>{dirty && <StatusMessage tone="info">Your changes will save when you continue or finish later.</StatusMessage>}<ReviewDetails items={[["Public store name", stringValue(profile.publicStoreName)], ["Services Capability", statusLabel(stringValue(profile.fulfillmentMethod))], ["Bulk Order Capability", profile.bulkCapability === true ? 'Yes — Item-Based and Project-Based' : profile.bulkCapability === false ? 'No — Item-Based only' : 'Not configured'], ["TEST payment connection", statusLabel(stringValue(payment.connectionStatus, 'UNVERIFIED'))]]} /><StoreHours days={operatingDays(record(snapshot.setup).operating_schedule)} /><Checklist title="Setup checklist" section={sectionFor(snapshot, 'STORE_SETUP')} /></OnboardingStepContent>
   </OnboardingFlow>
@@ -1049,12 +1071,14 @@ function SetupCompletion({ snapshot, onSaved, dirty }: { snapshot: VendorOnboard
 
 export function VendorTeamPage() {
   const { snapshot, loading, error, refresh } = useOnboardingSnapshot()
+  useAutomaticRefresh(refresh, { enabled: !!snapshot?.permissions.includes('staff.manage') })
   const verification = useAccountVerification({ api: teamAccountsApi, portal: 'vendors', explainError: readableOnboardingError, enabled: !!snapshot?.permissions.includes('staff.manage') })
   if (loading && !snapshot) return <VendorShell navigationData={snapshot} activeHref="/team" accountLabel="Vendor team"><LoadingState /></VendorShell>
   if (error && !snapshot) return <VendorShell navigationData={snapshot} activeHref="/team" accountLabel="Vendor team"><ErrorState message={error} onRetry={() => void refresh()} /></VendorShell>
   if (!snapshot) return null
   if (!snapshot.permissions.includes('staff.manage')) return <Navigate to="/dashboard" replace />
-  return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/team" accountLabel="Vendor team"><div className="mx-auto max-w-[1600px] space-y-6"><PageHeader eyebrow="Store Management" title="Team Accounts" description="Manage your store’s people, roles and account access." /><section className="min-w-0"><VendorTeamInvitations organizationName={stringValue(record(snapshot.organization).storeName, 'Your store')} verifyChange={verification.verify} canInviteManager={snapshot.permissions.includes('managers.manage')} invite={inviteVendorTeamMember} deleteInvitation={snapshot.permissions.includes('managers.manage') ? deleteVendorTeamInvitation : undefined} list={listVendorTeamInvitations} explainError={readableOnboardingError}><VendorTeamMembers list={listVendorTeamMembers} explainError={readableOnboardingError} canManageManagers={snapshot.permissions.includes('managers.manage')} update={updateVendorTeamMember} deleteAccount={snapshot.permissions.includes('managers.manage') ? deleteVendorTeamMember : undefined} changeStatus={changeVendorTeamMemberStatus} changeDelegation={changeVendorTeamMemberDelegation} verifyChange={verification.verify} /></VendorTeamInvitations></section>{snapshot.permissions.includes('staff.delegate') && <StaffDisputeSetting snapshot={snapshot} refresh={refresh} verifyChange={verification.verify} />}{verification.dialog}</div></VendorShell>
+  return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/team" accountLabel="Vendor team"><div className="mx-auto max-w-[1600px] space-y-6"><PageHeader eyebrow="Store Management" title="Team Accounts" description="Manage your store’s people, roles and account access." />
+    <section className="min-w-0"><VendorTeamInvitations organizationName={stringValue(record(snapshot.organization).storeName, 'Your store')} verifyChange={verification.verify} canInviteManager={snapshot.permissions.includes('managers.manage')} invite={inviteVendorTeamMember} deleteInvitation={snapshot.permissions.includes('managers.manage') ? deleteVendorTeamInvitation : undefined} list={listVendorTeamInvitations} explainError={readableOnboardingError}><VendorTeamMembers list={listVendorTeamMembers} explainError={readableOnboardingError} canManageManagers={snapshot.permissions.includes('managers.manage')} update={updateVendorTeamMember} deleteAccount={snapshot.permissions.includes('managers.manage') ? deleteVendorTeamMember : undefined} changeStatus={changeVendorTeamMemberStatus} changeDelegation={changeVendorTeamMemberDelegation} verifyChange={verification.verify} /></VendorTeamInvitations></section>{snapshot.permissions.includes('staff.delegate') && <StaffDisputeSetting snapshot={snapshot} refresh={refresh} verifyChange={verification.verify} />}<VendorDeliverySetup hideWhenReady method={snapshot.setup.deliverySetup?.fulfillmentMethod ?? ''} state={snapshot.setup.deliverySetup} vehicleAction={<Link to="/vehicles" className="inline-flex min-h-11 items-center text-action-primary underline">Manage Vehicles</Link>} />{verification.dialog}</div></VendorShell>
 }
 function StaffDisputeSetting({ snapshot, refresh, verifyChange }: { snapshot: VendorOnboardingSnapshot; refresh: () => Promise<unknown>; verifyChange: RequestAccountVerification }) {
   const [busy, setBusy] = useState(false)
@@ -1080,7 +1104,7 @@ export function VendorStoreProfilePage() {
   if (record(snapshot.activation).status !== 'ACTIVE') return <Navigate to="/dashboard" replace />
   const org = record(snapshot.organization)
   const profile = record(record(snapshot.setup).profile)
-  return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/store-profile" accountLabel={stringValue(org.storeName, 'Your store')}><div className="mx-auto max-w-[1600px] space-y-6"><header className="rounded-surface border border-border-default bg-surface-primary p-6"><div className="mb-5 min-h-24 rounded-control bg-surface-canvas"><StoreMediaPreview media={arrayValue(record(snapshot.setup).media).filter(item => stringValue(item.kind) === 'BANNER').at(-1)} kind="BANNER" /></div><div className="flex flex-col gap-5 sm:flex-row sm:items-center"><div className="w-24 shrink-0"><StoreMediaPreview media={arrayValue(record(snapshot.setup).media).filter(item => stringValue(item.kind) === 'LOGO').at(-1)} kind="LOGO" /></div><div className="min-w-0 flex-1"><p className="text-xs font-semibold uppercase tracking-widest text-text-secondary">Store profile</p><h2 className="mt-2 break-words text-lg font-semibold">{stringValue(profile.publicStoreName, stringValue(org.storeName, 'Store Profile'))}</h2><p className="mt-2 break-words text-text-secondary">{stringValue(profile.description, 'Your marketplace business profile')}</p></div><StatusBadge label={record(snapshot.setup).vacationMode === true ? 'Vacation Mode on' : 'Active store'} /></div></header><div className="rounded-surface border border-border-default bg-surface-primary p-4 sm:p-7"><SectionWorkspace beforeSectionChange={() => businessSave.current?.() ?? configurationSave.current?.() ?? true} sections={[
+  return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/store-profile" accountLabel={stringValue(org.storeName, 'Your store')}><div className="mx-auto max-w-[1600px] space-y-6"><header className="rounded-surface border border-border-default bg-surface-primary p-6"><div className="mb-5 min-h-24 rounded-control bg-surface-canvas"><StoreMediaPreview media={arrayValue(record(snapshot.setup).media).filter(item => stringValue(item.kind) === 'BANNER').at(-1)} kind="BANNER" /></div><div className="flex flex-col gap-5 sm:flex-row sm:items-center"><div className="w-24 shrink-0"><StoreMediaPreview media={arrayValue(record(snapshot.setup).media).filter(item => stringValue(item.kind) === 'LOGO').at(-1)} kind="LOGO" /></div><div className="min-w-0 flex-1"><p className="text-xs font-semibold uppercase tracking-widest text-text-secondary">Store profile</p><h1 className="mt-2 break-words text-h1 font-semibold">{stringValue(profile.publicStoreName, stringValue(org.storeName, 'Store Profile'))}</h1><p className="mt-2 break-words text-text-secondary">{stringValue(profile.description, 'Your marketplace business profile')}</p></div><StatusBadge label={record(snapshot.setup).vacationMode === true ? 'Vacation Mode on' : 'Active store'} /></div></header><div className="rounded-surface border border-border-default bg-surface-primary p-4 sm:p-7"><SectionWorkspace beforeSectionChange={() => businessSave.current?.() ?? configurationSave.current?.() ?? true} sections={[
     { label: 'Store Information', content: <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]"><PublicStoreProfileEditor snapshot={snapshot} onSaved={setSnapshot} /><MediaUploader embedded snapshot={snapshot} onRefresh={refresh} /></div> },
     { label: 'Business Information', content: <StoreBusinessInformation snapshot={snapshot} renderEditor={() => <VerificationForm editing registerBeforeLeave={registerBeforeLeave} snapshot={snapshot} onSaved={setSnapshot} onRefresh={refresh} />} /> },
     { label: 'Store Location', content: <StoreLocation snapshot={snapshot} /> },
@@ -1093,99 +1117,129 @@ type ProfileSectionEditorProps = { snapshot: VendorOnboardingSnapshot; onSaved: 
 
 function StoreFulfillmentEditor({ snapshot, onSaved, registerBeforeLeave }: ProfileSectionEditorProps) {
   const profile = record(record(snapshot.setup).profile)
-  const delivery = record(record(snapshot.setup).delivery)
   const [bulk, setBulk] = useState(profile.bulkCapability === true ? 'yes' : profile.bulkCapability === false ? 'no' : '')
   const [method, setMethod] = useState(stringValue(profile.fulfillmentMethod))
-  const [coverageNotes, setCoverageNotes] = useState(stringValue(delivery.coverageNotes))
+  const deliverySetup = snapshot.setup.deliverySetup
+  const canConfigurePayments = snapshot.permissions.includes('payments.configure')
+  const [paymentSettings, setPaymentSettings] = useState<PhysicalPaymentSettings | null>(null)
+  const paymentOptions = { codEnabled: method === 'VENDOR_DELIVERY' || method === 'BOTH', inStoreEnabled: method === 'SELF_PICKUP' || method === 'BOTH' }
+  const [paymentLoadError, setPaymentLoadError] = useState<string | null>(null)
+  const [paymentLoadAttempt, setPaymentLoadAttempt] = useState(0)
   const [dirty, setDirty] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
   const editRevision = useRef(0)
-  const save = async (): Promise<boolean> => {
-    if (!dirty) return true
+  useEffect(() => {
+    if (!canConfigurePayments) return
+    let active = true
+    setPaymentLoadError(null)
+    void getFinanceOverview().then(overview => {
+      if (!active) return
+      const settings = section(overview.physicalPayments)
+      const saved = { codEnabled: settings.cod_enabled === true, inStoreEnabled: settings.in_store_enabled === true, lockVersion: Number(settings.lock_version ?? 0) }
+      setPaymentSettings(saved)
+    }).catch(async cause => {
+      const text = await readableOnboardingError(cause)
+      if (active) setPaymentLoadError(text)
+    })
+    return () => { active = false }
+  }, [canConfigurePayments, paymentLoadAttempt])
+  const paymentsDirty = canConfigurePayments && paymentSettings !== null && (paymentOptions.codEnabled !== paymentSettings.codEnabled || paymentOptions.inStoreEnabled !== paymentSettings.inStoreEnabled)
+  useAutomaticRefresh(async () => onSaved(await getVendorOnboarding()), { enabled: !busy && !dirty && !paymentsDirty })
+  const paymentLoading = canConfigurePayments && paymentSettings === null
+  const save = async (deliveryEnabled?: boolean): Promise<boolean> => {
+    if (!dirty && !paymentsDirty && deliveryEnabled === undefined) return true
     if (busy) return false
     if (!bulk || !method) { setMessage({ tone: 'error', text: 'Choose bulk order capability and a fulfillment method.' }); return false }
     const revision = editRevision.current
     setBusy(true); setMessage(null)
+    let fulfillmentSaved = false
     try {
-      onSaved(await saveVendorSetupDraft({ organizationLockVersion: numberValue(record(snapshot.organization).lockVersion, 1), draftLockVersion: numberValue(arrayValue(snapshot.drafts).find(item => item.workstream === 'STORE_SETUP')?.lockVersion, 0), bulkCapability: bulk === 'yes', fulfillmentMethod: method as 'SELF_PICKUP' | 'VENDOR_DELIVERY' | 'BOTH', ...(method !== 'SELF_PICKUP' ? { delivery: { coverageNotes: coverageNotes.trim() || null } } : {}) }))
-      if (editRevision.current === revision) { setDirty(false); setMessage({ tone: 'success', text: 'Fulfillment configuration saved. Changes apply to future procurement.' }) }
+      if (dirty || deliveryEnabled !== undefined) {
+        onSaved(await saveVendorSetupDraft({ organizationLockVersion: numberValue(record(snapshot.organization).lockVersion, 1), draftLockVersion: numberValue(arrayValue(snapshot.drafts).find(item => item.workstream === 'STORE_SETUP')?.lockVersion, 0), bulkCapability: bulk === 'yes', fulfillmentMethod: method as 'SELF_PICKUP' | 'VENDOR_DELIVERY' | 'BOTH', ...(deliveryEnabled !== undefined ? { vendorDeliveryEnabled: deliveryEnabled } : method !== stringValue(profile.fulfillmentMethod) ? { vendorDeliveryEnabled: false } : {}) }))
+        fulfillmentSaved = true
+        if (editRevision.current === revision) setDirty(false)
+      }
+      if (paymentsDirty && paymentSettings) setPaymentSettings(await updatePhysicalPayments(paymentSettings.lockVersion, paymentOptions.codEnabled, paymentOptions.inStoreEnabled))
+      if (editRevision.current === revision) setMessage({ tone: 'success', text: 'Fulfillment configuration saved. Changes apply to future procurement.' })
       return editRevision.current === revision
-    } catch (cause) { setMessage({ tone: 'error', text: await readableOnboardingError(cause) }); return false }
+    } catch (cause) { setMessage({ tone: 'error', text: `${fulfillmentSaved ? 'Fulfillment saved, but physical payment options were not saved. Retry saving. ' : ''}${await readableOnboardingError(cause)}` }); return false }
     finally { setBusy(false) }
   }
   const saveRef = useRef(save)
   saveRef.current = save
   useEffect(() => { registerBeforeLeave(() => saveRef.current()); return () => registerBeforeLeave(null) }, [registerBeforeLeave])
-  return <div className="max-w-4xl space-y-7"><div><h2 className="text-xl font-semibold">Fulfillment and delivery</h2><p className="mt-2 text-sm text-text-secondary">Update how Buyers can procure and receive materials. Existing accepted orders and quotations stay unchanged.</p></div>{message && <StatusMessage tone={message.tone}>{message.text}</StatusMessage>}
-    <ChoiceField legend="Bulk Order Capability" description="Choose the procurement types your store can support." name="bulk_capability" value={bulk} onChange={value => { editRevision.current += 1; setBulk(value); setDirty(true) }} required options={[{ value: 'yes', label: 'Yes', description: 'Eligible for Item-Based and Project-Based procurement.' }, { value: 'no', label: 'No', description: 'Eligible for Item-Based procurement only.' }]} />
-    <div className="border-t border-border-default pt-6"><ChoiceField legend="Services Capability" description="Choose how Buyers can receive their orders." name="fulfillment_method" value={method} onChange={value => { editRevision.current += 1; setMethod(value); setDirty(true) }} required options={[{ value: 'SELF_PICKUP', label: 'Self-Pickup', description: 'Buyers collect their orders. Delivery Configuration is not applicable.' }, { value: 'VENDOR_DELIVERY', label: 'Vendor Delivery', description: 'Your store delivers orders. Delivery Configuration is required.' }, { value: 'BOTH', label: 'Both', description: 'Offer pickup and delivery. Delivery Configuration is required.' }]} /></div>
-    {method === 'SELF_PICKUP' ? <StatusMessage tone="info">Delivery Configuration is not applicable for Self-Pickup only.</StatusMessage> : <div className="space-y-4 border-t border-border-default pt-6"><ProfileDetails title="Service coverage" items={[["Maximum delivery distance", `${numberValue(delivery.maximumDistanceKm, 50)} km`]]} /><label className="grid gap-2 text-sm font-semibold" htmlFor="coverage-notes">Coverage notes<textarea id="coverage-notes" maxLength={1000} value={coverageNotes} onChange={event => { editRevision.current += 1; setCoverageNotes(event.target.value); setDirty(true) }} className="min-h-28 rounded-control border border-border-default bg-surface-primary p-3 font-normal" /></label><p className="text-sm text-text-secondary">Configure operated vehicles and delivery rates in Vehicles Management.</p></div>}
-    <Button disabled={busy || !dirty} onClick={() => void save()}>{busy ? 'Saving…' : 'Save fulfillment configuration'}</Button>
-  </div>
-}
-
-function StoreVehiclesEditor({ snapshot, onSaved, registerBeforeLeave }: ProfileSectionEditorProps) {
-  const setup = record(snapshot.setup)
-  const [vehicles, setVehicles] = useState<DeliveryVehicleDraft[]>(() => arrayValue(setup.vehicles).map(vehicleDraft))
-  const [dirty, setDirty] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [errors, setErrors] = useState<Record<string, Record<string, string>>>({})
-  const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
-  const pendingImages = useRef(new Set<string>())
-  const editRevision = useRef(0)
-  const deliveryEnabled = ['VENDOR_DELIVERY', 'BOTH'].includes(stringValue(record(setup.profile).fulfillmentMethod))
-  const save = async (): Promise<boolean> => {
-    if (!dirty) return true
-    if (busy) return false
-    if (pendingImages.current.size) { setMessage({ tone: 'error', text: 'Wait for vehicle image uploads to finish or retry failed uploads.' }); return false }
-    const issues = Object.fromEntries(vehicles.map(vehicle => [vehicle.key, vehicleErrors(vehicle)]))
-    setErrors(issues)
-    if (Object.values(issues).some(fields => Object.keys(fields).length)) { setMessage({ tone: 'error', text: 'Complete the highlighted vehicle details before saving.' }); return false }
-    const revision = editRevision.current
-    setBusy(true); setMessage(null)
-    try {
-      const updated = await saveVendorSetupDraft({ organizationLockVersion: numberValue(record(snapshot.organization).lockVersion, 1), draftLockVersion: numberValue(arrayValue(snapshot.drafts).find(item => item.workstream === 'STORE_SETUP')?.lockVersion, 0), vehicles: vehicles.map(vehiclePayload) })
-      onSaved(updated)
-      if (editRevision.current === revision) { setVehicles(arrayValue(record(updated.setup).vehicles).map(vehicleDraft)); setDirty(false); setErrors({}); setMessage({ tone: 'success', text: 'Vehicle configuration saved. Existing accepted orders stay unchanged.' }) }
-      return editRevision.current === revision
-    } catch (cause) {
-      const fields = await onboardingFieldErrors(cause)
-      const mapping: Record<string, string> = { vehicle_category: 'category', vehicle_type: 'type', custom_type_name: 'customType', name: 'name', brand: 'brand', capacity_kg: 'weight', number_available: 'count', mixer_capacity_m3: 'mixer', cargo_length_m: 'length', cargo_width_m: 'width', cargo_height_m: 'height', heavy_classification: 'heavy', base_fee_centavos: 'baseFee', per_km_centavos: 'perKm', image_file_id: 'imageId' }
-      for (const [field, error] of Object.entries(fields)) {
-        const match = /^vehicles\.(\d+)\.(.+)$/.exec(field)
-        const vehicle = match ? vehicles[Number(match[1])] : undefined
-        const name = match?.[2] ? mapping[match[2]] : undefined
-        if (vehicle && name) issues[vehicle.key] = { ...issues[vehicle.key], [name]: error }
-      }
-      setErrors(issues); setMessage({ tone: 'error', text: await readableOnboardingError(cause) }); return false
-    } finally { setBusy(false) }
-  }
-  const saveRef = useRef(save)
-  saveRef.current = save
-  useEffect(() => { registerBeforeLeave(() => saveRef.current()); return () => registerBeforeLeave(null) }, [registerBeforeLeave])
-  return <div className="space-y-6"><div><h2 className="text-xl font-semibold">Registered vehicles</h2><p className="mt-2 text-sm text-text-secondary">{vehicles.filter(vehicle => vehicle.active).length} active vehicles configured for your store. Changes affect future delivery recommendations only.</p></div>{message && <StatusMessage tone={message.tone}>{message.text}</StatusMessage>}{!deliveryEnabled && <StatusMessage tone="info">Select Vendor Delivery or Both in Fulfillment Configuration to use delivery vehicles.</StatusMessage>}
-    {deliveryEnabled && <><DeliveryVehicles vehicles={vehicles} errors={errors} onChange={next => { editRevision.current += 1; setVehicles(next); setDirty(true); setErrors({}) }} onImagePending={(key, pending) => { if (pending) pendingImages.current.add(key); else pendingImages.current.delete(key) }} uploadImage={uploadVehicleImage} resolveImage={resolveVehicleImage} coverageKm={numberValue(record(setup.delivery).maximumDistanceKm, 50)} /><Button disabled={busy || !dirty} onClick={() => void save()}>{busy ? 'Saving…' : 'Save vehicles'}</Button></>}
+  return <div className="w-full min-w-0 space-y-6">
+    <header className="border-b border-border-default pb-5">
+      <h2 className="text-xl font-semibold text-text-strong">Fulfillment and delivery</h2>
+      <p className="mt-1 max-w-3xl text-sm leading-6 text-text-secondary">Update how Buyers can procure and receive materials. Existing accepted orders and quotations stay unchanged.</p>
+    </header>
+    {message && <StatusMessage tone={message.tone}>{message.text}</StatusMessage>}
+    <fieldset disabled={busy || paymentLoading} className="grid min-w-0 gap-6">
+      <legend className="sr-only">Fulfillment preferences</legend>
+      <ChoiceField legend="Bulk Order Capability" description="Choose the procurement types your store can support." name="bulk_capability" value={bulk} onChange={value => { editRevision.current += 1; setBulk(value); setDirty(true) }} required options={[
+        { value: 'yes', label: 'Yes', description: 'Eligible for Item-Based and Project-Based procurement.' },
+        { value: 'no', label: 'No', description: 'Eligible for Item-Based procurement only.' },
+      ]} />
+      <div className="border-t border-border-default pt-5">
+        <ChoiceField legend="Services Capability" description="Choose how Buyers can receive their orders." name="fulfillment_method" value={method} onChange={value => {
+          if (value === method) return
+          if (value === 'SELF_PICKUP' && (deliverySetup?.activeDeliveryObligations ?? 0) > 0) { setMessage({ tone: 'error', text: 'Complete active delivery obligations before switching to Self-Pickup Only. You can pause new deliveries.' }); return }
+          editRevision.current += 1; setMethod(value); setDirty(true)
+        }} required options={[
+          { value: 'SELF_PICKUP', label: 'Self-Pickup Only', description: 'Buyers collect their orders. Fulfillment Staff and delivery vehicles are not required.' },
+          { value: 'VENDOR_DELIVERY', label: 'Vendor Delivery Only', description: 'Your store delivers orders. Active Fulfillment Staff and an eligible registered vehicle are required.' },
+          { value: 'BOTH', label: 'Both (Self-Pickup & Vendor Delivery)', description: 'Offer pickup and delivery. Vendor Delivery Setup must be complete before delivery activation.' },
+        ]} />
+      </div>
+      <VendorDeliverySetup method={method} state={deliverySetup}
+        staffAction={<Link to="/team" className="inline-flex min-h-11 items-center text-action-primary underline">Manage Fulfillment Staff</Link>}
+        vehicleAction={<Link to="/vehicles" className="inline-flex min-h-11 items-center text-action-primary underline">Manage Vehicles</Link>}
+        locationAction={<Link to="/onboarding/verification" className="inline-flex min-h-11 items-center text-action-primary underline">Update store location</Link>}
+        activationAction={deliverySetup && ['VENDOR_DELIVERY', 'BOTH'].includes(method) && <Button type="button" variant="secondary" disabled={busy || (!deliverySetup.enabled && !deliverySetup.ready)} onClick={() => void save(!deliverySetup.enabled)}>{deliverySetup.enabled ? 'Pause new deliveries' : 'Activate Vendor Delivery'}</Button>} />
+      {canConfigurePayments && <FinanceSection id="store-physical-payments" layout="split" title="Physical payments" description="Buyers pay you directly. You record what you receive with evidence; a record never confirms an online payment.">
+        <PhysicalPaymentOptions {...paymentOptions} disabled />
+        <p className="text-sm leading-6 text-text-secondary">Payment options follow Services Capability automatically. Save fulfillment configuration to apply them.</p>
+      </FinanceSection>}
+    </fieldset>
+    {paymentLoading && (paymentLoadError ? <div className="grid gap-3"><StatusMessage tone="error">{paymentLoadError}</StatusMessage><div><Button variant="secondary" onClick={() => setPaymentLoadAttempt(attempt => attempt + 1)}>Retry loading payment options</Button></div></div> : <p role="status" className="text-sm text-text-secondary">Loading physical payment options…</p>)}
+    <div className="flex flex-col gap-4 border-t border-border-default pt-5 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-sm text-text-secondary">Changes apply to future procurement.</p>
+      <Button className="w-full sm:w-auto" disabled={busy || paymentLoading || (!dirty && !paymentsDirty)} onClick={() => void save()}>{busy ? 'Saving…' : 'Save fulfillment configuration'}</Button>
+    </div>
   </div>
 }
 
 function StoreOperationEditor({ snapshot, onSaved }: { snapshot: VendorOnboardingSnapshot; onSaved: (snapshot: VendorOnboardingSnapshot) => void }) {
-  const [days, setDays] = useState<StoreOperatingDay[]>(() => operatingDays(record(snapshot.setup).operating_schedule))
+  const saved = operatingDays(record(snapshot.setup).operating_schedule)
+  const [editing, setEditing] = useState(false)
+  const [days, setDays] = useState<StoreOperatingDay[]>(saved)
   const [errors, setErrors] = useState<Record<number, string>>({})
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
+  const [dialogError, setDialogError] = useState('')
+  function openEditor() {
+    setDays(saved); setErrors({}); setDialogError(''); setMessage(null); setEditing(true)
+  }
   async function save() {
     const nextErrors = storeScheduleErrors(days)
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length) return
-    setBusy(true); setMessage(null)
+    setBusy(true); setDialogError('')
     try {
       onSaved(await saveVendorSetupDraft({ organizationLockVersion: numberValue(record(snapshot.organization).lockVersion, 1), draftLockVersion: numberValue(arrayValue(snapshot.drafts).find(item => item.workstream === 'STORE_SETUP')?.lockVersion, 0), operatingSchedule: days.map(day => ({ dayOfWeek: day.dayOfWeek, status: day.status as 'OPEN' | 'CLOSED', opensAt: day.status === 'OPEN' ? day.opensAt : null, closesAt: day.status === 'OPEN' ? day.closesAt : null })) }))
+      setEditing(false)
       setMessage({ tone: 'success', text: 'Store Hours saved to your public Store Profile.' })
-    } catch (cause) { setMessage({ tone: 'error', text: await readableOnboardingError(cause) }) }
+    } catch (cause) { setDialogError(await readableOnboardingError(cause)) }
     finally { setBusy(false) }
   }
-  return <div className="space-y-6">{message && <StatusMessage tone={message.tone}>{message.text}</StatusMessage>}<StoreHours days={operatingDays(record(snapshot.setup).operating_schedule)} /><StoreOperationSchedule days={days} errors={errors} onChange={next => { setDays(next); setErrors({}) }} /><Button disabled={busy} onClick={() => void save()}>{busy ? 'Saving…' : 'Save Store Hours'}</Button></div>
+  return <div className="space-y-6">{message && <StatusMessage tone={message.tone}>{message.text}</StatusMessage>}
+    <StoreHours days={saved} action={<Button variant="secondary" aria-label="Edit Store Hours" onClick={openEditor}><Pencil size={16} aria-hidden="true" />Edit</Button>} />
+    <FormDialog open={editing} size="wide" title="Edit Store Hours" description="Set when your store normally accepts customers, inquiries and pickups. Times use Philippine time (UTC+8)." busy={busy} onClose={() => setEditing(false)}
+      footer={<div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><Button variant="secondary" disabled={busy} onClick={() => setEditing(false)}>Cancel</Button><Button disabled={busy} onClick={() => void save()}>{busy ? 'Saving…' : 'Save Store Hours'}</Button></div>}>
+      <div className="space-y-5">{dialogError && <StatusMessage tone="error">{dialogError}</StatusMessage>}<StoreOperationSchedule showHeading={false} days={days} errors={errors} onChange={next => { setDays(next); setErrors({}) }} /></div>
+    </FormDialog>
+  </div>
 }
 function PublicStoreProfileEditor({ snapshot, onSaved }: { snapshot: VendorOnboardingSnapshot; onSaved: (snapshot: VendorOnboardingSnapshot) => void }) {
   const profile = record(record(snapshot.setup).profile)

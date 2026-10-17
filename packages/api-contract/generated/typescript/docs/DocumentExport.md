@@ -7,6 +7,7 @@
 Name | Type
 ------------ | -------------
 `id` | string
+`resourceId` | string
 `type` | string
 `format` | string
 `state` | string
@@ -28,6 +29,7 @@ import type { DocumentExport } from '@materyalph/api-client-ts'
 // TODO: Update the object below with actual values
 const example = {
   "id": null,
+  "resourceId": null,
   "type": null,
   "format": null,
   "state": null,

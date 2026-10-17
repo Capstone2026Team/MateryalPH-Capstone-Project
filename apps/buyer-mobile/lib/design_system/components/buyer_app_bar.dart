@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'procurement_components.dart';
+import 'count_badge.dart';
 import '../theme.dart';
 
 /// Plain outlined header action with an accessible target and optional count.
@@ -13,6 +14,7 @@ class BuyerHeaderIconButton extends StatelessWidget {
     required this.onPressed,
     this.badgeCount = 0,
     this.badgeColor,
+    this.badgeQuantity,
   });
 
   final IconData icon;
@@ -20,6 +22,7 @@ class BuyerHeaderIconButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final int badgeCount;
   final Color? badgeColor;
+  final String? badgeQuantity;
 
   @override
   Widget build(BuildContext context) => IconButton(
@@ -29,10 +32,8 @@ class BuyerHeaderIconButton extends StatelessWidget {
       minimumSize: const Size(48, 48),
       foregroundColor: BuyerTheme.ink,
     ),
-    icon: Badge(
-      isLabelVisible: badgeCount > 0,
-      label: Text(badgeCount > 99 ? '99+' : '$badgeCount'),
-      backgroundColor: badgeColor ?? BuyerTheme.ink,
+    icon: CountBadge(
+      quantity: badgeQuantity ?? '$badgeCount',
       child: Icon(icon, size: 24),
     ),
   );

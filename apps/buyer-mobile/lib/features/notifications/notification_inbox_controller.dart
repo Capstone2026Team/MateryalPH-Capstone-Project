@@ -15,8 +15,6 @@ abstract interface class NotificationInboxTransport {
   Future<void Function()> watch(void Function() refresh);
 }
 
-enum NotificationInboxStatus { unread, archived }
-
 String notificationCategoryLabel(String category) => switch (category) {
   'SECURITY' => 'Account security update',
   'TEAM' => 'Team access changed',
@@ -39,7 +37,6 @@ class NotificationInboxController extends ChangeNotifier {
   final NotificationInboxTransport _transport;
   List<api.NotificationItem> _items = const [];
   List<api.NotificationItem> get items => List.unmodifiable(_items);
-  NotificationInboxStatus status = NotificationInboxStatus.unread;
   String? category;
   String? error;
   bool loaded = false;
@@ -70,41 +67,25 @@ class NotificationInboxController extends ChangeNotifier {
       _items.where((item) => category == null || item.category == category);
   int get filteredUnreadCount =>
       _matchingType.where((item) => item.readAt == null).length;
-  int get filteredArchivedCount =>
-      _matchingType.where((item) => item.readAt != null).length;
-  List<api.NotificationItem> get visible => _matchingType
-      .where(
-        (item) => status == NotificationInboxStatus.unread
-            ? item.readAt == null
-            : item.readAt != null,
-      )
-      .toList();
-  bool get filtersActive =>
-      category != null || status != NotificationInboxStatus.unread;
-  bool get canMarkAll =>
-      loaded &&
-      !marking &&
-      !opening &&
-      status == NotificationInboxStatus.unread &&
-      filteredUnreadCount > 0;
 
-  void filter({
-    String? type,
-    NotificationInboxStatus? selectedStatus,
-    bool clearType = false,
-  }) {
+  /// The inbox lists unread notices only; a notice leaves it once read.
+  List<api.NotificationItem> get visible =>
+      _matchingType.where((item) => item.readAt == null).toList();
+  bool get filtersActive => category != null;
+  bool get canMarkAll =>
+      loaded && !marking && !opening && filteredUnreadCount > 0;
+
+  void filter({String? type, bool clearType = false}) {
     if (clearType) {
       category = null;
     } else if (type != null) {
       category = type;
     }
-    if (selectedStatus != null) status = selectedStatus;
     _emit();
   }
 
   void clearFilters() {
     category = null;
-    status = NotificationInboxStatus.unread;
     _emit();
   }
 
@@ -141,7 +122,6 @@ class NotificationInboxController extends ChangeNotifier {
         loaded = marking = opening = false;
         error = category = null;
         _mutationError = false;
-        status = NotificationInboxStatus.unread;
         _emit();
       }
       return;
@@ -233,7 +213,10 @@ class NotificationInboxController extends ChangeNotifier {
   Future<void> markAllRead() async {
     if (!canMarkAll) return;
     final generation = _generation;
-    final ids = visible.map((item) => item.id).toSet();
+    final ids = _matchingType
+        .where((item) => item.readAt == null)
+        .map((item) => item.id)
+        .toSet();
     final throughId = _items.first.id;
     final selectedCategory = category;
     final optimisticAt = DateTime.now().toUtc().toIso8601String();

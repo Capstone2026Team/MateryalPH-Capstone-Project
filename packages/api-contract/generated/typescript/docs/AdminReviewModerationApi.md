@@ -175,7 +175,7 @@ example().catch(console.error);
 
 ## listAdminReviewModeration
 
-> ModerationQueueEnvelope listAdminReviewModeration(state, page)
+> ModerationQueueEnvelope listAdminReviewModeration(state, page, from, to)
 
 
 
@@ -205,6 +205,10 @@ async function example() {
     state: state_example,
     // number (optional)
     page: 56,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review submitted_at. (optional)
+    from: 2013-10-20,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review submitted_at. (optional)
+    to: 2013-10-20,
   } satisfies ListAdminReviewModerationRequest;
 
   try {
@@ -226,6 +230,8 @@ example().catch(console.error);
 |------------- | ------------- | ------------- | -------------|
 | **state** | `NEEDS_ACTION`, `ALL`, `NONE`, `FLAGGED`, `HIDDEN_PENDING_REVIEW`, `CORRECTION_REQUESTED`, `REMOVED` |  | [Optional] [Defaults to `undefined`] [Enum: NEEDS_ACTION, ALL, NONE, FLAGGED, HIDDEN_PENDING_REVIEW, CORRECTION_REQUESTED, REMOVED] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **from** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review submitted_at. | [Optional] [Defaults to `undefined`] |
+| **to** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review submitted_at. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 

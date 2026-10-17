@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { PriceTrendPanel } from '@materyalph/web-ui'
+import { parseDate } from '@materyalph/api-client-ts'
 import * as api from '../lib/trust-api'
 import type { VendorMaterialsAnalyticsDetail, VendorMaterialsAnalyticsList } from '../lib/trust-api'
 import { useOnboardingSnapshot } from '../lib/vendor-status'
@@ -60,16 +61,18 @@ test('an empty published history renders an explicit null state, never an empty 
 test('details show the gap-aware graph, a synchronized sortable table, the trend text and Edit My Listing', async () => {
   snapshot(['materials_analytics.view_competitors', 'catalog.manage'])
   const series = [
-    { date: new Date('2026-10-02'), status: 'OK', averagePhp: '110.00', competitorCount: 3, participantsChanged: null },
-    { date: new Date('2026-10-03'), status: 'MISSING_DAY', label: 'No snapshot recorded for this date' },
-    { date: new Date('2026-10-04'), status: 'OK', averagePhp: '121.00', competitorCount: 4, participantsChanged: true },
+    { date: parseDate('2026-10-02'), status: 'OK', averagePhp: '110.00', competitorCount: 3, participantsChanged: null },
+    { date: parseDate('2026-10-03'), status: 'MISSING_DAY', label: 'No snapshot recorded for this date' },
+    { date: parseDate('2026-10-04'), status: 'OK', averagePhp: '121.00', competitorCount: 4, participantsChanged: true },
   ]
-  const okRow = { ...suppressedRow, endPoint: { date: new Date('2026-10-04'), status: 'OK', averagePhp: '121.00', competitorCount: 4 }, trend: { changePercent: '10.00', direction: 'INCREASING', compositionChanged: true, startDate: new Date('2026-10-02'), endDate: new Date('2026-10-04') } }
+  const okRow = { ...suppressedRow, endPoint: { date: parseDate('2026-10-04'), status: 'OK', averagePhp: '121.00', competitorCount: 4 }, trend: { changePercent: '10.00', direction: 'INCREASING', compositionChanged: true, startDate: parseDate('2026-10-02'), endDate: parseDate('2026-10-04') } }
   vi.mocked(api.getVendorAnalyticsDetail).mockResolvedValue({ ...envelope, group: okRow, variants: [group], series, canEditOwnListing: true } as unknown as VendorMaterialsAnalyticsDetail)
   render(<MemoryRouter initialEntries={['/analytics/materials/g1']}><Routes><Route path="/analytics/materials/:groupId" element={<VendorMaterialPriceDetailsPage />} /></Routes></MemoryRouter>)
   expect(await screen.findByText('+10.00% · Increasing')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: /Edit My Listing/ })).toHaveAttribute('href', '/products/own-listing')
   const table = screen.getByRole('table', { name: /daily values/ })
+  expect(screen.getByText('Competitor average · Oct 4, 2026')).toBeInTheDocument()
+  expect(within(table).getByRole('button', { name: /Show Oct 2, 2026 on the graph/ })).toBeInTheDocument()
   expect(within(table).getByText('No snapshot recorded for this date')).toBeInTheDocument()
   expect(within(table).getByText('Participants changed')).toBeInTheDocument()
   fireEvent.click(within(table).getByRole('button', { name: /Show Oct 4, 2026 on the graph/ }))
@@ -93,7 +96,43 @@ test('Store Performance shows the sample-gate state instead of an unearned score
     scores: [{ key: 'MQS', value: undefined, published: false, sampleCount: 4, minimumSample: 5, window: 'Rolling 90 days', statusText: 'New Vendor — Building Track Record — needs 5 eligible product ratings' }],
     operations: null, ratingComponents: {}, completedOrders: {} } as unknown as api.StorePerformance)
   render(<MemoryRouter><VendorStorePerformancePage /></MemoryRouter>)
-  expect(await screen.findByText('Not published')).toBeInTheDocument()
-  expect(screen.getByText('Rolling 90 days · 4 of 5 needed')).toBeInTheDocument()
+  expect(await screen.findByText('Not yet published')).toBeInTheDocument()
+  expect(screen.getByRole('meter', { name: 'MQS sample' })).toHaveAttribute('aria-valuetext', '4 of 5')
+  expect(screen.getByText('4 of 5 needed')).toBeInTheDocument()
+  expect(screen.getByText(/Average verified Product Quality rating · Rolling 90 days/)).toBeInTheDocument()
   expect(screen.getByText('New Vendor — Building Track Record')).toBeInTheDocument()
+  expect(screen.getAllByText('How this is calculated').length).toBeGreaterThan(0)
+  expect(screen.queryByRole('tab', { name: 'Product analytics' })).not.toBeInTheDocument()
+})
+
+test('comparison dates use the shared constrained picker and retain radius and search', async () => {
+  HTMLDialogElement.prototype.showModal = function () { this.open = true }
+  HTMLDialogElement.prototype.close = function () { this.open = false }
+  snapshot(['materials_analytics.view_competitors'])
+  vi.mocked(api.listVendorAnalytics).mockResolvedValue(listing([]))
+  render(<MemoryRouter initialEntries={['/analytics/materials?radius=20&q=cement']}><Routes><Route path="/analytics/materials" element={<VendorMaterialsAnalyticsPage />} /></Routes></MemoryRouter>)
+  await screen.findByRole('region', { name: 'No comparable materials to show' })
+  fireEvent.click(screen.getByRole('button', { name: '30-day comparison' }))
+  const picker = screen.getByRole('dialog', { name: 'Price comparison dates' })
+  expect(within(picker).queryByRole('button', { name: 'All dates' })).not.toBeInTheDocument()
+  expect(within(picker).queryByRole('button', { name: 'Today' })).not.toBeInTheDocument()
+  fireEvent.change(within(picker).getByLabelText('From'), { target: { value: '2026-10-01' } })
+  fireEvent.change(within(picker).getByLabelText('To'), { target: { value: '2026-10-01' } })
+  expect(within(picker).getByRole('button', { name: 'Apply' })).toBeDisabled()
+  fireEvent.change(within(picker).getByLabelText('To'), { target: { value: '2026-10-08' } })
+  fireEvent.click(within(picker).getByRole('button', { name: 'Apply' }))
+  await waitFor(() => expect(api.listVendorAnalytics).toHaveBeenLastCalledWith(expect.objectContaining({ radiusKm: 20, q: 'cement', presetDays: null, startDate: '2026-10-01', endDate: '2026-10-08' }), null))
+})
+
+test('material comparison pagination uses the authoritative cursor and resets after a search change', async () => {
+  snapshot(['materials_analytics.view_competitors'])
+  vi.mocked(api.listVendorAnalytics).mockResolvedValueOnce({ ...listing([]), nextCursor: 'cursor-next' }).mockResolvedValue(listing([]))
+  openList()
+  fireEvent.click(await screen.findByRole('button', { name: 'Next' }))
+  await waitFor(() => expect(api.listVendorAnalytics).toHaveBeenLastCalledWith(expect.any(Object), 'cursor-next'))
+  const search = screen.getByRole('searchbox', { name: 'Search materials' })
+  fireEvent.change(search, { target: { value: 'Cement' } })
+  fireEvent.submit(screen.getByRole('search', { name: 'Search materials' }))
+  await waitFor(() => expect(api.listVendorAnalytics).toHaveBeenLastCalledWith(expect.objectContaining({ q: 'Cement' }), null))
+  expect(screen.queryByRole('button', { name: 'Previous' })).not.toBeInTheDocument()
 })

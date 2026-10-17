@@ -149,6 +149,16 @@ class _$ConversationView extends ConversationView {
   @override
   final bool? canListFulfillmentConversations;
   @override
+  final String? mainConversationId;
+  @override
+  final int? projectInquiryCount;
+  @override
+  final int? projectUnreadCount;
+  @override
+  final String? inquiryLabel;
+  @override
+  final int? fulfillmentUnreadCount;
+  @override
   final bool fulfillmentEntryEnabled;
   @override
   final bool readOnly;
@@ -189,6 +199,11 @@ class _$ConversationView extends ConversationView {
       required this.updatedAt,
       required this.canTransfer,
       this.canListFulfillmentConversations,
+      this.mainConversationId,
+      this.projectInquiryCount,
+      this.projectUnreadCount,
+      this.inquiryLabel,
+      this.fulfillmentUnreadCount,
       required this.fulfillmentEntryEnabled,
       required this.readOnly,
       this.readOnlyReason,
@@ -227,6 +242,11 @@ class _$ConversationView extends ConversationView {
         canTransfer == other.canTransfer &&
         canListFulfillmentConversations ==
             other.canListFulfillmentConversations &&
+        mainConversationId == other.mainConversationId &&
+        projectInquiryCount == other.projectInquiryCount &&
+        projectUnreadCount == other.projectUnreadCount &&
+        inquiryLabel == other.inquiryLabel &&
+        fulfillmentUnreadCount == other.fulfillmentUnreadCount &&
         fulfillmentEntryEnabled == other.fulfillmentEntryEnabled &&
         readOnly == other.readOnly &&
         readOnlyReason == other.readOnlyReason &&
@@ -256,6 +276,11 @@ class _$ConversationView extends ConversationView {
     _$hash = $jc(_$hash, updatedAt.hashCode);
     _$hash = $jc(_$hash, canTransfer.hashCode);
     _$hash = $jc(_$hash, canListFulfillmentConversations.hashCode);
+    _$hash = $jc(_$hash, mainConversationId.hashCode);
+    _$hash = $jc(_$hash, projectInquiryCount.hashCode);
+    _$hash = $jc(_$hash, projectUnreadCount.hashCode);
+    _$hash = $jc(_$hash, inquiryLabel.hashCode);
+    _$hash = $jc(_$hash, fulfillmentUnreadCount.hashCode);
     _$hash = $jc(_$hash, fulfillmentEntryEnabled.hashCode);
     _$hash = $jc(_$hash, readOnly.hashCode);
     _$hash = $jc(_$hash, readOnlyReason.hashCode);
@@ -288,6 +313,11 @@ class _$ConversationView extends ConversationView {
           ..add('canTransfer', canTransfer)
           ..add('canListFulfillmentConversations',
               canListFulfillmentConversations)
+          ..add('mainConversationId', mainConversationId)
+          ..add('projectInquiryCount', projectInquiryCount)
+          ..add('projectUnreadCount', projectUnreadCount)
+          ..add('inquiryLabel', inquiryLabel)
+          ..add('fulfillmentUnreadCount', fulfillmentUnreadCount)
           ..add('fulfillmentEntryEnabled', fulfillmentEntryEnabled)
           ..add('readOnly', readOnly)
           ..add('readOnlyReason', readOnlyReason)
@@ -365,6 +395,30 @@ class ConversationViewBuilder
   set canListFulfillmentConversations(bool? canListFulfillmentConversations) =>
       _$this._canListFulfillmentConversations = canListFulfillmentConversations;
 
+  String? _mainConversationId;
+  String? get mainConversationId => _$this._mainConversationId;
+  set mainConversationId(String? mainConversationId) =>
+      _$this._mainConversationId = mainConversationId;
+
+  int? _projectInquiryCount;
+  int? get projectInquiryCount => _$this._projectInquiryCount;
+  set projectInquiryCount(int? projectInquiryCount) =>
+      _$this._projectInquiryCount = projectInquiryCount;
+
+  int? _projectUnreadCount;
+  int? get projectUnreadCount => _$this._projectUnreadCount;
+  set projectUnreadCount(int? projectUnreadCount) =>
+      _$this._projectUnreadCount = projectUnreadCount;
+
+  String? _inquiryLabel;
+  String? get inquiryLabel => _$this._inquiryLabel;
+  set inquiryLabel(String? inquiryLabel) => _$this._inquiryLabel = inquiryLabel;
+
+  int? _fulfillmentUnreadCount;
+  int? get fulfillmentUnreadCount => _$this._fulfillmentUnreadCount;
+  set fulfillmentUnreadCount(int? fulfillmentUnreadCount) =>
+      _$this._fulfillmentUnreadCount = fulfillmentUnreadCount;
+
   bool? _fulfillmentEntryEnabled;
   bool? get fulfillmentEntryEnabled => _$this._fulfillmentEntryEnabled;
   set fulfillmentEntryEnabled(bool? fulfillmentEntryEnabled) =>
@@ -438,6 +492,11 @@ class ConversationViewBuilder
       _updatedAt = $v.updatedAt;
       _canTransfer = $v.canTransfer;
       _canListFulfillmentConversations = $v.canListFulfillmentConversations;
+      _mainConversationId = $v.mainConversationId;
+      _projectInquiryCount = $v.projectInquiryCount;
+      _projectUnreadCount = $v.projectUnreadCount;
+      _inquiryLabel = $v.inquiryLabel;
+      _fulfillmentUnreadCount = $v.fulfillmentUnreadCount;
       _fulfillmentEntryEnabled = $v.fulfillmentEntryEnabled;
       _readOnly = $v.readOnly;
       _readOnlyReason = $v.readOnlyReason;
@@ -493,6 +552,11 @@ class ConversationViewBuilder
             canTransfer: BuiltValueNullFieldError.checkNotNull(
                 canTransfer, r'ConversationView', 'canTransfer'),
             canListFulfillmentConversations: canListFulfillmentConversations,
+            mainConversationId: mainConversationId,
+            projectInquiryCount: projectInquiryCount,
+            projectUnreadCount: projectUnreadCount,
+            inquiryLabel: inquiryLabel,
+            fulfillmentUnreadCount: fulfillmentUnreadCount,
             fulfillmentEntryEnabled: BuiltValueNullFieldError.checkNotNull(
                 fulfillmentEntryEnabled,
                 r'ConversationView',

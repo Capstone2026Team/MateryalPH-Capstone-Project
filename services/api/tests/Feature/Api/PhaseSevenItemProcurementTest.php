@@ -308,6 +308,33 @@ final class PhaseSevenItemProcurementTest extends TestCase
         $this->searchListings(['per_page' => 1, 'cursor' => $first, 'query' => 'other'])->assertStatus(422)->assertJsonPath('errors.0.code', 'CURSOR_INVALID');
     }
 
+    public function test_top_selling_ranks_by_completed_quantity_only_and_pages_with_its_own_cursor(): void
+    {
+        $listings = [];
+        $stores = [];
+        foreach (['Near' => 1000, 'Middle' => 2000, 'Farther' => 3000] as $name => $meters) {
+            [$store, $owner] = $this->activeStore($name.' Seller', false);
+            $this->signInStoreMember($owner);
+            $listings[$name] = $this->listing('TS-'.Str::upper($name));
+            $stores[$name] = $store;
+            $this->placeStore($store->id, $meters, 90);
+        }
+        $profile = $this->buyerProfileId($this->buyer());
+        $this->sale($stores['Farther']->id, $listings['Farther'], $profile, '7', 'COMPLETED');
+        $this->sale($stores['Middle']->id, $listings['Middle'], $profile, '2.5', 'COMPLETED');
+        $this->sale($stores['Middle']->id, $listings['Middle'], $profile, '1', 'COMPLETED');
+        $this->sale($stores['Near']->id, $listings['Near'], $profile, '50', 'CONFIRMED');
+
+        $top = $this->searchListings(['sort' => 'TOP_SELLING'])->assertOk()->assertJsonPath('meta.sort', 'TOP_SELLING')
+            ->assertJsonPath('meta.ranking.tie_breakers.0', 'units_sold_desc');
+        self::assertSame([$listings['Farther'], $listings['Middle'], $listings['Near']], array_column($top->json('data'), 'listing_id'));
+        self::assertSame(['7.0000', '3.5000', '0.0000'], array_column($top->json('data'), 'units_sold'), 'Only COMPLETED orders count, matching the card figure.');
+
+        $first = $this->searchListings(['sort' => 'TOP_SELLING', 'per_page' => 1])->assertOk();
+        $this->searchListings(['sort' => 'TOP_SELLING', 'per_page' => 1, 'cursor' => $first->json('meta.next_cursor')])->assertOk()->assertJsonPath('data.0.listing_id', $listings['Middle']);
+        $this->searchListings(['sort' => 'PRICE', 'per_page' => 1, 'cursor' => $first->json('meta.next_cursor')])->assertStatus(422)->assertJsonPath('errors.0.code', 'CURSOR_INVALID');
+    }
+
     public function test_stale_stock_is_excluded_and_old_product_details_report_unavailable(): void
     {
         [$store, $owner] = $this->activeStore('Stale Details', false);
@@ -470,6 +497,80 @@ final class PhaseSevenItemProcurementTest extends TestCase
         self::assertCount(3, array_merge(...array_column($this->getJson('/api/v1/buyers/cart')->json('data.groups'), 'lines')), 'No cart line is discarded.');
         self::assertSame(0, DB::table('inventory_holds')->count());
         self::assertSame(0, DB::table('orders')->count());
+    }
+
+    public function test_failed_delivery_route_identifies_a_matching_store_pin_or_address_without_changing_eligibility(): void
+    {
+        [$store, $owner] = $this->activeStore('Same Address Store', false, true);
+        $this->signInStoreMember($owner);
+        $listing = $this->listing('SAME-ADDRESS');
+        $this->vehicle();
+        $this->placeStore($store->id, 1000);
+        $this->connectOnlinePayments($store->id);
+        $buyer = $this->buyer();
+        $samePin = $this->savedLocation($buyer, 'Store pin', 1000, 90);
+        $sameAddress = $this->savedLocation($buyer, 'Store address', 2000, 90);
+        $other = $this->savedLocation($buyer, 'Other delivery site', 2500, 90);
+        DB::table('addresses')->where('id', DB::table('buyer_locations')->where('id', $sameAddress)->value('address_id'))
+            ->update(['formatted_address' => "  123 aurora boulevard,   quezon city, metro manila 1109\n"]);
+        $this->addToCart($listing, '1', 'DELIVERY');
+
+        foreach (['ROUTE_UNAVAILABLE', 'ROUTE_NOT_FOUND'] as $code) {
+            $this->routes->failure = $code === 'ROUTE_UNAVAILABLE' ? 'ERROR' : null;
+            $this->routes->noRoute = $code === 'ROUTE_NOT_FOUND';
+            foreach ([$samePin, $sameAddress, $other] as $location) {
+                $lock = (int) $this->getJson('/api/v1/buyers/cart')->json('data.lock_version');
+                $this->putJson('/api/v1/buyers/cart/destination', ['lock_version' => $lock, 'intended_location_id' => $location, 'heavy_vehicle_restriction' => 'NO'])->assertOk();
+                $blocked = $this->preview()->assertOk()->assertJsonPath('data.groups.0.status', 'BLOCKED')
+                    ->assertJsonPath('data.groups.0.delivery.issues.0.code', $code)
+                    ->assertJsonPath('data.groups.0.delivery.estimate', null)->json('data.groups.0.issues.0.message');
+                if ($location === $other) {
+                    self::assertStringNotContainsString("matches the Vendor's store address", $blocked);
+                } else {
+                    self::assertStringContainsString("Your intended destination matches the Vendor's store address", $blocked);
+                    self::assertStringContainsString('Choose another delivery location or select Self-Pickup if available.', $blocked);
+                }
+                $this->postJson('/api/v1/buyers/cart/delivery-preview', ['listing_variant_id' => $this->variants($listing)[0], 'quantity' => '1'])
+                    ->assertOk()->assertJsonPath('data.issues.0.message', $blocked);
+            }
+        }
+
+        // Matching the store alone is not a new prohibition when the route is available.
+        $this->routes->failure = null;
+        $this->routes->noRoute = false;
+        $lock = (int) $this->getJson('/api/v1/buyers/cart')->json('data.lock_version');
+        $this->putJson('/api/v1/buyers/cart/destination', ['lock_version' => $lock, 'intended_location_id' => $samePin, 'heavy_vehicle_restriction' => 'NO'])->assertOk();
+        $this->preview()->assertOk()->assertJsonPath('data.groups.0.status', 'READY');
+        self::assertSame(1, DB::table('cart_items')->count());
+        self::assertSame(0, DB::table('orders')->count());
+        self::assertSame(0, DB::table('inventory_holds')->count());
+    }
+
+    public function test_route_blocker_compares_the_alternative_drop_off_instead_of_the_intended_destination(): void
+    {
+        [$store, $owner] = $this->activeStore('Alternate Address Store', false, true);
+        $this->signInStoreMember($owner);
+        $listing = $this->listing('SAME-ALTERNATE');
+        $this->vehicle();
+        $this->placeStore($store->id, 1000);
+        $this->connectOnlinePayments($store->id);
+        $buyer = $this->buyer();
+        $samePin = $this->savedLocation($buyer, 'Store pin', 1000, 90);
+        $other = $this->savedLocation($buyer, 'Different location', 2000, 90);
+        $this->addToCart($listing, '1', 'DELIVERY');
+        $this->routes->failure = 'ERROR';
+        foreach ([[$samePin, $other, false], [$other, $samePin, true]] as [$intended, $alternate, $matches]) {
+            $lock = (int) $this->getJson('/api/v1/buyers/cart')->json('data.lock_version');
+            $this->putJson('/api/v1/buyers/cart/destination', ['lock_version' => $lock, 'intended_location_id' => $intended,
+                'heavy_vehicle_restriction' => 'YES', 'alternate_drop_off_location_id' => $alternate, 'access_instructions' => 'Unload at the selected drop-off.'])->assertOk();
+            $message = $this->preview()->assertOk()->assertJsonPath('data.groups.0.status', 'BLOCKED')
+                ->assertJsonPath('data.groups.0.delivery.issues.0.code', 'ROUTE_UNAVAILABLE')->json('data.groups.0.issues.0.message');
+            if ($matches) {
+                self::assertStringContainsString("Your alternative vehicle drop-off matches the Vendor's store address", $message);
+            } else {
+                self::assertStringNotContainsString("matches the Vendor's store address", $message);
+            }
+        }
     }
 
     public function test_heavy_access_requires_an_alternate_preserves_the_intended_site_and_uses_the_drop_off_route_basis(): void
@@ -689,6 +790,18 @@ final class PhaseSevenItemProcurementTest extends TestCase
     private function variants(string $listing): array
     {
         return DB::table('listing_variants')->where('vendor_listing_id', $listing)->where('active', true)->orderBy('sort_order')->pluck('id')->map(static fn (mixed $id): string => (string) $id)->all();
+    }
+
+    /** One order line of $quantity for the listing's first variant on an order in $state. */
+    private function sale(string $organizationId, string $listing, string $buyerProfileId, string $quantity, string $state): void
+    {
+        $orderId = (string) Str::uuid7();
+        DB::table('orders')->insert(['id' => $orderId, 'reference' => 'TS-'.Str::upper(Str::random(10)), 'buyer_profile_id' => $buyerProfileId, 'vendor_organization_id' => $organizationId, 'procurement_type' => 'ITEM_BASED',
+            'order_state' => $state, 'fulfillment_method' => 'PICKUP', 'payment_method' => 'ONLINE', 'commercial_total_centavos' => 1800, 'materials_centavos' => 1800,
+            'closed_at' => $state === 'COMPLETED' ? now() : null, 'created_at' => now(), 'updated_at' => now()]);
+        $variant = $this->variants($listing)[0];
+        DB::table('order_lines')->insert(['id' => (string) Str::uuid7(), 'order_id' => $orderId, 'listing_variant_id' => $variant, 'unit_id' => DB::table('listing_variants')->where('id', $variant)->value('unit_id'),
+            'quantity' => $quantity, 'unit_price_centavos' => 1800, 'payable_centavos' => 1800, 'tax_category' => 'NON_VAT', 'created_at' => now(), 'updated_at' => now()]);
     }
 
     private function profileId(string $organizationId): string

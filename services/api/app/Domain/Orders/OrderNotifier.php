@@ -31,7 +31,7 @@ final class OrderNotifier
     public function vendor(object $order, string $title, string $body, array $roles = self::VENDOR_ROLES, string $category = 'ORDERS'): void
     {
         $recipients = DB::table('vendor_memberships as m')->join('users as u', 'u.id', '=', 'm.user_id')->where('m.vendor_organization_id', $order->vendor_organization_id)
-            ->where('m.status', 'ACTIVE')->whereIn('m.role', $roles)->where('u.account_status', 'ACTIVE')->orderBy('u.id')->get(['u.id', 'u.email']);
+            ->where('m.status', 'ACTIVE')->whereNull('m.deleted_at')->whereIn('m.role', $roles)->where('u.account_status', 'ACTIVE')->orderBy('u.id')->get(['u.id', 'u.email']);
         foreach ($recipients as $recipient) {
             $this->deliver((int) $recipient->id, $recipient->email, $order, $title, $body, $category);
         }
@@ -42,7 +42,7 @@ final class OrderNotifier
     {
         $recipient = DB::table('order_fulfillment_assignments as a')->join('users as u', 'u.id', '=', 'a.user_id')
             ->join('vendor_memberships as m', fn ($join) => $join->on('m.user_id', '=', 'a.user_id')->where('m.vendor_organization_id', $order->vendor_organization_id))
-            ->where('a.order_id', $order->id)->whereNull('a.ended_at')->where('m.status', 'ACTIVE')->where('m.role', 'FULFILLMENT')->where('u.account_status', 'ACTIVE')->first(['u.id', 'u.email']);
+            ->where('a.order_id', $order->id)->whereNull('a.ended_at')->where('m.status', 'ACTIVE')->whereNull('m.deleted_at')->where('m.role', 'FULFILLMENT')->where('u.account_status', 'ACTIVE')->first(['u.id', 'u.email']);
         if ($recipient !== null) {
             $this->deliver((int) $recipient->id, $recipient->email, $order, $title, $body);
         }
@@ -55,6 +55,16 @@ final class OrderNotifier
             'resource_type' => 'ORDER', 'resource_id' => $order->id, 'created_at' => now(), 'updated_at' => now()]);
         if (is_string($email) && $email !== '') {
             $this->outbox->publish('ORDER_NOTICE', 'ORDER', (string) $order->id, ['recipient' => $email, 'subject' => $title, 'message' => $body, 'notification_id' => $notificationId]);
+        }
+    }
+
+    public function formerAssignee(object $order, int $userId): void
+    {
+        $recipient = DB::table('users as u')->join('vendor_memberships as m', 'm.user_id', '=', 'u.id')
+            ->where('u.id', $userId)->where('u.account_status', 'ACTIVE')->where('m.vendor_organization_id', $order->vendor_organization_id)
+            ->where('m.status', 'ACTIVE')->whereNull('m.deleted_at')->first(['u.email']);
+        if ($recipient !== null) {
+            $this->deliver($userId, $recipient->email, $order, 'Delivery reassigned: '.$order->reference, 'This delivery has been reassigned. Your previous actions remain in its history.');
         }
     }
 }

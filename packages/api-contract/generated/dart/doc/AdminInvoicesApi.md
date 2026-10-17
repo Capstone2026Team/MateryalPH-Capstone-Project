@@ -69,7 +69,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listAdminInvoiceLog**
-> InvoiceLogEnvelope listAdminInvoiceLog(view, page)
+> InvoiceLogEnvelope listAdminInvoiceLog(view, page, from, to)
 
 
 
@@ -90,9 +90,11 @@ import 'package:materyalph_api_client/api.dart';
 final api = MateryalphApiClient().getAdminInvoicesApi();
 final String view = view_example; // String |
 final int page = 56; // int |
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Invoice issued_on for RECORDS/MISMATCHES, request created_at for REQUESTS. Workload counts remain current.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Invoice issued_on for RECORDS/MISMATCHES, request created_at for REQUESTS. Workload counts remain current.
 
 try {
-    final response = api.listAdminInvoiceLog(view, page);
+    final response = api.listAdminInvoiceLog(view, page, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling AdminInvoicesApi->listAdminInvoiceLog: $e\n');
@@ -105,6 +107,8 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **view** | **String**|  | [optional]
  **page** | **int**|  | [optional]
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Invoice issued_on for RECORDS/MISMATCHES, request created_at for REQUESTS. Workload counts remain current. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Invoice issued_on for RECORDS/MISMATCHES, request created_at for REQUESTS. Workload counts remain current. | [optional]
 
 ### Return type
 

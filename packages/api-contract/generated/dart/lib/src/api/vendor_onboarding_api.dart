@@ -11,6 +11,7 @@ import 'dart:typed_data';
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/api_util.dart';
 import 'package:materyalph_api_client/src/model/account_mutation_result_envelope.dart';
+import 'package:materyalph_api_client/src/model/date.dart';
 import 'package:materyalph_api_client/src/model/email_request.dart';
 import 'package:materyalph_api_client/src/model/generic_data_envelope.dart';
 import 'package:materyalph_api_client/src/model/psgc_search_envelope.dart';
@@ -33,6 +34,7 @@ import 'package:materyalph_api_client/src/model/vendor_store_email_confirmation.
 import 'package:materyalph_api_client/src/model/vendor_store_email_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_team_activity_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_team_invitation_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_team_performance_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_verification_draft.dart';
 import 'package:materyalph_api_client/src/model/vendor_verification_submit.dart';
 import 'package:materyalph_api_client/src/model/vendor_webhook_envelope.dart';
@@ -1063,6 +1065,99 @@ class VendorOnboardingApi {
     );
   }
 
+  /// getVendorTeamPerformance
+  /// Team Tracking statistics for one team member, chosen by the member&#39;s current fixed role. Store Manager and Owner members report every work area; Store Staff sales, quotations, order confirmations, disputes and inventory; Customer Service Staff sales, quotation drafts, order confirmations and disputes; Inventory Staff inventory; Fulfillment Staff fulfillment. Same authority as Team Tracking history; refresh on team.activity.changed.
+  ///
+  /// Parameters:
+  /// * [memberId]
+  /// * [from] - Inclusive Asia/Manila calendar date; omit both dates for All dates.
+  /// * [to] - Inclusive Asia/Manila calendar date; omit both dates for All dates.
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [VendorTeamPerformanceEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<VendorTeamPerformanceEnvelope>> getVendorTeamPerformance({
+    required String memberId,
+    Date? from,
+    Date? to,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendors/account/activity/performance';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      r'member_id': encodeQueryParameter(_serializers, memberId, const FullType(String)),
+      if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    VendorTeamPerformanceEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(VendorTeamPerformanceEnvelope),
+      ) as VendorTeamPerformanceEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<VendorTeamPerformanceEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
   /// inviteVendorTeamMember
   ///
   ///
@@ -1182,6 +1277,8 @@ class VendorOnboardingApi {
   /// * [role] - Role recorded at the time of the action.
   /// * [days]
   /// * [category]
+  /// * [from] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Immutable operation timestamp; messages use sent_at. Omitted days and dates mean All dates.
+  /// * [to] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Immutable operation timestamp; messages use sent_at. Omitted days and dates mean All dates.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1197,6 +1294,8 @@ class VendorOnboardingApi {
     String? role,
     int? days = 30,
     String? category,
+    Date? from,
+    Date? to,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -1230,6 +1329,8 @@ class VendorOnboardingApi {
       if (role != null) r'role': encodeQueryParameter(_serializers, role, const FullType(String)),
       if (days != null) r'days': encodeQueryParameter(_serializers, days, const FullType(int)),
       if (category != null) r'category': encodeQueryParameter(_serializers, category, const FullType(String)),
+      if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
     };
 
     final _response = await _dio.request<Object>(

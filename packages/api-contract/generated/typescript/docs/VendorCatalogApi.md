@@ -16,6 +16,7 @@ All URIs are relative to */api/v1*
 | [**getVendorCatalogListing**](VendorCatalogApi.md#getvendorcataloglisting) | **GET** /vendor/catalog/listings/{listingId} |  |
 | [**getVendorCatalogTaxonomy**](VendorCatalogApi.md#getvendorcatalogtaxonomy) | **GET** /vendor/catalog/taxonomy |  |
 | [**listVendorCatalogListings**](VendorCatalogApi.md#listvendorcataloglistings) | **GET** /vendor/catalog/listings |  |
+| [**lookupListingCompliance**](VendorCatalogApi.md#lookuplistingcompliance) | **POST** /vendor/catalog/listings/{listingId}/compliance/lookup |  |
 | [**publishVendorCatalogListing**](VendorCatalogApi.md#publishvendorcataloglisting) | **POST** /vendor/catalog/listings/{listingId}/publish |  |
 | [**removeVendorListingMedia**](VendorCatalogApi.md#removevendorlistingmedia) | **DELETE** /vendor/catalog/listings/{listingId}/media/{mediaId} |  |
 | [**saveVendorCatalogVariants**](VendorCatalogApi.md#savevendorcatalogvariants) | **PUT** /vendor/catalog/listings/{listingId}/variants |  |
@@ -927,6 +928,86 @@ example().catch(console.error);
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## lookupListingCompliance
+
+> ComplianceLookupEnvelope lookupListingCompliance(listingId, complianceLookupRequest)
+
+
+
+Looks up a PS License No. or ICC sticker serial in the active DTI-BPS register snapshot for this listing\&#39;s regulated product (rule compliance.register-number.v2) and returns the register record used to prefill the declaration. Read-only — nothing is submitted and nothing reaches Admin review. MATCHED means automatic verification is possible; UNCERTAIN means the number is listed for another product or an expired record; UNMATCHED means it is not listed or is not in the printed format; UNAVAILABLE means no snapshot is active.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  VendorCatalogApi,
+} from '@materyalph/api-client-ts';
+import type { LookupListingComplianceRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new VendorCatalogApi(config);
+
+  const body = {
+    // string
+    listingId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // ComplianceLookupRequest
+    complianceLookupRequest: ...,
+  } satisfies LookupListingComplianceRequest;
+
+  try {
+    const data = await api.lookupListingCompliance(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **listingId** | `string` |  | [Defaults to `undefined`] |
+| **complianceLookupRequest** | [ComplianceLookupRequest](ComplianceLookupRequest.md) |  | |
+
+### Return type
+
+[**ComplianceLookupEnvelope**](ComplianceLookupEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Register lookup result. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **404** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## publishVendorCatalogListing
 
 > CatalogListingEnvelope publishVendorCatalogListing(listingId, idempotencyKey, catalogLockVersion)
@@ -1251,7 +1332,7 @@ example().catch(console.error);
 
 
 
-Review and Confirm for all three paths. An exact match with the active DTI-BPS register snapshot (rule compliance.register-exact.v1) is VERIFIED as an audited system decision; uncertain, unavailable or unmatched results become PENDING_ADMIN_REVIEW, never a counterfeit finding.
+Review and Confirm for all three paths. The Vendor supplies the PS License No. or ICC sticker serial and marking evidence. With review_mode AUTOMATIC (default) a MATCHED register lookup (rule compliance.register-number.v2) is VERIFIED as an audited system decision and the register record supplies the manufacturer or importer; any other result returns 422 COMPLIANCE_REGISTER_NOT_MATCHED with details.lookup and records nothing. With review_mode MANUAL_REVIEW, which the Vendor chooses explicitly, an unmatched declaration becomes PENDING_ADMIN_REVIEW, never a counterfeit finding.
 
 ### Example
 
@@ -1490,11 +1571,11 @@ example().catch(console.error);
 
 ## uploadListingComplianceEvidence
 
-> ComplianceEvidenceEnvelope uploadListingComplianceEvidence(listingId, path, file, qrPayload)
+> ComplianceEvidenceEnvelope uploadListingComplianceEvidence(listingId, path, file, qrPayload, markingType)
 
 
 
-Stores a private PS Mark/ICC marking photo or QR image and returns editable extraction assistance. OCR and QR values are suggestions only; UNAVAILABLE means the Vendor enters the values on Review and Confirm.
+Stores a private PS Mark/ICC marking photo or QR image and returns editable extraction assistance. OCR and QR values are suggestions only; PHOTO_OCR uses local Tesseract after malware scanning and returns only labelled marking fields, never raw OCR text. UNAVAILABLE (engine missing) or FAILED (unreadable image, timeout or engine failure) retains the private evidence for manual Review and Confirm. Current authorization and listing eligibility are checked again after extraction. OCR never changes compliance or publication status. With marking_type, OCR and QR read the PS License No. or ICC sticker serial by its printed shape; look-alike readings are checked against the active DTI-BPS register and the listed one is suggested (register_listed). A QR payload sent with a PHOTO_OCR photo is used instead of OCR when it holds the number.
 
 ### Example
 
@@ -1522,8 +1603,10 @@ async function example() {
     path: ...,
     // Blob
     file: BINARY_DATA_HERE,
-    // string | Text decoded by the browser from the QR image; untrusted. (optional)
+    // string | Text decoded by the browser from the QR image or from a QR code visible in a marking photo; untrusted. (optional)
     qrPayload: qrPayload_example,
+    // MarkingType | The marking the Vendor selected (optional)
+    markingType: ...,
   } satisfies UploadListingComplianceEvidenceRequest;
 
   try {
@@ -1546,7 +1629,8 @@ example().catch(console.error);
 | **listingId** | `string` |  | [Defaults to `undefined`] |
 | **path** | `CompliancePath` |  | [Defaults to `undefined`] [Enum: PHOTO_OCR, QR, MANUAL] |
 | **file** | `Blob` |  | [Defaults to `undefined`] |
-| **qrPayload** | `string` | Text decoded by the browser from the QR image; untrusted. | [Optional] [Defaults to `undefined`] |
+| **qrPayload** | `string` | Text decoded by the browser from the QR image or from a QR code visible in a marking photo; untrusted. | [Optional] [Defaults to `undefined`] |
+| **markingType** | `MarkingType` | The marking the Vendor selected | [Optional] [Defaults to `undefined`] [Enum: PS_MARK, ICC_STICKER] |
 
 ### Return type
 

@@ -98,13 +98,15 @@ class _$WorkPackageView extends WorkPackageView {
   @override
   final WorkPackageVersion? version;
   @override
-  final WorkPackageVersionPage versions;
-  @override
   final ProjectBudget budget;
   @override
   final BuiltList<BuiltMap<String, JsonObject?>> missingLines;
   @override
   final BuiltMap<String, JsonObject?> document;
+  @override
+  final bool? hasOrder;
+  @override
+  final bool? canDelete;
 
   factory _$WorkPackageView([void Function(WorkPackageViewBuilder)? updates]) =>
       (WorkPackageViewBuilder()..update(updates))._build();
@@ -121,10 +123,11 @@ class _$WorkPackageView extends WorkPackageView {
       this.selectedVendorId,
       this.orderId,
       this.version,
-      required this.versions,
       required this.budget,
       required this.missingLines,
-      required this.document})
+      required this.document,
+      this.hasOrder,
+      this.canDelete})
       : super._();
   @override
   WorkPackageView rebuild(void Function(WorkPackageViewBuilder) updates) =>
@@ -148,10 +151,11 @@ class _$WorkPackageView extends WorkPackageView {
         selectedVendorId == other.selectedVendorId &&
         orderId == other.orderId &&
         version == other.version &&
-        versions == other.versions &&
         budget == other.budget &&
         missingLines == other.missingLines &&
-        document == other.document;
+        document == other.document &&
+        hasOrder == other.hasOrder &&
+        canDelete == other.canDelete;
   }
 
   @override
@@ -168,10 +172,11 @@ class _$WorkPackageView extends WorkPackageView {
     _$hash = $jc(_$hash, selectedVendorId.hashCode);
     _$hash = $jc(_$hash, orderId.hashCode);
     _$hash = $jc(_$hash, version.hashCode);
-    _$hash = $jc(_$hash, versions.hashCode);
     _$hash = $jc(_$hash, budget.hashCode);
     _$hash = $jc(_$hash, missingLines.hashCode);
     _$hash = $jc(_$hash, document.hashCode);
+    _$hash = $jc(_$hash, hasOrder.hashCode);
+    _$hash = $jc(_$hash, canDelete.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -190,10 +195,11 @@ class _$WorkPackageView extends WorkPackageView {
           ..add('selectedVendorId', selectedVendorId)
           ..add('orderId', orderId)
           ..add('version', version)
-          ..add('versions', versions)
           ..add('budget', budget)
           ..add('missingLines', missingLines)
-          ..add('document', document))
+          ..add('document', document)
+          ..add('hasOrder', hasOrder)
+          ..add('canDelete', canDelete))
         .toString();
   }
 }
@@ -251,12 +257,6 @@ class WorkPackageViewBuilder
       _$this._version ??= WorkPackageVersionBuilder();
   set version(WorkPackageVersionBuilder? version) => _$this._version = version;
 
-  WorkPackageVersionPageBuilder? _versions;
-  WorkPackageVersionPageBuilder get versions =>
-      _$this._versions ??= WorkPackageVersionPageBuilder();
-  set versions(WorkPackageVersionPageBuilder? versions) =>
-      _$this._versions = versions;
-
   ProjectBudgetBuilder? _budget;
   ProjectBudgetBuilder get budget => _$this._budget ??= ProjectBudgetBuilder();
   set budget(ProjectBudgetBuilder? budget) => _$this._budget = budget;
@@ -272,6 +272,14 @@ class WorkPackageViewBuilder
       _$this._document ??= MapBuilder<String, JsonObject?>();
   set document(MapBuilder<String, JsonObject?>? document) =>
       _$this._document = document;
+
+  bool? _hasOrder;
+  bool? get hasOrder => _$this._hasOrder;
+  set hasOrder(bool? hasOrder) => _$this._hasOrder = hasOrder;
+
+  bool? _canDelete;
+  bool? get canDelete => _$this._canDelete;
+  set canDelete(bool? canDelete) => _$this._canDelete = canDelete;
 
   WorkPackageViewBuilder() {
     WorkPackageView._defaults(this);
@@ -291,10 +299,11 @@ class WorkPackageViewBuilder
       _selectedVendorId = $v.selectedVendorId;
       _orderId = $v.orderId;
       _version = $v.version?.toBuilder();
-      _versions = $v.versions.toBuilder();
       _budget = $v.budget.toBuilder();
       _missingLines = $v.missingLines.toBuilder();
       _document = $v.document.toBuilder();
+      _hasOrder = $v.hasOrder;
+      _canDelete = $v.canDelete;
       _$v = null;
     }
     return this;
@@ -336,18 +345,17 @@ class WorkPackageViewBuilder
             selectedVendorId: selectedVendorId,
             orderId: orderId,
             version: _version?.build(),
-            versions: versions.build(),
             budget: budget.build(),
             missingLines: missingLines.build(),
             document: document.build(),
+            hasOrder: hasOrder,
+            canDelete: canDelete,
           );
     } catch (_) {
       late String _$failedField;
       try {
         _$failedField = 'version';
         _version?.build();
-        _$failedField = 'versions';
-        versions.build();
         _$failedField = 'budget';
         budget.build();
         _$failedField = 'missingLines';

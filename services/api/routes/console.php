@@ -6,6 +6,9 @@ use App\Domain\Analytics\Geo\BoundaryImporter;
 use App\Domain\Analytics\Geo\DemoGeoAnalytics;
 use App\Domain\Analytics\Geo\GeoFactsBuilder;
 use App\Domain\Analytics\MaterialPriceCaptureService;
+use App\Domain\Compliance\ComplianceRegisterImporter;
+use App\Domain\Compliance\ComplianceRegisterSync;
+use App\Domain\Demo\DemoVendorMarketplace;
 use App\Domain\Disputes\DisputeAdminService;
 use App\Domain\Enforcement\EnforcementService;
 use App\Domain\Finance\StatementService;
@@ -21,12 +24,14 @@ use App\Domain\Payments\XenditWebhookInbox;
 use App\Domain\Reporting\TaxReminderService;
 use App\Domain\Reviews\ReviewService;
 use App\Domain\Scores\ScoreSnapshotService;
+use App\Domain\Vendors\VendorVacationSchedule;
 use App\Infrastructure\Payments\FakePaymentGateway;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
+use Illuminate\Support\Str;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -105,6 +110,42 @@ Artisan::command('materyalph:materials-analytics-demo {--latitude=14.5995} {--lo
     return 0;
 })->purpose('DEMO only: seed labelled demo stores, comparable groups and isolated simulated Materials Analytics history');
 
+Artisan::command('materyalph:demo-vendors-seed {--only=* : Seed only these Vendor slugs} {--payments=xendit : xendit provisions real Xendit TEST sub-accounts; simulate is for automated tests only} {--refresh-only : Only refresh stock confirmations and discoverability} {--credentials= : Where to write the sign-in details (default storage/app/demo-vendor-credentials.json)}', function (): int {
+    if (app()->isProduction()) {
+        $this->error('Demo Vendors cannot be seeded in production.');
+
+        return 1;
+    }
+    $payments = (string) $this->option('payments');
+    if (! in_array($payments, ['xendit', 'simulate'], true)) {
+        $this->error('--payments must be xendit or simulate.');
+
+        return 1;
+    }
+    if ($payments === 'xendit' && ! app()->environment('local', 'development', 'testing') && ! $this->confirm('Create real Xendit TEST sub-accounts for ten demo Vendors?', false)) {
+        return 1;
+    }
+    $path = (string) ($this->option('credentials') ?: storage_path('app/demo-vendor-credentials.json'));
+    $existing = is_file($path) ? (json_decode((string) file_get_contents($path), true) ?: []) : [];
+    $password = (string) config('materyalph.demo.password') ?: (string) ($existing['password'] ?? Str::password(24, symbols: false));
+    $report = app(DemoVendorMarketplace::class)->seed((array) $this->option('only'), $payments, $password, $path, (bool) $this->option('refresh-only'));
+    $failed = 0;
+    foreach ($report as $row) {
+        $this->line(sprintf('%-26s %-10s verification=%s setup=%s activation=%s discoverability=%s listings=%s gate=%s',
+            $row['slug'], $row['status'], $row['verification'] ?? '-', $row['setup'] ?? '-', $row['activation'] ?? '-', $row['discoverability'] ?? '-', $row['active_listings'] ?? '-', ($row['gate_ready'] ?? false) ? 'ready' : 'blocked'));
+        foreach (($row['notes'] ?? []) as $key => $note) {
+            $this->line('    '.$key.': '.$note);
+        }
+        if (isset($row['error'])) {
+            $this->error('    '.$row['error']);
+        }
+        $failed += $row['status'] === 'OK' ? 0 : 1;
+    }
+    $this->info('Sign-in details were written to '.$path.' (git-ignored). Passwords and authenticator secrets are never printed.');
+
+    return $failed === 0 ? 0 : 1;
+})->purpose('DEMO only: seed ten fictional, fully onboarded Tier 2 Vendors with accounts, photos, delivery setup and published listings');
+
 Artisan::command('materyalph:scores-daily', function (): void {
     $this->info('Scores: '.json_encode(app(ScoreSnapshotService::class)->run(CarbonImmutable::now())));
 })->purpose('Project metric events, write the daily score snapshots (OHS weekly) and award or remove badges');
@@ -148,6 +189,29 @@ Artisan::command('materyalph:enforcement-sweep', function (): void {
     $this->info('Temporary restrictions lifted at the end of their duration: '.app(EnforcementService::class)->sweep());
 })->purpose('Lift applied Temporary Restrictions whose duration has ended (system rule; attributed to the scheduler)');
 Schedule::command('materyalph:enforcement-sweep')->everyFifteenMinutes()->withoutOverlapping();
+
+Artisan::command('materyalph:compliance-registers-sync', function (): int {
+    $sync = app(ComplianceRegisterSync::class);
+    $failed = false;
+    foreach (ComplianceRegisterImporter::KINDS as $kind) {
+        try {
+            $result = $sync->sync($kind, (bool) config('materyalph.compliance_registers.auto_activate'));
+            $this->info($kind.': '.$result['outcome'].($result['row_count'] === null ? '' : ' ('.$result['row_count'].' rows)'));
+        } catch (AuthenticationException $exception) {
+            $failed = true;
+            $this->error($kind.': '.$exception->errorCode);
+        }
+    }
+
+    return $failed ? 1 : 0;
+})->purpose('Refresh the DTI-BPS PS licensee and ICC certificate registers from configured authorized feeds (does nothing when none is configured)');
+// The lists are updated monthly; a daily check picks up a new month within a day and skips unchanged files.
+Schedule::command('materyalph:compliance-registers-sync')->dailyAt('03:15')->timezone('Asia/Manila')->withoutOverlapping()->onOneServer();
+
+Artisan::command('materyalph:vendor-vacation-sweep', function (): void {
+    $this->info('Stores whose Vacation Mode started or ended: '.app(VendorVacationSchedule::class)->sweep());
+})->purpose('Turn Vacation Mode on when its start date arrives and off after its end date (system rule; attributed to the scheduler)');
+Schedule::command('materyalph:vendor-vacation-sweep')->everyMinute()->withoutOverlapping();
 
 Artisan::command('materyalph:geo-analytics-demo {--days=90} {--seed=16}', function (): int {
     if (app()->isProduction()) {

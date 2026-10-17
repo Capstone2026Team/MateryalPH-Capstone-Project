@@ -9,6 +9,7 @@ Name | Type
 `lockVersion` | number
 `lines` | [Array&lt;OrderLineQuantity&gt;](OrderLineQuantity.md)
 `vendorDiscountCentavos` | number
+`discount` | [ChatQuotationDiscount](ChatQuotationDiscount.md)
 `nrpc` | [NrpcProposal](NrpcProposal.md)
 `pickup` | [PickupConfirmation](PickupConfirmation.md)
 `delivery` | [DeliveryConfirmation](DeliveryConfirmation.md)
@@ -23,6 +24,7 @@ const example = {
   "lockVersion": null,
   "lines": null,
   "vendorDiscountCentavos": null,
+  "discount": null,
   "nrpc": null,
   "pickup": null,
   "delivery": null,

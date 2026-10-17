@@ -1,3 +1,4 @@
+import { parseDate } from '@materyalph/api-client-ts'
 import {
   AdminMaterialsAnalyticsApi,
   AdminReviewModerationApi,
@@ -14,6 +15,7 @@ import {
   type ReviewModerationRequestActionEnum,
 } from '@materyalph/api-client-ts'
 import { createWebApiConfiguration } from '@materyalph/web-ui'
+import { dateQuery, type CalendarRange } from './admin-format'
 
 export type { AdminMaterialsAnalyticsDetail, AdminMaterialsAnalyticsList, AdminScoreDetail, AdminScoreRow, AnalyticsRun, AnalyticsSource, ModerationDetail, ModerationQueueRow }
 export type ModerationState = ListAdminReviewModerationStateEnum
@@ -26,7 +28,7 @@ const key = () => crypto.randomUUID()
 export type AdminAnalyticsFilters = { presetDays: number | null; startDate: string | null; endDate: string | null; psgcCode?: string | undefined; q?: string | undefined }
 const windowParams = (filters: AdminAnalyticsFilters) => ({
   ...(filters.psgcCode ? { psgcCode: filters.psgcCode } : {}),
-  ...(filters.startDate && filters.endDate ? { startDate: new Date(`${filters.startDate}T00:00:00Z`), endDate: new Date(`${filters.endDate}T00:00:00Z`) } : { presetDays: (filters.presetDays ?? 30) as 7 | 30 | 90 }),
+  ...(filters.startDate && filters.endDate ? { startDate: parseDate(filters.startDate), endDate: parseDate(filters.endDate) } : { presetDays: (filters.presetDays ?? 30) as 7 | 30 | 90 }),
 })
 
 export async function listAdminAnalytics(filters: AdminAnalyticsFilters): Promise<AdminMaterialsAnalyticsList> {
@@ -42,16 +44,16 @@ export async function listRuns(): Promise<AnalyticsRun[]> {
   return (await new AdminMaterialsAnalyticsApi(config()).listAdminMaterialPriceRuns()).data
 }
 export async function listSources(groupId: string, snapshotDate: string, reason: string, psgcCode?: string): Promise<{ items: AnalyticsSource[]; runId: string }> {
-  const response = await new AdminMaterialsAnalyticsApi(config()).listAdminMaterialPriceSources({ groupId, snapshotDate: new Date(`${snapshotDate}T00:00:00Z`), reason, ...(psgcCode ? { psgcCode } : {}) })
+  const response = await new AdminMaterialsAnalyticsApi(config()).listAdminMaterialPriceSources({ groupId, snapshotDate: parseDate(snapshotDate), reason, ...(psgcCode ? { psgcCode } : {}) })
   return { items: response.data, runId: String((response.meta as Record<string, unknown>).run_id ?? (response.meta as Record<string, unknown>).runId ?? '') }
 }
 export async function correctRun(runId: string, excludedObservationIds: string[], reason: string): Promise<void> {
   await new AdminMaterialsAnalyticsApi(config()).correctAdminMaterialPriceRun({ runId, idempotencyKey: key(), analyticsCorrectionRequest: { excludedObservationIds, reason } })
 }
 
-export async function listScores(q?: string, page = 1): Promise<{ items: AdminScoreRow[]; total: number }> {
+export async function listScores(q?: string, page = 1): Promise<{ items: AdminScoreRow[]; total: number; perPage: number }> {
   const response = await new AdminScoreMonitoringApi(config()).listAdminScores({ ...(q ? { q } : {}), page })
-  return { items: response.data, total: Number(response.meta.total ?? 0) }
+  return { items: response.data, total: Number(response.meta.total ?? 0), perPage: response.meta.perPage ?? 20 }
 }
 export async function getScore(vendorId: string, page = 1): Promise<AdminScoreDetail> {
   return (await new AdminScoreMonitoringApi(config()).getAdminScore({ vendorId, page })).data
@@ -69,9 +71,9 @@ export async function liftSuppression(suppressionId: string, reason: string): Pr
   await new AdminScoreMonitoringApi(config()).liftAdminBadgeSuppression({ suppressionId, idempotencyKey: key(), investigationReasonRequest: { reason } })
 }
 
-export async function listModeration(state: ModerationState, page = 1): Promise<{ items: ModerationQueueRow[]; total: number }> {
-  const response = await new AdminReviewModerationApi(config()).listAdminReviewModeration({ state, page })
-  return { items: response.data, total: Number(response.meta.total ?? 0) }
+export async function listModeration(state: ModerationState, page = 1, range?: CalendarRange): Promise<{ items: ModerationQueueRow[]; total: number; perPage: number }> {
+  const response = await new AdminReviewModerationApi(config()).listAdminReviewModeration({ state, page, ...dateQuery(range) })
+  return { items: response.data, total: Number(response.meta.total ?? 0), perPage: response.meta.perPage ?? 20 }
 }
 export async function getModeration(reviewId: string): Promise<ModerationDetail> {
   return (await new AdminReviewModerationApi(config()).getAdminReviewModeration({ reviewId })).data

@@ -1,6 +1,7 @@
 
 # ListingSearchSort
 
+TOP_SELLING ranks by units_sold (quantity on COMPLETED orders in each listing\'s sale unit), then SRS, distance, price and listing id.
 
 ## Properties
 

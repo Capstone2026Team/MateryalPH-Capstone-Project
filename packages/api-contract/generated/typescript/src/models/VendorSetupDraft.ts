@@ -55,9 +55,17 @@ export interface VendorSetupDraft {
      */
     formState?: string;
     /**
-     * Owner-only immediate pause of all new procurement. Existing work and messaging remain available. Does not alter weekly hours or activation.
+     * Owner-only pause of all new procurement over the Asia/Manila date window in vacation_starts_on to vacation_ends_on, both required when true. Existing work and messaging remain available. False clears the window. Does not alter weekly hours or activation.
      */
     vacationMode?: boolean;
+    /**
+     * First Asia/Manila day of the pause. Today or later, unless an active window keeps its saved start. Today starts the pause immediately; a later date schedules it.
+     */
+    vacationStartsOn?: string | null;
+    /**
+     * Last Asia/Manila day of the pause, inclusive; on or after vacation_starts_on. Procurement reopens at the next midnight.
+     */
+    vacationEndsOn?: string | null;
     /**
      *
      */
@@ -74,6 +82,10 @@ export interface VendorSetupDraft {
      *
      */
     fulfillmentMethod?: VendorSetupDraftFulfillmentMethodEnum;
+    /**
+     * True activates delivery only after current staff, vehicle, location and service requirements pass; otherwise 422 VENDOR_DELIVERY_SETUP_REQUIRED. False saves a draft or pauses new deliveries. Omission preserves saved intent. Switching to SELF_PICKUP while delivery obligations remain returns 409 ACTIVE_DELIVERY_OBLIGATIONS. Accepted orders and assignments remain unchanged.
+     */
+    vendorDeliveryEnabled?: boolean;
     /**
      *
      */
@@ -131,10 +143,13 @@ export function VendorSetupDraftFromJSONTyped(json: any, ignoreDiscriminator: bo
         'organizationLockVersion': json['organization_lock_version'],
         'formState': json['form_state'] == null ? undefined : json['form_state'],
         'vacationMode': json['vacation_mode'] == null ? undefined : json['vacation_mode'],
+        'vacationStartsOn': json['vacation_starts_on'] === undefined ? undefined : json['vacation_starts_on'] === null ? null : json['vacation_starts_on'],
+        'vacationEndsOn': json['vacation_ends_on'] === undefined ? undefined : json['vacation_ends_on'] === null ? null : json['vacation_ends_on'],
         'publicStoreName': json['public_store_name'] == null ? undefined : json['public_store_name'],
         'description': json['description'] === undefined ? undefined : json['description'] === null ? null : json['description'],
         'bulkCapability': json['bulk_capability'] == null ? undefined : json['bulk_capability'],
         'fulfillmentMethod': json['fulfillment_method'] == null ? undefined : json['fulfillment_method'],
+        'vendorDeliveryEnabled': json['vendor_delivery_enabled'] == null ? undefined : json['vendor_delivery_enabled'],
         'publicEmail': json['public_email'] === undefined ? undefined : json['public_email'] === null ? null : json['public_email'],
         'publicPhone': json['public_phone'] === undefined ? undefined : json['public_phone'] === null ? null : json['public_phone'],
         'operatingSchedule': json['operating_schedule'] == null ? undefined : ((json['operating_schedule'] as Array<any>).map(StoreOperatingDayFromJSON)),
@@ -159,10 +174,13 @@ export function VendorSetupDraftToJSONTyped(value?: VendorSetupDraft | null, ign
         'organization_lock_version': value['organizationLockVersion'],
         'form_state': value['formState'],
         'vacation_mode': value['vacationMode'],
+        'vacation_starts_on': value['vacationStartsOn'],
+        'vacation_ends_on': value['vacationEndsOn'],
         'public_store_name': value['publicStoreName'],
         'description': value['description'],
         'bulk_capability': value['bulkCapability'],
         'fulfillment_method': value['fulfillmentMethod'],
+        'vendor_delivery_enabled': value['vendorDeliveryEnabled'],
         'public_email': value['publicEmail'],
         'public_phone': value['publicPhone'],
         'operating_schedule': value['operatingSchedule'] == null ? undefined : ((value['operatingSchedule'] as Array<any>).map(StoreOperatingDayToJSON)),

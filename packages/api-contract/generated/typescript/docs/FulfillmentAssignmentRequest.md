@@ -8,6 +8,9 @@ Name | Type
 ------------ | -------------
 `userId` | number
 `reason` | string
+`vehicleIndex` | number
+`lockVersion` | number
+`dispatch` | boolean
 
 ## Example
 
@@ -18,6 +21,9 @@ import type { FulfillmentAssignmentRequest } from '@materyalph/api-client-ts'
 const example = {
   "userId": null,
   "reason": null,
+  "vehicleIndex": null,
+  "lockVersion": null,
+  "dispatch": null,
 } satisfies FulfillmentAssignmentRequest
 
 console.log(example)

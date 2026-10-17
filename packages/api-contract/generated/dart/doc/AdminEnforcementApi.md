@@ -283,7 +283,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listEnforcementActions**
-> EnforcementListEnvelope listEnforcementActions(state, subjectType, action, source_, subjectId, page)
+> EnforcementListEnvelope listEnforcementActions(state, subjectType, action, source_, subjectId, page, from, to)
 
 
 
@@ -308,9 +308,11 @@ final String action = action_example; // String |
 final String source_ = source__example; // String |
 final String subjectId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final int page = 56; // int |
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Action created_at.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Action created_at.
 
 try {
-    final response = api.listEnforcementActions(state, subjectType, action, source_, subjectId, page);
+    final response = api.listEnforcementActions(state, subjectType, action, source_, subjectId, page, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling AdminEnforcementApi->listEnforcementActions: $e\n');
@@ -327,6 +329,8 @@ Name | Type | Description  | Notes
  **source_** | **String**|  | [optional]
  **subjectId** | **String**|  | [optional]
  **page** | **int**|  | [optional]
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Action created_at. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Action created_at. | [optional]
 
 ### Return type
 

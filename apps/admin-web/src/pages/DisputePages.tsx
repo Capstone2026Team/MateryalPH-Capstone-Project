@@ -1,8 +1,9 @@
+import { useNavigationRefresh } from '@materyalph/web-ui'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Gavel, Info, RefreshCw, Scale, ShieldAlert, UserRoundCheck } from 'lucide-react'
 import {
-  Button, ConfirmDialog, DisputeDeadlines, DisputeStatusBadge, DisputeTimeline, FilterChips, OriginalPaymentMethodNotice, RefundTimeline, StatusMessage,
+  ALL_DATES, Button, ConfirmDialog, DateFilter, DisputeDeadlines, DisputeStatusBadge, DisputeTimeline, FilterChips, OriginalPaymentMethodNotice, RefundTimeline, StatusMessage, Toolbar,
   disputeIssueLabel, disputeRemedyLabel, disputeRoleLabel, formatManilaDateTime, formatPesoCentavos,
 } from '@materyalph/web-ui'
 import {
@@ -11,6 +12,7 @@ import {
 } from '../lib/disputes-api'
 import { readableVerificationError } from '../lib/vendor-verification-api'
 import { AdminShell, ErrorState, LoadingState, PageHeader } from './PhaseThreeAdminPages'
+import { Pager } from '../components/OperationsKit'
 
 const control = 'min-h-12 w-full min-w-0 rounded-control border border-border-default bg-surface-primary px-3 text-base font-normal'
 const STATUSES: { value: QueueStatus; label: string }[] = [
@@ -28,16 +30,20 @@ export function AdminDisputeQueuePage() {
   const [meta, setMeta] = useState<DisputeListMeta | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
+  useNavigationRefresh(() => setAttempt(value => value + 1))
+  const [page, setPage] = useState(1)
+  const [range, setRange] = useState(ALL_DATES)
   useEffect(() => {
     let active = true
     setRows(null); setError(null)
-    listQueue(status).then(result => { if (active) { setRows(result.items); setMeta(result.meta) } }).catch(async cause => { const text = await readableVerificationError(cause); if (active) setError(text) })
+    listQueue(status, page, range).then(result => { if (active) { setRows(result.items); setMeta(result.meta) } }).catch(async cause => { const text = await readableVerificationError(cause); if (active) setError(text) })
     return () => { active = false }
-  }, [status, attempt])
+  }, [status, page, range, attempt])
   return <AdminShell activeHref="/disputes"><div className="grid min-w-0 gap-6">
     <PageHeader eyebrow="Compliance & quality" title="Disputes & Appeals" description="Review escalated cases, request clarification, decide with a remedy, reason and conflict check, and track remedies until they complete. Refunds return only to the original payment; Admins never hold or disburse money."
       actions={<Button variant="secondary" onClick={() => setAttempt(value => value + 1)}><RefreshCw size={16} aria-hidden="true" />Refresh</Button>} />
-    <FilterChips label="Case queue" value={status} onChange={value => setParams({ status: value })} chips={STATUSES.map(item => ({ value: item.value, label: item.label, count: item.value === 'ALL' ? undefined : meta?.counts?.[item.value] }))} />
+    <FilterChips label="Case queue" value={status} onChange={value => { setParams({ status: value }); setPage(1) }} chips={STATUSES.map(item => ({ value: item.value, label: item.label, count: item.value === 'ALL' ? undefined : meta?.counts?.[item.value] }))} />
+    <Toolbar filters={<><DateFilter title="Case opened dates" value={range} onChange={value => { setRange(value); setPage(1) }} />{(range.from || range.to) && <Button variant="quiet" onClick={() => { setRange(ALL_DATES); setPage(1) }}>Reset dates</Button>}</>} />
     {error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} /> : rows === null ? <LoadingState /> : rows.length === 0
       ? <p className="rounded-surface border border-dashed border-border-default px-6 py-10 text-center text-sm text-text-secondary">No cases in this queue.</p>
       : <ul className="grid divide-y divide-border-default rounded-surface border border-border-default bg-surface-primary">{rows.map(row => <li key={row.id} className="grid gap-2 px-4 py-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-center">
@@ -47,6 +53,7 @@ export function AdminDisputeQueuePage() {
         <div className="grid justify-items-start gap-1"><DisputeStatusBadge status={row.status} /><span className="text-xs text-text-secondary">{row.nextDeadline ? `${row.nextDeadline.kind.replaceAll('_', ' ').toLowerCase()} · ${row.nextDeadline.label}` : 'No open deadline'}{row.assignedToAdmin ? ' · assigned' : ' · unassigned'}</span></div>
         <Link to={`/disputes/${row.id}`} className="inline-flex min-h-11 items-center justify-center rounded-control border border-border-default px-4 text-sm font-semibold hover:bg-surface-canvas">Review</Link>
       </li>)}</ul>}
+    {rows && meta && <Pager page={page} lastPage={Math.max(page, Math.ceil((meta.total ?? rows.length) / (meta.perPage ?? 25)), meta.hasMore ? page + 1 : 1)} total={meta.total} onChange={setPage} />}
   </div></AdminShell>
 }
 

@@ -1,9 +1,11 @@
+import { CountBadge } from './count-badge'
 import { RateLimitNotice } from './rate-limit-notice'
 import { PortalAccountMenu } from './portal-account-menu'
 import { useEffect, useState, type MouseEvent, type ReactNode } from 'react'
-import { Circle, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
+import { Bell, Circle, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
 import type { PortalIdentity } from './portal-identity'
 import './portal-shell.css'
+import './portal-patterns.css'
 
 export type PortalNavItem = { label: string; href: string; icon?: ReactNode; disabled?: boolean; updateCount?: number; updateCountLabel?: string }
 export type PortalNavSection = { label: string; items: PortalNavItem[] }
@@ -18,6 +20,7 @@ export function PortalShell({
   accountAvatarUrl,
   children,
   headerActions,
+  notificationUnreadCount = 0,
   homeHref = '/dashboard',
   contentLayout = 'standard',
   onNavigate,
@@ -36,6 +39,7 @@ export function PortalShell({
   accountAvatarUrl?: string | null
   children: ReactNode
   headerActions?: ReactNode
+  notificationUnreadCount?: number
   contentLayout?: 'standard' | 'full'
   homeHref?: string
   onNavigate?: (href: string) => void
@@ -49,6 +53,8 @@ export function PortalShell({
   const [profile, setProfile] = useState<PortalIdentity | null>(null)
   const [avatarFailed, setAvatarFailed] = useState(false)
   const [tooltip, setTooltip] = useState<{ label: string; top: number; left: number } | null>(null)
+  const unreadNotifications = Number.isSafeInteger(notificationUnreadCount) && notificationUnreadCount > 0 ? notificationUnreadCount : 0
+  const notificationLabel = unreadNotifications > 0 ? `Notifications, ${unreadNotifications} unread ${unreadNotifications === 1 ? 'notification' : 'notifications'}` : 'Notifications'
   const storeIdentity = !isAdmin && profile?.role === 'OWNER'
   const footerName = storeIdentity ? profile.organizationName || accountLabel : profile?.fullName || accountLabel
   const footerStatus = isAdmin ? profile?.role.replaceAll('_', ' ') || accountStatus : accountStatus
@@ -84,6 +90,7 @@ export function PortalShell({
 
   return (
     <div className={`portal-layout ${collapsed ? 'is-collapsed' : ''} bg-surface-canvas text-text-strong`}>
+      <a href="#main-content" className="sr-only fixed left-4 top-4 z-50 rounded-control bg-surface-primary px-4 py-3 text-sm font-semibold text-action-primary shadow-floating focus:not-sr-only">Skip to content</a>
       <aside id="portal-sidebar" className={`portal-sidebar ${navigationOpen ? 'is-open' : ''} bg-surface-primary`} aria-label={`${portalLabel} navigation`} onKeyDown={event => {
         if (event.key === 'Escape') { setTooltip(null); if (!navigationOpen) return; setNavigationOpen(false); requestAnimationFrame(() => document.getElementById('portal-navigation-toggle')?.focus()) }
         if (navigationOpen && event.key === 'Tab') {
@@ -110,7 +117,7 @@ export function PortalShell({
                 {section.items.map(item => {
                   const count = !item.disabled && typeof item.updateCount === 'number' && Number.isSafeInteger(item.updateCount) && item.updateCount > 0 ? item.updateCount : 0
                   const label = count > 0 ? `${item.label}, ${count} ${item.updateCountLabel ?? 'unread update'}${count === 1 ? '' : 's'}` : item.label
-                  const content = <><span className="portal-nav-icon" aria-hidden="true">{item.icon ?? <Circle />}</span><span className="portal-nav-text">{item.label}</span>{count > 0 && <span className="portal-nav-badge" aria-hidden="true">{count > 99 ? '99+' : count}</span>}</>
+                  const content = <><span className="portal-nav-icon" aria-hidden="true">{item.icon ?? <Circle />}</span><span className="portal-nav-text">{item.label}</span><CountBadge count={count} className="portal-nav-badge" /></>
                   const hints = { onMouseEnter: (event: MouseEvent<HTMLElement>) => showTooltip(event.currentTarget, label), onMouseLeave: () => setTooltip(null), onBlur: () => setTooltip(null) }
                   return item.disabled
                     ? <span key={item.href} role="link" tabIndex={0} aria-label={`${item.label}, unavailable`} aria-disabled="true" className="portal-nav-row" {...hints}>{content}</span>
@@ -134,9 +141,15 @@ export function PortalShell({
             <button id="portal-navigation-toggle" className="portal-drawer-toggle inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-text-strong" type="button" aria-label="Open navigation" aria-expanded={navigationOpen} aria-controls="portal-sidebar" onClick={() => { setNavigationOpen(true); requestAnimationFrame(() => document.querySelector<HTMLButtonElement>('[aria-label="Close navigation"]')?.focus()) }}><Menu size={20} aria-hidden="true" /></button>
             {dateLabel && <p className="text-xs text-text-secondary" aria-label="System date">{dateLabel}</p>}
           </div>
-          <div className="flex shrink-0 items-center gap-2">{apiBasePath ? <PortalAccountMenu onProfileChange={setProfile} portal={portalLabel.startsWith('ADMIN') ? 'admin' : 'vendors'} basePath={apiBasePath} onNavigate={onNavigate} onSignOut={onSignOut} /> : headerActions}</div>
+          <div className="flex shrink-0 items-center gap-2">
+            <a className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-text-secondary hover:bg-surface-canvas hover:text-text-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" href="/notifications" aria-label={notificationLabel} title={notificationLabel} aria-current={activeHref === '/notifications' ? 'page' : undefined} onClick={event => follow(event, '/notifications')}>
+              <Bell size={20} aria-hidden="true" />
+              <CountBadge count={unreadNotifications} className="absolute right-0 top-0" />
+            </a>
+            {apiBasePath ? <PortalAccountMenu onProfileChange={setProfile} portal={portalLabel.startsWith('ADMIN') ? 'admin' : 'vendors'} basePath={apiBasePath} onNavigate={onNavigate} onSignOut={onSignOut} /> : headerActions}
+          </div>
         </header>
-        <main id="main-content" className={contentLayout === 'full' ? 'min-w-0 w-full' : 'mx-auto max-w-[96rem] px-4 py-6 sm:px-6 lg:px-8 lg:py-8'}><RateLimitNotice />{children}</main>
+        <main id="main-content" tabIndex={-1} className={contentLayout === 'full' ? 'portal-page min-w-0 w-full' : 'portal-page mx-auto w-full max-w-[90rem] px-4 py-6 sm:px-6 lg:px-8 lg:py-8'}><RateLimitNotice />{children}</main>
       </div>
     </div>
   )

@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:materyalph_api_client/src/model/chat_quotation_discount_assessment.dart';
 import 'package:materyalph_api_client/src/model/chat_quotation_change.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/chat_quotation_money.dart';
@@ -16,6 +17,7 @@ part 'chat_quotation_content.g.dart';
 /// ChatQuotationContent
 ///
 /// Properties:
+/// * [discount]
 /// * [lines]
 /// * [commercial]
 /// * [fulfillmentMethod]
@@ -29,6 +31,9 @@ part 'chat_quotation_content.g.dart';
 /// * [processingFeeStatus]
 @BuiltValue()
 abstract class ChatQuotationContent implements Built<ChatQuotationContent, ChatQuotationContentBuilder> {
+  @BuiltValueField(wireName: r'discount')
+  ChatQuotationDiscountAssessment? get discount;
+
   @BuiltValueField(wireName: r'lines')
   BuiltList<ChatQuotationLine> get lines;
 
@@ -86,6 +91,13 @@ class _$ChatQuotationContentSerializer implements PrimitiveSerializer<ChatQuotat
     ChatQuotationContent object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.discount != null) {
+      yield r'discount';
+      yield serializers.serialize(
+        object.discount,
+        specifiedType: const FullType(ChatQuotationDiscountAssessment),
+      );
+    }
     yield r'lines';
     yield serializers.serialize(
       object.lines,
@@ -168,6 +180,14 @@ class _$ChatQuotationContentSerializer implements PrimitiveSerializer<ChatQuotat
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'discount':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ChatQuotationDiscountAssessment),
+          ) as ChatQuotationDiscountAssessment?;
+          if (valueDes == null) continue;
+          result.discount.replace(valueDes);
+          break;
         case r'lines':
           final valueDes = serializers.deserialize(
             value,

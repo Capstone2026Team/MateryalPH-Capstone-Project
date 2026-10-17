@@ -1,9 +1,9 @@
-import { Button, DemoLabel, FactList, FilterTabs, HealthBadge, InfoNote, ReasonedDecisionForm, SidePanel, formatPesoCentavos, useAutomaticRefresh } from '@materyalph/web-ui'
+import { ALL_DATES, Button, DateFilter, DemoLabel, FactList, FilterTabs, HealthBadge, ReasonedDecisionForm, SidePanel, Toolbar, useAutomaticRefresh } from '@materyalph/web-ui'
 import { RefreshCw, RotateCcw } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { Pager, Panel } from '../components/OperationsKit'
-import { label as humanize, manilaDate, manilaDateTime, useLoad, useProtectedAction } from '../lib/operations-hooks'
-import { integrationOverview, listBudgetOverrides, newKey, operationFailures, operationRetries, problemText, retryOperation } from '../lib/operations-api'
+import { label as humanize, manilaDateTime, useLoad, useProtectedAction } from '../lib/operations-hooks'
+import { integrationOverview, newKey, operationFailures, operationRetries, problemText, retryOperation } from '../lib/operations-api'
 import { AdminShell, ErrorState, LoadingState, PageHeader } from './PhaseThreeAdminPages'
 
 type JsonRecord = Record<string, unknown>
@@ -26,7 +26,8 @@ export function AdminIntegrationHealthPage() {
   const overview = useLoad(integrationOverview, [])
   const [kind, setKind] = useState<'OUTBOX' | 'JOBS'>('OUTBOX')
   const [page, setPage] = useState(1)
-  const failures = useLoad(() => operationFailures(kind, page), [kind, page])
+  const [range, setRange] = useState(ALL_DATES)
+  const failures = useLoad(() => operationFailures(kind, page, range), [kind, page, range.from, range.to])
   const retries = useLoad(operationRetries, [])
   const [target, setTarget] = useState<RetryTarget | null>(null)
   const [done, setDone] = useState<string | null>(null)
@@ -75,6 +76,7 @@ export function AdminIntegrationHealthPage() {
     </>}
     <Panel title="Failures" description="Class names and failure categories only. Payment, refund, credential and invitation work is retried by its own reconciliation, never from here.">
       <FilterTabs appearance="tabs" label="Failure kind" value={kind} onChange={value => { setKind(value as 'OUTBOX' | 'JOBS'); setPage(1) }} chips={[{ value: 'OUTBOX', label: 'Dead-lettered deliveries' }, { value: 'JOBS', label: 'Failed jobs' }]} />
+      <Toolbar filters={<><DateFilter title="Failure dates" value={range} onChange={value => { setRange(value); setPage(1) }} />{(range.from || range.to) && <Button variant="quiet" onClick={() => { setRange(ALL_DATES); setPage(1) }}>Reset dates</Button>}</>} />
       {failures.error ? <ErrorState message={failures.error} onRetry={failures.retry} /> : !failures.data ? <LoadingState /> : failures.data.items.length === 0 ? <p className="text-sm text-text-secondary">Nothing has failed in this category.</p>
         : <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><caption className="sr-only">Failures</caption>
           <thead className="text-[13px] text-text-secondary"><tr>{['Work', 'Queue', 'Failure', 'Attempts', 'Failed', ''].map(head => <th key={head} scope="col" className="px-3 py-2 font-semibold">{head || <span className="sr-only">Action</span>}</th>)}</tr></thead>
@@ -107,20 +109,4 @@ function RetryPanel({ target, onClose, onDone }: { target: RetryTarget; onClose:
     <ReasonedDecisionForm title="Queue a retry" target={target.label} before={humanize(target.type)} after="Queued for another attempt" submitLabel="Queue retry" busy={busy} error={error} minReason={10} maxReason={500} onSubmit={reason => void submit(reason)} />
     {dialog}
   </SidePanel>
-}
-
-export function AdminBudgetOverridesPage() {
-  const [page, setPage] = useState(1)
-  const list = useLoad(() => listBudgetOverrides(page), [page])
-  return <AdminShell activeHref="/budget-overrides"><div className="space-y-6">
-    <PageHeader eyebrow="Finance" title="Budget Override Audit Log" description="Buyer-confirmed orders that exceeded a Project or Work Package budget, with the recorded reason. Read-only; Admins cannot change a Buyer budget." />
-    <InfoNote>Buyers are identified by a short pseudonymous suffix only.</InfoNote>
-    {list.error ? <ErrorState message={list.error} onRetry={list.retry} /> : !list.data ? <LoadingState /> : list.data.items.length === 0
-      ? <p className="rounded-surface border border-dashed border-border-default bg-surface-primary px-6 py-10 text-center text-sm text-text-secondary">No budget overrides have been recorded.</p>
-      : <div className="overflow-x-auto rounded-surface border border-border-default bg-surface-primary"><table className="w-full min-w-[900px] text-left text-sm"><caption className="sr-only">Budget overrides</caption>
-        <thead className="bg-surface-canvas text-[13px] text-text-secondary"><tr>{['Recorded', 'Project / Work Package', 'Order', 'Budget before', 'Order amount', 'Overage', 'Reason', 'Buyer'].map(head => <th key={head} scope="col" className="px-3 py-3 font-semibold">{head}</th>)}</tr></thead>
-        <tbody className="divide-y divide-border-default">{list.data.items.map(item => <tr key={item.id} className="align-top"><td className="px-3 py-3">{manilaDate(item.recordedAt)}</td><th scope="row" className="px-3 py-3 text-left font-normal"><span className="font-semibold">{item.project}</span><p className="text-[13px] text-text-secondary">{item.workPackage}</p></th><td className="px-3 py-3">{item.orderReference ?? '—'}</td>
-          <td className="px-3 py-3 text-right tabular-nums">{formatPesoCentavos(item.priorBudgetCentavos)}</td><td className="px-3 py-3 text-right tabular-nums">{formatPesoCentavos(item.orderAmountCentavos)}</td><td className="px-3 py-3 text-right font-semibold tabular-nums">{formatPesoCentavos(item.overageCentavos)}</td><td className="max-w-72 px-3 py-3">{item.reason}</td><td className="px-3 py-3">{item.actor}</td></tr>)}</tbody></table></div>}
-    {list.data && <Pager page={page} lastPage={list.data.lastPage} total={list.data.total} busy={list.loading} onChange={setPage} />}
-  </div></AdminShell>
 }

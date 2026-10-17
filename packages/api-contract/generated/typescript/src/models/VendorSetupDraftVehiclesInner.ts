@@ -89,6 +89,14 @@ export interface VendorSetupDraftVehiclesInner {
      */
     perKmCentavos?: number;
     /**
+     * Concrete Mixer Truck / Transit Mixer only; a positive fee needs mobilization_basis.
+     */
+    mobilizationFeeCentavos?: number | null;
+    /**
+     *
+     */
+    mobilizationBasis?: VendorSetupDraftVehiclesInnerMobilizationBasisEnum | null;
+    /**
      * Omission retains the saved limit; new coverage defaults to the approved 50 km procurement limit. New vehicle rates inherit coverage.
      */
     maximumDistanceKm?: number;
@@ -105,6 +113,15 @@ export const VendorSetupDraftVehiclesInnerVehicleCategoryEnum = {
     Truck: 'TRUCK',
 } as const;
 export type VendorSetupDraftVehiclesInnerVehicleCategoryEnum = typeof VendorSetupDraftVehiclesInnerVehicleCategoryEnum[keyof typeof VendorSetupDraftVehiclesInnerVehicleCategoryEnum];
+
+/**
+ * @export
+ */
+export const VendorSetupDraftVehiclesInnerMobilizationBasisEnum = {
+    PerTruck: 'PER_TRUCK',
+    PerTrip: 'PER_TRIP',
+} as const;
+export type VendorSetupDraftVehiclesInnerMobilizationBasisEnum = typeof VendorSetupDraftVehiclesInnerMobilizationBasisEnum[keyof typeof VendorSetupDraftVehiclesInnerMobilizationBasisEnum];
 
 
 /**
@@ -142,6 +159,8 @@ export function VendorSetupDraftVehiclesInnerFromJSONTyped(json: any, ignoreDisc
         'heavyClassification': json['heavy_classification'] === undefined ? undefined : json['heavy_classification'] === null ? null : json['heavy_classification'],
         'baseFeeCentavos': json['base_fee_centavos'] == null ? undefined : json['base_fee_centavos'],
         'perKmCentavos': json['per_km_centavos'] == null ? undefined : json['per_km_centavos'],
+        'mobilizationFeeCentavos': json['mobilization_fee_centavos'] === undefined ? undefined : json['mobilization_fee_centavos'] === null ? null : json['mobilization_fee_centavos'],
+        'mobilizationBasis': json['mobilization_basis'] === undefined ? undefined : json['mobilization_basis'] === null ? null : json['mobilization_basis'],
         'maximumDistanceKm': json['maximum_distance_km'] == null ? undefined : json['maximum_distance_km'],
     };
 }
@@ -175,6 +194,8 @@ export function VendorSetupDraftVehiclesInnerToJSONTyped(value?: VendorSetupDraf
         'heavy_classification': value['heavyClassification'],
         'base_fee_centavos': value['baseFeeCentavos'],
         'per_km_centavos': value['perKmCentavos'],
+        'mobilization_fee_centavos': value['mobilizationFeeCentavos'],
+        'mobilization_basis': value['mobilizationBasis'],
         'maximum_distance_km': value['maximumDistanceKm'],
     };
 }

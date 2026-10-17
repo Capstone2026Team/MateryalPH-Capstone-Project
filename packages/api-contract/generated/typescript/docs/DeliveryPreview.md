@@ -1,6 +1,7 @@
 
 # DeliveryPreview
 
+Advisory delivery preview using the actual vehicle endpoint. When a route is unavailable or not found and the endpoint exactly matches the Vendor\'s saved pin or formatted store address (ignoring case and whitespace), the blocking issue message explains the same store address and names the intended destination or alternative vehicle drop-off. It advises another delivery location or Self-Pickup if offered. Address matching alone does not change eligibility; an available route follows normal review.
 
 ## Properties
 

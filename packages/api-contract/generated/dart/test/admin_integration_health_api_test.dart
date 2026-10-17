@@ -16,7 +16,7 @@ void main() {
 
     // integrations.view. Dead-lettered outbox deliveries or failed jobs: type and failure class only.
     //
-    //Future<OperationFailureListEnvelope> listOperationFailures({ String kind, int page }) async
+    //Future<OperationFailureListEnvelope> listOperationFailures({ String kind, int page, Date from, Date to }) async
     test('test listOperationFailures', () async {
       // TODO
     });

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { type NotificationItem, type NotificationsApi } from '@materyalph/api-client-ts'
+import { parseDate, type NotificationItem, type NotificationsApi } from '@materyalph/api-client-ts'
 import { Bell, Settings2 } from 'lucide-react'
 import { Button } from './button'
+import { DateFilter } from './date-filter'
 import { EmptyState } from './page-patterns'
 import { useAutomaticRefresh } from './use-automatic-refresh'
 import { notificationError } from './notification-error'
@@ -16,7 +17,6 @@ export function NotificationInbox({ api, audience, disabled, onOpen, onPreferenc
   const [loaded, setLoaded] = useState(false)
   const [marking, setMarking] = useState(false)
   const [error, setError] = useState('')
-  const [message, setMessage] = useState('')
   const snapshot = useRef(items)
   useEffect(() => { snapshot.current = items }, [items])
   const generation = useRef(0)
@@ -26,7 +26,7 @@ export function NotificationInbox({ api, audience, disabled, onOpen, onPreferenc
   const controller = useRef<AbortController | null>(null)
   const optimistic = useRef<{ ids: Set<string>; at: string } | null>(null)
   const view = useMemo(() => notificationView(items, filters), [items, filters])
-  const filtersActive = filters.status !== 'unread' || filters.type !== ''
+  const filtersActive = filters.type !== '' || Boolean(filters.from || filters.to)
   const notifyCount = useCallback((snapshot: readonly NotificationItem[]) => {
     const unreadCount = snapshot.filter(item => !item.readAt).length
     window.dispatchEvent(new CustomEvent('materyalph:notification-count', { detail: { audience, unreadCount } }))
@@ -105,7 +105,7 @@ export function NotificationInbox({ api, audience, disabled, onOpen, onPreferenc
     url.searchParams.set('tab', 'inbox')
     window.history.replaceState(window.history.state, '', url)
   }
-  const clearFilters = () => changeFilters({ status: 'unread', type: '' })
+  const clearFilters = () => changeFilters({ type: '' })
 
   async function markAllRead() {
     if (marking || optimistic.current || !view.unread.length || !items[0]) return
@@ -114,15 +114,14 @@ export function NotificationInbox({ api, audience, disabled, onOpen, onPreferenc
     const at = new Date().toISOString()
     optimistic.current = { ids, at }
     readVersion.current++
-    setMarking(true); setError(''); setMessage('')
+    setMarking(true); setError('')
     const next = withNotificationReads(items, ids, at)
     setItems(next)
     try {
-      const result = await api.markNotificationsRead({ audience, notificationReadFilter: { throughId: items[0].id, ...(view.type ? { category: view.type } : {}) } })
+      const result = await api.markNotificationsRead({ audience, notificationReadFilter: { throughId: items[0].id, ...(view.type ? { category: view.type } : {}), ...(filters.from ? { from: parseDate(filters.from) } : {}), ...(filters.to ? { to: parseDate(filters.to) } : {}) } })
       if (epoch !== generation.current) return
       optimistic.current = null; readVersion.current++
       setItems(current => withNotificationReads(current, ids, result.data.readAt))
-      setMessage('Notifications marked as read. You can still view them in Archived.')
       window.dispatchEvent(new Event('materyalph:navigation-updates'))
       await refresh()
     } catch (cause) {
@@ -141,13 +140,12 @@ export function NotificationInbox({ api, audience, disabled, onOpen, onPreferenc
     <div className="grid gap-4 border-b border-border-default p-4">
       <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-semibold">Your inbox</h2><div className="flex flex-wrap items-center gap-2"><Button variant="secondary" disabled={disabled || marking || !loaded || !view.unread.length} onClick={() => void markAllRead()}>{marking ? 'Marking as read…' : 'Mark all as read'}</Button><Button variant="secondary" className="w-11 shrink-0 px-0!" aria-label="Notification preferences" title="Notification preferences" aria-haspopup="dialog" disabled={disabled || marking} onClick={onPreferences}><Settings2 size={18} aria-hidden="true" /></Button></div></div>
       <div className="flex flex-wrap items-end gap-3">
+        <DateFilter title="Notification dates" value={{ label: filters.dateLabel || 'Custom range', from: filters.from || '', to: filters.to || '' }} disabled={disabled || marking} onChange={range => changeFilters({ ...filters, from: range.from, to: range.to, dateLabel: range.label })} />
         <label className="grid min-w-0 flex-1 gap-2 text-sm font-semibold sm:max-w-72">Type<select className={selectClass} value={view.type} onChange={event => changeFilters({ ...filters, type: event.target.value })}><option value="">All types</option>{view.type && !view.types.some(type => type.value === view.type) && <option value={view.type}>Unavailable type</option>}{view.types.map(type => <option key={type.value} value={type.value}>{type.label}</option>)}</select></label>
-        <label className="grid min-w-0 flex-1 gap-2 text-sm font-semibold sm:max-w-56">Status<select className={selectClass} value={filters.status} onChange={event => changeFilters({ ...filters, status: event.target.value as NotificationFilters['status'] })}><option value="unread">Unread ({view.counts.unread})</option><option value="archived">Archived ({view.counts.archived})</option></select></label>
         {filtersActive && <Button variant="quiet" className="text-action-primary underline" onClick={clearFilters}>Clear filters</Button>}
       </div>
     </div>
     {error && <div role="alert" className="grid gap-2 border-b border-border-default p-4"><p>{error}</p><Button variant="secondary" className="justify-self-start" disabled={marking} onClick={() => { setError(''); void refresh() }}>Retry</Button></div>}
-    {message && <p role="status" className="px-4 pt-4 text-sm text-text-secondary">{message}</p>}
-    {!loaded ? !error && <p role="status" className="p-6">Loading notifications…</p> : !view.visible.length ? <EmptyState icon={<Bell size={24} aria-hidden="true" />} message={filters.status === 'unread' ? "You're all caught up." : 'No notifications match your filters.'} {...(filters.status !== 'unread' ? { action: <Button variant="secondary" onClick={clearFilters}>Clear filters</Button> } : {})} /> : <ul className="divide-y divide-border-default">{view.visible.map(item => <li key={item.id} className="p-4 sm:p-5"><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold">{item.title}</h3>{!item.readAt && <span className="text-xs font-semibold text-action-primary">Unread</span>}{item.mandatory && <span className="text-xs text-text-secondary">Required notice</span>}</div><p className="mt-2 text-sm text-text-secondary">{item.body}</p><div className="mt-3 flex flex-wrap items-center justify-between gap-3"><time className="text-xs text-text-secondary" dateTime={item.createdAt}>{new Date(item.createdAt).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} · Manila</time><Button variant="secondary" disabled={disabled || marking} onClick={() => void onOpen(item.id)}>View details<span className="sr-only">: {item.title}</span></Button></div></li>)}</ul>}
+    {!loaded ? !error && <p role="status" className="p-6">Loading notifications…</p> : !view.visible.length ? <EmptyState icon={<Bell size={24} aria-hidden="true" />} message={filtersActive ? 'No notifications match your filters.' : "You're all caught up."} {...(filtersActive ? { action: <Button variant="secondary" onClick={clearFilters}>Clear filters</Button> } : {})} /> : <ul className="divide-y divide-border-default">{view.visible.map(item => <li key={item.id} className="p-4 sm:p-5"><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold">{item.title}</h3>{!item.readAt && <span className="text-xs font-semibold text-action-primary">Unread</span>}{item.mandatory && <span className="text-xs text-text-secondary">Required notice</span>}</div><p className="mt-2 text-sm text-text-secondary">{item.body}</p><div className="mt-3 flex flex-wrap items-center justify-between gap-3"><time className="text-xs text-text-secondary" dateTime={item.createdAt}>{new Date(item.createdAt).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} · Manila</time><Button variant="secondary" disabled={disabled || marking} onClick={() => void onOpen(item.id)}>View details<span className="sr-only">: {item.title}</span></Button></div></li>)}</ul>}
   </div>
 }

@@ -2,7 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from './button'
 import { readWebPrivateFile } from './web-api-session'
 
-export type PrivateEvidenceItem = { id: string; label: string; loadUrl: () => Promise<{ url: string }> }
+/** `publicImage` marks an already-public photo (for example a CDN listing image) that may be shown from its own https URL. */
+export type PrivateEvidenceItem = { id: string; label: string; loadUrl: () => Promise<{ url: string }>; publicImage?: boolean }
+
+function publicImageUrl(url: string, apiBasePath: string): string | null {
+  const api = new URL(apiBasePath, window.location.origin)
+  const parsed = new URL(url, api)
+  return parsed.protocol === 'https:' && parsed.origin !== api.origin ? parsed.href : null
+}
 
 export function PrivateEvidenceGallery({ items, apiBasePath }: { items: PrivateEvidenceItem[]; apiBasePath: string }) {
   return <div className="grid gap-5">{items.map(item => <EvidencePreview key={item.id} item={item} apiBasePath={apiBasePath} />)}</div>
@@ -20,7 +27,13 @@ function EvidencePreview({ item, apiBasePath }: { item: PrivateEvidenceItem; api
     let objectUrl = ''
     setPreview(null)
     setError('')
-    void item.loadUrl().then(file => readWebPrivateFile(apiBasePath, file.url)).then(blob => {
+    void item.loadUrl().then(async file => {
+      const external = item.publicImage ? publicImageUrl(file.url, apiBasePath) : null
+      if (external) {
+        if (active) setPreview({ url: external, type: 'image/*' })
+        return
+      }
+      const blob = await readWebPrivateFile(apiBasePath, file.url)
       if (!active) return
       objectUrl = URL.createObjectURL(blob)
       setPreview({ url: objectUrl, type: blob.type })

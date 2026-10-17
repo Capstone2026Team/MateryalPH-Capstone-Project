@@ -1,0 +1,1841 @@
+{
+ "_comment": "Photo sources for the demo Vendors. tools/demo-assets/fetch_demo_photos.py downloads and normalizes them into the git-ignored photos/ folder. Product photos of branded goods are manufacturer/retailer images used only for the academic demonstration; openly licensed photos carry their author and license here for attribution. Owner and staff portraits are AI-generated (no real person) and committed under vendors/<slug>/.",
+ "products": {
+  "commonwealth-masonry/CHB-4": [
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/0/03/Concrete-block%2Cjapan.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Concrete-block,japan.JPG",
+    "credit": "katorisi / File:Concrete-block,japan.JPG",
+    "license": "CC BY 2.5",
+    "license_url": "https://creativecommons.org/licenses/by/2.5"
+   },
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/6/68/Concrete_masonry_units.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Concrete_masonry_units.jpg",
+    "credit": "USACE Afghanistan Engineer District-South / File:Concrete masonry units.jpg",
+    "license": "CC BY-SA 2.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0"
+   }
+  ],
+  "commonwealth-masonry/CHB-5": [
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/9/93/Schalstein_Schalungsstein_IMG_20170710_090526585.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Schalstein_Schalungsstein_IMG_20170710_090526585.jpg",
+    "credit": "Hans Haase / File:Schalstein Schalungsstein IMG 20170710 090526585.jpg",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+   },
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/0/03/Concrete-block%2Cjapan.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Concrete-block,japan.JPG",
+    "credit": "katorisi / File:Concrete-block,japan.JPG",
+    "license": "CC BY 2.5",
+    "license_url": "https://creativecommons.org/licenses/by/2.5"
+   }
+  ],
+  "commonwealth-masonry/CHB-6": [
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/6/68/Concrete_masonry_units.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Concrete_masonry_units.jpg",
+    "credit": "USACE Afghanistan Engineer District-South / File:Concrete masonry units.jpg",
+    "license": "CC BY-SA 2.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0"
+   },
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/9/93/Schalstein_Schalungsstein_IMG_20170710_090526585.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Schalstein_Schalungsstein_IMG_20170710_090526585.jpg",
+    "credit": "Hans Haase / File:Schalstein Schalungsstein IMG 20170710 090526585.jpg",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+   }
+  ],
+  "commonwealth-masonry/SAND-W": [
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/9/9b/Pile_of_Sand_for_Building_in_Anambra_State.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Pile_of_Sand_for_Building_in_Anambra_State.jpg",
+    "credit": "Johnnybam / File:Pile of Sand for Building in Anambra State.jpg",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+   },
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/5/53/This_is_a_huge_heap_of_sand_-_geograph.org.uk_-_5046622.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:This_is_a_huge_heap_of_sand_-_geograph.org.uk_-_5046622.jpg",
+    "credit": "Evelyn Simak / File:This is a huge heap of sand - geograph.org.uk - 5046622.jpg",
+    "license": "CC BY-SA 2.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0"
+   }
+  ],
+  "commonwealth-masonry/GRAVEL-34": [
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/4/47/Gravel_Pile_-_geograph.org.uk_-_8067081.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Gravel_Pile_-_geograph.org.uk_-_8067081.jpg",
+    "credit": "Dave Thompson / File:Gravel Pile - geograph.org.uk - 8067081.jpg",
+    "license": "CC BY-SA 2.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0"
+   },
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/d/df/Pile_of_Gravel_-_geograph.org.uk_-_872114.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Pile_of_Gravel_-_geograph.org.uk_-_872114.jpg",
+    "credit": "Sebastian Ballard / File:Pile of Gravel - geograph.org.uk - 872114.jpg",
+    "license": "CC BY-SA 2.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0"
+   }
+  ],
+  "commonwealth-masonry/GRAVEL-G1": [
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/8/8b/Gravel_Pile_-_geograph.org.uk_-_8067073.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Gravel_Pile_-_geograph.org.uk_-_8067073.jpg",
+    "credit": "Dave Thompson / File:Gravel Pile - geograph.org.uk - 8067073.jpg",
+    "license": "CC BY-SA 2.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0"
+   },
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/a/af/Large_gravel_pile_-_geograph.org.uk_-_3084939.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Large_gravel_pile_-_geograph.org.uk_-_3084939.jpg",
+    "credit": "Peter Barr / File:Large gravel pile - geograph.org.uk - 3084939.jpg",
+    "license": "CC BY-SA 2.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0"
+   }
+  ],
+  "commonwealth-masonry/ESCOMBRO": [
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/c/c1/A_heap_of_soil_and_rubble_-_geograph.org.uk_-_4832059.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:A_heap_of_soil_and_rubble_-_geograph.org.uk_-_4832059.jpg",
+    "credit": "Evelyn Simak / File:A heap of soil and rubble - geograph.org.uk - 4832059.jpg",
+    "license": "CC BY-SA 2.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0"
+   },
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/e/e0/Soil_heap_in_Pilverlands_Field_%2842_acres%29_-_geograph.org.uk_-_8119089.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Soil_heap_in_Pilverlands_Field_(42_acres)_-_geograph.org.uk_-_8119089.jpg",
+    "credit": "Mr Ignavy / File:Soil heap in Pilverlands Field (42 acres) - geograph.org.uk - 8119089.jpg",
+    "license": "CC BY-SA 2.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0"
+   }
+  ],
+  "commonwealth-masonry/PAVER-60": [
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/4/4b/Interlocking_floor.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Interlocking_floor.jpg",
+    "credit": "Anasskoko / File:Interlocking floor.jpg",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+   },
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/9/91/PREVIEW_interlocking_concrete_pavers_%28Amal_Kumar_via_Poly_Haven%29.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:PREVIEW_interlocking_concrete_pavers_(Amal_Kumar_via_Poly_Haven).png",
+    "credit": "Amal Kumar / File:PREVIEW interlocking concrete pavers (Amal Kumar via Poly Haven).png",
+    "license": "CC0",
+    "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
+   }
+  ],
+  "commonwealth-masonry/RJ-WHEELBARROW": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/raijin-rswbarrow150-wheel-barrow-8628725.png?v=1789978807",
+    "source": "https://khmtools.com.ph/products/raijin-rswbarrow150-wheel-barrow",
+    "credit": "Raijin RSWBARROW150 Wheel Barrow product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "commonwealth-masonry/WF-SHOVEL": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/DP3211001-5-Recovered-Recovered-Recovered-Recovered-Recovered_a8b123a6-6f57-47f0-b36e-3404b294996c.png?v=1750511541",
+    "source": "https://khmtools.com.ph/products/wadfow-wse3324-steel-shovel-1000mm",
+    "credit": "Wadfow WSE3324 Steel Shovel 1000mm product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/DP3211001-5-Recovered-Recovered-Recovered-Recovered-Recovered_bad3242e-99db-4d03-a237-11e643bcce00.png?v=1750511538",
+    "source": "https://khmtools.com.ph/products/wadfow-wse3334-steel-shovel-1000mm-square",
+    "credit": "Wadfow WSE3334 Steel Shovel 1000mm (Square) product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "commonwealth-masonry/IN-TROWEL": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/ingco-hbt766-bricklaying-trowel-7-1735622.png?v=1789988406",
+    "source": "https://khmtools.com.ph/products/ingco-hbt766-bricklaying-trowel-7",
+    "credit": "Ingco HBT766 Bricklaying Trowel 7\" product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/ingco-hbt918-bricklaying-trowel-cement-trowel-9-2473047.png?v=1789987506",
+    "source": "https://khmtools.com.ph/products/ingco-hbt918-bricklaying-trowel-cement-trowel-9",
+    "credit": "Ingco HBT918 Bricklaying Trowel / Cement Trowel 9\" product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "commonwealth-masonry/PN-POWERFLEX": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0552/7594/6163/files/PIONEER_54.png?v=1786671428",
+    "source": "https://cbkhardware.com/products/water-tite-powerflex-4l",
+    "credit": "WATER-TITE POWERFLEX 4L product photo via cbkhardware.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0552/7594/6163/files/PIONEER_55.png?v=1786671428",
+    "source": "https://cbkhardware.com/products/water-tite-powerflex-4l",
+    "credit": "WATER-TITE POWERFLEX 4L product photo via cbkhardware.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bahay-toro-electrical/PD-THHN": [
+   {
+    "url": "https://phelpsdodge.com.ph/wp-content/uploads/2023/11/THHN.jpg",
+    "source": "https://phelpsdodge.com.ph/products/thhn-thwn2-building-wire/",
+    "credit": "Phelps Dodge Philippines product photo",
+    "license": "Manufacturer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://phelpsdodge.com.ph/wp-content/uploads/2024/03/Permalite-THHN-THWN-2-Building-Wire.jpg",
+    "source": "https://phelpsdodge.com.ph/products/thhn-thwn2-building-wire/",
+    "credit": "Phelps Dodge Philippines product photo",
+    "license": "Manufacturer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bahay-toro-electrical/ROYU-THHN": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/royu-rtn500m-250mm2-thhnthwn-2-conventional-stranded-building-wires-7931009.jpg?v=1789986127",
+    "source": "https://khmtools.com.ph/products/royu-thhn-thwn-2-conventional-stranded-building-wires",
+    "credit": "Royu RTN14A 2.0mm² THHN/THWN-2 Conventional Stranded Building Wires product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/royu-rtn500m-250mm2-thhnthwn-2-conventional-stranded-building-wires-5982989.webp?v=1789986127",
+    "source": "https://khmtools.com.ph/products/royu-thhn-thwn-2-conventional-stranded-building-wires",
+    "credit": "Royu RTN14A 2.0mm² THHN/THWN-2 Conventional Stranded Building Wires product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bahay-toro-electrical/ROYU-MCB": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/royu-screw-type-terminal-circuit-breaker-8001358.jpg?v=1789986188",
+    "source": "https://khmtools.com.ph/products/royu-screw-type-terminal-circuit-breaker",
+    "credit": "Royu Screw Type Terminal Circuit Breaker product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/royu-screw-type-terminal-circuit-breaker-9610030.jpg?v=1789986188",
+    "source": "https://khmtools.com.ph/products/royu-screw-type-terminal-circuit-breaker",
+    "credit": "Royu Screw Type Terminal Circuit Breaker product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/royu-screw-type-terminal-circuit-breaker-2867418.jpg?v=1789986188",
+    "source": "https://khmtools.com.ph/products/royu-screw-type-terminal-circuit-breaker",
+    "credit": "Royu Screw Type Terminal Circuit Breaker product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bahay-toro-electrical/ROYU-PANEL": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/royu-all-metal-panel-box-2881883.png?v=1789986668",
+    "source": "https://khmtools.com.ph/products/royu-all-metal-panel-box",
+    "credit": "Royu All-Metal Panel Box product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/royu-all-metal-panel-box-3202829.png?v=1789986668",
+    "source": "https://khmtools.com.ph/products/royu-all-metal-panel-box",
+    "credit": "Royu All-Metal Panel Box product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/royu-all-metal-panel-box-6206700.png?v=1789986668",
+    "source": "https://khmtools.com.ph/products/royu-all-metal-panel-box",
+    "credit": "Royu All-Metal Panel Box product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bahay-toro-electrical/ROYU-WIDE": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/royu-wh501-1-gang-switch-set-10a-wide-5941797.png?v=1789986667",
+    "source": "https://khmtools.com.ph/products/royu-wh501-1-gang-switch-set-10a-wide",
+    "credit": "Royu WH501 1-Gang Switch Set 10A (Wide) product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/royu-wh902-1-gang-tandem-aircon-outlet-set-20a-classic-1092734.png?v=1789986727",
+    "source": "https://khmtools.com.ph/products/royu-wh902-1-gang-tandem-aircon-outlet-set-20a-classic",
+    "credit": "Royu WH902 1-Gang Tandem Aircon Outlet Set 20A (Classic) product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bahay-toro-electrical/OMNI-EXT": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/YAE0512.jpg?v=1596545410",
+    "source": "https://diyhardware.ph/products/omni-unv-ext-crd-3gng-weu103pk-bas",
+    "credit": "Omni Universal Extension Cord 3 Gang Weu103Pk product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/YAE0514.jpg?v=1596545420",
+    "source": "https://diyhardware.ph/products/omni-univ-ext-crd-5gng-weu105pk-bas",
+    "credit": "Omni Universal Extension Cord 5 Gang Weu105Pk product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/YAE0515.jpg?v=1596545410",
+    "source": "https://diyhardware.ph/products/omni-univ-ext-crd-6gng-weu106pk-bas",
+    "credit": "Omni Universal Extension Cord 6 Gang Weu106Pk product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bahay-toro-electrical/FF-LED": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/FFE1020.jpg?v=1605243527",
+    "source": "https://diyhardware.ph/products/firefly-led-bulb-5w-e27-dl-ebi105dl-bas",
+    "credit": "Firefly Led Light Bulb 5 Watts Daylight Ebi105Dl product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/FFE1089.jpg?v=1605243524",
+    "source": "https://diyhardware.ph/products/firefly-led-bulb-9w-e27-dl-ebi109dl-bas",
+    "credit": "Firefly Led Light Bulb 9 Watts Daylight Ebi109Dl product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/FFE1200_ab19131b-adc6-488e-a314-c7868c5ce86f.jpg?v=1609849807",
+    "source": "https://diyhardware.ph/products/firefly-led-bulb-13w-dl-e27-ebi113dlreg",
+    "credit": "Firefly Led Light Bulb 13 Watts Daylight Ebi113Dlreg product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bahay-toro-electrical/FF-T8SET": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/LED-T5-Tube_4f549f1b-9fee-4941-91d8-e50b1a86d8ad.gif?v=1750517481",
+    "source": "https://khmtools.com.ph/products/firefly-cbts12-dl-led-t8-tube-box-type-set-double-ended-1",
+    "credit": "Firefly CBTS12/DL LED T8 Tube & Box Type Set (Double-ended) product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bahay-toro-electrical/FF-FLOOD": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/DOB-LED-Floodlight.gif?v=1750749540",
+    "source": "https://khmtools.com.ph/products/firefly-cfl30-dob-led-floodlight",
+    "credit": "Firefly CFL30 DOB LED Floodlight product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bahay-toro-electrical/FF-EMERGENCY": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/FFE1062.jpg?v=1605243542",
+    "source": "https://diyhardware.ph/products/firefly-led-emergency-lamp-rechargeable-fel201l-bas",
+    "credit": "Firefly Led Rechargeable Emergency Lamp FEL201L product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bahay-toro-electrical/ROYU-TAPE": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/royu-pvc-electrical-tape-insulating-tape-5271333.png?v=1789986309",
+    "source": "https://khmtools.com.ph/products/royu-pvc-electrical-tape",
+    "credit": "Royu PVC Electrical Tape / Insulating Tape product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/royu-pvc-electrical-tape-insulating-tape-5939394.png?v=1789986309",
+    "source": "https://khmtools.com.ph/products/royu-pvc-electrical-tape",
+    "credit": "Royu PVC Electrical Tape / Insulating Tape product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/royu-pvc-electrical-tape-insulating-tape-5957068.png?v=1789986309",
+    "source": "https://khmtools.com.ph/products/royu-pvc-electrical-tape",
+    "credit": "Royu PVC Electrical Tape / Insulating Tape product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/royu-pvc-electrical-tape-insulating-tape-7284544.png?v=1789986309",
+    "source": "https://khmtools.com.ph/products/royu-pvc-electrical-tape",
+    "credit": "Royu PVC Electrical Tape / Insulating Tape product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/royu-pvc-electrical-tape-insulating-tape-8108522.png?v=1789986309",
+    "source": "https://khmtools.com.ph/products/royu-pvc-electrical-tape",
+    "credit": "Royu PVC Electrical Tape / Insulating Tape product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bahay-toro-electrical/ROYU-JBOX": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/royu-rub3-square-box-with-cover-and-screw-5710324.png?v=1789989968",
+    "source": "https://khmtools.com.ph/products/royu-rub3-square-box-with-cover-and-screw",
+    "credit": "Royu RUB3 Square Box with Cover and Screw product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "palanan-paint/BOY-PERMA-FLAT": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/YDG0025.jpg?v=1605932767",
+    "source": "https://diyhardware.ph/products/boysen-paint-4-liters-white-permacoat-flat-latex-701",
+    "credit": "Boysen Paint 4 Liters White Permacoat Flat Latex B-701 product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "palanan-paint/BOY-PERMA-SEMI": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/YDG0039.jpg?v=1606089222",
+    "source": "https://diyhardware.ph/products/boysen-paint-1-liter-white-semi-gloss-latex-715",
+    "credit": "Boysen Paint 1 Liter White Semi Gloss Latex B-715 product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "palanan-paint/BOY-PERMA-GLOSS": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/YDG0036.jpg?v=1605945217",
+    "source": "https://diyhardware.ph/products/boysen-paint-16-liters-white-permacoat-gloss-710",
+    "credit": "Boysen Paint 16 Liters White Permacoat Gloss B-710 product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "palanan-paint/DAV-SUNRAIN": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/D8G0069.jpg?v=1604372582",
+    "source": "https://diyhardware.ph/products/davies-sun-rain-cream-surprise-1-liter",
+    "credit": "Davies Sun & Rain Elastomeric Waterproofing Paint Cream Surprise 1 Liter product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/D8G0006_898a00b4-feb7-4040-b50d-547f7aed29d1.png?v=1604374296",
+    "source": "https://diyhardware.ph/products/davies-sun-rain-tulle-white-1-liter",
+    "credit": "Davies Sun & Rain Elastomeric Waterproofing Paint Tulle White 1 Liter product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/D8G0035.png?v=1604369149",
+    "source": "https://diyhardware.ph/products/davies-paint-4-liters-sunny-day-sr-472",
+    "credit": "Davies Paint 4 Liters Sunny Day product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "palanan-paint/DAV-PONDO": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/files/ph-11134207-7r98y-lpgbnpqs4t3j7a_resize_w450_nl.webp?v=1726293046",
+    "source": "https://diyhardware.ph/products/davies-pondo-high-hiding-undercoat-flat-latex-white-4-liters-uc-1",
+    "credit": "Davies Pondo High Hiding Undercoat-Flat Latex White 4 Liters UC-1 product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed",
+    "crop": [
+     0.45,
+     0.02,
+     1.0,
+     0.84
+    ]
+   }
+  ],
+  "palanan-paint/BOY-QDE": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/YDG0038.jpg?v=1606088413",
+    "source": "https://diyhardware.ph/products/boysen-paint-1-liter-black-quick-drying-enamel-690",
+    "credit": "Boysen Paint 1 Liter Black Quick Drying Enamel B-690 product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/YDG0012.jpg?v=1604725342",
+    "source": "https://diyhardware.ph/products/boysen-paint-1-liter-chocolate-brown-quick-drying-enamel-680",
+    "credit": "Boysen Paint 1 Liter Chocolate Brown Quick Drying Enamel B-680 product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/YDG0031.jpg?v=1605943179",
+    "source": "https://diyhardware.ph/products/boysen-paint-1-liter-royal-blue-quick-drying-enamel-640",
+    "credit": "Boysen Paint 1 Liter Royal Blue Quick Drying Enamel B-640 product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/YDG0011.jpg?v=1604724789",
+    "source": "https://diyhardware.ph/products/boysen-paint-1-liter-quick-drying-enamel-international-red-671",
+    "credit": "Boysen Paint 1 Liters Quick Drying Enamel International Red product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/YDG0032.jpg?v=1605944887",
+    "source": "https://diyhardware.ph/products/boysen-paint-1-liter-dark-green-quick-dry-enamel-651",
+    "credit": "Boysen Paint 1 Liter Dark Green Quick Dry Enamel B-651 product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "palanan-paint/DAV-GLOSSIT": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/D8G0061.png?v=1623739596",
+    "source": "https://diyhardware.ph/products/davies-gloss-it-quick-dry-enamel-white-4l-dv-400-04",
+    "credit": "Davies Gloss-It Quick Dry Enamel White 4L Dv-400-04 product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/D8G0057.jpg?v=1604369749",
+    "source": "https://diyhardware.ph/products/davies-gloss-it-quick-dry-enamel-white-1-liter-dv-400-01",
+    "credit": "Davies Gloss-It Quick Dry Enamel Paint White 1 Liter product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "palanan-paint/BOY-FWE": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/YDG0007.jpg?v=1604715691",
+    "source": "https://diyhardware.ph/products/boysen-paint-1-liter-white-flat-wall-enamel-800",
+    "credit": "Boysen Paint 1 Liter White Flat Wall Enamel product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "palanan-paint/BOY-ROOFGARD": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/YDG0021_c1ac1b86-7f98-4a0e-9570-73c7aa98dba2.jpg?v=1605945329",
+    "source": "https://diyhardware.ph/products/boysen-paint-16-liters-baguio-green-roof-guard",
+    "credit": "Boysen Paint 16 Liters Baguio Green Roof Guard product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "palanan-paint/BOY-PLASOLUX": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/YDG0020.jpg?v=1604728804",
+    "source": "https://diyhardware.ph/products/boysen-paint-1-liter-white-plasolux-glazing-putty-311",
+    "credit": "Boysen Paint 1 Liter White Plasolux Glazing Putty product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "palanan-paint/LT-ROLLER": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/lotus-paint-roller-w-handle-7065755.png?v=1789979405",
+    "source": "https://khmtools.com.ph/products/lotus-paint-roller-w-handle",
+    "credit": "Lotus Paint Roller w/ Handle product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/lotus-pr9t-paint-roller-tray-9-8272459.png?v=1789978147",
+    "source": "https://khmtools.com.ph/products/lotus-pr9t-paint-roller-tray-9",
+    "credit": "Lotus PR9T Paint Roller Tray 9” product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/lotus-paint-roller-refill-5199143.png?v=1789978446",
+    "source": "https://khmtools.com.ph/products/lotus-paint-roller-refill",
+    "credit": "Lotus Paint Roller Refill product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "palanan-paint/WF-MASKING": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/wadfow-masking-tape-3038892.jpg?v=1789990749",
+    "source": "https://khmtools.com.ph/products/wadfow-masking-tape",
+    "credit": "Wadfow Masking Tape product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "ugong-plumbing/WN-GOOSENECK": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/NUF1854.png?v=1657006214",
+    "source": "https://diyhardware.ph/products/wassernison-hybrid-goose-neck-faucet-whb-5007",
+    "credit": "Wassernison Hybrid Goose Neck Faucet WHB 5007 product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "ugong-plumbing/WN-BASIN": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/NUF1859_2.png?v=1657505533",
+    "source": "https://diyhardware.ph/products/wassernison-hybrid-basin-faucet-whb-6258",
+    "credit": "Wassernison Hybrid Basin Faucet WHB 6258 product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "ugong-plumbing/WN-HOSEBIB": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/NUF1994.jpg?v=1597387349",
+    "source": "https://diyhardware.ph/products/wnison-stls-stl-fcet-hse-bib-wss201-bas",
+    "credit": "Wassernison Stainless Steel Faucet Hose Bib Wss201 product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "ugong-plumbing/WN-BIDET": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/NUF0081_1.jpg?v=1657012728",
+    "source": "https://diyhardware.ph/products/wassernison-bidet-complete-set-chrome-nbcs-81sc",
+    "credit": "Wassernison Bidet Complete Set Chrome NBCS 81SC product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/NUF0080.jpg?v=1597392808",
+    "source": "https://diyhardware.ph/products/bidet-complete-set-white-nbcs-80w-bas",
+    "credit": "Wassernison Bidet Complete Set White Nbcs 80W product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "ugong-plumbing/WN-ANGLE": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/NUF0040.jpg?v=1597392763",
+    "source": "https://diyhardware.ph/products/angle-valve-12-x-12-bll-vl-nav-53-bas",
+    "credit": "Wassernison Angle Valve 12 X 12 Bll Vl Nav 53 product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/NUF0907.jpg?v=1597393969",
+    "source": "https://diyhardware.ph/products/ceramic-angle-vlve-12-x-12-nav-58-bas",
+    "credit": "Wassernison Ceramic Angle Valve 12 X 12 Nav-58 product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "ugong-plumbing/WN-HANDSHOWER": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/NUF0439.jpg?v=1597396262",
+    "source": "https://diyhardware.ph/products/med-series-hand-shower-set-hss-1041-bas",
+    "credit": "Wassernison Med Series Hand Shower Set Hss-1041 product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "ugong-plumbing/KITZ-BALL": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/KHM_677f6a90-a0eb-421e-bbab-28a584d17e5f.jpg?v=1750511520",
+    "source": "https://khmtools.com.ph/products/kitz-ball-valve",
+    "credit": "Kitz Ball Valve product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "ugong-plumbing/AX-DRAIN": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0552/7594/6163/products/3Q6A10960.jpg?v=1747619534",
+    "source": "https://cbkhardware.com/products/axs40a4402s-floor-drain-stainless-steel-4x-4-5mm-square-cover",
+    "credit": "SQUARE FLOOR DRAIN 4\" X 4\" 5MM STAINLESS STEEL product photo via cbkhardware.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0552/7594/6163/products/3Q6A10950.jpg?v=1747619535",
+    "source": "https://cbkhardware.com/products/axs40a4401s-floor-drain-stainless-steel-4x-4-5mm-round-cover",
+    "credit": "ROUND FLOOR DRAIN 4\" X 4\" 5MM STAINLESS STEEL product photo via cbkhardware.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "ugong-plumbing/WF-FLEXHOSE": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/wadfow-flexible-hose-double-ended-2376628.jpg?v=1789989909",
+    "source": "https://khmtools.com.ph/products/wadfow-flexible-hose-double-ended",
+    "credit": "Wadfow Flexible Hose Double-Ended product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "ugong-plumbing/WF-PUMP": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/wadfow-wwpca03-5-centrifugal-water-pump-1hp-4894667.png?v=1789981806",
+    "source": "https://khmtools.com.ph/products/wadfow-wwpca03-5-centrifugal-water-pump-1hp",
+    "credit": "Wadfow WWPCA03-5 Centrifugal Water Pump 1HP product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "ugong-plumbing/WF-PTFE": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/wadfow-ptfe-thread-seal-tape-9133823.jpg?v=1789989666",
+    "source": "https://khmtools.com.ph/products/wadfow-ptfe-thread-seal-tape",
+    "credit": "Wadfow PTFE Thread Seal Tape product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "ugong-plumbing/WF-PIPEWRENCH": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/DP3211001-5-Recovered-Recovered-Recovered-Recovered_0f84f33f-d946-4bee-93d9-a9670ebced9c.png?v=1750511759",
+    "source": "https://khmtools.com.ph/products/wadfow-wpw7110-pipe-wrench-10",
+    "credit": "Wadfow WPW7110 Pipe Wrench 10\" product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "highway-hills-hardware/FM-TEKSCREW": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/tek-screw.jpg?v=1750511596",
+    "source": "https://khmtools.com.ph/products/fn-tek-screw-for-wood-metal",
+    "credit": "FM Tek Screw for Wood/Metal product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "highway-hills-hardware/LT-WEDGEANCHOR": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/lotus-wedge-anchor-2643011.png?v=1789978567",
+    "source": "https://khmtools.com.ph/products/lotus-wedge-anchor",
+    "credit": "Lotus Wedge Anchor product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "highway-hills-hardware/WF-UNIVTOX": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/wadfow-universal-anchor-tox-6448844.jpg?v=1789990268",
+    "source": "https://khmtools.com.ph/products/wadfow-universal-anchor-tox",
+    "credit": "Wadfow Universal Anchor Tox product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "highway-hills-hardware/WF-DROPIN": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/DP3211001-5-Recovered-Recovered-Recovered-Recovered-Recovered_ec84429e-846c-4ed3-8c2f-3030e87fab3d.png?v=1750511557",
+    "source": "https://khmtools.com.ph/products/wadfow-drop-in-anchor-tox",
+    "credit": "Wadfow Drop-in Anchor (Tox) product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "highway-hills-hardware/LT-RIVETS": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/lotus-blind-rivets-3622914.png?v=1789979107",
+    "source": "https://khmtools.com.ph/products/lotus-blind-rivets",
+    "credit": "Lotus Blind Rivets product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "highway-hills-hardware/LT-RIVETER": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/lotus-ltht200hrx-hand-riveter-hd-6055878.png?v=1789979226",
+    "source": "https://khmtools.com.ph/products/lotus-ltht200hrx-hand-riveter-hd",
+    "credit": "Lotus LTHT200HRX Hand Riveter HD product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "highway-hills-hardware/LT-LOOSEPIN": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/lotus-loose-pin-hinges-3564193.png?v=1789979587",
+    "source": "https://khmtools.com.ph/products/lotus-loose-pin-hinges",
+    "credit": "Lotus Loose Pin Hinges product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "highway-hills-hardware/HS-BARREL": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/barrel-bolt.gif?v=1752800909",
+    "source": "https://khmtools.com.ph/products/china-diamond-c-p-barrel-bolt",
+    "credit": "HS Diamond C/P Barrel Bolt product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "highway-hills-hardware/IN-BRASSPADLOCK": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/ingco-hd-brass-block-padlock-9104193.png?v=1789987927",
+    "source": "https://khmtools.com.ph/products/ingco-hd-brass-block-padlock",
+    "credit": "Ingco HD Brass Block Padlock product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "highway-hills-hardware/LT-PADLOCK": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/lotus-laminated-padlock-3917004.png?v=1789980606",
+    "source": "https://khmtools.com.ph/products/lotus-laminated-padlock",
+    "credit": "Lotus Laminated Padlock product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "highway-hills-hardware/LT-BITTOX": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/lotus-ltxt800btx-bit-tox-set-8pcs-7506636.png?v=1789979587",
+    "source": "https://khmtools.com.ph/products/lotus-bit-tox-set-8pcs",
+    "credit": "Lotus LTXT800BTX Bit & Tox Set 8pcs product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "highway-hills-hardware/LT-CONCEALED": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/lotus-concealed-hinges-stainless-steel-9443110.png?v=1789979169",
+    "source": "https://khmtools.com.ph/products/lotus-concealed-hinges-stainless-steel",
+    "credit": "Lotus Concealed Hinges Stainless Steel product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/lotus-concealed-hinges-stainless-steel-3638574.png?v=1789979169",
+    "source": "https://khmtools.com.ph/products/lotus-concealed-hinges-stainless-steel",
+    "credit": "Lotus Concealed Hinges Stainless Steel product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/lotus-concealed-hinges-stainless-steel-9918163.png?v=1789979169",
+    "source": "https://khmtools.com.ph/products/lotus-concealed-hinges-stainless-steel",
+    "credit": "Lotus Concealed Hinges Stainless Steel product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "industrial-valley-tools/MK-M0801B": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0728/1777/products/M0801BCLEAR_f3a711a4-3363-4827-b972-0c8daf71e4d9.jpg?v=1625296060",
+    "source": "https://www.gigatools.ph/products/makita-m0801b-hammer-drill-5-8-16mm-500w",
+    "credit": "Makita M0801B Hammer Drill 13mm 500W product photo via www.gigatools.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0728/1777/products/M0801BCLEAR.jpg?v=1625296060",
+    "source": "https://www.gigatools.ph/products/makita-m0801b-hammer-drill-5-8-16mm-500w",
+    "credit": "Makita M0801B Hammer Drill 13mm 500W product photo via www.gigatools.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "industrial-valley-tools/MK-HP333": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0728/1777/files/HP333DWYX3.jpg?v=1728528526",
+    "source": "https://www.gigatools.ph/products/makita-hp333dwyx3-cordless-hammer-driver-drill-3-8-max12v-cxt-kit-set",
+    "credit": "Makita HP333DWYX3 Cordless Hammer Driver Drill 3/8 Max12V CXT Kit Set product photo via www.gigatools.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0728/1777/products/HP333DWYE_infobook-1.jpg?v=1605275162",
+    "source": "https://www.gigatools.ph/products/makita-hp333dwyx3-cordless-hammer-driver-drill-3-8-max12v-cxt-kit-set",
+    "credit": "Makita HP333DWYX3 Cordless Hammer Driver Drill 3/8 Max12V CXT Kit Set product photo via www.gigatools.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "industrial-valley-tools/MK-M5801B": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0728/1777/products/M5801BNEWCLEAR.jpg?v=1678412102",
+    "source": "https://www.gigatools.ph/products/makita-m5801b-circular-saw-7-1-4-1-050w-with-makpac-type-3-stackable-connector-case",
+    "credit": "Makita M5801B Circular Saw 7-1/4\" ( 1,050W ) with MAKPAC Type 3 Stackable Connec product photo via www.gigatools.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0728/1777/products/MAKPACTYPE3M5801BCLEAR.jpg?v=1678412102",
+    "source": "https://www.gigatools.ph/products/makita-m5801b-circular-saw-7-1-4-1-050w-with-makpac-type-3-stackable-connector-case",
+    "credit": "Makita M5801B Circular Saw 7-1/4\" ( 1,050W ) with MAKPAC Type 3 Stackable Connec product photo via www.gigatools.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0728/1777/products/M5801BNEWCLEAR2.jpg?v=1678412102",
+    "source": "https://www.gigatools.ph/products/makita-m5801b-circular-saw-7-1-4-1-050w-with-makpac-type-3-stackable-connector-case",
+    "credit": "Makita M5801B Circular Saw 7-1/4\" ( 1,050W ) with MAKPAC Type 3 Stackable Connec product photo via www.gigatools.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "industrial-valley-tools/BS-GWS750": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0728/1777/files/o361582v117_246457-GWS750-100_appl_03_16_9_update_T6.jpg?v=1751509533",
+    "source": "https://www.gigatools.ph/products/bosch-gws-750-100-angle-grinder-4-heavy-duty-750w",
+    "credit": "Bosch GWS 750-100 4\" Angle Grinder  (750W) product photo via www.gigatools.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0728/1777/files/o361583v117_246459-GWS750-100_appl_01_16_9_update_T6.jpg?v=1751509533",
+    "source": "https://www.gigatools.ph/products/bosch-gws-750-100-angle-grinder-4-heavy-duty-750w",
+    "credit": "Bosch GWS 750-100 4\" Angle Grinder  (750W) product photo via www.gigatools.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "industrial-valley-tools/BS-GBH224": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0728/1777/products/GBH_2-24_RE_2.jpg?v=1587399299",
+    "source": "https://www.gigatools.ph/products/bosch-rotary-hammer-gbh2-20re-600w",
+    "credit": "Bosch GBH 2-24 RE Professional Rotary Hammer with SDS plus (Heavy Duty) 790W product photo via www.gigatools.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "industrial-valley-tools/ST-HAMMER": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0728/1777/files/STANLEYFIBERGLASSCLAWHAMMER.jpg?v=1708319055",
+    "source": "https://www.gigatools.ph/products/stanley-fiberglass-handle-claw-hammer",
+    "credit": "Stanley Fiberglass Handle Claw Hammer product photo via www.gigatools.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed",
+    "crop": [
+     0,
+     0,
+     1,
+     0.9
+    ]
+   }
+  ],
+  "industrial-valley-tools/ST-TAPE": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/stanley-stht37192-steel-tape-measure-8m-tylon-8079818.png?v=1789983012",
+    "source": "https://khmtools.com.ph/products/stanley-stht37192-steel-tape-measure-8m-tylon",
+    "credit": "Stanley STHT37192 Steel Tape Measure 8m (Tylon) product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/stanley-stht37190-steel-tape-measure-3m-tylon-7650090.jpg?v=1789984086",
+    "source": "https://khmtools.com.ph/products/stanley-stht37190-steel-tape-measure-3m-tylon",
+    "credit": "Stanley STHT37190 Steel Tape Measure 3m (Tylon) product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/stanley-stht37191-steel-tape-measure-5m-tylon-1398676.png?v=1789980665",
+    "source": "https://khmtools.com.ph/products/stanley-stht37191-steel-tape-measure-5m-tylon",
+    "credit": "Stanley STHT37191 Steel Tape Measure 5m (Tylon) product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/stanley-stht37192-steel-tape-measure-8m-tylon-3158083.jpg?v=1789983012",
+    "source": "https://khmtools.com.ph/products/stanley-stht37192-steel-tape-measure-8m-tylon",
+    "credit": "Stanley STHT37192 Steel Tape Measure 8m (Tylon) product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "industrial-valley-tools/ST-LEVEL": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0728/1777/files/STANLEYLEVELBAR.jpg?v=1695431103",
+    "source": "https://www.gigatools.ph/products/stanley-aluminum-i-beam-level-bar",
+    "credit": "Stanley Aluminum I-Beam Level Bar product photo via www.gigatools.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed",
+    "crop": [
+     0,
+     0,
+     1,
+     0.88
+    ]
+   }
+  ],
+  "industrial-valley-tools/ST-HANDSAW": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0728/1777/files/STANLEYCROSSCUTHANDSAWPVC.jpg?v=1707705973",
+    "source": "https://www.gigatools.ph/products/stanley-crosscut-hand-saw-with-pvc-handle",
+    "credit": "Stanley Crosscut Hand Saw with PVC Handle product photo via www.gigatools.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed",
+    "crop": [
+     0,
+     0,
+     1,
+     0.88
+    ]
+   }
+  ],
+  "industrial-valley-tools/ST-KNIFE": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0728/1777/files/STANLEY10-189C_2.jpg?v=1695783990",
+    "source": "https://www.gigatools.ph/products/stanley-self-retracting-safety-6-utility-knife-10-189c",
+    "credit": "Stanley Self-Retracting Safety 6\" Utility Knife ( 10-189C ) product photo via www.gigatools.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0728/1777/files/STANLEY10-189C_1.jpg?v=1695783989",
+    "source": "https://www.gigatools.ph/products/stanley-self-retracting-safety-6-utility-knife-10-189c",
+    "credit": "Stanley Self-Retracting Safety 6\" Utility Knife ( 10-189C ) product photo via www.gigatools.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0728/1777/files/STANLEY10-189C_6.jpg?v=1695783989",
+    "source": "https://www.gigatools.ph/products/stanley-self-retracting-safety-6-utility-knife-10-189c",
+    "credit": "Stanley Self-Retracting Safety 6\" Utility Knife ( 10-189C ) product photo via www.gigatools.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "industrial-valley-tools/WF-HELMET": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/DP3211001-5-Recovered-Recovered-Recovered_28b2a113-701e-4739-9f19-09378f994aac.png?v=1747819348",
+    "source": "https://khmtools.com.ph/products/wadfow-safety-helmet",
+    "credit": "Wadfow Safety Helmet product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "industrial-valley-tools/WF-GLOVES": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/wadfow-wlg0105-leather-gloves-105-3226557.jpg?v=1789990688",
+    "source": "https://khmtools.com.ph/products/wadfow-wlg0105-leather-gloves-10-5",
+    "credit": "Wadfow WLG0105 Leather Gloves 10.5\" product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bicutan-timber/COCO-22": [
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/1/19/Coconut_wood_planks_for_sale_in_Lobo%2C_Batangas%2C_Philippines_%282025%29..jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Coconut_wood_planks_for_sale_in_Lobo,_Batangas,_Philippines_(2025)..jpg",
+    "credit": "Fiszi37 / File:Coconut wood planks for sale in Lobo, Batangas, Philippines (2025)..jpg",
+    "license": "CC0",
+    "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
+   },
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/f/f3/Pine_plank_fence_2019_G1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Pine_plank_fence_2019_G1.jpg",
+    "credit": "George Chernilevsky / File:Pine plank fence 2019 G1.jpg",
+    "license": "Public domain",
+    "license_url": null
+   }
+  ],
+  "bicutan-timber/COCO-23": [
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/f/f3/Pine_plank_fence_2019_G1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Pine_plank_fence_2019_G1.jpg",
+    "credit": "George Chernilevsky / File:Pine plank fence 2019 G1.jpg",
+    "license": "Public domain",
+    "license_url": null
+   },
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/1/19/Coconut_wood_planks_for_sale_in_Lobo%2C_Batangas%2C_Philippines_%282025%29..jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Coconut_wood_planks_for_sale_in_Lobo,_Batangas,_Philippines_(2025)..jpg",
+    "credit": "Fiszi37 / File:Coconut wood planks for sale in Lobo, Batangas, Philippines (2025)..jpg",
+    "license": "CC0",
+    "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
+   }
+  ],
+  "bicutan-timber/COCO-24": [
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/1/15/Velden_Augsdorf_Oberer_Kirchenweg_5_Bretterstapel_0906202_3961.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Velden_Augsdorf_Oberer_Kirchenweg_5_Bretterstapel_0906202_3961.jpg",
+    "credit": "Johann Jaritz / File:Velden Augsdorf Oberer Kirchenweg 5 Bretterstapel 0906202 3961.jpg",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+   },
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/f/f3/Pine_plank_fence_2019_G1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Pine_plank_fence_2019_G1.jpg",
+    "credit": "George Chernilevsky / File:Pine plank fence 2019 G1.jpg",
+    "license": "Public domain",
+    "license_url": null
+   }
+  ],
+  "bicutan-timber/APITONG-24": [
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/8/8a/Wooden_planks_for_pillars_in_Awka.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Wooden_planks_for_pillars_in_Awka.jpg",
+    "credit": "Johnnybam / File:Wooden planks for pillars in Awka.jpg",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+   },
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/9/9a/Red_Gum_Lumber_wood.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Red_Gum_Lumber_wood.jpg",
+    "credit": "Stephen Ondich / File:Red Gum Lumber wood.jpg",
+    "license": "CC0",
+    "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
+   }
+  ],
+  "bicutan-timber/TANG-18": [
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/9/9a/Red_Gum_Lumber_wood.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Red_Gum_Lumber_wood.jpg",
+    "credit": "Stephen Ondich / File:Red Gum Lumber wood.jpg",
+    "license": "CC0",
+    "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
+   },
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/6/64/Weatherworn_planks_on_top_of_wooden_table.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Weatherworn_planks_on_top_of_wooden_table.jpg",
+    "credit": "W.carter / File:Weatherworn planks on top of wooden table.jpg",
+    "license": "CC0",
+    "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
+   }
+  ],
+  "bicutan-timber/LAWAAN-110": [
+   {
+    "url": "https://live.staticflickr.com/3951/15312763898_8435ee6324_b.jpg",
+    "source": "https://www.flickr.com/photos/52957117@N04/15312763898",
+    "credit": "Dave Catchpole / 25th Ickworth Wood & Craft Fair 2014",
+    "license": "by 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0/"
+   },
+   {
+    "url": "https://live.staticflickr.com/3936/15312457889_f50413927b_b.jpg",
+    "source": "https://www.flickr.com/photos/52957117@N04/15312457889",
+    "credit": "Dave Catchpole / 25th Ickworth Wood & Craft Fair 2014",
+    "license": "by 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0/"
+   }
+  ],
+  "bicutan-timber/BAMBOO-20": [
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/4/4d/Dismantled_bamboo_scaffolding.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Dismantled_bamboo_scaffolding.JPG",
+    "credit": "Clément Bucco-Lechat / File:Dismantled bamboo scaffolding.JPG",
+    "license": "CC BY-SA 3.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0"
+   },
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/0/07/Bamboo_Heap.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Bamboo_Heap.jpg",
+    "credit": "Cpraise / File:Bamboo Heap.jpg",
+    "license": "CC0",
+    "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
+   }
+  ],
+  "bicutan-timber/PN-NONSAG": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0552/7594/6163/files/PIONEER_74_31459379-24af-4c64-bf2b-2c47fadaa604.png?v=1786782791",
+    "source": "https://cbkhardware.com/products/non-sag-epoxy-quart",
+    "credit": "PIONEER product photo via cbkhardware.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0552/7594/6163/files/PIONEER_72_5d3d106f-18a2-4cb2-9055-4b78740b9f4a.png?v=1786782791",
+    "source": "https://cbkhardware.com/products/non-sag-epoxy-quart",
+    "credit": "PIONEER product photo via cbkhardware.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0552/7594/6163/files/PIONEER_71_db6048f6-fd32-4835-b634-525e03efeb5e.png?v=1786782791",
+    "source": "https://cbkhardware.com/products/non-sag-epoxy-quart",
+    "credit": "PIONEER product photo via cbkhardware.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bicutan-timber/LT-CHISELSET": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/lotus-ltht400wcx-wood-chisel-set-5508983.png?v=1789978326",
+    "source": "https://khmtools.com.ph/products/lotus-ltht400wcx-wood-chisel-set",
+    "credit": "Lotus LTHT400WCX Wood Chisel Set product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/lotus-wood-chisel-7184257.png?v=1789977906",
+    "source": "https://khmtools.com.ph/products/lotus-wood-chisel",
+    "credit": "Lotus Wood Chisel product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bicutan-timber/LT-SQUARE": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/lotus-carpenter-square-8359133.png?v=1789978867",
+    "source": "https://khmtools.com.ph/products/lotus-carpenter-square",
+    "credit": "Lotus Carpenter Square product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bicutan-timber/MK-SANDPAPER": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/DP3211001-5-Recovered-Recovered-Recovered-Recovered-Recovered_b5c035d0-ae9a-4804-a409-ea0ed997084b.png?v=1750511644",
+    "source": "https://khmtools.com.ph/products/makita-sand-paper-for-wood-50pcs-9x11",
+    "credit": "Makita Abrasive Sandpaper for Wood 50Pcs (9\"x11\") product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/DP3211001-5-Recovered-Recovered-Recovered-Recovered-Recovered-Recovered_85f4d30b-5614-4d15-a506-830c8d157a40.png?v=1750511645",
+    "source": "https://khmtools.com.ph/products/makita-sand-paper-for-wood-50pcs-9x11",
+    "credit": "Makita Abrasive Sandpaper for Wood 50Pcs (9\"x11\") product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bicutan-timber/CENTRO-VARNISH": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0401/7301/1096/products/RYC0025.jpg?v=1676621938",
+    "source": "https://diyhardware.ph/products/centro-plastic-varnish-350cc",
+    "credit": "Centro Plastic Varnish 350cc product photo via diyhardware.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed",
+    "crop": [
+     0.14,
+     0.2,
+     0.86,
+     0.84
+    ]
+   }
+  ],
+  "san-dionisio-flooring/DL-SPC": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/Decolite-SPCFlooring.jpg?v=1768893823",
+    "source": "https://buildershome.com/products/decolite-spc-flooring-panel",
+    "credit": "Decolite SPC Flooring Panels product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/LightCedar_29b34c4f-e851-43f4-9a2a-da20a2c54827.png?v=1768893823",
+    "source": "https://buildershome.com/products/decolite-spc-flooring-panel",
+    "credit": "Decolite SPC Flooring Panels product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/OceanGrey_1.png?v=1768893822",
+    "source": "https://buildershome.com/products/decolite-spc-flooring-panel",
+    "credit": "Decolite SPC Flooring Panels product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/Walnut_2.png?v=1768893823",
+    "source": "https://buildershome.com/products/decolite-spc-flooring-panel",
+    "credit": "Decolite SPC Flooring Panels product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "san-dionisio-flooring/AMY-SPC": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0466/5150/6852/files/MAPLE.png?v=1741575016",
+    "source": "https://laeuropa.com.ph/products/stone-plastic-composite-vinyl",
+    "credit": "Maple (SPC) product photo via laeuropa.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0466/5150/6852/files/CAROLINA.png?v=1741586597",
+    "source": "https://laeuropa.com.ph/products/stone-plastic-composite-copy-2",
+    "credit": "Carolina Oak (SPC) product photo via laeuropa.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0466/5150/6852/files/TESUN.png?v=1741586597",
+    "source": "https://laeuropa.com.ph/products/stone-plastic-composite-copy-1",
+    "credit": "Tesun Oak (SPC) product photo via laeuropa.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0466/5150/6852/files/DECKDUSK.png?v=1741586597",
+    "source": "https://laeuropa.com.ph/products/stone-plastic-composite-copy-3",
+    "credit": "Deck Dust (SPC) product photo via laeuropa.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "san-dionisio-flooring/DL-SKIRTING": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/1000001808_Skirting_Oak_Front.jpg?v=1749431322",
+    "source": "https://buildershome.com/products/decolite-skirting",
+    "credit": "Decolite SPC Skirting product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/1000001806_Skirting_Light_Cedar_Front.jpg?v=1749431329",
+    "source": "https://buildershome.com/products/decolite-skirting",
+    "credit": "Decolite SPC Skirting product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/Skirting_Ocean_Grey_Side.jpg?v=1749431329",
+    "source": "https://buildershome.com/products/decolite-skirting",
+    "credit": "Decolite SPC Skirting product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "san-dionisio-flooring/DL-STAIRNOSE": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/1000001889_Stairnose_Light_Cedar_Front.jpg?v=1749431226",
+    "source": "https://buildershome.com/products/decolite-flush-stair-nose",
+    "credit": "Decolite SPC Flush Stairnose product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/Stairnose_Ocean_Grey_Front.jpg?v=1749431226",
+    "source": "https://buildershome.com/products/decolite-flush-stair-nose",
+    "credit": "Decolite SPC Flush Stairnose product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "san-dionisio-flooring/DL-TMOLD": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/1000001811_T_Mold_Walnut_Front.jpg?v=1749433825",
+    "source": "https://buildershome.com/products/decolite-t-mold",
+    "credit": "Decolite SPC T-Molding product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/1000001812_T_Mold_Oak_Front.jpg?v=1749433825",
+    "source": "https://buildershome.com/products/decolite-t-mold",
+    "credit": "Decolite SPC T-Molding product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "san-dionisio-flooring/TV-DECKING": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/Teak_57cc826c-d51e-41b6-a6d3-096b299a917d.png?v=1768890720",
+    "source": "https://buildershome.com/products/trevo-wpc-decking",
+    "credit": "Trevo WPC Decking product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/CarbonBlack.png?v=1768890719",
+    "source": "https://buildershome.com/products/trevo-wpc-decking",
+    "credit": "Trevo WPC Decking product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "san-dionisio-flooring/DL-CEILING": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/Decolite-PVCCeilingSeamless.jpg?v=1768893687",
+    "source": "https://buildershome.com/products/decolite-seamless-pvc-ceiling-panel",
+    "credit": "Decolite Seamless PVC Ceiling Panel product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/White_Oak_deb3d107-e13c-4bab-b050-d2951b18e3d1.png?v=1768893687",
+    "source": "https://buildershome.com/products/decolite-seamless-pvc-ceiling-panel",
+    "credit": "Decolite Seamless PVC Ceiling Panel product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/Narra_e03014c9-bf04-4306-a3db-9d6dd8d457c9.png?v=1768893687",
+    "source": "https://buildershome.com/products/decolite-seamless-pvc-ceiling-panel",
+    "credit": "Decolite Seamless PVC Ceiling Panel product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/Wenge_d73d2027-4d97-487c-8b13-c269db228372.png?v=1768893687",
+    "source": "https://buildershome.com/products/decolite-seamless-pvc-ceiling-panel",
+    "credit": "Decolite Seamless PVC Ceiling Panel product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "san-dionisio-flooring/WF-SPACER": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/triangle-file_239634fb-5533-4ea9-93e4-d5265ba898e8.png?v=1750511549",
+    "source": "https://khmtools.com.ph/products/wadfow-tile-spacer",
+    "credit": "Wadfow Tile Spacer product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/DP3211001-5-Recovered-Recovered-Recovered-Recovered-Recovered_ae643390-0cdf-41a7-a44e-976de36da615.png?v=1750511548",
+    "source": "https://khmtools.com.ph/products/wadfow-tile-spacer",
+    "credit": "Wadfow Tile Spacer product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "san-dionisio-flooring/LT-NOTCHTROWEL": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/lotus-ltht900ntx-tilenotched-trowel-1611156.png?v=1789978805",
+    "source": "https://khmtools.com.ph/products/lotus-ltht900ntx-tile-notched-trowel",
+    "credit": "Lotus LTHT900NTX Tile/Notched Trowel product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "san-dionisio-flooring/LT-MALLET": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/lotus-rubber-mallet-black-and-white-4232439.png?v=1789977846",
+    "source": "https://khmtools.com.ph/products/lotus-rubber-mallet-black-and-white",
+    "credit": "Lotus Rubber Mallet Black and White product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "san-dionisio-flooring/DELI-TILECUTTER": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/tile-cutter.gif?v=1753875153",
+    "source": "https://khmtools.com.ph/products/deli-edl354060-tile-cutter-24",
+    "credit": "Deli EDL354060 Tile Cutter 24\" product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "san-dionisio-flooring/WF-LEVELER": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/wadfow-tile-leveler-4170503.jpg?v=1789989906",
+    "source": "https://khmtools.com.ph/products/wadfow-tile-leveler",
+    "credit": "Wadfow Tile Leveler product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bagong-silang-roofing/AW-CORRUGATED": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/Corrugated-PC-Group-2.jpg?v=1767678935",
+    "source": "https://buildershome.com/products/acewell-corrugated-polycarbonate-sheet",
+    "credit": "Acewell Corrugated Polycarbonate Sheet product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/PC_Solo_C_Blue-2_V1_1645_6d812801-0bcb-474b-9a70-e2009280f229.jpg?v=1767678935",
+    "source": "https://buildershome.com/products/acewell-corrugated-polycarbonate-sheet",
+    "credit": "Acewell Corrugated Polycarbonate Sheet product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/PC_Solo_C_Bronze-1_V1_1657_3b3bb65d-97be-4a6a-b678-e5c2010ca1f2.jpg?v=1767678935",
+    "source": "https://buildershome.com/products/acewell-corrugated-polycarbonate-sheet",
+    "credit": "Acewell Corrugated Polycarbonate Sheet product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bagong-silang-roofing/AW-RIBTYPE": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/PC_Group_Flat_Sheet_RT_V1-2_0029_8f1e60c7-06ee-47f0-a17e-bfe24eeef888.jpg?v=1765416201",
+    "source": "https://buildershome.com/products/acewell-rib-type-polycarbonate-sheet",
+    "credit": "Acewell Ribtype Polycarbonate Sheet product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/PC_Solo_RT_Clear-1_V1_1680.jpg?v=1767679180",
+    "source": "https://buildershome.com/products/acewell-rib-type-polycarbonate-sheet",
+    "credit": "Acewell Ribtype Polycarbonate Sheet product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/PC_Solo_RT_Bronze-1_V1_1701.jpg?v=1767679179",
+    "source": "https://buildershome.com/products/acewell-rib-type-polycarbonate-sheet",
+    "credit": "Acewell Ribtype Polycarbonate Sheet product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bagong-silang-roofing/DUR-TWINWALL": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/PC_Group_Flat_Sheet_TW_V1-2_0144.jpg?v=1751683470",
+    "source": "https://buildershome.com/products/duralon-twinwall-polycarbonate-6mm-8mm-and-10mm",
+    "credit": "Duralon Twinwall Polycarbonate (6mm, 8mm, and 10mm) product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/1000000244_PC_Solo_TW_Clear-1_V1_9547.jpg?v=1747814482",
+    "source": "https://buildershome.com/products/duralon-twinwall-polycarbonate-6mm-8mm-and-10mm",
+    "credit": "Duralon Twinwall Polycarbonate (6mm, 8mm, and 10mm) product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/1000000243_PC_Solo_TW_Bronze-1_V2_9466.jpg?v=1747814454",
+    "source": "https://buildershome.com/products/duralon-twinwall-polycarbonate-6mm-8mm-and-10mm",
+    "credit": "Duralon Twinwall Polycarbonate (6mm, 8mm, and 10mm) product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/1000000242PC_Solo_TW_Blue-1_V1_9483.jpg?v=1747811608",
+    "source": "https://buildershome.com/products/duralon-twinwall-polycarbonate-6mm-8mm-and-10mm",
+    "credit": "Duralon Twinwall Polycarbonate (6mm, 8mm, and 10mm) product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bagong-silang-roofing/PLY-TEKSCREW": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/Tekscrew-2_V1_2769.jpg?v=1747963684",
+    "source": "https://buildershome.com/products/polylite-metal-tex-screw",
+    "credit": "Polylite Metal Tek Screw product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/Tekscrew-1_V1_2773.jpg?v=1747963685",
+    "source": "https://buildershome.com/products/polylite-metal-tex-screw",
+    "credit": "Polylite Metal Tek Screw product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bagong-silang-roofing/PLY-HCONNECTOR": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/H-Connector-2_V1_0406.jpg?v=1749008664",
+    "source": "https://buildershome.com/products/polylite-h-connector",
+    "credit": "Polycarbonate H-Connector product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/H-Connector-1_V1_-0386.jpg?v=1749008642",
+    "source": "https://buildershome.com/products/polylite-h-connector",
+    "credit": "Polycarbonate H-Connector product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bagong-silang-roofing/BOS-VULCASEAL": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0663/2217/0012/files/FINAL_BOSTIK_VULCA_SEAL_75ML.png?v=1741968596",
+    "source": "https://manyustores.com/products/bostik-super-vulca-seal",
+    "credit": "Bostik Super Vulca Seal product photo via manyustores.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed",
+    "crop": [
+     0,
+     0,
+     1,
+     0.74
+    ]
+   }
+  ],
+  "bagong-silang-roofing/PN-ELASTOSEAL": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0552/7594/6163/files/PIONEER_23_a3ded1ac-475e-46cb-a021-a8c5f0ce7eca.png?v=1786502972",
+    "source": "https://cbkhardware.com/products/pioneer-elastoseal-1-4-liter",
+    "credit": "ELASTOSEAL 1/4 LITER product photo via cbkhardware.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0552/7594/6163/files/PIONEER_24_40bc74ea-bf99-49a1-bb57-88c1a7b56016.png?v=1786502972",
+    "source": "https://cbkhardware.com/products/pioneer-elastoseal-1-4-liter",
+    "credit": "ELASTOSEAL 1/4 LITER product photo via cbkhardware.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bagong-silang-roofing/PN-FLEXOSEAL": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0552/7594/6163/files/PIONEER_36.png?v=1786517675",
+    "source": "https://cbkhardware.com/products/pioneer-flex-o-seal-600ml",
+    "credit": "FLEX-O-SEAL 600ML product photo via cbkhardware.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bagong-silang-roofing/PN-WATERTITE": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0552/7594/6163/files/PIONEER_57.png?v=1786687319",
+    "source": "https://cbkhardware.com/products/water-tite-100-pouch-200g",
+    "credit": "WATER-TITE 100 POUCH 200G product photo via cbkhardware.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0552/7594/6163/files/PIONEER_56.png?v=1786686279",
+    "source": "https://cbkhardware.com/products/water-tite-100-4-54kg",
+    "credit": "WATER-TITE 100 4.54KG product photo via cbkhardware.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bagong-silang-roofing/WF-MESHTAPE": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/wadfow-wwgb1390-fiberglass-mesh-tape-50mmx90m-3274002.jpg?v=1789992187",
+    "source": "https://khmtools.com.ph/products/wadfow-wwgb1390-fiberglass-mesh-tape-50mmx90m",
+    "credit": "Wadfow WWGB1390 Fiberglass Mesh Tape 50MMx90M product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bagong-silang-roofing/TV-SOFFIT": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/Trevo-PVCSoffitPerforated.jpg?v=1768889580",
+    "source": "https://buildershome.com/products/trevo-pvc-soffit-perforated",
+    "credit": "Trevo PVC Soffit Perforated product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/Perforated_-_White.png?v=1768889580",
+    "source": "https://buildershome.com/products/trevo-pvc-soffit-perforated",
+    "credit": "Trevo PVC Soffit Perforated product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0924/7722/7283/files/Perforated_-_Espresso.png?v=1768889580",
+    "source": "https://buildershome.com/products/trevo-pvc-soffit-perforated",
+    "credit": "Trevo PVC Soffit Perforated product photo via buildershome.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "bagong-silang-roofing/RAIN-GUTTER": [
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/d/d4/Ch%C3%A9neau%2C_bande_d%27%C3%A9gout_et_noue_en_plomb..JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Ch%C3%A9neau,_bande_d%27%C3%A9gout_et_noue_en_plomb..JPG",
+    "credit": "Le plombier du désert / File:Chéneau, bande d'égout et noue en plomb..JPG",
+    "license": "CC BY-SA 3.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0"
+   },
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/a/af/Rain_gutter_and_drain_pipe_%2825921162725%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Rain_gutter_and_drain_pipe_(25921162725).jpg",
+    "credit": "Jeremy from Sydney, Australia / File:Rain gutter and drain pipe (25921162725).jpg",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0"
+   }
+  ],
+  "karuhatan-doors/YL-LEVERSET": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0552/7594/6163/products/ylhl6227us26drh.jpg?v=1747619956",
+    "source": "https://cbkhardware.com/products/yale-leverset-entrance-right-handed-satin-chrome-2",
+    "credit": "LEVERSET ENTRANCE RIGHT-HANDED SATIN CHROME product photo via cbkhardware.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0552/7594/6163/products/ylhl6267us5rh.jpg?v=1747619950",
+    "source": "https://cbkhardware.com/products/yale-leverset-entrance-right-handed-antique-brass-1",
+    "credit": "LEVERSET ENTRANCE RIGHT-HANDED ANTIQUE BRASS product photo via cbkhardware.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "karuhatan-doors/YL-KNOBSET": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0552/7594/6163/products/ylhca5231us5.jpg?v=1747619905",
+    "source": "https://cbkhardware.com/products/yale-knobset-passage-carolina-antique-brass",
+    "credit": "KNOBSET PASSAGE CAROLINA GR.3 ANTIQUE BRASS product photo via cbkhardware.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "karuhatan-doors/YL-DEADBOLT": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0552/7594/6163/products/ylh8101us32d.jpg?v=1747619978",
+    "source": "https://cbkhardware.com/products/yale-deadbolt-single-cylinder-satin-stainless-steel-1",
+    "credit": "DEADBOLT SINGLE CYLINDER SATIN STAINLESS STEEL product photo via cbkhardware.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "karuhatan-doors/YL-VIEWER": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0552/7594/6163/products/ylh0401us3.jpg?v=1747620145",
+    "source": "https://cbkhardware.com/products/yale-door-viewer-180-bright-brass",
+    "credit": "DOOR VIEWER 180 DEGREES BRT. BRASS product photo via cbkhardware.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0552/7594/6163/products/ylh0401us26.jpg?v=1747620145",
+    "source": "https://cbkhardware.com/products/yale-door-viewer-180-bright-chrome",
+    "credit": "DOOR VIEWER 180 DEGREES BRT. CHROME product photo via cbkhardware.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   },
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0552/7594/6163/products/ylhydg030us32d.jpg?v=1747620131",
+    "source": "https://cbkhardware.com/products/yale-door-viewer-180-satin-stainless-steel-30mm",
+    "credit": "DOOR VIEWER 180 DEGREES 30MM SATIN STAINLESS STEEL product photo via cbkhardware.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "karuhatan-doors/YL-CLOSER": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0552/7594/6163/products/concealed-door-closer-250x250.jpg?v=1747619967",
+    "source": "https://cbkhardware.com/products/yale-door-closer-concealed-w-hold-open",
+    "credit": "DOOR CLOSER CONCEALED W/ HOLD OPEN product photo via cbkhardware.com",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "karuhatan-doors/LT-BBHINGE": [
+   {
+    "url": "https://cdn.shopify.com/s/files/1/0518/3592/8728/files/lotus-ball-bearing-hinges-3751333.png?v=1789979705",
+    "source": "https://khmtools.com.ph/products/lotus-ball-bearing-hinges",
+    "credit": "Lotus Ball Bearing Hinges product photo via khmtools.com.ph",
+    "license": "Manufacturer or retailer product photo; used for an academic demonstration, not redistributed"
+   }
+  ],
+  "karuhatan-doors/DOOR-FLUSH": [
+   {
+    "url": "https://live.staticflickr.com/5217/5505966555_a402a33970_b.jpg",
+    "source": "https://www.flickr.com/photos/26098878@N06/5505966555",
+    "credit": "MAZZALI bespoke italian furniture / DUAL wardrobe / armadio",
+    "license": "by-sa 2.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0/"
+   },
+   {
+    "url": "https://live.staticflickr.com/5181/5622047256_1af40b3bf0_b.jpg",
+    "source": "https://www.flickr.com/photos/38097610@N05/5622047256",
+    "credit": "DecoDesignCenter.com / Contemporary Interior Doors",
+    "license": "by-nc 2.0",
+    "license_url": "https://creativecommons.org/licenses/by-nc/2.0/"
+   }
+  ],
+  "karuhatan-doors/DOOR-PVC": [
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/7/7c/Porte_PVC_-_200827-001.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Porte_PVC_-_200827-001.jpg",
+    "credit": "Boodja / File:Porte PVC - 200827-001.jpg",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+   },
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/0/05/Porte_PVC_-_200827-002.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Porte_PVC_-_200827-002.jpg",
+    "credit": "Boodja / File:Porte PVC - 200827-002.jpg",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+   }
+  ],
+  "karuhatan-doors/WIN-JALOUSIE": [
+   {
+    "url": "https://live.staticflickr.com/7829/32756545118_76dc03b431_b.jpg",
+    "source": "https://www.flickr.com/photos/59081381@N03/32756545118",
+    "credit": "w_lemay / Jalousie Window, Wilkesdale Baptist Church, Sylva, NC",
+    "license": "cc0 1.0",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/2/23/Jalousie_full.png?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Jalousie_full.png",
+    "credit": "Renlis / File:Jalousie full.png",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+   }
+  ],
+  "karuhatan-doors/WIN-SLIDING": [
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/b/b6/Detailed_view_of_a_cross-section_of_a_modern_window_frame_shows_multiple_materials_and_insulation_layers.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Detailed_view_of_a_cross-section_of_a_modern_window_frame_shows_multiple_materials_and_insulation_layers.jpg",
+    "credit": "Shixart1985 / File:Detailed view of a cross-section of a modern window frame shows multiple materials and insulati",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0"
+   }
+  ],
+  "karuhatan-doors/GLASS-6": [
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/d/d6/Putting_old_glass_panels_onto_a_truck_2.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Putting_old_glass_panels_onto_a_truck_2.jpg",
+    "credit": "Syced / File:Putting old glass panels onto a truck 2.jpg",
+    "license": "CC0",
+    "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
+   },
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/4/48/Worker_installs_a_glass_panel_in_a_warehouse.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Worker_installs_a_glass_panel_in_a_warehouse.jpg",
+    "credit": "Shixart1985 / File:Worker installs a glass panel in a warehouse.jpg",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0"
+   }
+  ],
+  "karuhatan-doors/GRILLE-WIN": [
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/9/9c/Window_Grill.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Window_Grill.JPG",
+    "credit": "Marlith / File:Window Grill.JPG",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0"
+   },
+   {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/6/63/Window_Grill_MET_sf52-142-2.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Window_Grill_MET_sf52-142-2.jpg",
+    "credit": "Unknown author / File:Window Grill MET sf52-142-2.jpg",
+    "license": "CC0",
+    "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en"
+   }
+  ]
+ },
+ "vendors": {
+  "commonwealth-masonry": {
+   "banner": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/6/68/Concrete_masonry_units.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Concrete_masonry_units.jpg",
+    "credit": "USACE Afghanistan Engineer District-South / File:Concrete masonry units.jpg",
+    "license": "CC BY-SA 2.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0",
+    "focus": [
+     0.5,
+     0.6
+    ]
+   },
+   "vehicle": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/2/2d/Isuzu_Elf_NPR_Dropside_Cargo_Truck_2019.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Isuzu_Elf_NPR_Dropside_Cargo_Truck_2019.jpg",
+    "credit": "Captainmorlypogi1959 / File:Isuzu Elf NPR Dropside Cargo Truck 2019.jpg",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "focus": [
+     0.5,
+     0.55
+    ]
+   }
+  },
+  "bahay-toro-electrical": {
+   "banner": {
+    "collage": [
+     "FF-LED-3",
+     "ROYU-MCB-2",
+     "PD-THHN-1",
+     "OMNI-EXT-3",
+     "FF-FLOOD-1"
+    ],
+    "credit": "Composed from this store's product photos",
+    "license": "See the product photo entries"
+   },
+   "vehicle": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/d/d8/Toyota_HiAce_GL_Grandia_%28rear%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Toyota_HiAce_GL_Grandia_(rear).jpg",
+    "credit": "Judgefloro / File:Toyota HiAce GL Grandia (rear).jpg",
+    "license": "Public domain",
+    "license_url": null,
+    "focus": [
+     0.5,
+     0.55
+    ]
+   }
+  },
+  "palanan-paint": {
+   "banner": {
+    "collage": [
+     "BOY-PERMA-FLAT-1",
+     "DAV-SUNRAIN-1",
+     "BOY-QDE-4",
+     "DAV-GLOSSIT-1",
+     "BOY-ROOFGARD-1"
+    ],
+    "credit": "Composed from this store's product photos",
+    "license": "See the product photo entries"
+   }
+  },
+  "ugong-plumbing": {
+   "banner": {
+    "collage": [
+     "WN-GOOSENECK-1",
+     "KITZ-BALL-1",
+     "WF-PUMP-1",
+     "WN-ANGLE-1",
+     "AX-DRAIN-1"
+    ],
+    "credit": "Composed from this store's product photos",
+    "license": "See the product photo entries"
+   },
+   "vehicle": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/f/ff/Ford_Ranger_4x4_Wildtrak_2020_%282%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Ford_Ranger_4x4_Wildtrak_2020_(2).jpg",
+    "credit": "Captainmorlypogi1959 / File:Ford Ranger 4x4 Wildtrak 2020 (2).jpg",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "focus": [
+     0.5,
+     0.55
+    ]
+   }
+  },
+  "highway-hills-hardware": {
+   "banner": {
+    "collage": [
+     "IN-BRASSPADLOCK-1",
+     "LT-CONCEALED-2",
+     "FM-TEKSCREW-1",
+     "LT-LOOSEPIN-1",
+     "WF-DROPIN-1"
+    ],
+    "credit": "Composed from this store's product photos",
+    "license": "See the product photo entries"
+   }
+  },
+  "industrial-valley-tools": {
+   "banner": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/0/05/Werkstatt_Werkzeuge_work_shop_tools_690038.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Werkstatt_Werkzeuge_work_shop_tools_690038.jpg",
+    "credit": "Igor Trepeshchenok / File:Werkstatt Werkzeuge work shop tools 690038.jpg",
+    "license": "Public domain",
+    "license_url": null,
+    "focus": [
+     0.5,
+     0.5
+    ]
+   },
+   "vehicle": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/7/71/Honda_tmx_155.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Honda_tmx_155.jpg",
+    "credit": "Jybumaat / File:Honda tmx 155.jpg",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "focus": [
+     0.5,
+     0.55
+    ]
+   }
+  },
+  "bicutan-timber": {
+   "banner": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/a/ad/Lumber_yard_in_Troy%2C_North_Carolina.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Lumber_yard_in_Troy,_North_Carolina.jpg",
+    "credit": "Indy beetle / File:Lumber yard in Troy, North Carolina.jpg",
+    "license": "CC0",
+    "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+    "focus": [
+     0.5,
+     0.6
+    ]
+   },
+   "vehicle": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/a/a2/Isuzu_NQR_Dropside_Cargo_Truck_2026.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Isuzu_NQR_Dropside_Cargo_Truck_2026.jpg",
+    "credit": "Captainmorlypogi1959 / File:Isuzu NQR Dropside Cargo Truck 2026.jpg",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "focus": [
+     0.5,
+     0.55
+    ]
+   }
+  },
+  "san-dionisio-flooring": {
+   "banner": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/1/1b/Tile_Store_1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Tile_Store_1.jpg",
+    "credit": "Stilfehler / File:Tile Store 1.jpg",
+    "license": "CC0",
+    "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+    "focus": [
+     0.5,
+     0.5
+    ]
+   },
+   "vehicle": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/9/93/Nissan_NV350_Urvan_2.5_15-Seater_2019.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Nissan_NV350_Urvan_2.5_15-Seater_2019.jpg",
+    "credit": "Ethan Llamas / File:Nissan NV350 Urvan 2.5 15-Seater 2019.jpg",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "focus": [
+     0.5,
+     0.55
+    ]
+   }
+  },
+  "bagong-silang-roofing": {
+   "banner": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/1/1c/Residential_Roofing_Process.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Residential_Roofing_Process.jpg",
+    "credit": "Porcinipal / File:Residential Roofing Process.jpg",
+    "license": "CC0",
+    "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+    "focus": [
+     0.5,
+     0.5
+    ]
+   },
+   "vehicle": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/2/22/Mitsubishi_Fuso_Canter_%2827910526448%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original",
+    "source": "https://commons.wikimedia.org/wiki/File:Mitsubishi_Fuso_Canter_(27910526448).jpg",
+    "credit": "Guillaume Vachey from Chalon sur Saone, France / File:Mitsubishi Fuso Canter (27910526448).jpg",
+    "license": "CC0",
+    "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+    "focus": [
+     0.5,
+     0.55
+    ]
+   }
+  },
+  "karuhatan-doors": {
+   "banner": {
+    "collage": [
+     "YL-LEVERSET-1",
+     "YL-KNOBSET-1",
+     "YL-DEADBOLT-1",
+     "LT-BBHINGE-1",
+     "YL-VIEWER-1"
+    ],
+    "credit": "Composed from this store's product photos",
+    "license": "See the product photo entries"
+   }
+  }
+ }
+}

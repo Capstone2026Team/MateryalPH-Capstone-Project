@@ -1,4 +1,4 @@
-import { Button, EventTimeline, FactList, FilterTabs, InfoNote, ReasonedDecisionForm, SidePanel, StatusBadge, Toolbar } from '@materyalph/web-ui'
+import { ALL_DATES, Button, DateFilter, EventTimeline, FactList, FilterTabs, InfoNote, ReasonedDecisionForm, SearchInput, SidePanel, StatusBadge, Toolbar } from '@materyalph/web-ui'
 import { ArrowLeft, Plus, RefreshCw, Search } from 'lucide-react'
 import { useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -9,6 +9,7 @@ import {
   type EnforcementDetail, type EnforcementSubjectMatch, type EnforcementSummary,
 } from '../lib/operations-api'
 import { AdminShell, ErrorState, LoadingState, PageHeader } from './PhaseThreeAdminPages'
+import { dateQuery } from '../lib/admin-format'
 
 type SubjectType = 'BUYER' | 'VENDOR_ORGANIZATION'
 const ACTIONS = ['WARNING', 'TEMPORARY_RESTRICTION', 'SUSPENSION', 'PERMANENT_BAN'] as const
@@ -34,7 +35,8 @@ export function AdminEnforcementQueuePage({ subjectType, activeHref = '/enforcem
   const [type, setType] = useState<string>(subjectType ?? '')
   const [page, setPage] = useState(1)
   const [recording, setRecording] = useState(false)
-  const list = useLoad(() => listEnforcement({ ...(state ? { state: state as never } : {}), ...(source ? { source: source as never } : {}), ...(type ? { subjectType: type as never } : {}), page }), [state, source, type, page])
+  const [range, setRange] = useState(ALL_DATES)
+  const list = useLoad(() => listEnforcement({ ...(state ? { state: state as never } : {}), ...(source ? { source: source as never } : {}), ...(type ? { subjectType: type as never } : {}), ...dateQuery(range), page }), [state, source, type, range.from, range.to, page])
   const buyers = subjectType === 'BUYER'
   return <AdminShell activeHref={activeHref}><div className="space-y-6">
     <PageHeader eyebrow={buyers ? 'Marketplace' : 'Compliance & quality'} title={buyers ? 'Buyer Management' : 'Enforcement'} description={buyers ? 'Review Buyer accounts referred for enforcement and record graduated sanctions. Contact details, coordinates and payment data are never shown.' : 'Warnings, Temporary Restrictions, Suspensions and Permanent Bans for Buyers and Vendors, including dispute referrals. Every sanction records a reason and a continuation plan for open orders.'}
@@ -42,10 +44,12 @@ export function AdminEnforcementQueuePage({ subjectType, activeHref = '/enforcem
     <InfoNote>Refunds always proceed regardless of sanctions. Lifting a Vendor sanction returns the store to its readiness state; it never re-activates a store directly.</InfoNote>
     <FilterTabs label="Enforcement state" value={state} onChange={value => { setState(value); setPage(1) }} chips={[{ value: 'REFERRED', label: 'Awaiting decision' }, { value: 'APPLIED', label: 'Applied' }, { value: 'EFFECTIVE', label: 'Warnings' }, { value: 'LIFTED', label: 'Lifted' }, { value: 'DECLINED', label: 'Declined' }, { value: '', label: 'All' }]} />
     <Toolbar filters={<>
+      <DateFilter title="Enforcement recorded dates" value={range} onChange={value => { setRange(value); setPage(1) }} />
       {!subjectType && <label className="sr-only" htmlFor="enforcement-subject">Subject type</label>}
       {!subjectType && <select id="enforcement-subject" className={`${control} w-auto`} value={type} onChange={event => { setType(event.target.value); setPage(1) }}><option value="">Buyers and Vendors</option><option value="BUYER">Buyers</option><option value="VENDOR_ORGANIZATION">Vendors</option></select>}
       <label className="sr-only" htmlFor="enforcement-source">Source</label>
       <select id="enforcement-source" className={`${control} w-auto`} value={source} onChange={event => { setSource(event.target.value); setPage(1) }}><option value="">All sources</option><option value="DISPUTE_REFERRAL">Dispute referrals</option><option value="DIRECT">Direct Admin actions</option></select>
+      {(state || source || range.from || range.to || (!subjectType && type)) && <Button variant="quiet" onClick={() => { setState(''); setSource(''); setType(subjectType ?? ''); setRange(ALL_DATES); setPage(1) }}>Reset filters</Button>}
     </>} />
     {list.error ? <ErrorState message={list.error} onRetry={list.retry} /> : !list.data ? <LoadingState /> : list.data.items.length === 0
       ? <p className="rounded-surface border border-dashed border-border-default bg-surface-primary px-6 py-10 text-center text-sm text-text-secondary">No enforcement records match this view.</p>
@@ -107,7 +111,7 @@ function RecordActionPanel({ initialType, lockType, onClose }: { initialType: Su
     <div className="grid gap-5">
       <form role="search" onSubmit={event => void search(event)} className="grid gap-3">
         {!lockType && <label className={labelClass}>Subject type<select className={control} value={type} onChange={event => { setType(event.target.value as SubjectType); setMatches(null); setSubjectId('') }}><option value="BUYER">Buyer</option><option value="VENDOR_ORGANIZATION">Vendor</option></select></label>}
-        <label className={labelClass}>{type === 'BUYER' ? 'Exact Buyer email' : 'Store or registered name'}<span className="flex gap-2"><input className={control} value={query} minLength={type === 'BUYER' ? 5 : 2} required type={type === 'BUYER' ? 'email' : 'search'} onChange={event => setQuery(event.target.value)} /><Button type="submit" variant="secondary" disabled={busy}><Search size={16} aria-hidden="true" />Find</Button></span></label>
+        <div className={labelClass}><span>{type === 'BUYER' ? 'Exact Buyer email' : 'Store or registered name'}</span><div className="flex min-w-0 flex-wrap gap-2"><SearchInput label={type === 'BUYER' ? 'Exact Buyer email' : 'Store or registered name'} value={query} minLength={type === 'BUYER' ? 5 : 2} required type={type === 'BUYER' ? 'email' : 'search'} onChange={setQuery} className="flex-1 basis-48" /><Button type="submit" variant="secondary" disabled={busy}><Search size={16} aria-hidden="true" />Find</Button></div></div>
       </form>
       {matches && (matches.length === 0 ? <p className="text-sm text-text-secondary">No matching account. Buyer search needs the exact email address.</p>
         : <fieldset className="grid gap-2"><legend className="text-sm font-semibold">Select the subject</legend>{matches.map(match => <label key={match.id} className={`flex min-h-11 items-center gap-3 rounded-control border px-3 py-2 text-sm ${match.id === subjectId ? 'border-action-primary bg-brand-orange-50' : 'border-border-default'}`}><input type="radio" name="subject" checked={match.id === subjectId} onChange={() => setSubjectId(match.id)} /><span className="min-w-0 flex-1"><span className="font-semibold">{match.displayName}</span> · {humanize(match.status)}</span></label>)}</fieldset>)}

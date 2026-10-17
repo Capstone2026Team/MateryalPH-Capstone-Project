@@ -23,6 +23,7 @@ part 'auth_envelope_all_of_data.g.dart';
 /// * [mfaRequired]
 /// * [mfaEnrollmentRequired]
 /// * [challengeExpiresIn]
+/// * [challengeToken] - MOBILE transport only, present with mfa_required. Opaque single-use login challenge; keep it in memory and never persist or log it.
 /// * [recoveryCodes] - Present only immediately after enrollment or recovery; store offline because these values are not returned again.
 @BuiltValue()
 abstract class AuthEnvelopeAllOfData implements Built<AuthEnvelopeAllOfData, AuthEnvelopeAllOfDataBuilder> {
@@ -55,6 +56,10 @@ abstract class AuthEnvelopeAllOfData implements Built<AuthEnvelopeAllOfData, Aut
 
   @BuiltValueField(wireName: r'challenge_expires_in')
   int? get challengeExpiresIn;
+
+  /// MOBILE transport only, present with mfa_required. Opaque single-use login challenge; keep it in memory and never persist or log it.
+  @BuiltValueField(wireName: r'challenge_token')
+  String? get challengeToken;
 
   /// Present only immediately after enrollment or recovery; store offline because these values are not returned again.
   @BuiltValueField(wireName: r'recovery_codes')
@@ -151,6 +156,13 @@ class _$AuthEnvelopeAllOfDataSerializer implements PrimitiveSerializer<AuthEnvel
       yield serializers.serialize(
         object.challengeExpiresIn,
         specifiedType: const FullType(int),
+      );
+    }
+    if (object.challengeToken != null) {
+      yield r'challenge_token';
+      yield serializers.serialize(
+        object.challengeToken,
+        specifiedType: const FullType(String),
       );
     }
     if (object.recoveryCodes != null) {
@@ -262,6 +274,14 @@ class _$AuthEnvelopeAllOfDataSerializer implements PrimitiveSerializer<AuthEnvel
           ) as int?;
           if (valueDes == null) continue;
           result.challengeExpiresIn = valueDes;
+          break;
+        case r'challenge_token':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.challengeToken = valueDes;
           break;
         case r'recovery_codes':
           final valueDes = serializers.deserialize(

@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Domain\Compliance\ComplianceReferenceProvider;
+use App\Domain\Compliance\ComplianceRegisterSource;
 use App\Domain\Compliance\ComplianceTextExtractor;
 use App\Domain\Finance\DemoWithholdingEvidenceAdapter;
 use App\Domain\Finance\WithholdingEvidenceAdapter;
@@ -13,6 +14,7 @@ use App\Domain\Identity\OtpCodeGenerator;
 use App\Domain\Identity\PassportAccessTokenIssuer;
 use App\Domain\Identity\RecaptchaAssessmentGateway;
 use App\Domain\Identity\SecureOtpCodeGenerator;
+use App\Domain\Notifications\MailProvider;
 use App\Domain\Notifications\PushGateway;
 use App\Domain\Operations\ScheduledTaskRecorder;
 use App\Domain\Payments\PaymentGateway;
@@ -21,7 +23,9 @@ use App\Domain\Vendors\AddressGeocoder;
 use App\Domain\Vendors\PsgcProvider;
 use App\Domain\Vendors\PublicStoreMediaStorage;
 use App\Domain\Vendors\XenditAccountVerificationGateway;
+use App\Infrastructure\Compliance\HttpComplianceRegisterSource;
 use App\Infrastructure\Compliance\RegisterComplianceReferenceProvider;
+use App\Infrastructure\Compliance\TesseractComplianceTextExtractor;
 use App\Infrastructure\Compliance\UnavailableComplianceTextExtractor;
 use App\Infrastructure\Geography\ConfiguredGoogleMapsGeocoder;
 use App\Infrastructure\Geography\GooglePlacesProvider;
@@ -30,6 +34,7 @@ use App\Infrastructure\Geography\PsgcCloudProvider;
 use App\Infrastructure\Identity\GoogleRecaptchaEnterpriseGateway;
 use App\Infrastructure\Notifications\FakePushGateway;
 use App\Infrastructure\Notifications\FcmPushGateway;
+use App\Infrastructure\Notifications\LaravelMailProvider;
 use App\Infrastructure\Payments\ConfiguredXenditAccountVerificationGateway;
 use App\Infrastructure\Payments\FakePaymentGateway;
 use App\Infrastructure\Payments\XenditPaymentSessionGateway;
@@ -52,6 +57,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->bind(MailProvider::class, LaravelMailProvider::class);
         $this->app->singleton(PushGateway::class, fn () => config('notifications.push_driver') === 'fake' && ! app()->isProduction()
             ? new FakePushGateway : new FcmPushGateway);
         $this->app->bind(OtpCodeGenerator::class, SecureOtpCodeGenerator::class);
@@ -62,7 +68,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(PsgcProvider::class, PsgcCloudProvider::class);
         $this->app->bind(XenditAccountVerificationGateway::class, ConfiguredXenditAccountVerificationGateway::class);
         $this->app->bind(ComplianceReferenceProvider::class, RegisterComplianceReferenceProvider::class);
-        $this->app->bind(ComplianceTextExtractor::class, UnavailableComplianceTextExtractor::class);
+        $this->app->bind(ComplianceRegisterSource::class, HttpComplianceRegisterSource::class);
+        $this->app->bind(ComplianceTextExtractor::class, fn ($app) => $app->make(
+            config('materyalph.compliance_ocr.driver') === 'tesseract' ? TesseractComplianceTextExtractor::class : UnavailableComplianceTextExtractor::class,
+        ));
         $this->app->bind(PlacesProvider::class, GooglePlacesProvider::class);
         $this->app->bind(RouteProvider::class, GoogleRoutesProvider::class);
         $this->app->singleton(WithholdingEvidenceAdapter::class, DemoWithholdingEvidenceAdapter::class);

@@ -14,6 +14,7 @@ abstract interface class MessagingRepository {
     String? instructions,
   });
   Future<api.ConversationPage> inbox({int page = 1, bool archived = false});
+  Future<api.ConversationPage> projectInquiries(String id, {int page = 1});
   Future<void> archive(String id);
   Future<void> restore(String id);
   Future<api.ConversationDetail> conversation(
@@ -32,6 +33,22 @@ abstract interface class MessagingRepository {
     String? accessInstructions,
   });
   Future<void> send(String id, String body, String key, {String? productId});
+
+  /// Free site inspection for ready-mixed concrete; returns the store
+  /// conversation it was posted in. [key] also identifies the request on retry.
+  Future<String> requestSiteInspection({
+    required String listingId,
+    required String locationId,
+    required DateTime preferredDate,
+    required String key,
+    String? variantId,
+    String? notes,
+  });
+  Future<void> cancelSiteInspection(
+    String id,
+    String inspectionId,
+    int version,
+  );
   Future<api.ChatProductPage> products(
     String id, {
     String? query,
@@ -68,12 +85,41 @@ abstract interface class MessagingRepository {
   });
 }
 
+/// A chat upload answers only after the fail-closed malware scan, and a photo of up to 10 MB
+/// can take a while to send or fetch on mobile data. The generated client's three-second
+/// receive timeout reported these as offline even though the upload had been saved.
+final class _ChatAttachmentTimeouts extends Interceptor {
+  static final _attachments = RegExp(
+    r'/conversations/[^/]+/attachments(/[^/]+)?$',
+  );
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    final match = _attachments.firstMatch(options.path);
+    if (match != null) {
+      if (options.method == 'POST' && match.group(1) == null) {
+        options.sendTimeout = const Duration(seconds: 60);
+        options.receiveTimeout = const Duration(seconds: 60);
+      } else if (options.method == 'GET') {
+        options.receiveTimeout = const Duration(seconds: 45);
+      }
+    }
+    handler.next(options);
+  }
+}
+
 final class ApiMessagingRepository implements MessagingRepository {
   ApiMessagingRepository({
     required api.MateryalphApiClient client,
     required Future<void> Function() onSessionExpired,
   }) : _client = client,
-       _guard = ApiGuard(onSessionExpired);
+       _guard = ApiGuard(onSessionExpired) {
+    if (!_client.dio.interceptors.any(
+      (item) => item is _ChatAttachmentTimeouts,
+    )) {
+      _client.dio.interceptors.add(_ChatAttachmentTimeouts());
+    }
+  }
   final api.MateryalphApiClient _client;
   final ApiGuard _guard;
   api.MessagingApi get _api => _client.getMessagingApi();
@@ -115,6 +161,18 @@ final class ApiMessagingRepository implements MessagingRepository {
           )).data?.data,
         ),
       );
+  @override
+  Future<api.ConversationPage> projectInquiries(String id, {int page = 1}) =>
+      _guard(
+        () async => _guard.required(
+          (await _api.listChatProjectInquiries(
+            messagingPortal: 'buyers',
+            conversationId: id,
+            page: page,
+          )).data?.data,
+        ),
+      );
+
   @override
   Future<void> archive(String id) => _guard(() async {
     await _api.archiveChatConversation(
@@ -188,6 +246,53 @@ final class ApiMessagingRepository implements MessagingRepository {
           ),
         );
       });
+  @override
+  Future<String> requestSiteInspection({
+    required String listingId,
+    required String locationId,
+    required DateTime preferredDate,
+    required String key,
+    String? variantId,
+    String? notes,
+  }) => _guard(
+    () async => _guard
+        .required(
+          (await _api.requestSiteInspection(
+            messagingPortal: 'buyers',
+            idempotencyKey: key,
+            siteInspectionCreate: api.SiteInspectionCreate(
+              (b) => b
+                ..listingId = listingId
+                ..listingVariantId = variantId
+                ..locationId = locationId
+                ..preferredDate = api.Date(
+                  preferredDate.year,
+                  preferredDate.month,
+                  preferredDate.day,
+                )
+                ..notes = notes,
+            ),
+          )).data?.data,
+        )
+        .conversationId,
+  );
+
+  @override
+  Future<void> cancelSiteInspection(
+    String id,
+    String inspectionId,
+    int version,
+  ) => _guard(() async {
+    await _api.cancelSiteInspection(
+      messagingPortal: 'buyers',
+      conversationId: id,
+      inspectionId: inspectionId,
+      siteInspectionVersion: api.SiteInspectionVersion(
+        (b) => b..lockVersion = version,
+      ),
+    );
+  });
+
   @override
   Future<api.ChatProductPage> products(
     String id, {

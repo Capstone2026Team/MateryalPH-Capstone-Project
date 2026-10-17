@@ -94,10 +94,16 @@ class StarRatingField extends StatelessWidget {
 
 /// Read-only stars with the value as text for screen readers.
 class StarRatingLine extends StatelessWidget {
-  const StarRatingLine({super.key, required this.label, required this.value});
+  const StarRatingLine({
+    super.key,
+    required this.label,
+    required this.value,
+    this.showLabel = true,
+  });
 
   final String label;
   final int value;
+  final bool showLabel;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -106,10 +112,11 @@ class StarRatingLine extends StatelessWidget {
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          '$label ',
-          style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
-        ),
+        if (showLabel)
+          Text(
+            '$label ',
+            style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
+          ),
         for (var star = 1; star <= 5; star++)
           Icon(
             LucideIcons.star,

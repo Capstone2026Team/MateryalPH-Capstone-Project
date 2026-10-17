@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Domain\Notifications;
 
+use App\Domain\Authorization\AccountAccess;
 use App\Domain\Authorization\VendorTeamMembersQuery;
+use App\Domain\Disputes\DisputeQueries;
 use App\Domain\Messaging\ConversationService;
 use App\Domain\Orders\OrderQueries;
 use Illuminate\Http\Request;
@@ -19,7 +21,17 @@ final class VendorNavigationUpdates
     public function summary(Request $request): array
     {
         $user = $request->user();
-        $sections = ['/orders' => $this->orders->activeVendorCount($request), '/team' => $this->members->activeCount($request), '/notifications' => 0, '/messages' => $this->conversations->unreadInboxCount($request)];
+        $scope = app(AccountAccess::class)->resolve($user);
+        $canSeeOrders = in_array('portal.orders', $scope['permissions'], true);
+        $sections = ['/orders' => $canSeeOrders ? $this->orders->activeVendorCount($request) : 0, '/team' => $this->members->activeCount($request), '/notifications' => 0, '/messages' => $this->conversations->unreadNavigationCount($request)];
+        $sections['/fulfillment'] = $canSeeOrders ? $this->orders->pendingFulfillmentCount($request) : 0;
+        if (in_array('portal.disputes', $scope['permissions'], true)) {
+            $sections['/disputes'] = app(DisputeQueries::class)->activeCount($request);
+        }
+        if (in_array('portal.invoices', $scope['permissions'], true)) {
+            $sections['/invoices'] = DB::table('invoice_requests')->where('vendor_organization_id', $scope['organization_id'])
+                ->whereIn('state', ['REQUESTED', 'RETURNED_FOR_CORRECTION'])->count();
+        }
         $preferences = DB::table('notification_preferences')->where('user_id', $user->getKey())->pluck('in_app', 'category');
         $notices = DB::table('notifications')->where('user_id', $user->getKey())->whereNull('read_at')->lazyById(200);
         foreach ($notices as $notice) {
@@ -31,11 +43,8 @@ final class VendorNavigationUpdates
             $path = explode('?', $this->policy->target($user, $notice), 2)[0];
             // Match the existing destination hierarchy, rather than guessing from notice titles.
             $section = match (true) {
-                $notice->category === 'INVOICES' && str_starts_with($path, '/orders/') => '/invoices',
                 str_starts_with($path, '/products') => '/products',
-                str_starts_with($path, '/disputes/') => '/disputes',
                 str_starts_with($path, '/finance') => '/finance',
-                in_array($path, ['/dashboard', '/invoices'], true) => $path,
                 default => null,
             };
             if ($section !== null) {

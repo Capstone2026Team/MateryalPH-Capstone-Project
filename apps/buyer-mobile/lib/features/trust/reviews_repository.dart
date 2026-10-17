@@ -43,7 +43,10 @@ abstract interface class ReviewsRepository {
 
   Future<Uint8List> media(String reviewId, ReviewMediaView media);
 
-  Future<ListingReviewsView> listingReviews(String listingId);
+  Future<ListingReviewsView> listingReviews(String listingId, {int page = 1});
+
+  /// The store's rating summary and published scores for its Store Profile.
+  Future<StoreRatingView> storeRating(String vendorId);
 
   Future<void> report({
     required String reviewId,
@@ -179,27 +182,80 @@ final class ApiReviewsRepository implements ReviewsRepository {
   });
 
   @override
-  Future<ListingReviewsView> listingReviews(String listingId) => _api(() async {
-    final response = await _reviews.listListingReviews(listingId: listingId);
-    final envelope = _api.required(response.data);
-    final summary = envelope.meta.summary?.asMap() ?? const {};
-    return ListingReviewsView(
-      average: summary['average']?.value.toString(),
-      count: int.tryParse('${summary['count']?.value ?? 0}') ?? 0,
-      items: envelope.data
-          .map(
-            (review) => PublicReviewView(
-              id: review.id,
-              media: _media(review.media),
-              ratings: _ratings(review.ratings),
-              comment: review.comment,
-              displayName: review.displayName,
-              edited: review.edited,
-              variantLabel: review.variantLabel,
-              submittedAt: review.submittedAt,
-            ),
-          )
-          .toList(growable: false),
+  Future<ListingReviewsView> listingReviews(String listingId, {int page = 1}) =>
+      _api(() async {
+        final response = await _reviews.listListingReviews(
+          listingId: listingId,
+          page: page,
+        );
+        final envelope = _api.required(response.data);
+        final summary = envelope.meta.summary?.asMap() ?? const {};
+        final distribution = <int, int>{};
+        final buckets = summary['distribution']?.value;
+        if (buckets is List) {
+          for (final bucket in buckets) {
+            if (bucket case {
+              'stars': final int stars,
+              'count': final int count,
+            }) {
+              if (stars >= 1 && stars <= 5 && count >= 0) {
+                distribution[stars] = count;
+              }
+            }
+          }
+        }
+        return ListingReviewsView(
+          average: summary['average']?.value.toString(),
+          count:
+              int.tryParse(
+                '${summary['count']?.value ?? envelope.meta.total ?? 0}',
+              ) ??
+              0,
+          distribution: Map.unmodifiable(distribution),
+          page: envelope.meta.page ?? page,
+          perPage: envelope.meta.perPage ?? 20,
+          items: envelope.data
+              .map(
+                (review) => PublicReviewView(
+                  id: review.id,
+                  media: _media(review.media),
+                  ratings: _ratings(review.ratings),
+                  comment: review.comment,
+                  displayName: review.displayName,
+                  edited: review.edited,
+                  variantLabel: review.variantLabel,
+                  submittedAt: review.submittedAt,
+                ),
+              )
+              .toList(growable: false),
+        );
+      });
+
+  @override
+  Future<StoreRatingView> storeRating(String vendorId) => _api(() async {
+    final response = await _reviews.listStoreReviews(vendorId: vendorId);
+    final meta = _api.required(response.data).meta;
+    final summary = meta.summary?.asMap() ?? const {};
+    String? average(String key) => summary[key]?.value.toString();
+    final scores = meta.scores;
+    return StoreRatingView(
+      ratingCount: int.tryParse('${summary['count']?.value ?? 0}') ?? 0,
+      serviceQuality: average('service_quality'),
+      speed: average('speed'),
+      scoreLabel: scores?.label ?? 'New Vendor — Building Track Record',
+      newVendor: scores?.newVendor ?? true,
+      vcs: scores?.vcs,
+      mqs: scores?.mqs,
+      vps: scores?.vps,
+      badges: [
+        for (final badge in scores?.badges ?? const <api.PublicBadge>[])
+          StoreBadgeView(
+            code: badge.code.name,
+            name: badge.name,
+            description: badge.description,
+            scopeLabel: badge.scopeLabel,
+          ),
+      ],
     );
   });
 

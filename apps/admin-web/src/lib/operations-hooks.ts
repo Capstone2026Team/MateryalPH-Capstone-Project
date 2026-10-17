@@ -32,7 +32,7 @@ export function useLoad<T>(load: () => Promise<T>, deps: unknown[]): { data: T |
   const [attempt, setAttempt] = useState(0)
   useEffect(() => {
     let active = true
-    setLoading(true); setProblem(null)
+    setLoading(true); setProblem(null); setData(null)
     load().then(result => { if (active) setData(result) }).catch(async cause => { const next = await apiProblem(cause); if (active) setProblem(next) }).finally(() => { if (active) setLoading(false) })
     return () => { active = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- callers pass every dependency of load
@@ -66,7 +66,10 @@ export type PagedResult<T> = { items: T[]; hasMore: boolean; total: number }
 
 /** Page-numbered loader for finance-style lists that report `has_more`; errors carry the correlation ID. */
 export function usePaged<T>(load: (page: number) => Promise<PagedResult<T>>, deps: unknown[]) {
-  const [page, setPage] = useState(1)
+  const filterKey = JSON.stringify(deps)
+  const [position, setPosition] = useState({ filterKey, page: 1 })
+  const page = position.filterKey === filterKey ? position.page : 1
+  const setPage = (next: number) => setPosition({ filterKey, page: Math.max(1, next) })
   const [data, setData] = useState<PagedResult<T> | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)

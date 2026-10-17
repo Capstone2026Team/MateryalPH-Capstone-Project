@@ -2,20 +2,24 @@ import { CheckCircle2, CircleDashed, AlertTriangle } from 'lucide-react'
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AlertCircle, LayoutGrid, Layers, Package, Rows3, Trash2 } from 'lucide-react'
-import { ResponseError, type CatalogListingUpdate, type ListingStatus } from '@materyalph/api-client-ts'
-import { Button, ConfirmDialog, Field, OnboardingFlow, ResponsiveRecordList, RowErrorTable, StatusMessage, StockLabelBadge, stockLabelText, StatCard, ActiveFilters, Toolbar, InfoNote, EmptyState, type RecordColumn } from '@materyalph/web-ui'
+import { ResponseError, type ListingStatus } from '@materyalph/api-client-ts'
+import { Button, ConfirmDialog, Field, OnboardingFlow, Pagination, ResponsiveRecordList, RowErrorTable, Select, StatusMessage, StockLabelBadge, stockLabelText, StatCard, ActiveFilters, Toolbar, InfoNote, EmptyState, type RecordColumn } from '@materyalph/web-ui'
 import {
   applyImport, catalogFieldErrors, createListing, deactivateListing, deleteListing, formatCentavos, getCatalogTaxonomy, getImport,
-  getImportTemplate, getListing, getMaterial, listListings, publishListing, readableCatalogError, removeListingMedia, saveVariants,
+  getImportTemplate, getListing, getMaterial, listListings, publishListing, readableCatalogError, removeListingMedia,
   updateListing, uploadImport, uploadListingMedia,
   type CatalogImportJob, type CatalogListing, type CatalogListingListMeta, type CatalogListingSummary, type CatalogMaterial, type CatalogMaterialMatch, type CatalogTaxonomy,
 } from '../lib/catalog-api'
 import { statusLabel } from '../lib/vendor-status'
 import { storeName, useCatalogAccess } from '../lib/catalog-access'
-import { formFromListing, listingSteps, quantityText, rowsFromListing, unitName, useMaterialSearch, usePhotoPreviews, variantClientErrors, variantInputs, type DetailsForm, type VariantRow } from '../lib/catalog-form'
-import { ProductActions, ListingBadge, ListingState, ProductsTabs } from './CatalogShared'
+import { formFromListing, listingSteps, mergeSavedRows, quantityText, rowsFromListing, unitName, useMaterialSearch, usePhotoPreviews, variantClientErrors, type DetailsForm, type VariantRow } from '../lib/catalog-form'
+import { manualSaveReason, useListingAutosave, type SaveStatus } from '../lib/listing-autosave'
+import { ProductActions, ListingBadge, ListingState, ProductsTabs, SaveStatusLine } from './CatalogShared'
 import { MaterialMatchOption, MaterialStep, PhotosComplianceStep, ProductInformationStep, PublicationGate, ReviewStep } from './CatalogListingSteps'
 import { ErrorState, LoadingState, PageHeader, VendorShell } from './PhaseThreeVendorPages'
+import { ProductAnalyticsShortcut, ProductInsightStrip } from './ProductAnalyticsPages'
+import { useProductSummaries } from '../lib/product-summaries'
+import type { ProductSummary } from '../lib/product-analytics-api'
 
 const LISTING_STATUSES: ListingStatus[] = ['DRAFT', 'PENDING_COMPLIANCE', 'PENDING_ADMIN_REVIEW', 'ACTIVE', 'INACTIVE', 'TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED', 'REJECTED']
 const ATTENTION: ListingStatus[] = ['PENDING_COMPLIANCE', 'PENDING_ADMIN_REVIEW', 'TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED', 'REJECTED']
@@ -48,7 +52,7 @@ function StockLine({ row, unit }: { row: CatalogListingSummary; unit: string }) 
     : <span className="font-semibold text-status-error">Out of stock</span>
 }
 
-function ProductCard({ row, taxonomy, onDelete }: { row: CatalogListingSummary; taxonomy: CatalogTaxonomy | null; onDelete: (row: CatalogListingSummary) => void }) {
+function ProductCard({ row, taxonomy, onDelete, analytics }: { row: CatalogListingSummary; taxonomy: CatalogTaxonomy | null; onDelete: (row: CatalogListingSummary) => void; analytics?: { summary: ProductSummary | undefined } | undefined }) {
   const unit = unitName(taxonomy, row.unitCode)
   return <li className="flex min-w-0 flex-col overflow-hidden rounded-surface border border-border-default bg-surface-primary transition-shadow hover:shadow-md motion-reduce:transition-none">
     <div className="grid aspect-[16/10] place-items-center overflow-hidden bg-surface-canvas">
@@ -60,6 +64,7 @@ function ProductCard({ row, taxonomy, onDelete }: { row: CatalogListingSummary; 
       <p><span className="text-lg font-semibold tabular-nums">{priceText(row)}</span>{unit && row.minPriceCentavos !== null && row.minPriceCentavos !== undefined && <span className="text-sm text-text-secondary"> / {unit}</span>}</p>
       <div className="mt-auto flex flex-wrap gap-2 pt-1"><ListingBadge status={row.status} />{row.regulated && <ListingBadge status={row.complianceStatus} prefix="PS/ICC" />}</div>
     </div>
+    {analytics && !row.deletable && <ProductInsightStrip listingId={row.id} summary={analytics.summary} />}
     <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-default px-4 py-2 text-sm">
       <StockLine row={row} unit={unit} />
       <span className="flex gap-2">{row.deletable && <Button variant="quiet" aria-label={`Delete ${row.displayName}`} onClick={() => onDelete(row)}><Trash2 size={16} aria-hidden="true" /> Delete</Button>}<Link className="inline-flex min-h-11 items-center rounded-control border border-border-default px-3 font-semibold hover:bg-surface-canvas" to={`/products/${row.id}`}>Edit<span className="sr-only"> {row.displayName}</span></Link></span>
@@ -91,6 +96,9 @@ export function VendorCatalogPage() {
   const [pendingDelete, setPendingDelete] = useState<CatalogListingSummary | null>(null)
   const [deleting, setDeleting] = useState(false)
   const ready = access.canView && access.active
+  // Product analytics follow catalog.manage; other roles keep the plain list.
+  const { summaries, failed: summariesFailed } = useProductSummaries(rows.filter(row => !row.deletable).map(row => row.id), ready && access.canManage && !loading)
+  const analyticsFor = (row: CatalogListingSummary) => (access.canManage && !summariesFailed ? { summary: summaries?.get(row.id) } : undefined)
 
   async function confirmDelete() {
     if (!pendingDelete) return
@@ -139,27 +147,27 @@ export function VendorCatalogPage() {
     ...(categoryId ? [{ key: 'category', label: taxonomy?.categories.find(item => item.id === categoryId)?.name ?? 'Category', onRemove: () => setParams({ category: '' }) }] : []),
   ]
   const columns: RecordColumn<CatalogListingSummary>[] = [
-    { key: 'name', header: 'Product', cell: row => <Link className="font-semibold text-action-primary underline" to={`/products/${row.id}`}>{row.displayName}</Link> },
-    { key: 'sku', header: 'Vendor SKU', cell: row => row.vendorSku },
-    { key: 'status', header: 'Listing status', cell: row => <ListingState status={row.status} /> },
-    { key: 'compliance', header: 'PS/ICC', cell: row => row.regulated ? <ListingState status={row.complianceStatus} /> : <span className="text-text-secondary">Not regulated</span> },
-    { key: 'material', header: 'Material', cell: row => row.materialName ?? (row.otherLabel ? `Other: ${row.otherLabel}` : 'Not classified') },
-    { key: 'variants', header: 'Variants', cell: row => row.variantCount },
-    { key: 'price', header: 'Price', cell: row => `${priceText(row)}${row.unitCode && row.minPriceCentavos != null ? ` / ${unitName(taxonomy, row.unitCode)}` : ''}` },
-    { key: 'stock', header: 'Stock (private)', cell: row => <StockLine row={row} unit={unitName(taxonomy, row.unitCode)} /> },
-    { key: 'availability', header: 'Buyers see', cell: row => <StockLabelBadge label={row.publicAvailability} prefix="" /> },
-    { key: 'actions', header: 'Actions', cell: row => row.deletable ? <Button variant="quiet" aria-label={`Delete ${row.displayName}`} onClick={() => setPendingDelete(row)}><Trash2 size={16} aria-hidden="true" /> Delete</Button> : <span className="text-text-secondary">—</span> },
+    { key: 'name', header: 'Product', className: 'min-w-48 max-w-72', cell: row => <Link className="break-words font-semibold text-action-primary underline" to={`/products/${row.id}`}>{row.displayName}</Link> },
+    { key: 'sku', header: 'Vendor SKU', className: 'min-w-28 max-w-40', cell: row => row.vendorSku },
+    { key: 'status', header: 'Listing status', className: 'min-w-36 whitespace-nowrap', cell: row => <ListingState status={row.status} /> },
+    { key: 'compliance', header: 'PS/ICC', className: 'min-w-32 whitespace-nowrap', cell: row => row.regulated ? <ListingState status={row.complianceStatus} /> : <span className="text-text-secondary">Not regulated</span> },
+    { key: 'material', header: 'Material', className: 'min-w-40 max-w-56 [overflow-wrap:normal]', cell: row => row.materialName ?? (row.otherLabel ? `Other: ${row.otherLabel}` : 'Not classified') },
+    { key: 'variants', header: 'Variants', className: 'whitespace-nowrap tabular-nums', cell: row => row.variantCount },
+    { key: 'price', header: 'Price', className: 'min-w-40 whitespace-nowrap tabular-nums', cell: row => `${priceText(row)}${row.unitCode && row.minPriceCentavos != null ? ` / ${unitName(taxonomy, row.unitCode)}` : ''}` },
+    { key: 'stock', header: 'Stock (private)', className: 'min-w-44 whitespace-nowrap tabular-nums', cell: row => <StockLine row={row} unit={unitName(taxonomy, row.unitCode)} /> },
+    { key: 'availability', header: 'Buyers see', className: 'min-w-36 whitespace-nowrap', cell: row => <StockLabelBadge label={row.publicAvailability} prefix="" /> },
+    ...(access.canManage && !summariesFailed ? [{ key: 'analytics', header: 'Last 30 days', className: 'min-w-56 max-w-64 [overflow-wrap:normal]', cell: (row: CatalogListingSummary) => !row.deletable ? <ProductInsightStrip compact listingId={row.id} summary={summaries?.get(row.id)} /> : <span className="text-text-secondary">Not published yet</span> }] : []),
+    { key: 'actions', header: 'Actions', className: 'min-w-28 whitespace-nowrap', cell: row => row.deletable ? <Button variant="quiet" aria-label={`Delete ${row.displayName}`} onClick={() => setPendingDelete(row)}><Trash2 size={16} aria-hidden="true" /> Delete</Button> : <span className="text-text-secondary">—</span> },
   ]
-  const control = 'min-h-12 w-full min-w-0 rounded-control border border-border-default bg-surface-primary px-3 text-base font-normal'
   const lastPage = meta.lastPage ?? 1
 
   return <CatalogGate access={access} activeHref="/products">
     <div className="space-y-6">
-      <PageHeader eyebrow="Store Management" title="My Products" description="Manage listings, variants, photos and compliance evidence." actions={<ProductActions canManage={access.canManage} />} />
+      <PageHeader eyebrow="Store Management" title="My Products" description="Manage listings, variants, photos and compliance evidence." actions={<>{access.canManage && <ProductAnalyticsShortcut />}<ProductActions canManage={access.canManage} /></>} />
       <ProductsTabs active="listings" showInventory={access.canViewInventory} />
       <dl aria-label="Listing summary" className="grid grid-cols-2 gap-4 xl:grid-cols-4">{kpis.map(item => <StatCard key={item.label} label={item.label} value={loading || error ? '—' : item.value} icon={<span aria-hidden="true">{item.icon}</span>} hint={item.hint} active={selectedStatus === item.filter} onClick={() => selectStatus(item.filter)} />)}</dl>
       <Toolbar searchFirst search={{ label: 'Search name or SKU', placeholder: 'Name or SKU', value: query, onChange: setQuery, maxLength: 120, onSubmit: event => { event.preventDefault(); setParams({ q: query.trim() }) } }}
-        filters={<><select aria-label="Status" className={control} value={selectedStatus} onChange={event => selectStatus(event.target.value)}><option value="">All statuses</option>{LISTING_STATUSES.map(value => <option key={value} value={value}>{statusLabel(value)}</option>)}<option value="NEEDS_ATTENTION">Needs attention</option><option value="OUT_OF_STOCK">Out of stock</option></select><select aria-label="Category" className={control} value={categoryId} onChange={event => setParams({ category: event.target.value })}><option value="">All categories</option>{taxonomy?.categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></>}
+        filters={<><Select label="Status" hideLabel value={selectedStatus} onChange={event => selectStatus(event.target.value)}><option value="">All statuses</option>{LISTING_STATUSES.map(value => <option key={value} value={value}>{statusLabel(value)}</option>)}<option value="NEEDS_ATTENTION">Needs attention</option><option value="OUT_OF_STOCK">Out of stock</option></Select><Select label="Category" hideLabel value={categoryId} onChange={event => setParams({ category: event.target.value })}><option value="">All categories</option>{taxonomy?.categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</Select></>}
         viewToggle={<div role="group" aria-label="Layout" className="flex gap-2">{[{ value: 'grid', label: 'Grid', icon: <LayoutGrid size={16} /> }, { value: 'table', label: 'Table', icon: <Rows3 size={16} /> }].map(item => <Button key={item.value} variant={view === item.value ? 'primary' : 'secondary'} aria-pressed={view === item.value} onClick={() => setParams({ view: item.value === 'table' ? 'table' : '' })}><span aria-hidden="true">{item.icon}</span>{item.label}</Button>)}</div>} />
       <ActiveFilters filters={activeFilters} onClear={clearFilters} />
       <InfoNote dismissible>Your store stays active without products; discovery requires published stock and verified PS/ICC evidence for regulated materials.</InfoNote>
@@ -169,12 +177,12 @@ export function VendorCatalogPage() {
           : rows.length === 0 ? <EmptyState icon={<Package size={24} aria-hidden="true" />} message={meta.scope === 'ASSIGNED_ONLY' ? 'No products assigned to you.' : q || selectedStatus || categoryId ? 'No products match these filters.' : 'No products yet.'} action={q || selectedStatus || categoryId ? <Button variant="secondary" onClick={() => { setQuery(''); setSearchParams({ ...(view === 'table' ? { view } : {}) }, { replace: true }) }}>Clear filters</Button> : access.canManage ? <Link className="inline-flex min-h-11 items-center rounded-control border border-border-default px-4 text-sm font-semibold" to="/products/new">Add your first product</Link> : <Button variant="secondary" onClick={() => setAttempt(value => value + 1)}>Retry</Button>} />
             : <>
               {view === 'table'
-                ? <ResponsiveRecordList caption="Store products" rows={rows} columns={columns} rowKey={row => row.id} cardTitle={row => <Link className="text-action-primary underline" to={`/products/${row.id}`}>{row.displayName}</Link>} />
+                ? <ResponsiveRecordList caption="Store products" tableClassName="[&_th]:whitespace-nowrap" rows={rows} columns={columns} rowKey={row => row.id} cardTitle={row => <Link className="text-action-primary underline" to={`/products/${row.id}`}>{row.displayName}</Link>} />
                 : <ul className="grid grid-cols-1 gap-4 min-[480px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5" aria-label="Store products">
-                  {rows.map(row => <ProductCard key={row.id} row={row} taxonomy={taxonomy} onDelete={setPendingDelete} />)}
+                  {rows.map(row => <ProductCard key={row.id} row={row} taxonomy={taxonomy} onDelete={setPendingDelete} analytics={analyticsFor(row)} />)}
 
                 </ul>}
-              {lastPage > 1 && <nav aria-label="Product pages" className="flex flex-wrap items-center gap-3"><Button variant="secondary" disabled={page <= 1} onClick={() => setParams({ page: String(page - 1) })}>Previous</Button><span>Page {page} of {lastPage}</span><Button variant="secondary" disabled={page >= lastPage} onClick={() => setParams({ page: String(page + 1) })}>Next</Button></nav>}
+              {lastPage > 1 && <Pagination page={page} lastPage={lastPage} total={meta.total ?? 0} busy={loading} onChange={next => setParams({ page: String(next) })} />}
             </>}
       <ConfirmDialog open={pendingDelete !== null} title="Delete this draft?" confirmLabel="Delete draft" busy={deleting} onConfirm={() => void confirmDelete()} onCancel={() => setPendingDelete(null)}>
         <p>“{pendingDelete?.displayName}” will be removed from My Products and its SKU can be used again. This can't be undone. Only drafts that were never published can be deleted.</p>
@@ -203,9 +211,31 @@ export function VendorListingEditorPage() {
   const step = Math.min(Math.max(Number(searchParams.get('step') ?? '0') || 0, 0), listingSteps.length - 1)
   const ready = access.canView && access.active
 
+  // Edits save themselves as the Vendor works; a live or verified-regulated listing waits for Save changes instead.
+  const manualReason = listing ? manualSaveReason(listing) : null
+  const autosave = useListingAutosave({
+    listing, form, rows, paused: busy,
+    mode: !listing?.permissions.canManage || conflict ? 'off' : manualReason ? 'manual' : 'auto',
+    onSaved: (saved, merge) => {
+      setListing(saved); setFieldErrors({}); setMessage(current => current?.tone === 'error' ? null : current)
+      if (merge) setRows(current => mergeSavedRows(current, merge.sent, merge.saved))
+    },
+    onError: async cause => {
+      if (cause instanceof ResponseError && cause.response.status === 409) setConflict(true)
+      setFieldErrors(await catalogFieldErrors(cause))
+      return readableCatalogError(cause)
+    },
+  })
+
+  const { reset: resetSaved, isDirty: hasUnsavedEdits } = autosave
   const apply = useCallback((loaded: CatalogListing) => {
-    setListing(loaded); setForm(formFromListing(loaded)); setRows(rowsFromListing(loaded)); setConflict(false)
-  }, [])
+    const nextForm = formFromListing(loaded)
+    const nextRows = rowsFromListing(loaded)
+    setListing(loaded); setForm(nextForm); setRows(nextRows); setConflict(false)
+    resetSaved(nextForm, nextRows)
+  }, [resetSaved])
+  // A server answer that is not about the details (a photo, a publication) must not replace what is still being typed.
+  const adopt = useCallback((updated: CatalogListing) => { if (hasUnsavedEdits()) setListing(updated); else apply(updated) }, [apply, hasUnsavedEdits])
 
   const load = useCallback(async () => {
     if (!listingId) return
@@ -225,13 +255,15 @@ export function VendorListingEditorPage() {
   }
 
   async function run(action: () => Promise<CatalogListing>, success: string) {
+    await autosave.flush()
     setBusy(true); setMessage(null); setFieldErrors({})
-    try { const updated = await action(); apply(updated); setMessage({ tone: 'success', text: success }); return updated }
+    try { const updated = await action(); adopt(updated); setMessage({ tone: 'success', text: success }); return updated }
     catch (cause) { await fail(cause); return null }
     finally { setBusy(false) }
   }
 
   function goToStep(index: number) {
+    void autosave.flush()
     setSearchParams(index === 0 ? {} : { step: String(index) }, { replace: true })
   }
 
@@ -239,34 +271,22 @@ export function VendorListingEditorPage() {
   if (loading || !listing || !form || !taxonomy) return <CatalogGate access={access} activeHref="/products">{loadError ? <ErrorState message={loadError} onRetry={() => void load()} /> : <LoadingState label="Loading listing…" />}</CatalogGate>
 
   const readOnly = !listing.permissions.canManage
-  const detailsUpdate = (current: CatalogListing): CatalogListingUpdate => ({
-    lockVersion: current.lockVersion, displayName: form.displayName, vendorSku: form.vendorSku, description: form.description || null,
-    ...(form.materialId ? { materialId: form.materialId, materialMatch: form.materialMatch } : { materialId: null, otherLabel: form.otherLabel || null, materialCategoryId: form.categoryId || null }),
-    tagIds: form.tagIds, brand: form.brand || null, model: form.model || null, manufacturer: form.manufacturer || null, manufacturerAddress: form.manufacturerAddress || null,
-    countryOfManufacture: form.countryOfManufacture ? form.countryOfManufacture.toUpperCase() : null, technicalAttributes: form.technicalAttributes,
-  })
-  const saveDraft = () => run(() => updateListing(listing.id, detailsUpdate(listing)), 'Draft saved.')
 
-  // Details and variants are separate server writes; the fresh lock version from the first is carried
-  // into the second so a variant problem never leaves the page holding a stale version.
-  async function saveProductInformation() {
-    if (!listing) return
-    const clientErrors = variantClientErrors(rows)
-    if (Object.keys(clientErrors).length) { setFieldErrors(clientErrors); setMessage({ tone: 'error', text: 'Review the highlighted variant rows and try again.' }); return }
-    setBusy(true); setMessage(null); setFieldErrors({})
-    try {
-      const updated = await updateListing(listing.id, detailsUpdate(listing))
-      setListing(updated)
-      apply(await saveVariants(updated.id, updated.lockVersion, variantInputs(rows)))
-      setMessage({ tone: 'success', text: 'Product information, prices and stock counts saved.' })
-    } catch (cause) { await fail(cause) } finally { setBusy(false) }
+  // The Save changes button of a listing that does not save itself. Variant rows that are still incomplete are
+  // shown inline so the Vendor can see exactly what is missing.
+  async function saveNow() {
+    const incomplete = variantClientErrors(rows)
+    if (Object.keys(incomplete).length) { setFieldErrors(incomplete); setMessage({ tone: 'error', text: 'Review the highlighted variant rows and try again.' }); return }
+    setMessage(null); setFieldErrors({})
+    if (await autosave.saveNow()) setMessage({ tone: 'success', text: 'Changes saved.' })
   }
 
   async function removeListing() {
     if (!listing) return
     setBusy(true)
-    try { await deleteListing(listing.id, listing.lockVersion); navigate('/products', { replace: true, state: { notice: `“${listing.displayName}” was deleted.` } }) }
-    catch (cause) { setConfirmingDelete(false); await fail(cause) }
+    await autosave.stop()
+    try { await deleteListing(listing.id, autosave.lockVersion() ?? listing.lockVersion); navigate('/products', { replace: true, state: { notice: `“${listing.displayName}” was deleted.` } }) }
+    catch (cause) { autosave.resume(); setConfirmingDelete(false); await fail(cause) }
     finally { setBusy(false) }
   }
 
@@ -276,10 +296,10 @@ export function VendorListingEditorPage() {
     </ConfirmDialog>
     <EditorContent onDelete={() => setConfirmingDelete(true)} listing={listing} taxonomy={taxonomy} form={form} setForm={setForm} rows={rows} setRows={setRows} material={material} setMaterial={setMaterial}
       step={step} goToStep={goToStep} busy={busy} setBusy={setBusy} readOnly={readOnly} conflict={conflict} message={message} fieldErrors={fieldErrors}
-      onReload={() => void load()} onSaveDraft={() => void saveDraft()} onSaveProductInformation={() => void saveProductInformation()}
+      onReload={() => void load()} saveStatus={autosave.status} manualSave={manualReason} onSaveNow={() => void saveNow()} onRetrySave={() => void autosave.saveNow()}
       onUpload={(file, replaces) => void run(() => uploadListingMedia(listing.id, file, listing.displayName, replaces), replaces ? 'Photo replaced. The previous version is retained in history.' : 'Photo uploaded.')}
       onRemove={mediaId => void run(() => removeListingMedia(listing.id, mediaId), 'Photo removed.')}
-      onComplianceSubmitted={updated => { apply(updated); setMessage({ tone: updated.complianceStatus === 'VERIFIED' ? 'success' : 'info', text: updated.complianceStatus === 'VERIFIED' ? 'Verified through an exact match with the current DTI-BPS register.' : 'Submitted for Product Compliance review. No result is an accusation; a reviewer will confirm the marking.' }) }}
+      onComplianceSubmitted={updated => { adopt(updated); setMessage({ tone: updated.complianceStatus === 'VERIFIED' ? 'success' : 'info', text: updated.complianceStatus === 'VERIFIED' ? 'Verified through a match with the current DTI-BPS register.' : 'Sent for manual review. Product Compliance staff will check the number and photo against DTI-BPS records; an unconfirmed number is not treated as counterfeit.' }) }}
       onPublish={() => void run(() => publishListing(listing.id, listing.lockVersion), 'Publication evaluated by the server.')}
       onDeactivate={reason => void run(() => deactivateListing(listing.id, listing.lockVersion, reason), 'Listing deactivated. It is no longer offered to Buyers.')} />
   </CatalogGate>
@@ -289,13 +309,12 @@ function EditorContent(props: {
   listing: CatalogListing; taxonomy: CatalogTaxonomy; form: DetailsForm; setForm: (form: DetailsForm) => void; rows: VariantRow[]; setRows: (rows: VariantRow[]) => void
   material: CatalogMaterial | null; setMaterial: (material: CatalogMaterial | null) => void; step: number; goToStep: (step: number) => void; busy: boolean; setBusy: (busy: boolean) => void
   readOnly: boolean; conflict: boolean; message: { tone: 'success' | 'error' | 'info'; text: string } | null; fieldErrors: Record<string, string>
-  onReload: () => void; onSaveDraft: () => void; onSaveProductInformation: () => void; onUpload: (file: File, replaces: string | null) => void; onRemove: (mediaId: string) => void
+  onReload: () => void; saveStatus: SaveStatus; manualSave: 'LIVE' | 'REGULATED' | null; onSaveNow: () => void; onRetrySave: () => void; onUpload: (file: File, replaces: string | null) => void; onRemove: (mediaId: string) => void
   onComplianceSubmitted: (listing: CatalogListing) => void; onPublish: () => void; onDeactivate: (reason: string | null) => void; onDelete: () => void
 }) {
   const { listing, taxonomy, form, step, busy, readOnly, fieldErrors } = props
   const previews = usePhotoPreviews(listing)
-  const actions = readOnly ? null : step === 0 ? <Button variant="secondary" disabled={busy} onClick={props.onSaveDraft}>{busy ? 'Saving…' : 'Save draft'}</Button>
-    : step === 1 ? <Button variant="secondary" disabled={busy} onClick={props.onSaveProductInformation}>{busy ? 'Saving…' : 'Save product information'}</Button> : null
+  const actions = readOnly ? null : <SaveStatusLine status={props.saveStatus} manual={props.manualSave} onSave={props.onSaveNow} onRetry={props.onRetrySave} />
   return <div className="space-y-5">
     <Link className="inline-flex min-h-11 items-center text-sm font-semibold text-action-primary" to="/products">← My Products</Link>
     <PageHeader eyebrow={`Listing · ${listing.vendorSku}`} title={listing.displayName} description="Edit product details, variants, prices, photos and evidence." actions={<><ListingBadge status={listing.status} />{listing.permissions.canDelete && <Button variant="quiet" disabled={busy} onClick={props.onDelete}><Trash2 size={16} aria-hidden="true" /> Delete draft</Button>}</>} />
@@ -308,7 +327,7 @@ function EditorContent(props: {
       nextLabel={next => `Continue: ${next.label}`}
       aside={<PublicationGate listing={listing} onGoTo={props.goToStep} />}>
       {step === 0 && <MaterialStep form={form} setForm={props.setForm} taxonomy={taxonomy} material={props.material} setMaterial={props.setMaterial} errors={fieldErrors} readOnly={readOnly} />}
-      {step === 1 && <ProductInformationStep listing={listing} form={form} setForm={props.setForm} rows={props.rows} setRows={props.setRows} taxonomy={taxonomy} material={props.material} errors={fieldErrors} busy={busy} readOnly={readOnly} />}
+      {step === 1 && <ProductInformationStep listing={listing} form={form} setForm={props.setForm} rows={props.rows} setRows={props.setRows} taxonomy={taxonomy} material={props.material} errors={fieldErrors} busy={busy} readOnly={readOnly} onEditMaterial={() => props.goToStep(0)} />}
       {step === 2 && <PhotosComplianceStep listing={listing} taxonomy={taxonomy} busy={busy} setBusy={props.setBusy} readOnly={readOnly} previews={previews} onUpload={props.onUpload} onRemove={props.onRemove} mediaError={fieldErrors.media ?? null} onComplianceSubmitted={props.onComplianceSubmitted} />}
       {step === 3 && <ReviewStep listing={listing} taxonomy={taxonomy} previews={previews} busy={busy} readOnly={readOnly} onGoTo={props.goToStep} onPublish={props.onPublish} onDeactivate={props.onDeactivate} />}
     </OnboardingFlow>
@@ -427,7 +446,7 @@ export function VendorCatalogImportPage() {
           {job.status === 'APPLIED_WITH_REJECTIONS' && <StatusMessage tone="error">Partially imported: {job.appliedRows} rows became draft listings and {job.errorRows} rows were not imported. Correct the rejected rows below and import them again.</StatusMessage>}
           {!applied && job.validRows > 0 && <Button className="w-fit" disabled={busy} onClick={() => void apply()}>{busy ? 'Applying…' : `Apply ${job.validRows} valid row${job.validRows === 1 ? '' : 's'}`}</Button>}
           <RowErrorTable caption="Rejected rows" rows={job.rowErrors.map(row => ({ rowNumber: row.rowNumber, identifier: [row.vendorSku, row.variantSku].filter(Boolean).join(' / '), errors: row.errors }))} />
-          {lastPage > 1 && <div className="flex items-center gap-3"><Button variant="secondary" disabled={page <= 1} onClick={() => void changePage(page - 1)}>Previous</Button><span>Error page {page} of {lastPage}</span><Button variant="secondary" disabled={page >= lastPage} onClick={() => void changePage(page + 1)}>Next</Button></div>}
+          {lastPage > 1 && <Pagination page={page} lastPage={lastPage} busy={busy} onChange={next => void changePage(next)} />}
           {applied && <Link className="inline-flex min-h-11 w-fit items-center font-semibold text-action-primary underline" to="/products?status=DRAFT">Review imported drafts</Link>}
         </section>}
       </>}

@@ -81,7 +81,7 @@ final class AccountAccess
             'CUSTOMER_SERVICE' => ['orders.confirm', 'inventory.view', 'auto_accept.view_outcomes', 'disputes.respond', 'disputes.export', 'invoices.view', 'reviews.view', 'reviews.rate_buyer', 'reviews.report'],
             'INVENTORY' => ['catalog.manage', 'inventory.view', 'inventory.manage', 'compliance.submit', 'auto_accept.manage_allotment'],
             // Fulfillment Staff contribute fulfillment evidence to a case of an assigned order; they never manage a case.
-            'FULFILLMENT' => ['fulfillment.record', 'vehicles.view_assigned', 'disputes.fulfillment_evidence', 'invoices.view'],
+            'FULFILLMENT' => ['fulfillment.record', 'vehicles.view_assigned', 'disputes.fulfillment_evidence'],
             default => [],
         };
         if ($role === 'OWNER') {
@@ -92,11 +92,11 @@ final class AccountAccess
         }
 
         $sections = match ($role) {
-            'OWNER' => ['orders', 'fulfillment', 'messages', 'invoices', 'notifications', 'disputes', 'reviews', 'products', 'vehicles', 'wallet', 'performance', 'materials_analytics', 'earnings', 'tracking'],
-            'STORE_MANAGER' => ['orders', 'fulfillment', 'messages', 'invoices', 'notifications', 'disputes', 'reviews', 'products', 'vehicles', 'performance', 'materials_analytics'],
-            'STORE_STAFF', 'CUSTOMER_SERVICE' => ['orders', 'fulfillment', 'messages', 'invoices', 'notifications', 'disputes', 'reviews', 'products'],
+            'OWNER' => ['orders', 'messages', 'invoices', 'notifications', 'disputes', 'reviews', 'products', 'vehicles', 'wallet', 'performance', 'materials_analytics', 'earnings', 'tracking'],
+            'STORE_MANAGER' => ['orders', 'messages', 'invoices', 'notifications', 'disputes', 'reviews', 'products', 'vehicles', 'performance', 'materials_analytics'],
+            'STORE_STAFF', 'CUSTOMER_SERVICE' => ['orders', 'messages', 'invoices', 'notifications', 'disputes', 'reviews', 'products'],
             'INVENTORY' => ['orders', 'notifications', 'products'],
-            'FULFILLMENT' => ['orders', 'fulfillment', 'messages', 'invoices', 'notifications', 'products', 'vehicles'],
+            'FULFILLMENT' => ['orders', 'fulfillment', 'messages', 'notifications', 'vehicles'],
             default => [],
         };
         if ($role === 'STORE_MANAGER' && $delegated) {

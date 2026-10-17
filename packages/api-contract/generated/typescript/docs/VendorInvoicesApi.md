@@ -260,7 +260,7 @@ example().catch(console.error);
 
 ## listVendorInvoices
 
-> InvoiceLogEnvelope listVendorInvoices(view, page)
+> InvoiceLogEnvelope listVendorInvoices(view, page, from, to)
 
 
 
@@ -290,6 +290,10 @@ async function example() {
     view: view_example,
     // number (optional)
     page: 56,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Invoice issued_on for RECORDS/RECONCILIATION, request created_at for REQUESTS, and accepted_at for DUE orders. Tab counts retain their existing unrestricted scope. (optional)
+    from: 2013-10-20,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Invoice issued_on for RECORDS/RECONCILIATION, request created_at for REQUESTS, and accepted_at for DUE orders. Tab counts retain their existing unrestricted scope. (optional)
+    to: 2013-10-20,
   } satisfies ListVendorInvoicesRequest;
 
   try {
@@ -311,6 +315,8 @@ example().catch(console.error);
 |------------- | ------------- | ------------- | -------------|
 | **view** | `REQUESTS`, `DUE`, `RECORDS`, `RECONCILIATION` |  | [Optional] [Defaults to `undefined`] [Enum: REQUESTS, DUE, RECORDS, RECONCILIATION] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **from** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Invoice issued_on for RECORDS/RECONCILIATION, request created_at for REQUESTS, and accepted_at for DUE orders. Tab counts retain their existing unrestricted scope. | [Optional] [Defaults to `undefined`] |
+| **to** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Invoice issued_on for RECORDS/RECONCILIATION, request created_at for REQUESTS, and accepted_at for DUE orders. Tab counts retain their existing unrestricted scope. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 

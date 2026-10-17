@@ -17,6 +17,7 @@ Name | Type | Description | Notes
 **otherLabel** | **String** |  | [optional]
 **materialCategoryId** | **String** |  | [optional]
 **tagIds** | **BuiltList&lt;String&gt;** |  | [optional]
+**customTags** | **BuiltList&lt;String&gt;** | Replaces the listing's own search tags. Letters | [optional]
 **brand** | **String** |  | [optional]
 **model** | **String** |  | [optional]
 **manufacturer** | **String** |  | [optional]

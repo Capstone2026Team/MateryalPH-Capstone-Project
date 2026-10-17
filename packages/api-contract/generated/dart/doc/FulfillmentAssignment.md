@@ -12,6 +12,9 @@ Name | Type | Description | Notes
 **role** | **String** |  |
 **assignedAt** | [**DateTime**](DateTime.md) |  | [optional]
 **userId** | **int** |  | [optional]
+**acknowledgedAt** | [**DateTime**](DateTime.md) |  | [optional]
+**endedAt** | [**DateTime**](DateTime.md) |  | [optional]
+**vehicle** | [**FulfillmentArrangementVehicle**](FulfillmentArrangementVehicle.md) |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

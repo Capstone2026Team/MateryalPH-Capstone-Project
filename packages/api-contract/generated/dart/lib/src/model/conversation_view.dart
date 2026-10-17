@@ -28,6 +28,11 @@ part 'conversation_view.g.dart';
 /// * [updatedAt]
 /// * [canTransfer]
 /// * [canListFulfillmentConversations] - Current vendor Owner or Store Manager may list this sales inquiry buyer's fulfillment conversations. False for other roles and fulfillment threads.
+/// * [mainConversationId] - Currently authorized Item-Based main conversation for this Buyer and Store. Null if the viewer cannot access it or this is a fulfillment thread.
+/// * [projectInquiryCount] - Number of currently authorized project inquiries for this Buyer and Store.
+/// * [projectUnreadCount] - Received unread messages across all currently authorized project inquiries, including every page. Opening the main thread does not mark these messages read.
+/// * [inquiryLabel] - Work Package name for a project inquiry, or Item inquiry for the main thread.
+/// * [fulfillmentUnreadCount] - Unread received messages across every fulfillment conversation for this inquiry buyer and store, including history and all pages. Zero unless can_list_fulfillment_conversations is true. Does not include sales messages or mark messages read.
 /// * [fulfillmentEntryEnabled]
 /// * [readOnly]
 /// * [readOnlyReason]
@@ -82,6 +87,26 @@ abstract class ConversationView implements Built<ConversationView, ConversationV
   /// Current vendor Owner or Store Manager may list this sales inquiry buyer's fulfillment conversations. False for other roles and fulfillment threads.
   @BuiltValueField(wireName: r'can_list_fulfillment_conversations')
   bool? get canListFulfillmentConversations;
+
+  /// Currently authorized Item-Based main conversation for this Buyer and Store. Null if the viewer cannot access it or this is a fulfillment thread.
+  @BuiltValueField(wireName: r'main_conversation_id')
+  String? get mainConversationId;
+
+  /// Number of currently authorized project inquiries for this Buyer and Store.
+  @BuiltValueField(wireName: r'project_inquiry_count')
+  int? get projectInquiryCount;
+
+  /// Received unread messages across all currently authorized project inquiries, including every page. Opening the main thread does not mark these messages read.
+  @BuiltValueField(wireName: r'project_unread_count')
+  int? get projectUnreadCount;
+
+  /// Work Package name for a project inquiry, or Item inquiry for the main thread.
+  @BuiltValueField(wireName: r'inquiry_label')
+  String? get inquiryLabel;
+
+  /// Unread received messages across every fulfillment conversation for this inquiry buyer and store, including history and all pages. Zero unless can_list_fulfillment_conversations is true. Does not include sales messages or mark messages read.
+  @BuiltValueField(wireName: r'fulfillment_unread_count')
+  int? get fulfillmentUnreadCount;
 
   @BuiltValueField(wireName: r'fulfillment_entry_enabled')
   bool get fulfillmentEntryEnabled;
@@ -208,6 +233,41 @@ class _$ConversationViewSerializer implements PrimitiveSerializer<ConversationVi
       yield serializers.serialize(
         object.canListFulfillmentConversations,
         specifiedType: const FullType(bool),
+      );
+    }
+    if (object.mainConversationId != null) {
+      yield r'main_conversation_id';
+      yield serializers.serialize(
+        object.mainConversationId,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.projectInquiryCount != null) {
+      yield r'project_inquiry_count';
+      yield serializers.serialize(
+        object.projectInquiryCount,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.projectUnreadCount != null) {
+      yield r'project_unread_count';
+      yield serializers.serialize(
+        object.projectUnreadCount,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.inquiryLabel != null) {
+      yield r'inquiry_label';
+      yield serializers.serialize(
+        object.inquiryLabel,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.fulfillmentUnreadCount != null) {
+      yield r'fulfillment_unread_count';
+      yield serializers.serialize(
+        object.fulfillmentUnreadCount,
+        specifiedType: const FullType(int),
       );
     }
     yield r'fulfillment_entry_enabled';
@@ -399,6 +459,46 @@ class _$ConversationViewSerializer implements PrimitiveSerializer<ConversationVi
           ) as bool?;
           if (valueDes == null) continue;
           result.canListFulfillmentConversations = valueDes;
+          break;
+        case r'main_conversation_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.mainConversationId = valueDes;
+          break;
+        case r'project_inquiry_count':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.projectInquiryCount = valueDes;
+          break;
+        case r'project_unread_count':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.projectUnreadCount = valueDes;
+          break;
+        case r'inquiry_label':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.inquiryLabel = valueDes;
+          break;
+        case r'fulfillment_unread_count':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.fulfillmentUnreadCount = valueDes;
           break;
         case r'fulfillment_entry_enabled':
           final valueDes = serializers.deserialize(

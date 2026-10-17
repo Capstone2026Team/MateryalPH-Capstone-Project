@@ -44,9 +44,38 @@ final BuiltSet<VendorSetupDraftVehiclesInnerVehicleCategoryEnum>
   _$vendorSetupDraftVehiclesInnerVehicleCategoryEnum_TRUCK,
 ]);
 
+const VendorSetupDraftVehiclesInnerMobilizationBasisEnum
+    _$vendorSetupDraftVehiclesInnerMobilizationBasisEnum_PER_TRUCK =
+    const VendorSetupDraftVehiclesInnerMobilizationBasisEnum._('PER_TRUCK');
+const VendorSetupDraftVehiclesInnerMobilizationBasisEnum
+    _$vendorSetupDraftVehiclesInnerMobilizationBasisEnum_PER_TRIP =
+    const VendorSetupDraftVehiclesInnerMobilizationBasisEnum._('PER_TRIP');
+
+VendorSetupDraftVehiclesInnerMobilizationBasisEnum
+    _$vendorSetupDraftVehiclesInnerMobilizationBasisEnumValueOf(String name) {
+  switch (name) {
+    case 'PER_TRUCK':
+      return _$vendorSetupDraftVehiclesInnerMobilizationBasisEnum_PER_TRUCK;
+    case 'PER_TRIP':
+      return _$vendorSetupDraftVehiclesInnerMobilizationBasisEnum_PER_TRIP;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<VendorSetupDraftVehiclesInnerMobilizationBasisEnum>
+    _$vendorSetupDraftVehiclesInnerMobilizationBasisEnumValues = BuiltSet<
+        VendorSetupDraftVehiclesInnerMobilizationBasisEnum>(const <VendorSetupDraftVehiclesInnerMobilizationBasisEnum>[
+  _$vendorSetupDraftVehiclesInnerMobilizationBasisEnum_PER_TRUCK,
+  _$vendorSetupDraftVehiclesInnerMobilizationBasisEnum_PER_TRIP,
+]);
+
 Serializer<VendorSetupDraftVehiclesInnerVehicleCategoryEnum>
     _$vendorSetupDraftVehiclesInnerVehicleCategoryEnumSerializer =
     _$VendorSetupDraftVehiclesInnerVehicleCategoryEnumSerializer();
+Serializer<VendorSetupDraftVehiclesInnerMobilizationBasisEnum>
+    _$vendorSetupDraftVehiclesInnerMobilizationBasisEnumSerializer =
+    _$VendorSetupDraftVehiclesInnerMobilizationBasisEnumSerializer();
 
 class _$VendorSetupDraftVehiclesInnerVehicleCategoryEnumSerializer
     implements
@@ -82,6 +111,40 @@ class _$VendorSetupDraftVehiclesInnerVehicleCategoryEnumSerializer
           Serializers serializers, Object serialized,
           {FullType specifiedType = FullType.unspecified}) =>
       VendorSetupDraftVehiclesInnerVehicleCategoryEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
+class _$VendorSetupDraftVehiclesInnerMobilizationBasisEnumSerializer
+    implements
+        PrimitiveSerializer<
+            VendorSetupDraftVehiclesInnerMobilizationBasisEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'PER_TRUCK': 'PER_TRUCK',
+    'PER_TRIP': 'PER_TRIP',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'PER_TRUCK': 'PER_TRUCK',
+    'PER_TRIP': 'PER_TRIP',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    VendorSetupDraftVehiclesInnerMobilizationBasisEnum
+  ];
+  @override
+  final String wireName = 'VendorSetupDraftVehiclesInnerMobilizationBasisEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          VendorSetupDraftVehiclesInnerMobilizationBasisEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  VendorSetupDraftVehiclesInnerMobilizationBasisEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      VendorSetupDraftVehiclesInnerMobilizationBasisEnum.valueOf(
           _fromWire[serialized] ?? (serialized is String ? serialized : ''));
 }
 
@@ -121,6 +184,10 @@ class _$VendorSetupDraftVehiclesInner extends VendorSetupDraftVehiclesInner {
   @override
   final int? perKmCentavos;
   @override
+  final int? mobilizationFeeCentavos;
+  @override
+  final VendorSetupDraftVehiclesInnerMobilizationBasisEnum? mobilizationBasis;
+  @override
   final int? maximumDistanceKm;
 
   factory _$VendorSetupDraftVehiclesInner(
@@ -145,6 +212,8 @@ class _$VendorSetupDraftVehiclesInner extends VendorSetupDraftVehiclesInner {
       this.heavyClassification,
       this.baseFeeCentavos,
       this.perKmCentavos,
+      this.mobilizationFeeCentavos,
+      this.mobilizationBasis,
       this.maximumDistanceKm})
       : super._();
   @override
@@ -177,6 +246,8 @@ class _$VendorSetupDraftVehiclesInner extends VendorSetupDraftVehiclesInner {
         heavyClassification == other.heavyClassification &&
         baseFeeCentavos == other.baseFeeCentavos &&
         perKmCentavos == other.perKmCentavos &&
+        mobilizationFeeCentavos == other.mobilizationFeeCentavos &&
+        mobilizationBasis == other.mobilizationBasis &&
         maximumDistanceKm == other.maximumDistanceKm;
   }
 
@@ -200,6 +271,8 @@ class _$VendorSetupDraftVehiclesInner extends VendorSetupDraftVehiclesInner {
     _$hash = $jc(_$hash, heavyClassification.hashCode);
     _$hash = $jc(_$hash, baseFeeCentavos.hashCode);
     _$hash = $jc(_$hash, perKmCentavos.hashCode);
+    _$hash = $jc(_$hash, mobilizationFeeCentavos.hashCode);
+    _$hash = $jc(_$hash, mobilizationBasis.hashCode);
     _$hash = $jc(_$hash, maximumDistanceKm.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
@@ -225,6 +298,8 @@ class _$VendorSetupDraftVehiclesInner extends VendorSetupDraftVehiclesInner {
           ..add('heavyClassification', heavyClassification)
           ..add('baseFeeCentavos', baseFeeCentavos)
           ..add('perKmCentavos', perKmCentavos)
+          ..add('mobilizationFeeCentavos', mobilizationFeeCentavos)
+          ..add('mobilizationBasis', mobilizationBasis)
           ..add('maximumDistanceKm', maximumDistanceKm))
         .toString();
   }
@@ -313,6 +388,19 @@ class VendorSetupDraftVehiclesInnerBuilder
   set perKmCentavos(int? perKmCentavos) =>
       _$this._perKmCentavos = perKmCentavos;
 
+  int? _mobilizationFeeCentavos;
+  int? get mobilizationFeeCentavos => _$this._mobilizationFeeCentavos;
+  set mobilizationFeeCentavos(int? mobilizationFeeCentavos) =>
+      _$this._mobilizationFeeCentavos = mobilizationFeeCentavos;
+
+  VendorSetupDraftVehiclesInnerMobilizationBasisEnum? _mobilizationBasis;
+  VendorSetupDraftVehiclesInnerMobilizationBasisEnum? get mobilizationBasis =>
+      _$this._mobilizationBasis;
+  set mobilizationBasis(
+          VendorSetupDraftVehiclesInnerMobilizationBasisEnum?
+              mobilizationBasis) =>
+      _$this._mobilizationBasis = mobilizationBasis;
+
   int? _maximumDistanceKm;
   int? get maximumDistanceKm => _$this._maximumDistanceKm;
   set maximumDistanceKm(int? maximumDistanceKm) =>
@@ -342,6 +430,8 @@ class VendorSetupDraftVehiclesInnerBuilder
       _heavyClassification = $v.heavyClassification;
       _baseFeeCentavos = $v.baseFeeCentavos;
       _perKmCentavos = $v.perKmCentavos;
+      _mobilizationFeeCentavos = $v.mobilizationFeeCentavos;
+      _mobilizationBasis = $v.mobilizationBasis;
       _maximumDistanceKm = $v.maximumDistanceKm;
       _$v = null;
     }
@@ -381,6 +471,8 @@ class VendorSetupDraftVehiclesInnerBuilder
           heavyClassification: heavyClassification,
           baseFeeCentavos: baseFeeCentavos,
           perKmCentavos: perKmCentavos,
+          mobilizationFeeCentavos: mobilizationFeeCentavos,
+          mobilizationBasis: mobilizationBasis,
           maximumDistanceKm: maximumDistanceKm,
         );
     replace(_$result);

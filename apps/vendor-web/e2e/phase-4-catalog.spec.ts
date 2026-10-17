@@ -126,25 +126,25 @@ async function fits(page: Page) {
 }
 
 async function capture(page: Page, name: string) {
-  const directory = resolve('../../docs/design/evidence/phase-4')
+  const directory = resolve('../../docs/design/evidence/portal-standardization')
   mkdirSync(directory, { recursive: true })
   // Desktop portals scroll inside the workspace; release it so the capture shows the whole page.
   await page.addStyleTag({ content: 'html, body, .portal-layout, .portal-workspace { height: auto !important; max-height: none !important; overflow: visible !important; } .portal-workspace > header { position: static !important; }' })
-  await page.screenshot({ path: resolve(directory, `${page.viewportSize()!.width}-${name}.png`), fullPage: true })
+  await page.screenshot({ path: resolve(directory, `catalog-${page.viewportSize()!.width}-${name}.png`), fullPage: true })
 }
 
 test('My Products shows summary tiles, status chips and product cards, and the same data as a table', async ({ page }) => {
   await vendorFixture(page)
   await page.goto('/products')
   await expect(page.getByRole('heading', { name: 'My Products', exact: true })).toBeVisible()
-  await expect(page.getByText('2 products')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Filter: Total', exact: true }).locator('..')).toContainText('2')
   const cards = page.getByRole('list', { name: 'Store products' })
-  await expect(cards.getByRole('listitem')).toHaveCount(3)
+  await expect(cards.getByRole('listitem')).toHaveCount(2)
   await expect(cards.getByText('₱285.50')).toBeVisible()
   await expect(cards.getByText('₱14.50 – ₱18.75')).toBeVisible()
   await expect(cards.getByText('Out of stock')).toBeVisible()
   await expect(cards.locator('img')).toHaveCount(1)
-  await expect(page.getByText('Needs attention')).toBeVisible()
+  await expect(page.getByLabel('Listing summary').getByText('Needs attention', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Filter: Total' })).toHaveAttribute('aria-pressed', 'true')
   await expect(cards.getByRole('button', { name: /^Delete / })).toHaveCount(1)
   await fits(page)

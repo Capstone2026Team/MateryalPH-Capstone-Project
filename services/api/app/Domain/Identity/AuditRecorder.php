@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Identity;
 
 use App\Domain\Authorization\VendorTeamActivityBroadcast;
+use App\Domain\Notifications\NavigationBroadcast;
 use App\Domain\Notifications\OnboardingNotices;
 use App\Models\LoginEvent;
 use App\Models\User;
@@ -40,6 +41,9 @@ final class AuditRecorder
         ]);
         app(VendorTeamActivityBroadcast::class)->publish($scope['organization_id'] ?? null, $scope['role'] ?? $request->user()?->account_type);
         app(OnboardingNotices::class)->fromAudit($auditId, $action, $resourceType, $resourceId, $scope['organization_id'] ?? null, $after);
+        if ($succeeded) {
+            app(NavigationBroadcast::class)->fromAudit($action, $resourceType, $resourceId);
+        }
     }
 
     /** @param array<string, mixed> $safeContext */

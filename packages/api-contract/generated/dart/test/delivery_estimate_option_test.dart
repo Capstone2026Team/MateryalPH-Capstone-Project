@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(DeliveryEstimateOption, () {
+    // Recommended registered vehicle; absent in historical estimates.
+    // String vehicleId
+    test('to test the property `vehicleId`', () async {
+      // TODO
+    });
+
     // String loadKey
     test('to test the property `loadKey`', () async {
       // TODO
@@ -32,6 +38,7 @@ void main() {
       // TODO
     });
 
+    // Trip fees plus any mixer mobilization.
     // int feeCentavos
     test('to test the property `feeCentavos`', () async {
       // TODO
@@ -39,6 +46,27 @@ void main() {
 
     // int feePerTripCentavos
     test('to test the property `feePerTripCentavos`', () async {
+      // TODO
+    });
+
+    // The Vendor's chosen mixer mobilization basis.
+    // String mobilizationBasis
+    test('to test the property `mobilizationBasis`', () async {
+      // TODO
+    });
+
+    // int mobilizationFeeCentavos
+    test('to test the property `mobilizationFeeCentavos`', () async {
+      // TODO
+    });
+
+    // int mobilizationTotalCentavos
+    test('to test the property `mobilizationTotalCentavos`', () async {
+      // TODO
+    });
+
+    // MixerVolumePlan volumePlan
+    test('to test the property `volumePlan`', () async {
       // TODO
     });
 

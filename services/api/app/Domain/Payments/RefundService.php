@@ -7,6 +7,7 @@ namespace App\Domain\Payments;
 use App\Domain\Disputes\DisputeRemedyService;
 use App\Domain\Finance\FinanceNotifier;
 use App\Domain\Finance\FinancialLedgerService;
+use App\Domain\Finance\RemittanceAssessmentService;
 use App\Domain\Finance\WithholdingThresholdService;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Operations\OutboxPublisher;
@@ -14,6 +15,7 @@ use App\Domain\Orders\OrderActor;
 use App\Domain\Orders\OrderNotifier;
 use App\Domain\Orders\OrderStates;
 use App\Domain\Orders\OrderTransitionService;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Throwable;
@@ -42,7 +44,21 @@ final class RefundService
         private readonly FinancialLedgerService $ledger,
         private readonly WithholdingThresholdService $review,
         private readonly OutboxPublisher $outbox,
+        private readonly RemittanceAssessmentService $assessments,
     ) {}
+
+    /** One aggregate per original capture: multiple instructions never multiply payment totals. */
+    public static function paymentTotals(?string $organizationId = null): Builder
+    {
+        return DB::table('refunds as f')->join('payments as source', 'source.id', '=', 'f.source_payment_id')
+            ->when($organizationId, fn (Builder $q, string $id) => $q->where('source.vendor_organization_id', $id))->groupBy('f.source_payment_id')
+            ->selectRaw("f.source_payment_id,
+                SUM(CASE WHEN f.state = 'REFUNDED' THEN f.amount_centavos ELSE 0 END) AS refunded_centavos,
+                SUM(CASE WHEN f.state = 'REFUNDED' THEN COALESCE(f.principal_centavos, f.amount_centavos - LEAST(f.amount_centavos, source.processing_fee_centavos)) ELSE 0 END) AS principal_refunded_centavos,
+                SUM(CASE WHEN f.state = 'REFUNDED' THEN CASE WHEN f.principal_centavos IS NULL THEN LEAST(f.amount_centavos, source.processing_fee_centavos) ELSE f.processing_fee_centavos END ELSE 0 END) AS fees_refunded_centavos,
+                COUNT(*) FILTER (WHERE f.state = 'REFUND_PENDING') AS pending_count,
+                COUNT(*) FILTER (WHERE f.state = 'REFUND_FAILED') AS failed_count");
+    }
 
     /** Publishes the post-commit provider request for a committed instruction. */
     public function queue(string $refundId, string $correlationId): void
@@ -197,6 +213,9 @@ final class RefundService
 
                 return 'REFUNDED';
             }
+            if ($refund->source_payment_id !== null) {
+                $this->assessments->voidFullyRefundedCollection((string) $refund->source_payment_id, $correlationId);
+            }
             if ($order !== null) {
                 $order = $this->syncOrder($order, OrderActor::system($correlationId), (string) $refund->trigger);
                 $order = $this->disputeRemedy($order, $refundId, $correlationId);
@@ -320,12 +339,13 @@ final class RefundService
      *
      * @return int credit amount covered by refund instructions
      */
-    public function createFeeCreditRefunds(object $adjustment, object $assessment, string $correlationId): int
+    public function createFeeCreditRefunds(object $adjustment, object $assessment, string $correlationId, ?int $refundCentavos = null): int
     {
-        $remaining = (int) $adjustment->amount_centavos;
+        $requested = $refundCentavos ?? (int) $adjustment->amount_centavos;
+        $covered = (int) DB::table('refunds')->where('fee_adjustment_id', $adjustment->id)->where('target_type', 'PLATFORM_FEE')->sum('amount_centavos');
+        $remaining = max(0, $requested - $covered);
         $statements = DB::table('fee_statement_lines as l')->join('fee_statements as s', 's.id', '=', 'l.fee_statement_id')->where('l.fee_assessment_id', $assessment->id)
             ->where('s.state', 'PAID')->orderBy('s.id')->pluck('s.id');
-        $covered = 0;
         foreach ($statements as $statementId) {
             $allocations = DB::table('fee_payment_allocations as a')->join('payments as p', 'p.id', '=', 'a.payment_id')->where('a.fee_statement_id', $statementId)
                 ->where('p.state', 'PAID')->where('p.purpose', 'PLATFORM_FEE_PAYMENT')->orderByDesc('a.allocated_at')->orderByDesc('p.id')->get(['p.id', 'a.amount_centavos']);

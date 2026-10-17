@@ -10,5 +10,5 @@ export function useCatalogAccess() {
 
 export function storeName(snapshot: ReturnType<typeof useOnboardingSnapshot>['snapshot']): string {
   const organization = snapshot?.organization as { store_name?: string; storeName?: string } | undefined
-  return organization?.storeName ?? organization?.store_name ?? 'Vendor'
+  return organization?.storeName || organization?.store_name || 'Vendor'
 }

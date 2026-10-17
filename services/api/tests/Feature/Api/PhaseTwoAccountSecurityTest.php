@@ -7,8 +7,10 @@ namespace Tests\Feature\Api;
 use App\Domain\Authorization\AccountAccess;
 use App\Domain\Authorization\FinancePolicy;
 use App\Domain\Authorization\MembershipPolicy;
+use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\EmailOtpService;
 use App\Domain\Identity\OtpCodeGenerator;
+use App\Domain\Identity\ProfilePhotoScanner;
 use App\Domain\Identity\TokenSessionService;
 use App\Models\AuthSession;
 use App\Models\User;
@@ -17,7 +19,9 @@ use App\Models\VendorMembership;
 use App\Models\VendorOrganization;
 use Database\Seeders\SystemFoundationSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Passport\AccessToken;
 use Tests\TestCase;
@@ -58,6 +62,93 @@ final class PhaseTwoAccountSecurityTest extends TestCase
         self::assertTrue($session->refresh()->last_used_at->greaterThan($recorded));
         $session->update(['revoked_at' => now()]);
         $this->getJson('/api/v1/buyers/account/profile')->assertUnauthorized();
+    }
+
+    public function test_buyer_photo_is_sanitized_private_versioned_and_owner_bound(): void
+    {
+        Storage::fake('local');
+        config(['materyalph.files.disk' => 'local']);
+        [$user] = $this->buyer();
+        $this->mock(ProfilePhotoScanner::class)->shouldReceive('assertClean')->times(3);
+        $version = (int) $user->fresh()->lock_version;
+        $upload = fn (int $lockVersion) => $this->post('/api/v1/buyers/account/photo', [
+            'photo' => UploadedFile::fake()->image('portrait.png', 64, 48), 'lock_version' => $lockVersion,
+        ]);
+        $result = $upload($version)->assertOk()->assertJsonPath('data.lock_version', $version + 1);
+        $url = $result->json('data.avatar_url');
+        self::assertStringContainsString('/api/v1/buyers/account/photo?', $url);
+        $user->refresh();
+        $this->get($url)->assertOk()->assertHeader('Content-Type', 'image/png')->assertHeader('X-Content-Type-Options', 'nosniff');
+        parse_str((string) parse_url($url, PHP_URL_QUERY), $query);
+        // Same order as the generated mobile request, including all signed fields.
+        $mobileQuery = ['expires' => $query['expires'], 'owner' => $query['owner'], 'version' => $query['version'], 'signature' => $query['signature']];
+        $photoPath = strtok($url, '?');
+        $this->get($photoPath.'?'.http_build_query($mobileQuery, '', '&', PHP_QUERY_RFC3986))->assertOk();
+        foreach (['owner' => 'another-buyer', 'version' => 999] as $field => $tampered) {
+            $this->get($photoPath.'?'.http_build_query([...$mobileQuery, $field => $tampered], '', '&', PHP_QUERY_RFC3986))->assertForbidden();
+        }
+        self::assertStringContainsString('no-store', $this->get($url)->headers->get('Cache-Control'));
+        $user->refresh();
+        $dimensions = getimagesizefromstring(Storage::disk('local')->get($user->profile_photo_key));
+        self::assertSame([256, 256], [$dimensions[0], $dimensions[1]]);
+        $key = $user->profile_photo_key;
+        $upload($version)->assertConflict()->assertJsonPath('errors.0.code', 'RESOURCE_VERSION_CONFLICT');
+        self::assertSame($key, $user->refresh()->profile_photo_key);
+        self::assertCount(1, Storage::disk('local')->allFiles('private/profile-photos'));
+        $this->get('/api/v1/buyers/account/photo')->assertForbidden();
+        $upload($version + 1)->assertOk()->assertJsonPath('data.lock_version', $version + 2);
+        $user->refresh();
+        $this->get($url)->assertNotFound();
+        $currentUrl = $this->getJson('/api/v1/buyers/account/profile')->assertOk()->json('data.avatar_url');
+        [, $otherSession] = $this->buyer();
+        $this->get($currentUrl)->assertNotFound();
+        $this->withUnencryptedCookie('mp_csrf', 'test-csrf')->withHeader('X-CSRF-Token', 'test-csrf');
+        $this->post('/api/v1/vendors/account/photo', [])->assertForbidden();
+        $this->post('/api/v1/admin/account/photo', [])->assertForbidden();
+        $otherSession->update(['revoked_at' => now()]);
+        $this->get($currentUrl)->assertUnauthorized();
+        $this->assertDatabaseHas('audit_logs', ['action' => 'PROFILE_PHOTO_UPDATED', 'actor_user_id' => $user->getKey()]);
+    }
+
+    public function test_buyer_photo_rejects_invalid_files_and_scanner_failure_preserves_identity(): void
+    {
+        Storage::fake('local');
+        config(['materyalph.files.disk' => 'local']);
+        [$user] = $this->buyer();
+        $version = (int) $user->fresh()->lock_version;
+        foreach ([
+            UploadedFile::fake()->create('fake.svg', 1, 'image/svg+xml'),
+            UploadedFile::fake()->image('oversized.png')->size(2049),
+            UploadedFile::fake()->image('wide.png', 4097, 8),
+        ] as $file) {
+            $this->post('/api/v1/buyers/account/photo', ['photo' => $file, 'lock_version' => $version])->assertUnprocessable();
+        }
+        $this->mock(ProfilePhotoScanner::class)->shouldReceive('assertClean')->once()
+            ->andThrow(new AuthenticationException('PHOTO_SCANNER_UNAVAILABLE', 'Unavailable.', 503));
+        $this->post('/api/v1/buyers/account/photo', ['photo' => UploadedFile::fake()->image('portrait.png'), 'lock_version' => $version])
+            ->assertStatus(503)->assertJsonPath('errors.0.code', 'PHOTO_SCANNER_UNAVAILABLE');
+        self::assertNull($user->refresh()->profile_photo_key);
+        self::assertSame($version, (int) $user->lock_version);
+        self::assertCount(0, Storage::disk('local')->allFiles('private/profile-photos'));
+    }
+
+    public function test_buyer_photo_requires_active_authenticated_session_and_an_unexpired_signature(): void
+    {
+        $this->post('/api/v1/buyers/account/photo', [])->assertUnauthorized();
+        Storage::fake('local');
+        config(['materyalph.files.disk' => 'local']);
+        [$user] = $this->buyer();
+        $this->mock(ProfilePhotoScanner::class)->shouldReceive('assertClean')->once();
+        $url = $this->post('/api/v1/buyers/account/photo', [
+            'photo' => UploadedFile::fake()->image('portrait.png'), 'lock_version' => $user->fresh()->lock_version,
+        ])->assertOk()->json('data.avatar_url');
+        $user->refresh();
+        $this->travel(6)->minutes();
+        $this->get($url)->assertForbidden();
+        $currentUrl = $this->getJson('/api/v1/buyers/account/profile')->assertOk()->json('data.avatar_url');
+        $user->update(['account_status' => 'SUSPENDED']);
+        $this->get($currentUrl)->assertForbidden();
+        $this->post('/api/v1/buyers/account/photo', [])->assertForbidden();
     }
 
     public function test_buyer_contact_number_is_owned_and_full_email_still_requires_recent_identity_verification(): void

@@ -13,7 +13,7 @@ Name | Type | Description | Notes
 **period** | [**GeoDashboardPeriod**](GeoDashboardPeriod.md) |  |
 **filters** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  |
 **filterApplicability** | [**BuiltList&lt;GeoFilterApplicability&gt;**](GeoFilterApplicability.md) |  |
-**disclosure** | [**GeoDashboardDisclosure**](GeoDashboardDisclosure.md) |  |
+**disclosure** | [**AdminDashboardMarketplaceDisclosure**](AdminDashboardMarketplaceDisclosure.md) |  |
 **kpis** | [**GeoKpis**](GeoKpis.md) |  |
 **trends** | [**BuiltList&lt;GeoTrendPoint&gt;**](GeoTrendPoint.md) |  |
 **activityTrend** | [**BuiltList&lt;GeoActivityPoint&gt;**](GeoActivityPoint.md) |  |

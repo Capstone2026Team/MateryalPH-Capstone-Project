@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:materyalph/design_system/theme.dart';
+import 'package:materyalph/features/notifications/notification_settings_screen.dart';
 import 'package:materyalph/features/notifications/notifications_repository.dart';
 import 'package:materyalph/features/notifications/notifications_screen.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart';
@@ -77,35 +78,37 @@ void main() {
         );
         final repository = NotificationsRepository(client, () async {});
         addTearDown(repository.inbox.dispose);
-        await tester.pumpWidget(
-          MaterialApp(
-            debugShowCheckedModeBanner: false,
-            theme: BuyerTheme.light,
-            builder: (context, child) => MediaQuery(
-              data: MediaQuery.of(
-                context,
-              ).copyWith(textScaler: TextScaler.linear(scale)),
-              child: child!,
-            ),
-            home: NotificationsScreen(
-              repository: repository,
-              open: (_) async {},
-            ),
+        Widget app(Widget home) => MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: BuyerTheme.light,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(scale)),
+            child: child!,
           ),
+          home: home,
+        );
+        await tester.pumpWidget(
+          app(NotificationsScreen(repository: repository, open: (_) async {})),
         );
         await tester.pumpAndSettle();
         expect(find.text('Account access changed'), findsOneWidget);
+        expect(find.text('1 unread'), findsOneWidget);
+        expect(find.byTooltip('Notification preferences'), findsNothing);
         expect(tester.takeException(), isNull);
-        await tester.tap(find.byTooltip('Notification preferences'));
+
+        await tester.pumpWidget(
+          app(NotificationSettingsScreen(repository: repository)),
+        );
         await tester.pumpAndSettle();
-        if (scale > 1) {
-          await tester.scrollUntilVisible(
-            find.text(
-              'Account safety, legal and transaction notices stay enabled across all available channels.',
-            ),
-            120,
-          );
-        }
+        expect(find.text('Notification settings'), findsOneWidget);
+        await tester.scrollUntilVisible(
+          find.text(
+            'Account safety, legal and transaction notices stay enabled across all available channels.',
+          ),
+          120,
+        );
         expect(
           find.text(
             'Account safety, legal and transaction notices stay enabled across all available channels.',
@@ -113,10 +116,12 @@ void main() {
           findsOneWidget,
         );
         expect(tester.takeException(), isNull);
-        expect(find.byType(AlertDialog), findsOneWidget);
-        expect(find.text('Notification preferences'), findsOneWidget);
-        await tester.scrollUntilVisible(find.text('In-app'), 120);
-        expect(find.byType(Checkbox), findsNWidgets(3));
+        await tester.scrollUntilVisible(
+          find.text('In-app'),
+          -120,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(find.byType(SwitchListTile), findsNWidgets(3));
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox.shrink());
       },

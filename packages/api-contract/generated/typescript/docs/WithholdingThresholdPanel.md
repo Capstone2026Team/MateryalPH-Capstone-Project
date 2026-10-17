@@ -15,6 +15,7 @@ Name | Type
 `cumulativeGrossCentavos` | number
 `remainingAllowanceCentavos` | number
 `localGrossCentavos` | number
+`calculationBreakdown` | [WithholdingThresholdCalculation](WithholdingThresholdCalculation.md)
 `externalDeclaredCentavos` | number
 `externalOverlapCentavos` | number
 `externalOverlapState` | string
@@ -45,6 +46,7 @@ const example = {
   "cumulativeGrossCentavos": null,
   "remainingAllowanceCentavos": null,
   "localGrossCentavos": null,
+  "calculationBreakdown": null,
   "externalDeclaredCentavos": null,
   "externalOverlapCentavos": null,
   "externalOverlapState": null,

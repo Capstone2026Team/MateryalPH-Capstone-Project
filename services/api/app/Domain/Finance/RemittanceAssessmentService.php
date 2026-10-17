@@ -60,8 +60,91 @@ final class RemittanceAssessmentService
         if ($refund !== null && DB::table('remittance_assessments')->where('id', $assessmentId)->where('calculation_state', 'POSTED')->exists()) {
             $this->openAdjustmentForRefund($assessmentId, (string) $refund->id, (int) $refund->amount_centavos, 'The order was cancelled before this collection was assessed. Review the posted withholding.');
         }
+        $this->voidFullyRefundedCollection($paymentId, $correlationId ?? (string) Str::uuid7());
 
         return $assessmentId;
+    }
+
+    /**
+     * FIN-05 step 4: a collection whose whole payment the provider has already refunded is not a merchant
+     * remittance. Its posted assessment becomes VOIDED, the FIN-04A counter drops by its G and its simulated ledger
+     * postings are reversed, so refunded money counts toward neither the threshold nor Earnings.
+     *
+     * Only while the taxable year has not crossed: a crossing is final for the year, so a crossed accumulator, its
+     * status and the posted assessment stay as they are and the FIN-07 tax-adjustment case is the only follow-up. A
+     * partial refund never voids; it is netted in the figures that read it. Safe to repeat.
+     *
+     * @return bool true when this call voided the assessment
+     */
+    public function voidFullyRefundedCollection(string $paymentId, string $correlationId): bool
+    {
+        return DB::transaction(function () use ($paymentId, $correlationId): bool {
+            $payment = DB::table('payments')->where('id', $paymentId)->first(['total_centavos', 'purpose']);
+            if ($payment === null || $payment->purpose === 'PLATFORM_FEE_PAYMENT') {
+                return false;
+            }
+            $refunded = (int) DB::table('refunds')->where('source_payment_id', $paymentId)->where('target_type', 'ORDER')->where('state', 'REFUNDED')->sum('amount_centavos');
+            if ($refunded < (int) $payment->total_centavos) {
+                return false;
+            }
+            $accumulatorId = DB::table('remittance_assessments')->where('payment_id', $paymentId)->where('obligation_type', self::OBLIGATION)->where('calculation_state', 'POSTED')->value('accumulator_id');
+            if ($accumulatorId === null) {
+                return false;
+            }
+            $accumulator = DB::table('vendor_withholding_accumulators')->where('id', $accumulatorId)->lockForUpdate()->first();
+            $assessment = DB::table('remittance_assessments')->where('payment_id', $paymentId)->where('obligation_type', self::OBLIGATION)->where('calculation_state', 'POSTED')->lockForUpdate()->first();
+            if ($accumulator === null || $assessment === null || $accumulator->crossed_at !== null) {
+                return false;
+            }
+            $gross = min((int) $assessment->gross_basis_centavos, (int) $accumulator->g_accumulated_centavos);
+            $before = (int) $accumulator->g_effective_centavos;
+            DB::table('remittance_assessments')->where('id', $assessment->id)->update(['calculation_state' => 'VOIDED', 'updated_at' => now()]);
+            $this->closeUnstartedAdjustments((string) $assessment->id, (string) $accumulator->organization_id, $correlationId);
+            DB::table('vendor_withholding_accumulators')->where('id', $accumulator->id)->update(['g_accumulated_centavos' => (int) $accumulator->g_accumulated_centavos - $gross,
+                'lock_version' => (int) $accumulator->lock_version + 1, 'updated_at' => now()]);
+            // Status never changes here (refunds never restore relief); one event records the lower total.
+            DB::table('vendor_withholding_status_events')->insert(['id' => (string) Str::uuid7(), 'accumulator_id' => $accumulator->id, 'from_status' => $accumulator->withholding_status,
+                'to_status' => $accumulator->withholding_status, 'reason_code' => 'COLLECTION_REFUNDED_VOIDED', 'g_before_centavos' => $before, 'g_after_centavos' => $before - $gross,
+                'assessment_id' => $assessment->id, 'actor_type' => 'SYSTEM', 'actor_id' => null, 'evidence_id' => null, 'correlation_id' => mb_substr($correlationId, 0, 64), 'occurred_at' => now()]);
+            $reversal = DB::table('financial_ledger_entries')->where('ledger', FinancialLedgerService::DEMO_FLOW)->where('source_type', 'ASSESSMENT')->where('source_id', $assessment->id)
+                ->get(['account_code', 'direction', 'amount_centavos'])->map(static fn (object $entry): array => ['account' => (string) $entry->account_code,
+                    'direction' => $entry->direction === 'DEBIT' ? 'CREDIT' : 'DEBIT', 'amount' => (int) $entry->amount_centavos, 'source_type' => 'ASSESSMENT_VOID', 'source_id' => (string) $assessment->id])->all();
+            $this->ledger->post(FinancialLedgerService::DEMO_FLOW, 'SIMULATED_VOID', 'DEMO_FLOW:VOID:'.$assessment->id, $reversal, $correlationId);
+
+            return true;
+        });
+    }
+
+    /**
+     * A voided collection has no withholding left to review, so the system-opened FIN-07 case nobody has started is
+     * closed as NOT_REQUIRED. A prepared, approved, posted or rejected adjustment is a human decision and stays as is.
+     */
+    private function closeUnstartedAdjustments(string $assessmentId, string $organizationId, string $correlationId): void
+    {
+        $note = 'The collection was fully refunded and voided before the taxable year crossed the threshold; no withholding remains to review.';
+        $closed = DB::table('tax_adjustments')->where('remittance_assessment_id', $assessmentId)->where('opened_by', 'SYSTEM')->where('state', 'ADJUSTMENT_REQUIRED')->whereNull('prepared_by_user_id')
+            ->lockForUpdate()->pluck('id');
+        foreach ($closed as $id) {
+            DB::table('tax_adjustments')->where('id', $id)->update(['state' => 'NOT_REQUIRED', 'after_values' => json_encode(['closed_by' => 'SYSTEM', 'note' => $note], JSON_THROW_ON_ERROR), 'updated_at' => now()]);
+            DB::table('audit_logs')->insert(['id' => (string) Str::uuid7(), 'actor_user_id' => null, 'actor_role' => 'SYSTEM', 'action' => 'TAX_ADJUSTMENT_NOT_REQUIRED', 'resource_type' => 'TAX_ADJUSTMENT',
+                'resource_id' => (string) $id, 'vendor_organization_id' => $organizationId, 'before' => json_encode(['state' => 'ADJUSTMENT_REQUIRED'], JSON_THROW_ON_ERROR),
+                'after' => json_encode(['state' => 'NOT_REQUIRED'], JSON_THROW_ON_ERROR), 'reason' => $note, 'correlation_id' => mb_substr($correlationId, 0, 64), 'succeeded' => true, 'created_at' => now(), 'updated_at' => now()]);
+        }
+    }
+
+    /**
+     * Voids every already-refunded collection the live path has not seen (rows refunded before this rule existed).
+     *
+     * @return int assessments voided
+     */
+    public function voidAllFullyRefundedCollections(string $correlationId): int
+    {
+        $voided = 0;
+        foreach (DB::table('refunds')->where('target_type', 'ORDER')->where('state', 'REFUNDED')->whereNotNull('source_payment_id')->distinct()->pluck('source_payment_id') as $paymentId) {
+            $voided += $this->voidFullyRefundedCollection((string) $paymentId, $correlationId) ? 1 : 0;
+        }
+
+        return $voided;
     }
 
     /**
@@ -133,9 +216,10 @@ final class RemittanceAssessmentService
     }
 
     /**
-     * FIN-07: a refund after a posted assessment never lowers the counter or restores relief. It opens one
-     * system tax-adjustment case per kind (cancellation or dispute refund) linked to the assessment and, for a crossed
-     * year, a finance work item.
+     * FIN-07: a refund after a posted assessment never restores relief and never lowers a crossed year's counter (a
+     * fully refunded collection in an uncrossed year is voided separately, see voidFullyRefundedCollection). It opens
+     * one system tax-adjustment case per kind (cancellation or dispute refund) linked to the assessment and, for a
+     * crossed year, a finance work item.
      */
     public function openAdjustmentForRefund(string $assessmentId, ?string $refundId, int $refundedCentavos, string $reason, string $kind = 'REFUND_AFTER_ASSESSMENT'): string
     {

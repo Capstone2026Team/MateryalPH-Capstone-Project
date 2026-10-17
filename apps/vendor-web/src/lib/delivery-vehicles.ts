@@ -24,13 +24,14 @@ export function vehiclePayload(vehicle: DeliveryVehicleDraft): VendorSetupDraftV
     cargoWidthM: vehicle.type === 'CONCRETE_MIXER' ? null : Number(vehicle.width),
     cargoHeightM: vehicle.type === 'CONCRETE_MIXER' ? null : Number(vehicle.height),
     heavyClassification: vehicle.heavy, baseFeeCentavos: base, perKmCentavos: perKm, imageFileId: vehicle.imageId,
+    ...mobilizationPayload(vehicle),
   }
 }
 
 export function vehicleDraft(row: Record<string, unknown>): DeliveryVehicleDraft {
   const value = (key: string) => row[key] === null || row[key] === undefined ? '' : String(row[key])
   const fee = (key: string) => typeof row[key] === 'number' ? (row[key] / 100).toFixed(2) : ''
-  return { ...emptyDeliveryVehicle(), ...(value('id') ? { id: value('id') } : {}), category: value('vehicleCategory'), type: value('vehicleType'), customType: value('customTypeName'), name: value('name'), brand: value('brand'), count: value('numberAvailable'), weight: value('capacityKg'), mixer: value('mixerCapacityM3'), length: value('cargoLengthM'), width: value('cargoWidthM'), height: value('cargoHeightM'), heavy: value('heavyClassification'), baseFee: fee('baseFeeCentavos'), perKm: fee('perKmCentavos'), imageId: value('imageFileId'), active: row.active !== false }
+  return { ...emptyDeliveryVehicle(), ...(value('id') ? { id: value('id') } : {}), category: value('vehicleCategory'), type: value('vehicleType'), customType: value('customTypeName'), name: value('name'), brand: value('brand'), count: value('numberAvailable'), weight: value('capacityKg'), mixer: value('mixerCapacityM3'), length: value('cargoLengthM'), width: value('cargoWidthM'), height: value('cargoHeightM'), heavy: value('heavyClassification'), baseFee: fee('baseFeeCentavos'), perKm: fee('perKmCentavos'), mobilizationFee: fee('mobilizationFeeCentavos'), mobilizationBasis: value('mobilizationBasis'), imageId: value('imageFileId'), active: row.active !== false }
 }
 
 /** Operational fleet row from the saved configuration, including its optimistic version. */
@@ -41,7 +42,7 @@ export function fleetVehicleDraft(row: FleetVehicle): DeliveryVehicleDraft {
     ...emptyDeliveryVehicle(), id: row.id, lockVersion: row.lockVersion, category: text(row.vehicleCategory), type: row.vehicleType, customType: text(row.customTypeName),
     name: row.name, brand: text(row.brand), count: text(row.numberAvailable), weight: text(row.capacityKg), mixer: text(row.mixerCapacityM3),
     length: text(row.cargoLengthM), width: text(row.cargoWidthM), height: text(row.cargoHeightM), heavy: text(row.heavyClassification),
-    baseFee: fee(row.baseFeeCentavos), perKm: fee(row.perKmCentavos), maxDistance: text(row.maximumDistanceKm), imageId: text(row.imageFileId),
+    baseFee: fee(row.baseFeeCentavos), perKm: fee(row.perKmCentavos), mobilizationFee: fee(row.mobilizationFeeCentavos), mobilizationBasis: text(row.mobilizationBasis), maxDistance: text(row.maximumDistanceKm), imageId: text(row.imageFileId),
     active: row.active, available: row.available, removed: false,
   }
 }
@@ -58,6 +59,7 @@ export function fleetVehiclePayload(vehicle: DeliveryVehicleDraft): FleetVehicle
     mixerCapacityM3: mixer ? number(vehicle.mixer) : null, cargoLengthM: mixer ? null : number(vehicle.length), cargoWidthM: mixer ? null : number(vehicle.width), cargoHeightM: mixer ? null : number(vehicle.height),
     heavyClassification: (vehicle.heavy || null) as NonNullable<FleetVehicleInput['heavyClassification']> | null, active: vehicle.active, available: vehicle.available,
     baseFeeCentavos: pesosToCentavos(vehicle.baseFee) ?? -1, perKmCentavos: pesosToCentavos(vehicle.perKm) ?? -1, maximumDistanceKm: Number(vehicle.maxDistance),
+    ...mobilizationPayload(vehicle),
   }
 }
 
@@ -65,7 +67,7 @@ export function fleetVehiclePayload(vehicle: DeliveryVehicleDraft): FleetVehicle
 export const fleetFieldNames: Record<string, keyof DeliveryVehicleDraft> = {
   vehicle_category: 'category', vehicle_type: 'type', custom_type_name: 'customType', name: 'name', brand: 'brand', image_file_id: 'imageId', number_available: 'count',
   capacity_kg: 'weight', mixer_capacity_m3: 'mixer', cargo_length_m: 'length', cargo_width_m: 'width', cargo_height_m: 'height', heavy_classification: 'heavy',
-  base_fee_centavos: 'baseFee', per_km_centavos: 'perKm', maximum_distance_km: 'maxDistance',
+  base_fee_centavos: 'baseFee', per_km_centavos: 'perKm', maximum_distance_km: 'maxDistance', mobilization_fee_centavos: 'mobilizationFee', mobilization_basis: 'mobilizationBasis',
 }
 
 export function vehicleErrors(vehicle: DeliveryVehicleDraft, operational = false): Record<string, string> {
@@ -85,5 +87,18 @@ export function vehicleErrors(vehicle: DeliveryVehicleDraft, operational = false
     else if (dimension && value > 1000) errors[field] = 'Enter meters, up to 1,000 (for example 2.5).'
   }
   for (const field of ['baseFee', 'perKm'] as const) if (pesosToCentavos(vehicle[field]) === null) errors[field] = 'Enter pesos with up to two decimal places.'
+  if (vehicle.type === 'CONCRETE_MIXER' && vehicle.mobilizationFee.trim()) {
+    const mobilization = pesosToCentavos(vehicle.mobilizationFee)
+    if (mobilization === null) errors.mobilizationFee = 'Enter pesos with up to two decimal places.'
+    else if (mobilization > 0 && !vehicle.mobilizationBasis) errors.mobilizationBasis = 'Choose whether mobilization is charged per truck or per trip.'
+  }
   return errors
+}
+
+/** Mobilization applies to mixers only; any other vehicle sends none, so a type change clears it. */
+function mobilizationPayload(vehicle: DeliveryVehicleDraft): { mobilizationFeeCentavos: number | null; mobilizationBasis: 'PER_TRUCK' | 'PER_TRIP' | null } {
+  if (vehicle.type !== 'CONCRETE_MIXER' || !vehicle.mobilizationFee.trim()) return { mobilizationFeeCentavos: null, mobilizationBasis: null }
+  const fee = pesosToCentavos(vehicle.mobilizationFee)
+  const basis = vehicle.mobilizationBasis === 'PER_TRUCK' || vehicle.mobilizationBasis === 'PER_TRIP' ? vehicle.mobilizationBasis : null
+  return { mobilizationFeeCentavos: fee ?? -1, mobilizationBasis: fee === 0 ? null : basis }
 }

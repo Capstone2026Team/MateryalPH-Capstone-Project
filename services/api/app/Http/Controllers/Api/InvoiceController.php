@@ -12,6 +12,7 @@ use App\Domain\Settings\PlatformSettings;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\PortalDateRange;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -57,7 +58,7 @@ final class InvoiceController extends Controller
 
     public function vendorIndex(Request $request): JsonResponse
     {
-        $filters = $request->validate(['view' => ['sometimes', Rule::in(['REQUESTS', 'DUE', 'RECORDS', 'RECONCILIATION'])], 'page' => ['sometimes', 'integer', 'between:1,1000']]);
+        $filters = $request->validate(['view' => ['sometimes', Rule::in(['REQUESTS', 'DUE', 'RECORDS', 'RECONCILIATION'])], 'page' => ['sometimes', 'integer', 'between:1,1000']] + PortalDateRange::rules($request));
         $result = $this->queries->vendorList($request, $filters);
 
         return ApiResponse::success($result['items'], $result['meta']);
@@ -106,7 +107,7 @@ final class InvoiceController extends Controller
 
     public function adminLog(Request $request): JsonResponse
     {
-        $filters = $request->validate(['view' => ['sometimes', Rule::in(['REQUESTS', 'RECORDS', 'MISMATCHES'])], 'page' => ['sometimes', 'integer', 'between:1,1000']]);
+        $filters = $request->validate(['view' => ['sometimes', Rule::in(['REQUESTS', 'RECORDS', 'MISMATCHES'])], 'page' => ['sometimes', 'integer', 'between:1,1000']] + PortalDateRange::rules($request));
         $result = $this->queries->adminLog($request, $filters);
 
         return ApiResponse::success($result['items'], $result['meta']);

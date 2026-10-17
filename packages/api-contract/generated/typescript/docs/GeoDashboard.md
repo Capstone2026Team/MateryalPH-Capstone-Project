@@ -12,7 +12,7 @@ Name | Type
 `period` | [GeoDashboardPeriod](GeoDashboardPeriod.md)
 `filters` | { [key: string]: any; }
 `filterApplicability` | [Array&lt;GeoFilterApplicability&gt;](GeoFilterApplicability.md)
-`disclosure` | [GeoDashboardDisclosure](GeoDashboardDisclosure.md)
+`disclosure` | [AdminDashboardMarketplaceDisclosure](AdminDashboardMarketplaceDisclosure.md)
 `kpis` | [GeoKpis](GeoKpis.md)
 `trends` | [Array&lt;GeoTrendPoint&gt;](GeoTrendPoint.md)
 `activityTrend` | [Array&lt;GeoActivityPoint&gt;](GeoActivityPoint.md)

@@ -9,11 +9,16 @@ All URIs are relative to */api/v1*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
+[**acknowledgeDeliveryAssignment**](VendorFulfillmentApi.md#acknowledgedeliveryassignment) | **POST** /vendor/orders/{orderId}/fulfillment/acknowledge |
 [**assignVendorFulfillmentStaff**](VendorFulfillmentApi.md#assignvendorfulfillmentstaff) | **POST** /vendor/orders/{orderId}/fulfillment/assignment |
 [**cancelVendorOrder**](VendorFulfillmentApi.md#cancelvendororder) | **POST** /vendor/orders/{orderId}/cancel |
 [**finalizeVendorCancellationRequest**](VendorFulfillmentApi.md#finalizevendorcancellationrequest) | **POST** /vendor/orders/{orderId}/cancellation-request/finalize |
+[**getDeliveryBuyerPhoto**](VendorFulfillmentApi.md#getdeliverybuyerphoto) | **GET** /vendor/orders/{orderId}/fulfillment/buyer-photo |
+[**getDeliveryDirections**](VendorFulfillmentApi.md#getdeliverydirections) | **GET** /vendor/orders/{orderId}/fulfillment/route |
 [**getVendorCancellationPreview**](VendorFulfillmentApi.md#getvendorcancellationpreview) | **GET** /vendor/orders/{orderId}/cancellation-preview |
 [**getVendorOrderFile**](VendorFulfillmentApi.md#getvendororderfile) | **GET** /vendor/orders/{orderId}/files/{fileId} |
+[**listAssignedFulfillments**](VendorFulfillmentApi.md#listassignedfulfillments) | **GET** /vendor/fulfillment |
+[**listDeliveryAssignmentVehicles**](VendorFulfillmentApi.md#listdeliveryassignmentvehicles) | **GET** /vendor/orders/{orderId}/fulfillment/vehicles |
 [**listVendorFulfillmentAssignees**](VendorFulfillmentApi.md#listvendorfulfillmentassignees) | **GET** /vendor/orders/{orderId}/fulfillment/assignees |
 [**recordVendorFulfillmentMilestone**](VendorFulfillmentApi.md#recordvendorfulfillmentmilestone) | **POST** /vendor/orders/{orderId}/fulfillment/milestones |
 [**recordVendorFulfillmentTrip**](VendorFulfillmentApi.md#recordvendorfulfillmenttrip) | **POST** /vendor/orders/{orderId}/fulfillment/trips |
@@ -23,12 +28,65 @@ Method | HTTP request | Description
 [**retryVendorRefund**](VendorFulfillmentApi.md#retryvendorrefund) | **POST** /vendor/orders/{orderId}/refunds/{refundId}/retry |
 
 
+# **acknowledgeDeliveryAssignment**
+> OrderDetailEnvelope acknowledgeDeliveryAssignment(orderId, idempotencyKey)
+
+
+
+Currently assigned Fulfillment Staff only. Idempotently acknowledge the current assignment with attribution and timestamp; leaves all order states unchanged.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getVendorFulfillmentApi();
+final String orderId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.acknowledgeDeliveryAssignment(orderId, idempotencyKey);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling VendorFulfillmentApi->acknowledgeDeliveryAssignment: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **orderId** | **String**|  |
+ **idempotencyKey** | **String**|  |
+
+### Return type
+
+[**OrderDetailEnvelope**](OrderDetailEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **assignVendorFulfillmentStaff**
 > OrderDetailEnvelope assignVendorFulfillmentStaff(orderId, idempotencyKey, fulfillmentAssignmentRequest)
 
 
 
-Owner or Store Manager assign or reassign Fulfillment Staff. The former assignee loses order, thread, file and realtime access immediately; history keeps its attribution.
+Owner or Store Manager assign or reassign active same-store Fulfillment Staff and an available accepted registered vehicle. With dispatch=true, assignment and Out for Delivery commit atomically using vehicle_index and lock_version; the order appears in the assigned staff workspace. Reassignment before Delivered preserves accepted arrangements and charges, records history and notifies affected staff. The former assignee loses order, thread, file and realtime access immediately; history keeps its attribution.
 
 ### Example
 ```dart
@@ -192,6 +250,110 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **getDeliveryBuyerPhoto**
+> Uint8List getDeliveryBuyerPhoto(orderId, version)
+
+
+
+Sanitized Buyer profile photo for an accepted, open Site Delivery order. Owner/Manager or current active assigned Fulfillment Staff only. Reauthorizes after private storage access; closure, reassignment or deactivation revokes access. Profile version changes invalidate an older version parameter. No storage key or private account identifier is returned. Response is private and no-store.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getVendorFulfillmentApi();
+final String orderId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final int version = 56; // int |
+
+try {
+    final response = api.getDeliveryBuyerPhoto(orderId, version);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling VendorFulfillmentApi->getDeliveryBuyerPhoto: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **orderId** | **String**|  |
+ **version** | **int**|  | [optional]
+
+### Return type
+
+[**Uint8List**](Uint8List.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: image/png, application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getDeliveryDirections**
+> DeliveryNavigationRouteEnvelope getDeliveryDirections(orderId)
+
+
+
+Owner/Manager or currently assigned Fulfillment Staff only. Registered store to confirmed delivery endpoint. Google Routes estimate and polyline; no live device tracking. Reauthorizes after provider call.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getVendorFulfillmentApi();
+final String orderId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.getDeliveryDirections(orderId);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling VendorFulfillmentApi->getDeliveryDirections: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **orderId** | **String**|  |
+
+### Return type
+
+[**DeliveryNavigationRouteEnvelope**](DeliveryNavigationRouteEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **getVendorCancellationPreview**
 > VendorCancellationPreviewEnvelope getVendorCancellationPreview(orderId)
 
@@ -296,6 +458,114 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **listAssignedFulfillments**
+> DeliveryWorkspacePage listAssignedFulfillments(status, sort, q, page)
+
+
+
+Fulfillment Staff only. Paginated current assignments; receipt-confirmed orders revoke staff access. Search order reference or Buyer name.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getVendorFulfillmentApi();
+final String status = status_example; // String |
+final String sort = sort_example; // String |
+final String q = q_example; // String |
+final int page = 56; // int |
+
+try {
+    final response = api.listAssignedFulfillments(status, sort, q, page);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling VendorFulfillmentApi->listAssignedFulfillments: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **status** | **String**|  | [optional]
+ **sort** | **String**|  | [optional]
+ **q** | **String**|  | [optional]
+ **page** | **int**|  | [optional]
+
+### Return type
+
+[**DeliveryWorkspacePage**](DeliveryWorkspacePage.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **listDeliveryAssignmentVehicles**
+> DeliveryVehicleOptionsEnvelope listDeliveryAssignmentVehicles(orderId)
+
+
+
+Owner/Manager only. Accepted vehicles with current availability and active allocation conflicts. Does not change accepted fees or arrangements.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getVendorFulfillmentApi();
+final String orderId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.listDeliveryAssignmentVehicles(orderId);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling VendorFulfillmentApi->listDeliveryAssignmentVehicles: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **orderId** | **String**|  |
+
+### Return type
+
+[**DeliveryVehicleOptionsEnvelope**](DeliveryVehicleOptionsEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **listVendorFulfillmentAssignees**
 > FulfillmentAssigneeListEnvelope listVendorFulfillmentAssignees(orderId)
 
@@ -348,11 +618,11 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **recordVendorFulfillmentMilestone**
-> OrderDetailEnvelope recordVendorFulfillmentMilestone(orderId, idempotencyKey, milestone, lockVersion, vehicleIndex, tripNumber, receiverName, receiverKind, handoverConfirmed, note, file, signature)
+> OrderDetailEnvelope recordVendorFulfillmentMilestone(orderId, idempotencyKey, milestone, lockVersion, vehicleIndex, tripNumber, receiverName, receiverKind, handoverConfirmed, note, file, signature, additionalPhotos)
 
 
 
-Owner, Store Manager or the assigned Fulfillment Staff record the next milestone through the shared state machine. Duplicate → replay or 409 MILESTONE_ALREADY_RECORDED; out of order → 409 ORDER_STATE_CONFLICT; open cancellation request → 409 CANCELLATION_PENDING; missing proof → 422 PROOF_REQUIRED. READY_FOR_PICKUP or OUT_FOR_DELIVERY opens the one fulfillment thread in the same transaction.
+Owner, Store Manager or the assigned Fulfillment Staff record authorized milestones through the shared state machine. DELIVERED is restricted to the currently assigned active Fulfillment Staff; Owner or Store Manager attempts return 403 PERMISSION_DENIED before proof storage. Staff must submit receiver_name and a validated private delivery photo; signature and up to three additional photos are optional within the configured evidence limit. OUT_FOR_DELIVERY requires an active same-store staff assignment (422 FULFILLMENT_STAFF_REQUIRED) and an available accepted registered vehicle (422 DELIVERY_VEHICLE_REQUIRED). New-delivery settings do not block existing orders. Self-Pickup handover rules are unchanged. Duplicate → replay or 409 MILESTONE_ALREADY_RECORDED; out of order → 409 ORDER_STATE_CONFLICT; open cancellation request → 409 CANCELLATION_PENDING; missing proof → 422 PROOF_REQUIRED. READY_FOR_PICKUP or OUT_FOR_DELIVERY ensures the one fulfillment thread in the same transaction. Private invalidations and authoritative REST refresh synchronize the recorded status and proof for the Buyer, store and assigned staff.
 
 ### Example
 ```dart
@@ -379,9 +649,10 @@ final bool handoverConfirmed = true; // bool |
 final String note = note_example; // String |
 final MultipartFile file = BINARY_DATA_HERE; // MultipartFile | Delivery photo (required for DELIVERED): JPG or PNG up to 10 MB, scanned fail-closed, stored privately.
 final MultipartFile signature = BINARY_DATA_HERE; // MultipartFile | Optional receiver signature image.
+final BuiltList<MultipartFile> additionalPhotos = /path/to/file.txt; // BuiltList<MultipartFile> |
 
 try {
-    final response = api.recordVendorFulfillmentMilestone(orderId, idempotencyKey, milestone, lockVersion, vehicleIndex, tripNumber, receiverName, receiverKind, handoverConfirmed, note, file, signature);
+    final response = api.recordVendorFulfillmentMilestone(orderId, idempotencyKey, milestone, lockVersion, vehicleIndex, tripNumber, receiverName, receiverKind, handoverConfirmed, note, file, signature, additionalPhotos);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling VendorFulfillmentApi->recordVendorFulfillmentMilestone: $e\n');
@@ -404,6 +675,7 @@ Name | Type | Description  | Notes
  **note** | **String**|  | [optional]
  **file** | **MultipartFile**| Delivery photo (required for DELIVERED): JPG or PNG up to 10 MB, scanned fail-closed, stored privately. | [optional]
  **signature** | **MultipartFile**| Optional receiver signature image. | [optional]
+ **additionalPhotos** | [**BuiltList&lt;MultipartFile&gt;**](MultipartFile.md)|  | [optional]
 
 ### Return type
 

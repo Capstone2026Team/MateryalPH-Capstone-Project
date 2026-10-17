@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`discount` | [ChatQuotationDiscountAssessment](ChatQuotationDiscountAssessment.md)
 `lines` | [Array&lt;ChatQuotationLine&gt;](ChatQuotationLine.md)
 `commercial` | [ChatQuotationMoney](ChatQuotationMoney.md)
 `fulfillmentMethod` | string
@@ -25,6 +26,7 @@ import type { ChatQuotationContent } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "discount": null,
   "lines": null,
   "commercial": null,
   "fulfillmentMethod": null,

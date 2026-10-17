@@ -1,3 +1,4 @@
+import '../../design_system/components/buyer_cart_button.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -198,15 +199,9 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
     ),
   );
 
-  Widget _cartButton() => IconButton(
-    tooltip: 'Cart',
+  Widget _cartButton() => BuyerCartButton(
+    cart: widget.navigation.cart,
     onPressed: () => widget.navigation.openCart(context),
-    icon: Badge(
-      isLabelVisible: widget.navigation.cart.lineCount > 0,
-      backgroundColor: BuyerTheme.ink,
-      label: Text('${widget.navigation.cart.lineCount}'),
-      child: const Icon(LucideIcons.shoppingCart, color: BuyerTheme.ink),
-    ),
   );
 
   Widget _header() {
@@ -478,7 +473,6 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
         SliverToBoxAdapter(
           child: StateMessage(
             kind: StateKind.needsLocation,
-            artwork: 'assets/states/location.png',
             title: 'Choose a location first',
             message:
                 'Select a location on the Map to search nearby Verified Vendors.',
@@ -516,7 +510,6 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
         SliverToBoxAdapter(
           child: StateMessage(
             kind: StateKind.empty,
-            artwork: 'assets/states/location.png',
             title: 'Search not found',
             message: filtered
                 ? 'No Verified Vendor listings match the current filters within ${_controller.radiusKm} km. Try removing a filter.'

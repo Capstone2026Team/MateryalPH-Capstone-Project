@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { ChatQuotationDiscount } from './ChatQuotationDiscount';
+import {
+    ChatQuotationDiscountFromJSON,
+    ChatQuotationDiscountFromJSONTyped,
+    ChatQuotationDiscountToJSON,
+    ChatQuotationDiscountToJSONTyped,
+} from './ChatQuotationDiscount';
 import type { NrpcProposal } from './NrpcProposal';
 import {
     NrpcProposalFromJSON,
@@ -57,9 +64,14 @@ export interface VendorOrderConfirmRequest {
      */
     lines: Array<OrderLineQuantity>;
     /**
-     *
+     * Legacy fixed materials discount. Omit when discount is supplied.
+     * @deprecated
      */
     vendorDiscountCentavos?: number;
+    /**
+     *
+     */
+    discount?: ChatQuotationDiscount;
     /**
      *
      */
@@ -96,6 +108,7 @@ export function VendorOrderConfirmRequestFromJSONTyped(json: any, ignoreDiscrimi
         'lockVersion': json['lock_version'],
         'lines': ((json['lines'] as Array<any>).map(OrderLineQuantityFromJSON)),
         'vendorDiscountCentavos': json['vendor_discount_centavos'] == null ? undefined : json['vendor_discount_centavos'],
+        'discount': json['discount'] == null ? undefined : ChatQuotationDiscountFromJSON(json['discount']),
         'nrpc': json['nrpc'] === undefined ? undefined : json['nrpc'] === null ? null : NrpcProposalFromJSON(json['nrpc']),
         'pickup': json['pickup'] === undefined ? undefined : json['pickup'] === null ? null : PickupConfirmationFromJSON(json['pickup']),
         'delivery': json['delivery'] === undefined ? undefined : json['delivery'] === null ? null : DeliveryConfirmationFromJSON(json['delivery']),
@@ -116,6 +129,7 @@ export function VendorOrderConfirmRequestToJSONTyped(value?: VendorOrderConfirmR
         'lock_version': value['lockVersion'],
         'lines': ((value['lines'] as Array<any>).map(OrderLineQuantityToJSON)),
         'vendor_discount_centavos': value['vendorDiscountCentavos'],
+        'discount': ChatQuotationDiscountToJSON(value['discount']),
         'nrpc': NrpcProposalToJSON(value['nrpc']),
         'pickup': PickupConfirmationToJSON(value['pickup']),
         'delivery': DeliveryConfirmationToJSON(value['delivery']),

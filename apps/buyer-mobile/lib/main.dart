@@ -21,6 +21,7 @@ import 'screens/splash_screen.dart';
 import 'screens/verify_email_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/terms_screen.dart';
+import 'screens/two_factor_sign_in_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -103,7 +104,7 @@ class _BuyerAppState extends State<BuyerApp> {
   @override
   void dispose() {
     _linkSubscription?.cancel();
-    _notifications.inbox.dispose();
+    _notifications.dispose();
     super.dispose();
   }
 
@@ -194,6 +195,19 @@ class _BuyerAppState extends State<BuyerApp> {
     try {
       await _authRepository.exchangeGoogleMobileCode(code);
       if (mounted) setState(() => _stage = _AppStage.home);
+    } on BuyerTwoFactorRequired catch (challenge) {
+      // Google proved the identity; the Buyer's authenticator still has to finish sign-in.
+      if (!mounted) return;
+      setState(() => _stage = _AppStage.login);
+      await WidgetsBinding.instance.endOfFrame;
+      final navigatorContext = _navigatorKey.currentContext;
+      if (navigatorContext == null || !navigatorContext.mounted) return;
+      final signedIn = await completeTwoFactorSignIn(
+        navigatorContext,
+        _authRepository,
+        challenge,
+      );
+      if (mounted && signedIn) setState(() => _stage = _AppStage.home);
     } on BuyerAuthException catch (error) {
       if (!mounted) return;
       setState(() => _stage = _AppStage.welcome);

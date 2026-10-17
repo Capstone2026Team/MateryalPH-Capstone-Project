@@ -20,6 +20,10 @@ import { mapValues } from '../runtime';
  */
 export interface FulfillmentThreadRef {
     /**
+     * Received messages this viewer has not read in this order's fulfillment conversation. Zero for a missing thread or a viewer without current conversation access. Counting never marks messages read.
+     */
+    unreadCount?: number;
+    /**
      *
      */
     available: boolean;
@@ -72,6 +76,7 @@ export function FulfillmentThreadRefFromJSONTyped(json: any, ignoreDiscriminator
     }
     return {
 
+        'unreadCount': json['unread_count'] == null ? undefined : json['unread_count'],
         'available': json['available'],
         'conversationId': json['conversation_id'] == null ? undefined : json['conversation_id'],
         'readOnly': json['read_only'],
@@ -91,6 +96,7 @@ export function FulfillmentThreadRefToJSONTyped(value?: FulfillmentThreadRef | n
 
     return {
 
+        'unread_count': value['unreadCount'],
         'available': value['available'],
         'conversation_id': value['conversationId'],
         'read_only': value['readOnly'],

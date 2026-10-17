@@ -1,5 +1,7 @@
-import { useId, useMemo, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { AlertTriangle, ArrowDownRight, ArrowUpRight, Award, BadgeCheck, Clock, EyeOff, Minus, ShieldCheck, Star, Tag, ThumbsUp, Timer, TrendingUp, Users } from 'lucide-react'
+import { chartLeftInset, chartMinimumWidth, chartTicks } from './chart-layout'
+import { useMeasuredWidth } from './geo-analytics-patterns'
 
 /** One graph/table day. A null value is a gap (missing day, suppressed or no local observation) — never zero. */
 export type PricePoint = {
@@ -22,10 +24,16 @@ export type TrendValue = {
   endDate?: string | Date | null | undefined
 }
 
-/** Generated clients may hand dates over as Date objects; analytics dates are calendar days. */
+/**
+ * Generated clients may hand dates over as Date objects; analytics dates are calendar days. The generated runtime
+ * parses a date-only value as local midnight (and serializes with local getters), so the day is read with local
+ * getters too: toISOString() would turn local midnight in Asia/Manila (UTC+8) into the previous day.
+ */
 export function analyticsDay(value: string | Date | null | undefined): string | null {
   if (value === null || value === undefined) return null
-  return value instanceof Date ? value.toISOString().slice(0, 10) : value.slice(0, 10)
+  if (!(value instanceof Date)) return value.slice(0, 10)
+  if (Number.isNaN(value.getTime())) return null
+  return `${String(value.getFullYear()).padStart(4, '0')}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`
 }
 
 const dayFormat = new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', timeZone: 'UTC' })
@@ -54,13 +62,20 @@ export function PriceTrendChart({ title, unit, points, focusedDate, onFocusDate,
   title: string; unit: string; points: PricePoint[]; focusedDate: string | null; onFocusDate: (date: string | null) => void; emptyReason: string
 }) {
   const summaryId = useId()
+  const [frame, measured] = useMeasuredWidth(720)
   const values = points.map(point => (point.value === null ? null : Number(point.value)))
   const numeric = values.filter((value): value is number => value !== null && Number.isFinite(value))
   if (numeric.length === 0) return <AnalyticsNullState title="No graph for this period" reason={emptyReason} />
-  const width = 720, height = 240, left = 64, right = 16, top = 16, bottom = 40
   const min = Math.min(...numeric), max = Math.max(...numeric)
   const pad = max === min ? Math.max(1, max * 0.05) : (max - min) * 0.12
   const low = Math.max(0, min - pad), high = max + pad
+  const ticks = [low, (low + high) / 2, high]
+  const tickLabels = ticks.map(tick => formatPhpDecimal(tick.toFixed(2)))
+  const dateLabels = points.map(point => formatAnalyticsDate(point.date))
+  const height = 240, left = chartLeftInset(tickLabels, 64), right = 24, top = 16, bottom = 40
+  const minimumWidth = chartMinimumWidth(dateLabels, left, right)
+  const width = Math.max(measured, minimumWidth)
+  const dateTicks = chartTicks(dateLabels, left, width - right)
   const x = (index: number) => left + (points.length === 1 ? (width - left - right) / 2 : index * (width - left - right) / (points.length - 1))
   const y = (value: number) => top + (1 - (value - low) / (high - low)) * (height - top - bottom)
   const segments: string[] = []
@@ -70,8 +85,6 @@ export function PriceTrendChart({ title, unit, points, focusedDate, onFocusDate,
     current += `${current ? 'L' : 'M'}${x(index).toFixed(1)},${y(value).toFixed(1)} `
   })
   if (current) segments.push(current)
-  const ticks = [low, (low + high) / 2, high]
-  const labelEvery = Math.max(1, Math.ceil(points.length / 6))
   const focusIndex = focusedDate === null ? -1 : points.findIndex(point => point.date === focusedDate)
   const focus = focusIndex >= 0 ? points[focusIndex] : undefined
   const gaps = points.filter(point => point.value === null).length
@@ -85,12 +98,12 @@ export function PriceTrendChart({ title, unit, points, focusedDate, onFocusDate,
   }
   return <figure className="m-0 min-w-0">
     <figcaption className="sr-only" id={summaryId}>{title}. {numeric.length} days with an average and {gaps} days without one, in {unit}. Use the arrow keys to move between days; the table below lists every value.</figcaption>
-    <div className="overflow-x-auto">
-      <svg viewBox={`0 0 ${width} ${height}`} className="h-auto w-full min-w-[480px] rounded-control focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" role="img" aria-labelledby={summaryId}
+    <div ref={frame} className="overflow-x-auto">
+      <svg viewBox={`0 0 ${width} ${height}`} style={{ minWidth: minimumWidth }} className="h-auto w-full rounded-control focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" role="img" aria-labelledby={summaryId}
         tabIndex={0} onKeyDown={move} onMouseLeave={() => onFocusDate(null)} onBlur={() => onFocusDate(null)}>
-        {ticks.map(tick => <g key={tick}>
+        {ticks.map((tick, index) => <g key={tick}>
           <line x1={left} x2={width - right} y1={y(tick)} y2={y(tick)} stroke="var(--mp-color-border-default)" strokeWidth={1} />
-          <text x={left - 8} y={y(tick) + 4} textAnchor="end" fontSize={11} fill="var(--mp-color-text-secondary)">{formatPhpDecimal(tick.toFixed(2))}</text>
+          <text x={left - 8} y={y(tick) + 4} textAnchor="end" fontSize={11} fill="var(--mp-color-text-secondary)">{tickLabels[index]}</text>
         </g>)}
         {points.map((point, index) => point.value === null && <g key={`gap-${point.date}`}>
           <rect x={x(index) - 5} y={top} width={10} height={height - top - bottom} fill="url(#analytics-gap)" opacity={0.6} />
@@ -101,7 +114,7 @@ export function PriceTrendChart({ title, unit, points, focusedDate, onFocusDate,
           <circle cx={x(index)} cy={y(Number(point.value))} r={index === focusIndex ? 6 : 4} fill="var(--mp-color-surface-primary)" stroke="var(--mp-color-action-primary)" strokeWidth={2} />
           {point.participantsChanged && <path d={`M${x(index)},${y(Number(point.value)) - 14} l5,8 h-10 z`} fill="var(--mp-color-text-strong)" aria-hidden="true" />}
         </g>)}
-        {points.map((point, index) => (index % labelEvery === 0 || (index === points.length - 1 && index % labelEvery > labelEvery / 2)) && <text key={`label-${point.date}`} x={x(index)} y={height - 16} textAnchor="middle" fontSize={11} fill="var(--mp-color-text-secondary)">{formatAnalyticsDate(point.date)}</text>)}
+        {dateTicks.map(tick => <text key={tick.index} x={tick.x} y={height - 16} textAnchor={tick.textAnchor} fontSize={11} fill="var(--mp-color-text-secondary)">{tick.label}</text>)}
         {focus && <line x1={x(focusIndex)} x2={x(focusIndex)} y1={top} y2={height - bottom} stroke="var(--mp-color-text-secondary)" strokeDasharray="3 3" strokeWidth={1} />}
         {points.map((point, index) => <rect key={`hit-${point.date}`} x={x(index) - (width - left - right) / Math.max(1, points.length - 1) / 2} y={top} width={Math.max(12, (width - left - right) / Math.max(1, points.length - 1))} height={height - top - bottom}
           fill="transparent" onMouseEnter={() => onFocusDate(point.date)} />)}
@@ -215,16 +228,33 @@ export function StarRatingDisplay({ value, label }: { value: number; label: stri
   </span>
 }
 
-/** A 1–5 radio group with 44 px targets and a visible legend. */
-export function StarRatingInput({ legend, name, value, onChange, error, disabled = false }: { legend: string; name: string; value: number | null; onChange: (value: number) => void; error?: string | null; disabled?: boolean }) {
-  const errorId = useId()
-  return <fieldset className="grid gap-2" aria-describedby={error ? errorId : undefined} disabled={disabled}>
-    <legend className="text-sm font-semibold text-text-strong">{legend}</legend>
-    <div className="flex flex-wrap gap-1">{[1, 2, 3, 4, 5].map(star => <label key={star} className={`inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-control border ${value !== null && star <= value ? 'border-brand-orange-500 bg-brand-orange-50' : 'border-border-default bg-surface-primary'} has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-focus-ring`}>
-      <input className="sr-only" type="radio" name={name} value={star} checked={value === star} onChange={() => onChange(star)} />
-      <Star size={20} aria-hidden="true" className={value !== null && star <= value ? 'fill-brand-orange-500 text-brand-orange-500' : 'text-text-secondary'} />
-      <span className="sr-only">{star} of 5</span>
-    </label>)}</div>
+/** A 1–5 radio group; score selection never submits its enclosing form. */
+export function StarRatingInput({ legend, name, value, onChange, error, disabled = false, descriptionId, hideLegend = false }: { legend: string; name: string; value: number | null; onChange: (value: number) => void; error?: string | null; disabled?: boolean; descriptionId?: string; hideLegend?: boolean }) {
+  const id = useId()
+  const errorId = `${id}-error`
+  const buttons = useRef<(HTMLButtonElement | null)[]>([])
+  const describedBy = [descriptionId, error ? errorId : null].filter(Boolean).join(' ') || undefined
+  function move(event: KeyboardEvent<HTMLButtonElement>, star: number) {
+    const next = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? star % 5 + 1
+      : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? (star + 3) % 5 + 1
+        : event.key === 'Home' ? 1 : event.key === 'End' ? 5 : null
+    if (next === null || disabled) return
+    event.preventDefault()
+    event.stopPropagation()
+    onChange(next)
+    buttons.current[next - 1]?.focus()
+  }
+  return <fieldset className="grid min-w-0 gap-2" disabled={disabled}>
+    <legend id={`${id}-legend`} className={hideLegend ? 'sr-only' : 'text-sm font-semibold text-text-strong'}>{legend}</legend>
+    <div role="radiogroup" aria-labelledby={`${id}-legend`} aria-describedby={describedBy} aria-invalid={Boolean(error)} className="flex flex-wrap gap-1">
+      {[1, 2, 3, 4, 5].map(star => <button key={star} ref={element => { buttons.current[star - 1] = element }} type="button" role="radio" name={name} value={star}
+        aria-label={`${star} of 5`} aria-checked={value === star} tabIndex={star === (value ?? 1) ? 0 : -1} disabled={disabled}
+        onClick={event => { event.preventDefault(); event.stopPropagation(); onChange(star) }} onKeyDown={event => move(event, star)}
+        className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-control border transition-colors motion-reduce:transition-none hover:border-action-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:cursor-not-allowed disabled:opacity-60 ${value !== null && star <= value ? 'border-action-primary bg-brand-orange-50' : 'border-border-default bg-surface-primary'}`}>
+        <Star size={20} aria-hidden="true" className={value !== null && star <= value ? 'fill-action-primary text-action-primary' : 'text-text-secondary'} />
+      </button>)}
+    </div>
+    <p className="text-xs text-text-secondary">{value === null ? 'Choose a score' : `${value} of 5 selected`}</p>
     {error && <p id={errorId} className="text-sm text-status-error" role="alert">{error}</p>}
   </fieldset>
 }

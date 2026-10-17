@@ -94,7 +94,7 @@ example().catch(console.error);
 
 ## listAdminInvoiceLog
 
-> InvoiceLogEnvelope listAdminInvoiceLog(view, page)
+> InvoiceLogEnvelope listAdminInvoiceLog(view, page, from, to)
 
 
 
@@ -124,6 +124,10 @@ async function example() {
     view: view_example,
     // number (optional)
     page: 56,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Invoice issued_on for RECORDS/MISMATCHES, request created_at for REQUESTS. Workload counts remain current. (optional)
+    from: 2013-10-20,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Invoice issued_on for RECORDS/MISMATCHES, request created_at for REQUESTS. Workload counts remain current. (optional)
+    to: 2013-10-20,
   } satisfies ListAdminInvoiceLogRequest;
 
   try {
@@ -145,6 +149,8 @@ example().catch(console.error);
 |------------- | ------------- | ------------- | -------------|
 | **view** | `REQUESTS`, `RECORDS`, `MISMATCHES` |  | [Optional] [Defaults to `undefined`] [Enum: REQUESTS, RECORDS, MISMATCHES] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **from** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Invoice issued_on for RECORDS/MISMATCHES, request created_at for REQUESTS. Workload counts remain current. | [Optional] [Defaults to `undefined`] |
+| **to** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Invoice issued_on for RECORDS/MISMATCHES, request created_at for REQUESTS. Workload counts remain current. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 

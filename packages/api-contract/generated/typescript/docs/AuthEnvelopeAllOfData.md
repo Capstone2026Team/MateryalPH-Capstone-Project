@@ -16,6 +16,7 @@ Name | Type
 `mfaRequired` | boolean
 `mfaEnrollmentRequired` | boolean
 `challengeExpiresIn` | number
+`challengeToken` | string
 `recoveryCodes` | Array&lt;string&gt;
 
 ## Example
@@ -35,6 +36,7 @@ const example = {
   "mfaRequired": null,
   "mfaEnrollmentRequired": null,
   "challengeExpiresIn": null,
+  "challengeToken": null,
   "recoveryCodes": null,
 } satisfies AuthEnvelopeAllOfData
 

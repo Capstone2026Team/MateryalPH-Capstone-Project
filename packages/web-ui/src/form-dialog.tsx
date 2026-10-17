@@ -4,7 +4,7 @@ import { Button } from './button'
 
 /** A modal editor with persistent content and independently scrolling fields. */
 export function FormDialog({ open, title, description, children, footer, busy = false, onClose, bodyClassName, headerMedia, headerDetails, size = 'wide' }: {
-  open: boolean; title: string; description: string; children: ReactNode; footer: ReactNode; busy?: boolean; onClose: () => void; bodyClassName?: string; headerMedia?: ReactNode; headerDetails?: ReactNode; size?: 'compact' | 'wide'
+  open: boolean; title: string; description: string; children: ReactNode; footer: ReactNode; busy?: boolean; onClose: () => void; bodyClassName?: string; headerMedia?: ReactNode; headerDetails?: ReactNode; size?: 'small' | 'compact' | 'wide' | 'date'
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
   const titleId = useId()
@@ -22,7 +22,7 @@ export function FormDialog({ open, title, description, children, footer, busy = 
       if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus()
     }
   }, [open])
-  return <dialog ref={dialog} aria-labelledby={titleId} aria-describedby={descriptionId} onCancel={event => { if (event.target !== event.currentTarget) return; event.preventDefault(); if (!busy) onClose() }} className={`fixed inset-0 m-auto max-h-[calc(100dvh_-_2rem)] w-[calc(100%_-_2rem)] ${size === 'compact' ? 'max-w-2xl' : 'max-w-5xl'} overflow-hidden rounded-surface border border-border-default bg-surface-primary p-0 text-text-strong shadow-xl backdrop:bg-black/50`}>
+  return <dialog ref={dialog} aria-labelledby={titleId} aria-describedby={descriptionId} onCancel={event => { if (event.target !== event.currentTarget) return; event.preventDefault(); if (!busy) onClose() }} className={`fixed inset-0 m-auto max-h-[calc(100dvh_-_2rem)] ${size === 'date' ? 'w-[calc(100%_-_0.5rem)] max-w-4xl sm:w-[calc(100%_-_2rem)]' : `w-[calc(100%_-_2rem)] ${size === 'small' ? 'max-w-md' : size === 'compact' ? 'max-w-2xl' : 'max-w-5xl'}`} overflow-hidden rounded-surface border border-border-default bg-surface-primary p-0 text-text-strong shadow-floating backdrop:bg-overlay-scrim`}>
     <div className="flex max-h-[calc(100dvh_-_2rem)] flex-col">
       <header className="flex shrink-0 items-start justify-between gap-4 border-b border-border-default px-5 py-4 sm:px-6">
         <div className="flex min-w-0 flex-1 flex-wrap items-start gap-4">

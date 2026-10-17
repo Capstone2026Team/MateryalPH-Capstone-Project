@@ -30,6 +30,11 @@ const DocumentExportInputTypeEnum _$documentExportInputTypeEnum_AUDIT_LOG =
     const DocumentExportInputTypeEnum._('AUDIT_LOG');
 const DocumentExportInputTypeEnum _$documentExportInputTypeEnum_GEO_ANALYTICS =
     const DocumentExportInputTypeEnum._('GEO_ANALYTICS');
+const DocumentExportInputTypeEnum
+    _$documentExportInputTypeEnum_TRANSACTION_HISTORY =
+    const DocumentExportInputTypeEnum._('TRANSACTION_HISTORY');
+const DocumentExportInputTypeEnum _$documentExportInputTypeEnum_EARNINGS =
+    const DocumentExportInputTypeEnum._('EARNINGS');
 
 DocumentExportInputTypeEnum _$documentExportInputTypeEnumValueOf(String name) {
   switch (name) {
@@ -53,6 +58,10 @@ DocumentExportInputTypeEnum _$documentExportInputTypeEnumValueOf(String name) {
       return _$documentExportInputTypeEnum_AUDIT_LOG;
     case 'GEO_ANALYTICS':
       return _$documentExportInputTypeEnum_GEO_ANALYTICS;
+    case 'TRANSACTION_HISTORY':
+      return _$documentExportInputTypeEnum_TRANSACTION_HISTORY;
+    case 'EARNINGS':
+      return _$documentExportInputTypeEnum_EARNINGS;
     default:
       throw ArgumentError(name);
   }
@@ -71,6 +80,8 @@ final BuiltSet<DocumentExportInputTypeEnum>
   _$documentExportInputTypeEnum_TAX_PACKAGE,
   _$documentExportInputTypeEnum_AUDIT_LOG,
   _$documentExportInputTypeEnum_GEO_ANALYTICS,
+  _$documentExportInputTypeEnum_TRANSACTION_HISTORY,
+  _$documentExportInputTypeEnum_EARNINGS,
 ]);
 
 const DocumentExportInputFormatEnum _$documentExportInputFormatEnum_PDF =
@@ -117,6 +128,8 @@ class _$DocumentExportInputTypeEnumSerializer
     'TAX_PACKAGE': 'TAX_PACKAGE',
     'AUDIT_LOG': 'AUDIT_LOG',
     'GEO_ANALYTICS': 'GEO_ANALYTICS',
+    'TRANSACTION_HISTORY': 'TRANSACTION_HISTORY',
+    'EARNINGS': 'EARNINGS',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'PURCHASE_ORDER': 'PURCHASE_ORDER',
@@ -129,6 +142,8 @@ class _$DocumentExportInputTypeEnumSerializer
     'TAX_PACKAGE': 'TAX_PACKAGE',
     'AUDIT_LOG': 'AUDIT_LOG',
     'GEO_ANALYTICS': 'GEO_ANALYTICS',
+    'TRANSACTION_HISTORY': 'TRANSACTION_HISTORY',
+    'EARNINGS': 'EARNINGS',
   };
 
   @override

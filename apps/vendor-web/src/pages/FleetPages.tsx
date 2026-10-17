@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { AlertTriangle, CheckCircle2, CircleCheck, Truck, TruckElectric } from 'lucide-react'
-import { Button, ConflictBanner, DeliveryVehicles, StatCard, InfoNote, EmptyState, StatusMessage, useAutomaticRefresh, type DeliveryVehicleDraft } from '@materyalph/web-ui'
+import { Button, ConflictBanner, DeliveryVehicles, VendorDeliverySetup, StatCard, InfoNote, EmptyState, StatusMessage, useAutomaticRefresh, type DeliveryVehicleDraft } from '@materyalph/web-ui'
 import { apiFailure, fleetImageUrl, listFleet, readableInventoryError, saveFleet, uploadFleetImage, type FleetVehicle, type FleetVehicleListMeta } from '../lib/inventory-api'
 import { fleetFieldNames, fleetVehicleDraft, fleetVehiclePayload, vehicleErrors } from '../lib/delivery-vehicles'
 import { useOnboardingSnapshot } from '../lib/vendor-status'
@@ -188,6 +188,9 @@ export function VendorFleetPage() {
               <p>Another person saved a vehicle after you opened this page. Nothing was overwritten. Reload to see the saved configuration, then reapply your change.</p>
             </ConflictBanner>}
             {notice && <StatusMessage tone={notice.tone}>{notice.text}</StatusMessage>}
+            {canManage && <VendorDeliverySetup hideWhenReady method={meta?.delivery?.fulfillmentMethod ?? ''} state={meta?.deliverySetup}
+              staffAction={<Link to="/team" className="inline-flex min-h-11 items-center text-action-primary underline">Manage Fulfillment Staff</Link>}
+              activationAction={<Link to="/store-profile" className="inline-flex min-h-11 items-center text-action-primary underline">Open Fulfillment Configuration</Link>} />}
             {!canManage && <StatusMessage>You can view vehicles. Only the Owner or Store Manager can change vehicle configuration, fees or capacity.</StatusMessage>}
             <DeliveryVehicles key={editorRevision} operational disabled={!canManage || busy} vehicles={drafts} errors={errors} notices={notices} coverageKm={meta?.delivery?.serviceRadiusKm ?? 50}
               onChange={next => { currentEdit.current.dirty = true; setDrafts(next); setDirty(true) }}

@@ -20,6 +20,13 @@ import {
     ChatQuotationChangeToJSON,
     ChatQuotationChangeToJSONTyped,
 } from './ChatQuotationChange';
+import type { ChatQuotationDiscountAssessment } from './ChatQuotationDiscountAssessment';
+import {
+    ChatQuotationDiscountAssessmentFromJSON,
+    ChatQuotationDiscountAssessmentFromJSONTyped,
+    ChatQuotationDiscountAssessmentToJSON,
+    ChatQuotationDiscountAssessmentToJSONTyped,
+} from './ChatQuotationDiscountAssessment';
 import type { ChatQuotationLine } from './ChatQuotationLine';
 import {
     ChatQuotationLineFromJSON,
@@ -41,6 +48,10 @@ import {
  * @interface ChatQuotationContent
  */
 export interface ChatQuotationContent {
+    /**
+     *
+     */
+    discount?: ChatQuotationDiscountAssessment;
     /**
      *
      */
@@ -125,6 +136,7 @@ export function ChatQuotationContentFromJSONTyped(json: any, ignoreDiscriminator
     }
     return {
 
+        'discount': json['discount'] == null ? undefined : ChatQuotationDiscountAssessmentFromJSON(json['discount']),
         'lines': ((json['lines'] as Array<any>).map(ChatQuotationLineFromJSON)),
         'commercial': ChatQuotationMoneyFromJSON(json['commercial']),
         'fulfillmentMethod': json['fulfillment_method'],
@@ -150,6 +162,7 @@ export function ChatQuotationContentToJSONTyped(value?: ChatQuotationContent | n
 
     return {
 
+        'discount': ChatQuotationDiscountAssessmentToJSON(value['discount']),
         'lines': ((value['lines'] as Array<any>).map(ChatQuotationLineToJSON)),
         'commercial': ChatQuotationMoneyToJSON(value['commercial']),
         'fulfillment_method': value['fulfillmentMethod'],

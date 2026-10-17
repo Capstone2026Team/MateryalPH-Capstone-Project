@@ -4,6 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/fulfillment_arrangement_vehicle.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -16,6 +17,9 @@ part 'fulfillment_assignment.g.dart';
 /// * [role]
 /// * [assignedAt]
 /// * [userId]
+/// * [acknowledgedAt]
+/// * [endedAt]
+/// * [vehicle]
 @BuiltValue()
 abstract class FulfillmentAssignment implements Built<FulfillmentAssignment, FulfillmentAssignmentBuilder> {
   @BuiltValueField(wireName: r'display_name')
@@ -30,6 +34,15 @@ abstract class FulfillmentAssignment implements Built<FulfillmentAssignment, Ful
 
   @BuiltValueField(wireName: r'user_id')
   int? get userId;
+
+  @BuiltValueField(wireName: r'acknowledged_at')
+  DateTime? get acknowledgedAt;
+
+  @BuiltValueField(wireName: r'ended_at')
+  DateTime? get endedAt;
+
+  @BuiltValueField(wireName: r'vehicle')
+  FulfillmentArrangementVehicle? get vehicle;
 
   FulfillmentAssignment._();
 
@@ -76,6 +89,27 @@ class _$FulfillmentAssignmentSerializer implements PrimitiveSerializer<Fulfillme
       yield serializers.serialize(
         object.userId,
         specifiedType: const FullType(int),
+      );
+    }
+    if (object.acknowledgedAt != null) {
+      yield r'acknowledged_at';
+      yield serializers.serialize(
+        object.acknowledgedAt,
+        specifiedType: const FullType(DateTime),
+      );
+    }
+    if (object.endedAt != null) {
+      yield r'ended_at';
+      yield serializers.serialize(
+        object.endedAt,
+        specifiedType: const FullType(DateTime),
+      );
+    }
+    if (object.vehicle != null) {
+      yield r'vehicle';
+      yield serializers.serialize(
+        object.vehicle,
+        specifiedType: const FullType.nullable(FulfillmentArrangementVehicle),
       );
     }
   }
@@ -130,6 +164,30 @@ class _$FulfillmentAssignmentSerializer implements PrimitiveSerializer<Fulfillme
           ) as int?;
           if (valueDes == null) continue;
           result.userId = valueDes;
+          break;
+        case r'acknowledged_at':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(DateTime),
+          ) as DateTime?;
+          if (valueDes == null) continue;
+          result.acknowledgedAt = valueDes;
+          break;
+        case r'ended_at':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(DateTime),
+          ) as DateTime?;
+          if (valueDes == null) continue;
+          result.endedAt = valueDes;
+          break;
+        case r'vehicle':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(FulfillmentArrangementVehicle),
+          ) as FulfillmentArrangementVehicle?;
+          if (valueDes == null) continue;
+          result.vehicle.replace(valueDes);
           break;
         default:
           unhandled.add(key);

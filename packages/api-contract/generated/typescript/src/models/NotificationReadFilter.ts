@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { mapValues, parseDate, parseDateTime, serializeDate, serializeDateTime } from '../runtime';
 /**
  *
  * @export
@@ -32,6 +32,14 @@ export interface NotificationReadFilter {
      * @deprecated
      */
     title?: string;
+    /**
+     * Inclusive Asia/Manila notification created_at lower boundary. Omit for an open boundary.
+     */
+    from?: Date;
+    /**
+     * Inclusive Asia/Manila notification created_at upper boundary. Must be on or after from when both are provided.
+     */
+    to?: Date;
 }
 
 /**
@@ -55,6 +63,8 @@ export function NotificationReadFilterFromJSONTyped(json: any, ignoreDiscriminat
         'throughId': json['through_id'],
         'category': json['category'] == null ? undefined : json['category'],
         'title': json['title'] == null ? undefined : json['title'],
+        'from': json['from'] == null ? undefined : (parseDate(json['from'])),
+        'to': json['to'] == null ? undefined : (parseDate(json['to'])),
     };
 }
 
@@ -72,6 +82,8 @@ export function NotificationReadFilterToJSONTyped(value?: NotificationReadFilter
         'through_id': value['throughId'],
         'category': value['category'],
         'title': value['title'],
+        'from': value['from'] == null ? value['from'] : serializeDate(value['from']),
+        'to': value['to'] == null ? value['to'] : serializeDate(value['to']),
     };
 }
 

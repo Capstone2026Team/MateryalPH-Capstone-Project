@@ -8,7 +8,7 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**category** | **String** |  |
+**category** | **String** | A supported notification category, including MESSAGES for received Vendor conversation messages. MESSAGES preferences apply to both SALES and FULFILLMENT conversations. |
 **inApp** | **bool** |  |
 **email** | **bool** |  |
 **push** | **bool** |  |

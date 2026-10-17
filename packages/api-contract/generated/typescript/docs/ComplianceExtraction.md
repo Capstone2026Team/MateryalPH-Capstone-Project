@@ -7,9 +7,11 @@
 Name | Type
 ------------ | -------------
 `source` | string
+`provider` | string
 `status` | string
 `confidence` | number
 `suggestions` | { [key: string]: string; }
+`registerListed` | boolean
 `assistanceOnly` | boolean
 
 ## Example
@@ -20,9 +22,11 @@ import type { ComplianceExtraction } from '@materyalph/api-client-ts'
 // TODO: Update the object below with actual values
 const example = {
   "source": null,
+  "provider": null,
   "status": null,
   "confidence": null,
   "suggestions": null,
+  "registerListed": null,
   "assistanceOnly": null,
 } satisfies ComplianceExtraction
 

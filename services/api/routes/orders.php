@@ -11,6 +11,8 @@ Route::prefix('buyers')->middleware(['auth.transport:MOBILE', 'auth:api', 'accou
     Route::get('/checkouts/{checkoutId}', [BuyerOrderController::class, 'checkout'])->whereUuid('checkoutId');
     Route::get('/orders', [BuyerOrderController::class, 'index']);
     Route::get('/orders/{orderId}', [BuyerOrderController::class, 'show'])->whereUuid('orderId');
+    Route::post('/orders/{orderId}/fulfillment-conversation', [BuyerOrderController::class, 'fulfillmentConversation'])->whereUuid('orderId');
+    Route::post('/orders/{orderId}/buy-again', [BuyerOrderController::class, 'buyAgain'])->whereUuid('orderId');
     Route::post('/orders/{orderId}/revision/approve', [BuyerOrderController::class, 'approveRevision'])->whereUuid('orderId');
     Route::post('/orders/{orderId}/revision/reject', [BuyerOrderController::class, 'rejectRevision'])->whereUuid('orderId');
     Route::post('/orders/{orderId}/nrpc/accept', [BuyerOrderController::class, 'acceptNrpc'])->whereUuid('orderId');

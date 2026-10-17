@@ -33,6 +33,8 @@ part 'fleet_vehicle_input.g.dart';
 /// * [baseFeeCentavos]
 /// * [perKmCentavos]
 /// * [maximumDistanceKm]
+/// * [mobilizationFeeCentavos] - Concrete Mixer Truck / Transit Mixer only (owner decision 2026-10-16). A positive fee needs mobilization_basis. Any change appends a rate version.
+/// * [mobilizationBasis] - PER_TRUCK charges once per truck dispatched; PER_TRIP once per trip.
 @BuiltValue()
 abstract class FleetVehicleInput implements Built<FleetVehicleInput, FleetVehicleInputBuilder> {
   /// Omit for a new configuration.
@@ -104,6 +106,15 @@ abstract class FleetVehicleInput implements Built<FleetVehicleInput, FleetVehicl
 
   @BuiltValueField(wireName: r'maximum_distance_km')
   int? get maximumDistanceKm;
+
+  /// Concrete Mixer Truck / Transit Mixer only (owner decision 2026-10-16). A positive fee needs mobilization_basis. Any change appends a rate version.
+  @BuiltValueField(wireName: r'mobilization_fee_centavos')
+  int? get mobilizationFeeCentavos;
+
+  /// PER_TRUCK charges once per truck dispatched; PER_TRIP once per trip.
+  @BuiltValueField(wireName: r'mobilization_basis')
+  FleetVehicleInputMobilizationBasisEnum? get mobilizationBasis;
+  // enum mobilizationBasisEnum {  PER_TRUCK,  PER_TRIP,  ,  };
 
   FleetVehicleInput._();
 
@@ -273,6 +284,20 @@ class _$FleetVehicleInputSerializer implements PrimitiveSerializer<FleetVehicleI
       yield serializers.serialize(
         object.maximumDistanceKm,
         specifiedType: const FullType(int),
+      );
+    }
+    if (object.mobilizationFeeCentavos != null) {
+      yield r'mobilization_fee_centavos';
+      yield serializers.serialize(
+        object.mobilizationFeeCentavos,
+        specifiedType: const FullType.nullable(int),
+      );
+    }
+    if (object.mobilizationBasis != null) {
+      yield r'mobilization_basis';
+      yield serializers.serialize(
+        object.mobilizationBasis,
+        specifiedType: const FullType.nullable(FleetVehicleInputMobilizationBasisEnum),
       );
     }
   }
@@ -466,6 +491,22 @@ class _$FleetVehicleInputSerializer implements PrimitiveSerializer<FleetVehicleI
           if (valueDes == null) continue;
           result.maximumDistanceKm = valueDes;
           break;
+        case r'mobilization_fee_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.mobilizationFeeCentavos = valueDes;
+          break;
+        case r'mobilization_basis':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(FleetVehicleInputMobilizationBasisEnum),
+          ) as FleetVehicleInputMobilizationBasisEnum?;
+          if (valueDes == null) continue;
+          result.mobilizationBasis = valueDes;
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -528,5 +569,21 @@ class FleetVehicleInputHeavyClassificationEnum extends EnumClass {
 
   static BuiltSet<FleetVehicleInputHeavyClassificationEnum> get values => _$fleetVehicleInputHeavyClassificationEnumValues;
   static FleetVehicleInputHeavyClassificationEnum valueOf(String name) => _$fleetVehicleInputHeavyClassificationEnumValueOf(name);
+}
+
+/// PER_TRUCK charges once per truck dispatched; PER_TRIP once per trip.
+class FleetVehicleInputMobilizationBasisEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'PER_TRUCK')
+  static const FleetVehicleInputMobilizationBasisEnum PER_TRUCK = _$fleetVehicleInputMobilizationBasisEnum_PER_TRUCK;
+  @BuiltValueEnumConst(wireName: r'PER_TRIP')
+  static const FleetVehicleInputMobilizationBasisEnum PER_TRIP = _$fleetVehicleInputMobilizationBasisEnum_PER_TRIP;
+
+  static Serializer<FleetVehicleInputMobilizationBasisEnum> get serializer => _$fleetVehicleInputMobilizationBasisEnumSerializer;
+
+  const FleetVehicleInputMobilizationBasisEnum._(String name): super(name);
+
+  static BuiltSet<FleetVehicleInputMobilizationBasisEnum> get values => _$fleetVehicleInputMobilizationBasisEnumValues;
+  static FleetVehicleInputMobilizationBasisEnum valueOf(String name) => _$fleetVehicleInputMobilizationBasisEnumValueOf(name);
 }
 

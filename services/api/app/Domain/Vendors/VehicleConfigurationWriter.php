@@ -90,9 +90,39 @@ final class VehicleConfigurationWriter
             if (! is_int($distance) || $distance < 1 || $distance > 1000) {
                 $add($index, 'maximum_distance_km', 'Enter a maximum delivery distance from 1 to 1,000 km.');
             }
+            foreach (self::mobilizationErrors($vehicle) as $field => $message) {
+                $add($index, $field, $message);
+            }
         }
 
         return $errors;
+    }
+
+    /**
+     * Owner decision (2026-10-16): a mixer may carry a mobilization fee, and its Vendor chooses whether it is charged
+     * per truck dispatched or per trip. Other vehicle types never carry one.
+     *
+     * @param  array<string, mixed>  $vehicle
+     * @return array<string, string>
+     */
+    public static function mobilizationErrors(array $vehicle): array
+    {
+        $fee = $vehicle['mobilization_fee_centavos'] ?? null;
+        $basis = $vehicle['mobilization_basis'] ?? null;
+        if (($vehicle['vehicle_type'] ?? null) !== 'CONCRETE_MIXER') {
+            return ($fee !== null && $fee !== 0) || $basis !== null ? ['mobilization_fee_centavos' => 'Only a Concrete Mixer Truck / Transit Mixer can carry a mobilization fee.'] : [];
+        }
+        if ($fee !== null && (! is_int($fee) || $fee < 0 || $fee > self::MAX_CENTAVOS)) {
+            return ['mobilization_fee_centavos' => 'Enter a mobilization fee of zero or more.'];
+        }
+        if ((int) $fee > 0 && ! in_array($basis, DeliveryRecommendationService::MOBILIZATION_BASES, true)) {
+            return ['mobilization_basis' => 'Choose whether the mobilization fee is charged per truck or per trip.'];
+        }
+        if ($basis !== null && ! in_array($basis, DeliveryRecommendationService::MOBILIZATION_BASES, true)) {
+            return ['mobilization_basis' => 'Choose per truck or per trip.'];
+        }
+
+        return [];
     }
 
     /**
@@ -172,9 +202,9 @@ final class VehicleConfigurationWriter
             }
             $this->version($id, $actorId);
 
-            $rateKeys = ['base_fee_centavos', 'per_km_centavos', 'maximum_distance_km'];
-            if (count(array_intersect($rateKeys, array_keys($vehicle))) > 0) {
-                $this->saveRate($id, $vehicle, $deliveryDistance, $actorId);
+            $rateKeys = ['base_fee_centavos', 'per_km_centavos', 'maximum_distance_km', 'mobilization_fee_centavos', 'mobilization_basis'];
+            if (count(array_intersect($rateKeys, array_keys($vehicle))) > 0 || ($vehicleType !== 'CONCRETE_MIXER' && $this->carriesMobilization($id))) {
+                $this->saveRate($id, $vehicle, $deliveryDistance, $actorId, $vehicleType === 'CONCRETE_MIXER');
             }
             $saved[] = $id;
         }
@@ -186,8 +216,14 @@ final class VehicleConfigurationWriter
         return $saved;
     }
 
+    /** A vehicle changed away from a mixer must not keep charging mobilization on its current rate. */
+    private function carriesMobilization(string $vehicleId): bool
+    {
+        return (int) DB::table('vehicle_rate_versions')->where('vendor_vehicle_id', $vehicleId)->orderByDesc('version')->value('mobilization_fee_centavos') > 0;
+    }
+
     /** @param array<string, mixed> $vehicle */
-    private function saveRate(string $vehicleId, array $vehicle, mixed $deliveryDistance, ?int $actorId): void
+    private function saveRate(string $vehicleId, array $vehicle, mixed $deliveryDistance, ?int $actorId, bool $mixer): void
     {
         $centavos = static function (mixed $value): ?int {
             if (is_int($value)) {
@@ -206,8 +242,20 @@ final class VehicleConfigurationWriter
         if ($baseFee === null || $perKm === null || ! is_numeric($maximumDistance) || ! is_finite((float) $maximumDistance) || floor((float) $maximumDistance) !== (float) $maximumDistance || (int) $maximumDistance < 1 || (int) $maximumDistance > 1000) {
             throw new AuthenticationException('VEHICLE_RATE_INCOMPLETE', 'Provide non-negative base and per-kilometer fees and a delivery distance between 1 and 1000 km.', 422);
         }
-        if ($currentRate === null || (int) $currentRate->base_fee_centavos !== $baseFee || (int) $currentRate->per_km_centavos !== $perKm || (int) $currentRate->maximum_distance_km !== (int) $maximumDistance) {
-            DB::table('vehicle_rate_versions')->insert(['id' => (string) Str::uuid7(), 'vendor_vehicle_id' => $vehicleId, 'version' => ($currentRate === null ? 0 : (int) $currentRate->version) + 1, 'base_fee_centavos' => $baseFee, 'per_km_centavos' => $perKm, 'maximum_distance_km' => (int) $maximumDistance, 'effective_at' => now(), 'created_by_user_id' => $actorId, 'created_at' => now(), 'updated_at' => now()]);
+        $mobilizationFee = 0;
+        $mobilizationBasis = null;
+        if ($mixer) {
+            $mobilizationFee = $centavos(array_key_exists('mobilization_fee_centavos', $vehicle) ? ($vehicle['mobilization_fee_centavos'] ?? 0) : ($currentRate->mobilization_fee_centavos ?? 0));
+            $mobilizationBasis = array_key_exists('mobilization_basis', $vehicle) ? $vehicle['mobilization_basis'] : ($currentRate->mobilization_basis ?? null);
+            if ($mobilizationFee === null || $mobilizationFee > self::MAX_CENTAVOS || ($mobilizationFee > 0 && ! in_array($mobilizationBasis, DeliveryRecommendationService::MOBILIZATION_BASES, true))) {
+                throw ValidationException::withMessages(['mobilization_fee_centavos' => 'Enter a mobilization fee of zero or more and choose whether it is charged per truck or per trip.']);
+            }
+            $mobilizationBasis = $mobilizationFee === 0 ? null : (string) $mobilizationBasis;
+        }
+        if ($currentRate === null || (int) $currentRate->base_fee_centavos !== $baseFee || (int) $currentRate->per_km_centavos !== $perKm || (int) $currentRate->maximum_distance_km !== (int) $maximumDistance
+            || (int) $currentRate->mobilization_fee_centavos !== $mobilizationFee || $currentRate->mobilization_basis !== $mobilizationBasis) {
+            DB::table('vehicle_rate_versions')->insert(['id' => (string) Str::uuid7(), 'vendor_vehicle_id' => $vehicleId, 'version' => ($currentRate === null ? 0 : (int) $currentRate->version) + 1, 'base_fee_centavos' => $baseFee, 'per_km_centavos' => $perKm,
+                'mobilization_fee_centavos' => $mobilizationFee, 'mobilization_basis' => $mobilizationBasis, 'maximum_distance_km' => (int) $maximumDistance, 'effective_at' => now(), 'created_by_user_id' => $actorId, 'created_at' => now(), 'updated_at' => now()]);
         }
     }
 

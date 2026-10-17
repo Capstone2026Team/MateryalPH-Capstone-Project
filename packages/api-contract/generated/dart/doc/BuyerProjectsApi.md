@@ -14,10 +14,10 @@ Method | HTTP request | Description
 [**compileProjectEstimates**](BuyerProjectsApi.md#compileprojectestimates) | **POST** /buyers/work-packages/{packageId}/estimates |
 [**createProject**](BuyerProjectsApi.md#createproject) | **POST** /buyers/projects |
 [**createWorkPackage**](BuyerProjectsApi.md#createworkpackage) | **POST** /buyers/projects/{projectId}/work-packages |
-[**createWorkPackageVersion**](BuyerProjectsApi.md#createworkpackageversion) | **POST** /buyers/work-packages/{packageId}/versions |
 [**deleteProject**](BuyerProjectsApi.md#deleteproject) | **DELETE** /buyers/projects/{projectId} |
 [**deleteWorkPackage**](BuyerProjectsApi.md#deleteworkpackage) | **DELETE** /buyers/work-packages/{packageId} |
 [**editWorkPackage**](BuyerProjectsApi.md#editworkpackage) | **PUT** /buyers/work-packages/{packageId} |
+[**estimateWorkPackageBudget**](BuyerProjectsApi.md#estimateworkpackagebudget) | **POST** /buyers/projects/{projectId}/work-package-estimate |
 [**getProject**](BuyerProjectsApi.md#getproject) | **GET** /buyers/projects/{projectId} |
 [**getProjectCandidateRoute**](BuyerProjectsApi.md#getprojectcandidateroute) | **POST** /buyers/work-packages/{packageId}/candidates/{candidateId}/route |
 [**getProjectEstimates**](BuyerProjectsApi.md#getprojectestimates) | **GET** /buyers/work-packages/{packageId}/estimates |
@@ -25,7 +25,10 @@ Method | HTTP request | Description
 [**getWorkPackage**](BuyerProjectsApi.md#getworkpackage) | **GET** /buyers/work-packages/{packageId} |
 [**inquireProjectVendor**](BuyerProjectsApi.md#inquireprojectvendor) | **POST** /buyers/work-packages/{packageId}/inquiries |
 [**listProjects**](BuyerProjectsApi.md#listprojects) | **GET** /buyers/projects |
+[**listWorkPackageLineAlternatives**](BuyerProjectsApi.md#listworkpackagelinealternatives) | **GET** /buyers/work-packages/{packageId}/lines/{lineId}/alternatives |
+[**previewProjectSpecificationSelection**](BuyerProjectsApi.md#previewprojectspecificationselection) | **POST** /buyers/work-packages/{packageId}/candidates/{candidateId}/selection-preview |
 [**previewWorkPackageCsv**](BuyerProjectsApi.md#previewworkpackagecsv) | **POST** /buyers/work-packages/import-preview |
+[**reactivateWorkPackage**](BuyerProjectsApi.md#reactivateworkpackage) | **POST** /buyers/work-packages/{packageId}/reactivate |
 [**resetProjectRankingPreferences**](BuyerProjectsApi.md#resetprojectrankingpreferences) | **POST** /buyers/project-ranking-preferences/reset |
 [**resolveProjectMissingLine**](BuyerProjectsApi.md#resolveprojectmissingline) | **PUT** /buyers/work-packages/{packageId}/missing-lines/{lineId} |
 [**saveProjectRankingPreferences**](BuyerProjectsApi.md#saveprojectrankingpreferences) | **PUT** /buyers/project-ranking-preferences |
@@ -86,7 +89,7 @@ Name | Type | Description  | Notes
 
 
 
-Cancel an unassigned package, retaining every locked version. Selected work follows order cancellation rules.
+Cancel an unassigned package, retaining its saved contents. Selected work follows order cancellation rules.
 
 ### Example
 ```dart
@@ -221,7 +224,7 @@ Name | Type | Description  | Notes
 
 
 
-Save a Draft. Normalized units, positive quantities, explicit site and access are validated.
+Save a Draft. Normalized units, positive quantities, explicit site and access are validated. The budget is deducted from the Project budget immediately; WORK_PACKAGE_BUDGET_EXCEEDS_PROJECT (422) when non-cancelled allocations would exceed it.
 
 ### Example
 ```dart
@@ -245,53 +248,6 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **projectId** | **String**|  |
- **idempotencyKey** | **String**|  |
- **workPackageInput** | [**WorkPackageInput**](WorkPackageInput.md)|  |
-
-### Return type
-
-[**WorkPackageViewResponse**](WorkPackageViewResponse.md)
-
-### Authorization
-
-[passportBearer](../README.md#passportBearer)
-
-### HTTP request headers
-
- - **Content-Type**: application/json
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
-# **createWorkPackageVersion**
-> WorkPackageViewResponse createWorkPackageVersion(packageId, idempotencyKey, workPackageInput)
-
-
-
-Explicit correction version invalidates estimates and expires inquiries. Selected work requires prior order cancellation.
-
-### Example
-```dart
-import 'package:materyalph_api_client/api.dart';
-
-final api = MateryalphApiClient().getBuyerProjectsApi();
-final String packageId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
-final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
-final WorkPackageInput workPackageInput = ; // WorkPackageInput |
-
-try {
-    final response = api.createWorkPackageVersion(packageId, idempotencyKey, workPackageInput);
-    print(response);
-} on DioException catch (e) {
-    print('Exception when calling BuyerProjectsApi->createWorkPackageVersion: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **packageId** | **String**|  |
  **idempotencyKey** | **String**|  |
  **workPackageInput** | [**WorkPackageInput**](WorkPackageInput.md)|  |
 
@@ -360,7 +316,7 @@ Name | Type | Description  | Notes
 
 
 
-Delete only a Draft with no locked historical version. Retain activated evidence.
+Delete a Work Package that has no order, tagged purchase or selected Vendor. A Draft with no locked history is removed; any other package is cancelled and hidden from the Buyer while its saved originals, estimates and quotations are retained. A package with an order returns WORK_PACKAGE_HAS_ORDER.
 
 ### Example
 ```dart
@@ -405,7 +361,7 @@ Name | Type | Description  | Notes
 
 
 
-Editable Draft only; saves an append-only draft version.
+Edit the Work Package directly, with no new list entry. Allowed until an order, tagged purchase or selected Vendor exists (otherwise WORK_PACKAGE_HAS_ORDER). Estimates and open quotation requests built on the old materials are invalidated; a compared or quoted package returns to Active.
 
 ### Example
 ```dart
@@ -435,6 +391,51 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**WorkPackageViewResponse**](WorkPackageViewResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **estimateWorkPackageBudget**
+> WorkPackageBudgetEstimateResponse estimateWorkPackageBudget(projectId, workPackageBudgetEstimateRequest)
+
+
+
+Advisory materials-only budget estimate for a Work Package being drafted. Each catalog line is priced at the half-up average of one price per eligible Vendor (that Vendor's lowest exact match) within the radius of the site. Unlisted and unmatched lines carry no price. Excludes delivery fees and labor. Nothing is stored.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getBuyerProjectsApi();
+final String projectId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final WorkPackageBudgetEstimateRequest workPackageBudgetEstimateRequest = ; // WorkPackageBudgetEstimateRequest |
+
+try {
+    final response = api.estimateWorkPackageBudget(projectId, workPackageBudgetEstimateRequest);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling BuyerProjectsApi->estimateWorkPackageBudget: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **projectId** | **String**|  |
+ **workPackageBudgetEstimateRequest** | [**WorkPackageBudgetEstimateRequest**](WorkPackageBudgetEstimateRequest.md)|  |
+
+### Return type
+
+[**WorkPackageBudgetEstimateResponse**](WorkPackageBudgetEstimateResponse.md)
 
 ### Authorization
 
@@ -538,11 +539,11 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **getProjectEstimates**
-> ProjectEstimatePageResponse getProjectEstimates(packageId, page)
+> ProjectEstimatePageResponse getProjectEstimates(packageId, page, sort, favoritesOnly, completeOnly, withinBudget)
 
 
 
-Immutable, paginated snapshots. Complete one-Vendor matches first; missing lines explicit. Expiry is exactly 48 hours.
+Immutable, paginated snapshots. Complete one-Vendor matches first by default; missing lines explicit. Expiry is exactly 48 hours. Sorting and filters run on the server so every page is consistent; each ordering ends on the system rank.
 
 ### Example
 ```dart
@@ -551,9 +552,13 @@ import 'package:materyalph_api_client/api.dart';
 final api = MateryalphApiClient().getBuyerProjectsApi();
 final String packageId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final int page = 56; // int |
+final String sort = sort_example; // String |
+final bool favoritesOnly = true; // bool |
+final bool completeOnly = true; // bool |
+final bool withinBudget = true; // bool |
 
 try {
-    final response = api.getProjectEstimates(packageId, page);
+    final response = api.getProjectEstimates(packageId, page, sort, favoritesOnly, completeOnly, withinBudget);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling BuyerProjectsApi->getProjectEstimates: $e\n');
@@ -566,6 +571,10 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **packageId** | **String**|  |
  **page** | **int**|  | [optional]
+ **sort** | **String**|  | [optional]
+ **favoritesOnly** | **bool**|  | [optional]
+ **completeOnly** | **bool**|  | [optional]
+ **withinBudget** | **bool**|  | [optional]
 
 ### Return type
 
@@ -626,7 +635,7 @@ This endpoint does not need any parameter.
 
 
 
-Locked original, paginated version history, missing-item resolution and budget metrics. PDF generation remains Phase 15.
+The package's current materials, missing-item resolution, budget metrics and delete/edit availability. PDF generation remains Phase 15.
 
 ### Example
 ```dart
@@ -756,6 +765,102 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **listWorkPackageLineAlternatives**
+> WorkPackageAlternativePageResponse listWorkPackageLineAlternatives(packageId, lineId, page, excludeVendorId)
+
+
+
+Eligible Item-Based offers for the same canonical material and unit within the package radius of its site, for buying a missing line separately. Exact matches first, then price. Unlisted lines return status UNLISTED with no items.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getBuyerProjectsApi();
+final String packageId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String lineId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final int page = 56; // int |
+final String excludeVendorId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.listWorkPackageLineAlternatives(packageId, lineId, page, excludeVendorId);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling BuyerProjectsApi->listWorkPackageLineAlternatives: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **packageId** | **String**|  |
+ **lineId** | **String**|  |
+ **page** | **int**|  | [optional]
+ **excludeVendorId** | **String**|  | [optional]
+
+### Return type
+
+[**WorkPackageAlternativePageResponse**](WorkPackageAlternativePageResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **previewProjectSpecificationSelection**
+> ProjectCandidateResponse previewProjectSpecificationSelection(packageId, candidateId, projectSelectionPreview)
+
+
+
+Re-price a fresh candidate with the Buyer's specification choices (lines, totals, delivery estimate, score and budget label). Nothing is stored; send the same selections when selecting or inquiring. An unknown option is SPECIFICATION_OPTION_INVALID.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getBuyerProjectsApi();
+final String packageId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String candidateId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final ProjectSelectionPreview projectSelectionPreview = ; // ProjectSelectionPreview |
+
+try {
+    final response = api.previewProjectSpecificationSelection(packageId, candidateId, projectSelectionPreview);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling BuyerProjectsApi->previewProjectSpecificationSelection: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **packageId** | **String**|  |
+ **candidateId** | **String**|  |
+ **projectSelectionPreview** | [**ProjectSelectionPreview**](ProjectSelectionPreview.md)|  |
+
+### Return type
+
+[**ProjectCandidateResponse**](ProjectCandidateResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **previewWorkPackageCsv**
 > ProjectImportPreviewResponse previewWorkPackageCsv(projectImportRequest)
 
@@ -787,6 +892,53 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**ProjectImportPreviewResponse**](ProjectImportPreviewResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **reactivateWorkPackage**
+> WorkPackageViewResponse reactivateWorkPackage(packageId, idempotencyKey, projectVersionRequest)
+
+
+
+Return a cancelled Work Package to Active in place; no copy is made. The Project budget is checked again because cancelling released it. A package with an order, selected Vendor or tagged purchase cannot be reactivated.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getBuyerProjectsApi();
+final String packageId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final ProjectVersionRequest projectVersionRequest = ; // ProjectVersionRequest |
+
+try {
+    final response = api.reactivateWorkPackage(packageId, idempotencyKey, projectVersionRequest);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling BuyerProjectsApi->reactivateWorkPackage: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **packageId** | **String**|  |
+ **idempotencyKey** | **String**|  |
+ **projectVersionRequest** | [**ProjectVersionRequest**](ProjectVersionRequest.md)|  |
+
+### Return type
+
+[**WorkPackageViewResponse**](WorkPackageViewResponse.md)
 
 ### Authorization
 

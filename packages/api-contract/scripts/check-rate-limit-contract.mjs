@@ -17,7 +17,7 @@ const exported = process.argv[2]
 const routeList = JSON.parse(exported)
 for (const route of routeList) {
   if (/^api\/v1\/(?:auth\/|mobile\/auth\/|webhooks\/)/.test(route.uri)) continue
-  const credentialAction = route.method === 'POST' && /\/(?:account\/(?:reauthentication(?:\/email)?|password|email(?:\/confirm)?|factor(?:\/confirm)?|recovery-codes)|vendors\/account\/invitations|vendors\/onboarding\/store-email(?:\/confirm)?)$/.test(route.uri)
+  const credentialAction = route.method === 'POST' && /\/(?:account\/(?:reauthentication(?:\/email)?|password|email(?:\/confirm)?|factor(?:\/confirm)?|recovery-codes|two-factor(?:\/confirm|\/disable)?|deletion)|vendors\/account\/invitations|vendors\/onboarding\/store-email(?:\/confirm)?)$/.test(route.uri)
   const throttles = route.middleware.filter(name => /(?:throttle|ThrottleRequests):/.test(name))
   assert.equal(throttles.length, credentialAction ? 1 : 0, `Unexpected throttle policy: ${route.method} ${route.uri}`)
   if (credentialAction) assert.ok(throttles[0].endsWith(':account-security'), route.uri)

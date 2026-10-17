@@ -18,11 +18,14 @@ part 'vendor_setup_draft.g.dart';
 /// * [draftLockVersion] - Workstream draft version; zero on first save. Send together with the required organization guard. Omission retains legacy behavior without draft-level comparison. A stale draft returns 409 STALE_VERSION; a stale organization returns 409 RESOURCE_VERSION_CONFLICT.
 /// * [organizationLockVersion]
 /// * [formState] - Encrypted JSON setup form progress. Unfinished vehicle entries are not operational configurations. Returned privately as setup.form_state.
-/// * [vacationMode] - Owner-only immediate pause of all new procurement. Existing work and messaging remain available. Does not alter weekly hours or activation.
+/// * [vacationMode] - Owner-only pause of all new procurement over the Asia/Manila date window in vacation_starts_on to vacation_ends_on, both required when true. Existing work and messaging remain available. False clears the window. Does not alter weekly hours or activation.
+/// * [vacationStartsOn] - First Asia/Manila day of the pause. Today or later, unless an active window keeps its saved start. Today starts the pause immediately; a later date schedules it.
+/// * [vacationEndsOn] - Last Asia/Manila day of the pause, inclusive; on or after vacation_starts_on. Procurement reopens at the next midnight.
 /// * [publicStoreName]
 /// * [description]
 /// * [bulkCapability]
 /// * [fulfillmentMethod]
+/// * [vendorDeliveryEnabled] - True activates delivery only after current staff, vehicle, location and service requirements pass; otherwise 422 VENDOR_DELIVERY_SETUP_REQUIRED. False saves a draft or pauses new deliveries. Omission preserves saved intent. Switching to SELF_PICKUP while delivery obligations remain returns 409 ACTIVE_DELIVERY_OBLIGATIONS. Accepted orders and assignments remain unchanged.
 /// * [publicEmail]
 /// * [publicPhone]
 /// * [operatingSchedule] - Complete replacement of the normal weekly schedule. All seven distinct weekdays are required. Closed days have null times; Open days need a same-day opening and later closing time.
@@ -41,9 +44,17 @@ abstract class VendorSetupDraft implements Built<VendorSetupDraft, VendorSetupDr
   @BuiltValueField(wireName: r'form_state')
   String? get formState;
 
-  /// Owner-only immediate pause of all new procurement. Existing work and messaging remain available. Does not alter weekly hours or activation.
+  /// Owner-only pause of all new procurement over the Asia/Manila date window in vacation_starts_on to vacation_ends_on, both required when true. Existing work and messaging remain available. False clears the window. Does not alter weekly hours or activation.
   @BuiltValueField(wireName: r'vacation_mode')
   bool? get vacationMode;
+
+  /// First Asia/Manila day of the pause. Today or later, unless an active window keeps its saved start. Today starts the pause immediately; a later date schedules it.
+  @BuiltValueField(wireName: r'vacation_starts_on')
+  String? get vacationStartsOn;
+
+  /// Last Asia/Manila day of the pause, inclusive; on or after vacation_starts_on. Procurement reopens at the next midnight.
+  @BuiltValueField(wireName: r'vacation_ends_on')
+  String? get vacationEndsOn;
 
   @BuiltValueField(wireName: r'public_store_name')
   String? get publicStoreName;
@@ -57,6 +68,10 @@ abstract class VendorSetupDraft implements Built<VendorSetupDraft, VendorSetupDr
   @BuiltValueField(wireName: r'fulfillment_method')
   VendorSetupDraftFulfillmentMethodEnum? get fulfillmentMethod;
   // enum fulfillmentMethodEnum {  SELF_PICKUP,  VENDOR_DELIVERY,  BOTH,  };
+
+  /// True activates delivery only after current staff, vehicle, location and service requirements pass; otherwise 422 VENDOR_DELIVERY_SETUP_REQUIRED. False saves a draft or pauses new deliveries. Omission preserves saved intent. Switching to SELF_PICKUP while delivery obligations remain returns 409 ACTIVE_DELIVERY_OBLIGATIONS. Accepted orders and assignments remain unchanged.
+  @BuiltValueField(wireName: r'vendor_delivery_enabled')
+  bool? get vendorDeliveryEnabled;
 
   @BuiltValueField(wireName: r'public_email')
   String? get publicEmail;
@@ -123,6 +138,20 @@ class _$VendorSetupDraftSerializer implements PrimitiveSerializer<VendorSetupDra
         specifiedType: const FullType(bool),
       );
     }
+    if (object.vacationStartsOn != null) {
+      yield r'vacation_starts_on';
+      yield serializers.serialize(
+        object.vacationStartsOn,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.vacationEndsOn != null) {
+      yield r'vacation_ends_on';
+      yield serializers.serialize(
+        object.vacationEndsOn,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
     if (object.publicStoreName != null) {
       yield r'public_store_name';
       yield serializers.serialize(
@@ -149,6 +178,13 @@ class _$VendorSetupDraftSerializer implements PrimitiveSerializer<VendorSetupDra
       yield serializers.serialize(
         object.fulfillmentMethod,
         specifiedType: const FullType(VendorSetupDraftFulfillmentMethodEnum),
+      );
+    }
+    if (object.vendorDeliveryEnabled != null) {
+      yield r'vendor_delivery_enabled';
+      yield serializers.serialize(
+        object.vendorDeliveryEnabled,
+        specifiedType: const FullType(bool),
       );
     }
     if (object.publicEmail != null) {
@@ -240,6 +276,22 @@ class _$VendorSetupDraftSerializer implements PrimitiveSerializer<VendorSetupDra
           if (valueDes == null) continue;
           result.vacationMode = valueDes;
           break;
+        case r'vacation_starts_on':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.vacationStartsOn = valueDes;
+          break;
+        case r'vacation_ends_on':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.vacationEndsOn = valueDes;
+          break;
         case r'public_store_name':
           final valueDes = serializers.deserialize(
             value,
@@ -271,6 +323,14 @@ class _$VendorSetupDraftSerializer implements PrimitiveSerializer<VendorSetupDra
           ) as VendorSetupDraftFulfillmentMethodEnum?;
           if (valueDes == null) continue;
           result.fulfillmentMethod = valueDes;
+          break;
+        case r'vendor_delivery_enabled':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.vendorDeliveryEnabled = valueDes;
           break;
         case r'public_email':
           final valueDes = serializers.deserialize(

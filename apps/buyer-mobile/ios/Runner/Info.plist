@@ -7,7 +7,7 @@
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Record sound when you capture a video for your product review.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Choose photos or videos to attach to your product review.</string>
+	<string>Choose a profile photo or photos and videos for your product review.</string>
 	<key>GMSApiKey</key>
 	<string>$(MAPS_IOS_API_KEY)</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
@@ -68,6 +68,10 @@
 			</array>
 		</dict>
 	</dict>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

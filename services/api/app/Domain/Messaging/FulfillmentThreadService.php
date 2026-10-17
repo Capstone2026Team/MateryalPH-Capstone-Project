@@ -4,36 +4,44 @@ declare(strict_types=1);
 
 namespace App\Domain\Messaging;
 
+use App\Domain\Catalog\CatalogAccess;
 use App\Domain\Identity\AuthenticationException;
+use App\Domain\Orders\OrderAccess;
 use App\Domain\Orders\OrderStates;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * One order-specific FULFILLMENT thread (ONB-09), separate from every sales conversation. It is enabled only by the
- * first valid READY_FOR_PICKUP or OUT_FOR_DELIVERY milestone, inside that milestone's transaction, so its creation
- * and CONVERSATION_CHANGED outbox event commit with the milestone or not at all. A repeated or reordered milestone
- * reuses the one thread (unique order id). Participants are the Buyer, the Owner/Store Manager by role, and the
- * currently assigned active Fulfillment Staff; access is re-evaluated on every request, socket and file read, so a
- * reassignment or deactivation removes access immediately while every earlier message keeps its attribution.
+ * One order-specific FULFILLMENT thread (ONB-09), separate from every sales conversation. It opens when the order is
+ * submitted, inside the submission transaction, so its creation and CONVERSATION_CHANGED outbox event commit with
+ * the order or not at all (approved by the project owner on 2026-10-10; previously it opened at the first handover
+ * milestone). Every later call reuses the one thread (unique order id). Participants are the Buyer, the Owner/Store
+ * Manager by role, and the currently assigned active Fulfillment Staff; access is re-evaluated on every request,
+ * socket and file read, so a reassignment or deactivation removes access immediately while every earlier message
+ * keeps its attribution.
  *
- * Lifecycle (approved by the project owner on 2026-10-02): writable until the order closes; at COMPLETED or
- * CANCELLED it becomes read-only, the Fulfillment Staff assignment ends, and the Buyer, Owner and Store Manager keep
- * the full history.
+ * Lifecycle (approved by the project owner on 2026-10-02 and 2026-10-10): writable while the order is open; at
+ * COMPLETED, CANCELLED, DECLINED or EXPIRED it becomes read-only, the Fulfillment Staff assignment ends, and the
+ * Buyer, Owner and Store Manager keep the full history.
  */
 final class FulfillmentThreadService
 {
     public const ENTRY_ENABLED = true;
 
-    /** Orders whose thread accepts new messages. */
-    public const WRITABLE_STATES = [OrderStates::READY_FOR_PICKUP, OrderStates::OUT_FOR_DELIVERY, OrderStates::DELIVERED, OrderStates::PICKED_UP, 'DISPUTED'];
+    /** Orders whose thread accepts new messages: every open order state. */
+    public const WRITABLE_STATES = [
+        OrderStates::AWAITING_VENDOR_CONFIRMATION, OrderStates::AWAITING_BUYER_APPROVAL, OrderStates::AWAITING_NRPC_ACCEPTANCE, OrderStates::AWAITING_PAYMENT,
+        OrderStates::CONFIRMED, OrderStates::PROCESSING, OrderStates::CANCELLATION_REQUESTED, OrderStates::READY_FOR_PICKUP, OrderStates::OUT_FOR_DELIVERY,
+        OrderStates::DELIVERED, OrderStates::PICKED_UP, 'DISPUTED',
+    ];
 
     /**
      * Assigns (or reassigns) active Fulfillment Staff to an order the caller has locked. Ends the previous
      * assignment, revokes the former assignee's thread participation and announces the change in the thread.
      */
-    public function assign(object $order, User $actor, int $userId, string $reason): ?int
+    public function assign(object $order, User $actor, int $userId, string $reason, bool $force = false): ?int
     {
         if (DB::transactionLevel() < 1) {
             throw new \LogicException('Fulfillment assignment changes only inside the order transaction.');
@@ -42,12 +50,12 @@ final class FulfillmentThreadService
             throw new AuthenticationException('ASSIGNMENT_NOT_AVAILABLE', 'Fulfillment Staff can be assigned from confirmation until the order closes.', 409);
         }
         $target = DB::table('vendor_memberships as m')->join('users as u', 'u.id', '=', 'm.user_id')->where('m.vendor_organization_id', $order->vendor_organization_id)
-            ->where('m.user_id', $userId)->where('m.role', 'FULFILLMENT')->where('m.status', 'ACTIVE')->where('u.account_status', 'ACTIVE')->exists();
+            ->where('m.user_id', $userId)->where('m.role', 'FULFILLMENT')->where('m.status', 'ACTIVE')->whereNull('m.deleted_at')->where('u.account_status', 'ACTIVE')->exists();
         if (! $target || mb_strlen(trim($reason)) < 5) {
             throw new AuthenticationException('HANDLER_UNAVAILABLE', 'Choose active Fulfillment Staff and give an assignment reason of at least 5 characters.', 422);
         }
         $old = DB::table('order_fulfillment_assignments')->where('order_id', $order->id)->whereNull('ended_at')->lockForUpdate()->first();
-        if ($old !== null && (int) $old->user_id === $userId) {
+        if (! $force && $old !== null && (int) $old->user_id === $userId) {
             return null;
         }
         DB::table('order_fulfillment_assignments')->where('order_id', $order->id)->whereNull('ended_at')->update(['ended_at' => now(), 'updated_at' => now()]);
@@ -68,10 +76,11 @@ final class FulfillmentThreadService
     }
 
     /**
-     * Creates or reuses the order's single fulfillment thread inside the caller's milestone transaction. Throws when
-     * the order has not reached READY_FOR_PICKUP or OUT_FOR_DELIVERY, so no thread can open early.
+     * Creates or reuses the order's single fulfillment thread inside the caller's transaction (order submission, a
+     * milestone, or a Buyer opening an order submitted before threads opened at submission). A closed order never
+     * gains a new thread; an existing one is returned read-only.
      */
-    public function ensureForMilestone(string $orderId, ?int $actorUserId = null): string
+    public function ensureForOrder(string $orderId, ?int $actorUserId = null): string
     {
         return DB::transaction(function () use ($orderId, $actorUserId): string {
             $order = DB::table('orders')->where('id', $orderId)->lockForUpdate()->first();
@@ -79,13 +88,13 @@ final class FulfillmentThreadService
             if ($existing !== null) {
                 return (string) $existing->id;
             }
-            if ($order === null || ! in_array($order->order_state, OrderStates::HANDOVER_STAGE, true)) {
-                throw new AuthenticationException('FULFILLMENT_THREAD_NOT_READY', 'Fulfillment messages open at Ready for Pickup or Out for Delivery.', 409);
+            if ($order === null || ! in_array($order->order_state, self::WRITABLE_STATES, true)) {
+                throw new AuthenticationException('FULFILLMENT_THREAD_CLOSED', 'This order is closed, so Fulfillment Messages cannot start now.', 409);
             }
             $id = (string) Str::uuid7();
             $assigned = DB::table('order_fulfillment_assignments as a')->join('vendor_memberships as m', fn ($join) => $join->on('m.user_id', '=', 'a.user_id')->where('m.vendor_organization_id', $order->vendor_organization_id))
                 ->join('users as u', 'u.id', '=', 'a.user_id')->where('a.order_id', $orderId)->whereNull('a.ended_at')->where('m.role', 'FULFILLMENT')->where('m.status', 'ACTIVE')
-                ->where('u.account_status', 'ACTIVE')->value('a.user_id');
+                ->whereNull('m.deleted_at')->where('u.account_status', 'ACTIVE')->value('a.user_id');
             // Teams are optional: without assigned staff the Owner/Store Manager who recorded the milestone handles it.
             $handler = $assigned ?? $actorUserId ?? DB::table('vendor_memberships')->where('vendor_organization_id', $order->vendor_organization_id)->where('role', 'OWNER')->where('status', 'ACTIVE')->value('user_id');
             DB::table('conversations')->insert(['id' => $id, 'buyer_profile_id' => $order->buyer_profile_id, 'vendor_organization_id' => $order->vendor_organization_id,
@@ -98,8 +107,10 @@ final class FulfillmentThreadService
             }
             if ($handler !== null) {
                 $role = $assigned !== null ? 'FULFILLMENT' : (string) (DB::table('vendor_memberships')->where('vendor_organization_id', $order->vendor_organization_id)->where('user_id', $handler)->value('role') ?? 'OWNER');
+                $reason = in_array($order->order_state, OrderStates::HANDOVER_STAGE, true)
+                    ? 'Opened by the '.strtolower(str_replace('_', ' ', (string) $order->order_state)).' milestone' : 'Opened with the order';
                 DB::table('conversation_assignments')->insert(['id' => (string) Str::uuid7(), 'conversation_id' => $id, 'assigned_user_id' => $handler,
-                    'assigned_role' => $role, 'reason' => 'Opened by the '.strtolower(str_replace('_', ' ', (string) $order->order_state)).' milestone', 'created_at' => now(), 'updated_at' => now()]);
+                    'assigned_role' => $role, 'reason' => $reason, 'created_at' => now(), 'updated_at' => now()]);
             }
             $service->changed($id);
 
@@ -108,8 +119,8 @@ final class FulfillmentThreadService
     }
 
     /**
-     * At COMPLETED or CANCELLED: the thread becomes read-only by order state, the Fulfillment Staff assignment ends so
-     * staff access is removed, and a system message records the closure. History is never deleted.
+     * At COMPLETED, CANCELLED, DECLINED or EXPIRED: the thread becomes read-only by order state, the Fulfillment Staff
+     * assignment ends so staff access is removed, and a system message records the closure. History is never deleted.
      */
     public function close(object $order, User|int|null $actor, string $closingState): void
     {
@@ -124,10 +135,29 @@ final class FulfillmentThreadService
         $system = $actor instanceof User ? $actor : User::query()->find(is_int($actor) ? $actor
             : DB::table('vendor_memberships')->where('vendor_organization_id', $order->vendor_organization_id)->where('role', 'OWNER')->where('status', 'ACTIVE')->value('user_id'));
         if ($system !== null) {
-            app(ConversationService::class)->append($c, $system, $closingState === OrderStates::COMPLETED
-                ? 'This order is completed. Fulfillment messages are now read-only and kept for your records.'
-                : 'This order was cancelled. Fulfillment messages are now read-only and kept for your records.');
+            app(ConversationService::class)->append($c, $system, match ($closingState) {
+                OrderStates::COMPLETED => 'This order is completed.',
+                OrderStates::DECLINED => 'The store declined this order request.',
+                OrderStates::EXPIRED => 'This order request expired.',
+                default => 'This order was cancelled.',
+            }.' Fulfillment messages are now read-only and kept for your records.');
         }
+    }
+
+    /**
+     * The Buyer's My Orders message button: returns the order's thread, opening it for an open order submitted before
+     * threads opened at submission. Another Buyer's order is not found. The key is required like every Buyer order
+     * mutation; replays need no stored result because the order has exactly one thread.
+     *
+     * @return array{conversation_id: string, read_only: bool}
+     */
+    public function openForBuyer(Request $request, string $orderId): array
+    {
+        app(CatalogAccess::class)->requireIdempotencyKey($request);
+        $order = app(OrderAccess::class)->buyerOrder($request, $orderId);
+        $id = $this->ensureForOrder((string) $order->id);
+
+        return ['conversation_id' => $id, 'read_only' => self::writability(DB::table('conversations')->where('id', $id)->first())['read_only']];
     }
 
     /** @return array{read_only: bool, reason: ?string} */

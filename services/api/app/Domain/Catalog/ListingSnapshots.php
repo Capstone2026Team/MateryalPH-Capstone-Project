@@ -51,6 +51,7 @@ final class ListingSnapshots
             'product' => ['brand' => $listing?->brand, 'model' => $listing?->model, 'manufacturer' => $listing?->manufacturer, 'country_of_manufacture' => $listing?->country_of_manufacture],
             'technical_attributes' => ComparableMappingService::decode($listing?->technical_attributes),
             'tags' => DB::table('listing_tag_links as t')->join('material_tags as m', 'm.id', '=', 't.material_tag_id')->where('t.vendor_listing_id', $listingId)->orderBy('m.code')->pluck('m.code')->all(),
+            'custom_tags' => CustomTags::forListing($listingId),
             'compliance' => ['regulated' => (bool) $listing?->regulated, 'status' => $listing?->compliance_status, 'rule_id' => $listing?->rule_id, 'rule_version' => $listing?->rule_version, 'required_marking' => $listing?->required_marking, 'submission_id' => $listing?->current_compliance_submission_id, 'review_id' => $reviewId],
             'media_file_ids' => DB::table('listing_media')->where('vendor_listing_id', $listingId)->where('status', 'READY')->orderBy('sort_order')->orderBy('id')->pluck('file_id')->all(),
             'variants' => array_map(fn (object $variant): array => $this->variant($variant), $variants->all()),

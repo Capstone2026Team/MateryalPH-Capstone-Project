@@ -25,13 +25,19 @@ class OrderSubmittedScreen extends StatelessWidget {
 
   /// Clears the checkout trail first so Back from Orders returns to Home, not a stale Cart or
   /// product page the Buyer already finished with.
+  /// Opens on Confirmation, or on Processing when every order was accepted automatically and
+  /// needs no payment.
   void _openOrders(BuildContext context) {
-    final navigator = Navigator.of(context)
-      ..popUntil((route) => route.isFirst);
+    final confirmed =
+        checkout.orders.isNotEmpty &&
+        checkout.orders.every((order) => order.orderState == 'CONFIRMED');
+    final navigator = Navigator.of(context)..popUntil((route) => route.isFirst);
     navigator.push(
       MaterialPageRoute<void>(
-        builder: (_) =>
-            OrdersScreen(repository: repository, initialGroup: 'ALL'),
+        builder: (_) => OrdersScreen(
+          repository: repository,
+          initialGroup: confirmed ? 'PROCESSING' : 'CONFIRMATION',
+        ),
       ),
     );
   }

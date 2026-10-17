@@ -20,7 +20,7 @@ import { mapValues } from '../runtime';
  */
 export interface VendorNavigationUpdates {
     /**
-     * Fixed Vendor sidebar paths mapped to section counts. Orders counts currently visible nonterminal orders; completed, declined, expired and cancelled orders are excluded. Team Accounts counts manageable active non-Owner memberships with active user accounts; deleted memberships and unaccepted invitations are excluded. Without current staff-management permission its count is zero. Notifications counts unread notices only; Messages counts received messages without a read receipt. Store Profile is omitted. Zero or missing counts have no indicator.
+     * Fixed Vendor sidebar paths mapped to section counts. Orders counts currently visible nonterminal orders; completed, declined, expired and cancelled orders are excluded. Team Accounts counts manageable active non-Owner memberships with active user accounts; deleted memberships and unaccepted invitations are excluded. Without current staff-management permission its count is zero. Notifications counts unread notices only; Messages counts received sales and fulfillment messages without a read receipt, restricted to the viewer current role, organization and assignment scope. Fulfillment counts visible confirmed, processing and handover-stage orders. Disputes counts active cases; Invoices counts outstanding requests and remains pending when its notice is read. Store Profile is omitted. Zero or missing counts have no indicator.
      */
     sections: { [key: string]: number; };
 }

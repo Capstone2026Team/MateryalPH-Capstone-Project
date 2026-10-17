@@ -76,6 +76,18 @@ final class ScoreRules
         return self::HIGH[$metric];
     }
 
+    /** The published penalty band a rate falls in: NONE (no penalty), LOW, MEDIUM or HIGH. */
+    public static function band(string $metric, string $ratePercent): string
+    {
+        foreach (self::BANDS[$metric] as $index => [$upper]) {
+            if (bccomp($ratePercent, $upper, 2) <= 0) {
+                return ['NONE', 'LOW', 'MEDIUM'][$index];
+            }
+        }
+
+        return 'HIGH';
+    }
+
     /** 0.10 for one violation, 0.30 for two to three, 0.60 for four to five, 1.00 for six or more. */
     public static function lvdPenalty(int $violations): string
     {

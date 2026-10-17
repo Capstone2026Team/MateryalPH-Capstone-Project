@@ -80,7 +80,7 @@ This endpoint does not need any parameter.
 
 ## listOperationFailures
 
-> OperationFailureListEnvelope listOperationFailures(kind, page)
+> OperationFailureListEnvelope listOperationFailures(kind, page, from, to)
 
 
 
@@ -110,6 +110,10 @@ async function example() {
     kind: kind_example,
     // number (optional)
     page: 56,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Failed job failed_at or dead-letter outbox updated_at. (optional)
+    from: 2013-10-20,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Failed job failed_at or dead-letter outbox updated_at. (optional)
+    to: 2013-10-20,
   } satisfies ListOperationFailuresRequest;
 
   try {
@@ -131,6 +135,8 @@ example().catch(console.error);
 |------------- | ------------- | ------------- | -------------|
 | **kind** | `OUTBOX`, `JOBS` |  | [Optional] [Defaults to `undefined`] [Enum: OUTBOX, JOBS] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **from** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Failed job failed_at or dead-letter outbox updated_at. | [Optional] [Defaults to `undefined`] |
+| **to** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Failed job failed_at or dead-letter outbox updated_at. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 

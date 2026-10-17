@@ -142,6 +142,10 @@ export interface CatalogListing {
      */
     tagIds: Array<string>;
     /**
+     * Search tags the Vendor typed for this listing only
+     */
+    customTags: Array<string>;
+    /**
      *
      */
     technicalAttributes: { [key: string]: string; };
@@ -247,6 +251,7 @@ export function instanceOfCatalogListing(value: object): value is CatalogListing
     if ((!('vendorSku' in (value as Record<string, any>)) && !('vendor_sku' in (value as Record<string, any>))) || ((value as Record<string, any>)['vendorSku'] === undefined && (value as Record<string, any>)['vendor_sku'] === undefined)) return false;
     if ((!('materialMatch' in (value as Record<string, any>)) && !('material_match' in (value as Record<string, any>))) || ((value as Record<string, any>)['materialMatch'] === undefined && (value as Record<string, any>)['material_match'] === undefined)) return false;
     if ((!('tagIds' in (value as Record<string, any>)) && !('tag_ids' in (value as Record<string, any>))) || ((value as Record<string, any>)['tagIds'] === undefined && (value as Record<string, any>)['tag_ids'] === undefined)) return false;
+    if ((!('customTags' in (value as Record<string, any>)) && !('custom_tags' in (value as Record<string, any>))) || ((value as Record<string, any>)['customTags'] === undefined && (value as Record<string, any>)['custom_tags'] === undefined)) return false;
     if ((!('technicalAttributes' in (value as Record<string, any>)) && !('technical_attributes' in (value as Record<string, any>))) || ((value as Record<string, any>)['technicalAttributes'] === undefined && (value as Record<string, any>)['technical_attributes'] === undefined)) return false;
     if (!('regulated' in value) || value['regulated'] === undefined) return false;
     if ((!('complianceStatus' in (value as Record<string, any>)) && !('compliance_status' in (value as Record<string, any>))) || ((value as Record<string, any>)['complianceStatus'] === undefined && (value as Record<string, any>)['compliance_status'] === undefined)) return false;
@@ -282,6 +287,7 @@ export function CatalogListingFromJSONTyped(json: any, ignoreDiscriminator: bool
         'materialCategoryId': json['material_category_id'] === undefined ? undefined : json['material_category_id'] === null ? null : json['material_category_id'],
         'otherLabel': json['other_label'] === undefined ? undefined : json['other_label'] === null ? null : json['other_label'],
         'tagIds': json['tag_ids'],
+        'customTags': json['custom_tags'],
         'technicalAttributes': json['technical_attributes'],
         'brand': json['brand'] === undefined ? undefined : json['brand'] === null ? null : json['brand'],
         'model': json['model'] === undefined ? undefined : json['model'] === null ? null : json['model'],
@@ -327,6 +333,7 @@ export function CatalogListingToJSONTyped(value?: CatalogListing | null, ignoreD
         'material_category_id': value['materialCategoryId'],
         'other_label': value['otherLabel'],
         'tag_ids': value['tagIds'],
+        'custom_tags': value['customTags'],
         'technical_attributes': value['technicalAttributes'],
         'brand': value['brand'],
         'model': value['model'],

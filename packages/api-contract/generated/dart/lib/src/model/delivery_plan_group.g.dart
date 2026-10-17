@@ -83,6 +83,8 @@ class _$DeliveryPlanGroup extends DeliveryPlanGroup {
   final BuiltList<String> manualReviewReasons;
   @override
   final BuiltList<DeliveryPlanVehicle> candidates;
+  @override
+  final BuiltList<DeliveryPlanVehicle>? manualReviewVehicles;
 
   factory _$DeliveryPlanGroup(
           [void Function(DeliveryPlanGroupBuilder)? updates]) =>
@@ -93,7 +95,8 @@ class _$DeliveryPlanGroup extends DeliveryPlanGroup {
       required this.label,
       required this.status,
       required this.manualReviewReasons,
-      required this.candidates})
+      required this.candidates,
+      this.manualReviewVehicles})
       : super._();
   @override
   DeliveryPlanGroup rebuild(void Function(DeliveryPlanGroupBuilder) updates) =>
@@ -111,7 +114,8 @@ class _$DeliveryPlanGroup extends DeliveryPlanGroup {
         label == other.label &&
         status == other.status &&
         manualReviewReasons == other.manualReviewReasons &&
-        candidates == other.candidates;
+        candidates == other.candidates &&
+        manualReviewVehicles == other.manualReviewVehicles;
   }
 
   @override
@@ -122,6 +126,7 @@ class _$DeliveryPlanGroup extends DeliveryPlanGroup {
     _$hash = $jc(_$hash, status.hashCode);
     _$hash = $jc(_$hash, manualReviewReasons.hashCode);
     _$hash = $jc(_$hash, candidates.hashCode);
+    _$hash = $jc(_$hash, manualReviewVehicles.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -133,7 +138,8 @@ class _$DeliveryPlanGroup extends DeliveryPlanGroup {
           ..add('label', label)
           ..add('status', status)
           ..add('manualReviewReasons', manualReviewReasons)
-          ..add('candidates', candidates))
+          ..add('candidates', candidates)
+          ..add('manualReviewVehicles', manualReviewVehicles))
         .toString();
   }
 }
@@ -166,6 +172,13 @@ class DeliveryPlanGroupBuilder
   set candidates(ListBuilder<DeliveryPlanVehicle>? candidates) =>
       _$this._candidates = candidates;
 
+  ListBuilder<DeliveryPlanVehicle>? _manualReviewVehicles;
+  ListBuilder<DeliveryPlanVehicle> get manualReviewVehicles =>
+      _$this._manualReviewVehicles ??= ListBuilder<DeliveryPlanVehicle>();
+  set manualReviewVehicles(
+          ListBuilder<DeliveryPlanVehicle>? manualReviewVehicles) =>
+      _$this._manualReviewVehicles = manualReviewVehicles;
+
   DeliveryPlanGroupBuilder() {
     DeliveryPlanGroup._defaults(this);
   }
@@ -178,6 +191,7 @@ class DeliveryPlanGroupBuilder
       _status = $v.status;
       _manualReviewReasons = $v.manualReviewReasons.toBuilder();
       _candidates = $v.candidates.toBuilder();
+      _manualReviewVehicles = $v.manualReviewVehicles?.toBuilder();
       _$v = null;
     }
     return this;
@@ -209,6 +223,7 @@ class DeliveryPlanGroupBuilder
                 status, r'DeliveryPlanGroup', 'status'),
             manualReviewReasons: manualReviewReasons.build(),
             candidates: candidates.build(),
+            manualReviewVehicles: _manualReviewVehicles?.build(),
           );
     } catch (_) {
       late String _$failedField;
@@ -217,6 +232,8 @@ class DeliveryPlanGroupBuilder
         manualReviewReasons.build();
         _$failedField = 'candidates';
         candidates.build();
+        _$failedField = 'manualReviewVehicles';
+        _manualReviewVehicles?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'DeliveryPlanGroup', _$failedField, e.toString());

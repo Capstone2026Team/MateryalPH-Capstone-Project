@@ -14,6 +14,7 @@ import 'package:materyalph_api_client/src/model/admin_order_operations_summary_e
 import 'package:materyalph_api_client/src/model/admin_refund_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/admin_reimbursement_decision.dart';
 import 'package:materyalph_api_client/src/model/admin_reimbursement_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/date.dart';
 
 class AdminOrderOperationsApi {
 
@@ -133,7 +134,7 @@ class AdminOrderOperationsApi {
   }
 
   /// getAdminOrderOperationsSummary
-  /// orders.operations.view. Counts of failed and pending refunds, pending reimbursements, open cancellation requests and recent NFR events.
+  /// orders.operations.view. All-record refund and order-linked reimbursement totals, independent of list filters, plus counts of failed and pending refunds, pending reimbursements, open cancellation requests and recent NFR events.
   ///
   /// Parameters:
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -221,6 +222,8 @@ class AdminOrderOperationsApi {
   /// orders.operations.view. Open Buyer requests awaiting the Vendor, earliest deadline first.
   ///
   /// Parameters:
+  /// * [from] - Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Open cancellation request created_at; existing 100-record bound retained.
+  /// * [to] - Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Open cancellation request created_at; existing 100-record bound retained.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -231,6 +234,8 @@ class AdminOrderOperationsApi {
   /// Returns a [Future] containing a [Response] with a [AdminCancellationRequestListEnvelope] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<AdminCancellationRequestListEnvelope>> listAdminCancellationRequests({
+    Date? from,
+    Date? to,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -263,9 +268,15 @@ class AdminOrderOperationsApi {
       validateStatus: validateStatus,
     );
 
+    final _queryParameters = <String, dynamic>{
+      if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
+    };
+
     final _response = await _dio.request<Object>(
       _path,
       options: _options,
+      queryParameters: _queryParameters,
       cancelToken: cancelToken,
       onSendProgress: onSendProgress,
       onReceiveProgress: onReceiveProgress,
@@ -309,6 +320,8 @@ class AdminOrderOperationsApi {
   /// * [state]
   /// * [trigger]
   /// * [page]
+  /// * [from] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Refund requested_at with created_at fallback.
+  /// * [to] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Refund requested_at with created_at fallback.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -322,6 +335,8 @@ class AdminOrderOperationsApi {
     String? state,
     String? trigger,
     int? page,
+    Date? from,
+    Date? to,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -358,6 +373,8 @@ class AdminOrderOperationsApi {
       if (state != null) r'state': encodeQueryParameter(_serializers, state, const FullType(String)),
       if (trigger != null) r'trigger': encodeQueryParameter(_serializers, trigger, const FullType(String)),
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+      if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
     };
 
     final _response = await _dio.request<Object>(
@@ -404,6 +421,8 @@ class AdminOrderOperationsApi {
   /// orders.operations.view. Vendor cash reimbursements of cancelled orders.
   ///
   /// Parameters:
+  /// * [from] - Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Reimbursement instruction created_at; existing 100-record bound retained.
+  /// * [to] - Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Reimbursement instruction created_at; existing 100-record bound retained.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -414,6 +433,8 @@ class AdminOrderOperationsApi {
   /// Returns a [Future] containing a [Response] with a [AdminReimbursementListEnvelope] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<AdminReimbursementListEnvelope>> listAdminReimbursements({
+    Date? from,
+    Date? to,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -446,9 +467,15 @@ class AdminOrderOperationsApi {
       validateStatus: validateStatus,
     );
 
+    final _queryParameters = <String, dynamic>{
+      if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
+    };
+
     final _response = await _dio.request<Object>(
       _path,
       options: _options,
+      queryParameters: _queryParameters,
       cancelToken: cancelToken,
       onSendProgress: onSendProgress,
       onReceiveProgress: onReceiveProgress,

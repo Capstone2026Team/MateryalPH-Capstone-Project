@@ -28,24 +28,36 @@ IconData _toneIcon(StateTone tone) => switch (tone) {
   StateTone.neutral => LucideIcons.circleDashed,
 };
 
-/// A compact order-state label for cards.
+/// A compact order-state label for cards. [tinted] fills it with a light wash of its tone (the My
+/// Orders cards); the text keeps the tone's strong color, so contrast does not depend on the wash.
 class OrderStateChip extends StatelessWidget {
-  const OrderStateChip({super.key, required this.state});
+  const OrderStateChip({super.key, required this.state, this.tinted = false});
 
   final String state;
+  final bool tinted;
 
   @override
   Widget build(BuildContext context) {
     final tone = orderStateTone(state);
     final color = _toneColor(tone);
+    final wash = switch (tone) {
+      StateTone.warning ||
+      StateTone.info => const Color(MateryalColorTokens.brandOrange50),
+      StateTone.neutral => BuyerTheme.canvas,
+      _ => Color.lerp(Colors.white, color, 0.08)!,
+    };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: tone == StateTone.warning
+        color: tinted
+            ? wash
+            : tone == StateTone.warning
             ? const Color(MateryalColorTokens.brandOrange50)
             : BuyerTheme.canvas,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: BuyerTheme.border),
+        borderRadius: BorderRadius.circular(tinted ? 6 : 999),
+        border: Border.all(
+          color: tinted ? Color.lerp(wash, color, 0.25)! : BuyerTheme.border,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -390,7 +402,9 @@ class MoneyBreakdownCard extends StatelessWidget {
     final delivery = switch (money.deliveryStatus) {
       'NOT_APPLICABLE' => 'None (Self-Pickup)',
       _ when money.deliveryCentavos != null => formatPeso(
-        money.deliveryCentavos!,
+        money.discount?.scope == 'DELIVERY'
+            ? money.discount!.basisCentavos
+            : money.deliveryCentavos!,
       ),
       _ when money.deliveryEstimateMin != null =>
         money.deliveryEstimateMin == money.deliveryEstimateMax
@@ -443,7 +457,9 @@ class MoneyBreakdownCard extends StatelessWidget {
           _MoneyRow('Materials', formatPeso(money.materialsGrossCentavos)),
           if (money.vendorDiscountCentavos > 0)
             _MoneyRow(
-              'Vendor discount',
+              money.discount?.scope == 'MATERIALS'
+                  ? 'Vendor discount ${money.discount!.percent}% (materials)'
+                  : 'Vendor discount',
               '− ${formatPeso(money.vendorDiscountCentavos)}',
             ),
           _MoneyRow(
@@ -461,12 +477,19 @@ class MoneyBreakdownCard extends StatelessWidget {
               muted: true,
             ),
           _MoneyRow(
-            'Delivery fee',
+            money.discount?.scope == 'DELIVERY'
+                ? 'Delivery before discount'
+                : 'Delivery fee',
             delivery,
             note: money.deliveryStatus == 'PENDING_VENDOR_CONFIRMATION'
                 ? 'The Vendor confirms it before you pay'
                 : null,
           ),
+          if (money.discount?.scope == 'DELIVERY')
+            _MoneyRow(
+              'Vendor discount ${money.discount!.percent}% (delivery fee)',
+              '− ${formatPeso(money.discount!.deductionCentavos)}',
+            ),
           if (money.nrpcCentavos > 0)
             _MoneyRow(
               'Preparation cost (NRPC)',

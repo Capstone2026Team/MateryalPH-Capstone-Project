@@ -60,7 +60,7 @@ final class DeliveryPreviewService
         }
         $endpoint = $restriction === 'YES' ? $points['alternate'] : $points['intended'];
         $store = DB::table('vendor_addresses as va')->join('vendor_address_versions as av', 'av.id', '=', 'va.current_version_id')->where('va.vendor_organization_id', $organizationId)->whereNotNull('av.location')
-            ->selectRaw('av.id, av.latitude, av.longitude, ST_Distance(av.location, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography) AS straight_line', [$endpoint['longitude'], $endpoint['latitude']])->first();
+            ->selectRaw('av.id, av.latitude, av.longitude, av.formatted_address, ST_Distance(av.location, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography) AS straight_line', [$endpoint['longitude'], $endpoint['latitude']])->first();
         $coverage = DB::table('delivery_service_areas')->where('vendor_organization_id', $organizationId)->where('active', true)->max('maximum_distance_km');
         if ($store === null || $coverage === null) {
             return array_replace($base, ['status' => 'BLOCKED', 'issues' => [['code' => 'DELIVERY_NOT_OFFERED', 'severity' => CartService::BLOCKING, 'message' => 'This store is not offering Site Delivery right now. Choose Self-Pickup if available.']]]);
@@ -74,8 +74,16 @@ final class DeliveryPreviewService
         }
         $route = $this->route((string) $store->id, (float) $store->latitude, (float) $store->longitude, $endpoint);
         if (is_string($route)) {
+            $location = $restriction === 'YES' ? $destination['alternate_drop_off'] : $destination['intended'];
+            $storeAddress = Str::lower(Str::squish((string) $store->formatted_address));
+            $destinationAddress = Str::lower(Str::squish((string) ($location['formatted_address'] ?? '')));
+            $samePin = (float) $store->latitude === (float) $endpoint['latitude'] && (float) $store->longitude === (float) $endpoint['longitude'];
+            $message = $samePin || ($storeAddress !== '' && $storeAddress === $destinationAddress)
+                ? sprintf("Your %s matches the Vendor's store address. Delivery is blocked because a route to this location could not be confirmed. Choose another delivery location or select Self-Pickup if available.", $restriction === 'YES' ? 'alternative vehicle drop-off' : 'intended destination')
+                : ($route === 'ROUTE_NOT_FOUND' ? 'No driving route to the vehicle drop-off was found. Choose another drop-off or Self-Pickup.' : 'The delivery route could not be confirmed right now. Retry, or choose Self-Pickup.');
+
             return array_replace($base, ['status' => 'BLOCKED', 'issues' => [['code' => $route, 'severity' => CartService::BLOCKING,
-                'message' => $route === 'ROUTE_NOT_FOUND' ? 'No driving route to the vehicle drop-off was found. Choose another drop-off or Self-Pickup.' : 'The delivery route could not be confirmed right now. Retry, or choose Self-Pickup.']]]);
+                'message' => $message]]]);
         }
         $base['route'] = $route;
         if (count($lines) > self::MAX_LOAD_GROUPS) {
@@ -107,6 +115,8 @@ final class DeliveryPreviewService
             $message = match (true) {
                 in_array('WEIGHT_UNKNOWN', $reasons, true) || in_array('UNIT_DIMENSIONS_UNKNOWN', $reasons, true) => 'An automatic delivery estimate needs the product weight and cargo dimensions. The Vendor must complete the missing measurements or review this delivery manually.',
                 in_array('VOLUME_UNKNOWN', $reasons, true) => 'An automatic mixer delivery estimate needs the ready-mixed concrete volume. The Vendor must complete the missing volume or review this delivery manually.',
+                $result['status'] === 'NO_ELIGIBLE_VEHICLE' && array_any($result['groups'], static fn (array $group): bool => ($group['material_kind'] ?? null) === DeliveryRecommendationService::READY_MIXED_CONCRETE && $group['status'] === 'NO_ELIGIBLE_VEHICLE') => 'No Concrete Mixer Truck / Transit Mixer from this store can reach the drop-off with this volume right now, so the Vendor must arrange the delivery and fee manually.',
+                in_array('UNIT_DIMENSIONS_REQUIRE_MANUAL_REVIEW', $reasons, true) => 'The saved product dimensions exceed the cargo space of the available vehicles. The Vendor must verify the transport measurements before the system can recommend a vehicle and calculate a delivery fee.',
                 $result['status'] === 'NO_ELIGIBLE_VEHICLE' && in_array('DIMENSIONS_INSUFFICIENT', $excluded, true) => 'An item in this order is larger than the cargo space of every vehicle this store has configured, so the Vendor must arrange the delivery and fee manually.',
                 $result['status'] === 'NO_ELIGIBLE_VEHICLE' && $excluded === [] => 'This store has no delivery vehicle available right now, so the Vendor must arrange the delivery and fee manually.',
                 default => 'The Vendor must review this load manually. Vehicles, trips and the delivery fee will be shown after the Vendor confirms.',
@@ -172,7 +182,7 @@ final class DeliveryPreviewService
     }
 
     /**
-     * Range across the advisory alternatives per load group; no single vehicle is chosen for the Vendor.
+     * Estimate for the system-recommended vehicle and trips in each separately carried load group.
      *
      * @param  list<array<string, mixed>>  $groups
      * @return array<string, mixed>
@@ -181,6 +191,7 @@ final class DeliveryPreviewService
     {
         $summary = ['fee_min_centavos' => 0, 'fee_max_centavos' => 0, 'trips_min' => 0, 'trips_max' => 0, 'vehicles_min' => 0, 'vehicles_max' => 0, 'options' => []];
         foreach ($groups as $group) {
+            $group['candidates'] = array_slice($group['candidates'], 0, 1);
             $fees = array_column($group['candidates'], 'estimated_charge_centavos');
             $trips = array_column($group['candidates'], 'total_vehicle_trips');
             $vehicles = array_column($group['candidates'], 'number_of_vehicles');
@@ -192,9 +203,11 @@ final class DeliveryPreviewService
             $summary['vehicles_max'] += max($vehicles);
             foreach ($group['candidates'] as $candidate) {
                 $vehicle = $candidate['vehicle'];
-                $option = ['load_key' => (string) $group['key'], 'vehicle_name' => (string) $vehicle['name'], 'vehicle_type' => (string) $vehicle['vehicle_type'],
+                $option = ['load_key' => (string) $group['key'], 'vehicle_id' => (string) $vehicle['id'], 'vehicle_name' => (string) $vehicle['name'], 'vehicle_type' => (string) $vehicle['vehicle_type'],
                     'vehicles' => (int) $candidate['number_of_vehicles'], 'trips' => (int) $candidate['total_vehicle_trips'], 'fee_centavos' => (int) $candidate['estimated_charge_centavos'],
-                    'fee_per_trip_centavos' => (int) $candidate['fee']['per_trip_centavos']];
+                    'fee_per_trip_centavos' => (int) $candidate['fee']['per_trip_centavos'],
+                    'mobilization_basis' => $candidate['fee']['mobilization_basis'], 'mobilization_fee_centavos' => (int) $candidate['fee']['mobilization_fee_centavos'],
+                    'mobilization_total_centavos' => (int) $candidate['fee']['mobilization_total_centavos'], 'volume_plan' => $candidate['volume_plan'] ?? null];
                 if ($includeRateBasis) {
                     $option += [
                         'base_fee_centavos' => (int) $candidate['fee']['base_fee_centavos'], 'per_km_centavos' => (int) $candidate['fee']['per_km_centavos'],

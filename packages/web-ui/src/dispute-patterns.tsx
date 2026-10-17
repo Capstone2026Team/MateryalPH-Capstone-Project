@@ -215,10 +215,10 @@ export function InvoiceRecordList({ records, apiBasePath, renderAction }: { reco
 
 /** MateryalPH's own Purchase Order and payment confirmation, each visibly labelled "Not a tax invoice". */
 export function PlatformDocumentNotice({ documents }: { documents: PlatformDocumentRef[] }) {
-  return <ul className="grid gap-2" aria-label="MateryalPH documents">
-    {documents.map(document => <li key={document.kind} className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-control border border-border-default bg-surface-canvas px-3 py-2 text-sm">
-      <span className="flex min-w-0 items-center gap-2"><FileText size={15} aria-hidden="true" />{document.title}</span>
-      <StatusBadge label={document.label} tone="neutral" icon={<Ban size={14} aria-hidden="true" />} />
+  return <ul className="grid min-w-0 divide-y divide-border-default rounded-control border border-border-default bg-surface-canvas px-3" aria-label="MateryalPH documents">
+    {documents.map(document => <li key={document.kind} className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3 text-sm">
+      <span className="flex min-w-0 items-start gap-2"><FileText size={16} className="mt-0.5 shrink-0" aria-hidden="true" /><span className="min-w-0 break-words">{document.title}</span></span>
+      <span className="shrink-0"><StatusBadge label={document.label} tone="neutral" icon={<Ban size={14} aria-hidden="true" />} /></span>
     </li>)}
   </ul>
 }

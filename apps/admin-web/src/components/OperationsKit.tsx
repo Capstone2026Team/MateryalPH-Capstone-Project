@@ -1,14 +1,10 @@
-import { Button } from '@materyalph/web-ui'
+import { DataTable, Pagination } from '@materyalph/web-ui'
 import type { ReactNode } from 'react'
 import type { PagedState } from '../lib/operations-hooks'
 import { ErrorState, LoadingState } from '../pages/PhaseThreeAdminPages'
 
-export function Pager({ page, lastPage, busy, onChange, total }: { page: number; lastPage: number; busy?: boolean; onChange: (page: number) => void; total?: number }) {
-  return <nav aria-label="Pagination" className="flex flex-wrap items-center gap-3 text-sm">
-    <Button variant="secondary" disabled={busy || page <= 1} onClick={() => onChange(page - 1)}>Previous</Button>
-    <span className="tabular-nums">Page {page} of {lastPage}{total !== undefined ? ` · ${total.toLocaleString('en-PH')} records` : ''}</span>
-    <Button variant="secondary" disabled={busy || page >= lastPage} onClick={() => onChange(page + 1)}>Next</Button>
-  </nav>
+export function Pager({ page, lastPage, busy, onChange, total }: { page: number; lastPage: number; busy?: boolean; onChange: (page: number) => void; total?: number | undefined }) {
+  return <Pagination page={page} lastPage={lastPage} busy={busy ?? false} {...(total !== undefined ? { total } : {})} onChange={onChange} />
 }
 
 export function Panel({ title, description, actions, children, id }: { title: string; description?: string; actions?: ReactNode; children: ReactNode; id?: string }) {
@@ -23,12 +19,10 @@ export function Paged<T>({ state, empty, children }: { state: PagedState<T>; emp
   if (!state.data) return <LoadingState />
   if (state.data.items.length === 0) return <p className="rounded-surface border border-dashed border-border-default bg-surface-primary p-8 text-center text-sm text-text-secondary">{empty}</p>
   return <div className="grid gap-4">{children(state.data.items)}
-    {(state.page > 1 || state.data.hasMore) && <div className="flex items-center justify-between gap-3"><Button variant="secondary" disabled={state.page === 1} onClick={() => state.setPage(state.page - 1)}>Previous</Button><span className="text-sm text-text-secondary">Page {state.page} · {state.data.total} total</span><Button variant="secondary" disabled={!state.data.hasMore} onClick={() => state.setPage(state.page + 1)}>Next</Button></div>}
+    {(state.page > 1 || state.data.hasMore) && <Pagination page={state.page} hasMore={state.data.hasMore} total={state.data.total} onChange={state.setPage} />}
   </div>
 }
 
 export function Table({ caption, headers, children }: { caption: string; headers: string[]; children: ReactNode }) {
-  return <div className="min-w-0 overflow-x-auto rounded-surface border border-border-default bg-surface-primary"><table className="w-full min-w-[46rem] border-collapse text-left text-sm"><caption className="sr-only">{caption}</caption>
-    <thead className="bg-surface-canvas text-xs uppercase tracking-wide text-text-secondary"><tr>{headers.map(header => <th key={header} scope="col" className="px-4 py-3 font-semibold">{header}</th>)}</tr></thead>
-    <tbody className="divide-y divide-border-default">{children}</tbody></table></div>
+  return <DataTable caption={caption} headers={headers}>{children}</DataTable>
 }

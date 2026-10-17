@@ -115,7 +115,24 @@ class FakeReviewsRepository implements ReviewsRepository {
       Uint8List(0);
 
   @override
-  Future<ListingReviewsView> listingReviews(String listingId) async => listing;
+  Future<ListingReviewsView> listingReviews(
+    String listingId, {
+    int page = 1,
+  }) async => listing;
+
+  StoreRatingView store = const StoreRatingView(
+    ratingCount: 0,
+    scoreLabel: 'New Vendor — Building Track Record',
+    newVendor: true,
+  );
+  final List<String> storeRatingCalls = [];
+
+  @override
+  Future<StoreRatingView> storeRating(String vendorId) async {
+    storeRatingCalls.add(vendorId);
+    if (failure != null) throw failure!;
+    return store;
+  }
 
   @override
   Future<void> report({

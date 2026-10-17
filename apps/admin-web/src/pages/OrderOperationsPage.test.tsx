@@ -16,7 +16,37 @@ const at = (path: string) => render(<MemoryRouter initialEntries={[path]}><Route
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(operations.getSummary).mockResolvedValue({ refundsFailed: 1, refundsPending: 2, reimbursementsPending: 1, cancellationRequestsOpen: 0, nfrEvents30Days: 3 })
+  vi.mocked(operations.getSummary).mockResolvedValue({ refundsTotal: 5, refundsFailed: 1, refundsPending: 2, reimbursementsTotal: 2, reimbursementsPending: 1, cancellationRequestsOpen: 0, nfrEvents30Days: 3 })
+})
+
+test('tab badges include processed refunds and confirmed reimbursements while cards retain exception counts', async () => {
+  vi.mocked(operations.getSummary).mockResolvedValue({ refundsTotal: 1, refundsFailed: 0, refundsPending: 0, reimbursementsTotal: 1, reimbursementsPending: 0, cancellationRequestsOpen: 0, nfrEvents30Days: 1 })
+  vi.mocked(operations.listRefunds).mockResolvedValue({ items: [refund({ state: 'REFUNDED', displayState: 'PROCESSED', canRetry: false })], hasMore: false })
+  at('/order-operations')
+  expect(await screen.findByRole('tab', { name: 'Refunds 1' })).toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: 'Cash reimbursements 1' })).toBeInTheDocument()
+  expect(screen.getByText('Failed refunds').closest('div')).toHaveTextContent('Failed refunds0')
+  expect(screen.getByText('Refunds awaiting provider').closest('div')).toHaveTextContent('Refunds awaiting provider0')
+  expect(screen.getByText('Reimbursements pending').closest('div')).toHaveTextContent('Reimbursements pending0')
+  fireEvent.change(screen.getByRole('combobox', { name: 'Status' }), { target: { value: '' } })
+  await waitFor(() => expect(operations.listRefunds).toHaveBeenLastCalledWith(1, undefined, { label: 'All dates', from: '', to: '' }))
+  expect(screen.getByRole('tab', { name: 'Refunds 1' })).toBeInTheDocument()
+})
+
+test('Refresh updates the summary and current list without resetting its filters', async () => {
+  vi.mocked(operations.listRefunds).mockResolvedValue({ items: [], hasMore: false })
+  at('/order-operations')
+  await screen.findByText('No refunds in this status.')
+  fireEvent.change(screen.getByRole('combobox', { name: 'Status' }), { target: { value: 'REFUNDED' } })
+  await waitFor(() => expect(operations.listRefunds).toHaveBeenLastCalledWith(1, 'REFUNDED', { label: 'All dates', from: '', to: '' }))
+  vi.mocked(operations.getSummary).mockResolvedValue({ refundsTotal: 6, refundsFailed: 0, refundsPending: 2, reimbursementsTotal: 2, reimbursementsPending: 1, cancellationRequestsOpen: 0, nfrEvents30Days: 3 })
+  vi.mocked(operations.listRefunds).mockResolvedValue({ items: [refund({ state: 'REFUNDED', displayState: 'PROCESSED', canRetry: false })], hasMore: false })
+  const callsBefore = vi.mocked(operations.listRefunds).mock.calls.length
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+  expect(await screen.findByRole('tab', { name: 'Refunds 6' })).toBeInTheDocument()
+  expect(await screen.findByText('Refund processed by the payment provider')).toBeInTheDocument()
+  expect(screen.getByRole('combobox', { name: 'Status' })).toHaveValue('REFUNDED')
+  expect(operations.listRefunds).toHaveBeenCalledTimes(callsBefore + 1)
 })
 
 test('failed refunds come first with a retry to the original payment that stays pending', async () => {
@@ -24,8 +54,9 @@ test('failed refunds come first with a retry to the original payment that stays 
   vi.mocked(operations.retryRefund).mockResolvedValue()
   at('/order-operations')
   expect(await screen.findByText('Refund failed — action required')).toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: 'Refunds 5' })).toBeInTheDocument()
   expect(screen.getByText(/INSUFFICIENT_BALANCE/)).toBeInTheDocument()
-  expect(operations.listRefunds).toHaveBeenCalledWith(1, 'REFUND_FAILED')
+  expect(operations.listRefunds).toHaveBeenCalledWith(1, 'REFUND_FAILED', { label: 'All dates', from: '', to: '' })
   fireEvent.click(screen.getByRole('button', { name: 'Retry after funding is resolved' }))
   await waitFor(() => expect(operations.retryRefund).toHaveBeenCalledWith('refund-1'))
   expect(await screen.findByText(/stays pending until the provider confirms it/)).toBeInTheDocument()

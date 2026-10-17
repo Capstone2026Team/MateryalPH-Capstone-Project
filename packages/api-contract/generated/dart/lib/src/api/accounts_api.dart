@@ -31,6 +31,12 @@ import 'package:materyalph_api_client/src/model/account_role_list_envelope.dart'
 import 'package:materyalph_api_client/src/model/account_security_envelope.dart';
 import 'package:materyalph_api_client/src/model/account_session_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/account_session_revocation.dart';
+import 'package:materyalph_api_client/src/model/buyer_account_deletion_preview_envelope.dart';
+import 'package:materyalph_api_client/src/model/buyer_account_deletion_request.dart';
+import 'package:materyalph_api_client/src/model/buyer_account_deletion_result_envelope.dart';
+import 'package:materyalph_api_client/src/model/buyer_two_factor_confirmation.dart';
+import 'package:materyalph_api_client/src/model/buyer_two_factor_disable.dart';
+import 'package:materyalph_api_client/src/model/buyer_two_factor_enrollment_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_invitation_acceptance.dart';
 import 'package:materyalph_api_client/src/model/vendor_staff_update.dart';
 import 'package:materyalph_api_client/src/model/vendor_team_deletion.dart';
@@ -157,7 +163,7 @@ class AccountsApi {
   }
 
   /// acceptVendorStaffInvitation
-  ///
+  /// Accepts an unexpired invitation for its invited email and fixed role. When Vendor bot protection is enabled, requires an Enterprise checkbox assessment with server-selected action vendor_invitation_accept, or an accessible email security check with a single-use HttpOnly proof bound to this email and action. Invalid, expired, revoked, deleted or accepted invitations cannot trigger a bot email challenge. Existing Vendor identities in ACTIVE or PENDING_VERIFICATION use their current password and must have no retained Vendor membership. Deleted memberships remain historical records. Pending identities receive a new email verification code and remain pending until verification; acceptance never signs in or activates the identity. Suspended, banned, deactivated and non-Vendor identities remain ineligible.
   ///
   /// Parameters:
   /// * [vendorInvitationAcceptance]
@@ -942,6 +948,208 @@ class AccountsApi {
     );
   }
 
+  /// confirmBuyerTwoFactor
+  /// Confirms the pending authenticator with a current 6-digit code. Requires recent authentication. Turns 2FA on, signs out the Buyer&#39;s other devices and returns 8 single-use recovery codes once. From then on every Buyer sign-in, including Google, needs an authenticator or recovery code. A wrong code is 422 MFA_CODE_INVALID.
+  ///
+  /// Parameters:
+  /// * [buyerTwoFactorConfirmation]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [AccountRecoveryCodesEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<AccountRecoveryCodesEnvelope>> confirmBuyerTwoFactor({
+    required BuyerTwoFactorConfirmation buyerTwoFactorConfirmation,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/buyers/account/two-factor/confirm';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'passportBearer',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(BuyerTwoFactorConfirmation);
+      _bodyData = _serializers.serialize(buyerTwoFactorConfirmation, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    AccountRecoveryCodesEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AccountRecoveryCodesEnvelope),
+      ) as AccountRecoveryCodesEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<AccountRecoveryCodesEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// deleteBuyerAccount
+  /// Deletes the signed-in Buyer account. Requires recent authentication and the typed confirmation phrase. Refused with 409 ACCOUNT_DELETION_BLOCKED (details.blockers) while an order, dispute or refund is open. The account becomes DELETED (final), every session, push device and authenticator is revoked and an IN_APP DELETION privacy request is opened. Orders, payments, disputes, reviews and audit records are retained and later minimized, never deleted.
+  ///
+  /// Parameters:
+  /// * [buyerAccountDeletionRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [BuyerAccountDeletionResultEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<BuyerAccountDeletionResultEnvelope>> deleteBuyerAccount({
+    required BuyerAccountDeletionRequest buyerAccountDeletionRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/buyers/account/deletion';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'passportBearer',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(BuyerAccountDeletionRequest);
+      _bodyData = _serializers.serialize(buyerAccountDeletionRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    BuyerAccountDeletionResultEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(BuyerAccountDeletionResultEnvelope),
+      ) as BuyerAccountDeletionResultEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<BuyerAccountDeletionResultEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
   /// deleteVendorTeamInvitation
   /// Owner only. Allowed for unaccepted expired invitations or accepted invitations linked to a deleted membership. Otherwise returns TEAM_INVITATION_NOT_DELETABLE. Stale lock_version returns RESOURCE_VERSION_CONFLICT. Requires recent authentication and current agreements. Repeated deletion succeeds without duplicating audit events.
   ///
@@ -1107,6 +1315,107 @@ class AccountsApi {
     try {
       const _type = FullType(VendorTeamDeletion);
       _bodyData = _serializers.serialize(vendorTeamDeletion, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    AccountMutationResultEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AccountMutationResultEnvelope),
+      ) as AccountMutationResultEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<AccountMutationResultEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// disableBuyerTwoFactor
+  /// Turns the Buyer&#39;s authenticator off. Requires recent authentication plus a fresh authenticator code or an unused recovery code. Retires every recovery code, spends the recent-authentication proof and emails a security notice.
+  ///
+  /// Parameters:
+  /// * [buyerTwoFactorDisable]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [AccountMutationResultEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<AccountMutationResultEnvelope>> disableBuyerTwoFactor({
+    required BuyerTwoFactorDisable buyerTwoFactorDisable,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/buyers/account/two-factor/disable';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'passportBearer',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(BuyerTwoFactorDisable);
+      _bodyData = _serializers.serialize(buyerTwoFactorDisable, specifiedType: _type);
 
     } catch(error, stackTrace) {
       throw DioException(
@@ -1417,6 +1726,178 @@ class AccountsApi {
     }
 
     return Response<AccountSecurityEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// getBuyerAccountDeletionPreview
+  /// What deleting the account keeps and whether open orders, disputes or pending refunds block it. Shown before the Buyer confirms.
+  ///
+  /// Parameters:
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [BuyerAccountDeletionPreviewEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<BuyerAccountDeletionPreviewEnvelope>> getBuyerAccountDeletionPreview({
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/buyers/account/deletion';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'passportBearer',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    BuyerAccountDeletionPreviewEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(BuyerAccountDeletionPreviewEnvelope),
+      ) as BuyerAccountDeletionPreviewEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<BuyerAccountDeletionPreviewEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// getBuyerAccountPhoto
+  /// Use the five-minute signed avatar_url from the Buyer profile through an authenticated request. Owner and current profile version are checked on every fetch. Private no-store response; the signed URL alone grants no access.
+  ///
+  /// Parameters:
+  /// * [expires]
+  /// * [owner]
+  /// * [version]
+  /// * [signature]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [Uint8List] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<Uint8List>> getBuyerAccountPhoto({
+    required int expires,
+    required String owner,
+    required int version,
+    required String signature,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/buyers/account/photo';
+    final _options = Options(
+      method: r'GET',
+      responseType: ResponseType.bytes,
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'passportBearer',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      r'expires': encodeQueryParameter(_serializers, expires, const FullType(int)),
+      r'owner': encodeQueryParameter(_serializers, owner, const FullType(String)),
+      r'version': encodeQueryParameter(_serializers, version, const FullType(int)),
+      r'signature': encodeQueryParameter(_serializers, signature, const FullType(String)),
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    Uint8List? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : rawResponse as Uint8List;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<Uint8List>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -2115,7 +2596,7 @@ class AccountsApi {
   }
 
   /// replaceAccountRecoveryCodes
-  /// Server enforces the route audience, active account and membership, resource ownership, Passport scope and session transport. buyers uses MOBILE bearer; vendors/admin use WEB cookies and CSRF on mutations. Privileged security changes require session-bound recent authentication. No client header can select or bypass transport security.
+  /// Server enforces the route audience, active account and membership, resource ownership, Passport scope and session transport. buyers uses MOBILE bearer; vendors/admin use WEB cookies and CSRF on mutations. Privileged security changes require session-bound recent authentication. No client header can select or bypass transport security. Requires an enrolled authenticator; a Buyer with optional 2FA may also regenerate codes. Previous codes stop working and the recent-authentication proof is spent.
   ///
   /// Parameters:
   /// * [accountPortal]
@@ -2706,6 +3187,85 @@ class AccountsApi {
     );
   }
 
+  /// startBuyerTwoFactor
+  /// Starts optional authenticator-app (TOTP, RFC 6238, SHA-1, 6 digits, 30 seconds) enrollment for the signed-in Buyer. Requires session-bound recent authentication. Returns the setup key and otpauth provisioning URI for a QR code or copy/paste; calling again before confirmation returns the same pending key. The key is shown only to the owner and is never logged.
+  ///
+  /// Parameters:
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [BuyerTwoFactorEnrollmentEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<BuyerTwoFactorEnrollmentEnvelope>> startBuyerTwoFactor({
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/buyers/account/two-factor';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'passportBearer',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    BuyerTwoFactorEnrollmentEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(BuyerTwoFactorEnrollmentEnvelope),
+      ) as BuyerTwoFactorEnrollmentEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<BuyerTwoFactorEnrollmentEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
   /// updateAccountProfile
   /// Server enforces the route audience, active account and membership, resource ownership, Passport scope and session transport. buyers uses MOBILE bearer; vendors/admin use WEB cookies and CSRF on mutations. Privileged security changes require session-bound recent authentication. No client header can select or bypass transport security.
   ///
@@ -2929,7 +3489,7 @@ class AccountsApi {
   }
 
   /// uploadAccountPhoto
-  /// Owner-only personal photo. Maximum 2 MB JPEG/PNG/WebP and 4096 pixels per dimension. Malware-scanned, re-encoded to 256px PNG, privately stored. Five uploads/minute within the overall account budget. Fails closed if scanning or processing is unavailable.
+  /// Owner-only personal photo. Maximum 2 MB JPEG/PNG/WebP and 4096 pixels per dimension. Malware-scanned, re-encoded to 256px PNG, privately stored. Fails closed if scanning or processing is unavailable.
   ///
   /// Parameters:
   /// * [webAccountPortal]
@@ -2973,6 +3533,111 @@ class AccountsApi {
             'name': 'webCsrf',
             'keyName': 'X-CSRF-Token',
             'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'multipart/form-data',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      _bodyData = FormData.fromMap(<String, dynamic>{
+        r'photo': photo,
+        r'lock_version': encodeFormParameter(_serializers, lockVersion, const FullType(int)),
+      });
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    AccountProfileEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AccountProfileEnvelope),
+      ) as AccountProfileEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<AccountProfileEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// uploadBuyerAccountPhoto
+  /// Authenticated Buyer&#39;s own personal photo. Maximum 2 MB JPEG/PNG/WebP and 4096 pixels per dimension. Uses the shared malware scan, 256px PNG sanitization, private storage and profile version checks. Fails closed if scanning or processing is unavailable.
+  ///
+  /// Parameters:
+  /// * [photo]
+  /// * [lockVersion]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [AccountProfileEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<AccountProfileEnvelope>> uploadBuyerAccountPhoto({
+    required MultipartFile photo,
+    required int lockVersion,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/buyers/account/photo';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'passportBearer',
           },
         ],
         ...?extra,

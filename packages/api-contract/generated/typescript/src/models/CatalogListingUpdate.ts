@@ -56,6 +56,10 @@ export interface CatalogListingUpdate {
      */
     tagIds?: Array<string>;
     /**
+     * Replaces the listing's own search tags. Letters
+     */
+    customTags?: Array<string>;
+    /**
      *
      */
     brand?: string | null;
@@ -120,6 +124,7 @@ export function CatalogListingUpdateFromJSONTyped(json: any, ignoreDiscriminator
         'otherLabel': json['other_label'] === undefined ? undefined : json['other_label'] === null ? null : json['other_label'],
         'materialCategoryId': json['material_category_id'] === undefined ? undefined : json['material_category_id'] === null ? null : json['material_category_id'],
         'tagIds': json['tag_ids'] == null ? undefined : json['tag_ids'],
+        'customTags': json['custom_tags'] == null ? undefined : json['custom_tags'],
         'brand': json['brand'] === undefined ? undefined : json['brand'] === null ? null : json['brand'],
         'model': json['model'] === undefined ? undefined : json['model'] === null ? null : json['model'],
         'manufacturer': json['manufacturer'] === undefined ? undefined : json['manufacturer'] === null ? null : json['manufacturer'],
@@ -149,6 +154,7 @@ export function CatalogListingUpdateToJSONTyped(value?: CatalogListingUpdate | n
         'other_label': value['otherLabel'],
         'material_category_id': value['materialCategoryId'],
         'tag_ids': value['tagIds'],
+        'custom_tags': value['customTags'],
         'brand': value['brand'],
         'model': value['model'],
         'manufacturer': value['manufacturer'],

@@ -82,5 +82,15 @@ void main() {
       // TODO
     });
 
+    // BuiltList<DeliveryAssignmentHistory> assignmentHistory
+    test('to test the property `assignmentHistory`', () async {
+      // TODO
+    });
+
+    // int proofUploadLimitKb
+    test('to test the property `proofUploadLimitKb`', () async {
+      // TODO
+    });
+
   });
 }

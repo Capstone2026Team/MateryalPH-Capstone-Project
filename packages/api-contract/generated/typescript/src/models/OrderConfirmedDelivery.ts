@@ -27,6 +27,13 @@ import {
     OrderPointToJSON,
     OrderPointToJSONTyped,
 } from './OrderPoint';
+import type { DeliveryEstimateOption } from './DeliveryEstimateOption';
+import {
+    DeliveryEstimateOptionFromJSON,
+    DeliveryEstimateOptionFromJSONTyped,
+    DeliveryEstimateOptionToJSON,
+    DeliveryEstimateOptionToJSONTyped,
+} from './DeliveryEstimateOption';
 
 /**
  * The frozen Owner/Manager-confirmed arrangement. Later vehicle, rate, profile or schedule changes never alter it.
@@ -34,6 +41,18 @@ import {
  * @interface OrderConfirmedDelivery
  */
 export interface OrderConfirmedDelivery {
+    /**
+     *
+     */
+    systemRecommendation?: Array<DeliveryEstimateOption>;
+    /**
+     *
+     */
+    recommendationChanged?: boolean;
+    /**
+     * Vendor explanation shown before Buyer approval and payment. Includes manual load review when no automatic fit was available.
+     */
+    changeReason?: string | null;
     /**
      *
      */
@@ -143,6 +162,9 @@ export function OrderConfirmedDeliveryFromJSONTyped(json: any, ignoreDiscriminat
     }
     return {
 
+        'systemRecommendation': json['system_recommendation'] == null ? undefined : ((json['system_recommendation'] as Array<any>).map(DeliveryEstimateOptionFromJSON)),
+        'recommendationChanged': json['recommendation_changed'] == null ? undefined : json['recommendation_changed'],
+        'changeReason': json['change_reason'] === undefined ? undefined : json['change_reason'] === null ? null : json['change_reason'],
         'vehicles': ((json['vehicles'] as Array<any>).map(OrderDeliveryVehicleFromJSON)),
         'distanceMeters': json['distance_meters'],
         'routeSource': json['route_source'],
@@ -171,6 +193,9 @@ export function OrderConfirmedDeliveryToJSONTyped(value?: OrderConfirmedDelivery
 
     return {
 
+        'system_recommendation': value['systemRecommendation'] == null ? undefined : ((value['systemRecommendation'] as Array<any>).map(DeliveryEstimateOptionToJSON)),
+        'recommendation_changed': value['recommendationChanged'],
+        'change_reason': value['changeReason'],
         'vehicles': ((value['vehicles'] as Array<any>).map(OrderDeliveryVehicleToJSON)),
         'distance_meters': value['distanceMeters'],
         'route_source': value['routeSource'],

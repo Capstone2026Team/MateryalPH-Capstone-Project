@@ -10,7 +10,7 @@ class _$VendorReviewListEnvelope extends VendorReviewListEnvelope {
   @override
   final BuiltList<VendorReviewRow> data;
   @override
-  final ReviewListMeta meta;
+  final VendorReviewListMeta meta;
   @override
   final BuiltList<ApiError> errors;
 
@@ -69,9 +69,10 @@ class VendorReviewListEnvelopeBuilder
       _$this._data ??= ListBuilder<VendorReviewRow>();
   set data(ListBuilder<VendorReviewRow>? data) => _$this._data = data;
 
-  ReviewListMetaBuilder? _meta;
-  ReviewListMetaBuilder get meta => _$this._meta ??= ReviewListMetaBuilder();
-  set meta(ReviewListMetaBuilder? meta) => _$this._meta = meta;
+  VendorReviewListMetaBuilder? _meta;
+  VendorReviewListMetaBuilder get meta =>
+      _$this._meta ??= VendorReviewListMetaBuilder();
+  set meta(VendorReviewListMetaBuilder? meta) => _$this._meta = meta;
 
   ListBuilder<ApiError>? _errors;
   ListBuilder<ApiError> get errors =>

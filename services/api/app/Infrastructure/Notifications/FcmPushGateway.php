@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Notifications;
 
 use App\Domain\Notifications\PushGateway;
+use App\Domain\Notifications\PushNotification;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 use Throwable;
@@ -12,7 +13,7 @@ use Throwable;
 /** Backend-only HTTP v1 adapter. Neither provider bodies nor credentials enter exceptions or delivery logs. */
 final class FcmPushGateway implements PushGateway
 {
-    public function send(#[\SensitiveParameter] string $token, string $notificationId, string $platform): string
+    public function send(#[\SensitiveParameter] string $token, PushNotification $notification, string $platform): string
     {
         try {
             $path = (string) config('notifications.firebase_credentials');
@@ -38,15 +39,25 @@ final class FcmPushGateway implements PushGateway
             if (! $auth->successful() || ! is_string($auth->json('access_token'))) {
                 throw new RuntimeException('PUSH_UNAVAILABLE');
             }
-            // Lock-screen copy is deliberately generic. Contents and the destination are fetched after auth.
-            $message = ['token' => $token, 'notification' => ['title' => 'MateryalPH', 'body' => 'A new notification is available. Sign in to view it.'],
-                'data' => ['notification_id' => $notificationId]];
+            // The domain supplies the authorized notice preview. Routes and private files remain behind REST.
+            $message = ['token' => $token, 'notification' => ['title' => $notification->title, 'body' => $notification->body],
+                'data' => ['notification_id' => $notification->id]];
+            if ($platform === 'ANDROID') {
+                $message['android'] = ['priority' => 'high', 'notification' => [
+                    'channel_id' => 'materyalph_updates', 'icon' => 'ic_notification',
+                    'sound' => 'default', 'tag' => $notification->id, 'visibility' => 'PRIVATE',
+                ]];
+            } elseif ($platform === 'IOS') {
+                $message['apns'] = ['headers' => ['apns-priority' => '10'], 'payload' => ['aps' => ['sound' => 'default']]];
+            }
             if ($platform === 'WEB') {
                 // The registered worker opens its own origin; Vendor and Admin origins never mix.
                 unset($message['notification']);
                 $message['webpush'] = ['headers' => ['TTL' => '3600']];
             }
-            $response = Http::timeout(15)->withToken($auth->json('access_token'))->post('https://fcm.googleapis.com/v1/projects/'.rawurlencode($project).'/messages:send', ['message' => $message]);
+            $response = Http::timeout(15)->withToken($auth->json('access_token'))
+                ->withBody(json_encode(['message' => $message], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), 'application/json')
+                ->post('https://fcm.googleapis.com/v1/projects/'.rawurlencode($project).'/messages:send');
             if ($response->status() === 404 && str_contains($response->body(), 'UNREGISTERED')) {
                 return 'REVOKED';
             }

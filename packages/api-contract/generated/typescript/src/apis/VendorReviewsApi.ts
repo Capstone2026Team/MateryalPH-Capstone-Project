@@ -44,6 +44,11 @@ import {
     VendorReviewEditRequestToJSON,
 } from '../models/VendorReviewEditRequest';
 import {
+    type VendorReviewEnvelope,
+    VendorReviewEnvelopeFromJSON,
+    VendorReviewEnvelopeToJSON,
+} from '../models/VendorReviewEnvelope';
+import {
     type VendorReviewListEnvelope,
     VendorReviewListEnvelopeFromJSON,
     VendorReviewListEnvelopeToJSON,
@@ -65,6 +70,13 @@ export interface GetVendorOrderReviewsRequest {
      *
      */
     orderId: string;
+}
+
+export interface GetVendorReviewRequest {
+    /**
+     *
+     */
+    reviewId: string;
 }
 
 export interface GetVendorReviewPhotoRequest {
@@ -92,9 +104,21 @@ export interface ListVendorReviewsRequest {
      */
     type?: ListVendorReviewsTypeEnum;
     /**
+     * Current store's listing UUID. Accepted only with type PRODUCT; foreign or unavailable listings return 404.
+     */
+    listingId?: string;
+    /**
      *
      */
     page?: number;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review submitted_at.
+     */
+    from?: Date;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review submitted_at.
+     */
+    to?: Date;
 }
 
 export interface ReportVendorReviewRequest {
@@ -241,6 +265,55 @@ export class VendorReviewsApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for getVendorReview without sending the request
+     */
+    async getVendorReviewRequestOpts(requestParameters: GetVendorReviewRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['reviewId'] == null) {
+            throw new runtime.RequiredError(
+                'reviewId',
+                'Required parameter "reviewId" was null or undefined when calling getVendorReview().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendor/reviews/{reviewId}`;
+        urlPath = urlPath.replace('{reviewId}', encodeURIComponent(String(requestParameters['reviewId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * reviews.view. Read one review belonging to the current store with its privacy-safe author, immutable purchased-product snapshot, rating, comment and authorized media links. Received reviews must still satisfy blind reveal, dispute withholding, moderation and score-exclusion visibility. The store may also read its own Buyer ratings. Foreign and unavailable reviews return 404.
+     */
+    async getVendorReviewRaw(requestParameters: GetVendorReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorReviewEnvelope>> {
+        const requestOptions = await this.getVendorReviewRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorReviewEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * reviews.view. Read one review belonging to the current store with its privacy-safe author, immutable purchased-product snapshot, rating, comment and authorized media links. Received reviews must still satisfy blind reveal, dispute withholding, moderation and score-exclusion visibility. The store may also read its own Buyer ratings. Foreign and unavailable reviews return 404.
+     */
+    async getVendorReview(requestParameters: GetVendorReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorReviewEnvelope> {
+        const response = await this.getVendorReviewRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for getVendorReviewPhoto without sending the request
      */
     async getVendorReviewPhotoRequestOpts(requestParameters: GetVendorReviewPhotoRequest): Promise<runtime.RequestOpts> {
@@ -329,8 +402,20 @@ export class VendorReviewsApi extends runtime.BaseAPI {
             queryParameters['type'] = requestParameters['type'];
         }
 
+        if (requestParameters['listingId'] != null) {
+            queryParameters['listing_id'] = requestParameters['listingId'];
+        }
+
         if (requestParameters['page'] != null) {
             queryParameters['page'] = requestParameters['page'];
+        }
+
+        if (requestParameters['from'] != null) {
+            queryParameters['from'] = runtime.serializeDate(requestParameters['from'] as any);
+        }
+
+        if (requestParameters['to'] != null) {
+            queryParameters['to'] = runtime.serializeDate(requestParameters['to'] as any);
         }
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -351,7 +436,7 @@ export class VendorReviewsApi extends runtime.BaseAPI {
     }
 
     /**
-     * reviews.view (Owner, Store Manager, Store Staff, Customer Service). Visible received Vendor ratings or Product Reviews, or your store\'s Buyer ratings. There is no delete operation.
+     * reviews.view (Owner, Store Manager, Store Staff, Customer Service). Visible received Vendor ratings or Product Reviews, or your store\'s Buyer ratings. Optional listing_id restricts PRODUCT reviews to a listing owned by the current store. PRODUCT results include a rating summary of every visible review matching the product and date filters, calculated before pagination. There is no delete operation.
      */
     async listVendorReviewsRaw(requestParameters: ListVendorReviewsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorReviewListEnvelope>> {
         const requestOptions = await this.listVendorReviewsRequestOpts(requestParameters);
@@ -361,7 +446,7 @@ export class VendorReviewsApi extends runtime.BaseAPI {
     }
 
     /**
-     * reviews.view (Owner, Store Manager, Store Staff, Customer Service). Visible received Vendor ratings or Product Reviews, or your store\'s Buyer ratings. There is no delete operation.
+     * reviews.view (Owner, Store Manager, Store Staff, Customer Service). Visible received Vendor ratings or Product Reviews, or your store\'s Buyer ratings. Optional listing_id restricts PRODUCT reviews to a listing owned by the current store. PRODUCT results include a rating summary of every visible review matching the product and date filters, calculated before pagination. There is no delete operation.
      */
     async listVendorReviews(requestParameters: ListVendorReviewsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorReviewListEnvelope> {
         const response = await this.listVendorReviewsRaw(requestParameters, initOverrides);

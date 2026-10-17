@@ -180,7 +180,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listVendorInvoices**
-> InvoiceLogEnvelope listVendorInvoices(view, page)
+> InvoiceLogEnvelope listVendorInvoices(view, page, from, to)
 
 
 
@@ -201,9 +201,11 @@ import 'package:materyalph_api_client/api.dart';
 final api = MateryalphApiClient().getVendorInvoicesApi();
 final String view = view_example; // String |
 final int page = 56; // int |
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Invoice issued_on for RECORDS/RECONCILIATION, request created_at for REQUESTS, and accepted_at for DUE orders. Tab counts retain their existing unrestricted scope.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Invoice issued_on for RECORDS/RECONCILIATION, request created_at for REQUESTS, and accepted_at for DUE orders. Tab counts retain their existing unrestricted scope.
 
 try {
-    final response = api.listVendorInvoices(view, page);
+    final response = api.listVendorInvoices(view, page, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling VendorInvoicesApi->listVendorInvoices: $e\n');
@@ -216,6 +218,8 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **view** | **String**|  | [optional]
  **page** | **int**|  | [optional]
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Invoice issued_on for RECORDS/RECONCILIATION, request created_at for REQUESTS, and accepted_at for DUE orders. Tab counts retain their existing unrestricted scope. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Invoice issued_on for RECORDS/RECONCILIATION, request created_at for REQUESTS, and accepted_at for DUE orders. Tab counts retain their existing unrestricted scope. | [optional]
 
 ### Return type
 

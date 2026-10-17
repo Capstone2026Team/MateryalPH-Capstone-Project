@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "description": "OpenAPI 3.1 source and generated-client boundary for MateryalPH",
   "scripts": {
+    "test:bot-protection-contract": "node scripts/check-bot-protection-contract.mjs",
     "test:rate-limit-contract": "node scripts/check-rate-limit-contract.mjs",
     "validate": "openapi-generator-cli validate -i openapi.yaml",
     "generate:typescript": "openapi-generator-cli generate -i openapi.yaml -g typescript-fetch -o generated/typescript --additional-properties npmName=@materyalph/api-client-ts --additional-properties supportsES6=true --additional-properties typescriptThreePlus=true",
@@ -17,13 +18,21 @@
     "test:procurement-contract": "node scripts/check-procurement-contract.mjs",
     "test:orders-contract": "node scripts/check-orders-contract.mjs",
     "test:messaging-contract": "node scripts/check-messaging-contract.mjs",
+    "test:quotation-discount-contract": "dart run scripts/check-quotation-discount.dart",
     "test:projects-contract": "node scripts/check-projects-contract.mjs",
     "test:payments-contract": "node scripts/check-payments-contract.mjs",
+    "test:admin-finance-contract": "node scripts/check-admin-finance-contract.mjs",
     "test:fulfillment-contract": "node scripts/check-fulfillment-contract.mjs",
+    "test:delivery-contact-contract": "dart run scripts/check-delivery-contact.dart",
     "test:disputes-contract": "node scripts/check-disputes-contract.mjs",
     "test:trust-contract": "node scripts/check-trust-contract.mjs",
+    "test:vendor-review-contract": "dart run scripts/check-vendor-review.dart",
     "test:notifications-contract": "node scripts/check-notifications-contract.mjs",
-    "test:admin-operations-contract": "node scripts/check-admin-operations-contract.mjs"
+    "test:admin-operations-contract": "node scripts/check-admin-operations-contract.mjs",
+    "test:dashboard-contract": "node scripts/check-dashboard-insights-contract.mjs",
+    "test:product-analytics-contract": "node scripts/check-product-analytics-contract.mjs",
+    "test:portal-date-contract": "node scripts/check-portal-date-contract.mjs",
+    "test:earnings-contract": "node scripts/check-earnings-trend-contract.mjs"
   },
   "devDependencies": {
     "@openapitools/openapi-generator-cli": "^2.41.0",

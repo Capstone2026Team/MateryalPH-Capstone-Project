@@ -1,4 +1,5 @@
-import { DateFilter, ChecklistPanel, verificationChecklist, PrivateEvidenceGallery, type PrivateEvidenceItem } from '@materyalph/web-ui'
+import { DateFilter, FilterTabs, InfoNote, Pagination, Toolbar, ChecklistPanel, verificationChecklist, PrivateEvidenceGallery, PageHeader as SharedPageHeader, PortalPagePatterns, type PrivateEvidenceItem } from '@materyalph/web-ui'
+import { parseDate } from '@materyalph/api-client-ts'
 import {
   Activity,
   ChartNoAxesCombined,
@@ -14,7 +15,6 @@ import {
   AlertCircle,
   ArrowLeft,
   BadgeCheck,
-  Bell,
   Check,
   CheckCircle2,
   ClipboardCheck,
@@ -25,7 +25,7 @@ import {
 import { type FormEvent, type ReactNode, useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
-import { Button, Field, PortalShell, StatusBadge, StatusMessage, useNotificationUnreadCount, usePortalResource, type PortalNavSection } from '@materyalph/web-ui'
+import { Button, Field, PortalShell, StatusBadge, StatusMessage, useNavigationUpdates, useNavigationRefresh, usePortalResource, type PortalNavSection } from '@materyalph/web-ui'
 import {
   decideVendorVerificationRequirement,
   getAdminVendorEvidenceUrl,
@@ -39,12 +39,12 @@ import {
 
 import { formatDate, numberValue, record, records, statusLabel, statusTone, stringValue, type JsonRecord } from '../lib/admin-format'
 
-const adminModuleIcons: Record<string, typeof FileText> = { 'marketplace-analytics': ChartNoAxesCombined, 'buyer-management': Users, 'product-compliance': ShieldCheck, disputes: Scale, enforcement: ShieldAlert, scores: BadgeCheck, moderation: ClipboardCheck, transactions: CreditCard, 'order-operations': ReceiptText, invoices: ReceiptText, 'budget-overrides': History, settings: Settings, privacy: ShieldCheck, integrations: Activity }
-const adminModuleHrefs: Record<string, string> = { 'marketplace-analytics': '/analytics', 'buyer-management': '/buyer-management', 'product-compliance': '/product-compliance', disputes: '/disputes', enforcement: '/enforcement', scores: '/scores', moderation: '/reviews', transactions: '/finance', 'order-operations': '/order-operations', invoices: '/invoices', 'budget-overrides': '/budget-overrides', settings: '/settings', privacy: '/privacy', integrations: '/integrations' }
+const adminModuleIcons: Record<string, typeof FileText> = { 'marketplace-analytics': ChartNoAxesCombined, 'buyer-management': Users, 'product-compliance': ShieldCheck, disputes: Scale, enforcement: ShieldAlert, scores: BadgeCheck, moderation: ClipboardCheck, transactions: CreditCard, 'order-operations': ReceiptText, invoices: ReceiptText, settings: Settings, privacy: ShieldCheck, integrations: Activity }
+const adminModuleHrefs: Record<string, string> = { 'marketplace-analytics': '/analytics', 'buyer-management': '/buyer-management', 'product-compliance': '/product-compliance', disputes: '/disputes', enforcement: '/enforcement', scores: '/scores', moderation: '/reviews', transactions: '/finance', 'order-operations': '/order-operations', invoices: '/invoices', settings: '/settings', privacy: '/privacy', integrations: '/integrations' }
 const adminNavigation: PortalNavSection[] = [
-  { label: 'Overview', items: [{ label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={16} aria-hidden="true" /> }, { label: 'Notifications', href: '/notifications', icon: <Bell size={16} aria-hidden="true" /> }] },
+  { label: 'Overview', items: [{ label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={16} aria-hidden="true" /> }] },
   { label: 'User Management', items: [{ label: 'Vendor Management', href: '/vendor-verification', icon: <Store size={16} aria-hidden="true" /> }, { label: 'Buyer Management', href: adminModuleHrefs['buyer-management'] ?? '/buyer-management', icon: <Users size={16} aria-hidden="true" /> }] },
-  ...[['Marketplace', [['Marketplace Analytics', 'marketplace-analytics']]], ['Compliance & quality', [['Product Compliance Queue', 'product-compliance'], ['Disputes & Appeals', 'disputes'], ['Enforcement', 'enforcement'], ['Score & Badge Monitoring', 'scores'], ['Review Moderation', 'moderation']]], ['Finance', [['Transaction Log', 'transactions'], ['Orders & Refunds', 'order-operations'], ['Invoice Request Log', 'invoices'], ['Budget Override Audit Log', 'budget-overrides']]], ['Platform', [['Platform Settings', 'settings'], ['Privacy Requests', 'privacy'], ['Integration & Job Health', 'integrations']]]].map(([label, entries]) => ({ label: label as string, items: (entries as string[][]).map(([label = '', key = '']) => ({ label, href: adminModuleHrefs[key] ?? `/preview/${key}`, icon: (() => { const Icon = adminModuleIcons[key] ?? FileText; return <Icon size={18} aria-hidden="true" /> })() })) })),
+  ...[['Marketplace', [['Marketplace Analytics', 'marketplace-analytics']]], ['Compliance & quality', [['Product Compliance Queue', 'product-compliance'], ['Disputes & Appeals', 'disputes'], ['Enforcement', 'enforcement'], ['Score & Badge Monitoring', 'scores'], ['Review Moderation', 'moderation']]], ['Finance', [['Transaction', 'transactions'], ['Orders & Refunds', 'order-operations'], ['Invoice Request Log', 'invoices']]], ['Platform', [['Platform Settings', 'settings'], ['Privacy Requests', 'privacy'], ['Integration & Job Health', 'integrations']]]].map(([label, entries]) => ({ label: label as string, items: (entries as string[][]).map(([label = '', key = '']) => ({ label, href: adminModuleHrefs[key] ?? `/preview/${key}`, icon: (() => { const Icon = adminModuleIcons[key] ?? FileText; return <Icon size={18} aria-hidden="true" /> })() })) })),
   { label: 'Tracking', items: [{ label: 'Audit Log', href: '/audit', icon: <History size={16} aria-hidden="true" /> }] },
 ]
 
@@ -53,7 +53,7 @@ function adminDate(): string {
 }
 
 export function LoadingState() {
-  return <div className="grid min-h-64 place-items-center rounded-surface border border-border-default bg-surface-primary p-8 text-center"><RefreshCw className="animate-spin text-action-primary" size={24} aria-hidden="true" /><p className="mt-3 text-sm text-text-secondary">Loading verification workspace…</p></div>
+  return <div role="status" className="grid min-h-48 place-items-center rounded-surface border border-border-default bg-surface-primary p-8 text-center"><RefreshCw className="animate-spin motion-reduce:animate-none text-action-primary" size={24} aria-hidden="true" /><p className="mt-3 text-sm text-text-secondary">Loading workspace…</p></div>
 }
 
 export function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
@@ -63,36 +63,53 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry: () 
 export function AdminShell({ activeHref, children }: { activeHref: string; children: ReactNode }) {
   const navigate = useNavigate()
   const basePath = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'
-  const unread = useNotificationUnreadCount({ basePath, audience: 'admin' })
-  const sections = adminNavigation.map(section => ({ ...section, items: section.items.map(item => item.href === '/notifications' ? { ...item, updateCount: unread ?? 0, updateCountLabel: 'unread notification' } : item) }))
-  const notificationLabel = unread ? `Notifications, ${unread} unread ${unread === 1 ? 'notification' : 'notifications'}` : 'Notifications'
-  return <PortalShell apiBasePath={basePath} onNavigate={navigate} headerActions={<><Link className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-text-secondary hover:bg-surface-canvas hover:text-text-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" to="/notifications" aria-label={notificationLabel} title={notificationLabel}><Bell size={20} aria-hidden="true" />{unread !== null && unread > 0 && <span aria-hidden="true" className="absolute right-0 top-0 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-status-error px-1 text-[10px] font-semibold text-white">{unread > 99 ? '99+' : unread}</span>}</Link><Link className="inline-flex min-h-11 items-center text-sm font-semibold" to="/workspace">Account settings</Link></>} homeHref="/dashboard" portalLabel="ADMIN PORTAL" pageTitle={activeHref === '/dashboard' ? 'Dashboard' : activeHref === '/workspace' ? 'Settings' : activeHref === '/audit' ? 'Audit tracking' : adminNavigation.flatMap(section => section.items).find(item => item.href === activeHref)?.label ?? 'Vendor Management'} dateLabel={adminDate()} sections={sections} activeHref={activeHref} accountLabel="Admin review team" accountStatus="Audited access">{children}</PortalShell>
+  const counts = useNavigationUpdates({ basePath, audience: 'admin' })
+  const sections = adminNavigation.map(section => ({ ...section, items: section.items.map(item => ({ ...item, updateCount: counts?.[item.href] ?? 0, updateCountLabel: 'pending item' })) }))
+  return <PortalShell apiBasePath={basePath} onNavigate={navigate} notificationUnreadCount={counts?.['/notifications'] ?? 0} headerActions={<Link className="inline-flex min-h-11 items-center text-sm font-semibold" to="/workspace">Account settings</Link>} homeHref="/dashboard" portalLabel="ADMIN PORTAL" pageTitle={activeHref === '/dashboard' ? 'Dashboard' : activeHref === '/notifications' ? 'Notifications' : activeHref === '/workspace' ? 'Settings' : activeHref === '/audit' ? 'Audit tracking' : adminNavigation.flatMap(section => section.items).find(item => item.href === activeHref)?.label ?? 'Vendor Management'} dateLabel={adminDate()} sections={sections} activeHref={activeHref} accountLabel="Admin review team" accountStatus="Audited access"><PortalPagePatterns.Provider value><div className="admin-page text-sm">{children}</div></PortalPagePatterns.Provider></PortalShell>
 }
 
-export function PageHeader({ eyebrow, title, description, actions, compact = false }: { eyebrow: string; title: string; description: string; actions?: ReactNode; compact?: boolean }) {
-  return <div className={`flex flex-col gap-4 border-b border-border-default lg:flex-row lg:items-end lg:justify-between ${compact ? 'pb-4' : 'pb-7'}`}><div className="max-w-3xl"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-action-primary">{eyebrow}</p><h1 className={`font-semibold tracking-tight text-text-strong ${compact ? 'mt-1 text-2xl' : 'mt-3 text-3xl sm:text-4xl'}`}>{title}</h1><p className={`max-w-2xl text-text-secondary ${compact ? 'mt-1 text-sm leading-5' : 'mt-3 text-base leading-7'}`}>{description}</p></div>{actions && <div className="flex shrink-0 flex-wrap gap-3">{actions}</div>}</div>
+export function PageHeader({ eyebrow, title, description, actions }: { eyebrow: string; title: string; description: string; actions?: ReactNode; compact?: boolean }) {
+  return <SharedPageHeader eyebrow={eyebrow} title={title} description={description} actions={actions} />
+}
+
+const verificationTabs = ['PENDING_VERIFICATION', 'CHANGES_REQUIRED', 'REJECTED', 'APPROVED', 'EXPIRED']
+const blankVerificationFilters = { regionCode: '', submittedFrom: '', submittedTo: '', sort: 'submitted_desc', setupStatus: '', activation: '', discoverability: '', blocker: '', ageDays: '', expiryDays: '' }
+
+/** A day-count filter that applies on blur or Enter, so typing a number does not reload the queue on every keystroke. */
+function DaysFilter({ label, value, onCommit }: { label: string; value: string; onCommit: (value: string) => void }) {
+  const [draft, setDraft] = useState(value)
+  useEffect(() => { setDraft(value) }, [value])
+  const commit = () => { const next = draft.trim(); if (next !== value) onCommit(next) }
+  return <input type="number" min={1} max={365} inputMode="numeric" aria-label={label} placeholder={label} className="min-h-11 w-52 max-w-full rounded-control border border-border-default bg-surface-primary px-3 text-sm text-text-strong" value={draft} onChange={event => setDraft(event.target.value)} onBlur={commit} onKeyDown={event => { if (event.key === 'Enter') commit() }} />
 }
 
 export function AdminVendorVerificationQueuePage() {
   const [searchParams] = useSearchParams()
-  const initialFilters = { status: searchParams.get('status') ?? 'PENDING_VERIFICATION', regionCode: '', submittedFrom: '', submittedTo: '', sort: 'submitted_desc', setupStatus: '', activation: searchParams.get('activation') ?? '', discoverability: '', blocker: '', ageDays: '', expiryDays: searchParams.get('expiry') ?? '' }
-  const [filters, setFilters] = useState(initialFilters)
-  const [applied, setApplied] = useState(filters)
+  const requestedStatus = searchParams.get('status') ?? ''
+  const [filters, setFilters] = useState({ status: verificationTabs.includes(requestedStatus) ? requestedStatus : 'PENDING_VERIFICATION', ...blankVerificationFilters, activation: searchParams.get('activation') ?? '', expiryDays: searchParams.get('expiry') ?? '' })
   const [page, setPage] = useState(1)
   const [error, setError] = useState<string | null>(null)
+  const [counts, setCounts] = useState<Record<string, number>>({})
   const loadQueue = useCallback(() => listVendorVerificationQueue({
-      ...(applied.status ? { status: applied.status } : {}), ...(applied.regionCode ? { regionCode: applied.regionCode } : {}),
-      ...(applied.submittedFrom ? { submittedFrom: new Date(applied.submittedFrom + 'T00:00:00Z') } : {}),
-      ...(applied.submittedTo ? { submittedTo: new Date(applied.submittedTo + 'T00:00:00Z') } : {}),
-      ...(applied.setupStatus ? { setupStatus: applied.setupStatus as never } : {}), ...(applied.activation ? { activation: applied.activation as never } : {}),
-      ...(applied.discoverability ? { discoverability: applied.discoverability as never } : {}), ...(applied.blocker ? { blocker: applied.blocker as never } : {}),
-      ...(applied.ageDays ? { ageDays: Number(applied.ageDays) } : {}), ...(applied.expiryDays ? { expiryDays: Number(applied.expiryDays) } : {}),
-      sort: applied.sort as never, page,
-    }), [applied, page])
-  const { data, error: failure, refresh } = usePortalResource(`admin-verification:${JSON.stringify(applied)}:${page}`, loadQueue)
+      status: filters.status, ...(filters.regionCode ? { regionCode: filters.regionCode } : {}),
+      ...(filters.submittedFrom ? { submittedFrom: parseDate(filters.submittedFrom) } : {}),
+      ...(filters.submittedTo ? { submittedTo: parseDate(filters.submittedTo) } : {}),
+      ...(filters.setupStatus ? { setupStatus: filters.setupStatus as never } : {}), ...(filters.activation ? { activation: filters.activation as never } : {}),
+      ...(filters.discoverability ? { discoverability: filters.discoverability as never } : {}), ...(filters.blocker ? { blocker: filters.blocker as never } : {}),
+      ...(filters.ageDays ? { ageDays: Number(filters.ageDays) } : {}), ...(filters.expiryDays ? { expiryDays: Number(filters.expiryDays) } : {}),
+      sort: filters.sort as never, page,
+    }), [filters, page])
+  const { data, error: failure, refresh } = usePortalResource(`admin-verification:${JSON.stringify(filters)}:${page}`, loadQueue)
+  useNavigationRefresh(() => { void refresh() })
   const items = data?.items ?? []
   const meta = data?.meta ?? {}
   const loading = !data && !failure
+  useEffect(() => {
+    const received = data?.meta.status_counts
+    if (received && typeof received === 'object') setCounts(received as Record<string, number>)
+  }, [data])
+  const change = (patch: Partial<typeof filters>) => { setFilters(current => ({ ...current, ...patch })); setPage(1) }
+  const filtersChanged = (Object.keys(blankVerificationFilters) as (keyof typeof blankVerificationFilters)[]).some(key => filters[key] !== blankVerificationFilters[key])
   useEffect(() => {
     let active = true
     setError(null)
@@ -100,22 +117,28 @@ export function AdminVendorVerificationQueuePage() {
     return () => { active = false }
   }, [failure])
   const [dateLabel, setDateLabel] = useState('All dates')
-  const controlClass = "min-h-11 rounded-control border border-border-default bg-surface-primary px-3 font-normal"
+  const filterSelect = 'min-h-11 w-auto max-w-full rounded-control border border-border-default bg-surface-primary px-3 text-sm font-normal text-text-strong'
   return <AdminShell activeHref="/vendor-verification"><div className="space-y-6">
-    <PageHeader eyebrow="Admin review" title="Vendor Verification" description="Review submitted business requirements. Choose a review status and submission period, then open a case to review its evidence." actions={<Button variant="secondary" disabled={loading} onClick={() => void refresh()}>Refresh queue</Button>} />
-    <div className="flex flex-wrap items-end gap-3 rounded-surface border border-border-default bg-surface-primary p-4">
-      <label className="grid gap-2 text-sm font-semibold">Review status<select className={controlClass} value={filters.status} onChange={event => setFilters({ ...filters, status: event.target.value })}><option value="">All review cases</option>{['PENDING_VERIFICATION', 'CHANGES_REQUIRED', 'REJECTED', 'APPROVED', 'EXPIRED'].map(status => <option key={status} value={status}>{statusLabel(status)}</option>)}</select></label>
-      <label className="grid gap-2 text-sm font-semibold">Setup<select className={controlClass} value={filters.setupStatus} onChange={event => setFilters({ ...filters, setupStatus: event.target.value })}><option value="">Any setup state</option>{['NOT_STARTED', 'IN_PROGRESS', 'CHANGES_REQUIRED', 'COMPLETED'].map(value => <option key={value} value={value}>{statusLabel(value)}</option>)}</select></label>
-      <label className="grid gap-2 text-sm font-semibold">Activation<select className={controlClass} value={filters.activation} onChange={event => setFilters({ ...filters, activation: event.target.value })}><option value="">Any activation state</option>{['NOT_ACTIVE', 'NOT_READY', 'READY', 'ACTIVE', 'RESTRICTED', 'SUSPENDED'].map(value => <option key={value} value={value}>{statusLabel(value)}</option>)}</select></label>
-      <label className="grid gap-2 text-sm font-semibold">Discovery<select className={controlClass} value={filters.discoverability} onChange={event => setFilters({ ...filters, discoverability: event.target.value })}><option value="">Any discovery state</option><option value="DISCOVERABLE">Discoverable</option><option value="NOT_DISCOVERABLE">Not discoverable</option></select></label>
-      <label className="grid gap-2 text-sm font-semibold">Activation blocker<select className={controlClass} value={filters.blocker} onChange={event => setFilters({ ...filters, blocker: event.target.value })}><option value="">Any blocker</option>{[['MEDIA', 'Store media'], ['HOURS', 'Store hours'], ['DELIVERY', 'Delivery setup'], ['AUTHORITY', 'Authority to act'], ['TERMS', 'Agreements'], ['PROVIDER', 'Provider readiness (TEST)']].map(([value = '', text]) => <option key={value} value={value}>{text}</option>)}</select></label>
-      <label className="grid gap-2 text-sm font-semibold">Waiting at least (days)<input className={`${controlClass} w-28`} type="number" min={1} max={365} value={filters.ageDays} onChange={event => setFilters({ ...filters, ageDays: event.target.value })} /></label>
-      <label className="grid gap-2 text-sm font-semibold">Document expires within (days)<input className={`${controlClass} w-28`} type="number" min={1} max={365} value={filters.expiryDays} onChange={event => setFilters({ ...filters, expiryDays: event.target.value })} /></label>
-      <label className="grid gap-2 text-sm font-semibold">Sort by<select className={controlClass} value={filters.sort} onChange={event => setFilters({ ...filters, sort: event.target.value })}><option value="submitted_desc">Newest submission first</option><option value="submitted_asc">Oldest submission first</option><option value="oldest_pending">Oldest pending requirement first</option></select></label>
-      <DateFilter title="Submission dates" value={{ label: dateLabel, from: filters.submittedFrom, to: filters.submittedTo }} onChange={range => { setDateLabel(range.label); const next = { ...filters, submittedFrom: range.from, submittedTo: range.to }; setFilters(next); setApplied(next); setPage(1) }} />
-      <div className="flex items-end gap-3"><Button disabled={loading} onClick={() => { setPage(1); setApplied({ ...filters }) }}>Apply filters</Button><Button variant="secondary" disabled={loading} onClick={() => { const cleared = { ...initialFilters, status: '' }; setDateLabel('All dates'); setFilters(cleared); setApplied(cleared); setPage(1) }}>Reset</Button></div>
-    </div>
-    {loading ? <LoadingState /> : error ? <ErrorState message={error} onRetry={() => void refresh()} /> : <><p className="text-sm text-text-secondary">{numberValue(meta.total)} matching cases · Verification, setup, TEST provider readiness, activation and discovery are separate states.</p>{items.length === 0 ? <EmptyQueue status={applied.status} /> : <div className="overflow-x-auto"><table className="w-full min-w-[1100px] text-left text-sm"><thead><tr>{['Store', 'Location', 'Verification', 'Setup', 'Provider (TEST)', 'Activation', 'Discovery', 'Pending', 'Action'].map(label => <th className="px-4 py-3" scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{items.map(item => <tr className="border-t border-border-default align-top" key={item.id}><td className="px-4 py-4"><Link className="font-semibold text-action-primary underline" to={`/vendor-verification/${item.id}`}>{item.storeName}</Link><p className="mt-1 text-text-secondary">{item.registeredName ?? 'Registered name pending'}</p></td><td className="px-4 py-4"><p>{item.regionName ?? 'Unassigned region'}</p><p className="mt-1 text-text-secondary">{[item.province, item.cityMunicipality].filter(Boolean).join(' · ') || 'Address not recorded'}</p></td><td className="px-4 py-4"><StatusBadge label={statusLabel(item.verificationStatus)} tone={statusTone(item.verificationStatus)} /><div className="mt-2"><ProgressText progress={item.progress} /></div></td><td className="px-4 py-4">{statusLabel(item.setupStatus ?? 'NOT_STARTED')}</td><td className="px-4 py-4">{statusLabel(item.providerStatus ?? 'NOT_CONNECTED')}</td><td className="px-4 py-4"><StatusBadge label={statusLabel(item.activationStatus ?? 'NOT_READY')} tone={statusTone(item.activationStatus ?? 'NOT_READY')} />{item.holdCode && <p className="mt-1 text-[13px] text-text-secondary">Hold: {statusLabel(item.holdCode)}</p>}</td><td className="px-4 py-4">{statusLabel(item.discoverabilityStatus ?? 'NOT_DISCOVERABLE')}</td><td className="px-4 py-4"><p className="font-semibold tabular-nums">{item.pendingRequirements ?? 0} requirement(s)</p><p className="mt-1 text-[13px] text-text-secondary">{item.oldestPendingAt ? `Oldest ${formatDate(item.oldestPendingAt)}` : `Submitted ${formatDate(item.submittedAt)}`}</p></td><td className="px-4 py-4"><Link className="inline-flex min-h-11 items-center font-semibold text-action-primary" to={`/vendor-verification/${item.id}`}>Review</Link></td></tr>)}</tbody></table></div>}<div className="flex items-center gap-4"><Button variant="secondary" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>Previous</Button><span>Page {page} of {numberValue(meta.last_page, 1)}</span><Button variant="secondary" disabled={page >= numberValue(meta.last_page, 1)} onClick={() => setPage(value => value + 1)}>Next</Button></div></>}
+    <PageHeader eyebrow="Admin review" title="Vendor Verification" description="Review submitted business requirements. Choose a review status and submission period, then open a case to review its evidence." actions={<Button variant="secondary" disabled={loading} onClick={() => void refresh()}><RefreshCw size={16} aria-hidden="true" />Refresh queue</Button>} />
+    <InfoNote>Verification, setup, TEST provider readiness, activation and discovery are separate states. The number on each tab counts the cases under the filters below.</InfoNote>
+    <FilterTabs label="Review status" value={filters.status} onChange={status => change({ status })} chips={verificationTabs.map(value => ({ value, label: statusLabel(value), ...(counts[value] !== undefined ? { count: counts[value] } : {}) }))} />
+    <Toolbar filters={<>
+      <DateFilter title="Submission dates" value={{ label: dateLabel, from: filters.submittedFrom, to: filters.submittedTo }} onChange={range => { setDateLabel(range.label); change({ submittedFrom: range.from, submittedTo: range.to }) }} />
+      <label className="sr-only" htmlFor="verification-setup">Setup</label>
+      <select id="verification-setup" className={filterSelect} value={filters.setupStatus} onChange={event => change({ setupStatus: event.target.value })}><option value="">Any setup state</option>{['NOT_STARTED', 'IN_PROGRESS', 'CHANGES_REQUIRED', 'COMPLETED'].map(value => <option key={value} value={value}>{statusLabel(value)}</option>)}</select>
+      <label className="sr-only" htmlFor="verification-activation">Activation</label>
+      <select id="verification-activation" className={filterSelect} value={filters.activation} onChange={event => change({ activation: event.target.value })}><option value="">Any activation state</option>{['NOT_ACTIVE', 'NOT_READY', 'READY', 'ACTIVE', 'RESTRICTED', 'SUSPENDED'].map(value => <option key={value} value={value}>{statusLabel(value)}</option>)}</select>
+      <label className="sr-only" htmlFor="verification-discovery">Discovery</label>
+      <select id="verification-discovery" className={filterSelect} value={filters.discoverability} onChange={event => change({ discoverability: event.target.value })}><option value="">Any discovery state</option><option value="DISCOVERABLE">Discoverable</option><option value="NOT_DISCOVERABLE">Not discoverable</option></select>
+      <label className="sr-only" htmlFor="verification-blocker">Activation blocker</label>
+      <select id="verification-blocker" className={filterSelect} value={filters.blocker} onChange={event => change({ blocker: event.target.value })}><option value="">Any blocker</option>{[['MEDIA', 'Store media'], ['HOURS', 'Store hours'], ['DELIVERY', 'Delivery setup'], ['AUTHORITY', 'Authority to act'], ['TERMS', 'Agreements'], ['PROVIDER', 'Provider readiness (TEST)']].map(([value = '', text]) => <option key={value} value={value}>{text}</option>)}</select>
+      <DaysFilter label="Waiting at least (days)" value={filters.ageDays} onCommit={ageDays => change({ ageDays })} />
+      <DaysFilter label="Document expires within (days)" value={filters.expiryDays} onCommit={expiryDays => change({ expiryDays })} />
+      <label className="sr-only" htmlFor="verification-sort">Sort by</label>
+      <select id="verification-sort" className={filterSelect} value={filters.sort} onChange={event => change({ sort: event.target.value })}><option value="submitted_desc">Newest submission first</option><option value="submitted_asc">Oldest submission first</option><option value="oldest_pending">Oldest pending requirement first</option></select>
+      {filtersChanged && <Button variant="quiet" onClick={() => { setDateLabel('All dates'); setFilters({ status: filters.status, ...blankVerificationFilters }); setPage(1) }}>Reset filters</Button>}
+    </>} />
+    {loading ? <LoadingState /> : error ? <ErrorState message={error} onRetry={() => void refresh()} /> : <>{items.length === 0 ? <EmptyQueue status={filters.status} /> : <div className="overflow-x-auto"><table className="w-full min-w-[1100px] text-left text-sm"><thead><tr>{['Store', 'Location', 'Verification', 'Setup', 'Provider (TEST)', 'Activation', 'Discovery', 'Pending', 'Action'].map(label => <th className="whitespace-nowrap px-4 py-3" scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{items.map(item => <tr className="border-t border-border-default align-top" key={item.id}><td className="min-w-56 px-4 py-4"><Link className="font-semibold text-action-primary underline" to={`/vendor-verification/${item.id}`}>{item.storeName}</Link><p className="mt-1 text-text-secondary">{item.registeredName ?? 'Registered name pending'}</p></td><td className="min-w-56 px-4 py-4"><p>{item.regionName ?? 'Unassigned region'}</p><p className="mt-1 text-text-secondary">{[item.province, item.cityMunicipality].filter(Boolean).join(' · ') || 'Address not recorded'}</p></td><td className="whitespace-nowrap px-4 py-4"><StatusBadge label={statusLabel(item.verificationStatus)} tone={statusTone(item.verificationStatus)} /><div className="mt-2"><ProgressText progress={item.progress} /></div></td><td className="whitespace-nowrap px-4 py-4">{statusLabel(item.setupStatus ?? 'NOT_STARTED')}</td><td className="whitespace-nowrap px-4 py-4">{statusLabel(item.providerStatus ?? 'NOT_CONNECTED')}</td><td className="whitespace-nowrap px-4 py-4"><StatusBadge label={statusLabel(item.activationStatus ?? 'NOT_READY')} tone={statusTone(item.activationStatus ?? 'NOT_READY')} />{item.holdCode && <p className="mt-1 text-[13px] text-text-secondary">Hold: {statusLabel(item.holdCode)}</p>}</td><td className="whitespace-nowrap px-4 py-4">{statusLabel(item.discoverabilityStatus ?? 'NOT_DISCOVERABLE')}</td><td className="whitespace-nowrap px-4 py-4"><p className="font-semibold tabular-nums">{item.pendingRequirements ?? 0} requirement(s)</p><p className="mt-1 text-[13px] text-text-secondary">{item.oldestPendingAt ? `Oldest ${formatDate(item.oldestPendingAt)}` : `Submitted ${formatDate(item.submittedAt)}`}</p></td><td className="whitespace-nowrap px-4 py-4"><Link className="inline-flex min-h-11 items-center font-semibold text-action-primary" to={`/vendor-verification/${item.id}`}>Review</Link></td></tr>)}</tbody></table></div>}<Pagination page={page} lastPage={numberValue(meta.last_page, 1)} total={numberValue(meta.total)} busy={loading} onChange={setPage} /></>}
   </div></AdminShell>
 }
 
@@ -183,7 +206,7 @@ export function AdminVendorVerificationDetailPage() {
     try {
       const grouped = selectedItem.key !== stringValue(selectedStep.key)
       const requirementVersions = Object.fromEntries(selectedSteps.map(step => [stringValue(step.key), numberValue(step.lockVersion, numberValue(step.lock_version, 1))]))
-      const updated = await decideVendorVerificationRequirement(organizationId, selectedItem.key, { decision: decision as import('@materyalph/api-client-ts').AdminVendorVerificationDecision['decision'], ...(grouped ? { requirementVersions } : { lockVersion: numberValue(selectedStep.lockVersion, numberValue(selectedStep.lock_version, 1)) }), reason: reason.trim() || null, verifiedDocumentNumber: documentNumber.trim() || null, verifiedIssueDate: issueDate ? new Date(`${issueDate}T00:00:00Z`) : null, expirationKind: expirationKind as NonNullable<import('@materyalph/api-client-ts').AdminVendorVerificationDecision['expirationKind']>, verifiedExpirationDate: expirationDate ? new Date(`${expirationDate}T00:00:00Z`) : null, evidenceSource: evidenceSource.trim() || null, verifiedVatCategory: selectedItem.key === 'bir_cor' && verifiedVatCategory ? verifiedVatCategory as NonNullable<import('@materyalph/api-client-ts').AdminVendorVerificationDecision['verifiedVatCategory']> : null, remarks: remarks.trim() || null, ...(selectedItem.key === 'authority_to_act' ? { authorityEvidenceVersionId: authorityEvidence || null, authorityScopes: authorityScopes as NonNullable<import('@materyalph/api-client-ts').AdminVendorVerificationDecision['authorityScopes']> } : {}) }); setDetail(updated); setMessage({ tone: 'success', text: `${statusLabel(decision)} recorded for ${selectedItem.label}.` }); setReason('') } catch (cause) { setMessage({ tone: 'error', text: await readableVerificationError(cause) }) } finally { setBusy(false) }
+      const updated = await decideVendorVerificationRequirement(organizationId, selectedItem.key, { decision: decision as import('@materyalph/api-client-ts').AdminVendorVerificationDecision['decision'], ...(grouped ? { requirementVersions } : { lockVersion: numberValue(selectedStep.lockVersion, numberValue(selectedStep.lock_version, 1)) }), reason: reason.trim() || null, verifiedDocumentNumber: documentNumber.trim() || null, verifiedIssueDate: issueDate ? parseDate(issueDate) : null, expirationKind: expirationKind as NonNullable<import('@materyalph/api-client-ts').AdminVendorVerificationDecision['expirationKind']>, verifiedExpirationDate: expirationDate ? parseDate(expirationDate) : null, evidenceSource: evidenceSource.trim() || null, verifiedVatCategory: selectedItem.key === 'bir_cor' && verifiedVatCategory ? verifiedVatCategory as NonNullable<import('@materyalph/api-client-ts').AdminVendorVerificationDecision['verifiedVatCategory']> : null, remarks: remarks.trim() || null, ...(selectedItem.key === 'authority_to_act' ? { authorityEvidenceVersionId: authorityEvidence || null, authorityScopes: authorityScopes as NonNullable<import('@materyalph/api-client-ts').AdminVendorVerificationDecision['authorityScopes']> } : {}) }); setDetail(updated); setMessage({ tone: 'success', text: `${statusLabel(decision)} recorded for ${selectedItem.label}.` }); setReason('') } catch (cause) { setMessage({ tone: 'error', text: await readableVerificationError(cause) }) } finally { setBusy(false) }
   }
 
   async function changeRestriction(action: 'restrict' | 'restore') {

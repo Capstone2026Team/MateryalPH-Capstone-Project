@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`vehicleId` | string
 `loadKey` | string
 `vehicleName` | string
 `vehicleType` | string
@@ -13,6 +14,10 @@ Name | Type
 `trips` | number
 `feeCentavos` | number
 `feePerTripCentavos` | number
+`mobilizationBasis` | string
+`mobilizationFeeCentavos` | number
+`mobilizationTotalCentavos` | number
+`volumePlan` | [MixerVolumePlan](MixerVolumePlan.md)
 
 ## Example
 
@@ -21,6 +26,7 @@ import type { DeliveryEstimateOption } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "vehicleId": null,
   "loadKey": null,
   "vehicleName": null,
   "vehicleType": null,
@@ -28,6 +34,10 @@ const example = {
   "trips": null,
   "feeCentavos": null,
   "feePerTripCentavos": null,
+  "mobilizationBasis": null,
+  "mobilizationFeeCentavos": null,
+  "mobilizationTotalCentavos": null,
+  "volumePlan": null,
 } satisfies DeliveryEstimateOption
 
 console.log(example)

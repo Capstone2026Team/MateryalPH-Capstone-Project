@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Catalog;
 
+use App\Domain\Vendors\VendorDeliveryEligibility;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -37,22 +38,31 @@ final class ListingReadiness
             $blockers[] = ['key' => $key, 'step' => $step, 'reason' => $reason];
         };
 
-        $tagCount = DB::table('listing_tag_links')->where('vendor_listing_id', $listingId)->count();
+        // One search tag is the minimum; approved and Vendor-typed tags both count.
+        $tagCount = DB::table('listing_tag_links')->where('vendor_listing_id', $listingId)->count() + CustomTags::count($listingId);
         if ($listing->material_category_id === null) {
             $block('material_classification', 'material_category_id', 'Choose the material category.');
         }
         if ($listing->material_id === null && $listing->other_label === null) {
             $block('material_classification', 'material', 'Select a canonical material or describe the product with an Other label.');
         }
-        if ($tagCount < 1 || $tagCount > 3) {
-            $block('material_classification', 'tag_ids', 'Choose one to three search tags.');
+        if ($tagCount < 1) {
+            $block('material_classification', 'tag_ids', 'Add at least one search tag: choose an approved tag or type your own.');
         }
         if ($listing->material_id === null) {
-            $regulatedSuggestion = collect($this->search->search((string) $listing->display_name))
-                ->first(fn (array $row): bool => $row['regulated'] && $row['similarity'] >= self::REGULATED_SUGGESTION_THRESHOLD);
+            $matches = collect($this->search->search((string) $listing->display_name));
+            $regulatedSuggestion = $matches->first(fn (array $row): bool => $row['regulated'] && $row['similarity'] >= self::REGULATED_SUGGESTION_THRESHOLD);
+            // An Other-label ready-mix product would skip the mixer rule and be carried as ordinary cargo.
+            $readyMixedSuggestion = $matches->first(fn (array $row): bool => $row['code'] === ReadyMixedConcrete::MATERIAL_CODE && $row['similarity'] >= self::REGULATED_SUGGESTION_THRESHOLD);
             if ($regulatedSuggestion !== null) {
                 $block('material_classification', 'material', 'This product name closely matches the regulated material “'.$regulatedSuggestion['name'].'”. Select it, or rename the listing if it is a different product.');
+            } elseif ($readyMixedSuggestion !== null) {
+                $block('material_classification', 'material', 'This product name closely matches “'.$readyMixedSuggestion['name'].'”. Select it so the order is delivered by a Concrete Mixer Truck / Transit Mixer, or rename the listing if it is a different product.');
             }
+        }
+        $readyMixed = $this->readyMixed($listing);
+        if ($readyMixed && ! app(VendorDeliveryEligibility::class)->mixerOrganizations()->where('delivery_profile.vendor_organization_id', $listing->vendor_organization_id)->exists()) {
+            $block('material_classification', 'delivery_vehicle', 'Ready-mixed concrete is delivered only by a Concrete Mixer Truck / Transit Mixer through Site Delivery. Turn on Site Delivery and add an available mixer with its Mixer Capacity (m³) in Vehicles before publishing.');
         }
 
         foreach (['display_name' => 'Enter the display name.', 'vendor_sku' => 'Enter the Vendor SKU.', 'description' => 'Enter a product description.'] as $field => $reason) {
@@ -87,7 +97,10 @@ final class ListingReadiness
             if ($compatible !== null && $compatible !== [] && ! in_array($variant->unit_id, $compatible, true)) {
                 $block('variants_pricing', $row.'.unit_id', 'Choose a unit compatible with the selected material.');
             }
-            if ($variant->weight_kg === null || $variant->length_cm === null || $variant->width_cm === null || $variant->height_cm === null) {
+            // Ready-mixed concrete has no cargo dimensions: the mixer carries its volume, limited by payload.
+            if ($readyMixed && $variant->weight_kg === null) {
+                $block('variants_pricing', $row.'.weight_kg', 'Enter the weight of one cubic meter of '.($variant->label ?: $variant->sku).'.');
+            } elseif (! $readyMixed && ($variant->weight_kg === null || $variant->length_cm === null || $variant->width_cm === null || $variant->height_cm === null)) {
                 $block('variants_pricing', $row.'.weight_kg', 'Enter the weight and dimensions of '.($variant->label ?: $variant->sku).'.');
             }
             $price = DB::table('listing_price_versions')->where('listing_variant_id', $variant->id)->where('price_kind', 'ORDINARY')->whereNull('retired_at')->first(['tax_category']);
@@ -135,5 +148,10 @@ final class ListingReadiness
             ], $steps),
             'blockers' => $blockers,
         ];
+    }
+
+    private function readyMixed(object $listing): bool
+    {
+        return $listing->material_id !== null && DB::table('materials')->where('id', $listing->material_id)->value('code') === ReadyMixedConcrete::MATERIAL_CODE;
     }
 }

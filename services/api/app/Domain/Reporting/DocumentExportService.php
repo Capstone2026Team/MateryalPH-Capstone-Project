@@ -20,7 +20,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class DocumentExportService
 {
-    public const TYPES = ['PURCHASE_ORDER', 'PAYMENT_CONFIRMATION', 'PROJECT_SUMMARY', 'BUDGET_REPORT', 'OPERATIONAL_ORDER', 'FEE_STATEMENT', 'MATERIALS_ANALYTICS', 'TAX_PACKAGE', 'AUDIT_LOG', 'GEO_ANALYTICS'];
+    public const TYPES = ['PURCHASE_ORDER', 'PAYMENT_CONFIRMATION', 'PROJECT_SUMMARY', 'BUDGET_REPORT', 'OPERATIONAL_ORDER', 'FEE_STATEMENT', 'MATERIALS_ANALYTICS', 'TAX_PACKAGE', 'AUDIT_LOG', 'GEO_ANALYTICS', 'TRANSACTION_HISTORY', 'EARNINGS'];
 
     /** @param array<string, mixed> $input
      * @return array<string, mixed> */
@@ -84,6 +84,9 @@ final class DocumentExportService
             $snapshot['captured_at'] = $snapshot['generated_at'];
             $snapshot['generated_at'] = now('Asia/Manila')->format('Y-m-d H:i:s');
             $bytes = app(DocumentRenderer::class)->render($snapshot, $export->format);
+            if ($bytes === '' || ($export->format === 'PDF' && ! str_starts_with($bytes, '%PDF-'))) {
+                throw new \RuntimeException('EXPORT_RENDER_FAILED');
+            }
             $disk = app(CatalogFileStore::class)->privateDisk();
             $fileId = (string) Str::uuid7();
             $key = 'private/exports/'.app()->environment().'/'.$id.'/'.$fileId.'.'.strtolower($export->format);
@@ -124,7 +127,13 @@ final class DocumentExportService
             throw new AuthenticationException('EXPORT_EXPIRED', 'This export is unavailable or expired. Request a new copy.', 410);
         }
         $file = DB::table('files')->where('id', $export->file_id)->first();
+        if ($file === null) {
+            throw new AuthenticationException('EXPORT_FILE_UNAVAILABLE', 'This file is unavailable. Generate a new copy.', 410);
+        }
         $disk = json_decode($file->metadata, true)['disk'];
+        if (! Storage::disk($disk)->exists($file->object_key)) {
+            throw new AuthenticationException('EXPORT_FILE_UNAVAILABLE', 'This file is unavailable. Generate a new copy.', 410);
+        }
         $bytes = Storage::disk($disk)->get($file->object_key);
         if (! is_string($bytes) || ! hash_equals($file->checksum_sha256, hash('sha256', $bytes))) {
             throw new AuthenticationException('EXPORT_CHECKSUM_FAILED', 'This file could not be verified. Request a new export.', 409);
@@ -134,7 +143,7 @@ final class DocumentExportService
 
         return response()->streamDownload(static function () use ($bytes): void {
             echo $bytes;
-        }, $file->original_name, ['Content-Type' => $file->content_type, 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff']);
+        }, $file->original_name, ['Content-Type' => $file->content_type, 'Content-Length' => (string) strlen($bytes), 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff']);
     }
 
     /** @phpstan-impure Current membership and assignments can change between generation and delivery. */
@@ -159,7 +168,9 @@ final class DocumentExportService
     /** @return array<string, mixed> */
     public function present(object $row): array
     {
-        return ['id' => $row->id, 'type' => $row->export_type, 'format' => $row->format, 'state' => $row->state, 'purpose' => $row->reason,
+        $state = $row->state === 'READY' && $row->expires_at !== null && CarbonImmutable::parse($row->expires_at)->isPast() ? 'EXPIRED' : $row->state;
+
+        return ['id' => $row->id, 'type' => $row->export_type, 'resource_id' => $row->resource_id, 'format' => $row->format, 'state' => $state, 'purpose' => $row->reason,
             'filters' => (object) json_decode($row->filters, true), 'source_hash' => $row->source_hash, 'source_versions' => (object) json_decode($row->source_versions ?? '{}', true),
             'checksum' => $row->file_id === null ? null : DB::table('files')->where('id', $row->file_id)->value('checksum_sha256'), 'created_at' => $row->created_at,
             'expires_at' => $row->expires_at, 'failure_code' => $row->failure_code,

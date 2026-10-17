@@ -245,7 +245,7 @@ example().catch(console.error);
 
 ## listVendorInventoryMovements
 
-> InventoryMovementListEnvelope listVendorInventoryMovements(variantId, page)
+> InventoryMovementListEnvelope listVendorInventoryMovements(variantId, page, from, to)
 
 
 
@@ -273,6 +273,10 @@ async function example() {
     variantId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
     // number (optional)
     page: 56,
+    // Date | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Append-only movement created_at; filtered before pagination. (optional)
+    from: 2013-10-20,
+    // Date | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Append-only movement created_at; filtered before pagination. (optional)
+    to: 2013-10-20,
   } satisfies ListVendorInventoryMovementsRequest;
 
   try {
@@ -294,6 +298,8 @@ example().catch(console.error);
 |------------- | ------------- | ------------- | -------------|
 | **variantId** | `string` |  | [Defaults to `undefined`] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **from** | `Date` | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Append-only movement created_at; filtered before pagination. | [Optional] [Defaults to `undefined`] |
+| **to** | `Date` | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Append-only movement created_at; filtered before pagination. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 
@@ -322,7 +328,7 @@ example().catch(console.error);
 
 ## listVendorPriceHistory
 
-> PriceHistoryEnvelope listVendorPriceHistory(variantId)
+> PriceHistoryEnvelope listVendorPriceHistory(variantId, from, to)
 
 
 
@@ -348,6 +354,10 @@ async function example() {
   const body = {
     // string
     variantId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // Date | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Immutable price effective_at; filtered before the existing 50-record bound. (optional)
+    from: 2013-10-20,
+    // Date | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Immutable price effective_at; filtered before the existing 50-record bound. (optional)
+    to: 2013-10-20,
   } satisfies ListVendorPriceHistoryRequest;
 
   try {
@@ -368,6 +378,8 @@ example().catch(console.error);
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **variantId** | `string` |  | [Defaults to `undefined`] |
+| **from** | `Date` | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Immutable price effective_at; filtered before the existing 50-record bound. | [Optional] [Defaults to `undefined`] |
+| **to** | `Date` | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Immutable price effective_at; filtered before the existing 50-record bound. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 

@@ -159,6 +159,14 @@ export interface ListProductComplianceQueueRequest {
      *
      */
     page?: number;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Immutable submission submitted_at.
+     */
+    from?: Date;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Immutable submission submitted_at.
+     */
+    to?: Date;
 }
 
 /**
@@ -505,7 +513,7 @@ export class AdminProductComplianceApi extends runtime.BaseAPI {
     }
 
     /**
-     * Imports a CSV snapshot of the DTI-BPS PS licensee or ICC certificate register as an immutable DRAFT. It is used for matching only after activation.
+     * Imports an XLSX or CSV snapshot of the DTI-BPS List of PS Licensees or List of ICC Certificate Holders, in the official layout (title rows above the header are skipped; the ICC sticker serial from/to columns become serial ranges), as an immutable DRAFT. It is used for matching only after activation. An ICC file without sticker serial ranges is rejected with REGISTER_SERIALS_NOT_FOUND.
      */
     async importComplianceRegisterRaw(requestParameters: ImportComplianceRegisterRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ComplianceRegisterEnvelope>> {
         const requestOptions = await this.importComplianceRegisterRequestOpts(requestParameters);
@@ -515,7 +523,7 @@ export class AdminProductComplianceApi extends runtime.BaseAPI {
     }
 
     /**
-     * Imports a CSV snapshot of the DTI-BPS PS licensee or ICC certificate register as an immutable DRAFT. It is used for matching only after activation.
+     * Imports an XLSX or CSV snapshot of the DTI-BPS List of PS Licensees or List of ICC Certificate Holders, in the official layout (title rows above the header are skipped; the ICC sticker serial from/to columns become serial ranges), as an immutable DRAFT. It is used for matching only after activation. An ICC file without sticker serial ranges is rejected with REGISTER_SERIALS_NOT_FOUND.
      */
     async importComplianceRegister(requestParameters: ImportComplianceRegisterRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ComplianceRegisterEnvelope> {
         const response = await this.importComplianceRegisterRaw(requestParameters, initOverrides);
@@ -585,6 +593,14 @@ export class AdminProductComplianceApi extends runtime.BaseAPI {
 
         if (requestParameters['page'] != null) {
             queryParameters['page'] = requestParameters['page'];
+        }
+
+        if (requestParameters['from'] != null) {
+            queryParameters['from'] = runtime.serializeDate(requestParameters['from'] as any);
+        }
+
+        if (requestParameters['to'] != null) {
+            queryParameters['to'] = runtime.serializeDate(requestParameters['to'] as any);
         }
 
         const headerParameters: runtime.HTTPHeaders = {};

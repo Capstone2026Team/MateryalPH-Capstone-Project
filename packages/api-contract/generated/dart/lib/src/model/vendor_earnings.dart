@@ -3,6 +3,9 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:materyalph_api_client/src/model/vendor_earnings_products.dart';
+import 'package:materyalph_api_client/src/model/vendor_earnings_trend.dart';
+import 'package:materyalph_api_client/src/model/vendor_earnings_breakdown.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -14,17 +17,23 @@ part 'vendor_earnings.g.dart';
 /// * [demo]
 /// * [environment]
 /// * [notice]
-/// * [commercialSalesCentavos]
+/// * [commercialSalesCentavos] - Latest financial-snapshot total (materials after vendor discount, VAT included, plus delivery) of orders accepted in the range, leaving out declined, expired, cancelled and unconfirmed orders and orders whose payment was fully refunded. The Dashboard's Product sales value uses the same rule.
 /// * [includedVatCentavos]
-/// * [onlineCollectionsCentavos]
+/// * [onlineCollectionsCentavos] - Verified online principal less confirmed refunded principal, attributed to the original payment date; fully refunded principal contributes zero.
+/// * [onlineRefundsCentavos] - Confirmed online refunds, including their refunded Buyer fees, attributed to the original payment date. Pending and failed refunds do not reduce collections.
 /// * [buyerProcessingFeesCentavos]
 /// * [physicalCollectionsCentavos]
 /// * [providerChargesCentavos]
 /// * [simulatedCwtCentavos]
 /// * [estimatedRemittanceCashCentavos]
-/// * [earnedCommissionCentavos]
+/// * [remittanceCollectionsCentavos] - Original collected amounts, including Buyer processing fees, of POSTED assessments and confirmed fully refunded VOIDED assessments in the selected assessment-date range. Fully refunded amounts appear in both collections and refunds and cancel out; their provider charge, CWT and net cash remain zero.
+/// * [remittanceRefundsCentavos] - Refund allocations already applied to remittances plus subsequent confirmed full and partial refunds, counted once and allocated up to the original collection. Includes fully refunded VOIDED assessments, so refund visibility is preserved without counting refunded money as earnings. Pending and failed refunds do not reduce cash. Uses the same assessment-date range as estimated_remittance_cash_centavos.
+/// * [earnedCommissionCentavos] - Signed commission earnings less approved credits, by earned_at and approved_at respectively; shared with Admin Finance. Can be negative in a credit-only period.
 /// * [estimatedCommissionCentavos]
 /// * [unpaidStatementsCentavos]
+/// * [breakdown]
+/// * [products]
+/// * [trend]
 @BuiltValue()
 abstract class VendorEarnings implements Built<VendorEarnings, VendorEarningsBuilder> {
   @BuiltValueField(wireName: r'demo')
@@ -36,14 +45,20 @@ abstract class VendorEarnings implements Built<VendorEarnings, VendorEarningsBui
   @BuiltValueField(wireName: r'notice')
   String get notice;
 
+  /// Latest financial-snapshot total (materials after vendor discount, VAT included, plus delivery) of orders accepted in the range, leaving out declined, expired, cancelled and unconfirmed orders and orders whose payment was fully refunded. The Dashboard's Product sales value uses the same rule.
   @BuiltValueField(wireName: r'commercial_sales_centavos')
   int get commercialSalesCentavos;
 
   @BuiltValueField(wireName: r'included_vat_centavos')
   int get includedVatCentavos;
 
+  /// Verified online principal less confirmed refunded principal, attributed to the original payment date; fully refunded principal contributes zero.
   @BuiltValueField(wireName: r'online_collections_centavos')
   int get onlineCollectionsCentavos;
+
+  /// Confirmed online refunds, including their refunded Buyer fees, attributed to the original payment date. Pending and failed refunds do not reduce collections.
+  @BuiltValueField(wireName: r'online_refunds_centavos')
+  int get onlineRefundsCentavos;
 
   @BuiltValueField(wireName: r'buyer_processing_fees_centavos')
   int get buyerProcessingFeesCentavos;
@@ -60,6 +75,15 @@ abstract class VendorEarnings implements Built<VendorEarnings, VendorEarningsBui
   @BuiltValueField(wireName: r'estimated_remittance_cash_centavos')
   int get estimatedRemittanceCashCentavos;
 
+  /// Original collected amounts, including Buyer processing fees, of POSTED assessments and confirmed fully refunded VOIDED assessments in the selected assessment-date range. Fully refunded amounts appear in both collections and refunds and cancel out; their provider charge, CWT and net cash remain zero.
+  @BuiltValueField(wireName: r'remittance_collections_centavos')
+  int get remittanceCollectionsCentavos;
+
+  /// Refund allocations already applied to remittances plus subsequent confirmed full and partial refunds, counted once and allocated up to the original collection. Includes fully refunded VOIDED assessments, so refund visibility is preserved without counting refunded money as earnings. Pending and failed refunds do not reduce cash. Uses the same assessment-date range as estimated_remittance_cash_centavos.
+  @BuiltValueField(wireName: r'remittance_refunds_centavos')
+  int get remittanceRefundsCentavos;
+
+  /// Signed commission earnings less approved credits, by earned_at and approved_at respectively; shared with Admin Finance. Can be negative in a credit-only period.
   @BuiltValueField(wireName: r'earned_commission_centavos')
   int get earnedCommissionCentavos;
 
@@ -68,6 +92,15 @@ abstract class VendorEarnings implements Built<VendorEarnings, VendorEarningsBui
 
   @BuiltValueField(wireName: r'unpaid_statements_centavos')
   int get unpaidStatementsCentavos;
+
+  @BuiltValueField(wireName: r'breakdown')
+  VendorEarningsBreakdown get breakdown;
+
+  @BuiltValueField(wireName: r'products')
+  VendorEarningsProducts get products;
+
+  @BuiltValueField(wireName: r'trend')
+  VendorEarningsTrend get trend;
 
   VendorEarnings._();
 
@@ -122,6 +155,11 @@ class _$VendorEarningsSerializer implements PrimitiveSerializer<VendorEarnings> 
       object.onlineCollectionsCentavos,
       specifiedType: const FullType(int),
     );
+    yield r'online_refunds_centavos';
+    yield serializers.serialize(
+      object.onlineRefundsCentavos,
+      specifiedType: const FullType(int),
+    );
     yield r'buyer_processing_fees_centavos';
     yield serializers.serialize(
       object.buyerProcessingFeesCentavos,
@@ -147,6 +185,16 @@ class _$VendorEarningsSerializer implements PrimitiveSerializer<VendorEarnings> 
       object.estimatedRemittanceCashCentavos,
       specifiedType: const FullType(int),
     );
+    yield r'remittance_collections_centavos';
+    yield serializers.serialize(
+      object.remittanceCollectionsCentavos,
+      specifiedType: const FullType(int),
+    );
+    yield r'remittance_refunds_centavos';
+    yield serializers.serialize(
+      object.remittanceRefundsCentavos,
+      specifiedType: const FullType(int),
+    );
     yield r'earned_commission_centavos';
     yield serializers.serialize(
       object.earnedCommissionCentavos,
@@ -161,6 +209,21 @@ class _$VendorEarningsSerializer implements PrimitiveSerializer<VendorEarnings> 
     yield serializers.serialize(
       object.unpaidStatementsCentavos,
       specifiedType: const FullType(int),
+    );
+    yield r'breakdown';
+    yield serializers.serialize(
+      object.breakdown,
+      specifiedType: const FullType(VendorEarningsBreakdown),
+    );
+    yield r'products';
+    yield serializers.serialize(
+      object.products,
+      specifiedType: const FullType(VendorEarningsProducts),
+    );
+    yield r'trend';
+    yield serializers.serialize(
+      object.trend,
+      specifiedType: const FullType(VendorEarningsTrend),
     );
   }
 
@@ -227,6 +290,13 @@ class _$VendorEarningsSerializer implements PrimitiveSerializer<VendorEarnings> 
           ) as int;
           result.onlineCollectionsCentavos = valueDes;
           break;
+        case r'online_refunds_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.onlineRefundsCentavos = valueDes;
+          break;
         case r'buyer_processing_fees_centavos':
           final valueDes = serializers.deserialize(
             value,
@@ -262,6 +332,20 @@ class _$VendorEarningsSerializer implements PrimitiveSerializer<VendorEarnings> 
           ) as int;
           result.estimatedRemittanceCashCentavos = valueDes;
           break;
+        case r'remittance_collections_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.remittanceCollectionsCentavos = valueDes;
+          break;
+        case r'remittance_refunds_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.remittanceRefundsCentavos = valueDes;
+          break;
         case r'earned_commission_centavos':
           final valueDes = serializers.deserialize(
             value,
@@ -282,6 +366,27 @@ class _$VendorEarningsSerializer implements PrimitiveSerializer<VendorEarnings> 
             specifiedType: const FullType(int),
           ) as int;
           result.unpaidStatementsCentavos = valueDes;
+          break;
+        case r'breakdown':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(VendorEarningsBreakdown),
+          ) as VendorEarningsBreakdown;
+          result.breakdown.replace(valueDes);
+          break;
+        case r'products':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(VendorEarningsProducts),
+          ) as VendorEarningsProducts;
+          result.products.replace(valueDes);
+          break;
+        case r'trend':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(VendorEarningsTrend),
+          ) as VendorEarningsTrend;
+          result.trend.replace(valueDes);
           break;
         default:
           unhandled.add(key);

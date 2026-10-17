@@ -11,8 +11,11 @@ Name | Type
 `sourceReference` | string
 `snapshotDate` | Date
 `status` | string
+`sourceChannel` | string
+`stale` | boolean
 `rowCount` | number
 `rejectedRowCount` | number
+`serialRangeCount` | number
 `activatedAt` | string
 `supersededAt` | string
 `createdAt` | string
@@ -31,8 +34,11 @@ const example = {
   "sourceReference": null,
   "snapshotDate": null,
   "status": null,
+  "sourceChannel": null,
+  "stale": null,
   "rowCount": null,
   "rejectedRowCount": null,
+  "serialRangeCount": null,
   "activatedAt": null,
   "supersededAt": null,
   "createdAt": null,

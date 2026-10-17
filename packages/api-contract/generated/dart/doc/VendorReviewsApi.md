@@ -11,6 +11,7 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**editVendorBuyerRating**](VendorReviewsApi.md#editvendorbuyerrating) | **PATCH** /vendor/reviews/{reviewId} |
 [**getVendorOrderReviews**](VendorReviewsApi.md#getvendororderreviews) | **GET** /vendor/orders/{orderId}/reviews |
+[**getVendorReview**](VendorReviewsApi.md#getvendorreview) | **GET** /vendor/reviews/{reviewId} |
 [**getVendorReviewPhoto**](VendorReviewsApi.md#getvendorreviewphoto) | **GET** /vendor/reviews/{reviewId}/media/{mediaId}/content |
 [**listVendorReviews**](VendorReviewsApi.md#listvendorreviews) | **GET** /vendor/reviews |
 [**reportVendorReview**](VendorReviewsApi.md#reportvendorreview) | **POST** /vendor/reviews/{reviewId}/flags |
@@ -121,6 +122,57 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **getVendorReview**
+> VendorReviewEnvelope getVendorReview(reviewId)
+
+
+
+reviews.view. Read one review belonging to the current store with its privacy-safe author, immutable purchased-product snapshot, rating, comment and authorized media links. Received reviews must still satisfy blind reveal, dispute withholding, moderation and score-exclusion visibility. The store may also read its own Buyer ratings. Foreign and unavailable reviews return 404.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getVendorReviewsApi();
+final String reviewId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.getVendorReview(reviewId);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling VendorReviewsApi->getVendorReview: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **reviewId** | **String**|  |
+
+### Return type
+
+[**VendorReviewEnvelope**](VendorReviewEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **getVendorReviewPhoto**
 > Uint8List getVendorReviewPhoto(reviewId, mediaId, expires, signature)
 
@@ -179,11 +231,11 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listVendorReviews**
-> VendorReviewListEnvelope listVendorReviews(type, page)
+> VendorReviewListEnvelope listVendorReviews(type, listingId, page, from, to)
 
 
 
-reviews.view (Owner, Store Manager, Store Staff, Customer Service). Visible received Vendor ratings or Product Reviews, or your store's Buyer ratings. There is no delete operation.
+reviews.view (Owner, Store Manager, Store Staff, Customer Service). Visible received Vendor ratings or Product Reviews, or your store's Buyer ratings. Optional listing_id restricts PRODUCT reviews to a listing owned by the current store. PRODUCT results include a rating summary of every visible review matching the product and date filters, calculated before pagination. There is no delete operation.
 
 ### Example
 ```dart
@@ -199,10 +251,13 @@ import 'package:materyalph_api_client/api.dart';
 
 final api = MateryalphApiClient().getVendorReviewsApi();
 final String type = type_example; // String |
+final String listingId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String | Current store's listing UUID. Accepted only with type PRODUCT; foreign or unavailable listings return 404.
 final int page = 56; // int |
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review submitted_at.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review submitted_at.
 
 try {
-    final response = api.listVendorReviews(type, page);
+    final response = api.listVendorReviews(type, listingId, page, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling VendorReviewsApi->listVendorReviews: $e\n');
@@ -214,7 +269,10 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **type** | **String**|  | [optional]
+ **listingId** | **String**| Current store's listing UUID. Accepted only with type PRODUCT; foreign or unavailable listings return 404. | [optional]
  **page** | **int**|  | [optional]
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review submitted_at. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review submitted_at. | [optional]
 
 ### Return type
 

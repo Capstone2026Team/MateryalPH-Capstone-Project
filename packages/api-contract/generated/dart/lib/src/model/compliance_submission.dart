@@ -11,17 +11,19 @@ import 'package:built_value/serializer.dart';
 
 part 'compliance_submission.g.dart';
 
-/// Vendor-confirmed declaration from Review and Confirm. Extraction output is never submitted as truth.
+/// Vendor-confirmed declaration from Review and Confirm. Extraction output is never submitted as truth. Only the marking number is required; when the register matches, its record replaces the manufacturer/importer fields.
 ///
 /// Properties:
 /// * [listingLockVersion]
 /// * [path]
 /// * [evidenceIds]
 /// * [markingType]
-/// * [certificateNumber]
-/// * [manufacturerName] - Required for a PS Mark.
+/// * [certificateNumber] - The PS License No. (e.g. Q-1234) for a PS Mark
+/// * [reviewMode] - MANUAL_REVIEW is the Vendor's explicit request for Product Compliance review when the register cannot confirm the number.
+/// * [reviewNote]
+/// * [manufacturerName]
 /// * [manufacturerAddress]
-/// * [importerName] - Required for an ICC sticker.
+/// * [importerName]
 /// * [importerAddress]
 /// * [countryOfManufacture]
 /// * [brand]
@@ -43,17 +45,24 @@ abstract class ComplianceSubmission implements Built<ComplianceSubmission, Compl
   MarkingType get markingType;
   // enum markingTypeEnum {  PS_MARK,  ICC_STICKER,  };
 
+  /// The PS License No. (e.g. Q-1234) for a PS Mark
   @BuiltValueField(wireName: r'certificate_number')
   String get certificateNumber;
 
-  /// Required for a PS Mark.
+  /// MANUAL_REVIEW is the Vendor's explicit request for Product Compliance review when the register cannot confirm the number.
+  @BuiltValueField(wireName: r'review_mode')
+  ComplianceSubmissionReviewModeEnum? get reviewMode;
+  // enum reviewModeEnum {  AUTOMATIC,  MANUAL_REVIEW,  };
+
+  @BuiltValueField(wireName: r'review_note')
+  String? get reviewNote;
+
   @BuiltValueField(wireName: r'manufacturer_name')
   String? get manufacturerName;
 
   @BuiltValueField(wireName: r'manufacturer_address')
   String? get manufacturerAddress;
 
-  /// Required for an ICC sticker.
   @BuiltValueField(wireName: r'importer_name')
   String? get importerName;
 
@@ -78,7 +87,8 @@ abstract class ComplianceSubmission implements Built<ComplianceSubmission, Compl
   factory ComplianceSubmission([void updates(ComplianceSubmissionBuilder b)]) = _$ComplianceSubmission;
 
   @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(ComplianceSubmissionBuilder b) => b;
+  static void _defaults(ComplianceSubmissionBuilder b) => b
+      ..reviewMode = ComplianceSubmissionReviewModeEnum.valueOf('AUTOMATIC');
 
   @BuiltValueSerializer(custom: true)
   static Serializer<ComplianceSubmission> get serializer => _$ComplianceSubmissionSerializer();
@@ -121,6 +131,20 @@ class _$ComplianceSubmissionSerializer implements PrimitiveSerializer<Compliance
       object.certificateNumber,
       specifiedType: const FullType(String),
     );
+    if (object.reviewMode != null) {
+      yield r'review_mode';
+      yield serializers.serialize(
+        object.reviewMode,
+        specifiedType: const FullType(ComplianceSubmissionReviewModeEnum),
+      );
+    }
+    if (object.reviewNote != null) {
+      yield r'review_note';
+      yield serializers.serialize(
+        object.reviewNote,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
     if (object.manufacturerName != null) {
       yield r'manufacturer_name';
       yield serializers.serialize(
@@ -233,6 +257,22 @@ class _$ComplianceSubmissionSerializer implements PrimitiveSerializer<Compliance
           ) as String;
           result.certificateNumber = valueDes;
           break;
+        case r'review_mode':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ComplianceSubmissionReviewModeEnum),
+          ) as ComplianceSubmissionReviewModeEnum?;
+          if (valueDes == null) continue;
+          result.reviewMode = valueDes;
+          break;
+        case r'review_note':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.reviewNote = valueDes;
+          break;
         case r'manufacturer_name':
           final valueDes = serializers.deserialize(
             value,
@@ -325,6 +365,22 @@ class _$ComplianceSubmissionSerializer implements PrimitiveSerializer<Compliance
   }
 }
 
+
+/// MANUAL_REVIEW is the Vendor's explicit request for Product Compliance review when the register cannot confirm the number.
+class ComplianceSubmissionReviewModeEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'AUTOMATIC')
+  static const ComplianceSubmissionReviewModeEnum AUTOMATIC = _$complianceSubmissionReviewModeEnum_AUTOMATIC;
+  @BuiltValueEnumConst(wireName: r'MANUAL_REVIEW')
+  static const ComplianceSubmissionReviewModeEnum MANUAL_REVIEW = _$complianceSubmissionReviewModeEnum_MANUAL_REVIEW;
+
+  static Serializer<ComplianceSubmissionReviewModeEnum> get serializer => _$complianceSubmissionReviewModeEnumSerializer;
+
+  const ComplianceSubmissionReviewModeEnum._(String name): super(name);
+
+  static BuiltSet<ComplianceSubmissionReviewModeEnum> get values => _$complianceSubmissionReviewModeEnumValues;
+  static ComplianceSubmissionReviewModeEnum valueOf(String name) => _$complianceSubmissionReviewModeEnumValueOf(name);
+}
 
 class ComplianceSubmissionConfirmedEnum extends EnumClass {
 

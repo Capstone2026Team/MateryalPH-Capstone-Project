@@ -119,6 +119,7 @@ export const TaxAdjustmentStateEnum = {
     Approved: 'APPROVED',
     Posted: 'POSTED',
     Rejected: 'REJECTED',
+    NotRequired: 'NOT_REQUIRED',
 } as const;
 export type TaxAdjustmentStateEnum = typeof TaxAdjustmentStateEnum[keyof typeof TaxAdjustmentStateEnum];
 

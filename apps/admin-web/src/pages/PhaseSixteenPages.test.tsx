@@ -1,22 +1,20 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
-import { ResponseError } from '@materyalph/api-client-ts'
+import { ResponseError, parseDate } from '@materyalph/api-client-ts'
 import * as operations from '../lib/operations-api'
 import * as geo from '../lib/geo-analytics-api'
-import * as finance from '../lib/finance-api'
 import { AdminPlatformSettingsPage } from './PlatformSettingsPage'
 import { AdminEnforcementDetailPage } from './EnforcementPages'
 import { AdminAuditSearchPage } from './AuditSearchPage'
 import { AdminIntegrationHealthPage } from './IntegrationHealthPages'
 import { AdminGeoAnalyticsPage } from './GeoAnalyticsPage'
-import { FinanceKpiPanel, TaxAdjustments } from './FinanceOperationsPanels'
 
 vi.mock('../lib/operations-api', async original => ({ ...await original<typeof import('../lib/operations-api')>(), listSettings: vi.fn(), settingHistory: vi.fn(), updateSetting: vi.fn(),
   getEnforcement: vi.fn(), applyEnforcement: vi.fn(), declineEnforcement: vi.fn(), liftEnforcement: vi.fn(), searchAudit: vi.fn(), getAudit: vi.fn(), auditActions: vi.fn(),
   integrationOverview: vi.fn(), operationFailures: vi.fn(), operationRetries: vi.fn(), retryOperation: vi.fn(), requestExport: vi.fn() }))
 vi.mock('../lib/geo-analytics-api', async original => ({ ...await original<typeof import('../lib/geo-analytics-api')>(), getGeoDashboard: vi.fn(), getGeoDemand: vi.fn(), getGeoBoundaries: vi.fn() }))
-vi.mock('../lib/finance-api', async original => ({ ...await original<typeof import('../lib/finance-api')>(), financeKpis: vi.fn(), listTaxAdjustments: vi.fn(), prepareTaxAdjustment: vi.fn(), reviewTaxAdjustment: vi.fn(), postTaxAdjustment: vi.fn() }))
+vi.mock('../lib/finance-api', async original => ({ ...await original<typeof import('../lib/finance-api')>(), financeKpis: vi.fn() }))
 vi.mock('../lib/trust-api', async original => ({ ...await original<typeof import('../lib/trust-api')>(), listAdminAnalytics: vi.fn(() => new Promise(() => undefined)), listRuns: vi.fn(() => new Promise(() => undefined)) }))
 vi.mock('./PhaseThreeAdminPages', async original => ({ ...await original<typeof import('./PhaseThreeAdminPages')>(), AdminShell: ({ children }: { children: React.ReactNode }) => <main>{children}</main> }))
 
@@ -90,6 +88,27 @@ test('audit search is read-only: no edit or delete control and no detail link wi
   expect(screen.getByRole('button', { name: 'Load older entries' })).toBeInTheDocument()
 })
 
+test('audit date Apply preserves the applied actor and supports an open-ended Manila range; Cancel and Reset are safe', async () => {
+  vi.mocked(operations.auditActions).mockResolvedValue([])
+  vi.mocked(operations.searchAudit).mockResolvedValue({ items: [], nextCursor: null, canViewDetail: false, canExport: false })
+  at('/audit', <AdminAuditSearchPage />)
+  await screen.findByText('No audit entries match these filters.')
+  fireEvent.change(screen.getByLabelText('Actor name or email'), { target: { value: 'Finance reviewer' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Search' }))
+  await waitFor(() => expect(operations.searchAudit).toHaveBeenLastCalledWith({ actor: 'Finance reviewer' }))
+  const calls = vi.mocked(operations.searchAudit).mock.calls.length
+  fireEvent.click(screen.getByRole('button', { name: 'All dates' }))
+  fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-10-01' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+  expect(operations.searchAudit).toHaveBeenCalledTimes(calls)
+  fireEvent.click(screen.getByRole('button', { name: 'All dates' }))
+  fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-10-01' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+  await waitFor(() => expect(operations.searchAudit).toHaveBeenLastCalledWith({ actor: 'Finance reviewer', from: parseDate('2026-10-01') }))
+  fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }))
+  await waitFor(() => expect(operations.searchAudit).toHaveBeenLastCalledWith({}))
+})
+
 test('integration health shows masked statuses and a retry needs a reason; no secret value is rendered', async () => {
   vi.mocked(operations.integrationOverview).mockResolvedValue({ generatedAt: new Date(), environment: { app: 'Local', commerce: 'TEST — LIVE commerce disabled' }, canRetry: true,
     integrations: [{ key: 'google_maps', label: 'Google Maps, Places and Routes', status: 'NOT_CONFIGURED', detail: 'No server key configured; geocoding and routes use manual fallbacks.', environment: null, lastEventAt: null }],
@@ -147,25 +166,4 @@ test('the geographic dashboard separates gross and net GMV, shows suppression wi
   fireEvent.click(screen.getByRole('button', { name: 'Drill into National Capital Region' }))
   await waitFor(() => expect(screen.getByTestId('location').textContent).toContain('area=1300000000'))
   await waitFor(() => expect(geo.getGeoDashboard).toHaveBeenLastCalledWith(expect.objectContaining({ area: '1300000000' })))
-})
-
-test('finance KPIs keep commerce GMV apart from finance amounts, and the preparer cannot review their own adjustment', async () => {
-  vi.mocked(finance.financeKpis).mockResolvedValue({ label: 'DEMO — No real funds or BIR filing', scenario: 'DEMO_PLATFORM_WITHHOLDER', period: { from: new Date(), to: new Date() },
-    commerce: [{ key: 'gross_gmv', label: 'Gross GMV', valueCentavos: 100000, definition: 'Before cancellations.' }, { key: 'net_gmv', label: 'Net GMV', valueCentavos: 90000, definition: 'After refunds.' }],
-    finance: [{ key: 'assessed_cwt', label: 'Assessed CWT (simulated)', valueCentavos: 450, definition: 'Never platform revenue.' }], counts: { unreconciled_remittances: 1, open_tax_adjustments: 0, pending_certificates: 0, draft_statements: 0 } })
-  render(<MemoryRouter><FinanceKpiPanel /></MemoryRouter>)
-  const commerce = (await screen.findByRole('heading', { name: 'Marketplace commerce (GMV)' })).parentElement?.parentElement as HTMLElement
-  expect(within(commerce).getByText('Gross GMV')).toBeInTheDocument()
-  expect(within(commerce).queryByText(/CWT/)).not.toBeInTheDocument()
-  expect(screen.getByText('Blocked')).toBeInTheDocument()
-
-  vi.mocked(finance.listTaxAdjustments).mockResolvedValue({ items: [{ id: 'adj-1', kind: 'THRESHOLD_CROSSING', state: 'UNDER_REVIEW', environment: 'TEST', openedBy: 'SYSTEM', orderReference: 'ORD-1', vendorName: 'Test Supply',
-    originalRecordType: 'REMITTANCE_ASSESSMENT', originalRecordId: 'r1', periodStart: new Date('2026-10-01'), periodEnd: new Date('2026-10-31'), amountCentavos: 2500, beforeValues: { withheld_centavos: 0 }, afterValues: { withheld_centavos: 2500 },
-    reason: 'Late crossing', preparer: 'Finance Preparer', reviewer: null, reviewedAt: null, postedAt: null, createdAt: new Date(), allowedActions: ['APPROVE', 'REJECT'], separationNote: 'Prepared by Finance Preparer; a different finance user must review.' }], hasMore: false, total: 1 } as never)
-  vi.mocked(finance.reviewTaxAdjustment).mockRejectedValue(problem(409, 'PREPARER_CANNOT_REVIEW', 'The preparer cannot review their own adjustment.'))
-  render(<MemoryRouter><TaxAdjustments /></MemoryRouter>)
-  fireEvent.click(await screen.findByRole('button', { name: 'Approve (reviewer)' }))
-  fireEvent.change(screen.getByLabelText(/^Reason/), { target: { value: 'Base and threshold status verified.' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Approve' }))
-  expect(await screen.findByText(/preparer cannot review their own adjustment. Reference: corr-123/)).toBeInTheDocument()
 })

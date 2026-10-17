@@ -8,6 +8,7 @@ import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
 import 'package:materyalph_api_client/src/api_util.dart';
+import 'package:materyalph_api_client/src/model/date.dart';
 import 'package:materyalph_api_client/src/model/inventory_ledger_envelope.dart';
 import 'package:materyalph_api_client/src/model/inventory_movement_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/inventory_row_envelope.dart';
@@ -322,6 +323,8 @@ class VendorInventoryApi {
   /// Parameters:
   /// * [variantId]
   /// * [page]
+  /// * [from] - Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Append-only movement created_at; filtered before pagination.
+  /// * [to] - Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Append-only movement created_at; filtered before pagination.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -334,6 +337,8 @@ class VendorInventoryApi {
   Future<Response<InventoryMovementListEnvelope>> listVendorInventoryMovements({
     required String variantId,
     int? page,
+    Date? from,
+    Date? to,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -363,6 +368,8 @@ class VendorInventoryApi {
 
     final _queryParameters = <String, dynamic>{
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+      if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
     };
 
     final _response = await _dio.request<Object>(
@@ -410,6 +417,8 @@ class VendorInventoryApi {
   ///
   /// Parameters:
   /// * [variantId]
+  /// * [from] - Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Immutable price effective_at; filtered before the existing 50-record bound.
+  /// * [to] - Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Immutable price effective_at; filtered before the existing 50-record bound.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -421,6 +430,8 @@ class VendorInventoryApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<PriceHistoryEnvelope>> listVendorPriceHistory({
     required String variantId,
+    Date? from,
+    Date? to,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -448,9 +459,15 @@ class VendorInventoryApi {
       validateStatus: validateStatus,
     );
 
+    final _queryParameters = <String, dynamic>{
+      if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
+    };
+
     final _response = await _dio.request<Object>(
       _path,
       options: _options,
+      queryParameters: _queryParameters,
       cancelToken: cancelToken,
       onSendProgress: onSendProgress,
       onReceiveProgress: onReceiveProgress,

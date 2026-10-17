@@ -12,6 +12,7 @@ use App\Domain\Identity\AuditRecorder;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ProductComplianceDecisionRequest;
+use App\Support\PortalDateRange;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -29,7 +30,7 @@ final class AdminProductComplianceController extends Controller
             'reference_result' => ['sometimes', Rule::in(['MATCHED', 'UNMATCHED', 'UNCERTAIN', 'UNAVAILABLE'])],
             'sort' => ['sometimes', Rule::in(['oldest', 'newest'])],
             'page' => ['sometimes', 'integer', 'between:1,1000'],
-        ]);
+        ] + PortalDateRange::rules($request));
         $result = $this->compliance->queue($request, $filters);
 
         return ApiResponse::success($result['items'], $result['meta']);
@@ -58,9 +59,12 @@ final class AdminProductComplianceController extends Controller
         $access->requireAdmin($request, 'product_compliance.review');
         $filters = $request->validate(['page' => ['sometimes', 'integer', 'between:1,1000']]);
         $page = DB::table('compliance_reference_registers')->orderByDesc('created_at')->orderBy('id')
-            ->paginate(20, ['id', 'register_kind', 'source_reference', 'snapshot_date', 'status', 'row_count', 'rejected_row_count', 'activated_at', 'superseded_at', 'created_at'], 'page', (int) ($filters['page'] ?? 1));
+            ->paginate(20, ['id', 'register_kind', 'source_reference', 'source_channel', 'snapshot_date', 'status', 'row_count', 'rejected_row_count', 'activated_at', 'superseded_at', 'created_at'], 'page', (int) ($filters['page'] ?? 1));
+        // The government lists are updated monthly; an active snapshot past this age needs a fresh import.
+        $staleBefore = now('Asia/Manila')->subDays((int) config('materyalph.compliance_registers.stale_after_days', 45))->toDateString();
+        $items = array_map(static fn (object $row): array => (array) $row + ['stale' => $row->status === 'ACTIVE' && (string) $row->snapshot_date < $staleBefore], $page->items());
 
-        return ApiResponse::success($page->items(), ['current_page' => $page->currentPage(), 'last_page' => $page->lastPage(), 'total' => $page->total()]);
+        return ApiResponse::success($items, ['current_page' => $page->currentPage(), 'last_page' => $page->lastPage(), 'total' => $page->total()]);
     }
 
     public function importRegister(Request $request, CatalogAccess $access, ComplianceRegisterImporter $importer, AuditRecorder $audit): JsonResponse

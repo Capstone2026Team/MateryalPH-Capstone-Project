@@ -36,19 +36,49 @@ final class AdminVendorVerificationService
     public function queue(Request $request, array $filters): array
     {
         $this->authorize($request, 'vendor_verification.review');
-        $submitted = DB::table('vendor_onboarding_steps')->select('vendor_organization_id')->selectRaw('MAX(submitted_at) AS submitted_at')->where('section', 'STORE_VERIFICATION')->where('is_current', true)->groupBy('vendor_organization_id');
         $regions = new PhilippineRegionDirectory;
+        $query = $this->queueQuery($regions, $filters)
+            ->select('vendor_organizations.*', 'submission.submitted_at', 'address.province', 'address.city_municipality', 'region.region_code', 'region.region_name');
+        if (is_string($filters['status'] ?? null) && $filters['status'] !== '') {
+            $query->where('store_verification_status', $filters['status']);
+        }
+        // Tab counts follow every other active filter, so each count is what that tab would list.
+        $counts = $this->queueQuery($regions, $filters)->select('store_verification_status')->selectRaw('COUNT(*) AS total')->groupBy('store_verification_status')->pluck('total', 'store_verification_status');
+        $statusCounts = [];
+        foreach (['PENDING_VERIFICATION', 'CHANGES_REQUIRED', 'REJECTED', 'APPROVED', 'EXPIRED'] as $status) {
+            $statusCounts[$status] = (int) ($counts[$status] ?? 0);
+        }
+        $sort = $filters['sort'] ?? 'submitted_desc';
+        if ($sort === 'location') {
+            $query->orderBy('region.region_name')->orderBy('address.province')->orderBy('address.city_municipality');
+        }
+        if ($sort === 'oldest_pending') {
+            $query->orderByRaw('(SELECT MIN(r.submitted_at) FROM vendor_onboarding_requirements r WHERE r.vendor_organization_id = vendor_organizations.id AND r.is_current AND r.status = ? ) ASC NULLS LAST', ['PENDING_VERIFICATION']);
+        }
+        $query->orderByRaw('submission.submitted_at '.($sort === 'submitted_asc' || $sort === 'oldest_pending' ? 'ASC' : 'DESC').' NULLS LAST');
+        $rows = $query->orderBy('vendor_organizations.id')->paginate(20);
+
+        return [
+            'items' => array_map(fn (mixed $row): array => $this->queueItem($row), $rows->items()),
+            'meta' => ['current_page' => $rows->currentPage(), 'last_page' => $rows->lastPage(), 'per_page' => $rows->perPage(), 'total' => $rows->total(), 'regions' => $regions->options(), 'status_counts' => $statusCounts],
+        ];
+    }
+
+    /**
+     * The queue's joins and every filter except the review status, shared by the listing and the per-status tab counts.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    private function queueQuery(PhilippineRegionDirectory $regions, array $filters): Builder
+    {
+        $submitted = DB::table('vendor_onboarding_steps')->select('vendor_organization_id')->selectRaw('MAX(submitted_at) AS submitted_at')->where('section', 'STORE_VERIFICATION')->where('is_current', true)->groupBy('vendor_organization_id');
         $query = DB::table('vendor_organizations')
             ->leftJoinSub($submitted, 'submission', 'submission.vendor_organization_id', '=', 'vendor_organizations.id')
             ->leftJoin('addresses as address', function ($join): void {
                 $join->on('address.owner_id', '=', 'vendor_organizations.id')->where('address.owner_type', 'VENDOR_ORGANIZATION')->where('address.is_current', true);
             })
             ->leftJoinSub($regions->mapping(), 'region', 'region.code', '=', 'address.psgc_code')
-            ->select('vendor_organizations.*', 'submission.submitted_at', 'address.province', 'address.city_municipality', 'region.region_code', 'region.region_name')
             ->whereIn('store_verification_status', ['SUBMITTED', 'PENDING_VERIFICATION', 'CHANGES_REQUIRED', 'REJECTED', 'APPROVED', 'EXPIRED']);
-        if (is_string($filters['status'] ?? null) && $filters['status'] !== '') {
-            $query->where('store_verification_status', $filters['status']);
-        }
         if (is_string($filters['business_type'] ?? null) && $filters['business_type'] !== '') {
             $query->where('business_type', $filters['business_type']);
         }
@@ -63,20 +93,8 @@ final class AdminVendorVerificationService
             }
         }
         $this->operationsFilters($query, $filters);
-        $sort = $filters['sort'] ?? 'submitted_desc';
-        if ($sort === 'location') {
-            $query->orderBy('region.region_name')->orderBy('address.province')->orderBy('address.city_municipality');
-        }
-        if ($sort === 'oldest_pending') {
-            $query->orderByRaw('(SELECT MIN(r.submitted_at) FROM vendor_onboarding_requirements r WHERE r.vendor_organization_id = vendor_organizations.id AND r.is_current AND r.status = ? ) ASC NULLS LAST', ['PENDING_VERIFICATION']);
-        }
-        $query->orderByRaw('submission.submitted_at '.($sort === 'submitted_asc' || $sort === 'oldest_pending' ? 'ASC' : 'DESC').' NULLS LAST');
-        $rows = $query->orderBy('vendor_organizations.id')->paginate(20);
 
-        return [
-            'items' => array_map(fn (mixed $row): array => $this->queueItem($row), $rows->items()),
-            'meta' => ['current_page' => $rows->currentPage(), 'last_page' => $rows->lastPage(), 'per_page' => $rows->perPage(), 'total' => $rows->total(), 'regions' => $regions->options()],
-        ];
+        return $query;
     }
 
     /**

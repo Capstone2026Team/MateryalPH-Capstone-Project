@@ -40,7 +40,7 @@ export interface LoginRequest {
      */
     portal: LoginRequestPortalEnum;
     /**
-     * Vendor web password login only; prohibited for Admin login.
+     * Vendor and Admin web password login; required when bot protection is enabled unless a matching single-use HttpOnly proof cookie is present.
      */
     botProtection?: VendorBotProtectionEvidence | null;
 }

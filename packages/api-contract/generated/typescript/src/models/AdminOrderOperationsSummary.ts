@@ -20,6 +20,10 @@ import { mapValues } from '../runtime';
  */
 export interface AdminOrderOperationsSummary {
     /**
+     * All refund records, including processed refunds, independent of list filters and pagination.
+     */
+    refundsTotal: number;
+    /**
      *
      */
     refundsFailed: number;
@@ -27,6 +31,10 @@ export interface AdminOrderOperationsSummary {
      *
      */
     refundsPending: number;
+    /**
+     * All order-linked cash reimbursements, including confirmed reimbursements, independent of list filters.
+     */
+    reimbursementsTotal: number;
     /**
      *
      */
@@ -45,8 +53,10 @@ export interface AdminOrderOperationsSummary {
  * Check if a given object implements the AdminOrderOperationsSummary interface.
  */
 export function instanceOfAdminOrderOperationsSummary(value: object): value is AdminOrderOperationsSummary {
+    if ((!('refundsTotal' in (value as Record<string, any>)) && !('refunds_total' in (value as Record<string, any>))) || ((value as Record<string, any>)['refundsTotal'] === undefined && (value as Record<string, any>)['refunds_total'] === undefined)) return false;
     if ((!('refundsFailed' in (value as Record<string, any>)) && !('refunds_failed' in (value as Record<string, any>))) || ((value as Record<string, any>)['refundsFailed'] === undefined && (value as Record<string, any>)['refunds_failed'] === undefined)) return false;
     if ((!('refundsPending' in (value as Record<string, any>)) && !('refunds_pending' in (value as Record<string, any>))) || ((value as Record<string, any>)['refundsPending'] === undefined && (value as Record<string, any>)['refunds_pending'] === undefined)) return false;
+    if ((!('reimbursementsTotal' in (value as Record<string, any>)) && !('reimbursements_total' in (value as Record<string, any>))) || ((value as Record<string, any>)['reimbursementsTotal'] === undefined && (value as Record<string, any>)['reimbursements_total'] === undefined)) return false;
     if ((!('reimbursementsPending' in (value as Record<string, any>)) && !('reimbursements_pending' in (value as Record<string, any>))) || ((value as Record<string, any>)['reimbursementsPending'] === undefined && (value as Record<string, any>)['reimbursements_pending'] === undefined)) return false;
     if ((!('cancellationRequestsOpen' in (value as Record<string, any>)) && !('cancellation_requests_open' in (value as Record<string, any>))) || ((value as Record<string, any>)['cancellationRequestsOpen'] === undefined && (value as Record<string, any>)['cancellation_requests_open'] === undefined)) return false;
     if ((!('nfrEvents30Days' in (value as Record<string, any>)) && !('nfr_events_30_days' in (value as Record<string, any>))) || ((value as Record<string, any>)['nfrEvents30Days'] === undefined && (value as Record<string, any>)['nfr_events_30_days'] === undefined)) return false;
@@ -63,8 +73,10 @@ export function AdminOrderOperationsSummaryFromJSONTyped(json: any, ignoreDiscri
     }
     return {
 
+        'refundsTotal': json['refunds_total'],
         'refundsFailed': json['refunds_failed'],
         'refundsPending': json['refunds_pending'],
+        'reimbursementsTotal': json['reimbursements_total'],
         'reimbursementsPending': json['reimbursements_pending'],
         'cancellationRequestsOpen': json['cancellation_requests_open'],
         'nfrEvents30Days': json['nfr_events_30_days'],
@@ -82,8 +94,10 @@ export function AdminOrderOperationsSummaryToJSONTyped(value?: AdminOrderOperati
 
     return {
 
+        'refunds_total': value['refundsTotal'],
         'refunds_failed': value['refundsFailed'],
         'refunds_pending': value['refundsPending'],
+        'reimbursements_total': value['reimbursementsTotal'],
         'reimbursements_pending': value['reimbursementsPending'],
         'cancellation_requests_open': value['cancellationRequestsOpen'],
         'nfr_events_30_days': value['nfrEvents30Days'],

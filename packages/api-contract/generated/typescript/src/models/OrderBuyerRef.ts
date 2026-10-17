@@ -23,6 +23,14 @@ export interface OrderBuyerRef {
      *
      */
     displayName: string;
+    /**
+     * Current Buyer phone for delivery coordination. Only Owner/Manager or current active assigned Fulfillment Staff on an accepted, open Site Delivery order receives it. Other roles and closed/pickup orders receive null.
+     */
+    mobileE164?: string | null;
+    /**
+     * Authorized order-scoped API photo path with the Buyer profile version. Uses the same delivery-contact authorization as mobile_e164; never a public storage URL. Null when the Buyer has no photo or contact is unavailable.
+     */
+    avatarPath?: string | null;
 }
 
 /**
@@ -44,6 +52,8 @@ export function OrderBuyerRefFromJSONTyped(json: any, ignoreDiscriminator: boole
     return {
 
         'displayName': json['display_name'],
+        'mobileE164': json['mobile_e164'] === undefined ? undefined : json['mobile_e164'] === null ? null : json['mobile_e164'],
+        'avatarPath': json['avatar_path'] === undefined ? undefined : json['avatar_path'] === null ? null : json['avatar_path'],
     };
 }
 
@@ -59,6 +69,8 @@ export function OrderBuyerRefToJSONTyped(value?: OrderBuyerRef | null, ignoreDis
     return {
 
         'display_name': value['displayName'],
+        'mobile_e164': value['mobileE164'],
+        'avatar_path': value['avatarPath'],
     };
 }
 

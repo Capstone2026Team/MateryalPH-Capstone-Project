@@ -27,5 +27,20 @@ void main() {
       // TODO
     });
 
+    // DateTime acknowledgedAt
+    test('to test the property `acknowledgedAt`', () async {
+      // TODO
+    });
+
+    // DateTime endedAt
+    test('to test the property `endedAt`', () async {
+      // TODO
+    });
+
+    // FulfillmentArrangementVehicle vehicle
+    test('to test the property `vehicle`', () async {
+      // TODO
+    });
+
   });
 }

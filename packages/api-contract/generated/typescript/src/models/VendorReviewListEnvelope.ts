@@ -20,13 +20,13 @@ import {
     VendorReviewRowToJSON,
     VendorReviewRowToJSONTyped,
 } from './VendorReviewRow';
-import type { ReviewListMeta } from './ReviewListMeta';
+import type { VendorReviewListMeta } from './VendorReviewListMeta';
 import {
-    ReviewListMetaFromJSON,
-    ReviewListMetaFromJSONTyped,
-    ReviewListMetaToJSON,
-    ReviewListMetaToJSONTyped,
-} from './ReviewListMeta';
+    VendorReviewListMetaFromJSON,
+    VendorReviewListMetaFromJSONTyped,
+    VendorReviewListMetaToJSON,
+    VendorReviewListMetaToJSONTyped,
+} from './VendorReviewListMeta';
 import type { ApiError } from './ApiError';
 import {
     ApiErrorFromJSON,
@@ -48,7 +48,7 @@ export interface VendorReviewListEnvelope {
     /**
      *
      */
-    meta: ReviewListMeta;
+    meta: VendorReviewListMeta;
     /**
      *
      */
@@ -76,7 +76,7 @@ export function VendorReviewListEnvelopeFromJSONTyped(json: any, ignoreDiscrimin
     return {
 
         'data': ((json['data'] as Array<any>).map(VendorReviewRowFromJSON)),
-        'meta': ReviewListMetaFromJSON(json['meta']),
+        'meta': VendorReviewListMetaFromJSON(json['meta']),
         'errors': ((json['errors'] as Array<any>).map(ApiErrorFromJSON)),
     };
 }
@@ -93,7 +93,7 @@ export function VendorReviewListEnvelopeToJSONTyped(value?: VendorReviewListEnve
     return {
 
         'data': ((value['data'] as Array<any>).map(VendorReviewRowToJSON)),
-        'meta': ReviewListMetaToJSON(value['meta']),
+        'meta': VendorReviewListMetaToJSON(value['meta']),
         'errors': ((value['errors'] as Array<any>).map(ApiErrorToJSON)),
     };
 }

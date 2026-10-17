@@ -13,8 +13,11 @@ Name | Type | Description | Notes
 **sourceReference** | **String** |  |
 **snapshotDate** | [**Date**](Date.md) |  |
 **status** | **String** |  |
+**sourceChannel** | **String** |  | [optional]
+**stale** | **bool** | An ACTIVE snapshot older than the configured age (45 days); the government lists are updated monthly. | [optional]
 **rowCount** | **int** |  |
 **rejectedRowCount** | **int** |  |
+**serialRangeCount** | **int** |  | [optional]
 **activatedAt** | **String** |  | [optional]
 **supersededAt** | **String** |  | [optional]
 **createdAt** | **String** |  | [optional]

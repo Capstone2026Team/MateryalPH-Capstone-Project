@@ -26,10 +26,6 @@ export interface WorkPackageVersion {
     /**
      *
      */
-    version: number;
-    /**
-     *
-     */
     contentHash: string;
     /**
      *
@@ -46,7 +42,6 @@ export interface WorkPackageVersion {
  */
 export function instanceOfWorkPackageVersion(value: object): value is WorkPackageVersion {
     if (!('id' in value) || value['id'] === undefined) return false;
-    if (!('version' in value) || value['version'] === undefined) return false;
     if ((!('contentHash' in (value as Record<string, any>)) && !('content_hash' in (value as Record<string, any>))) || ((value as Record<string, any>)['contentHash'] === undefined && (value as Record<string, any>)['content_hash'] === undefined)) return false;
     if (!('content' in value) || value['content'] === undefined) return false;
     return true;
@@ -63,7 +58,6 @@ export function WorkPackageVersionFromJSONTyped(json: any, ignoreDiscriminator: 
     return {
 
         'id': json['id'],
-        'version': json['version'],
         'contentHash': json['content_hash'],
         'lockedAt': json['locked_at'] == null ? undefined : json['locked_at'],
         'content': json['content'],
@@ -82,7 +76,6 @@ export function WorkPackageVersionToJSONTyped(value?: WorkPackageVersion | null,
     return {
 
         'id': value['id'],
-        'version': value['version'],
         'content_hash': value['contentHash'],
         'locked_at': value['lockedAt'],
         'content': value['content'],

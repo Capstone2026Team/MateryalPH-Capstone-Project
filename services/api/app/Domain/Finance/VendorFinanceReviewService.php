@@ -33,7 +33,7 @@ final class VendorFinanceReviewService
                     'due_on' => (string) $row->due_on, 'state' => (string) $row->state, 'charges_centavos' => (int) $row->charges_centavos, 'credits_centavos' => (int) $row->credits_centavos,
                     'paid_centavos' => (int) $row->paid_centavos, 'outstanding_centavos' => (int) $row->outstanding_centavos, 'overdue' => (int) $row->outstanding_centavos > 0 && (string) $row->due_on < $today,
                     'approved' => $row->approved_at !== null])->all(),
-            'tax_adjustments' => DB::table('tax_adjustments as t')->join('orders as o', 'o.id', '=', 't.order_id')->where('o.vendor_organization_id', $organization)->orderByDesc('t.created_at')->limit(25)
+            'tax_adjustments' => DB::table('tax_adjustments as t')->join('orders as o', 'o.id', '=', 't.order_id')->where('o.vendor_organization_id', $organization)->whereNot('t.state', 'NOT_REQUIRED')->orderByDesc('t.created_at')->limit(25)
                 ->get(['t.id', 't.kind', 't.state', 't.period_start', 't.period_end', 't.amount_centavos', 't.reviewed_at', 't.posted_at', 't.created_at', 'o.reference'])
                 ->map(static fn (object $row): array => ['id' => (string) $row->id, 'kind' => (string) $row->kind, 'state' => (string) $row->state, 'order_reference' => (string) $row->reference,
                     'period_start' => (string) $row->period_start, 'period_end' => (string) $row->period_end, 'amount_centavos' => (int) $row->amount_centavos,

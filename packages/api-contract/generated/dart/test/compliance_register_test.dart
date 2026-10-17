@@ -32,6 +32,17 @@ void main() {
       // TODO
     });
 
+    // String sourceChannel
+    test('to test the property `sourceChannel`', () async {
+      // TODO
+    });
+
+    // An ACTIVE snapshot older than the configured age (45 days); the government lists are updated monthly.
+    // bool stale
+    test('to test the property `stale`', () async {
+      // TODO
+    });
+
     // int rowCount
     test('to test the property `rowCount`', () async {
       // TODO
@@ -39,6 +50,11 @@ void main() {
 
     // int rejectedRowCount
     test('to test the property `rejectedRowCount`', () async {
+      // TODO
+    });
+
+    // int serialRangeCount
+    test('to test the property `serialRangeCount`', () async {
       // TODO
     });
 

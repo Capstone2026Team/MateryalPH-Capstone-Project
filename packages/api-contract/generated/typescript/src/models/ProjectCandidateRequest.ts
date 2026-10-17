@@ -13,6 +13,14 @@
  */
 
 import { mapValues } from '../runtime';
+import type { ProjectSpecificationSelection } from './ProjectSpecificationSelection';
+import {
+    ProjectSpecificationSelectionFromJSON,
+    ProjectSpecificationSelectionFromJSONTyped,
+    ProjectSpecificationSelectionToJSON,
+    ProjectSpecificationSelectionToJSONTyped,
+} from './ProjectSpecificationSelection';
+
 /**
  *
  * @export
@@ -35,6 +43,10 @@ export interface ProjectCandidateRequest {
      *
      */
     budgetOverrideReason?: string;
+    /**
+     * The Buyer's specification choice for each line whose `selection_required` is true. Selection and inquiry are rejected with SPECIFICATION_SELECTION_REQUIRED until every such line has one.
+     */
+    selections?: Array<ProjectSpecificationSelection>;
 }
 
 /**
@@ -60,6 +72,7 @@ export function ProjectCandidateRequestFromJSONTyped(json: any, ignoreDiscrimina
         'candidateId': json['candidate_id'],
         'note': json['note'] == null ? undefined : json['note'],
         'budgetOverrideReason': json['budget_override_reason'] == null ? undefined : json['budget_override_reason'],
+        'selections': json['selections'] == null ? undefined : ((json['selections'] as Array<any>).map(ProjectSpecificationSelectionFromJSON)),
     };
 }
 
@@ -78,6 +91,7 @@ export function ProjectCandidateRequestToJSONTyped(value?: ProjectCandidateReque
         'candidate_id': value['candidateId'],
         'note': value['note'],
         'budget_override_reason': value['budgetOverrideReason'],
+        'selections': value['selections'] == null ? undefined : ((value['selections'] as Array<any>).map(ProjectSpecificationSelectionToJSON)),
     };
 }
 

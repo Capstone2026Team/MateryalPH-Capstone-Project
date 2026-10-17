@@ -2,10 +2,24 @@ import { ResponseError } from '@materyalph/api-client-ts'
 import { clearWebSessionTransport, createWebApiConfiguration, rateLimitMessage } from '@materyalph/web-ui'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { asValidationFailure, getSession, signOut, withWebAuthApi } from './auth-api'
+import { acceptVendorStaffInvitation, asValidationFailure, getSession, signOut, withWebAuthApi } from './auth-api'
 
 afterEach(() => vi.unstubAllGlobals())
 beforeEach(() => clearWebSessionTransport())
+
+test('staff acceptance serializes the checkbox evidence through the generated cookie and CSRF transport', async () => {
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce(new Response(JSON.stringify({ data: { csrf_token: 'test-csrf-token' }, meta: {}, errors: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    .mockResolvedValueOnce(new Response(JSON.stringify({ data: { next: 'VERIFY_EMAIL_AND_SIGN_IN' }, meta: {}, errors: [] }), { status: 201, headers: { 'Content-Type': 'application/json' } }))
+  vi.stubGlobal('fetch', fetchMock)
+  await acceptVendorStaffInvitation({ token: 'test-invitation', email: 'employee@example.test', fullName: 'Test Employee', password: 'TestPassword123', passwordConfirmation: 'TestPassword123' }, { recaptchaToken: 'test-checkbox-token' })
+  const acceptance = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/auth/vendor-invitations/accept'))
+  expect(acceptance).toBeDefined()
+  const request = acceptance?.[1] as RequestInit
+  expect(JSON.parse(String(request.body)).bot_protection).toEqual({ recaptcha_token: 'test-checkbox-token' })
+  expect(request.credentials).toBe('include')
+  expect(new Headers(request.headers).get('X-CSRF-Token')).toBe('test-csrf-token')
+})
 
 describe('Vendor auth API errors', () => {
   test('retains only safe Laravel validation field messages', async () => {
@@ -45,6 +59,26 @@ describe('Vendor auth API errors', () => {
 })
 
 describe('Vendor auth API transport', () => {
+  test.each([401, 429])('a late %s from an old session cannot invalidate or throttle the new account', async status => {
+    let complete!: (response: Response) => void
+    const fetchMock = vi.fn().mockImplementationOnce(() => new Promise<Response>(resolve => { complete = resolve })).mockResolvedValue(new Response(null, { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const denied = vi.fn()
+    window.addEventListener('materyalph:access-denied', denied)
+    try {
+      const config = createWebApiConfiguration('https://api.example.test/api/v1', { refreshSession: true })
+      const transport = config.fetchApi
+      if (!transport) throw new Error('The web session transport is required for this check.')
+      const request = transport('https://api.example.test/api/v1/vendor/navigation-updates', { method: 'GET' })
+      clearWebSessionTransport()
+      complete(new Response(null, { status, headers: { 'Retry-After': '60' } }))
+      expect((await request).status).toBe(status)
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(denied).not.toHaveBeenCalled()
+      expect((await transport('https://api.example.test/api/v1/vendor/navigation-updates', { method: 'GET' })).status).toBe(200)
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    } finally { window.removeEventListener('materyalph:access-denied', denied) }
+  })
   test('page permission denial neither refreshes nor logs out an authenticated session', async () => {
     const fetchMock = vi.fn(async () => jsonResponse({ data: null, meta: {}, errors: [{ code: 'PERMISSION_DENIED', message: 'This page is unavailable.' }] }, 403))
     vi.stubGlobal('fetch', fetchMock)

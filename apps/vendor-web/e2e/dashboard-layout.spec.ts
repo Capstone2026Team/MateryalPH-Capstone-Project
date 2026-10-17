@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { adminInsights, vendorInsights } from './fixtures/dashboard-insights'
 
 async function mockDashboard(page: Page, portal: 'vendor' | 'admin', restricted = false) {
   const reads = { vendor: 0, admin: 0 }
@@ -24,6 +25,11 @@ async function mockDashboard(page: Page, portal: 'vendor' | 'admin', restricted 
       can_view_audit: !restricted,
     }
     else if (path.endsWith('/admin/dashboard/audit')) data = []
+    else if (path.endsWith('/auth/csrf')) data = { csrf_token: 'dashboard-review-csrf-token' }
+    else if (path.endsWith('/vendor/dashboard/insights')) data = vendorInsights()
+    else if (path.endsWith('/admin/dashboard/insights')) data = restricted
+      ? { generated_at: '2026-09-30T06:00:00Z', access: { marketplace: false, vendor_health: false }, definitions: {}, marketplace: null, marketplace_unavailable_reason: null, vendor_health: null }
+      : adminInsights()
     await route.fulfill({ json: { data, meta: { last_page: 1 }, errors: [] } })
   })
   return reads
@@ -43,17 +49,26 @@ test('Vendor dashboard switches sections without stacking reports', async ({ pag
   await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: /Refresh/ })).toHaveCount(0)
   await expect(page.getByRole('region', { name: 'Store workspace', exact: true })).toBeVisible()
+  await expect(page.getByRole('img', { name: /Orders confirmed per day/ })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Incoming order requests', exact: true })).toBeVisible()
   await capture(page, 'vendor-overview')
   const navigation = page.getByRole('tablist', { name: 'Workspace sections' })
   await navigation.getByRole('tab', { name: 'Sales & Revenue', exact: true }).click()
   await expect(page.getByRole('region', { name: 'Store workspace', exact: true })).toHaveCount(0)
-  await expect(page.getByRole('region', { name: 'Revenue overview', exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Sales and 7-day forecast', exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Frequently ordered together', exact: true })).toBeVisible()
   await expect(navigation.getByRole('tab', { name: 'Sales & Revenue', exact: true })).toHaveAttribute('aria-selected', 'true')
   await capture(page, 'vendor-sales')
+  for (const [tab, region, name] of [['Performance', 'Store health indicator', 'vendor-performance'], ['Action Items & Alerts', 'Action items', 'vendor-actions'], ['Traffic & Volume', 'Demand funnel', 'vendor-traffic'], ['Disputes & Quality', 'Issue types', 'vendor-quality']] as const) {
+    await navigation.getByRole('tab', { name: tab, exact: true }).click()
+    await expect(page.getByRole('region', { name: region, exact: true })).toBeVisible()
+    await capture(page, name)
+  }
+  await navigation.getByRole('tab', { name: 'Sales & Revenue', exact: true }).click()
   await page.clock.fastForward(30_000)
   await expect.poll(() => reads.vendor).toBe(2)
   await expect(page.getByRole('main').getByText('Updated Supply', { exact: true })).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Revenue overview', exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Sales and 7-day forecast', exact: true })).toBeVisible()
   await navigation.getByRole('tab', { name: 'Overview', exact: true }).focus()
   await page.keyboard.press('Enter')
   await expect(page.getByRole('region', { name: 'Store workspace', exact: true })).toBeVisible()
@@ -66,15 +81,22 @@ test('Admin dashboard uses current counts and isolated sections', async ({ page 
   await expect(page.getByRole('heading', { name: '6 business documents awaiting review' })).toBeVisible()
   await expect(page.getByRole('button', { name: /Refresh/ })).toHaveCount(0)
   await expect(page.getByRole('link', { name: 'Open Vendor Management', exact: true })).toHaveAttribute('href', '/vendor-verification')
+  await expect(page.getByRole('img', { name: /Gross and net GMV per day/ })).toBeVisible()
   await capture(page, 'admin-overview')
-  const navigation = page.getByRole('navigation', { name: 'Workspace sections' })
-  await navigation.getByRole('button', { name: 'Vendor Activity', exact: true }).click()
+  const navigation = page.getByRole('tablist', { name: 'Workspace sections' })
+  await navigation.getByRole('tab', { name: 'Vendor Activity', exact: true }).click()
   await expect(page.getByRole('region', { name: 'Review priorities', exact: true })).toHaveCount(0)
   await expect(page.getByRole('region', { name: 'Vendor verification', exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Vendor health indicator', exact: true })).toBeVisible()
+  await capture(page, 'admin-vendor-activity')
+  await navigation.getByRole('tab', { name: 'Transactions & Finance', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Categories ordered together', exact: true })).toBeVisible()
+  await capture(page, 'admin-finance')
+  await navigation.getByRole('tab', { name: 'Vendor Activity', exact: true }).click()
   await page.clock.fastForward(30_000)
   await expect.poll(() => reads.admin).toBe(2)
-  await expect(page.getByRole('region', { name: 'Vendor Activity', exact: true }).getByText('25', { exact: true })).toBeVisible()
-  await navigation.getByRole('button', { name: 'Platform Health', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Vendor Activity', exact: true }).getByText('25', { exact: true }).filter({ visible: true }).first()).toBeVisible()
+  await navigation.getByRole('tab', { name: 'Platform Health', exact: true }).click()
   await expect(page.getByText('No audit events recorded.')).toBeVisible()
   await capture(page, 'admin-health')
 })
@@ -85,7 +107,9 @@ test('Admin dashboard preserves restricted counts and audit visibility', async (
   await expect(page.getByRole('heading', { name: 'Reviews outside your role scope' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Open Vendor Management', exact: true })).toHaveCount(0)
   await expect(page.getByRole('link', { name: 'View audit log', exact: true })).toHaveCount(0)
-  await page.getByRole('navigation', { name: 'Workspace sections' }).getByRole('button', { name: 'Platform Health' }).click()
+  await page.getByRole('tablist', { name: 'Workspace sections' }).getByRole('tab', { name: 'Platform Health' }).click()
   await expect(page.getByRole('region', { name: 'Recent platform activity', exact: true })).toHaveCount(0)
+  await expect(page.getByText(/need aggregate analytics access/).filter({ visible: true })).toBeVisible()
+  await expect(page.getByRole('img', { name: /GMV/ })).toHaveCount(0)
   await capture(page, 'admin-restricted')
 })

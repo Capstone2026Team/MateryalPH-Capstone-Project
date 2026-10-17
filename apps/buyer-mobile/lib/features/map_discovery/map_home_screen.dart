@@ -1,3 +1,4 @@
+import '../../design_system/components/buyer_cart_button.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -310,12 +311,10 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
                 onPressed: () => widget.onUnavailable?.call('Notifications'),
               ),
 
-              IconButton(
-                tooltip: 'Cart',
+              BuyerCartButton(
                 onPressed:
                     widget.onOpenCart ??
                     () => widget.onUnavailable?.call('Cart'),
-                icon: const Icon(LucideIcons.shoppingCart),
               ),
             ],
           ),

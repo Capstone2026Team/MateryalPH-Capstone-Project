@@ -27,6 +27,18 @@ export interface FulfillmentAssignmentRequest {
      *
      */
     reason: string;
+    /**
+     *
+     */
+    vehicleIndex?: number;
+    /**
+     *
+     */
+    lockVersion?: number;
+    /**
+     * Atomically assign and record Out for Delivery; requires vehicle_index and lock_version.
+     */
+    dispatch?: boolean;
 }
 
 /**
@@ -50,6 +62,9 @@ export function FulfillmentAssignmentRequestFromJSONTyped(json: any, ignoreDiscr
 
         'userId': json['user_id'],
         'reason': json['reason'],
+        'vehicleIndex': json['vehicle_index'] == null ? undefined : json['vehicle_index'],
+        'lockVersion': json['lock_version'] == null ? undefined : json['lock_version'],
+        'dispatch': json['dispatch'] == null ? undefined : json['dispatch'],
     };
 }
 
@@ -66,6 +81,9 @@ export function FulfillmentAssignmentRequestToJSONTyped(value?: FulfillmentAssig
 
         'user_id': value['userId'],
         'reason': value['reason'],
+        'vehicle_index': value['vehicleIndex'],
+        'lock_version': value['lockVersion'],
+        'dispatch': value['dispatch'],
     };
 }
 

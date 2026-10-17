@@ -21,6 +21,7 @@ part 'catalog_listing_update.g.dart';
 /// * [otherLabel]
 /// * [materialCategoryId]
 /// * [tagIds]
+/// * [customTags] - Replaces the listing's own search tags. Letters
 /// * [brand]
 /// * [model]
 /// * [manufacturer]
@@ -56,6 +57,10 @@ abstract class CatalogListingUpdate implements Built<CatalogListingUpdate, Catal
 
   @BuiltValueField(wireName: r'tag_ids')
   BuiltList<String>? get tagIds;
+
+  /// Replaces the listing's own search tags. Letters
+  @BuiltValueField(wireName: r'custom_tags')
+  BuiltList<String>? get customTags;
 
   @BuiltValueField(wireName: r'brand')
   String? get brand;
@@ -156,6 +161,13 @@ class _$CatalogListingUpdateSerializer implements PrimitiveSerializer<CatalogLis
       yield r'tag_ids';
       yield serializers.serialize(
         object.tagIds,
+        specifiedType: const FullType(BuiltList, [FullType(String)]),
+      );
+    }
+    if (object.customTags != null) {
+      yield r'custom_tags';
+      yield serializers.serialize(
+        object.customTags,
         specifiedType: const FullType(BuiltList, [FullType(String)]),
       );
     }
@@ -294,6 +306,14 @@ class _$CatalogListingUpdateSerializer implements PrimitiveSerializer<CatalogLis
           ) as BuiltList<String>?;
           if (valueDes == null) continue;
           result.tagIds.replace(valueDes);
+          break;
+        case r'custom_tags':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(String)]),
+          ) as BuiltList<String>?;
+          if (valueDes == null) continue;
+          result.customTags.replace(valueDes);
           break;
         case r'brand':
           final valueDes = serializers.deserialize(

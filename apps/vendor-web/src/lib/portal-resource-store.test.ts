@@ -8,6 +8,56 @@ function deferred<T>() {
 }
 
 describe('portal display snapshots', () => {
+  test('a read action preserves the pending GET barrier before fetching its authoritative remaining count', async () => {
+    const store = new PortalResourceStore()
+    const old = deferred<number>()
+    void store.load('counts', () => old.promise)
+    store.publish('counts', 0)
+    const loader = vi.fn(async () => 0)
+    const synchronize = store.synchronize('counts', loader)
+    await Promise.resolve()
+    expect(loader).not.toHaveBeenCalled()
+    old.resolve(2)
+    await synchronize
+    expect(loader).toHaveBeenCalledTimes(1)
+    expect(store.read('counts').data).toBe(0)
+  })
+  test('keeps mounted badges synchronized while many navigation/filter snapshots accumulate', async () => {
+    const store = new PortalResourceStore()
+    const release = store.retain('vendor-navigation-updates')
+    store.publish('vendor-navigation-updates', { '/messages': 3 })
+    for (let i = 0; i < 25; i++) await store.load(`filtered-orders-${i}`, async () => i)
+    expect(store.read('vendor-navigation-updates').data).toEqual({ '/messages': 3 })
+    release()
+    await store.load('another-page', async () => 1)
+    expect(store.read('vendor-navigation-updates').data).toBeNull()
+  })
+  test('coalesces events during a GET and synchronizes once after its stale response', async () => {
+    const store = new PortalResourceStore()
+    const initial = deferred<number>()
+    const load = store.load('counts', () => initial.promise)
+    const loader = vi.fn(async () => 4)
+    const next = store.synchronize('counts', loader)
+    expect(store.synchronize('counts', loader)).toBe(next)
+    initial.resolve(1)
+    await load
+    await next
+    expect(loader).toHaveBeenCalledTimes(1)
+    expect(store.read('counts').data).toBe(4)
+  })
+
+  test('does not run a queued invalidation after the session is cleared', async () => {
+    const store = new PortalResourceStore()
+    const initial = deferred<number>()
+    void store.load('counts', () => initial.promise)
+    const loader = vi.fn(async () => 4)
+    const next = store.synchronize('counts', loader)
+    store.clear()
+    initial.resolve(1)
+    await next
+    expect(loader).not.toHaveBeenCalled()
+    expect(store.read('counts').data).toBeNull()
+  })
   test('shares concurrent loads and retains data during navigation revalidation', async () => {
     const store = new PortalResourceStore()
     const first = deferred<string>()

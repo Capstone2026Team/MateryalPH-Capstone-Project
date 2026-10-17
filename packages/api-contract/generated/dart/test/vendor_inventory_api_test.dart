@@ -28,14 +28,14 @@ void main() {
 
     // Append-only movement history with actor, reason and before/after quantities, newest first.
     //
-    //Future<InventoryMovementListEnvelope> listVendorInventoryMovements(String variantId, { int page }) async
+    //Future<InventoryMovementListEnvelope> listVendorInventoryMovements(String variantId, { int page, Date from, Date to }) async
     test('test listVendorInventoryMovements', () async {
       // TODO
     });
 
     // Every immutable price version of the variant, newest first, including retired ordinary and volume-tier versions. Earlier versions are never edited in place (MAT-03).
     //
-    //Future<PriceHistoryEnvelope> listVendorPriceHistory(String variantId) async
+    //Future<PriceHistoryEnvelope> listVendorPriceHistory(String variantId, { Date from, Date to }) async
     test('test listVendorPriceHistory', () async {
       // TODO
     });

@@ -1,5 +1,6 @@
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import '../../core/api_guard.dart';
+import '../../design_system/components/peso_amount_field.dart';
 import '../map_discovery/discovery_repository.dart';
 
 typedef ProjectData = Map<String, Object?>;
@@ -11,6 +12,13 @@ final class ProjectsRepository {
     required Future<void> Function() onSessionExpired,
   }) : _client = client,
        _guard = ApiGuard(onSessionExpired);
+
+  ProjectsRepository.withGuard({
+    required api.MateryalphApiClient client,
+    required ApiGuard guard,
+  }) : _client = client,
+       _guard = guard;
+
   final api.MateryalphApiClient _client;
   final ApiGuard _guard;
   api.BuyerProjectsApi get _api => _client.getBuyerProjectsApi();
@@ -70,7 +78,6 @@ final class ProjectsRepository {
     ProjectData input,
     String key, {
     String? id,
-    bool newVersion = false,
   }) => _guard(() async {
     final body = _guard.required(
       _client.serializers.deserializeWith(
@@ -82,12 +89,6 @@ final class ProjectsRepository {
       id == null
           ? (await _api.createWorkPackage(
               projectId: projectId,
-              idempotencyKey: key,
-              workPackageInput: body,
-            )).data?.data
-          : newVersion
-          ? (await _api.createWorkPackageVersion(
-              packageId: id,
               idempotencyKey: key,
               workPackageInput: body,
             )).data?.data
@@ -105,6 +106,17 @@ final class ProjectsRepository {
         idempotencyKey: key,
         projectVersionRequest: api.ProjectVersionRequest(
           (b) => b..lockVersion = version,
+        ),
+      )).data?.data,
+    ),
+  );
+  Future<ProjectData> reactivate(String id, int lock, String key) => _guard(
+    () async => _json(
+      (await _api.reactivateWorkPackage(
+        packageId: id,
+        idempotencyKey: key,
+        projectVersionRequest: api.ProjectVersionRequest(
+          (b) => b..lockVersion = lock,
         ),
       )).data?.data,
     ),
@@ -131,11 +143,87 @@ final class ProjectsRepository {
           );
         }
       });
-  Future<ProjectData> estimates(String id, {int page = 1}) => _guard(
+
+  /// Vendor results; sorting and filters run on the server so pages agree.
+  Future<ProjectData> estimates(
+    String id, {
+    int page = 1,
+    String sort = 'BEST_MATCH',
+    bool favoritesOnly = false,
+    bool completeOnly = false,
+    bool withinBudget = false,
+  }) => _guard(
     () async => _json(
-      (await _api.getProjectEstimates(packageId: id, page: page)).data?.data,
+      (await _api.getProjectEstimates(
+        packageId: id,
+        page: page,
+        sort: sort,
+        favoritesOnly: favoritesOnly ? true : null,
+        completeOnly: completeOnly ? true : null,
+        withinBudget: withinBudget ? true : null,
+      )).data?.data,
     ),
   );
+
+  /// Similar Item-Based offers for a missing Work Package line.
+  Future<ProjectData> alternatives(
+    String packageId,
+    String lineId, {
+    int page = 1,
+    String? excludeVendorId,
+  }) => _guard(
+    () async => _json(
+      (await _api.listWorkPackageLineAlternatives(
+        packageId: packageId,
+        lineId: lineId,
+        page: page,
+        excludeVendorId: excludeVendorId,
+      )).data?.data,
+    ),
+  );
+
+  /// Adds a separate Item-Based purchase for a missing line to the cart,
+  /// tagged with the line it covers (owner decision 2026-10-12).
+  Future<void> addMissingToCart({
+    required ProjectData offer,
+    required String quantity,
+    required String workPackageLineId,
+    required String? locationId,
+    required int radiusKm,
+    required String idempotencyKey,
+  }) => _guard(() async {
+    await _client.getBuyerCartApi().addBuyerCartItem(
+      idempotencyKey: idempotencyKey,
+      cartItemCreate: api.CartItemCreate(
+        (b) => b
+          ..listingVariantId = projectText(offer['variant_id'])
+          ..expectedPriceVersionId = projectText(offer['price_version_id'])
+          ..quantity = quantity
+          ..locationId = locationId
+          ..radiusKm = radiusKm
+          ..workPackageLineId = workPackageLineId,
+      ),
+    );
+  });
+
+  /// Cart lines already bought for Work Package lines, keyed by that line.
+  Future<Map<String, List<ProjectData>>> taggedCartLines() => _guard(() async {
+    final cart = _json(
+      (await _client.getBuyerCartApi().getBuyerCart()).data?.data,
+    );
+    final tagged = <String, List<ProjectData>>{};
+    for (final group in projectRows(cart['groups'])) {
+      final vendor = projectObject(group['vendor']);
+      for (final line in projectRows(group['lines'])) {
+        final tag = line['work_package_line_id'];
+        // Each separate purchase names the store that supplies it.
+        if (tag is String) {
+          (tagged[tag] ??= []).add({...line, 'store_name': vendor['name']});
+        }
+      }
+    }
+    return tagged;
+  });
   Future<ProjectData> compile(String id, int version, int radius) => _guard(
     () async => _json(
       (await _api.compileProjectEstimates(
@@ -177,6 +265,27 @@ final class ProjectsRepository {
         )
         .id;
   });
+
+  /// The candidate re-priced with the Buyer's specification choices
+  /// (line id → option id); the server stores nothing.
+  Future<ProjectData> selectionPreview(
+    String id,
+    String candidate,
+    Map<String, String> selections,
+  ) => _guard(
+    () async => _json(
+      (await _api.previewProjectSpecificationSelection(
+        packageId: id,
+        candidateId: candidate,
+        projectSelectionPreview: _guard.required(
+          _client.serializers.deserializeWith(
+            api.ProjectSelectionPreview.serializer,
+            {'selections': specificationSelections(selections)},
+          ),
+        ),
+      )).data?.data,
+    ),
+  );
   Future<ProjectData> route(String id, String candidate) => _guard(
     () async => _json(
       (await _api.getProjectCandidateRoute(
@@ -196,6 +305,22 @@ final class ProjectsRepository {
     () async =>
         _json((await _api.searchProjectMaterials(query: query)).data?.data),
   );
+
+  /// Advisory, materials-only estimate; the server stores nothing.
+  Future<ProjectData> estimateBudget(String projectId, ProjectData input) =>
+      _guard(
+        () async => _json(
+          (await _api.estimateWorkPackageBudget(
+            projectId: projectId,
+            workPackageBudgetEstimateRequest: _guard.required(
+              _client.serializers.deserializeWith(
+                api.WorkPackageBudgetEstimateRequest.serializer,
+                input,
+              ),
+            ),
+          )).data?.data,
+        ),
+      );
   Future<ProjectData> preferences() => _guard(
     () async => _json((await _api.getProjectRankingPreferences()).data?.data),
   );
@@ -240,6 +365,11 @@ final class ProjectsRepository {
       );
 }
 
+/// Request rows for chosen specification options.
+List<ProjectData> specificationSelections(Map<String, String> selections) => [
+  for (final e in selections.entries) {'line_id': e.key, 'option_id': e.value},
+];
+
 ProjectData projectObject(Object? value) =>
     value is Map ? Map<String, Object?>.from(value) : <String, Object?>{};
 List<ProjectData> projectRows(Object? value) =>
@@ -249,16 +379,16 @@ int projectInt(Object? value) =>
     value is num ? value.toInt() : int.tryParse(projectText(value)) ?? 0;
 String projectMoney(Object? value) {
   final amount = projectInt(value);
-  return '${amount < 0 ? '-' : ''}₱${(amount.abs() ~/ 100)}.${(amount.abs() % 100).toString().padLeft(2, '0')}';
+  return '${amount < 0 ? '-' : ''}₱${groupPesoDigits('${amount.abs() ~/ 100}')}.${(amount.abs() % 100).toString().padLeft(2, '0')}';
 }
 
 int? parseProjectMoney(String input) {
   final match = RegExp(
-    r'^([0-9]{1,9})(?:\.([0-9]{1,2}))?$',
+    r'^([0-9]{1,9}|[0-9]{1,3}(?:,[0-9]{3}){1,2})(?:\.([0-9]{1,2}))?$',
   ).firstMatch(input.trim());
   return match == null
       ? null
-      : int.parse(match[1]!) * 100 +
+      : int.parse(match[1]!.replaceAll(',', '')) * 100 +
             int.parse((match[2] ?? '').padRight(2, '0'));
 }
 

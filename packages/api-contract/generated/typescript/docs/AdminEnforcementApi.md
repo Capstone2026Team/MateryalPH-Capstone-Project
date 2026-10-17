@@ -415,7 +415,7 @@ example().catch(console.error);
 
 ## listEnforcementActions
 
-> EnforcementListEnvelope listEnforcementActions(state, subjectType, action, source, subjectId, page)
+> EnforcementListEnvelope listEnforcementActions(state, subjectType, action, source, subjectId, page, from, to)
 
 
 
@@ -453,6 +453,10 @@ async function example() {
     subjectId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
     // number (optional)
     page: 56,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Action created_at. (optional)
+    from: 2013-10-20,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Action created_at. (optional)
+    to: 2013-10-20,
   } satisfies ListEnforcementActionsRequest;
 
   try {
@@ -478,6 +482,8 @@ example().catch(console.error);
 | **source** | `DISPUTE_REFERRAL`, `DIRECT` |  | [Optional] [Defaults to `undefined`] [Enum: DISPUTE_REFERRAL, DIRECT] |
 | **subjectId** | `string` |  | [Optional] [Defaults to `undefined`] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **from** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Action created_at. | [Optional] [Defaults to `undefined`] |
+| **to** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Action created_at. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 

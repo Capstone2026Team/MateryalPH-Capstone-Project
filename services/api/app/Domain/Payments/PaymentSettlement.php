@@ -153,9 +153,13 @@ final class PaymentSettlement
             DB::table('fee_payment_allocations')->insertOrIgnore(['id' => (string) Str::uuid7(), 'fee_statement_id' => $statement->id, 'payment_id' => $payment->id, 'amount_centavos' => $amount,
                 'statement_outstanding_before_centavos' => $outstanding, 'payment_unallocated_before_centavos' => (int) $payment->principal_centavos, 'allocated_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
             $paid = (int) $statement->paid_centavos + $amount;
-            $balance = (int) $statement->charges_centavos - (int) $statement->credits_centavos - $paid;
+            $balance = max(0, (int) $statement->charges_centavos - (int) $statement->credits_centavos - $paid);
             DB::table('fee_statements')->where('id', $statement->id)->update(['paid_centavos' => $paid, 'balance_centavos' => $balance, 'outstanding_centavos' => $balance,
                 'state' => $balance === 0 ? 'PAID' : 'PARTIALLY_PAID', 'lock_version' => (int) $statement->lock_version + 1, 'updated_at' => now()]);
+            if ($balance === 0) {
+                DB::table('finance_review_items')->where('kind', 'STATEMENT_OVERDUE')->where('source_id', $statement->id)->where('state', 'OPEN')
+                    ->update(['state' => 'RESOLVED', 'resolution' => 'Settled by verified commission payment.', 'resolved_at' => now(), 'updated_at' => now()]);
+            }
             $source = ['FEE_PAYMENT', (string) $payment->id];
             $this->ledger->post(FinancialLedgerService::PLATFORM_FEE, 'FEE_PAYMENT', 'PLATFORM_FEE:PAYMENT:'.$payment->id, [
                 FinancialLedgerService::debit('PROVIDER_COLLECTION_CONTROL', $amount, ...$source), FinancialLedgerService::credit('FEE_RECEIVABLE', $amount, ...$source),

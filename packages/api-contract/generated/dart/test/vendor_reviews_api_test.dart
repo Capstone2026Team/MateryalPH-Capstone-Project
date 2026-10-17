@@ -21,6 +21,13 @@ void main() {
       // TODO
     });
 
+    // reviews.view. Read one review belonging to the current store with its privacy-safe author, immutable purchased-product snapshot, rating, comment and authorized media links. Received reviews must still satisfy blind reveal, dispute withholding, moderation and score-exclusion visibility. The store may also read its own Buyer ratings. Foreign and unavailable reviews return 404.
+    //
+    //Future<VendorReviewEnvelope> getVendorReview(String reviewId) async
+    test('test getVendorReview', () async {
+      // TODO
+    });
+
     // Photo of a visible review of your store behind a signed link.
     //
     //Future<Uint8List> getVendorReviewPhoto(String reviewId, String mediaId, int expires, String signature) async
@@ -28,9 +35,9 @@ void main() {
       // TODO
     });
 
-    // reviews.view (Owner, Store Manager, Store Staff, Customer Service). Visible received Vendor ratings or Product Reviews, or your store's Buyer ratings. There is no delete operation.
+    // reviews.view (Owner, Store Manager, Store Staff, Customer Service). Visible received Vendor ratings or Product Reviews, or your store's Buyer ratings. Optional listing_id restricts PRODUCT reviews to a listing owned by the current store. PRODUCT results include a rating summary of every visible review matching the product and date filters, calculated before pagination. There is no delete operation.
     //
-    //Future<VendorReviewListEnvelope> listVendorReviews({ String type, int page }) async
+    //Future<VendorReviewListEnvelope> listVendorReviews({ String type, String listingId, int page, Date from, Date to }) async
     test('test listVendorReviews', () async {
       // TODO
     });

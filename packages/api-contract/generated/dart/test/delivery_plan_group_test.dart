@@ -32,5 +32,11 @@ void main() {
       // TODO
     });
 
+    // Configured vehicles permitted for a recorded Owner or Store Manager manual load review, including an automatic dimensional-fit rejection. Availability, material compatibility, known payload, route range and access still apply. Trip counts cover known payload or mixer volume only and do not prove cargo fit. Empty outside MANUAL_REVIEW_REQUIRED; automatic candidates remain separate.
+    // BuiltList<DeliveryPlanVehicle> manualReviewVehicles
+    test('to test the property `manualReviewVehicles`', () async {
+      // TODO
+    });
+
   });
 }

@@ -21,6 +21,9 @@ part 'fulfillment_proof.g.dart';
 /// * [photoPath]
 /// * [signaturePath]
 /// * [vehicle]
+/// * [note]
+/// * [recordedBy]
+/// * [additionalPhotoPaths]
 @BuiltValue()
 abstract class FulfillmentProof implements Built<FulfillmentProof, FulfillmentProofBuilder> {
   @BuiltValueField(wireName: r'milestone')
@@ -48,6 +51,15 @@ abstract class FulfillmentProof implements Built<FulfillmentProof, FulfillmentPr
 
   @BuiltValueField(wireName: r'vehicle')
   BuiltMap<String, JsonObject?>? get vehicle;
+
+  @BuiltValueField(wireName: r'note')
+  String? get note;
+
+  @BuiltValueField(wireName: r'recorded_by')
+  String? get recordedBy;
+
+  @BuiltValueField(wireName: r'additional_photo_paths')
+  BuiltList<String>? get additionalPhotoPaths;
 
   FulfillmentProof._();
 
@@ -122,6 +134,27 @@ class _$FulfillmentProofSerializer implements PrimitiveSerializer<FulfillmentPro
       yield serializers.serialize(
         object.vehicle,
         specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+      );
+    }
+    if (object.note != null) {
+      yield r'note';
+      yield serializers.serialize(
+        object.note,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.recordedBy != null) {
+      yield r'recorded_by';
+      yield serializers.serialize(
+        object.recordedBy,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.additionalPhotoPaths != null) {
+      yield r'additional_photo_paths';
+      yield serializers.serialize(
+        object.additionalPhotoPaths,
+        specifiedType: const FullType(BuiltList, [FullType(String)]),
       );
     }
   }
@@ -208,6 +241,30 @@ class _$FulfillmentProofSerializer implements PrimitiveSerializer<FulfillmentPro
           ) as BuiltMap<String, JsonObject?>?;
           if (valueDes == null) continue;
           result.vehicle.replace(valueDes);
+          break;
+        case r'note':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.note = valueDes;
+          break;
+        case r'recorded_by':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.recordedBy = valueDes;
+          break;
+        case r'additional_photo_paths':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(String)]),
+          ) as BuiltList<String>?;
+          if (valueDes == null) continue;
+          result.additionalPhotoPaths.replace(valueDes);
           break;
         default:
           unhandled.add(key);

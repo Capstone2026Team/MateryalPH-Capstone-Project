@@ -1097,7 +1097,7 @@ This endpoint does not need any parameter.
 
 ## listVendorDisputes
 
-> DisputeListEnvelope listVendorDisputes(group, q, page)
+> DisputeListEnvelope listVendorDisputes(group, q, page, from, to)
 
 
 
@@ -1129,6 +1129,10 @@ async function example() {
     q: q_example,
     // number (optional)
     page: 56,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Case created_at (filing). Group counts retain their existing unrestricted scope. (optional)
+    from: 2013-10-20,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Case created_at (filing). Group counts retain their existing unrestricted scope. (optional)
+    to: 2013-10-20,
   } satisfies ListVendorDisputesRequest;
 
   try {
@@ -1151,6 +1155,8 @@ example().catch(console.error);
 | **group** | `ALL`, `ACTIVE`, `NEEDS_RESPONSE`, `ADMIN_REVIEW`, `DECIDED`, `CONCLUDED` |  | [Optional] [Defaults to `undefined`] [Enum: ALL, ACTIVE, NEEDS_RESPONSE, ADMIN_REVIEW, DECIDED, CONCLUDED] |
 | **q** | `string` |  | [Optional] [Defaults to `undefined`] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **from** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Case created_at (filing). Group counts retain their existing unrestricted scope. | [Optional] [Defaults to `undefined`] |
+| **to** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Case created_at (filing). Group counts retain their existing unrestricted scope. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 

@@ -8,6 +8,7 @@ import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
 import 'package:materyalph_api_client/src/api_util.dart';
+import 'package:materyalph_api_client/src/model/date.dart';
 import 'package:materyalph_api_client/src/model/privacy_request_create_request.dart';
 import 'package:materyalph_api_client/src/model/privacy_request_detail_envelope.dart';
 import 'package:materyalph_api_client/src/model/privacy_request_list_envelope.dart';
@@ -116,6 +117,8 @@ class AdminPrivacyRequestsApi {
   /// * [requestType]
   /// * [handler]
   /// * [page]
+  /// * [from] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Request received_at.
+  /// * [to] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Request received_at.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -130,6 +133,8 @@ class AdminPrivacyRequestsApi {
     String? requestType,
     String? handler,
     int? page,
+    Date? from,
+    Date? to,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -167,6 +172,8 @@ class AdminPrivacyRequestsApi {
       if (requestType != null) r'request_type': encodeQueryParameter(_serializers, requestType, const FullType(String)),
       if (handler != null) r'handler': encodeQueryParameter(_serializers, handler, const FullType(String)),
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+      if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
     };
 
     final _response = await _dio.request<Object>(

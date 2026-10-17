@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { FulfillmentConversationPage } from '@materyalph/api-client-ts'
-import { Button, FormDialog, formatManilaDateTime, orderStateLabel } from '@materyalph/web-ui'
+import { Button, CountBadge, FormDialog, useNavigationRefresh, formatManilaDateTime, orderStateLabel } from '@materyalph/web-ui'
 import { ArrowLeft } from 'lucide-react'
 import { chatApi, readableChatError } from '../lib/messaging-api'
 import { ErrorState, LoadingState } from './PhaseThreeVendorPages'
@@ -12,17 +12,19 @@ export function FulfillmentConversationDialog({ inquiryId, conversationId, onClo
 }) {
   const [selected, setSelected] = useState(conversationId ?? null)
   const [page, setPage] = useState(1)
-  const [result, setResult] = useState<FulfillmentConversationPage | null>(null)
+  const [snapshot, setSnapshot] = useState<{ inquiryId: string; value: FulfillmentConversationPage } | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
+  const result = snapshot?.inquiryId === inquiryId ? snapshot?.value ?? null : null
+  useNavigationRefresh(() => { if (inquiryId && !selected) setAttempt(value => value + 1) })
 
   useEffect(() => {
     if (!inquiryId || selected) return
     let active = true
     setLoading(true); setError(null)
     chatApi.fulfillmentConversations(inquiryId, page)
-      .then(value => { if (active) setResult(value) })
+      .then(value => { if (active) setSnapshot({ inquiryId, value }) })
       .catch(async cause => { const message = await readableChatError(cause); if (active) setError(message) })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
@@ -34,7 +36,7 @@ export function FulfillmentConversationDialog({ inquiryId, conversationId, onClo
       {inquiryId && <div className="shrink-0 border-b border-border-default px-4"><Button variant="quiet" onClick={() => setSelected(null)}><ArrowLeft size={16} aria-hidden="true" />Back to conversations</Button></div>}
       <ConversationThread key={selected} selected={selected} role="FULFILLMENT" />
     </> : <div className="min-h-0 overflow-y-auto p-5">
-      {loading ? <LoadingState label="Loading fulfillment conversations…" /> : error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} /> : <>
+      {loading && result?.page !== page ? <LoadingState label="Loading fulfillment conversations…" /> : error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} /> : <>
         {result?.items.length === 0 && <p className="py-8 text-sm text-text-secondary">No fulfillment conversations yet. They open when an order is ready for pickup or out for delivery.</p>}
         <ul aria-label="Buyer fulfillment conversations" className="divide-y divide-border-default">
           {result?.items.map(row => <li key={row.conversationId}>
@@ -42,7 +44,7 @@ export function FulfillmentConversationDialog({ inquiryId, conversationId, onClo
               <span className="grid gap-1"><strong className="text-sm text-text-strong">{row.orderReference}</strong>
                 <span className="text-sm text-text-secondary">{orderStateLabel(row.orderState)} · {row.fulfillmentMethod === 'PICKUP' ? 'Self-Pickup' : 'Site Delivery'}</span>
                 <span className="text-xs text-text-secondary">{formatManilaDateTime(row.updatedAt)}</span></span>
-              <span className="grid gap-1 text-right text-xs"><span>{row.readOnly ? 'Read-only history' : 'Active conversation'}</span>{row.unreadCount > 0 && <strong className="text-action-primary">{row.unreadCount} unread</strong>}</span>
+              <span className="grid justify-items-end gap-1 text-right text-xs"><span>{row.readOnly ? 'Read-only history' : 'Active conversation'}</span><CountBadge count={row.unreadCount} />{row.unreadCount > 0 && <span className="sr-only">{row.unreadCount} unread fulfillment messages</span>}</span>
             </button>
           </li>)}
         </ul>

@@ -13,6 +13,14 @@
  */
 
 import { mapValues, parseDate, parseDateTime, serializeDate, serializeDateTime } from '../runtime';
+import type { FulfillmentArrangementVehicle } from './FulfillmentArrangementVehicle';
+import {
+    FulfillmentArrangementVehicleFromJSON,
+    FulfillmentArrangementVehicleFromJSONTyped,
+    FulfillmentArrangementVehicleToJSON,
+    FulfillmentArrangementVehicleToJSONTyped,
+} from './FulfillmentArrangementVehicle';
+
 /**
  *
  * @export
@@ -35,6 +43,18 @@ export interface FulfillmentAssignment {
      *
      */
     userId?: number;
+    /**
+     *
+     */
+    acknowledgedAt?: Date;
+    /**
+     *
+     */
+    endedAt?: Date;
+    /**
+     *
+     */
+    vehicle?: FulfillmentArrangementVehicle | null;
 }
 
 
@@ -72,6 +92,9 @@ export function FulfillmentAssignmentFromJSONTyped(json: any, ignoreDiscriminato
         'role': json['role'],
         'assignedAt': json['assigned_at'] == null ? undefined : (parseDateTime(json['assigned_at'])),
         'userId': json['user_id'] == null ? undefined : json['user_id'],
+        'acknowledgedAt': json['acknowledged_at'] == null ? undefined : (parseDateTime(json['acknowledged_at'])),
+        'endedAt': json['ended_at'] == null ? undefined : (parseDateTime(json['ended_at'])),
+        'vehicle': json['vehicle'] === undefined ? undefined : json['vehicle'] === null ? null : FulfillmentArrangementVehicleFromJSON(json['vehicle']),
     };
 }
 
@@ -90,6 +113,9 @@ export function FulfillmentAssignmentToJSONTyped(value?: FulfillmentAssignment |
         'role': value['role'],
         'assigned_at': value['assignedAt'] == null ? value['assignedAt'] : serializeDateTime(value['assignedAt']),
         'user_id': value['userId'],
+        'acknowledged_at': value['acknowledgedAt'] == null ? value['acknowledgedAt'] : serializeDateTime(value['acknowledgedAt']),
+        'ended_at': value['endedAt'] == null ? value['endedAt'] : serializeDateTime(value['endedAt']),
+        'vehicle': FulfillmentArrangementVehicleToJSON(value['vehicle']),
     };
 }
 

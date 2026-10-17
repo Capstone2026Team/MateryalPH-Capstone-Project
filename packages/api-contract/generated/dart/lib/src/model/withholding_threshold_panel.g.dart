@@ -188,6 +188,8 @@ class _$WithholdingThresholdPanel extends WithholdingThresholdPanel {
   @override
   final int localGrossCentavos;
   @override
+  final WithholdingThresholdCalculation? calculationBreakdown;
+  @override
   final int externalDeclaredCentavos;
   @override
   final int externalOverlapCentavos;
@@ -229,6 +231,7 @@ class _$WithholdingThresholdPanel extends WithholdingThresholdPanel {
       required this.cumulativeGrossCentavos,
       required this.remainingAllowanceCentavos,
       required this.localGrossCentavos,
+      this.calculationBreakdown,
       required this.externalDeclaredCentavos,
       required this.externalOverlapCentavos,
       required this.externalOverlapState,
@@ -265,6 +268,7 @@ class _$WithholdingThresholdPanel extends WithholdingThresholdPanel {
         cumulativeGrossCentavos == other.cumulativeGrossCentavos &&
         remainingAllowanceCentavos == other.remainingAllowanceCentavos &&
         localGrossCentavos == other.localGrossCentavos &&
+        calculationBreakdown == other.calculationBreakdown &&
         externalDeclaredCentavos == other.externalDeclaredCentavos &&
         externalOverlapCentavos == other.externalOverlapCentavos &&
         externalOverlapState == other.externalOverlapState &&
@@ -292,6 +296,7 @@ class _$WithholdingThresholdPanel extends WithholdingThresholdPanel {
     _$hash = $jc(_$hash, cumulativeGrossCentavos.hashCode);
     _$hash = $jc(_$hash, remainingAllowanceCentavos.hashCode);
     _$hash = $jc(_$hash, localGrossCentavos.hashCode);
+    _$hash = $jc(_$hash, calculationBreakdown.hashCode);
     _$hash = $jc(_$hash, externalDeclaredCentavos.hashCode);
     _$hash = $jc(_$hash, externalOverlapCentavos.hashCode);
     _$hash = $jc(_$hash, externalOverlapState.hashCode);
@@ -321,6 +326,7 @@ class _$WithholdingThresholdPanel extends WithholdingThresholdPanel {
           ..add('cumulativeGrossCentavos', cumulativeGrossCentavos)
           ..add('remainingAllowanceCentavos', remainingAllowanceCentavos)
           ..add('localGrossCentavos', localGrossCentavos)
+          ..add('calculationBreakdown', calculationBreakdown)
           ..add('externalDeclaredCentavos', externalDeclaredCentavos)
           ..add('externalOverlapCentavos', externalOverlapCentavos)
           ..add('externalOverlapState', externalOverlapState)
@@ -379,6 +385,13 @@ class WithholdingThresholdPanelBuilder
   int? get localGrossCentavos => _$this._localGrossCentavos;
   set localGrossCentavos(int? localGrossCentavos) =>
       _$this._localGrossCentavos = localGrossCentavos;
+
+  WithholdingThresholdCalculationBuilder? _calculationBreakdown;
+  WithholdingThresholdCalculationBuilder get calculationBreakdown =>
+      _$this._calculationBreakdown ??= WithholdingThresholdCalculationBuilder();
+  set calculationBreakdown(
+          WithholdingThresholdCalculationBuilder? calculationBreakdown) =>
+      _$this._calculationBreakdown = calculationBreakdown;
 
   int? _externalDeclaredCentavos;
   int? get externalDeclaredCentavos => _$this._externalDeclaredCentavos;
@@ -464,6 +477,7 @@ class WithholdingThresholdPanelBuilder
       _cumulativeGrossCentavos = $v.cumulativeGrossCentavos;
       _remainingAllowanceCentavos = $v.remainingAllowanceCentavos;
       _localGrossCentavos = $v.localGrossCentavos;
+      _calculationBreakdown = $v.calculationBreakdown?.toBuilder();
       _externalDeclaredCentavos = $v.externalDeclaredCentavos;
       _externalOverlapCentavos = $v.externalOverlapCentavos;
       _externalOverlapState = $v.externalOverlapState;
@@ -525,6 +539,7 @@ class WithholdingThresholdPanelBuilder
                 localGrossCentavos,
                 r'WithholdingThresholdPanel',
                 'localGrossCentavos'),
+            calculationBreakdown: _calculationBreakdown?.build(),
             externalDeclaredCentavos: BuiltValueNullFieldError.checkNotNull(
                 externalDeclaredCentavos,
                 r'WithholdingThresholdPanel',
@@ -562,6 +577,9 @@ class WithholdingThresholdPanelBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'calculationBreakdown';
+        _calculationBreakdown?.build();
+
         _$failedField = 'events';
         events.build();
       } catch (e) {

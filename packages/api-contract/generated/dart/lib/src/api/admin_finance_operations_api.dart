@@ -26,7 +26,7 @@ class AdminFinanceOperationsApi {
   const AdminFinanceOperationsApi(this._dio, this._serializers);
 
   /// getFinanceKpis
-  /// finance.view. Gross and net GMV beside assessed CWT, commission, platform revenue, collected cash and receivables (DEMO).
+  /// finance.view. Recorded commission earnings, approved credits, verified allocated collections, confirmed fee refunds, pending and overdue commissions, and net platform earnings after fee VAT and platform processing costs. Earnings/credits, collections and refunds use their event dates; current debt uses statement issue dates. GMV and CWT stay separate. Monthly activity is bounded to the most recent 120 recorded periods. TEST origins are retained; this endpoint does not enable live payments.
   ///
   /// Parameters:
   /// * [from]
@@ -128,6 +128,8 @@ class AdminFinanceOperationsApi {
   /// * [calculationState]
   /// * [deductionEvidenceState]
   /// * [page]
+  /// * [from] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Assessment created_at.
+  /// * [to] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Assessment created_at.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -142,6 +144,8 @@ class AdminFinanceOperationsApi {
     String? calculationState,
     String? deductionEvidenceState,
     int? page,
+    Date? from,
+    Date? to,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -179,6 +183,8 @@ class AdminFinanceOperationsApi {
       if (calculationState != null) r'calculation_state': encodeQueryParameter(_serializers, calculationState, const FullType(String)),
       if (deductionEvidenceState != null) r'deduction_evidence_state': encodeQueryParameter(_serializers, deductionEvidenceState, const FullType(String)),
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+      if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
     };
 
     final _response = await _dio.request<Object>(
@@ -227,6 +233,8 @@ class AdminFinanceOperationsApi {
   /// Parameters:
   /// * [state]
   /// * [page]
+  /// * [from] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Adjustment created_at.
+  /// * [to] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Adjustment created_at.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -239,6 +247,8 @@ class AdminFinanceOperationsApi {
   Future<Response<TaxAdjustmentListEnvelope>> listTaxAdjustments({
     String? state,
     int? page,
+    Date? from,
+    Date? to,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -274,6 +284,8 @@ class AdminFinanceOperationsApi {
     final _queryParameters = <String, dynamic>{
       if (state != null) r'state': encodeQueryParameter(_serializers, state, const FullType(String)),
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+      if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
     };
 
     final _response = await _dio.request<Object>(
@@ -322,6 +334,8 @@ class AdminFinanceOperationsApi {
   /// Parameters:
   /// * [reviewState]
   /// * [page]
+  /// * [from] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Evidence created_at.
+  /// * [to] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Evidence created_at.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -334,6 +348,8 @@ class AdminFinanceOperationsApi {
   Future<Response<TaxEvidenceQueueEnvelope>> listTaxEvidenceQueue({
     String? reviewState,
     int? page,
+    Date? from,
+    Date? to,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -369,6 +385,8 @@ class AdminFinanceOperationsApi {
     final _queryParameters = <String, dynamic>{
       if (reviewState != null) r'review_state': encodeQueryParameter(_serializers, reviewState, const FullType(String)),
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+      if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
     };
 
     final _response = await _dio.request<Object>(

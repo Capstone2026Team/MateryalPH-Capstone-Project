@@ -123,6 +123,31 @@ import {
     FulfillmentConversationPageResponseFromJSON,
     FulfillmentConversationPageResponseToJSON,
 } from '../models/FulfillmentConversationPageResponse';
+import {
+    type SiteInspectionCreate,
+    SiteInspectionCreateFromJSON,
+    SiteInspectionCreateToJSON,
+} from '../models/SiteInspectionCreate';
+import {
+    type SiteInspectionCreatedResponse,
+    SiteInspectionCreatedResponseFromJSON,
+    SiteInspectionCreatedResponseToJSON,
+} from '../models/SiteInspectionCreatedResponse';
+import {
+    type SiteInspectionDecision,
+    SiteInspectionDecisionFromJSON,
+    SiteInspectionDecisionToJSON,
+} from '../models/SiteInspectionDecision';
+import {
+    type SiteInspectionListResponse,
+    SiteInspectionListResponseFromJSON,
+    SiteInspectionListResponseToJSON,
+} from '../models/SiteInspectionListResponse';
+import {
+    type SiteInspectionVersion,
+    SiteInspectionVersionFromJSON,
+    SiteInspectionVersionToJSON,
+} from '../models/SiteInspectionVersion';
 
 export interface ArchiveChatConversationRequest {
     /**
@@ -144,6 +169,25 @@ export interface AuthorizeChatChannelRequest {
      *
      */
     chatChannelAuth: ChatChannelAuth;
+}
+
+export interface CancelSiteInspectionRequest {
+    /**
+     *
+     */
+    messagingPortal: CancelSiteInspectionMessagingPortalEnum;
+    /**
+     *
+     */
+    conversationId: string;
+    /**
+     *
+     */
+    inspectionId: string;
+    /**
+     *
+     */
+    siteInspectionVersion: SiteInspectionVersion;
 }
 
 export interface CreateConversationRequest {
@@ -182,6 +226,29 @@ export interface DecideChatQuotationRequest {
      *
      */
     chatDecision: ChatDecision;
+}
+
+export interface DecideSiteInspectionRequest {
+    /**
+     *
+     */
+    messagingPortal: DecideSiteInspectionMessagingPortalEnum;
+    /**
+     *
+     */
+    conversationId: string;
+    /**
+     *
+     */
+    inspectionId: string;
+    /**
+     *
+     */
+    action: DecideSiteInspectionActionEnum;
+    /**
+     *
+     */
+    siteInspectionDecision: SiteInspectionDecision;
 }
 
 export interface DownloadChatAttachmentRequest {
@@ -282,6 +349,21 @@ export interface ListChatProductsRequest {
     page?: number;
 }
 
+export interface ListChatProjectInquiriesRequest {
+    /**
+     *
+     */
+    messagingPortal: ListChatProjectInquiriesMessagingPortalEnum;
+    /**
+     *
+     */
+    conversationId: string;
+    /**
+     *
+     */
+    page?: number;
+}
+
 export interface ListConversationsRequest {
     /**
      *
@@ -292,7 +374,7 @@ export interface ListConversationsRequest {
      */
     page?: number;
     /**
-     * Buyer only. true lists the Buyer's archived sales conversations; omitted or false lists the active inbox. Order fulfillment threads are never listed for a Buyer; they open from Order Details.
+     * Buyer only. Archive and restore apply to the entire Buyer and Store sales group. New activity in any inquiry restores the group. true lists archived groups; omitted or false lists the active inbox. Order fulfillment threads are never listed for a Buyer; they open from Order Details.
      */
     archived?: boolean;
 }
@@ -351,6 +433,21 @@ export interface ReadChatMessagesRequest {
      *
      */
     chatRead: ChatRead;
+}
+
+export interface RequestSiteInspectionRequest {
+    /**
+     *
+     */
+    messagingPortal: RequestSiteInspectionMessagingPortalEnum;
+    /**
+     * Also the inspection identifier; a retry returns the same request.
+     */
+    idempotencyKey: string;
+    /**
+     *
+     */
+    siteInspectionCreate: SiteInspectionCreate;
 }
 
 export interface RestoreChatConversationRequest {
@@ -526,7 +623,7 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
-     * Hides one sales or quotation conversation from the Buyer\'s own inbox. It is idempotent, personal and reversible; messages, quotations and orders are never changed or deleted. Fulfillment threads stay with their order (409 CONVERSATION_NOT_ARCHIVABLE). New activity returns the conversation to the inbox.
+     * Hides the Buyer and Store sales group, including its item and project inquiries, from this Buyer\'s inbox. It is idempotent, personal and reversible; messages, quotations and orders are never changed or deleted. Fulfillment threads stay with their order (409 CONVERSATION_NOT_ARCHIVABLE). New activity in any inquiry returns the group to the inbox.
      */
     async archiveChatConversationRaw(requestParameters: ArchiveChatConversationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ChatEmptyResponse>> {
         const requestOptions = await this.archiveChatConversationRequestOpts(requestParameters);
@@ -536,7 +633,7 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
-     * Hides one sales or quotation conversation from the Buyer\'s own inbox. It is idempotent, personal and reversible; messages, quotations and orders are never changed or deleted. Fulfillment threads stay with their order (409 CONVERSATION_NOT_ARCHIVABLE). New activity returns the conversation to the inbox.
+     * Hides the Buyer and Store sales group, including its item and project inquiries, from this Buyer\'s inbox. It is idempotent, personal and reversible; messages, quotations and orders are never changed or deleted. Fulfillment threads stay with their order (409 CONVERSATION_NOT_ARCHIVABLE). New activity in any inquiry returns the group to the inbox.
      */
     async archiveChatConversation(requestParameters: ArchiveChatConversationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatEmptyResponse> {
         const response = await this.archiveChatConversationRaw(requestParameters, initOverrides);
@@ -607,6 +704,85 @@ export class MessagingApi extends runtime.BaseAPI {
      */
     async authorizeChatChannel(requestParameters: AuthorizeChatChannelRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatChannelSignature> {
         const response = await this.authorizeChatChannelRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for cancelSiteInspection without sending the request
+     */
+    async cancelSiteInspectionRequestOpts(requestParameters: CancelSiteInspectionRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['messagingPortal'] == null) {
+            throw new runtime.RequiredError(
+                'messagingPortal',
+                'Required parameter "messagingPortal" was null or undefined when calling cancelSiteInspection().'
+            );
+        }
+
+        if (requestParameters['conversationId'] == null) {
+            throw new runtime.RequiredError(
+                'conversationId',
+                'Required parameter "conversationId" was null or undefined when calling cancelSiteInspection().'
+            );
+        }
+
+        if (requestParameters['inspectionId'] == null) {
+            throw new runtime.RequiredError(
+                'inspectionId',
+                'Required parameter "inspectionId" was null or undefined when calling cancelSiteInspection().'
+            );
+        }
+
+        if (requestParameters['siteInspectionVersion'] == null) {
+            throw new runtime.RequiredError(
+                'siteInspectionVersion',
+                'Required parameter "siteInspectionVersion" was null or undefined when calling cancelSiteInspection().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/{messagingPortal}/conversations/{conversationId}/site-inspections/{inspectionId}/cancel`;
+        urlPath = urlPath.replace('{messagingPortal}', encodeURIComponent(String(requestParameters['messagingPortal'])));
+        urlPath = urlPath.replace('{conversationId}', encodeURIComponent(String(requestParameters['conversationId'])));
+        urlPath = urlPath.replace('{inspectionId}', encodeURIComponent(String(requestParameters['inspectionId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: SiteInspectionVersionToJSON(requestParameters['siteInspectionVersion']),
+        };
+    }
+
+    /**
+     * The Buyer cancels a REQUESTED or SCHEDULED inspection. A stale lock_version returns SITE_INSPECTION_VERSION_CONFLICT; a closed request returns SITE_INSPECTION_CLOSED.
+     */
+    async cancelSiteInspectionRaw(requestParameters: CancelSiteInspectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SiteInspectionListResponse>> {
+        const requestOptions = await this.cancelSiteInspectionRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => SiteInspectionListResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * The Buyer cancels a REQUESTED or SCHEDULED inspection. A stale lock_version returns SITE_INSPECTION_VERSION_CONFLICT; a closed request returns SITE_INSPECTION_CLOSED.
+     */
+    async cancelSiteInspection(requestParameters: CancelSiteInspectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SiteInspectionListResponse> {
+        const response = await this.cancelSiteInspectionRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -775,6 +951,89 @@ export class MessagingApi extends runtime.BaseAPI {
      */
     async decideChatQuotation(requestParameters: DecideChatQuotationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatDecisionResultResponse> {
         const response = await this.decideChatQuotationRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for decideSiteInspection without sending the request
+     */
+    async decideSiteInspectionRequestOpts(requestParameters: DecideSiteInspectionRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['messagingPortal'] == null) {
+            throw new runtime.RequiredError(
+                'messagingPortal',
+                'Required parameter "messagingPortal" was null or undefined when calling decideSiteInspection().'
+            );
+        }
+
+        if (requestParameters['conversationId'] == null) {
+            throw new runtime.RequiredError(
+                'conversationId',
+                'Required parameter "conversationId" was null or undefined when calling decideSiteInspection().'
+            );
+        }
+
+        if (requestParameters['inspectionId'] == null) {
+            throw new runtime.RequiredError(
+                'inspectionId',
+                'Required parameter "inspectionId" was null or undefined when calling decideSiteInspection().'
+            );
+        }
+
+        if (requestParameters['action'] == null) {
+            throw new runtime.RequiredError(
+                'action',
+                'Required parameter "action" was null or undefined when calling decideSiteInspection().'
+            );
+        }
+
+        if (requestParameters['siteInspectionDecision'] == null) {
+            throw new runtime.RequiredError(
+                'siteInspectionDecision',
+                'Required parameter "siteInspectionDecision" was null or undefined when calling decideSiteInspection().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/{messagingPortal}/conversations/{conversationId}/site-inspections/{inspectionId}/{action}`;
+        urlPath = urlPath.replace('{messagingPortal}', encodeURIComponent(String(requestParameters['messagingPortal'])));
+        urlPath = urlPath.replace('{conversationId}', encodeURIComponent(String(requestParameters['conversationId'])));
+        urlPath = urlPath.replace('{inspectionId}', encodeURIComponent(String(requestParameters['inspectionId'])));
+        urlPath = urlPath.replace('{action}', encodeURIComponent(String(requestParameters['action'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: SiteInspectionDecisionToJSON(requestParameters['siteInspectionDecision']),
+        };
+    }
+
+    /**
+     * Store sales roles (Owner, Store Manager, Store Staff, Customer Service) schedule or reschedule (future scheduled_for), decline (reason) or complete a SCHEDULED inspection with the measured volume in m³. Each change posts a system message and notifies the Buyer. Fulfillment Staff are not sales participants and receive 404. Completing never creates a quotation; the store sends one through the existing quotation flow.
+     */
+    async decideSiteInspectionRaw(requestParameters: DecideSiteInspectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SiteInspectionListResponse>> {
+        const requestOptions = await this.decideSiteInspectionRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => SiteInspectionListResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Store sales roles (Owner, Store Manager, Store Staff, Customer Service) schedule or reschedule (future scheduled_for), decline (reason) or complete a SCHEDULED inspection with the measured volume in m³. Each change posts a system message and notifies the Buyer. Fulfillment Staff are not sales participants and receive 404. Completing never creates a quotation; the store sends one through the existing quotation flow.
+     */
+    async decideSiteInspection(requestParameters: DecideSiteInspectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SiteInspectionListResponse> {
+        const response = await this.decideSiteInspectionRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1197,6 +1456,71 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for listChatProjectInquiries without sending the request
+     */
+    async listChatProjectInquiriesRequestOpts(requestParameters: ListChatProjectInquiriesRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['messagingPortal'] == null) {
+            throw new runtime.RequiredError(
+                'messagingPortal',
+                'Required parameter "messagingPortal" was null or undefined when calling listChatProjectInquiries().'
+            );
+        }
+
+        if (requestParameters['conversationId'] == null) {
+            throw new runtime.RequiredError(
+                'conversationId',
+                'Required parameter "conversationId" was null or undefined when calling listChatProjectInquiries().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/{messagingPortal}/conversations/{conversationId}/project-inquiries`;
+        urlPath = urlPath.replace('{messagingPortal}', encodeURIComponent(String(requestParameters['messagingPortal'])));
+        urlPath = urlPath.replace('{conversationId}', encodeURIComponent(String(requestParameters['conversationId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Lists existing Project-Based conversations for this authorized sales conversation\'s Buyer and Store. Includes only currently authorized assignments, newest activity first. Preserves each Work Package and quotation history. Never creates an inquiry. Fulfillment threads cannot use this endpoint.
+     */
+    async listChatProjectInquiriesRaw(requestParameters: ListChatProjectInquiriesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ConversationPageResponse>> {
+        const requestOptions = await this.listChatProjectInquiriesRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ConversationPageResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Lists existing Project-Based conversations for this authorized sales conversation\'s Buyer and Store. Includes only currently authorized assignments, newest activity first. Preserves each Work Package and quotation history. Never creates an inquiry. Fulfillment threads cannot use this endpoint.
+     */
+    async listChatProjectInquiries(requestParameters: ListChatProjectInquiriesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ConversationPageResponse> {
+        const response = await this.listChatProjectInquiriesRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for listConversations without sending the request
      */
     async listConversationsRequestOpts(requestParameters: ListConversationsRequest): Promise<runtime.RequestOpts> {
@@ -1244,7 +1568,7 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
-     * Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
+     * One sales inbox entry per Buyer and Store. The authorized Item-Based conversation is the main thread; when unavailable to the viewer, use their oldest authorized project inquiry. Preview, activity ordering and unread count include all currently authorized sales inquiries in that group. Detail messages and read receipts remain conversation-specific. Assigned Fulfillment Staff retain their separate order threads. Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
      */
     async listConversationsRaw(requestParameters: ListConversationsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ConversationPageResponse>> {
         const requestOptions = await this.listConversationsRequestOpts(requestParameters);
@@ -1254,7 +1578,7 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
-     * Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
+     * One sales inbox entry per Buyer and Store. The authorized Item-Based conversation is the main thread; when unavailable to the viewer, use their oldest authorized project inquiry. Preview, activity ordering and unread count include all currently authorized sales inquiries in that group. Detail messages and read receipts remain conversation-specific. Assigned Fulfillment Staff retain their separate order threads. Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
      */
     async listConversations(requestParameters: ListConversationsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ConversationPageResponse> {
         const response = await this.listConversationsRaw(requestParameters, initOverrides);
@@ -1506,7 +1830,7 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
-     * Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
+     * Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport. Reading received messages also marks that Buyer\'s corresponding MESSAGES notifications through the same message cutoff as read; later arrivals remain unread and queued delivery skips already-read message notices.
      */
     async readChatMessagesRaw(requestParameters: ReadChatMessagesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ChatEmptyResponse>> {
         const requestOptions = await this.readChatMessagesRequestOpts(requestParameters);
@@ -1516,10 +1840,84 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
-     * Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
+     * Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport. Reading received messages also marks that Buyer\'s corresponding MESSAGES notifications through the same message cutoff as read; later arrivals remain unread and queued delivery skips already-read message notices.
      */
     async readChatMessages(requestParameters: ReadChatMessagesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatEmptyResponse> {
         const response = await this.readChatMessagesRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for requestSiteInspection without sending the request
+     */
+    async requestSiteInspectionRequestOpts(requestParameters: RequestSiteInspectionRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['messagingPortal'] == null) {
+            throw new runtime.RequiredError(
+                'messagingPortal',
+                'Required parameter "messagingPortal" was null or undefined when calling requestSiteInspection().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling requestSiteInspection().'
+            );
+        }
+
+        if (requestParameters['siteInspectionCreate'] == null) {
+            throw new runtime.RequiredError(
+                'siteInspectionCreate',
+                'Required parameter "siteInspectionCreate" was null or undefined when calling requestSiteInspection().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/{messagingPortal}/site-inspections`;
+        urlPath = urlPath.replace('{messagingPortal}', encodeURIComponent(String(requestParameters['messagingPortal'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: SiteInspectionCreateToJSON(requestParameters['siteInspectionCreate']),
+        };
+    }
+
+    /**
+     * Free Site Inspection / Estimate for ready-mixed concrete (owner decision 2026-10-16). Instead of stating a volume, the Buyer asks the store to inspect a saved location. The request is posted in the Buyer\'s Item-Based store conversation, whose delivery destination becomes the inspected site, so the store\'s later quotation for the measured volume uses it. Creates no order, hold, reservation or charge. One open request per conversation (SITE_INSPECTION_ALREADY_OPEN); a non-ready-mixed or unavailable listing returns SITE_INSPECTION_UNAVAILABLE. The preferred date is today to 60 days ahead in Asia/Manila. Notes are stored encrypted and shown only to the Buyer and the store\'s sales roles.
+     */
+    async requestSiteInspectionRaw(requestParameters: RequestSiteInspectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SiteInspectionCreatedResponse>> {
+        const requestOptions = await this.requestSiteInspectionRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => SiteInspectionCreatedResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Free Site Inspection / Estimate for ready-mixed concrete (owner decision 2026-10-16). Instead of stating a volume, the Buyer asks the store to inspect a saved location. The request is posted in the Buyer\'s Item-Based store conversation, whose delivery destination becomes the inspected site, so the store\'s later quotation for the measured volume uses it. Creates no order, hold, reservation or charge. One open request per conversation (SITE_INSPECTION_ALREADY_OPEN); a non-ready-mixed or unavailable listing returns SITE_INSPECTION_UNAVAILABLE. The preferred date is today to 60 days ahead in Asia/Manila. Notes are stored encrypted and shown only to the Buyer and the store\'s sales roles.
+     */
+    async requestSiteInspection(requestParameters: RequestSiteInspectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SiteInspectionCreatedResponse> {
+        const response = await this.requestSiteInspectionRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1567,7 +1965,7 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
-     * Returns an archived conversation to the Buyer\'s inbox. Idempotent.
+     * Returns the archived Buyer and Store sales group to the Buyer\'s inbox. Idempotent. Accepts any authorized sales inquiry in the group.
      */
     async restoreChatConversationRaw(requestParameters: RestoreChatConversationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ChatEmptyResponse>> {
         const requestOptions = await this.restoreChatConversationRequestOpts(requestParameters);
@@ -1577,7 +1975,7 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
-     * Returns an archived conversation to the Buyer\'s inbox. Idempotent.
+     * Returns the archived Buyer and Store sales group to the Buyer\'s inbox. Idempotent. Accepts any authorized sales inquiry in the group.
      */
     async restoreChatConversation(requestParameters: RestoreChatConversationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatEmptyResponse> {
         const response = await this.restoreChatConversationRaw(requestParameters, initOverrides);
@@ -1709,7 +2107,7 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
-     * Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
+     * Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport. A new non-system Vendor message atomically records one MESSAGES notification for the conversation\'s Buyer and queues private realtime/push delivery. Replaying client_message_id does not duplicate the message or notification. Notice copy includes the public sender and store identity and a bounded message preview; private contacts and attachment details are excluded.
      */
     async sendChatMessageRaw(requestParameters: SendChatMessageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ChatIdResponse>> {
         const requestOptions = await this.sendChatMessageRequestOpts(requestParameters);
@@ -1719,7 +2117,7 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
-     * Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
+     * Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport. A new non-system Vendor message atomically records one MESSAGES notification for the conversation\'s Buyer and queues private realtime/push delivery. Replaying client_message_id does not duplicate the message or notification. Notice copy includes the public sender and store identity and a bounded message preview; private contacts and attachment details are excluded.
      */
     async sendChatMessage(requestParameters: SendChatMessageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatIdResponse> {
         const response = await this.sendChatMessageRaw(requestParameters, initOverrides);
@@ -2108,7 +2506,7 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
-     * Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
+     * Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport. A newly committed Vendor attachment message records one MESSAGES notification for the authorized Buyer without exposing attachment contents or names.
      */
     async uploadChatAttachmentRaw(requestParameters: UploadChatAttachmentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ChatEmptyResponse>> {
         const requestOptions = await this.uploadChatAttachmentRequestOpts(requestParameters);
@@ -2118,7 +2516,7 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
-     * Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
+     * Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport. A newly committed Vendor attachment message records one MESSAGES notification for the authorized Buyer without exposing attachment contents or names.
      */
     async uploadChatAttachment(requestParameters: UploadChatAttachmentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatEmptyResponse> {
         const response = await this.uploadChatAttachmentRaw(requestParameters, initOverrides);
@@ -2145,6 +2543,13 @@ export type AuthorizeChatChannelMessagingPortalEnum = typeof AuthorizeChatChanne
 /**
  * @export
  */
+export const CancelSiteInspectionMessagingPortalEnum = {
+    Buyers: 'buyers',
+} as const;
+export type CancelSiteInspectionMessagingPortalEnum = typeof CancelSiteInspectionMessagingPortalEnum[keyof typeof CancelSiteInspectionMessagingPortalEnum];
+/**
+ * @export
+ */
 export const CreateConversationMessagingPortalEnum = {
     Buyers: 'buyers',
 } as const;
@@ -2168,6 +2573,22 @@ export const DecideChatQuotationActionEnum = {
     Withdraw: 'withdraw',
 } as const;
 export type DecideChatQuotationActionEnum = typeof DecideChatQuotationActionEnum[keyof typeof DecideChatQuotationActionEnum];
+/**
+ * @export
+ */
+export const DecideSiteInspectionMessagingPortalEnum = {
+    Vendor: 'vendor',
+} as const;
+export type DecideSiteInspectionMessagingPortalEnum = typeof DecideSiteInspectionMessagingPortalEnum[keyof typeof DecideSiteInspectionMessagingPortalEnum];
+/**
+ * @export
+ */
+export const DecideSiteInspectionActionEnum = {
+    Schedule: 'schedule',
+    Decline: 'decline',
+    Complete: 'complete',
+} as const;
+export type DecideSiteInspectionActionEnum = typeof DecideSiteInspectionActionEnum[keyof typeof DecideSiteInspectionActionEnum];
 /**
  * @export
  */
@@ -2218,6 +2639,14 @@ export type ListChatProductsMessagingPortalEnum = typeof ListChatProductsMessagi
 /**
  * @export
  */
+export const ListChatProjectInquiriesMessagingPortalEnum = {
+    Buyers: 'buyers',
+    Vendor: 'vendor',
+} as const;
+export type ListChatProjectInquiriesMessagingPortalEnum = typeof ListChatProjectInquiriesMessagingPortalEnum[keyof typeof ListChatProjectInquiriesMessagingPortalEnum];
+/**
+ * @export
+ */
 export const ListConversationsMessagingPortalEnum = {
     Buyers: 'buyers',
     Vendor: 'vendor',
@@ -2238,6 +2667,13 @@ export const ReadChatMessagesMessagingPortalEnum = {
     Vendor: 'vendor',
 } as const;
 export type ReadChatMessagesMessagingPortalEnum = typeof ReadChatMessagesMessagingPortalEnum[keyof typeof ReadChatMessagesMessagingPortalEnum];
+/**
+ * @export
+ */
+export const RequestSiteInspectionMessagingPortalEnum = {
+    Buyers: 'buyers',
+} as const;
+export type RequestSiteInspectionMessagingPortalEnum = typeof RequestSiteInspectionMessagingPortalEnum[keyof typeof RequestSiteInspectionMessagingPortalEnum];
 /**
  * @export
  */

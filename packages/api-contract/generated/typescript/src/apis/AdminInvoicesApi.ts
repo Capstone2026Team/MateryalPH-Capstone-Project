@@ -48,6 +48,14 @@ export interface ListAdminInvoiceLogRequest {
      *
      */
     page?: number;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Invoice issued_on for RECORDS/MISMATCHES, request created_at for REQUESTS. Workload counts remain current.
+     */
+    from?: Date;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Invoice issued_on for RECORDS/MISMATCHES, request created_at for REQUESTS. Workload counts remain current.
+     */
+    to?: Date;
 }
 
 /**
@@ -138,6 +146,14 @@ export class AdminInvoicesApi extends runtime.BaseAPI {
 
         if (requestParameters['page'] != null) {
             queryParameters['page'] = requestParameters['page'];
+        }
+
+        if (requestParameters['from'] != null) {
+            queryParameters['from'] = runtime.serializeDate(requestParameters['from'] as any);
+        }
+
+        if (requestParameters['to'] != null) {
+            queryParameters['to'] = runtime.serializeDate(requestParameters['to'] as any);
         }
 
         const headerParameters: runtime.HTTPHeaders = {};

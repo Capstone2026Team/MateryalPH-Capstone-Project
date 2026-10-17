@@ -13,6 +13,14 @@
  */
 
 import { mapValues } from '../runtime';
+import type { VendorBotProtectionEvidence } from './VendorBotProtectionEvidence';
+import {
+    VendorBotProtectionEvidenceFromJSON,
+    VendorBotProtectionEvidenceFromJSONTyped,
+    VendorBotProtectionEvidenceToJSON,
+    VendorBotProtectionEvidenceToJSONTyped,
+} from './VendorBotProtectionEvidence';
+
 /**
  *
  * @export
@@ -23,6 +31,10 @@ export interface AdminInvitationRequest {
      *
      */
     token: string;
+    /**
+     * Must match the invited email when supplied. The server always derives the account and email-check recipient from the invitation.
+     */
+    email?: string;
     /**
      *
      */
@@ -43,6 +55,10 @@ export interface AdminInvitationRequest {
      *
      */
     privacyAccepted: AdminInvitationRequestPrivacyAcceptedEnum;
+    /**
+     * Admin invitation acceptance; required when bot protection is enabled unless a matching single-use HttpOnly proof cookie is present.
+     */
+    botProtection?: VendorBotProtectionEvidence | null;
 }
 
 
@@ -91,11 +107,13 @@ export function AdminInvitationRequestFromJSONTyped(json: any, ignoreDiscriminat
     return {
 
         'token': json['token'],
+        'email': json['email'] == null ? undefined : json['email'],
         'fullName': json['full_name'],
         'password': json['password'],
         'passwordConfirmation': json['password_confirmation'],
         'termsAccepted': json['terms_accepted'],
         'privacyAccepted': json['privacy_accepted'],
+        'botProtection': json['bot_protection'] === undefined ? undefined : json['bot_protection'] === null ? null : VendorBotProtectionEvidenceFromJSON(json['bot_protection']),
     };
 }
 
@@ -111,11 +129,13 @@ export function AdminInvitationRequestToJSONTyped(value?: AdminInvitationRequest
     return {
 
         'token': value['token'],
+        'email': value['email'],
         'full_name': value['fullName'],
         'password': value['password'],
         'password_confirmation': value['passwordConfirmation'],
         'terms_accepted': value['termsAccepted'],
         'privacy_accepted': value['privacyAccepted'],
+        'bot_protection': VendorBotProtectionEvidenceToJSON(value['botProtection']),
     };
 }
 

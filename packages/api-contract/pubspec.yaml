@@ -1,0 +1,11 @@
+name: materyalph_api_contract
+description: Handwritten checks for the generated MateryalPH Dart API client.
+version: 0.0.0
+publish_to: none
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+dev_dependencies:
+  materyalph_api_client:
+    path: generated/dart

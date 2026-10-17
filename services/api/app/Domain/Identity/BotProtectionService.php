@@ -17,21 +17,17 @@ final class BotProtectionService
         private readonly AuditRecorder $audit,
     ) {}
 
-    /** @param array<string, mixed>|null $vendorEvidence */
+    /** @param array<string, mixed>|null $webEvidence */
     public function guard(
         Request $request,
         string $email,
         string $portal,
         string $operation,
-        ?array $vendorEvidence,
+        ?array $webEvidence,
         ?string $riskProofToken,
         bool $deliveryAllowed,
         ?User $user = null,
     ): bool {
-        if ($portal === 'ADMIN') {
-            return false;
-        }
-
         $action = $this->action($portal, $operation);
         if ($portal === 'BUYER') {
             if (! is_string($riskProofToken) || $riskProofToken === '') {
@@ -42,22 +38,22 @@ final class BotProtectionService
 
             return true;
         }
-        if ($portal !== 'VENDOR') {
+        if (! in_array($portal, ['VENDOR', 'ADMIN'], true)) {
             throw new AuthenticationException('BOT_CLIENT_INVALID', 'This client cannot complete the requested authentication action.', 422);
         }
         if (! (bool) config('materyalph.bot_protection.enabled', false)) {
             return false;
         }
 
-        $vendorEvidence ??= [];
+        $webEvidence ??= [];
         $platform = 'WEB';
-        [$siteKey, $allowedIdentity] = $this->providerConfiguration();
+        [$siteKey, $allowedIdentity] = $this->providerConfiguration($portal);
 
-        if (($vendorEvidence['request_email_step_up'] ?? false) === true) {
+        if (($webEvidence['request_email_step_up'] ?? false) === true) {
             $this->requireEmailStepUp($request, $email, $portal, $action, $platform, 'ACCESSIBLE_FALLBACK', $deliveryAllowed, $user);
         }
 
-        $token = $vendorEvidence['recaptcha_token'] ?? null;
+        $token = $webEvidence['recaptcha_token'] ?? null;
         if (! is_string($token) || $token === '') {
             $proof = $this->proofFrom($request);
             if ($proof !== null) {
@@ -273,14 +269,15 @@ final class BotProtectionService
     }
 
     /** @return array{string, list<string>} */
-    private function providerConfiguration(): array
+    private function providerConfiguration(string $portal): array
     {
         $projectId = trim((string) config('services.recaptcha.project_id'));
         $apiKey = trim((string) config('services.recaptcha.api_key'));
-        $siteKey = trim((string) config('materyalph.bot_protection.site_keys.WEB'));
+        $client = $portal === 'ADMIN' ? 'ADMIN_WEB' : 'WEB';
+        $siteKey = trim((string) config('materyalph.bot_protection.site_keys.'.$client));
         $identity = array_values(array_filter(array_map(
             static fn (mixed $value): string => trim((string) $value),
-            (array) config('materyalph.bot_protection.allowed_identities.WEB', []),
+            (array) config('materyalph.bot_protection.allowed_identities.'.$client, []),
         )));
         if ($projectId === '' || $apiKey === '' || $siteKey === '' || $identity === []) {
             throw new AuthenticationException('BOT_PROTECTION_NOT_CONFIGURED', 'Bot protection is not configured for this client.', 503);
@@ -300,6 +297,10 @@ final class BotProtectionService
             'VENDOR_REGISTER' => 'vendor_register',
             'VENDOR_LOGIN' => 'vendor_login',
             'VENDOR_PASSWORD_RECOVERY' => 'vendor_password_recovery',
+            'VENDOR_INVITATION_ACCEPT' => 'vendor_invitation_accept',
+            'ADMIN_LOGIN' => 'admin_login',
+            'ADMIN_PASSWORD_RECOVERY' => 'admin_password_recovery',
+            'ADMIN_INVITATION_ACCEPT' => 'admin_invitation_accept',
             default => throw new AuthenticationException('BOT_ACTION_INVALID', 'This action cannot use bot protection.', 422),
         };
     }

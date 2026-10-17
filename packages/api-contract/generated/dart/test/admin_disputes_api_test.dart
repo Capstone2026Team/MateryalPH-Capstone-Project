@@ -72,7 +72,7 @@ void main() {
 
     // disputes.view. Case ID, order, parties, issue, handler, deadline, status, requested remedy and refund state.
     //
-    //Future<DisputeListEnvelope> listAdminDisputes({ String status, int page }) async
+    //Future<DisputeListEnvelope> listAdminDisputes({ String status, int page, Date from, Date to }) async
     test('test listAdminDisputes', () async {
       // TODO
     });

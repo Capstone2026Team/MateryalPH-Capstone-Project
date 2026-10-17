@@ -7,6 +7,9 @@ The frozen Owner/Manager-confirmed arrangement. Later vehicle, rate, profile or 
 
 Name | Type
 ------------ | -------------
+`systemRecommendation` | [Array&lt;DeliveryEstimateOption&gt;](DeliveryEstimateOption.md)
+`recommendationChanged` | boolean
+`changeReason` | string
 `vehicles` | [Array&lt;OrderDeliveryVehicle&gt;](OrderDeliveryVehicle.md)
 `distanceMeters` | number
 `routeSource` | string
@@ -29,6 +32,9 @@ import type { OrderConfirmedDelivery } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "systemRecommendation": null,
+  "recommendationChanged": null,
+  "changeReason": null,
   "vehicles": null,
   "distanceMeters": null,
   "routeSource": null,

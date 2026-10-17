@@ -10,6 +10,8 @@ class _$DocumentExport extends DocumentExport {
   @override
   final String id;
   @override
+  final String? resourceId;
+  @override
   final String type;
   @override
   final String format;
@@ -39,6 +41,7 @@ class _$DocumentExport extends DocumentExport {
 
   _$DocumentExport._(
       {required this.id,
+      this.resourceId,
       required this.type,
       required this.format,
       required this.state,
@@ -64,6 +67,7 @@ class _$DocumentExport extends DocumentExport {
     if (identical(other, this)) return true;
     return other is DocumentExport &&
         id == other.id &&
+        resourceId == other.resourceId &&
         type == other.type &&
         format == other.format &&
         state == other.state &&
@@ -82,6 +86,7 @@ class _$DocumentExport extends DocumentExport {
   int get hashCode {
     var _$hash = 0;
     _$hash = $jc(_$hash, id.hashCode);
+    _$hash = $jc(_$hash, resourceId.hashCode);
     _$hash = $jc(_$hash, type.hashCode);
     _$hash = $jc(_$hash, format.hashCode);
     _$hash = $jc(_$hash, state.hashCode);
@@ -102,6 +107,7 @@ class _$DocumentExport extends DocumentExport {
   String toString() {
     return (newBuiltValueToStringHelper(r'DocumentExport')
           ..add('id', id)
+          ..add('resourceId', resourceId)
           ..add('type', type)
           ..add('format', format)
           ..add('state', state)
@@ -125,6 +131,10 @@ class DocumentExportBuilder
   String? _id;
   String? get id => _$this._id;
   set id(String? id) => _$this._id = id;
+
+  String? _resourceId;
+  String? get resourceId => _$this._resourceId;
+  set resourceId(String? resourceId) => _$this._resourceId = resourceId;
 
   String? _type;
   String? get type => _$this._type;
@@ -188,6 +198,7 @@ class DocumentExportBuilder
     final $v = _$v;
     if ($v != null) {
       _id = $v.id;
+      _resourceId = $v.resourceId;
       _type = $v.type;
       _format = $v.format;
       _state = $v.state;
@@ -225,6 +236,7 @@ class DocumentExportBuilder
           _$DocumentExport._(
             id: BuiltValueNullFieldError.checkNotNull(
                 id, r'DocumentExport', 'id'),
+            resourceId: resourceId,
             type: BuiltValueNullFieldError.checkNotNull(
                 type, r'DocumentExport', 'type'),
             format: BuiltValueNullFieldError.checkNotNull(

@@ -28,6 +28,10 @@ import {
  */
 export interface DeliveryConfirmation {
     /**
+     * Required if vehicle
+     */
+    changeReason?: string | null;
+    /**
      *
      */
     vehicles: Array<DeliveryVehicleSelection>;
@@ -79,6 +83,7 @@ export function DeliveryConfirmationFromJSONTyped(json: any, ignoreDiscriminator
     }
     return {
 
+        'changeReason': json['change_reason'] === undefined ? undefined : json['change_reason'] === null ? null : json['change_reason'],
         'vehicles': ((json['vehicles'] as Array<any>).map(DeliveryVehicleSelectionFromJSON)),
         'finalFeeCentavos': json['final_fee_centavos'],
         'fulfillmentDate': (json['fulfillment_date'] == null ? json['fulfillment_date'] : parseDate(json['fulfillment_date'])),
@@ -100,6 +105,7 @@ export function DeliveryConfirmationToJSONTyped(value?: DeliveryConfirmation | n
 
     return {
 
+        'change_reason': value['changeReason'],
         'vehicles': ((value['vehicles'] as Array<any>).map(DeliveryVehicleSelectionToJSON)),
         'final_fee_centavos': value['finalFeeCentavos'],
         'fulfillment_date': value['fulfillmentDate'] == null ? value['fulfillmentDate'] : serializeDate(value['fulfillmentDate']),

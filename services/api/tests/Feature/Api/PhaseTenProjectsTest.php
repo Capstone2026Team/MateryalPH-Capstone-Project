@@ -89,6 +89,9 @@ final class PhaseTenProjectsTest extends TestCase
     private function inquiry(array $w, array $candidate): array
     {
         $id = $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/inquiries', ['lock_version' => $w['lock_version'], 'candidate_id' => $candidate['id']], $this->key())->assertCreated()->json('data.id');
+        $header = $this->getJson('/api/v1/buyers/conversations/'.$id)->assertOk()->json('data.conversation');
+        self::assertNotNull($header['main_conversation_id']);
+        $this->getJson('/api/v1/buyers/conversations/'.$header['main_conversation_id'])->assertOk()->assertJsonPath('data.conversation.context_type', 'ITEM_BASED');
 
         return [$id, $this->getJson('/api/v1/buyers/work-packages/'.$w['id'])->assertOk()->json('data')];
     }
@@ -117,12 +120,12 @@ final class PhaseTenProjectsTest extends TestCase
         $this->getJson('/api/v1/buyers/conversations/'.$chat)->assertOk()->assertJsonPath('data.quotations.quotation.state', 'EXPIRED');
         self::assertSame('INVALIDATED', DB::table('compiled_estimates')->where('id', $e['estimate']['id'])->value('state'));
         $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/estimates', ['lock_version' => $w['lock_version'], 'radius_km' => 5])->assertConflict();
-        $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/versions', $input + ['lock_version' => $w['lock_version']], $this->key())->assertConflict();
+        $this->putJson('/api/v1/buyers/work-packages/'.$w['id'], $input + ['lock_version' => $w['lock_version']], $this->key())->assertConflict()->assertJsonPath('errors.0.code', 'PROJECT_CLOSED');
         $this->postJson('/api/v1/buyers/projects/'.$p['id'].'/work-packages', $input, $this->key())->assertConflict();
         $this->patchJson('/api/v1/buyers/projects/'.$p['id'], ['lock_version' => $p['lock_version'] + 1, 'status' => 'ACTIVE'], $this->key())->assertConflict();
     }
 
-    public function test_versions_are_locked_explicit_corrections_expire_history_and_owner_scope_is_enforced(): void
+    public function test_editing_a_quoted_package_in_place_expires_inquiries_keeps_the_quoted_copy_and_enforces_owner_scope(): void
     {
         [$vendor] = $this->pickupStore('Version supplier');
         $this->bulk($vendor->id);
@@ -131,10 +134,10 @@ final class PhaseTenProjectsTest extends TestCase
         $e = $this->scan($w);
         [$chat,$w] = $this->inquiry($w, $e['items'][0]);
         $old = $w['version'];
-        $this->putJson('/api/v1/buyers/work-packages/'.$w['id'], $input + ['lock_version' => $w['lock_version']], $this->key())->assertConflict();
-        $next = $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/versions', $input + ['lock_version' => $w['lock_version']], $this->key())->assertOk()->json('data');
-        self::assertSame('DRAFT', $next['status']);
-        self::assertSame(2, $next['version']['version']);
+        $next = $this->putJson('/api/v1/buyers/work-packages/'.$w['id'], $input + ['lock_version' => $w['lock_version']], $this->key())->assertOk()->json('data');
+        self::assertSame($w['id'], $next['id']);
+        self::assertSame('ACTIVE', $next['status']);
+        self::assertNotNull($next['version']['locked_at']);
         self::assertNotSame($old['id'], $next['version']['id']);
         self::assertSame($old['content_hash'], DB::table('work_package_versions')->where('id', $old['id'])->value('content_hash'));
         self::assertSame('INVALIDATED', DB::table('compiled_estimates')->where('id', $e['estimate']['id'])->value('state'));

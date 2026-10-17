@@ -20,20 +20,7 @@ final class AcceptAdminInvitation
         return DB::transaction(function () use ($token, $fullName, $password): User {
             $hash = hash_hmac('sha256', $token, (string) config('app.key'));
             $invitation = AdminInvitation::query()->where('token_hash', $hash)->lockForUpdate()->first();
-            if ($invitation === null || $invitation->accepted_at !== null || $invitation->revoked_at !== null || $invitation->expires_at->isPast()) {
-                throw new AuthenticationException('ADMIN_INVITATION_INVALID', 'This invitation is invalid or expired.', 410);
-            }
-            if (! $invitation->bootstrap) {
-                $inviter = User::query()->find($invitation->invited_by_user_id);
-                $access = app(AccountAccess::class);
-                if ($inviter === null || $inviter->account_type !== 'ADMIN' || $inviter->account_status !== 'ACTIVE'
-                    || ! $access->allows($inviter, 'admin.invite') || $access->resolve($inviter)['role'] !== 'ADMIN_SUPERADMIN') {
-                    throw new AuthenticationException('ADMIN_INVITATION_INVALID', 'This invitation is invalid or expired.', 410);
-                }
-            }
-            if (User::query()->whereRaw('LOWER(email) = ?', [$invitation->normalized_email])->exists()) {
-                throw new AuthenticationException('ACCOUNT_ALREADY_EXISTS', 'An account already exists for this email.', 409);
-            }
+            $this->assertAvailable($invitation);
 
             $user = User::query()->create([
                 'name' => trim($fullName),
@@ -72,6 +59,38 @@ final class AcceptAdminInvitation
 
             return $user;
         });
+    }
+
+    public function assertInvitationAvailable(string $token, ?string $email = null): AdminInvitation
+    {
+        $invitation = AdminInvitation::query()
+            ->where('token_hash', hash_hmac('sha256', $token, (string) config('app.key')))
+            ->first();
+        $this->assertAvailable($invitation);
+        if ($email !== null && ! hash_equals($invitation->normalized_email, mb_strtolower(trim($email)))) {
+            throw new AuthenticationException('ADMIN_INVITATION_INVALID', 'This invitation is invalid or expired.', 410);
+        }
+
+        return $invitation;
+    }
+
+    /** @phpstan-assert AdminInvitation $invitation */
+    private function assertAvailable(?AdminInvitation $invitation): void
+    {
+        if ($invitation === null || $invitation->accepted_at !== null || $invitation->revoked_at !== null || $invitation->expires_at->isPast()) {
+            throw new AuthenticationException('ADMIN_INVITATION_INVALID', 'This invitation is invalid or expired.', 410);
+        }
+        if (! $invitation->bootstrap) {
+            $inviter = User::query()->find($invitation->invited_by_user_id);
+            $access = app(AccountAccess::class);
+            if ($inviter === null || $inviter->account_type !== 'ADMIN' || $inviter->account_status !== 'ACTIVE'
+                || ! $access->allows($inviter, 'admin.invite') || $access->resolve($inviter)['role'] !== 'ADMIN_SUPERADMIN') {
+                throw new AuthenticationException('ADMIN_INVITATION_INVALID', 'This invitation is invalid or expired.', 410);
+            }
+        }
+        if (User::query()->whereRaw('LOWER(email) = ?', [$invitation->normalized_email])->exists()) {
+            throw new AuthenticationException('ACCOUNT_ALREADY_EXISTS', 'An account already exists for this email.', 409);
+        }
     }
 
     private function recordAgreements(User $user): void

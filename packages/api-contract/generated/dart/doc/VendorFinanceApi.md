@@ -19,6 +19,7 @@ Method | HTTP request | Description
 [**payVendorFeeStatement**](VendorFinanceApi.md#payvendorfeestatement) | **POST** /vendor/finance/statements/{statementId}/payments |
 [**recordVendorPhysicalPayment**](VendorFinanceApi.md#recordvendorphysicalpayment) | **POST** /vendor/orders/{orderId}/physical-payments |
 [**refreshVendorFeePayment**](VendorFinanceApi.md#refreshvendorfeepayment) | **POST** /vendor/finance/payments/{paymentId}/refresh |
+[**revealVendorTin**](VendorFinanceApi.md#revealvendortin) | **POST** /vendor/tax-profile/tin/reveal |
 [**updateVendorPhysicalPayments**](VendorFinanceApi.md#updatevendorphysicalpayments) | **PUT** /vendor/finance/physical-payments |
 
 
@@ -76,7 +77,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **exportVendorTransactions**
-> String exportVendorTransactions(tab)
+> String exportVendorTransactions(tab, status, from, to)
 
 
 
@@ -96,9 +97,12 @@ import 'package:materyalph_api_client/api.dart';
 
 final api = MateryalphApiClient().getVendorFinanceApi();
 final String tab = tab_example; // String |
+final String status = status_example; // String | Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled.
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound.
 
 try {
-    final response = api.exportVendorTransactions(tab);
+    final response = api.exportVendorTransactions(tab, status, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling VendorFinanceApi->exportVendorTransactions: $e\n');
@@ -110,6 +114,9 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **tab** | **String**|  |
+ **status** | **String**| Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. | [optional]
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound. | [optional]
 
 ### Return type
 
@@ -127,11 +134,11 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **getVendorEarnings**
-> VendorEarningsEnvelope getVendorEarnings()
+> VendorEarningsEnvelope getVendorEarnings(from, to)
 
 
 
-Owner-only FIN-11 Earnings with separate sales, collections, charges, simulated CWT and commission.
+Owner-only FIN-11 Earnings with separate sales, confirmed online refunds, net online collections, charges, simulated CWT and commission. Confirmed refunds adjust the original payment and assessment date buckets; pending and failed refunds leave collections unchanged. Posted provider charges, CWT and FIN-04A thresholds remain unchanged; estimated remittance cash deducts confirmed refunds without deducting refunds already included in the assessment twice.
 
 ### Example
 ```dart
@@ -146,9 +153,11 @@ import 'package:materyalph_api_client/api.dart';
 //defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
 
 final api = MateryalphApiClient().getVendorFinanceApi();
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Commercial sales use order accepted_at; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Commercial sales use order accepted_at; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view.
 
 try {
-    final response = api.getVendorEarnings();
+    final response = api.getVendorEarnings(from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling VendorFinanceApi->getVendorEarnings: $e\n');
@@ -156,7 +165,11 @@ try {
 ```
 
 ### Parameters
-This endpoint does not need any parameter.
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Commercial sales use order accepted_at; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Commercial sales use order accepted_at; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view. | [optional]
 
 ### Return type
 
@@ -323,7 +336,7 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listVendorTransactions**
-> FinanceTransactionListEnvelope listVendorTransactions(tab, page)
+> FinanceTransactionListEnvelope listVendorTransactions(tab, page, status, from, to)
 
 
 
@@ -344,9 +357,12 @@ import 'package:materyalph_api_client/api.dart';
 final api = MateryalphApiClient().getVendorFinanceApi();
 final String tab = tab_example; // String |
 final int page = 56; // int |
+final String status = status_example; // String | Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled.
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end.
 
 try {
-    final response = api.listVendorTransactions(tab, page);
+    final response = api.listVendorTransactions(tab, page, status, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling VendorFinanceApi->listVendorTransactions: $e\n');
@@ -359,6 +375,9 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **tab** | **String**|  | [optional]
  **page** | **int**|  | [optional]
+ **status** | **String**| Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. | [optional]
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end. | [optional]
 
 ### Return type
 
@@ -530,6 +549,53 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**PaymentAttemptEnvelope**](PaymentAttemptEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **revealVendorTin**
+> VendorTinRevealEnvelope revealVendorTin()
+
+
+
+Owner-only. Returns the store's own full TIN and branch code on demand so the Owner can unmask the masked value shown in the Vendor Tax Profile summary and Tax registration. The response is never cached, each reveal is audited without recording the number, and the number is never returned to a Manager, staff member, Buyer, another Vendor or public surface.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getVendorFinanceApi();
+
+try {
+    final response = api.revealVendorTin();
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling VendorFinanceApi->revealVendorTin: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**VendorTinRevealEnvelope**](VendorTinRevealEnvelope.md)
 
 ### Authorization
 

@@ -1,3 +1,4 @@
+import '../../design_system/components/buyer_cart_button.dart';
 import 'dart:async';
 import 'dart:convert';
 import '../../design_system/components/buyer_app_bar.dart';
@@ -10,8 +11,8 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import '../../design_system/components/procurement_components.dart';
 import '../../widgets/buyer_account_widgets.dart';
 
@@ -31,8 +32,10 @@ import '../map_discovery/discovery_repository.dart' show newIdempotencyKey;
 import 'messaging_repository.dart';
 import 'chat_drafts.dart';
 import 'chat_product_picker.dart';
+import 'project_inquiries_screen.dart';
 import '../orders/orders_repository.dart';
 import '../orders/order_details_screen.dart';
+import 'site_inspection_card.dart';
 
 class MessagingScreen extends StatefulWidget {
   const MessagingScreen({
@@ -203,23 +206,25 @@ class _MessagingScreenState extends State<MessagingScreen>
     if (!live) unawaited(_load());
   }
 
-  /// Keeps the newest message in view. [force] is used for the first load and
-  /// the Buyer's own sends; otherwise only a reader already at the bottom follows.
+  /// Keeps the newest message in view. The thread list is reversed, so the
+  /// newest message sits at the minimum offset. [force] is used for the first
+  /// load and the Buyer's own sends; otherwise only a reader already at the
+  /// bottom follows.
   void _scrollToEnd({bool force = false, bool animate = true}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scroll.hasClients) return;
       final position = _scroll.position;
-      if (!force && position.maxScrollExtent - position.pixels > 160) return;
+      if (!force && position.pixels - position.minScrollExtent > 160) return;
       if (animate) {
         unawaited(
           _scroll.animateTo(
-            position.maxScrollExtent,
+            position.minScrollExtent,
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeOut,
           ),
         );
       } else {
-        _scroll.jumpTo(position.maxScrollExtent);
+        _scroll.jumpTo(position.minScrollExtent);
       }
     });
   }
@@ -382,17 +387,21 @@ class _MessagingScreenState extends State<MessagingScreen>
           } catch (_) {
             /* Storage can be unavailable; keep the active draft in memory. */
           }
-          if (widget.initialProductId != null &&
-              widget.initialProductId != value.conversation.latestProductId &&
-              _product == null) {
+          // The product the Buyer opened the thread from is prepared even if
+          // it was sent before, replacing an older draft product; the draft
+          // text is kept.
+          final entry = widget.initialProductId;
+          if (entry != null && entry != _product?.productId) {
             try {
               final products = await widget.repository.products(
                 id,
-                productId: widget.initialProductId,
+                productId: entry,
               );
-              if (mounted) {
-                setState(() => _product = products.items.firstOrNull);
+              final product = products.items.firstOrNull;
+              if (product == null) {
+                throw StateError('Product is not eligible to attach.');
               }
+              if (mounted) setState(() => _product = product);
               _saveDraft();
             } catch (_) {
               if (mounted) {
@@ -415,6 +424,7 @@ class _MessagingScreenState extends State<MessagingScreen>
         final latest = value.messages.items.lastOrNull;
 
         if (latest != null &&
+            ModalRoute.of(context)?.isCurrent != false &&
             _lastRead != latest.id &&
             value.conversation.unreadCount > 0) {
           _lastRead = latest.id;
@@ -666,6 +676,7 @@ class _MessagingScreenState extends State<MessagingScreen>
                   ),
 
                   if (action == 'accept') ...[
+                    QuotationDeliveryTerms(content: version.content),
                     ...version.content.originalChanges.map(
                       (change) => Padding(
                         padding: const EdgeInsets.symmetric(vertical: 4),
@@ -791,19 +802,63 @@ class _MessagingScreenState extends State<MessagingScreen>
       setState(() => _error = 'Choose a JPG, PNG or PDF up to 10 MB.');
       return;
     }
-    await widget.repository.upload(
-      widget.conversationId!,
-      bytes,
-      file.name,
-      newIdempotencyKey(),
-    );
+    final key = newIdempotencyKey();
+    try {
+      await widget.repository.upload(
+        widget.conversationId!,
+        bytes,
+        file.name,
+        key,
+      );
+    } on DiscoveryFailure catch (error) {
+      // A dropped response can follow a saved upload; the thread is the source of truth.
+      if (error.kind != DiscoveryFailureKind.offline) rethrow;
+      final thread = await widget.repository.conversation(
+        widget.conversationId!,
+      );
+      if (!thread.messages.items.any((m) => m.clientMessageId == key)) {
+        rethrow;
+      }
+    }
   });
 
-  Future<void> _openFile(api.ChatAttachment file) => _mutate(() async {
-    final bytes = await widget.repository.attachment(
-      widget.conversationId!,
-      file.id,
+  /// Image bytes per attachment, kept for the life of the thread so polling and rebuilds
+  /// never download the same private image twice. A failed load stays failed until the
+  /// Buyer taps the image or Download, which starts one new attempt.
+  final Map<String, Future<Uint8List>> _images = {};
+  final Set<String> _failedImages = {};
+
+  Future<Uint8List> _imageBytes(api.ChatAttachment file) =>
+      _images[file.id] ??= widget.repository
+          .attachment(widget.conversationId!, file.id)
+          .catchError((Object error) {
+            _failedImages.add(file.id);
+            throw error;
+          });
+
+  Future<Uint8List> _retryableImageBytes(api.ChatAttachment file) {
+    if (_failedImages.remove(file.id)) {
+      setState(() => _images.remove(file.id));
+    }
+    return _imageBytes(file);
+  }
+
+  Future<void> _saveImage(api.ChatAttachment file) => _mutate(() async {
+    final bytes = await _retryableImageBytes(file);
+    if (!mounted) return;
+    final saved = await FilePicker.saveFile(
+      fileName: file.displayName,
+      bytes: bytes,
+      mimeType: file.mediaType,
+      dialogTitle: 'Save image',
     );
+    if (saved != null && mounted) setState(() => _notice = 'Image saved.');
+  }, refresh: false);
+
+  Future<void> _openFile(api.ChatAttachment file) => _mutate(() async {
+    final bytes = file.mediaType.startsWith('image/')
+        ? await _retryableImageBytes(file)
+        : await widget.repository.attachment(widget.conversationId!, file.id);
 
     if (!mounted) return;
 
@@ -885,24 +940,61 @@ class _MessagingScreenState extends State<MessagingScreen>
 
   List<Widget> _headerActions() => [
     if (widget.onOpenCart != null)
+      BuyerCartButton(onPressed: widget.onOpenCart),
+    if (widget.conversationId != null &&
+        _detail?.conversation.purpose.name != 'FULFILLMENT')
       BuyerHeaderIconButton(
-        icon: LucideIcons.shoppingCart,
-        tooltip: 'Cart',
-        onPressed: widget.onOpenCart,
-      ),
-    BuyerNotificationButton(
-      onPressed:
-          widget.onOpenNotifications ??
-          () => Navigator.of(context).push<void>(
-            MaterialPageRoute(
-              builder: (_) => const BuyerUnavailableScreen(
-                title: 'Notifications',
-                artwork: 'notifications',
+        icon: LucideIcons.folderOpen,
+        tooltip: (_detail?.conversation.projectUnreadCount ?? 0) > 0
+            ? 'Project inquiries, ${_detail!.conversation.projectUnreadCount} unread'
+            : 'Project inquiries',
+        badgeCount: _detail?.conversation.projectUnreadCount ?? 0,
+        onPressed: _busy || _detail == null ? null : _openProjectInquiries,
+      )
+    else
+      BuyerNotificationButton(
+        onPressed:
+            widget.onOpenNotifications ??
+            () => Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                builder: (_) => const BuyerUnavailableScreen(
+                  title: 'Notifications',
+                  artwork: StateArtwork.notifications,
+                ),
               ),
             ),
-          ),
-    ),
+      ),
   ];
+
+  Future<void> _openInquiry(String id) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => MessagingScreen(
+          repository: widget.repository,
+          orders: widget.orders,
+          conversationId: id,
+          onOpenCart: widget.onOpenCart,
+          onOpenNotifications: widget.onOpenNotifications,
+          onOpenProduct: widget.onOpenProduct,
+          onSetDelivery: widget.onSetDelivery,
+        ),
+      ),
+    );
+    if (mounted) await _load();
+  }
+
+  Future<void> _openProjectInquiries() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => ProjectInquiriesScreen(
+          repository: widget.repository,
+          inquiryId: widget.conversationId!,
+          onOpen: _openInquiry,
+        ),
+      ),
+    );
+    if (mounted) await _load();
+  }
 
   Future<void> _toggleArchived() async {
     setState(() {
@@ -1040,7 +1132,7 @@ class _MessagingScreenState extends State<MessagingScreen>
           if (items.isEmpty && _error == null)
             StateMessage(
               kind: StateKind.empty,
-              artwork: 'assets/states/inbox.png',
+              artwork: StateArtwork.inbox,
               title: query.isNotEmpty
                   ? 'No matching conversations'
                   : _showArchived
@@ -1126,10 +1218,13 @@ class _MessagingScreenState extends State<MessagingScreen>
     return Column(
       children: [
         Expanded(
+          // Reversed so the thread opens on its newest message: offset 0 is the bottom,
+          // whatever height the earlier content turns out to have once it is laid out.
           child: ListView(
             controller: _scroll,
+            reverse: true,
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: [
+            children: <Widget>[
               if (d.conversation.contextType.name == 'PROJECT_BASED')
                 WorkPackageAttachment(
                   original: projectObject(
@@ -1195,6 +1290,18 @@ class _MessagingScreenState extends State<MessagingScreen>
                         ),
                       ),
                     ],
+                  ),
+                ),
+              if (d.siteInspections?.firstOrNull case final inspection?)
+                SiteInspectionCard(
+                  inspection: inspection,
+                  busy: _busy,
+                  onCancel: () => _mutate(
+                    () => widget.repository.cancelSiteInspection(
+                      d.conversation.id,
+                      inspection.id,
+                      inspection.lockVersion,
+                    ),
                   ),
                 ),
               if (d.messages.items.isEmpty)
@@ -1267,6 +1374,8 @@ class _MessagingScreenState extends State<MessagingScreen>
                   message: d.messages.items[index],
                   busy: _busy,
                   onOpenFile: (file) => unawaited(_openFile(file)),
+                  loadImage: _imageBytes,
+                  onSaveImage: (file) => unawaited(_saveImage(file)),
                   onOpenProduct: widget.onOpenProduct,
                 ),
               ],
@@ -1370,7 +1479,7 @@ class _MessagingScreenState extends State<MessagingScreen>
                 ),
 
               const SizedBox(height: 16),
-            ],
+            ].reversed.toList(),
           ),
         ),
 

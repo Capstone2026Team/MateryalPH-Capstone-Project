@@ -9,6 +9,7 @@ import 'package:dio/dio.dart';
 
 import 'package:materyalph_api_client/src/api_util.dart';
 import 'package:materyalph_api_client/src/model/budget_override_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/date.dart';
 
 class AdminBudgetOverridesApi {
 
@@ -23,6 +24,8 @@ class AdminBudgetOverridesApi {
   ///
   /// Parameters:
   /// * [page]
+  /// * [from] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Decision created_at.
+  /// * [to] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Decision created_at.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -34,6 +37,8 @@ class AdminBudgetOverridesApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<BudgetOverrideListEnvelope>> listBudgetOverrides({
     int? page,
+    Date? from,
+    Date? to,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -68,6 +73,8 @@ class AdminBudgetOverridesApi {
 
     final _queryParameters = <String, dynamic>{
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+      if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
     };
 
     final _response = await _dio.request<Object>(

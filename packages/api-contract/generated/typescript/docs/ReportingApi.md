@@ -174,11 +174,11 @@ example().catch(console.error);
 
 ## listDocumentExports
 
-> ListDocumentExports200Response listDocumentExports(audience, page)
+> ListDocumentExports200Response listDocumentExports(audience, page, type, resourceId, format, from, to)
 
 list Document Exports
 
-
+Lists the actor\&#39;s currently authorized exports, optionally scoped to the document type, source record and format. READY artifacts past their download deadline are returned as EXPIRED.
 
 ### Example
 
@@ -202,6 +202,16 @@ async function example() {
     audience: audience_example,
     // number (optional)
     page: 56,
+    // 'PURCHASE_ORDER' | 'PAYMENT_CONFIRMATION' | 'PROJECT_SUMMARY' | 'BUDGET_REPORT' | 'OPERATIONAL_ORDER' | 'FEE_STATEMENT' | 'MATERIALS_ANALYTICS' | 'TAX_PACKAGE' | 'AUDIT_LOG' | 'GEO_ANALYTICS' | 'TRANSACTION_HISTORY' | 'EARNINGS' (optional)
+    type: type_example,
+    // string (optional)
+    resourceId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // 'PDF' | 'CSV' (optional)
+    format: format_example,
+    // Date | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Export requested_at (created_at); each download rechecks current permissions. (optional)
+    from: 2013-10-20,
+    // Date | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Export requested_at (created_at); each download rechecks current permissions. (optional)
+    to: 2013-10-20,
   } satisfies ListDocumentExportsRequest;
 
   try {
@@ -223,6 +233,11 @@ example().catch(console.error);
 |------------- | ------------- | ------------- | -------------|
 | **audience** | `buyers`, `vendor`, `admin` | Authenticated surface. The server rejects mismatched account types. | [Defaults to `undefined`] [Enum: buyers, vendor, admin] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **type** | `PURCHASE_ORDER`, `PAYMENT_CONFIRMATION`, `PROJECT_SUMMARY`, `BUDGET_REPORT`, `OPERATIONAL_ORDER`, `FEE_STATEMENT`, `MATERIALS_ANALYTICS`, `TAX_PACKAGE`, `AUDIT_LOG`, `GEO_ANALYTICS`, `TRANSACTION_HISTORY`, `EARNINGS` |  | [Optional] [Defaults to `undefined`] [Enum: PURCHASE_ORDER, PAYMENT_CONFIRMATION, PROJECT_SUMMARY, BUDGET_REPORT, OPERATIONAL_ORDER, FEE_STATEMENT, MATERIALS_ANALYTICS, TAX_PACKAGE, AUDIT_LOG, GEO_ANALYTICS, TRANSACTION_HISTORY, EARNINGS] |
+| **resourceId** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **format** | `PDF`, `CSV` |  | [Optional] [Defaults to `undefined`] [Enum: PDF, CSV] |
+| **from** | `Date` | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Export requested_at (created_at); each download rechecks current permissions. | [Optional] [Defaults to `undefined`] |
+| **to** | `Date` | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Export requested_at (created_at); each download rechecks current permissions. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 
@@ -254,7 +269,7 @@ example().catch(console.error);
 
 ## listTaxPackages
 
-> ListTaxPackages200Response listTaxPackages(page)
+> ListTaxPackages200Response listTaxPackages(page, from, to)
 
 list Tax Packages
 
@@ -280,6 +295,10 @@ async function example() {
   const body = {
     // number (optional)
     page: 56,
+    // Date | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Report package created_at; statutory reporting periods remain immutable. (optional)
+    from: 2013-10-20,
+    // Date | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Report package created_at; statutory reporting periods remain immutable. (optional)
+    to: 2013-10-20,
   } satisfies ListTaxPackagesRequest;
 
   try {
@@ -300,6 +319,8 @@ example().catch(console.error);
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **from** | `Date` | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Report package created_at; statutory reporting periods remain immutable. | [Optional] [Defaults to `undefined`] |
+| **to** | `Date` | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Report package created_at; statutory reporting periods remain immutable. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 

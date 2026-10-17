@@ -6,6 +6,7 @@
 import 'package:materyalph_api_client/src/model/review_ratings.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/review_media_link.dart';
+import 'package:materyalph_api_client/src/model/review_product.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -23,6 +24,7 @@ part 'vendor_review_row.g.dart';
 /// * [submittedAt]
 /// * [edited]
 /// * [variantLabel]
+/// * [product] - Purchased-product identity from the immutable order line snapshot; null for Store and Buyer ratings.
 /// * [media]
 /// * [visibility]
 /// * [orderId]
@@ -57,6 +59,10 @@ abstract class VendorReviewRow implements Built<VendorReviewRow, VendorReviewRow
 
   @BuiltValueField(wireName: r'variant_label')
   String? get variantLabel;
+
+  /// Purchased-product identity from the immutable order line snapshot; null for Store and Buyer ratings.
+  @BuiltValueField(wireName: r'product')
+  ReviewProduct? get product;
 
   @BuiltValueField(wireName: r'media')
   BuiltList<ReviewMediaLink>? get media;
@@ -158,6 +164,13 @@ class _$VendorReviewRowSerializer implements PrimitiveSerializer<VendorReviewRow
       yield serializers.serialize(
         object.variantLabel,
         specifiedType: const FullType(String),
+      );
+    }
+    if (object.product != null) {
+      yield r'product';
+      yield serializers.serialize(
+        object.product,
+        specifiedType: const FullType.nullable(ReviewProduct),
       );
     }
     if (object.media != null) {
@@ -289,6 +302,14 @@ class _$VendorReviewRowSerializer implements PrimitiveSerializer<VendorReviewRow
           ) as String?;
           if (valueDes == null) continue;
           result.variantLabel = valueDes;
+          break;
+        case r'product':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ReviewProduct),
+          ) as ReviewProduct?;
+          if (valueDes == null) continue;
+          result.product.replace(valueDes);
           break;
         case r'media':
           final valueDes = serializers.deserialize(

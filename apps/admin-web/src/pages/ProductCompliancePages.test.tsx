@@ -30,12 +30,19 @@ function open(path: string) {
 }
 
 test('queue loads oldest pending submissions with register result text', async () => {
-  vi.mocked(api.listComplianceQueue).mockResolvedValue({ items: [{ id: 'submission-1', version: 2, path: 'MANUAL', status: 'PENDING_ADMIN_REVIEW', listingId: 'listing-1', displayName: 'Portland cement 40 kg', vendorSku: 'CEM-40', publicStoreName: 'Test Supply', productName: 'PORTLAND CEMENT', referenceStandard: 'PNS 07:2018', referenceResult: 'UNCERTAIN', submittedAt: '2026-09-27T01:00:00Z' }], meta: { total: 1, last_page: 1 } })
+  vi.mocked(api.listComplianceQueue).mockResolvedValue({ items: [{ id: 'submission-1', version: 2, path: 'MANUAL', status: 'PENDING_ADMIN_REVIEW', reviewMode: 'MANUAL_REVIEW', listingId: 'listing-1', displayName: 'Portland cement 40 kg', vendorSku: 'CEM-40', publicStoreName: 'Test Supply', productName: 'PORTLAND CEMENT', referenceStandard: 'PNS 07:2018', referenceResult: 'UNCERTAIN', submittedAt: '2026-09-27T01:00:00Z' }], meta: { total: 1, last_page: 1 } })
+  vi.mocked(api.listRegisters).mockResolvedValue({ items: [{ id: 'register-1', registerKind: 'PS_LICENSE', sourceReference: 'DTI-BPS', snapshotDate: new Date('2026-07-31'), status: 'ACTIVE', sourceChannel: 'UPLOAD', stale: true, rowCount: 7890, rejectedRowCount: 0 }], meta: {} })
   open('/product-compliance')
   const table = await screen.findByRole('table', { name: 'Product compliance submissions' })
   expect(within(table).getByText('Uncertain')).toBeVisible()
+  expect(within(table).getByText('Vendor requested review')).toBeVisible()
   expect(api.listComplianceQueue).toHaveBeenCalledWith(expect.objectContaining({ status: 'PENDING_ADMIN_REVIEW', sort: 'oldest' }))
   expect(screen.getByRole('heading', { name: 'DTI-BPS register snapshots' })).toBeVisible()
+  // The government sheets disable downloads, so the snapshot DTI-BPS provides is imported as .xlsx or .csv.
+  expect(screen.getByLabelText(/Register file/)).toHaveAttribute('accept', expect.stringContaining('.xlsx'))
+  const snapshots = await screen.findByRole('table', { name: 'Register snapshots' })
+  expect(within(snapshots).getByText(/Older than a month/)).toBeVisible()
+  expect(within(snapshots).getByText('Admin upload')).toBeVisible()
 })
 
 test('case names the exact target version and requires a reason to return or reject', async () => {
@@ -62,6 +69,25 @@ test('a stale decision shows a conflict banner with a refresh action', async () 
   expect(await screen.findByRole('button', { name: 'Refresh case' })).toBeVisible()
   fireEvent.click(screen.getByRole('button', { name: 'Refresh case' }))
   await waitFor(() => expect(api.getComplianceCase).toHaveBeenCalledTimes(2))
+})
+
+test('private marking evidence and public product photos both preview', async () => {
+  const apiBase = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'
+  const evidenceUrl = `${new URL(apiBase, window.location.origin).href.replace(/\/$/, '')}/catalog-files/file-1/content?expires=1&signature=test`
+  const photoUrl = 'https://res.cloudinary.com/demo/image/upload/listing.jpg'
+  vi.mocked(api.getComplianceCase).mockResolvedValue({ ...caseDetail(), listing: { ...caseDetail().listing, media_file_ids: ['media-1'] } })
+  vi.mocked(api.getComplianceFileUrl).mockImplementation(async fileId => ({ url: fileId === 'media-1' ? photoUrl : evidenceUrl, expiresAt: new Date() }))
+  const fetcher = vi.fn().mockResolvedValue(new Response('synthetic image', { headers: { 'Content-Type': 'image/jpeg' } }))
+  vi.stubGlobal('fetch', fetcher)
+  vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:evidence'), revokeObjectURL: vi.fn() }))
+  open('/product-compliance/submission-1')
+  expect(await screen.findByRole('img', { name: 'Marking photo · Manual' })).toHaveAttribute('src', 'blob:evidence')
+  fireEvent.click(screen.getByRole('button', { name: 'Listing and material' }))
+  expect(await screen.findByRole('img', { name: 'Public product photo 1' })).toHaveAttribute('src', photoUrl)
+  expect(screen.queryByText(/Preview could not be loaded/)).not.toBeInTheDocument()
+  expect(fetcher).toHaveBeenCalledTimes(1)
+  expect(fetcher).toHaveBeenCalledWith(new URL(evidenceUrl), expect.objectContaining({ credentials: 'include' }))
+  vi.unstubAllGlobals()
 })
 
 test('a decided submission is read-only and extraction is labelled as assistance', async () => {

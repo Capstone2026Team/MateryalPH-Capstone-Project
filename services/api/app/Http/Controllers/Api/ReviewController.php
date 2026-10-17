@@ -10,6 +10,7 @@ use App\Domain\Reviews\ReviewRules;
 use App\Domain\Reviews\ReviewService;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Support\PortalDateRange;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -91,9 +92,15 @@ final class ReviewController extends Controller
 
     public function vendorIndex(Request $request): JsonResponse
     {
-        $result = $this->queries->vendorReviews($request, $request->validate(['type' => ['sometimes', Rule::in([ReviewRules::VENDOR, ReviewRules::PRODUCT, ReviewRules::BUYER])], 'page' => ['sometimes', 'integer', 'between:1,500']]));
+        $result = $this->queries->vendorReviews($request, $request->validate(['type' => ['sometimes', Rule::in([ReviewRules::VENDOR, ReviewRules::PRODUCT, ReviewRules::BUYER])],
+            'listing_id' => ['sometimes', 'required', 'uuid', Rule::prohibitedIf($request->input('type') !== ReviewRules::PRODUCT)], 'page' => ['sometimes', 'integer', 'between:1,500']] + PortalDateRange::rules($request)));
 
         return ApiResponse::success($result['items'], $result['meta']);
+    }
+
+    public function vendorDetail(Request $request, string $reviewId): JsonResponse
+    {
+        return ApiResponse::success($this->queries->vendorDetail($request, $reviewId));
     }
 
     public function vendorOrder(Request $request, string $orderId): JsonResponse
@@ -127,7 +134,7 @@ final class ReviewController extends Controller
     public function moderationQueue(Request $request): JsonResponse
     {
         $result = $this->queries->moderationQueue($request, $request->validate(['state' => ['sometimes', Rule::in(['NEEDS_ACTION', 'ALL', 'FLAGGED', 'HIDDEN_PENDING_REVIEW', 'CORRECTION_REQUESTED', 'REMOVED', 'NONE'])],
-            'page' => ['sometimes', 'integer', 'between:1,500']]));
+            'page' => ['sometimes', 'integer', 'between:1,500']] + PortalDateRange::rules($request)));
 
         return ApiResponse::success($result['items'], $result['meta']);
     }

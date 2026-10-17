@@ -9,6 +9,7 @@ import 'package:materyalph_api_client/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **id** | **String** |  |
+**resourceId** | **String** | Source record for contextual export history; null for aggregate reports. | [optional]
 **type** | **String** |  |
 **format** | **String** |  |
 **state** | **String** |  |

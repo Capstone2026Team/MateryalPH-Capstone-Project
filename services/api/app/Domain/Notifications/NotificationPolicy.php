@@ -7,15 +7,21 @@ namespace App\Domain\Notifications;
 use App\Domain\Authorization\AccountAccess;
 use App\Domain\Disputes\DisputeAccess;
 use App\Domain\Identity\AuthenticationException;
+use App\Domain\Messaging\ConversationAccess;
 use App\Domain\Orders\OrderAccess;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 final class NotificationPolicy
 {
-    public const OPTIONAL = ['INVENTORY', 'MARKETING', 'PROJECTS'];
+    public const OPTIONAL = ['INVENTORY', 'MARKETING', 'PROJECTS', 'MESSAGES'];
 
-    public const CATEGORIES = ['SECURITY', 'LEGAL', 'SUSPENSION', 'PAYMENT', 'REFUND', 'DISPUTES', 'FINANCE_MANDATORY', 'ORDERS', 'INVOICES', 'VENDOR_VERIFICATION', 'INVENTORY', 'MARKETING', 'PROJECTS'];
+    public const CATEGORIES = ['SECURITY', 'LEGAL', 'SUSPENSION', 'PAYMENT', 'REFUND', 'DISPUTES', 'FINANCE_MANDATORY', 'ORDERS', 'INVOICES', 'VENDOR_VERIFICATION', 'INVENTORY', 'MARKETING', 'PROJECTS', 'MESSAGES'];
+
+    public static function defaultEnabled(string $category, string $channel): bool
+    {
+        return $category !== 'MESSAGES' || strtolower($channel) !== 'email';
+    }
 
     public static function mandatory(string $category): bool
     {
@@ -45,6 +51,11 @@ final class NotificationPolicy
         }
         $type = $notice->resource_type;
         $id = $notice->resource_id;
+        if ($type === 'CONVERSATION') {
+            $conversation = DB::table('conversations')->where('id', $id)->first();
+
+            return $user->account_type === 'BUYER' && $conversation !== null && app(ConversationAccess::class)->allows($user, $conversation);
+        }
         if (in_array($type, ['VENDOR_LISTING', 'LISTING_VARIANT'], true)) {
             $listingId = $type === 'VENDOR_LISTING' ? $id : DB::table('listing_variants')->where('id', $id)->value('vendor_listing_id');
             $organization = DB::table('vendor_listings')->where('id', $listingId)->value('vendor_organization_id');
@@ -119,6 +130,7 @@ final class NotificationPolicy
         }
 
         return match ($notice->resource_type) {
+            'CONVERSATION' => '/messages/'.$notice->resource_id,
             'VENDOR_LISTING', 'LISTING_VARIANT' => '/products/inventory',
             'ORDER' => $user->account_type === 'ADMIN' ? '/order-operations' : '/orders/'.$notice->resource_id,
             'DISPUTE_CASE' => '/disputes/'.$notice->resource_id,

@@ -13,7 +13,8 @@ Name | Type | Description | Notes
 **paymentMethod** | **String** |  |
 **fulfillmentDate** | **String** |  |
 **deadlineHours** | **int** |  | [optional] [default to 24]
-**vendorDiscountCentavos** | **int** |  | [optional]
+**vendorDiscountCentavos** | **int** | Legacy fixed materials discount. Omit when discount is supplied. | [optional]
+**discount** | [**ChatQuotationDiscount**](ChatQuotationDiscount.md) |  | [optional]
 **delivery** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  | [optional]
 **nrpc** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  | [optional]
 

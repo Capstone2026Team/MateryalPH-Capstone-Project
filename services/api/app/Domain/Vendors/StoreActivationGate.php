@@ -154,6 +154,6 @@ final class StoreActivationGate
 
     private function deliveryReady(string $organizationId): bool
     {
-        return app(DeliveryRecommendationService::class)->eligibleVehicles($organizationId) !== [];
+        return app(VendorDeliveryEligibility::class)->available($organizationId);
     }
 }

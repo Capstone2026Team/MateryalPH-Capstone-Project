@@ -14,7 +14,7 @@ void main() {
       // TODO
     });
 
-    // orders.operations.view. Counts of failed and pending refunds, pending reimbursements, open cancellation requests and recent NFR events.
+    // orders.operations.view. All-record refund and order-linked reimbursement totals, independent of list filters, plus counts of failed and pending refunds, pending reimbursements, open cancellation requests and recent NFR events.
     //
     //Future<AdminOrderOperationsSummaryEnvelope> getAdminOrderOperationsSummary() async
     test('test getAdminOrderOperationsSummary', () async {
@@ -23,21 +23,21 @@ void main() {
 
     // orders.operations.view. Open Buyer requests awaiting the Vendor, earliest deadline first.
     //
-    //Future<AdminCancellationRequestListEnvelope> listAdminCancellationRequests() async
+    //Future<AdminCancellationRequestListEnvelope> listAdminCancellationRequests({ Date from, Date to }) async
     test('test listAdminCancellationRequests', () async {
       // TODO
     });
 
     // orders.operations.view. Refund instructions, failures first. Admins never hold or disburse funds.
     //
-    //Future<AdminRefundListEnvelope> listAdminRefunds({ String state, String trigger, int page }) async
+    //Future<AdminRefundListEnvelope> listAdminRefunds({ String state, String trigger, int page, Date from, Date to }) async
     test('test listAdminRefunds', () async {
       // TODO
     });
 
     // orders.operations.view. Vendor cash reimbursements of cancelled orders.
     //
-    //Future<AdminReimbursementListEnvelope> listAdminReimbursements() async
+    //Future<AdminReimbursementListEnvelope> listAdminReimbursements({ Date from, Date to }) async
     test('test listAdminReimbursements', () async {
       // TODO
     });

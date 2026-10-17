@@ -12,11 +12,18 @@ export function ConfirmDialog({ open, title, children, confirmLabel, busy = fals
   const titleId = useId()
   useEffect(() => {
     const element = dialog.current
-    if (!element) return
-    if (open && !element.open) { if (typeof element.showModal === 'function') element.showModal(); else element.setAttribute('open', '') }
-    if (!open && element.open) { if (typeof element.close === 'function') element.close(); else element.removeAttribute('open') }
+    if (!element || !open) return
+    const previousFocus = document.activeElement
+    const overflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    if (!element.open) { if (typeof element.showModal === 'function') element.showModal(); else element.setAttribute('open', '') }
+    return () => {
+      if (element.open) { if (typeof element.close === 'function') element.close(); else element.removeAttribute('open') }
+      document.body.style.overflow = overflow
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus()
+    }
   }, [open])
-  return <dialog ref={dialog} aria-labelledby={titleId} onCancel={event => { event.preventDefault(); if (!busy) onCancel() }} className="fixed inset-0 m-auto w-[min(92vw,28rem)] rounded-surface border border-border-default bg-surface-primary p-5 text-text-strong backdrop:bg-black/50">
+  return <dialog ref={dialog} aria-labelledby={titleId} onCancel={event => { event.preventDefault(); if (!busy) onCancel() }} className="fixed inset-0 m-auto max-h-[calc(100dvh_-_2rem)] w-[min(92vw,28rem)] overflow-y-auto rounded-surface border border-border-default bg-surface-primary p-5 text-text-strong shadow-floating backdrop:bg-overlay-scrim">
     {open && <>
       <h2 id={titleId} className="text-lg font-semibold">{title}</h2>
       <div className="mt-2 text-sm text-text-secondary">{children}</div>

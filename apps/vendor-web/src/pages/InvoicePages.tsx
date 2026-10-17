@@ -2,7 +2,7 @@ import { cloneElement, useCallback, useEffect, useId, useRef, useState, type Rea
 import { Link, useSearchParams } from 'react-router-dom'
 import { FileText, ReceiptText, Upload } from 'lucide-react'
 import {
-  Button, ConfirmDialog, DeadlineCountdown, FilterTabs, InfoNote, EmptyState, InvoiceRecordList, PlatformDocumentNotice, ResponsiveRecordList, StatusBadge, StatusMessage, formatManilaDateTime, formatPesoCentavos, type RecordColumn,
+  ActiveFilters, ALL_DATES, Button, DateFilter, ConfirmDialog, DeadlineCountdown, FileSelectionField, FilterTabs, InfoNote, EmptyState, InvoiceRecordList, Pagination, PlatformDocumentNotice, ResponsiveRecordList, StatusBadge, StatusMessage, Toolbar, dateFilterLabel, formatManilaDateTime, formatPesoCentavos, type RecordColumn,
 } from '@materyalph/web-ui'
 import {
   disputeApiBasePath, explainDifference, getOrderInvoices, listInvoices, uploadInvoice,
@@ -13,6 +13,7 @@ import { newIdempotencyKey } from '../lib/onboarding-api'
 import { storeName } from '../lib/catalog-access'
 import { useOnboardingSnapshot } from '../lib/vendor-status'
 import { ErrorState, LoadingState, PageHeader, VendorShell } from './PhaseThreeVendorPages'
+import { dateRangeFromParams, dateRangePatch } from '../lib/date-filters'
 
 const control = 'min-h-12 w-full min-w-0 rounded-control border border-border-default bg-surface-primary px-3 text-base font-normal'
 const VIEWS: { value: InvoiceView; label: string }[] = [
@@ -34,6 +35,14 @@ export function VendorInvoicesPage() {
 function InvoicesWorkspace() {
   const [params, setParams] = useSearchParams()
   const view = (VIEWS.some(item => item.value === params.get('view')) ? params.get('view') : 'REQUESTS') as InvoiceView
+  const range = dateRangeFromParams(params)
+  const page = Math.max(1, Number(params.get('page') ?? '1') || 1)
+  const update = (patch: Record<string, string>) => setParams(current => {
+    const next = new URLSearchParams(current)
+    for (const [key, value] of Object.entries(patch)) { if (value) next.set(key, value); else next.delete(key) }
+    if (!('page' in patch)) next.delete('page')
+    return next
+  }, { replace: true })
   const [rows, setRows] = useState<InvoiceLogRow[] | null>(null)
   const [meta, setMeta] = useState<InvoiceListMeta | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -41,9 +50,9 @@ function InvoicesWorkspace() {
   useEffect(() => {
     let active = true
     setRows(null); setError(null)
-    listInvoices({ view }).then(result => { if (active) { setRows(result.items); setMeta(result.meta) } }).catch(async cause => { const text = await readableOrderError(cause); if (active) setError(text) })
+    listInvoices({ view, page, ...(range.from ? { from: range.from } : {}), ...(range.to ? { to: range.to } : {}) }).then(result => { if (active) { setRows(result.items); setMeta(result.meta) } }).catch(async cause => { const text = await readableOrderError(cause); if (active) setError(text) })
     return () => { active = false }
-  }, [view, attempt])
+  }, [view, page, range.from, range.to, attempt])
   const orderLink = (row: InvoiceLogRow) => <Link to={`/orders/${row.orderId ?? ''}#invoices`} className="font-semibold text-action-primary underline-offset-4 hover:underline">{row.orderReference ?? 'Order'}</Link>
   const columns: RecordColumn<InvoiceLogRow>[] = view === 'REQUESTS' ? [
     { key: 'order', header: 'Order', cell: orderLink },
@@ -64,10 +73,13 @@ function InvoicesWorkspace() {
   return <div className="grid min-w-0 gap-6">
     <PageHeader eyebrow="Store Operations" title="E-Invoices" description="Manage invoice copies and Buyer copy or correction requests." />
     <InfoNote>MateryalPH never assigns an official invoice number; an uploaded PDF is not proof of BIR compliance. {meta?.issuanceNotice}</InfoNote>
-    <FilterTabs label="Invoice view" value={view} onChange={value => setParams({ view: value })} chips={VIEWS.map(item => ({ value: item.value, label: item.label, count: meta?.counts?.[item.value] }))} />
+    <FilterTabs label="Invoice view" value={view} onChange={value => update({ view: value })} chips={VIEWS.map(item => ({ value: item.value, label: item.label, count: meta?.counts?.[item.value] }))} />
+    <Toolbar filters={<DateFilter title={view === 'REQUESTS' ? 'Request dates' : view === 'DUE' ? 'Sale confirmation dates' : 'Invoice dates'} value={range} onChange={next => update(dateRangePatch(next))} />} />
+    <ActiveFilters filters={range.from || range.to ? [{ key: 'dates', label: dateFilterLabel(range), onRemove: () => update(dateRangePatch(ALL_DATES)) }] : []} onClear={() => update(dateRangePatch(ALL_DATES))} />
     {error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} /> : rows === null ? <LoadingState label="Loading invoices…" />
       : rows.length === 0 ? <EmptyState icon={<ReceiptText size={24} aria-hidden="true" />} message={view === 'REQUESTS' ? 'No Buyer copy or correction requests.' : view === 'DUE' ? 'Every confirmed sale has an uploaded invoice copy.' : 'No invoice copies in this view.'} action={<Button variant="secondary" onClick={() => setAttempt(value => value + 1)}>Retry</Button>} />
         : <ResponsiveRecordList caption={VIEWS.find(item => item.value === view)?.label ?? 'Invoices'} rows={rows} columns={columns} rowKey={row => row.id ?? row.orderId ?? ''} cardTitle={orderLink} />}
+    {meta && (page > 1 || meta.hasMore) && <Pagination page={page} hasMore={Boolean(meta.hasMore)} total={meta.total ?? 0} busy={rows === null} onChange={next => update({ page: String(next) })} />}
   </div>
 }
 
@@ -85,12 +97,12 @@ export function OrderInvoicePanel({ orderId }: { orderId: string }) {
   }, [orderId, attempt])
   const changed = (next: VendorOrderInvoices, text: string) => { setData(next); setNotice(text) }
   return <section id="invoices" aria-labelledby="invoice-heading" className="grid min-w-0 gap-4 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5">
-    <div className="flex flex-wrap items-center justify-between gap-2">
-      <h2 id="invoice-heading" className="flex items-center gap-2 text-lg font-semibold"><FileText size={18} aria-hidden="true" />Invoices</h2>
+    <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+      <h2 id="invoice-heading" className="flex min-w-0 items-center gap-2 text-lg font-semibold"><FileText size={18} className="shrink-0" aria-hidden="true" />Invoices</h2>
       {data && <StatusBadge label={data.status === 'ISSUED' ? 'Copy uploaded' : data.status === 'NOT_YET_UPLOADED' ? 'No copy uploaded yet' : 'Not due yet'} tone={data.status === 'NOT_YET_UPLOADED' ? 'warning' : 'neutral'} />}
     </div>
     {error ? <ErrorState message={error} onRetry={reload} /> : !data ? <p className="text-sm text-text-secondary">Loading invoices…</p> : <>
-      <p className="text-sm text-text-secondary">{data.issuanceNotice}</p>
+      <p className="max-w-3xl text-sm leading-6 text-text-secondary">{data.issuanceNotice}</p>
       {notice && <StatusMessage tone="success">{notice}</StatusMessage>}
       {data.requests.filter(request => request.state !== 'CLOSED').map(request => <div key={request.id} className="grid gap-2 rounded-control border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
         <p className="font-semibold">The Buyer requested an invoice {request.kind === 'CORRECTION' ? 'correction' : 'copy'} · {REQUEST_STATES[request.state] ?? request.state}</p>
@@ -103,10 +115,13 @@ export function OrderInvoicePanel({ orderId }: { orderId: string }) {
         <div className="flex flex-wrap justify-between gap-x-3"><dt className="text-text-secondary">Address</dt><dd className="font-semibold">{data.billingDetails.billingAddress}</dd></div>
         {(data.billingDetails.tin || data.billingDetails.tinMasked) && <div className="flex flex-wrap justify-between gap-x-3"><dt className="text-text-secondary">Buyer TIN</dt><dd className="font-semibold tabular-nums">{data.billingDetails.tin ?? data.billingDetails.tinMasked}</dd></div>}
       </dl>}
-      <InvoiceRecordList records={data.records} apiBasePath={disputeApiBasePath} renderAction={record => record.canExplain ? <ExplainAction orderId={orderId} recordId={record.id} onChanged={changed} /> : null} />
-      {!data.canOpenFiles && data.records.length > 0 && <p className="text-xs text-text-secondary">Your role can see invoice status but not open the official file.</p>}
-      {data.canUpload ? <UploadForm data={data} onChanged={changed} /> : <p className="text-sm text-text-secondary">The Owner, Store Manager or Store Staff upload the official invoice copy.</p>}
-      <div className="grid gap-2 border-t border-border-default pt-3"><h3 className="text-sm font-semibold">MateryalPH documents</h3><PlatformDocumentNotice documents={data.platformDocuments} /></div>
+      <div className="grid min-w-0 gap-2">
+        <InvoiceRecordList records={data.records} apiBasePath={disputeApiBasePath} renderAction={record => record.canExplain ? <ExplainAction orderId={orderId} recordId={record.id} onChanged={changed} /> : null} />
+        {!data.canOpenFiles && data.records.length > 0 && <p className="text-xs leading-5 text-text-secondary">Your role can see invoice status but not open the official file.</p>}
+        {!data.canUpload && <p className="text-sm leading-6 text-text-secondary">The Owner, Store Manager or Store Staff upload the official invoice copy.</p>}
+      </div>
+      {data.canUpload && <UploadForm data={data} onChanged={changed} />}
+      <div className="grid min-w-0 gap-3 border-t border-border-default pt-4"><h3 className="text-sm font-semibold">MateryalPH documents</h3><PlatformDocumentNotice documents={data.platformDocuments} /></div>
     </>}
   </section>
 }
@@ -199,7 +214,7 @@ function UploadForm({ data, onChanged }: { data: VendorOrderInvoices; onChanged:
     </div>
     {data.lines.length > 1 && <fieldset className="grid gap-2"><legend className="text-sm font-semibold">Lines covered (leave all unchecked for the whole order)</legend>{data.lines.map(line => <label key={line.orderLineId} className="flex min-h-11 items-center gap-3 text-sm">
       <input type="checkbox" className="h-5 w-5 accent-action-primary" checked={lines.includes(line.orderLineId)} onChange={event => setLines(current => event.target.checked ? [...current, line.orderLineId] : current.filter(id => id !== line.orderLineId))} />{line.displayName}</label>)}</fieldset>}
-    <FieldShell label="Copy (PDF, JPG or PNG)" error={errors.file}><input type="file" accept="application/pdf,image/png,image/jpeg" className="min-h-12 w-full min-w-0 text-sm font-normal" onChange={event => setFile(event.target.files?.[0] ?? null)} /></FieldShell>
+    <FileSelectionField label="Copy (PDF, JPG or PNG)" accept="application/pdf,image/png,image/jpeg" hint="Select the issued invoice copy before uploading." file={file} disabled={busy} required error={errors.file} onChange={setFile} />
     <p className="text-xs text-text-secondary">TEST uploads are labelled DEMO samples. The totals are compared with the accepted order; a difference is flagged for you to explain and never changes what the Buyer pays.</p>
     <div className="flex flex-wrap gap-3"><Button type="submit" disabled={busy}>{busy ? 'Uploading…' : 'Upload copy'}</Button><Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button></div>
   </form>

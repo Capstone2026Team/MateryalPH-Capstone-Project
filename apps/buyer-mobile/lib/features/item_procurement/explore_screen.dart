@@ -1,3 +1,4 @@
+import '../../design_system/components/buyer_cart_button.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -74,16 +75,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
       context,
       'Materials Catalog',
       actions: [
-        ListenableBuilder(
-          listenable: widget.cart,
-          builder: (context, _) => BuyerHeaderIconButton(
-            icon: LucideIcons.shoppingCart,
-            tooltip: widget.cart.lineCount > 0
-                ? 'Cart, ${widget.cart.lineCount} lines'
-                : 'Cart',
-            badgeCount: widget.cart.lineCount,
-            onPressed: () => widget.navigation.openCart(context),
-          ),
+        BuyerCartButton(
+          cart: widget.cart,
+          onPressed: () => widget.navigation.openCart(context),
         ),
         BuyerNotificationButton(onPressed: widget.onOpenNotifications),
       ],
@@ -147,7 +141,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
     if (_controller.summaryPhase == LoadPhase.needsOrigin || origin == null) {
       return StateMessage(
         kind: StateKind.needsLocation,
-        artwork: 'assets/states/location.png',
         title: 'Choose a location first',
         message:
             'Products and prices depend on where you are buying for. Pick a location on the Map; GPS is optional.',
@@ -392,6 +385,7 @@ class _CategoryTile extends StatelessWidget {
 
 IconData categoryIcon(String code) => switch (code) {
   'CEMENT_AND_CONCRETE' || 'MASONRY' => LucideIcons.brickWall,
+  'READY_MIXED_CONCRETE' => LucideIcons.truck,
   'ROOFING_MATERIALS' => LucideIcons.house,
   'WOOD_AND_LUMBER' || 'LANDSCAPING_AND_EXTERIOR' => LucideIcons.trees,
   'STEEL_AND_REINFORCEMENT' ||

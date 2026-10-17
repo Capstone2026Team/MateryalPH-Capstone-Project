@@ -9,6 +9,7 @@ use App\Models\PlatformRole;
 use App\Models\User;
 use Database\Seeders\SystemFoundationSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
@@ -42,6 +43,28 @@ final class PhaseOneAuthAcceptanceTest extends TestCase
             ->assertJsonPath('errors.0.code', 'ACCOUNT_ALREADY_EXISTS');
 
         self::assertSame(1, User::query()->whereRaw('LOWER(email) = ?', ['one-identity@example.test'])->count());
+    }
+
+    public function test_vendor_registration_does_not_require_a_store_name(): void
+    {
+        $this->webPost('/api/v1/auth/register', [
+            'full_name' => 'Account Owner',
+            'email' => 'no-store-name@example.test',
+            'mobile_e164' => '+639171234567',
+            'password' => 'StrongPassword123',
+            'password_confirmation' => 'StrongPassword123',
+            'terms_accepted' => true,
+            'privacy_accepted' => true,
+        ])->assertSuccessful();
+
+        $organization = DB::table('vendor_organizations')
+            ->join('vendor_memberships', 'vendor_memberships.vendor_organization_id', '=', 'vendor_organizations.id')
+            ->join('users', 'users.id', '=', 'vendor_memberships.user_id')
+            ->where('users.email', 'no-store-name@example.test')
+            ->select('vendor_organizations.store_name', 'vendor_organizations.onboarding_status')
+            ->sole();
+        self::assertSame('', $organization->store_name);
+        self::assertSame('NOT_STARTED', $organization->onboarding_status);
     }
 
     public function test_admin_access_requires_and_consumes_a_valid_invitation(): void

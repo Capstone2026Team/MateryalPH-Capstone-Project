@@ -124,7 +124,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listAdminReviewModeration**
-> ModerationQueueEnvelope listAdminReviewModeration(state, page)
+> ModerationQueueEnvelope listAdminReviewModeration(state, page, from, to)
 
 
 
@@ -145,9 +145,11 @@ import 'package:materyalph_api_client/api.dart';
 final api = MateryalphApiClient().getAdminReviewModerationApi();
 final String state = state_example; // String |
 final int page = 56; // int |
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review submitted_at.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review submitted_at.
 
 try {
-    final response = api.listAdminReviewModeration(state, page);
+    final response = api.listAdminReviewModeration(state, page, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling AdminReviewModerationApi->listAdminReviewModeration: $e\n');
@@ -160,6 +162,8 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **state** | **String**|  | [optional]
  **page** | **int**|  | [optional]
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review submitted_at. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review submitted_at. | [optional]
 
 ### Return type
 

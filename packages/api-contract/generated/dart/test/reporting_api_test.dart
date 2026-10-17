@@ -27,9 +27,9 @@ void main() {
 
     // list Document Exports
     //
+    // Lists the actor's currently authorized exports, optionally scoped to the document type, source record and format. READY artifacts past their download deadline are returned as EXPIRED.
     //
-    //
-    //Future<ListDocumentExports200Response> listDocumentExports(String audience, { int page }) async
+    //Future<ListDocumentExports200Response> listDocumentExports(String audience, { int page, String type, String resourceId, String format, Date from, Date to }) async
     test('test listDocumentExports', () async {
       // TODO
     });
@@ -38,7 +38,7 @@ void main() {
     //
     //
     //
-    //Future<ListTaxPackages200Response> listTaxPackages({ int page }) async
+    //Future<ListTaxPackages200Response> listTaxPackages({ int page, Date from, Date to }) async
     test('test listTaxPackages', () async {
       // TODO
     });

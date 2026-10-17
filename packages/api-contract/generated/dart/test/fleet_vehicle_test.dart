@@ -119,6 +119,17 @@ void main() {
       // TODO
     });
 
+    // Mixer mobilization fee on the current rate; zero for other vehicles.
+    // int mobilizationFeeCentavos
+    test('to test the property `mobilizationFeeCentavos`', () async {
+      // TODO
+    });
+
+    // String mobilizationBasis
+    test('to test the property `mobilizationBasis`', () async {
+      // TODO
+    });
+
     // FleetVehicleEligibility eligibility
     test('to test the property `eligibility`', () async {
       // TODO

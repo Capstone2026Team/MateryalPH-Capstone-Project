@@ -52,6 +52,12 @@ void main() {
       // TODO
     });
 
+    // Replaces the listing's own search tags. Letters
+    // BuiltList<String> customTags
+    test('to test the property `customTags`', () async {
+      // TODO
+    });
+
     // String brand
     test('to test the property `brand`', () async {
       // TODO

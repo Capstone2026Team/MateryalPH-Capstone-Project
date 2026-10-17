@@ -25,6 +25,8 @@ Name | Type | Description | Notes
 **heavyClassification** | **String** |  | [optional]
 **baseFeeCentavos** | **int** |  | [optional]
 **perKmCentavos** | **int** |  | [optional]
+**mobilizationFeeCentavos** | **int** | Concrete Mixer Truck / Transit Mixer only; a positive fee needs mobilization_basis. | [optional]
+**mobilizationBasis** | **String** |  | [optional]
 **maximumDistanceKm** | **int** | Omission retains the saved limit; new coverage defaults to the approved 50 km procurement limit. New vehicle rates inherit coverage. | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

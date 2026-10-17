@@ -8,6 +8,7 @@ use App\Domain\Finance\AdminFinanceService;
 use App\Domain\Finance\WithholdingThresholdEngine;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Support\PortalDateRange;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -24,14 +25,14 @@ final class AdminFinanceController extends Controller
         $filters = $request->validate(['state' => ['sometimes', Rule::in(['CREATING', 'PENDING', 'UNCERTAIN', 'PAID', 'FAILED', 'EXPIRED', 'CANCELLED'])],
             'purpose' => ['sometimes', Rule::in(['FULL_ORDER_PAYMENT', 'NRPC_ASSURANCE_PAYMENT', 'ORDER_BALANCE_PAYMENT', 'PLATFORM_FEE_PAYMENT'])],
             'evidence_origin' => ['sometimes', Rule::in(['XENDIT_TEST', 'SIMULATED'])], 'reconciliation_state' => ['sometimes', Rule::in(['NOT_REQUIRED', 'PENDING', 'RECONCILED', 'EXCEPTION'])],
-            'page' => ['sometimes', 'integer', 'between:1,1000']]);
+            'page' => ['sometimes', 'integer', 'between:1,1000']] + PortalDateRange::rules($request));
 
         return $this->paged($this->finance->payments($request, $filters));
     }
 
     public function reviewItems(Request $request): JsonResponse
     {
-        $filters = $request->validate(['state' => ['sometimes', Rule::in(['OPEN', 'RESOLVED'])], 'kind' => ['sometimes', Rule::in(self::KINDS)], 'page' => ['sometimes', 'integer', 'between:1,1000']]);
+        $filters = $request->validate(['state' => ['sometimes', Rule::in(['OPEN', 'RESOLVED'])], 'kind' => ['sometimes', Rule::in(self::KINDS)], 'page' => ['sometimes', 'integer', 'between:1,1000']] + PortalDateRange::rules($request));
 
         return $this->paged($this->finance->reviewItems($request, $filters));
     }
@@ -66,7 +67,11 @@ final class AdminFinanceController extends Controller
 
     public function statements(Request $request): JsonResponse
     {
-        $filters = $request->validate(['state' => ['sometimes', Rule::in(['DRAFT', 'ISSUED', 'PARTIALLY_PAID', 'PAID', 'VOIDED'])], 'overdue' => ['sometimes', 'boolean'], 'page' => ['sometimes', 'integer', 'between:1,1000']]);
+        // Generated OpenAPI clients serialize query booleans as true/false; Laravel's boolean rule uses 1/0.
+        if (in_array($request->query('overdue'), ['true', 'false'], true)) {
+            $request->merge(['overdue' => $request->query('overdue') === 'true']);
+        }
+        $filters = $request->validate(['state' => ['sometimes', Rule::in(['DRAFT', 'ISSUED', 'PARTIALLY_PAID', 'PAID', 'VOIDED'])], 'overdue' => ['sometimes', 'boolean'], 'page' => ['sometimes', 'integer', 'between:1,1000']] + PortalDateRange::rules($request));
 
         return $this->paged($this->finance->statementsList($request, $filters));
     }

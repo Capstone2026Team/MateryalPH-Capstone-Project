@@ -29,6 +29,11 @@ import {
     ProjectCandidateRequestToJSON,
 } from '../models/ProjectCandidateRequest';
 import {
+    type ProjectCandidateResponse,
+    ProjectCandidateResponseFromJSON,
+    ProjectCandidateResponseToJSON,
+} from '../models/ProjectCandidateResponse';
+import {
     type ProjectCompile,
     ProjectCompileFromJSON,
     ProjectCompileToJSON,
@@ -89,6 +94,11 @@ import {
     ProjectRouteResponseToJSON,
 } from '../models/ProjectRouteResponse';
 import {
+    type ProjectSelectionPreview,
+    ProjectSelectionPreviewFromJSON,
+    ProjectSelectionPreviewToJSON,
+} from '../models/ProjectSelectionPreview';
+import {
     type ProjectUpdate,
     ProjectUpdateFromJSON,
     ProjectUpdateToJSON,
@@ -103,6 +113,21 @@ import {
     ProjectViewResponseFromJSON,
     ProjectViewResponseToJSON,
 } from '../models/ProjectViewResponse';
+import {
+    type WorkPackageAlternativePageResponse,
+    WorkPackageAlternativePageResponseFromJSON,
+    WorkPackageAlternativePageResponseToJSON,
+} from '../models/WorkPackageAlternativePageResponse';
+import {
+    type WorkPackageBudgetEstimateRequest,
+    WorkPackageBudgetEstimateRequestFromJSON,
+    WorkPackageBudgetEstimateRequestToJSON,
+} from '../models/WorkPackageBudgetEstimateRequest';
+import {
+    type WorkPackageBudgetEstimateResponse,
+    WorkPackageBudgetEstimateResponseFromJSON,
+    WorkPackageBudgetEstimateResponseToJSON,
+} from '../models/WorkPackageBudgetEstimateResponse';
 import {
     type WorkPackageInput,
     WorkPackageInputFromJSON,
@@ -177,21 +202,6 @@ export interface CreateWorkPackageRequest {
     workPackageInput: WorkPackageInput;
 }
 
-export interface CreateWorkPackageVersionRequest {
-    /**
-     *
-     */
-    packageId: string;
-    /**
-     *
-     */
-    idempotencyKey: string;
-    /**
-     *
-     */
-    workPackageInput: WorkPackageInput;
-}
-
 export interface DeleteProjectRequest {
     /**
      *
@@ -229,6 +239,17 @@ export interface EditWorkPackageRequest {
     workPackageInput: WorkPackageInput;
 }
 
+export interface EstimateWorkPackageBudgetRequest {
+    /**
+     *
+     */
+    projectId: string;
+    /**
+     *
+     */
+    workPackageBudgetEstimateRequest: WorkPackageBudgetEstimateRequest;
+}
+
 export interface GetProjectRequest {
     /**
      *
@@ -260,6 +281,22 @@ export interface GetProjectEstimatesRequest {
      *
      */
     page?: number;
+    /**
+     *
+     */
+    sort?: GetProjectEstimatesSortEnum;
+    /**
+     *
+     */
+    favoritesOnly?: boolean;
+    /**
+     *
+     */
+    completeOnly?: boolean;
+    /**
+     *
+     */
+    withinBudget?: boolean;
 }
 
 export interface GetWorkPackageRequest {
@@ -295,11 +332,60 @@ export interface ListProjectsRequest {
     page?: number;
 }
 
+export interface ListWorkPackageLineAlternativesRequest {
+    /**
+     *
+     */
+    packageId: string;
+    /**
+     *
+     */
+    lineId: string;
+    /**
+     *
+     */
+    page?: number;
+    /**
+     *
+     */
+    excludeVendorId?: string;
+}
+
+export interface PreviewProjectSpecificationSelectionRequest {
+    /**
+     *
+     */
+    packageId: string;
+    /**
+     *
+     */
+    candidateId: string;
+    /**
+     *
+     */
+    projectSelectionPreview: ProjectSelectionPreview;
+}
+
 export interface PreviewWorkPackageCsvRequest {
     /**
      *
      */
     projectImportRequest: ProjectImportRequest;
+}
+
+export interface ReactivateWorkPackageRequest {
+    /**
+     *
+     */
+    packageId: string;
+    /**
+     *
+     */
+    idempotencyKey: string;
+    /**
+     *
+     */
+    projectVersionRequest: ProjectVersionRequest;
 }
 
 export interface ResetProjectRankingPreferencesRequest {
@@ -493,7 +579,7 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Cancel an unassigned package, retaining every locked version. Selected work follows order cancellation rules.
+     * Cancel an unassigned package, retaining its saved contents. Selected work follows order cancellation rules.
      */
     async closeWorkPackageRaw(requestParameters: CloseWorkPackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkPackageViewResponse>> {
         const requestOptions = await this.closeWorkPackageRequestOpts(requestParameters);
@@ -503,7 +589,7 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Cancel an unassigned package, retaining every locked version. Selected work follows order cancellation rules.
+     * Cancel an unassigned package, retaining its saved contents. Selected work follows order cancellation rules.
      */
     async closeWorkPackage(requestParameters: CloseWorkPackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkPackageViewResponse> {
         const response = await this.closeWorkPackageRaw(requestParameters, initOverrides);
@@ -696,7 +782,7 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Save a Draft. Normalized units, positive quantities, explicit site and access are validated.
+     * Save a Draft. Normalized units, positive quantities, explicit site and access are validated. The budget is deducted from the Project budget immediately; WORK_PACKAGE_BUDGET_EXCEEDS_PROJECT (422) when non-cancelled allocations would exceed it.
      */
     async createWorkPackageRaw(requestParameters: CreateWorkPackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkPackageViewResponse>> {
         const requestOptions = await this.createWorkPackageRequestOpts(requestParameters);
@@ -706,84 +792,10 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Save a Draft. Normalized units, positive quantities, explicit site and access are validated.
+     * Save a Draft. Normalized units, positive quantities, explicit site and access are validated. The budget is deducted from the Project budget immediately; WORK_PACKAGE_BUDGET_EXCEEDS_PROJECT (422) when non-cancelled allocations would exceed it.
      */
     async createWorkPackage(requestParameters: CreateWorkPackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkPackageViewResponse> {
         const response = await this.createWorkPackageRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for createWorkPackageVersion without sending the request
-     */
-    async createWorkPackageVersionRequestOpts(requestParameters: CreateWorkPackageVersionRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['packageId'] == null) {
-            throw new runtime.RequiredError(
-                'packageId',
-                'Required parameter "packageId" was null or undefined when calling createWorkPackageVersion().'
-            );
-        }
-
-        if (requestParameters['idempotencyKey'] == null) {
-            throw new runtime.RequiredError(
-                'idempotencyKey',
-                'Required parameter "idempotencyKey" was null or undefined when calling createWorkPackageVersion().'
-            );
-        }
-
-        if (requestParameters['workPackageInput'] == null) {
-            throw new runtime.RequiredError(
-                'workPackageInput',
-                'Required parameter "workPackageInput" was null or undefined when calling createWorkPackageVersion().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        headerParameters['Content-Type'] = 'application/json';
-
-        if (requestParameters['idempotencyKey'] != null) {
-            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
-        }
-
-        if (this.configuration && this.configuration.accessToken) {
-            const token = this.configuration.accessToken;
-            const tokenString = await token("passportBearer", []);
-
-            if (tokenString) {
-                headerParameters["Authorization"] = `Bearer ${tokenString}`;
-            }
-        }
-
-        let urlPath = `/buyers/work-packages/{packageId}/versions`;
-        urlPath = urlPath.replace('{packageId}', encodeURIComponent(String(requestParameters['packageId'])));
-
-        return {
-            path: urlPath,
-            method: 'POST',
-            headers: headerParameters,
-            query: queryParameters,
-            body: WorkPackageInputToJSON(requestParameters['workPackageInput']),
-        };
-    }
-
-    /**
-     * Explicit correction version invalidates estimates and expires inquiries. Selected work requires prior order cancellation.
-     */
-    async createWorkPackageVersionRaw(requestParameters: CreateWorkPackageVersionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkPackageViewResponse>> {
-        const requestOptions = await this.createWorkPackageVersionRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => WorkPackageViewResponseFromJSON(jsonValue));
-    }
-
-    /**
-     * Explicit correction version invalidates estimates and expires inquiries. Selected work requires prior order cancellation.
-     */
-    async createWorkPackageVersion(requestParameters: CreateWorkPackageVersionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkPackageViewResponse> {
-        const response = await this.createWorkPackageVersionRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -896,7 +908,7 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Delete only a Draft with no locked historical version. Retain activated evidence.
+     * Delete a Work Package that has no order, tagged purchase or selected Vendor. A Draft with no locked history is removed; any other package is cancelled and hidden from the Buyer while its saved originals, estimates and quotations are retained. A package with an order returns WORK_PACKAGE_HAS_ORDER.
      */
     async deleteWorkPackageRaw(requestParameters: DeleteWorkPackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ChatEmptyResponse>> {
         const requestOptions = await this.deleteWorkPackageRequestOpts(requestParameters);
@@ -906,7 +918,7 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Delete only a Draft with no locked historical version. Retain activated evidence.
+     * Delete a Work Package that has no order, tagged purchase or selected Vendor. A Draft with no locked history is removed; any other package is cancelled and hidden from the Buyer while its saved originals, estimates and quotations are retained. A package with an order returns WORK_PACKAGE_HAS_ORDER.
      */
     async deleteWorkPackage(requestParameters: DeleteWorkPackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatEmptyResponse> {
         const response = await this.deleteWorkPackageRaw(requestParameters, initOverrides);
@@ -970,7 +982,7 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Editable Draft only; saves an append-only draft version.
+     * Edit the Work Package directly, with no new list entry. Allowed until an order, tagged purchase or selected Vendor exists (otherwise WORK_PACKAGE_HAS_ORDER). Estimates and open quotation requests built on the old materials are invalidated; a compared or quoted package returns to Active.
      */
     async editWorkPackageRaw(requestParameters: EditWorkPackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkPackageViewResponse>> {
         const requestOptions = await this.editWorkPackageRequestOpts(requestParameters);
@@ -980,10 +992,73 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Editable Draft only; saves an append-only draft version.
+     * Edit the Work Package directly, with no new list entry. Allowed until an order, tagged purchase or selected Vendor exists (otherwise WORK_PACKAGE_HAS_ORDER). Estimates and open quotation requests built on the old materials are invalidated; a compared or quoted package returns to Active.
      */
     async editWorkPackage(requestParameters: EditWorkPackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkPackageViewResponse> {
         const response = await this.editWorkPackageRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for estimateWorkPackageBudget without sending the request
+     */
+    async estimateWorkPackageBudgetRequestOpts(requestParameters: EstimateWorkPackageBudgetRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['projectId'] == null) {
+            throw new runtime.RequiredError(
+                'projectId',
+                'Required parameter "projectId" was null or undefined when calling estimateWorkPackageBudget().'
+            );
+        }
+
+        if (requestParameters['workPackageBudgetEstimateRequest'] == null) {
+            throw new runtime.RequiredError(
+                'workPackageBudgetEstimateRequest',
+                'Required parameter "workPackageBudgetEstimateRequest" was null or undefined when calling estimateWorkPackageBudget().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/projects/{projectId}/work-package-estimate`;
+        urlPath = urlPath.replace('{projectId}', encodeURIComponent(String(requestParameters['projectId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: WorkPackageBudgetEstimateRequestToJSON(requestParameters['workPackageBudgetEstimateRequest']),
+        };
+    }
+
+    /**
+     * Advisory materials-only budget estimate for a Work Package being drafted. Each catalog line is priced at the half-up average of one price per eligible Vendor (that Vendor\'s lowest exact match) within the radius of the site. Unlisted and unmatched lines carry no price. Excludes delivery fees and labor. Nothing is stored.
+     */
+    async estimateWorkPackageBudgetRaw(requestParameters: EstimateWorkPackageBudgetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkPackageBudgetEstimateResponse>> {
+        const requestOptions = await this.estimateWorkPackageBudgetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => WorkPackageBudgetEstimateResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Advisory materials-only budget estimate for a Work Package being drafted. Each catalog line is priced at the half-up average of one price per eligible Vendor (that Vendor\'s lowest exact match) within the radius of the site. Unlisted and unmatched lines carry no price. Excludes delivery fees and labor. Nothing is stored.
+     */
+    async estimateWorkPackageBudget(requestParameters: EstimateWorkPackageBudgetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkPackageBudgetEstimateResponse> {
+        const response = await this.estimateWorkPackageBudgetRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1122,6 +1197,22 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
             queryParameters['page'] = requestParameters['page'];
         }
 
+        if (requestParameters['sort'] != null) {
+            queryParameters['sort'] = requestParameters['sort'];
+        }
+
+        if (requestParameters['favoritesOnly'] != null) {
+            queryParameters['favorites_only'] = requestParameters['favoritesOnly'];
+        }
+
+        if (requestParameters['completeOnly'] != null) {
+            queryParameters['complete_only'] = requestParameters['completeOnly'];
+        }
+
+        if (requestParameters['withinBudget'] != null) {
+            queryParameters['within_budget'] = requestParameters['withinBudget'];
+        }
+
         const headerParameters: runtime.HTTPHeaders = {};
 
         if (this.configuration && this.configuration.accessToken) {
@@ -1145,7 +1236,7 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Immutable, paginated snapshots. Complete one-Vendor matches first; missing lines explicit. Expiry is exactly 48 hours.
+     * Immutable, paginated snapshots. Complete one-Vendor matches first by default; missing lines explicit. Expiry is exactly 48 hours. Sorting and filters run on the server so every page is consistent; each ordering ends on the system rank.
      */
     async getProjectEstimatesRaw(requestParameters: GetProjectEstimatesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ProjectEstimatePageResponse>> {
         const requestOptions = await this.getProjectEstimatesRequestOpts(requestParameters);
@@ -1155,7 +1246,7 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Immutable, paginated snapshots. Complete one-Vendor matches first; missing lines explicit. Expiry is exactly 48 hours.
+     * Immutable, paginated snapshots. Complete one-Vendor matches first by default; missing lines explicit. Expiry is exactly 48 hours. Sorting and filters run on the server so every page is consistent; each ordering ends on the system rank.
      */
     async getProjectEstimates(requestParameters: GetProjectEstimatesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ProjectEstimatePageResponse> {
         const response = await this.getProjectEstimatesRaw(requestParameters, initOverrides);
@@ -1247,7 +1338,7 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Locked original, paginated version history, missing-item resolution and budget metrics. PDF generation remains Phase 15.
+     * The package\'s current materials, missing-item resolution, budget metrics and delete/edit availability. PDF generation remains Phase 15.
      */
     async getWorkPackageRaw(requestParameters: GetWorkPackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkPackageViewResponse>> {
         const requestOptions = await this.getWorkPackageRequestOpts(requestParameters);
@@ -1257,7 +1348,7 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Locked original, paginated version history, missing-item resolution and budget metrics. PDF generation remains Phase 15.
+     * The package\'s current materials, missing-item resolution, budget metrics and delete/edit availability. PDF generation remains Phase 15.
      */
     async getWorkPackage(requestParameters: GetWorkPackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkPackageViewResponse> {
         const response = await this.getWorkPackageRaw(requestParameters, initOverrides);
@@ -1388,6 +1479,146 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for listWorkPackageLineAlternatives without sending the request
+     */
+    async listWorkPackageLineAlternativesRequestOpts(requestParameters: ListWorkPackageLineAlternativesRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['packageId'] == null) {
+            throw new runtime.RequiredError(
+                'packageId',
+                'Required parameter "packageId" was null or undefined when calling listWorkPackageLineAlternatives().'
+            );
+        }
+
+        if (requestParameters['lineId'] == null) {
+            throw new runtime.RequiredError(
+                'lineId',
+                'Required parameter "lineId" was null or undefined when calling listWorkPackageLineAlternatives().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        if (requestParameters['excludeVendorId'] != null) {
+            queryParameters['exclude_vendor_id'] = requestParameters['excludeVendorId'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/work-packages/{packageId}/lines/{lineId}/alternatives`;
+        urlPath = urlPath.replace('{packageId}', encodeURIComponent(String(requestParameters['packageId'])));
+        urlPath = urlPath.replace('{lineId}', encodeURIComponent(String(requestParameters['lineId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Eligible Item-Based offers for the same canonical material and unit within the package radius of its site, for buying a missing line separately. Exact matches first, then price. Unlisted lines return status UNLISTED with no items.
+     */
+    async listWorkPackageLineAlternativesRaw(requestParameters: ListWorkPackageLineAlternativesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkPackageAlternativePageResponse>> {
+        const requestOptions = await this.listWorkPackageLineAlternativesRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => WorkPackageAlternativePageResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Eligible Item-Based offers for the same canonical material and unit within the package radius of its site, for buying a missing line separately. Exact matches first, then price. Unlisted lines return status UNLISTED with no items.
+     */
+    async listWorkPackageLineAlternatives(requestParameters: ListWorkPackageLineAlternativesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkPackageAlternativePageResponse> {
+        const response = await this.listWorkPackageLineAlternativesRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for previewProjectSpecificationSelection without sending the request
+     */
+    async previewProjectSpecificationSelectionRequestOpts(requestParameters: PreviewProjectSpecificationSelectionRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['packageId'] == null) {
+            throw new runtime.RequiredError(
+                'packageId',
+                'Required parameter "packageId" was null or undefined when calling previewProjectSpecificationSelection().'
+            );
+        }
+
+        if (requestParameters['candidateId'] == null) {
+            throw new runtime.RequiredError(
+                'candidateId',
+                'Required parameter "candidateId" was null or undefined when calling previewProjectSpecificationSelection().'
+            );
+        }
+
+        if (requestParameters['projectSelectionPreview'] == null) {
+            throw new runtime.RequiredError(
+                'projectSelectionPreview',
+                'Required parameter "projectSelectionPreview" was null or undefined when calling previewProjectSpecificationSelection().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/work-packages/{packageId}/candidates/{candidateId}/selection-preview`;
+        urlPath = urlPath.replace('{packageId}', encodeURIComponent(String(requestParameters['packageId'])));
+        urlPath = urlPath.replace('{candidateId}', encodeURIComponent(String(requestParameters['candidateId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ProjectSelectionPreviewToJSON(requestParameters['projectSelectionPreview']),
+        };
+    }
+
+    /**
+     * Re-price a fresh candidate with the Buyer\'s specification choices (lines, totals, delivery estimate, score and budget label). Nothing is stored; send the same selections when selecting or inquiring. An unknown option is SPECIFICATION_OPTION_INVALID.
+     */
+    async previewProjectSpecificationSelectionRaw(requestParameters: PreviewProjectSpecificationSelectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ProjectCandidateResponse>> {
+        const requestOptions = await this.previewProjectSpecificationSelectionRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ProjectCandidateResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Re-price a fresh candidate with the Buyer\'s specification choices (lines, totals, delivery estimate, score and budget label). Nothing is stored; send the same selections when selecting or inquiring. An unknown option is SPECIFICATION_OPTION_INVALID.
+     */
+    async previewProjectSpecificationSelection(requestParameters: PreviewProjectSpecificationSelectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ProjectCandidateResponse> {
+        const response = await this.previewProjectSpecificationSelectionRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for previewWorkPackageCsv without sending the request
      */
     async previewWorkPackageCsvRequestOpts(requestParameters: PreviewWorkPackageCsvRequest): Promise<runtime.RequestOpts> {
@@ -1439,6 +1670,80 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
      */
     async previewWorkPackageCsv(requestParameters: PreviewWorkPackageCsvRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ProjectImportPreviewResponse> {
         const response = await this.previewWorkPackageCsvRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for reactivateWorkPackage without sending the request
+     */
+    async reactivateWorkPackageRequestOpts(requestParameters: ReactivateWorkPackageRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['packageId'] == null) {
+            throw new runtime.RequiredError(
+                'packageId',
+                'Required parameter "packageId" was null or undefined when calling reactivateWorkPackage().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling reactivateWorkPackage().'
+            );
+        }
+
+        if (requestParameters['projectVersionRequest'] == null) {
+            throw new runtime.RequiredError(
+                'projectVersionRequest',
+                'Required parameter "projectVersionRequest" was null or undefined when calling reactivateWorkPackage().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/work-packages/{packageId}/reactivate`;
+        urlPath = urlPath.replace('{packageId}', encodeURIComponent(String(requestParameters['packageId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ProjectVersionRequestToJSON(requestParameters['projectVersionRequest']),
+        };
+    }
+
+    /**
+     * Return a cancelled Work Package to Active in place; no copy is made. The Project budget is checked again because cancelling released it. A package with an order, selected Vendor or tagged purchase cannot be reactivated.
+     */
+    async reactivateWorkPackageRaw(requestParameters: ReactivateWorkPackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkPackageViewResponse>> {
+        const requestOptions = await this.reactivateWorkPackageRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => WorkPackageViewResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Return a cancelled Work Package to Active in place; no copy is made. The Project budget is checked again because cancelling released it. A package with an order, selected Vendor or tagged purchase cannot be reactivated.
+     */
+    async reactivateWorkPackage(requestParameters: ReactivateWorkPackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkPackageViewResponse> {
+        const response = await this.reactivateWorkPackageRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1828,3 +2133,14 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
 }
+
+/**
+ * @export
+ */
+export const GetProjectEstimatesSortEnum = {
+    BestMatch: 'BEST_MATCH',
+    BudgetFit: 'BUDGET_FIT',
+    Rating: 'RATING',
+    Price: 'PRICE',
+} as const;
+export type GetProjectEstimatesSortEnum = typeof GetProjectEstimatesSortEnum[keyof typeof GetProjectEstimatesSortEnum];

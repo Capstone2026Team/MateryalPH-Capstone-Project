@@ -29,7 +29,7 @@ import {
 } from './CompliancePath';
 
 /**
- * Vendor-confirmed declaration from Review and Confirm. Extraction output is never submitted as truth.
+ * Vendor-confirmed declaration from Review and Confirm. Extraction output is never submitted as truth. Only the marking number is required; when the register matches, its record replaces the manufacturer/importer fields.
  * @export
  * @interface ComplianceSubmission
  */
@@ -51,11 +51,19 @@ export interface ComplianceSubmission {
      */
     markingType: MarkingType;
     /**
-     *
+     * The PS License No. (e.g. Q-1234) for a PS Mark
      */
     certificateNumber: string;
     /**
-     * Required for a PS Mark.
+     * MANUAL_REVIEW is the Vendor's explicit request for Product Compliance review when the register cannot confirm the number.
+     */
+    reviewMode?: ComplianceSubmissionReviewModeEnum;
+    /**
+     *
+     */
+    reviewNote?: string | null;
+    /**
+     *
      */
     manufacturerName?: string | null;
     /**
@@ -63,7 +71,7 @@ export interface ComplianceSubmission {
      */
     manufacturerAddress?: string | null;
     /**
-     * Required for an ICC sticker.
+     *
      */
     importerName?: string | null;
     /**
@@ -88,6 +96,15 @@ export interface ComplianceSubmission {
     confirmed: ComplianceSubmissionConfirmedEnum;
 }
 
+
+/**
+ * @export
+ */
+export const ComplianceSubmissionReviewModeEnum = {
+    Automatic: 'AUTOMATIC',
+    ManualReview: 'MANUAL_REVIEW',
+} as const;
+export type ComplianceSubmissionReviewModeEnum = typeof ComplianceSubmissionReviewModeEnum[keyof typeof ComplianceSubmissionReviewModeEnum];
 
 /**
  * @export
@@ -128,6 +145,8 @@ export function ComplianceSubmissionFromJSONTyped(json: any, ignoreDiscriminator
         'evidenceIds': json['evidence_ids'],
         'markingType': MarkingTypeFromJSON(json['marking_type']),
         'certificateNumber': json['certificate_number'],
+        'reviewMode': json['review_mode'] == null ? undefined : json['review_mode'],
+        'reviewNote': json['review_note'] === undefined ? undefined : json['review_note'] === null ? null : json['review_note'],
         'manufacturerName': json['manufacturer_name'] === undefined ? undefined : json['manufacturer_name'] === null ? null : json['manufacturer_name'],
         'manufacturerAddress': json['manufacturer_address'] === undefined ? undefined : json['manufacturer_address'] === null ? null : json['manufacturer_address'],
         'importerName': json['importer_name'] === undefined ? undefined : json['importer_name'] === null ? null : json['importer_name'],
@@ -155,6 +174,8 @@ export function ComplianceSubmissionToJSONTyped(value?: ComplianceSubmission | n
         'evidence_ids': value['evidenceIds'],
         'marking_type': MarkingTypeToJSON(value['markingType']),
         'certificate_number': value['certificateNumber'],
+        'review_mode': value['reviewMode'],
+        'review_note': value['reviewNote'],
         'manufacturer_name': value['manufacturerName'],
         'manufacturer_address': value['manufacturerAddress'],
         'importer_name': value['importerName'],

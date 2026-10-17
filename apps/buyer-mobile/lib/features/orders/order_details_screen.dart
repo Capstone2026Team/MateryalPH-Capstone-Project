@@ -1,5 +1,7 @@
 import '../notifications/notification_scope.dart';
-import '../notifications/notifications_screen.dart';
+import '../notifications/navigation_refresh_binding.dart';
+import '../reporting/document_export_dialog.dart';
+import 'package:materyalph_api_client/materyalph_api_client.dart' as export_api;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -65,30 +67,84 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   DiscoveryFailure? _failure;
   String? _notice;
   bool _busy = false;
+  bool _started = false;
+  bool _refreshPending = false;
+  int _sequence = 0;
+  late final _navigation = NavigationRefreshBinding(
+    _refreshForNavigation,
+    _clearPrivateOrder,
+  );
   String? _decisionKey;
   String? _decisionScope;
   final _budgetReason = TextEditingController();
   final _scroll = ScrollController();
   @override
   void dispose() {
+    _navigation.dispose();
     _budgetReason.dispose();
     _scroll.dispose();
     super.dispose();
   }
 
   @override
-  void initState() {
-    super.initState();
-    _load();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final changed = _navigation.bind(NotificationScope.of(context)?.navigation);
+    if (!_started || changed) {
+      if (_started) _clearPrivateOrder();
+      _started = true;
+      unawaited(_load());
+    }
   }
 
-  Future<void> _load() async {
-    setState(() => _failure = null);
+  void _clearPrivateOrder() {
+    if (!mounted) return;
+    setState(() {
+      _sequence++;
+      _order = null;
+      _failure = null;
+      _notice = null;
+      _busy = false;
+      _refreshPending = false;
+      _decisionKey = null;
+      _decisionScope = null;
+      _budgetReason.clear();
+    });
+  }
+
+  Future<void> _refreshForNavigation() async {
+    if (_busy) {
+      _refreshPending = true;
+      return;
+    }
+    _refreshPending = false;
+    await _load(background: true);
+  }
+
+  Future<void> _load({bool background = false}) async {
+    final sequence = ++_sequence;
+    final stamp = _navigation.stamp;
+    if (!background) setState(() => _failure = null);
     try {
       final order = await widget.repository.order(widget.orderId);
-      if (mounted) setState(() => _order = order);
+      if (mounted && sequence == _sequence && _navigation.isCurrent(stamp)) {
+        setState(() {
+          _order = order;
+          _failure = null;
+        });
+      }
     } on DiscoveryFailure catch (error) {
-      if (mounted) setState(() => _failure = error);
+      if (mounted && sequence == _sequence && _navigation.isCurrent(stamp)) {
+        final denied =
+            error.kind == DiscoveryFailureKind.sessionExpired ||
+            error.kind == DiscoveryFailureKind.forbidden;
+        if (!background || denied) {
+          setState(() {
+            _failure = error;
+            if (denied) _order = null;
+          });
+        }
+      }
     }
   }
 
@@ -104,12 +160,15 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     if (_decisionScope != scope) _decisionKey = null;
     _decisionScope = scope;
     final key = _decisionKey ??= newIdempotencyKey();
+    final stamp = _navigation.stamp;
     setState(() {
+      _sequence++;
       _busy = true;
       _notice = null;
     });
     try {
       final order = await action(key);
+      if (!mounted || !_navigation.isCurrent(stamp)) return;
       _decisionKey = null;
       onSuccess?.call(order);
       if (mounted) {
@@ -129,11 +188,18 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         }
       }
     } on DiscoveryFailure catch (error) {
+      if (!mounted || !_navigation.isCurrent(stamp)) return;
       if (error.kind != DiscoveryFailureKind.offline) _decisionKey = null;
       if (mounted) setState(() => _notice = error.message);
       if (error.kind == DiscoveryFailureKind.conflict) await _load();
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted && _navigation.isSameScope(stamp)) {
+        setState(() => _busy = false);
+        if (_refreshPending) {
+          _refreshPending = false;
+          _navigation.invalidate();
+        }
+      }
     }
   }
 
@@ -194,18 +260,13 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         'Order details',
         actions: [
           if (NotificationScope.of(context) != null)
-            IconButton(
-              tooltip: 'Order documents',
-              icon: const Icon(Icons.description_outlined),
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute<void>(
-                  builder: (_) => BuyerReportsScreen(
-                    repository: NotificationScope.of(context)!,
-                    resourceId: widget.orderId,
-                  ),
-                ),
-              ),
+            BuyerDocumentExportButton(
+              repository: NotificationScope.of(context)!,
+              resourceId: widget.orderId,
+              types: [
+                export_api.DocumentExportInputTypeEnum.PURCHASE_ORDER,
+                export_api.DocumentExportInputTypeEnum.PAYMENT_CONFIRMATION,
+              ],
             ),
         ],
       ),
@@ -412,12 +473,9 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       false;
 
   Future<void> _confirmReceipt(OrderDetailView order) async {
-    final pickup = order.fulfillment?.method == 'PICKUP';
-    if (!await _confirm(
-      title: 'Confirm you received this order?',
-      message:
-          'Confirm only after checking the ${pickup ? 'items you picked up' : 'delivered items'}. This completes the order. For a later concern, use the return, warranty or dispute process.',
-      confirmLabel: 'Confirm receipt',
+    if (!await confirmReceiptPrompt(
+      context,
+      pickup: order.fulfillment?.method == 'PICKUP',
     )) {
       return;
     }
@@ -695,6 +753,13 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
             now: widget.now,
           ),
           const SizedBox(height: 16),
+        ] else if (order.fulfillment?.thread.available ?? false) ...[
+          // Threads open at submission, before there is any progress to track.
+          FulfillmentThreadEntry(
+            thread: order.fulfillment!.thread,
+            onOpen: widget.openConversation == null ? null : _openThread,
+          ),
+          const SizedBox(height: 16),
         ],
         if (order.refundTimeline != null && !order.refundTimeline!.isEmpty) ...[
           const _Heading('Refunds and reimbursements'),
@@ -718,7 +783,9 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               'QUANTITY_REDUCED' =>
                 '${change.label}: ${formatQuantity(change.from)} → ${formatQuantity(change.to)}',
               _ =>
-                'Vendor discount of ${formatPeso(int.tryParse(change.to) ?? 0)}',
+                order.money.discount == null
+                    ? 'Vendor discount of ${formatPeso(int.tryParse(change.to) ?? 0)}'
+                    : 'Vendor discount ${order.money.discount!.percent}% on ${order.money.discount!.scope == 'DELIVERY' ? 'delivery fee' : 'materials'}: ${formatPeso(order.money.discount!.deductionCentavos)}',
             }),
         ],
         const SizedBox(height: 16),
@@ -1468,6 +1535,10 @@ class _FulfillmentSection extends StatelessWidget {
                 style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
               ),
             const Divider(height: 20, color: BuyerTheme.border),
+            if (order.deliveryRecommendation.isNotEmpty) ...[
+              BuyerDeliveryRecommendation(lines: order.deliveryRecommendation),
+              const SizedBox(height: 12),
+            ],
             if (confirmed == null)
               Text(
                 order.money.deliveryEstimateMin == null
@@ -1498,6 +1569,18 @@ class _FulfillmentSection extends StatelessWidget {
                   confirmed.arrangement!,
                   style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
                 ),
+              if (confirmed.changeReason != null) ...[
+                const SizedBox(height: 8),
+                const Text(
+                  'Vendor explanation',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                Text(confirmed.changeReason!),
+                if (order.actions.contains('APPROVE_REVISION'))
+                  const Text(
+                    'Review this change before approving the order. Payment becomes available after your approval.',
+                  ),
+              ],
               const SizedBox(height: 4),
               Text(
                 'Delivery fee ${formatPeso(confirmed.finalFeeCentavos)}',

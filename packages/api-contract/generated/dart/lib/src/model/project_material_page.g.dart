@@ -8,13 +8,16 @@ part of 'project_material_page.dart';
 
 class _$ProjectMaterialPage extends ProjectMaterialPage {
   @override
-  final BuiltList<BuiltMap<String, JsonObject?>> items;
+  final BuiltList<ProjectMaterial> items;
+  @override
+  final BuiltList<ProjectMaterialUnit> units;
 
   factory _$ProjectMaterialPage(
           [void Function(ProjectMaterialPageBuilder)? updates]) =>
       (ProjectMaterialPageBuilder()..update(updates))._build();
 
-  _$ProjectMaterialPage._({required this.items}) : super._();
+  _$ProjectMaterialPage._({required this.items, required this.units})
+      : super._();
   @override
   ProjectMaterialPage rebuild(
           void Function(ProjectMaterialPageBuilder) updates) =>
@@ -27,13 +30,16 @@ class _$ProjectMaterialPage extends ProjectMaterialPage {
   @override
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
-    return other is ProjectMaterialPage && items == other.items;
+    return other is ProjectMaterialPage &&
+        items == other.items &&
+        units == other.units;
   }
 
   @override
   int get hashCode {
     var _$hash = 0;
     _$hash = $jc(_$hash, items.hashCode);
+    _$hash = $jc(_$hash, units.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -41,7 +47,8 @@ class _$ProjectMaterialPage extends ProjectMaterialPage {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'ProjectMaterialPage')
-          ..add('items', items))
+          ..add('items', items)
+          ..add('units', units))
         .toString();
   }
 }
@@ -50,11 +57,15 @@ class ProjectMaterialPageBuilder
     implements Builder<ProjectMaterialPage, ProjectMaterialPageBuilder> {
   _$ProjectMaterialPage? _$v;
 
-  ListBuilder<BuiltMap<String, JsonObject?>>? _items;
-  ListBuilder<BuiltMap<String, JsonObject?>> get items =>
-      _$this._items ??= ListBuilder<BuiltMap<String, JsonObject?>>();
-  set items(ListBuilder<BuiltMap<String, JsonObject?>>? items) =>
-      _$this._items = items;
+  ListBuilder<ProjectMaterial>? _items;
+  ListBuilder<ProjectMaterial> get items =>
+      _$this._items ??= ListBuilder<ProjectMaterial>();
+  set items(ListBuilder<ProjectMaterial>? items) => _$this._items = items;
+
+  ListBuilder<ProjectMaterialUnit>? _units;
+  ListBuilder<ProjectMaterialUnit> get units =>
+      _$this._units ??= ListBuilder<ProjectMaterialUnit>();
+  set units(ListBuilder<ProjectMaterialUnit>? units) => _$this._units = units;
 
   ProjectMaterialPageBuilder() {
     ProjectMaterialPage._defaults(this);
@@ -64,6 +75,7 @@ class ProjectMaterialPageBuilder
     final $v = _$v;
     if ($v != null) {
       _items = $v.items.toBuilder();
+      _units = $v.units.toBuilder();
       _$v = null;
     }
     return this;
@@ -88,12 +100,15 @@ class ProjectMaterialPageBuilder
       _$result = _$v ??
           _$ProjectMaterialPage._(
             items: items.build(),
+            units: units.build(),
           );
     } catch (_) {
       late String _$failedField;
       try {
         _$failedField = 'items';
         items.build();
+        _$failedField = 'units';
+        units.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'ProjectMaterialPage', _$failedField, e.toString());

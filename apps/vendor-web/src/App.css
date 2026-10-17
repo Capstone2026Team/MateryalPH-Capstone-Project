@@ -126,11 +126,12 @@
 .final-cta h2 { font-size: clamp(1.8rem, 4vw, 3rem); }
 .final-cta p { color: color-mix(in srgb, var(--mp-color-surface-primary) 82%, transparent); }
 
-footer { display: grid; max-width: 76rem; margin-inline: auto; grid-template-columns: 1fr auto; gap: 2rem; border-block-start: 1px solid var(--mp-color-border-default); padding: 3rem clamp(1rem, 4vw, 2rem); }
-footer p, footer small { color: var(--mp-color-text-secondary); }
-footer nav { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; }
-footer nav a { min-height: 2.75rem; display: inline-flex; align-items: center; color: var(--mp-color-text-strong); font-size: .82rem; }
-footer small { grid-column: 1 / -1; }
+/* Keep public-page footer styles out of portal cards and panels. */
+:is(.site-footer, .lp-footer) { display: grid; max-width: 76rem; margin-inline: auto; grid-template-columns: 1fr auto; gap: 2rem; border-block-start: 1px solid var(--mp-color-border-default); padding: 3rem clamp(1rem, 4vw, 2rem); }
+:is(.site-footer, .lp-footer) p, :is(.site-footer, .lp-footer) small { color: var(--mp-color-text-secondary); }
+:is(.site-footer, .lp-footer) nav { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; }
+:is(.site-footer, .lp-footer) nav a { min-height: 2.75rem; display: inline-flex; align-items: center; color: var(--mp-color-text-strong); font-size: .82rem; }
+:is(.site-footer, .lp-footer) small { grid-column: 1 / -1; }
 
 .auth-page { display: grid; min-height: 100svh; grid-template-columns: minmax(20rem, .9fr) minmax(0, 1.1fr); background: var(--mp-color-surface-primary); }
 .auth-story { border-inline-end: 1px solid var(--mp-color-border-default); display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; background: var(--mp-color-brand-orange-50); padding: clamp(2rem, 5vw, 4rem); }
@@ -170,14 +171,6 @@ footer small { grid-column: 1 / -1; }
 .auth-cancel { min-height: 2.75rem; display: inline-flex; align-items: center; justify-content: center; color: var(--mp-color-action-primary); font-size: .84rem; font-weight: 700; text-underline-offset: .2em; }
 .accessible-fallback { min-height: 2.75rem; border: 0; border-radius: var(--mp-radius-control); background: transparent; color: var(--mp-color-action-primary); font-size: .82rem; font-weight: 700; text-decoration: underline; text-underline-offset: .22em; cursor: pointer; }
 .accessible-fallback[aria-pressed="true"] { background: var(--mp-color-brand-orange-50); color: var(--mp-color-action-primary-pressed); text-decoration: none; }
-.recaptcha-checkbox { display: grid; min-width: 0; justify-items: center; gap: .5rem; }
-.recaptcha-checkbox[aria-disabled="true"] { opacity: .7; pointer-events: none; }
-.recaptcha-checkbox > div { max-width: 100%; overflow: hidden; }
-.recaptcha-notice { margin: -.25rem 0 0; color: var(--mp-color-text-secondary); font-size: .8rem; line-height: 1.5; text-align: center; }
-.risk-step-up__heading { display: flex; align-items: flex-start; gap: .9rem; border-block-end: 1px solid var(--mp-color-border-default); padding-block-end: 1rem; }
-.risk-step-up__heading > svg { width: 1.5rem; height: 1.5rem; flex: 0 0 auto; color: var(--mp-color-action-primary); }
-.risk-step-up__heading h3 { margin: 0; font-size: 1.15rem; }
-.risk-step-up__heading p { margin: .35rem 0 0; color: var(--mp-color-text-secondary); font-size: .82rem; line-height: 1.55; }
 .mfa-introduction { display: flex; gap: .9rem; align-items: flex-start; border-block: 1px solid var(--mp-color-border-default); padding-block: 1rem; }
 .mfa-introduction svg { width: 1.5rem; height: 1.5rem; flex: 0 0 auto; color: var(--mp-color-action-primary); }
 .mfa-introduction p { margin: 0; color: var(--mp-color-text-secondary); line-height: 1.6; }
@@ -249,8 +242,8 @@ footer small { grid-column: 1 / -1; }
   .score-diagram { grid-template-columns: 1fr; }
   .score-diagram b { grid-column: auto; }
   .final-cta { align-items: stretch; flex-direction: column; margin-inline: 1rem; }
-  footer { grid-template-columns: 1fr; }
-  footer small { grid-column: auto; }
+  :is(.site-footer, .lp-footer) { grid-template-columns: 1fr; }
+  :is(.site-footer, .lp-footer) small { grid-column: auto; }
 }
 
 @media (max-width: 420px) {

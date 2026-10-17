@@ -281,4 +281,48 @@ void main() {
       expect((await repository.reports()).data.single.checksum, isNull);
     },
   );
+  test('PDF popup history is scoped before pagination', () async {
+    final client = MateryalphApiClient(
+      dio: Dio(BaseOptions(baseUrl: 'https://api.example.test/api/v1')),
+      interceptors: [
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            expect(options.path, '/buyers/reports');
+            expect(
+              options.queryParameters,
+              containsPair('resource_id', 'source-order'),
+            );
+            expect(
+              options.queryParameters,
+              containsPair('type', 'PURCHASE_ORDER'),
+            );
+            expect(options.queryParameters, containsPair('format', 'PDF'));
+            expect(options.queryParameters, containsPair('page', 2));
+            handler.resolve(
+              Response(
+                requestOptions: options,
+                statusCode: 200,
+                data: {
+                  'data': <Object?>[],
+                  'meta': {'has_more': false},
+                  'errors': <Object?>[],
+                },
+              ),
+            );
+          },
+        ),
+      ],
+    );
+    final repository = NotificationsRepository(
+      client,
+      () async => fail('Session must remain active'),
+    );
+    final result = await repository.reports(
+      page: 2,
+      type: 'PURCHASE_ORDER',
+      resourceId: 'source-order',
+      format: 'PDF',
+    );
+    expect(result.data, isEmpty);
+  });
 }

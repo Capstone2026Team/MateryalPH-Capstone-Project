@@ -6,14 +6,15 @@ namespace App\Http\Controllers\Api;
 
 use App\Domain\Authorization\AccountAccess;
 use App\Domain\Identity\AuthenticationException;
+use App\Domain\Notifications\NavigationUpdates;
 use App\Domain\Notifications\NotificationBroadcast;
 use App\Domain\Notifications\NotificationChannel;
 use App\Domain\Notifications\NotificationPolicy;
 use App\Domain\Notifications\NotificationService;
 use App\Domain\Notifications\ReadNotifications;
-use App\Domain\Notifications\VendorNavigationUpdates;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Support\PortalDateRange;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
@@ -24,24 +25,24 @@ use Illuminate\Validation\Rule;
 
 final class NotificationController extends Controller
 {
-    public function navigationUpdates(Request $request, VendorNavigationUpdates $updates): JsonResponse
+    public function navigationUpdates(Request $request, NavigationUpdates $updates): JsonResponse
     {
         return ApiResponse::success($updates->summary($request));
     }
 
     public function index(Request $request, NotificationService $service): JsonResponse
     {
-        $input = $request->validate(['cursor' => ['nullable', 'uuid']]);
-        $page = $service->feed($request->user(), $input['cursor'] ?? null);
+        $input = $request->validate(['cursor' => ['nullable', 'uuid']] + PortalDateRange::rules($request));
+        $page = $service->feed($request->user(), $input['cursor'] ?? null, $input);
 
         return ApiResponse::success($page['items'], ['next_cursor' => $page['next_cursor']]);
     }
 
     public function readAll(Request $request, ReadNotifications $read): JsonResponse
     {
-        $input = $request->validate(['through_id' => ['required', 'uuid'], 'title' => ['sometimes', 'string', 'max:255'], 'category' => ['sometimes', 'string', 'max:64']]);
+        $input = $request->validate(['through_id' => ['required', 'uuid'], 'title' => ['sometimes', 'string', 'max:255'], 'category' => ['sometimes', 'string', 'max:64']] + PortalDateRange::rules($request));
 
-        return ApiResponse::success($read->filtered($request, $input['through_id'], $input['title'] ?? null, $input['category'] ?? null));
+        return ApiResponse::success($read->filtered($request, $input['through_id'], $input['title'] ?? null, $input['category'] ?? null, $input));
     }
 
     public function unreadCount(Request $request, NotificationService $service): JsonResponse
@@ -97,7 +98,7 @@ final class NotificationController extends Controller
             $preference = $rows->get($category);
             $items[] = ['category' => $category, 'mandatory' => $mandatory,
                 'explanation' => $mandatory ? 'Required to keep you informed about account safety, legal duties and active transactions. These notices remain enabled.' : 'Choose where you receive these optional updates.',
-                'in_app' => $mandatory || ($preference->in_app ?? true), 'email' => $mandatory || ($preference->email ?? true), 'push' => $mandatory || ($preference->push ?? true)];
+                'in_app' => $mandatory || ($preference->in_app ?? true), 'email' => $mandatory || ($preference->email ?? NotificationPolicy::defaultEnabled($category, 'email')), 'push' => $mandatory || ($preference->push ?? true)];
         }
 
         return ApiResponse::success($items, ['web_push_approved' => (bool) config('notifications.web_push_approved')]);
@@ -153,13 +154,15 @@ final class NotificationController extends Controller
         if ($request->user()->account_type !== 'ADMIN' || ! app(AccountAccess::class)->allows($request->user(), 'integrations.view')) {
             throw new AuthenticationException('PERMISSION_DENIED', 'Operational deliveries are not available to your role.', 403);
         }
-        $input = $request->validate(['page' => ['sometimes', 'integer', 'min:1']]);
+        $input = $request->validate(['page' => ['sometimes', 'integer', 'min:1']] + PortalDateRange::rules($request));
         $deliveries = DB::table('notification_deliveries')->where('state', 'FAILED')->select(['id', 'channel', 'state', 'attempt_count', 'failure_code', 'updated_at']);
         $exports = DB::table('data_exports')->where('state', 'FAILED')->selectRaw("id, 'EXPORT_GENERATION' as channel, state, 5 as attempt_count, failure_code, updated_at");
         $otherJobs = DB::table('outbox_events')->whereNull('processed_at')->where('attempts', '>=', 5)
             ->whereNotIn('event_type', ['NOTIFICATION_DELIVERY', 'DOCUMENT_EXPORT_REQUESTED'])
             ->selectRaw("id, 'OPERATIONAL_JOB' as channel, 'FAILED' as state, attempts as attempt_count, 'DELIVERY_FAILED' as failure_code, updated_at");
-        $rows = DB::query()->fromSub($deliveries->unionAll($exports)->unionAll($otherJobs), 'failures')->orderByDesc('id')->paginate(25, ['*'], 'page', $input['page'] ?? 1);
+        $query = DB::query()->fromSub($deliveries->unionAll($exports)->unionAll($otherJobs), 'failures');
+        PortalDateRange::apply($query, 'updated_at', $input);
+        $rows = $query->orderByDesc('id')->paginate(25, ['*'], 'page', $input['page'] ?? 1);
 
         return ApiResponse::success($rows->items(), ['has_more' => $rows->hasMorePages()]);
     }

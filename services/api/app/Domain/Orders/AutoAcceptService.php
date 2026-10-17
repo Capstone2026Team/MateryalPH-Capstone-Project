@@ -11,6 +11,7 @@ use App\Domain\Inventory\InventoryLedgerWriter;
 use App\Domain\Inventory\InventoryLocks;
 use App\Domain\Inventory\StockAvailability;
 use App\Domain\Operations\OutboxPublisher;
+use App\Domain\Projects\ProjectBudget;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -58,12 +59,22 @@ final class AutoAcceptService
         if ($vendorId === null) {
             return ['accepted' => false, 'reasons' => [['code' => 'ORDER_NOT_FOUND', 'listing_variant_id' => null]]];
         }
+        $packageId = DB::table('orders')->where('id', $orderId)->value('work_package_id');
+        $package = null;
+        if ($packageId !== null) {
+            $projectId = DB::table('work_packages')->where('id', $packageId)->value('project_id');
+            DB::table('projects')->where('id', $projectId)->lockForUpdate()->first();
+            $package = DB::table('work_packages')->where('id', $packageId)->lockForUpdate()->first();
+        }
         $organization = DB::table('vendor_organizations')->where('id', $vendorId)->lockForUpdate()->first();
         $order = DB::table('orders')->where('id', $orderId)->lockForUpdate()->first();
         if ($order->order_state !== OrderStates::AWAITING_VENDOR_CONFIRMATION || $order->confirmation_source !== null) {
             return ['accepted' => false, 'reasons' => [['code' => 'ORDER_NOT_PENDING', 'listing_variant_id' => null]]];
         }
         $reasons = [];
+        if ($package !== null && app(ProjectBudget::class)->wouldExceed($package, (int) $order->commercial_total_centavos, $orderId)) {
+            $reasons[] = ['code' => 'BUDGET_OVERRIDE_REQUIRED', 'listing_variant_id' => null];
+        }
         $reason = static function (string $code, ?string $variantId = null) use (&$reasons): void {
             $reasons[] = ['code' => $code, 'listing_variant_id' => $variantId];
         };

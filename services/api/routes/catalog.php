@@ -23,6 +23,7 @@ Route::prefix('vendor/catalog')->middleware([
     Route::post('/listings/{listingId}/deactivate', [VendorCatalogController::class, 'deactivate'])->whereUuid('listingId');
     Route::delete('/listings/{listingId}', [VendorCatalogController::class, 'destroy'])->whereUuid('listingId');
     Route::post('/listings/{listingId}/compliance/evidence', [VendorCatalogController::class, 'uploadComplianceEvidence'])->whereUuid('listingId');
+    Route::post('/listings/{listingId}/compliance/lookup', [VendorCatalogController::class, 'lookupCompliance'])->whereUuid('listingId');
     Route::post('/listings/{listingId}/compliance', [VendorCatalogController::class, 'submitCompliance'])->whereUuid('listingId');
     Route::get('/files/{fileId}', [VendorCatalogController::class, 'fileUrl'])->whereUuid('fileId');
     Route::get('/imports/template', [VendorCatalogController::class, 'importTemplate']);

@@ -86,6 +86,10 @@ class _$VendorSetupDraft extends VendorSetupDraft {
   @override
   final bool? vacationMode;
   @override
+  final String? vacationStartsOn;
+  @override
+  final String? vacationEndsOn;
+  @override
   final String? publicStoreName;
   @override
   final String? description;
@@ -93,6 +97,8 @@ class _$VendorSetupDraft extends VendorSetupDraft {
   final bool? bulkCapability;
   @override
   final VendorSetupDraftFulfillmentMethodEnum? fulfillmentMethod;
+  @override
+  final bool? vendorDeliveryEnabled;
   @override
   final String? publicEmail;
   @override
@@ -113,10 +119,13 @@ class _$VendorSetupDraft extends VendorSetupDraft {
       required this.organizationLockVersion,
       this.formState,
       this.vacationMode,
+      this.vacationStartsOn,
+      this.vacationEndsOn,
       this.publicStoreName,
       this.description,
       this.bulkCapability,
       this.fulfillmentMethod,
+      this.vendorDeliveryEnabled,
       this.publicEmail,
       this.publicPhone,
       this.operatingSchedule,
@@ -139,10 +148,13 @@ class _$VendorSetupDraft extends VendorSetupDraft {
         organizationLockVersion == other.organizationLockVersion &&
         formState == other.formState &&
         vacationMode == other.vacationMode &&
+        vacationStartsOn == other.vacationStartsOn &&
+        vacationEndsOn == other.vacationEndsOn &&
         publicStoreName == other.publicStoreName &&
         description == other.description &&
         bulkCapability == other.bulkCapability &&
         fulfillmentMethod == other.fulfillmentMethod &&
+        vendorDeliveryEnabled == other.vendorDeliveryEnabled &&
         publicEmail == other.publicEmail &&
         publicPhone == other.publicPhone &&
         operatingSchedule == other.operatingSchedule &&
@@ -157,10 +169,13 @@ class _$VendorSetupDraft extends VendorSetupDraft {
     _$hash = $jc(_$hash, organizationLockVersion.hashCode);
     _$hash = $jc(_$hash, formState.hashCode);
     _$hash = $jc(_$hash, vacationMode.hashCode);
+    _$hash = $jc(_$hash, vacationStartsOn.hashCode);
+    _$hash = $jc(_$hash, vacationEndsOn.hashCode);
     _$hash = $jc(_$hash, publicStoreName.hashCode);
     _$hash = $jc(_$hash, description.hashCode);
     _$hash = $jc(_$hash, bulkCapability.hashCode);
     _$hash = $jc(_$hash, fulfillmentMethod.hashCode);
+    _$hash = $jc(_$hash, vendorDeliveryEnabled.hashCode);
     _$hash = $jc(_$hash, publicEmail.hashCode);
     _$hash = $jc(_$hash, publicPhone.hashCode);
     _$hash = $jc(_$hash, operatingSchedule.hashCode);
@@ -177,10 +192,13 @@ class _$VendorSetupDraft extends VendorSetupDraft {
           ..add('organizationLockVersion', organizationLockVersion)
           ..add('formState', formState)
           ..add('vacationMode', vacationMode)
+          ..add('vacationStartsOn', vacationStartsOn)
+          ..add('vacationEndsOn', vacationEndsOn)
           ..add('publicStoreName', publicStoreName)
           ..add('description', description)
           ..add('bulkCapability', bulkCapability)
           ..add('fulfillmentMethod', fulfillmentMethod)
+          ..add('vendorDeliveryEnabled', vendorDeliveryEnabled)
           ..add('publicEmail', publicEmail)
           ..add('publicPhone', publicPhone)
           ..add('operatingSchedule', operatingSchedule)
@@ -212,6 +230,16 @@ class VendorSetupDraftBuilder
   bool? get vacationMode => _$this._vacationMode;
   set vacationMode(bool? vacationMode) => _$this._vacationMode = vacationMode;
 
+  String? _vacationStartsOn;
+  String? get vacationStartsOn => _$this._vacationStartsOn;
+  set vacationStartsOn(String? vacationStartsOn) =>
+      _$this._vacationStartsOn = vacationStartsOn;
+
+  String? _vacationEndsOn;
+  String? get vacationEndsOn => _$this._vacationEndsOn;
+  set vacationEndsOn(String? vacationEndsOn) =>
+      _$this._vacationEndsOn = vacationEndsOn;
+
   String? _publicStoreName;
   String? get publicStoreName => _$this._publicStoreName;
   set publicStoreName(String? publicStoreName) =>
@@ -232,6 +260,11 @@ class VendorSetupDraftBuilder
   set fulfillmentMethod(
           VendorSetupDraftFulfillmentMethodEnum? fulfillmentMethod) =>
       _$this._fulfillmentMethod = fulfillmentMethod;
+
+  bool? _vendorDeliveryEnabled;
+  bool? get vendorDeliveryEnabled => _$this._vendorDeliveryEnabled;
+  set vendorDeliveryEnabled(bool? vendorDeliveryEnabled) =>
+      _$this._vendorDeliveryEnabled = vendorDeliveryEnabled;
 
   String? _publicEmail;
   String? get publicEmail => _$this._publicEmail;
@@ -270,10 +303,13 @@ class VendorSetupDraftBuilder
       _organizationLockVersion = $v.organizationLockVersion;
       _formState = $v.formState;
       _vacationMode = $v.vacationMode;
+      _vacationStartsOn = $v.vacationStartsOn;
+      _vacationEndsOn = $v.vacationEndsOn;
       _publicStoreName = $v.publicStoreName;
       _description = $v.description;
       _bulkCapability = $v.bulkCapability;
       _fulfillmentMethod = $v.fulfillmentMethod;
+      _vendorDeliveryEnabled = $v.vendorDeliveryEnabled;
       _publicEmail = $v.publicEmail;
       _publicPhone = $v.publicPhone;
       _operatingSchedule = $v.operatingSchedule?.toBuilder();
@@ -309,10 +345,13 @@ class VendorSetupDraftBuilder
                 'organizationLockVersion'),
             formState: formState,
             vacationMode: vacationMode,
+            vacationStartsOn: vacationStartsOn,
+            vacationEndsOn: vacationEndsOn,
             publicStoreName: publicStoreName,
             description: description,
             bulkCapability: bulkCapability,
             fulfillmentMethod: fulfillmentMethod,
+            vendorDeliveryEnabled: vendorDeliveryEnabled,
             publicEmail: publicEmail,
             publicPhone: publicPhone,
             operatingSchedule: _operatingSchedule?.build(),

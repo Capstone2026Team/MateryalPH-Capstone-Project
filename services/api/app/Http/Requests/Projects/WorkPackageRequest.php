@@ -27,7 +27,9 @@ final class WorkPackageRequest extends FormRequest
             'heavy_vehicle_restriction' => ['required_if:fulfillment_method,DELIVERY', 'in:NO,YES'],
             'alternate_drop_off_location_id' => ['required_if:heavy_vehicle_restriction,YES', 'nullable', 'uuid'],
             'access_instructions' => ['required_if:fulfillment_method,DELIVERY', 'nullable', 'string', 'min:5', 'max:500'],
-            'lines' => ['required', 'array', 'min:1', 'max:100'], 'lines.*.material_id' => ['required', 'uuid'], 'lines.*.name' => ['required', 'string', 'max:200'],
+            // An absent or null material_id is an unlisted material named by the Buyer.
+            'lines' => ['required', 'array', 'min:1', 'max:100'], 'lines.*.material_id' => ['nullable', 'uuid'], 'lines.*.name' => ['required', 'string', 'max:200'],
+            'lines.*.description' => ['nullable', 'string', 'max:500'], 'lines.*.color' => ['nullable', 'string', 'max:60'],
             'lines.*.unit_id' => ['required', 'uuid'], 'lines.*.quantity' => ['required', 'regex:/^\d{1,7}(\.\d{1,4})?$/', 'numeric', 'gt:0', 'max:1000000'],
             'lines.*.specifications' => ['present', 'array', 'max:30'], 'lines.*.specifications.*' => ['string', 'max:200'], 'lines.*.preferred_brand' => ['nullable', 'string', 'max:100']];
     }

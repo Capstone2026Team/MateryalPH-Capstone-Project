@@ -20,6 +20,13 @@ import {
     FinanceKpiToJSON,
     FinanceKpiToJSONTyped,
 } from './FinanceKpi';
+import type { CommissionTrendPoint } from './CommissionTrendPoint';
+import {
+    CommissionTrendPointFromJSON,
+    CommissionTrendPointFromJSONTyped,
+    CommissionTrendPointToJSON,
+    CommissionTrendPointToJSONTyped,
+} from './CommissionTrendPoint';
 import type { FinanceKpisPeriod } from './FinanceKpisPeriod';
 import {
     FinanceKpisPeriodFromJSON,
@@ -58,7 +65,26 @@ export interface FinanceKpis {
      *
      */
     counts: { [key: string]: number; };
+    /**
+     *
+     */
+    trend?: Array<CommissionTrendPoint>;
+    /**
+     * DAY when the recorded range spans at most 92 days (empty days are zero-filled); otherwise MONTH, recorded months only.
+     */
+    trendGranularity?: FinanceKpisTrendGranularityEnum;
 }
+
+
+/**
+ * @export
+ */
+export const FinanceKpisTrendGranularityEnum = {
+    Day: 'DAY',
+    Month: 'MONTH',
+} as const;
+export type FinanceKpisTrendGranularityEnum = typeof FinanceKpisTrendGranularityEnum[keyof typeof FinanceKpisTrendGranularityEnum];
+
 
 /**
  * Check if a given object implements the FinanceKpis interface.
@@ -89,6 +115,8 @@ export function FinanceKpisFromJSONTyped(json: any, ignoreDiscriminator: boolean
         'commerce': ((json['commerce'] as Array<any>).map(FinanceKpiFromJSON)),
         'finance': ((json['finance'] as Array<any>).map(FinanceKpiFromJSON)),
         'counts': json['counts'],
+        'trend': json['trend'] == null ? undefined : ((json['trend'] as Array<any>).map(CommissionTrendPointFromJSON)),
+        'trendGranularity': json['trend_granularity'] == null ? undefined : json['trend_granularity'],
     };
 }
 
@@ -109,6 +137,8 @@ export function FinanceKpisToJSONTyped(value?: FinanceKpis | null, ignoreDiscrim
         'commerce': ((value['commerce'] as Array<any>).map(FinanceKpiToJSON)),
         'finance': ((value['finance'] as Array<any>).map(FinanceKpiToJSON)),
         'counts': value['counts'],
+        'trend': value['trend'] == null ? undefined : ((value['trend'] as Array<any>).map(CommissionTrendPointToJSON)),
+        'trend_granularity': value['trendGranularity'],
     };
 }
 

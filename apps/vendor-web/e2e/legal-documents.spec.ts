@@ -12,8 +12,7 @@ test('sign-up links show separate documents and preserve the registration form',
     ], meta: {}, errors: [],
   } }))
   await page.goto('/register')
-  await page.getByLabel('Owner full name').fill('Test Owner')
-  await page.getByLabel('Business or store name').fill('Test Supply')
+  await page.getByLabel('Account Owner Name').fill('Test Owner')
   for (const [title, content] of [
     ['Terms of Service', 'Marketplace roles'],
     ['Privacy Notice', 'Retention and requests'],
@@ -28,8 +27,7 @@ test('sign-up links show separate documents and preserve the registration form',
     if (page.viewportSize()?.width === 390 || page.viewportSize()?.width === 1440) await popup.screenshot({ path: `test-results/legal-${title.replaceAll(' ', '-').toLowerCase()}-${page.viewportSize()?.width}.png`, fullPage: true })
     await popup.close()
     await expect(page).toHaveURL(/\/register$/)
-    await expect(page.getByLabel('Owner full name')).toHaveValue('Test Owner')
-    await expect(page.getByLabel('Business or store name')).toHaveValue('Test Supply')
+    await expect(page.getByLabel('Account Owner Name')).toHaveValue('Test Owner')
     await expect(page.getByRole('checkbox', { name: /I accept the versioned/ })).not.toBeChecked()
     await expect(page.getByRole('checkbox', { name: /I acknowledge the separate/ })).not.toBeChecked()
   }

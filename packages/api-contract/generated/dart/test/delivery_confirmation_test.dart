@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(DeliveryConfirmation, () {
+    // Required if vehicle
+    // String changeReason
+    test('to test the property `changeReason`', () async {
+      // TODO
+    });
+
     // BuiltList<DeliveryVehicleSelection> vehicles
     test('to test the property `vehicles`', () async {
       // TODO

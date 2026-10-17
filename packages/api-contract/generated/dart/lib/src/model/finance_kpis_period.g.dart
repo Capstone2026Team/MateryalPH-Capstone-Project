@@ -8,15 +8,15 @@ part of 'finance_kpis_period.dart';
 
 class _$FinanceKpisPeriod extends FinanceKpisPeriod {
   @override
-  final Date from;
+  final Date? from;
   @override
-  final Date to;
+  final Date? to;
 
   factory _$FinanceKpisPeriod(
           [void Function(FinanceKpisPeriodBuilder)? updates]) =>
       (FinanceKpisPeriodBuilder()..update(updates))._build();
 
-  _$FinanceKpisPeriod._({required this.from, required this.to}) : super._();
+  _$FinanceKpisPeriod._({this.from, this.to}) : super._();
   @override
   FinanceKpisPeriod rebuild(void Function(FinanceKpisPeriodBuilder) updates) =>
       (toBuilder()..update(updates)).build();
@@ -91,10 +91,8 @@ class FinanceKpisPeriodBuilder
   _$FinanceKpisPeriod _build() {
     final _$result = _$v ??
         _$FinanceKpisPeriod._(
-          from: BuiltValueNullFieldError.checkNotNull(
-              from, r'FinanceKpisPeriod', 'from'),
-          to: BuiltValueNullFieldError.checkNotNull(
-              to, r'FinanceKpisPeriod', 'to'),
+          from: from,
+          to: to,
         );
     replace(_$result);
     return _$result;

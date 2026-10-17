@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Domain\Authorization;
 
 use App\Domain\Identity\AuthenticationException;
+use App\Support\PortalDateRange;
+use Carbon\CarbonInterface;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -27,47 +30,84 @@ CASE
 END
 SQL;
 
-    /** @return array{data: array<int, array<string, mixed>>, meta: array<string, mixed>} */
-    public function read(Request $request, AccountAccess $access): array
+    /**
+     * Team Tracking needs staff-management authority: the Owner, or a Manager with delegation enabled.
+     *
+     * @return array<string, mixed>
+     */
+    public function scope(Request $request, AccountAccess $access): array
     {
         $scope = $access->resolve($request->user());
         if (! in_array('staff.manage', $scope['permissions'], true)) {
             throw new AuthenticationException('PERMISSION_DENIED', 'You cannot view team activity.', 403);
         }
+
+        return $scope;
+    }
+
+    /**
+     * A member the viewer may monitor. Other organizations' members, and managers for a delegated Manager, are
+     * indistinguishable from missing ones.
+     *
+     * @param  array<string, mixed>  $scope
+     */
+    public function member(array $scope, string $memberId): object
+    {
+        $member = DB::table('vendor_memberships')->where('id', $memberId)->where('vendor_organization_id', $scope['organization_id'])->first();
+        if ($member === null || ($scope['role'] !== 'OWNER' && in_array($member->role, ['OWNER', 'STORE_MANAGER'], true))) {
+            throw new AuthenticationException('RESOURCE_NOT_FOUND', 'This team member is unavailable.', 404);
+        }
+
+        return $member;
+    }
+
+    /**
+     * Audit, Vendor message and quotation records of the viewer's organization as one source aliased `a`. Delegated
+     * Managers see only actions taken under the four non-manager roles.
+     *
+     * @param  array<string, mixed>  $scope
+     */
+    public function events(array $scope, ?CarbonInterface $since = null): Builder
+    {
+        $audit = DB::table('audit_logs')->where('vendor_organization_id', $scope['organization_id'])->when($since !== null, fn ($q) => $q->where('created_at', '>=', $since))
+            ->select(['id', 'actor_user_id', 'actor_role', 'action', 'resource_type', 'resource_id', 'created_at', 'succeeded', 'before', 'after', 'correlation_id']);
+        // Existing immutable histories supply attribution only, never message bodies or quotation prices.
+        $messages = DB::table('messages as m')->join('conversations as c', 'c.id', '=', 'm.conversation_id')
+            ->where('c.vendor_organization_id', $scope['organization_id'])->when($since !== null, fn ($q) => $q->where('m.sent_at', '>=', $since))
+            ->where('m.kind', '!=', 'SYSTEM')->whereIn(DB::raw("m.public_sender->>'role'"), self::ROLES)
+            ->selectRaw("m.id, m.sender_user_id as actor_user_id, m.public_sender->>'role' as actor_role, CASE WHEN c.purpose = 'FULFILLMENT' THEN 'FULFILLMENT_MESSAGE_SENT' ELSE 'MESSAGE_SENT' END as action, 'CONVERSATION' as resource_type, c.id as resource_id, m.sent_at as created_at, true as succeeded, '{}'::jsonb as before, '{}'::jsonb as after, null::text as correlation_id");
+        $quotations = DB::table('quotation_events as e')->join('quotations as q', 'q.id', '=', 'e.quotation_id')
+            ->where('q.vendor_organization_id', $scope['organization_id'])->when($since !== null, fn ($q) => $q->where('e.created_at', '>=', $since))
+            ->whereIn(DB::raw("e.payload->>'actor_role'"), self::ROLES)
+            ->selectRaw("e.id, e.actor_user_id, e.payload->>'actor_role' as actor_role, CASE WHEN e.event_type LIKE 'QUOTATION_%' THEN e.event_type ELSE 'QUOTATION_' || e.event_type END as action, 'QUOTATION' as resource_type, q.id as resource_id, e.created_at, true as succeeded, '{}'::jsonb as before, '{}'::jsonb as after, e.payload->>'correlation_id' as correlation_id");
+        $query = DB::query()->fromSub($audit->unionAll($messages)->unionAll($quotations), 'a');
+        if ($scope['role'] !== 'OWNER') {
+            $query->whereIn('a.actor_role', ['STORE_STAFF', 'CUSTOMER_SERVICE', 'INVENTORY', 'FULFILLMENT']);
+        }
+
+        return $query;
+    }
+
+    /** @return array{data: array<int, array<string, mixed>>, meta: array<string, mixed>} */
+    public function read(Request $request, AccountAccess $access): array
+    {
+        $scope = $this->scope($request, $access);
         $input = $request->validate([
             'page' => ['sometimes', 'integer', 'min:1'],
             'member_id' => ['sometimes', 'uuid'],
             'role' => ['sometimes', Rule::in(self::ROLES)],
             'days' => ['sometimes', 'integer', Rule::in([7, 30, 90])],
             'category' => ['sometimes', Rule::in(self::CATEGORIES)],
-        ]);
-        $since = now()->subDays((int) ($input['days'] ?? 30));
-        $audit = DB::table('audit_logs')->where('vendor_organization_id', $scope['organization_id'])->where('created_at', '>=', $since)
-            ->select(['id', 'actor_user_id', 'actor_role', 'action', 'resource_type', 'resource_id', 'created_at', 'succeeded', 'before', 'after', 'correlation_id']);
-        // Existing immutable histories supply attribution only, never message bodies or quotation prices.
-        $messages = DB::table('messages as m')->join('conversations as c', 'c.id', '=', 'm.conversation_id')
-            ->where('c.vendor_organization_id', $scope['organization_id'])->where('m.sent_at', '>=', $since)
-            ->where('m.kind', '!=', 'SYSTEM')->whereIn(DB::raw("m.public_sender->>'role'"), self::ROLES)
-            ->selectRaw("m.id, m.sender_user_id as actor_user_id, m.public_sender->>'role' as actor_role, CASE WHEN c.purpose = 'FULFILLMENT' THEN 'FULFILLMENT_MESSAGE_SENT' ELSE 'MESSAGE_SENT' END as action, 'CONVERSATION' as resource_type, c.id as resource_id, m.sent_at as created_at, true as succeeded, '{}'::jsonb as before, '{}'::jsonb as after, null::text as correlation_id");
-        $quotations = DB::table('quotation_events as e')->join('quotations as q', 'q.id', '=', 'e.quotation_id')
-            ->where('q.vendor_organization_id', $scope['organization_id'])->where('e.created_at', '>=', $since)
-            ->whereIn(DB::raw("e.payload->>'actor_role'"), self::ROLES)
-            ->selectRaw("e.id, e.actor_user_id, e.payload->>'actor_role' as actor_role, CASE WHEN e.event_type LIKE 'QUOTATION_%' THEN e.event_type ELSE 'QUOTATION_' || e.event_type END as action, 'QUOTATION' as resource_type, q.id as resource_id, e.created_at, true as succeeded, '{}'::jsonb as before, '{}'::jsonb as after, e.payload->>'correlation_id' as correlation_id");
-        $query = DB::query()->fromSub($audit->unionAll($messages)->unionAll($quotations), 'a')->leftJoin('users as u', 'u.id', '=', 'a.actor_user_id');
-        if ($scope['role'] !== 'OWNER') {
-            $query->whereIn('a.actor_role', ['STORE_STAFF', 'CUSTOMER_SERVICE', 'INVENTORY', 'FULFILLMENT']);
-        }
+        ] + PortalDateRange::rules($request));
+        $since = isset($input['days']) && ! isset($input['from']) && ! isset($input['to']) ? now('Asia/Manila')->startOfDay()->subDays((int) $input['days'] - 1)->setTimezone('UTC') : null;
+        $query = $this->events($scope, $since)->leftJoin('users as u', 'u.id', '=', 'a.actor_user_id');
         if (isset($input['member_id'])) {
-            $member = DB::table('vendor_memberships')->where('id', $input['member_id'])
-                ->where('vendor_organization_id', $scope['organization_id'])->first();
-            if ($member === null || ($scope['role'] !== 'OWNER' && in_array($member->role, ['OWNER', 'STORE_MANAGER'], true))) {
-                throw new AuthenticationException('RESOURCE_NOT_FOUND', 'This team member is unavailable.', 404);
-            }
-            $query->where('a.actor_user_id', $member->user_id);
+            $query->where('a.actor_user_id', $this->member($scope, (string) $input['member_id'])->user_id);
         }
         if (isset($input['role'])) {
             $query->where('a.actor_role', $input['role']);
         }
+        PortalDateRange::apply($query, 'a.created_at', $input);
         $groups = (clone $query)->selectRaw(self::CATEGORY_SQL.' as category, count(*) as total, count(*) filter (where a.succeeded) as succeeded')
             ->groupByRaw(self::CATEGORY_SQL)->get();
         $total = (int) $groups->sum('total');

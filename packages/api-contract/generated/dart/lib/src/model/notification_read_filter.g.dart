@@ -13,13 +13,17 @@ class _$NotificationReadFilter extends NotificationReadFilter {
   final String? category;
   @override
   final String? title;
+  @override
+  final Date? from;
+  @override
+  final Date? to;
 
   factory _$NotificationReadFilter(
           [void Function(NotificationReadFilterBuilder)? updates]) =>
       (NotificationReadFilterBuilder()..update(updates))._build();
 
   _$NotificationReadFilter._(
-      {required this.throughId, this.category, this.title})
+      {required this.throughId, this.category, this.title, this.from, this.to})
       : super._();
   @override
   NotificationReadFilter rebuild(
@@ -36,7 +40,9 @@ class _$NotificationReadFilter extends NotificationReadFilter {
     return other is NotificationReadFilter &&
         throughId == other.throughId &&
         category == other.category &&
-        title == other.title;
+        title == other.title &&
+        from == other.from &&
+        to == other.to;
   }
 
   @override
@@ -45,6 +51,8 @@ class _$NotificationReadFilter extends NotificationReadFilter {
     _$hash = $jc(_$hash, throughId.hashCode);
     _$hash = $jc(_$hash, category.hashCode);
     _$hash = $jc(_$hash, title.hashCode);
+    _$hash = $jc(_$hash, from.hashCode);
+    _$hash = $jc(_$hash, to.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -54,7 +62,9 @@ class _$NotificationReadFilter extends NotificationReadFilter {
     return (newBuiltValueToStringHelper(r'NotificationReadFilter')
           ..add('throughId', throughId)
           ..add('category', category)
-          ..add('title', title))
+          ..add('title', title)
+          ..add('from', from)
+          ..add('to', to))
         .toString();
   }
 }
@@ -75,6 +85,14 @@ class NotificationReadFilterBuilder
   String? get title => _$this._title;
   set title(String? title) => _$this._title = title;
 
+  Date? _from;
+  Date? get from => _$this._from;
+  set from(Date? from) => _$this._from = from;
+
+  Date? _to;
+  Date? get to => _$this._to;
+  set to(Date? to) => _$this._to = to;
+
   NotificationReadFilterBuilder() {
     NotificationReadFilter._defaults(this);
   }
@@ -85,6 +103,8 @@ class NotificationReadFilterBuilder
       _throughId = $v.throughId;
       _category = $v.category;
       _title = $v.title;
+      _from = $v.from;
+      _to = $v.to;
       _$v = null;
     }
     return this;
@@ -110,6 +130,8 @@ class NotificationReadFilterBuilder
               throughId, r'NotificationReadFilter', 'throughId'),
           category: category,
           title: title,
+          from: from,
+          to: to,
         );
     replace(_$result);
     return _$result;

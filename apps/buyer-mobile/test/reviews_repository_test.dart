@@ -64,7 +64,144 @@ Map<String, Object?> _envelope() => {
   'errors': <Object?>[],
 };
 
+Map<String, Object?> _listingEnvelope({int page = 1}) => {
+  'data': [
+    {
+      'id': 'review-$page',
+      'type': 'PRODUCT',
+      'ratings': {'product_quality': page == 1 ? 4 : 5},
+      'comment': 'Good quality.',
+      'display_name': 'Verified Buyer',
+      'verified_purchase': true,
+      'edited': false,
+      'media': <Object?>[],
+    },
+  ],
+  'meta': {
+    'page': page,
+    'per_page': 20,
+    'total': 24,
+    'summary': {
+      'count': 24,
+      'average': '4.75',
+      'distribution': [
+        {'stars': 5, 'count': 18},
+        {'stars': 4, 'count': 6},
+        {'stars': 3, 'count': 0},
+        {'stars': 2, 'count': 0},
+        {'stars': 1, 'count': 0},
+      ],
+    },
+  },
+  'errors': <Object?>[],
+};
+
+ApiReviewsRepository _listingRepository(
+  Map<String, Object?> response, [
+  List<RequestOptions>? requests,
+]) {
+  final dio = Dio(BaseOptions(baseUrl: 'https://api.example.test/api/v1'));
+  return ApiReviewsRepository(
+    client: api.MateryalphApiClient(
+      dio: dio,
+      interceptors: [
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            requests?.add(options);
+            handler.resolve(
+              Response(
+                requestOptions: options,
+                statusCode: 200,
+                data: response,
+              ),
+            );
+          },
+        ),
+      ],
+    ),
+    guard: ApiGuard(() async {}),
+  );
+}
+
 void main() {
+  test(
+    'listing summary uses all visible ratings, not the current page',
+    () async {
+      final repository = _listingRepository(_listingEnvelope());
+      final view = await repository.listingReviews('listing-1');
+      expect(view.items, hasLength(1));
+      expect(view.items.single.ratings.productQuality, 4);
+      expect(view.average, '4.75');
+      expect(view.count, 24);
+      expect(view.distribution, {5: 18, 4: 6, 3: 0, 2: 0, 1: 0});
+      expect(view.hasMore, isTrue);
+      expect(() => view.distribution[5] = 99, throwsUnsupportedError);
+    },
+  );
+
+  test(
+    'listing pagination requests the next page and stops at the total',
+    () async {
+      final requests = <RequestOptions>[];
+      final repository = _listingRepository(
+        _listingEnvelope(page: 2),
+        requests,
+      );
+      final view = await repository.listingReviews('listing-1', page: 2);
+      expect(requests.single.path, '/buyers/listings/listing-1/reviews');
+      expect(requests.single.queryParameters['page'], 2);
+      expect(view.page, 2);
+      expect(view.perPage, 20);
+      expect(view.hasMore, isFalse);
+    },
+  );
+
+  test('a new product retains a null average and zero distribution', () async {
+    final repository = _listingRepository({
+      'data': <Object?>[],
+      'meta': {
+        'page': 1,
+        'per_page': 20,
+        'total': 0,
+        'summary': {
+          'count': 0,
+          'average': null,
+          'distribution': [
+            for (var stars = 5; stars >= 1; stars--)
+              {'stars': stars, 'count': 0},
+          ],
+        },
+      },
+      'errors': <Object?>[],
+    });
+    final view = await repository.listingReviews('listing-1');
+    expect(view.average, isNull);
+    expect(view.count, 0);
+    expect(view.distribution.values, everyElement(0));
+    expect(view.hasMore, isFalse);
+  });
+
+  test(
+    'untyped summary buckets cannot introduce invalid star ratings or counts',
+    () async {
+      final response = _listingEnvelope();
+      (response['meta'] as Map<String, Object?>)['summary'] = {
+        'count': 6,
+        'average': '5.00',
+        'distribution': [
+          {'stars': 5, 'count': 6},
+          {'stars': 9, 'count': 100},
+          {'stars': 2, 'count': -1},
+          {'stars': 3, 'count': 'invalid'},
+        ],
+      };
+      final view = await _listingRepository(
+        response,
+      ).listingReviews('listing-1');
+      expect(view.distribution, {5: 6});
+    },
+  );
+
   test(
     'review decoding retains video type, own media and authoritative limits',
     () async {

@@ -36,7 +36,7 @@ for (const [path, methods] of Object.entries(spec.paths)) {
     const audience = TAGS[tag]
     const has = (...names) => names.some(name => actual.middleware.includes(name))
     assert.ok(has('auth:api', 'Illuminate\\Auth\\Middleware\\Authenticate:api') && has(`account.access:${audience}`, `App\\Http\\Middleware\\RequireAccountAccess:${audience}`), `${key} must authorize the ${audience}`)
-    assert.ok(has('App\\Http\\Middleware\\SetAuthTransport:WEB') && has('App\\Http\\Middleware\\AuthenticateFromCookie'), `${key} uses the web cookie transport`)
+    assert.ok(has('auth.transport:WEB', 'App\\Http\\Middleware\\SetAuthTransport:WEB') && has('auth.cookie', 'App\\Http\\Middleware\\AuthenticateFromCookie'), `${key} uses the web cookie transport`)
     if (method !== 'get') assert.ok(has('App\\Http\\Middleware\\VerifyAccountCsrf'), `${key} must verify CSRF`)
     assert.deepEqual(operation.security, [{ accessCookie: [], webCsrf: [] }], `${key} uses cookies with CSRF`)
     assert.ok(operation.responses['401'] && operation.responses['403'], `${key} documents authentication and authorization errors`)

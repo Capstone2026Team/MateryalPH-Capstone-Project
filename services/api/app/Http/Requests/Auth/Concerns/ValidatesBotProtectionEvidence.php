@@ -20,18 +20,18 @@ trait ValidatesBotProtectionEvidence
         ];
     }
 
-    protected function validateBotProtectionEvidence(Validator $validator): void
+    protected function validateBotProtectionEvidence(Validator $validator, ?string $fixedPortal = null): void
     {
-        $validator->after(function (Validator $validator): void {
+        $validator->after(function (Validator $validator) use ($fixedPortal): void {
             $evidence = $this->input('bot_protection');
             $transport = AuthTransport::fromRequest($this);
             $portal = $transport === AuthTransport::MOBILE
                 ? 'BUYER'
-                : strtoupper((string) ($this->input('account_type') ?? $this->input('portal') ?? 'VENDOR'));
+                : ($fixedPortal ?? strtoupper((string) ($this->input('account_type') ?? $this->input('portal') ?? 'VENDOR')));
             $riskProof = $this->input('risk_proof_token');
 
-            if ($portal !== 'VENDOR' && $evidence !== null) {
-                $validator->errors()->add('bot_protection', 'Bot protection is available only for Vendor web authentication.');
+            if (! in_array($portal, ['VENDOR', 'ADMIN'], true) && $evidence !== null) {
+                $validator->errors()->add('bot_protection', 'Bot protection is available only for Vendor and Admin web authentication.');
             }
             if ($portal !== 'BUYER' && is_string($riskProof) && $riskProof !== '') {
                 $validator->errors()->add('risk_proof_token', 'Risk proof is available only for Buyer email step-up.');
@@ -39,10 +39,10 @@ trait ValidatesBotProtectionEvidence
             $hasCookieProof = is_string($this->cookie('mp_bot_proof'))
                 && $this->cookie('mp_bot_proof') !== '';
             if (! is_array($evidence)) {
-                if ($portal === 'VENDOR'
+                if (in_array($portal, ['VENDOR', 'ADMIN'], true)
                     && (bool) config('materyalph.bot_protection.enabled', false)
                     && ! $hasCookieProof) {
-                    $validator->errors()->add('bot_protection', 'Complete the Vendor verification or request the accessible email check.');
+                    $validator->errors()->add('bot_protection', 'Complete the security checkbox or request the accessible email check.');
                 }
 
                 return;

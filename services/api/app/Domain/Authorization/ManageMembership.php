@@ -9,6 +9,7 @@ use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\ManageAccount;
 use App\Domain\Identity\TokenSessionService;
+use App\Domain\Vendors\OnboardingRequirementResolver;
 use App\Models\AuthSession;
 use App\Models\VendorMembership;
 use Illuminate\Http\Request;
@@ -43,6 +44,9 @@ final class ManageMembership
                 $this->sessions->revoke($session, 'MEMBERSHIP_CHANGED');
             }
             $this->audit->account($request, 'VENDOR_MEMBERSHIP_CHANGED', 'VENDOR_MEMBERSHIP', $id, $before, [$field => $value]);
+            if ($field === 'status' && $target->role === 'FULFILLMENT') {
+                app(OnboardingRequirementResolver::class)->synchronize($organization);
+            }
             $owner = DB::table('vendor_memberships as m')->join('users as u', 'u.id', '=', 'm.user_id')->where('m.vendor_organization_id', $organization)->where('m.role', 'OWNER')->where('m.status', 'ACTIVE')->first(['u.email', 'u.public_id']);
             if ($owner !== null) {
                 $this->accounts->notice($owner->email, $owner->public_id, 'A Vendor membership was changed. Review your account security audit.');

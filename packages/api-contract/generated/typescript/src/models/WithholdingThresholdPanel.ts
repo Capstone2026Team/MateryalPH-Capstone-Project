@@ -20,6 +20,13 @@ import {
     ThresholdStatusEventToJSON,
     ThresholdStatusEventToJSONTyped,
 } from './ThresholdStatusEvent';
+import type { WithholdingThresholdCalculation } from './WithholdingThresholdCalculation';
+import {
+    WithholdingThresholdCalculationFromJSON,
+    WithholdingThresholdCalculationFromJSONTyped,
+    WithholdingThresholdCalculationToJSON,
+    WithholdingThresholdCalculationToJSONTyped,
+} from './WithholdingThresholdCalculation';
 
 /**
  * FIN-04A panel. Status never uses EXEMPT/SUBJECT_TO_WITHHOLDING; remaining allowance is floored at zero; every figure is DEMO.
@@ -59,6 +66,10 @@ export interface WithholdingThresholdPanel {
      *
      */
     localGrossCentavos: number;
+    /**
+     * Null when no accumulator exists or historical assessment components do not reconcile to its on-platform gross. Never reconstructed from Earnings cash.
+     */
+    calculationBreakdown: WithholdingThresholdCalculation | null;
     /**
      *
      */
@@ -154,6 +165,7 @@ export function instanceOfWithholdingThresholdPanel(value: object): value is Wit
     if ((!('cumulativeGrossCentavos' in (value as Record<string, any>)) && !('cumulative_gross_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['cumulativeGrossCentavos'] === undefined && (value as Record<string, any>)['cumulative_gross_centavos'] === undefined)) return false;
     if ((!('remainingAllowanceCentavos' in (value as Record<string, any>)) && !('remaining_allowance_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['remainingAllowanceCentavos'] === undefined && (value as Record<string, any>)['remaining_allowance_centavos'] === undefined)) return false;
     if ((!('localGrossCentavos' in (value as Record<string, any>)) && !('local_gross_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['localGrossCentavos'] === undefined && (value as Record<string, any>)['local_gross_centavos'] === undefined)) return false;
+    if ((!('calculationBreakdown' in (value as Record<string, any>)) && !('calculation_breakdown' in (value as Record<string, any>))) || ((value as Record<string, any>)['calculationBreakdown'] === undefined && (value as Record<string, any>)['calculation_breakdown'] === undefined)) return false;
     if ((!('externalDeclaredCentavos' in (value as Record<string, any>)) && !('external_declared_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['externalDeclaredCentavos'] === undefined && (value as Record<string, any>)['external_declared_centavos'] === undefined)) return false;
     if ((!('externalOverlapCentavos' in (value as Record<string, any>)) && !('external_overlap_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['externalOverlapCentavos'] === undefined && (value as Record<string, any>)['external_overlap_centavos'] === undefined)) return false;
     if ((!('externalOverlapState' in (value as Record<string, any>)) && !('external_overlap_state' in (value as Record<string, any>))) || ((value as Record<string, any>)['externalOverlapState'] === undefined && (value as Record<string, any>)['external_overlap_state'] === undefined)) return false;
@@ -185,6 +197,7 @@ export function WithholdingThresholdPanelFromJSONTyped(json: any, ignoreDiscrimi
         'cumulativeGrossCentavos': json['cumulative_gross_centavos'],
         'remainingAllowanceCentavos': json['remaining_allowance_centavos'],
         'localGrossCentavos': json['local_gross_centavos'],
+        'calculationBreakdown': WithholdingThresholdCalculationFromJSON(json['calculation_breakdown']),
         'externalDeclaredCentavos': json['external_declared_centavos'],
         'externalOverlapCentavos': json['external_overlap_centavos'],
         'externalOverlapState': json['external_overlap_state'],
@@ -221,6 +234,7 @@ export function WithholdingThresholdPanelToJSONTyped(value?: WithholdingThreshol
         'cumulative_gross_centavos': value['cumulativeGrossCentavos'],
         'remaining_allowance_centavos': value['remainingAllowanceCentavos'],
         'local_gross_centavos': value['localGrossCentavos'],
+        'calculation_breakdown': WithholdingThresholdCalculationToJSON(value['calculationBreakdown']),
         'external_declared_centavos': value['externalDeclaredCentavos'],
         'external_overlap_centavos': value['externalOverlapCentavos'],
         'external_overlap_state': value['externalOverlapState'],

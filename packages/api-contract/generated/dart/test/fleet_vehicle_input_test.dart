@@ -117,5 +117,17 @@ void main() {
       // TODO
     });
 
+    // Concrete Mixer Truck / Transit Mixer only (owner decision 2026-10-16). A positive fee needs mobilization_basis. Any change appends a rate version.
+    // int mobilizationFeeCentavos
+    test('to test the property `mobilizationFeeCentavos`', () async {
+      // TODO
+    });
+
+    // PER_TRUCK charges once per truck dispatched; PER_TRIP once per trip.
+    // String mobilizationBasis
+    test('to test the property `mobilizationBasis`', () async {
+      // TODO
+    });
+
   });
 }

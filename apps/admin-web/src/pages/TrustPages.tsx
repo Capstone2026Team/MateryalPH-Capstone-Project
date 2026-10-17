@@ -1,9 +1,10 @@
+import { DocumentExportButton } from '@materyalph/web-ui'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Download, Search } from 'lucide-react'
 import {
-  AnalyticsNullState, BadgeList, Button, DatasetNotice, FilterChips, PriceTrendPanel, ScoreTile, StarRatingDisplay, StatusBadge, StatusMessage, TrendSummary,
-  analyticsDay, formatAnalyticsDate, formatManilaDateTime, formatPhpDecimal, type PricePoint,
+  ALL_DATES, AnalyticsNullState, BadgeList, Button, DateFilter, DatasetNotice, FilterChips, PriceTrendPanel, ScoreTile, SearchInput, StarRatingDisplay, StatusBadge, StatusMessage, Toolbar, TrendSummary,
+  analyticsDay, dateComparisonPreset, formatAnalyticsDate, formatManilaDateTime, formatPhpDecimal, manilaToday, type PricePoint,
 } from '@materyalph/web-ui'
 import { readableApiError } from '../lib/auth-api'
 import {
@@ -11,9 +12,9 @@ import {
   type AdminAnalyticsFilters, type AdminMaterialsAnalyticsDetail, type AdminMaterialsAnalyticsList, type AdminScoreDetail, type AdminScoreRow, type AnalyticsRun, type AnalyticsSource, type ModerationAction, type ModerationDetail, type ModerationQueueRow, type ModerationState,
 } from '../lib/trust-api'
 import { AdminShell, ErrorState, LoadingState, PageHeader } from './PhaseThreeAdminPages'
+import { Pager } from '../components/OperationsKit'
 
 const control = 'min-h-12 w-full min-w-0 rounded-control border border-border-default bg-surface-primary px-3 text-base font-normal'
-const PRESETS = [{ value: '7', label: '7 days' }, { value: '30', label: '30 days' }, { value: '90', label: '90 days' }]
 
 function useLoad<T>(load: () => Promise<T>, deps: unknown[]): { data: T | null; error: string | null; retry: () => void; set: (value: T) => void } {
   const [data, setData] = useState<T | null>(null)
@@ -31,13 +32,14 @@ function useLoad<T>(load: () => Promise<T>, deps: unknown[]): { data: T | null; 
 
 function useAdminFilters(): [AdminAnalyticsFilters, (next: Partial<AdminAnalyticsFilters>) => void] {
   const [params, setParams] = useSearchParams()
-  const filters: AdminAnalyticsFilters = { presetDays: [7, 30, 90].includes(Number(params.get('days'))) ? Number(params.get('days')) : 30, startDate: null, endDate: null,
+  const filters: AdminAnalyticsFilters = { presetDays: [7, 30, 90].includes(Number(params.get('days'))) ? Number(params.get('days')) : 30, startDate: params.get('priceFrom'), endDate: params.get('priceTo'),
     psgcCode: params.get('psgc') ?? undefined, q: params.get('q') ?? undefined }
   return [filters, next => {
     const merged = { ...filters, ...next }
     // Other query parameters (the geographic dashboard's filters) are preserved.
     const query = new URLSearchParams(params)
     query.set('days', String(merged.presetDays ?? 30))
+    if (merged.startDate && merged.endDate) { query.set('priceFrom', merged.startDate); query.set('priceTo', merged.endDate) } else { query.delete('priceFrom'); query.delete('priceTo') }
     if (merged.psgcCode) query.set('psgc', merged.psgcCode); else query.delete('psgc')
     if (merged.q) query.set('q', merged.q); else query.delete('q')
     setParams(query, { replace: true })
@@ -46,17 +48,24 @@ function useAdminFilters(): [AdminAnalyticsFilters, (next: Partial<AdminAnalytic
 
 const detailQuery = (filters: AdminAnalyticsFilters) => {
   const query = new URLSearchParams({ days: String(filters.presetDays ?? 30) })
+  if (filters.startDate && filters.endDate) { query.set('priceFrom', filters.startDate); query.set('priceTo', filters.endDate) }
   if (filters.psgcCode) query.set('psgc', filters.psgcCode)
   if (filters.q) query.set('q', filters.q)
   return `?${query.toString()}`
 }
 
-function AdminFilters({ filters, onChange, areaLabel }: { filters: AdminAnalyticsFilters; onChange: (next: Partial<AdminAnalyticsFilters>) => void; areaLabel?: string | undefined }) {
+function MaterialsDateControl({ filters, onChange, window }: { filters: AdminAnalyticsFilters; onChange: (next: Partial<AdminAnalyticsFilters>) => void; window?: AdminMaterialsAnalyticsList['window'] | undefined }) {
+  const end = analyticsDay(window?.latestAvailableDate) ?? analyticsDay(window?.endDate) ?? manilaToday()
+  const range = filters.startDate && filters.endDate ? { label: 'Custom range', from: filters.startDate, to: filters.endDate } : dateComparisonPreset(filters.presetDays ?? 30, end)
+  return <DateFilter title="Listed price dates" value={range} allowAllDates={false} allowOpenEnded={false} minRangeDays={2} maxRangeDays={366} maxDate={manilaToday()} presets={[7, 30, 90].map(days => dateComparisonPreset(days, end))} onChange={value => { const days = [7, 30, 90].find(days => value.label === `${days}-day comparison`); onChange(days ? { startDate: null, endDate: null, presetDays: days } : { startDate: value.from, endDate: value.to, presetDays: null }) }} />
+}
+
+function AdminFilters({ filters, onChange, areaLabel, window }: { filters: AdminAnalyticsFilters; onChange: (next: Partial<AdminAnalyticsFilters>) => void; areaLabel?: string | undefined; window?: AdminMaterialsAnalyticsList['window'] | undefined }) {
   const [q, setQ] = useState(filters.q ?? '')
   return <div className="grid gap-4 border-b border-border-default pb-5">
-    <FilterChips label="Comparison period" value={String(filters.presetDays ?? 30)} chips={PRESETS} onChange={value => onChange({ presetDays: Number(value) })} />
+    <div className="flex flex-wrap items-center gap-3"><MaterialsDateControl filters={filters} onChange={onChange} window={window} /><Button variant="quiet" onClick={() => { setQ(''); onChange({ presetDays: 30, startDate: null, endDate: null, q: undefined }) }}>Reset filters</Button></div>
     <form className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end" onSubmit={(event: FormEvent) => { event.preventDefault(); onChange({ q: q.trim() || undefined }) }}>
-      <label className="grid gap-2 text-sm font-semibold">Search materials<input className={control} value={q} onChange={event => setQ(event.target.value)} /></label>
+      <SearchInput label="Search materials" placeholder="Search materials" value={q} onChange={setQ} />
       <Button type="submit" variant="secondary"><Search size={16} aria-hidden="true" />Apply</Button>
     </form>
     <p className="text-xs text-text-secondary">Scope: {areaLabel ?? 'Philippines'} (PSGC area; no radius applies). Payment, order-state and other transaction filters are not applicable to listed-price history.</p>
@@ -77,9 +86,9 @@ export function MaterialsAnalyticsSection({ psgcCode, areaLabel }: { psgcCode: s
   }
   return <section aria-labelledby="materials-analytics" className="space-y-5">
     <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 id="materials-analytics" className="text-xl font-semibold">Materials Analytics</h2><p className="mt-1 max-w-3xl text-sm text-text-secondary">Equal-Vendor daily averages of public Tier 2 listed prices for {areaLabel}. Not an official price index.</p></div>
-      <Button variant="secondary" onClick={() => void download()}><Download size={16} aria-hidden="true" />Export CSV</Button></div>
+      <div className="flex flex-wrap gap-2"><DocumentExportButton basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} audience="admin" types={['MATERIALS_ANALYTICS']} filters={{ ...(filters.startDate && filters.endDate ? { start_date: filters.startDate, end_date: filters.endDate } : { preset_days: filters.presetDays ?? 30 }), ...(filters.psgcCode ? { psgc_code: filters.psgcCode } : {}), ...(filters.q ? { q: filters.q } : {}) }} /><Button variant="secondary" onClick={() => void download()}><Download size={16} aria-hidden="true" />Export CSV</Button></div></div>
     {exportError && <StatusMessage tone="error">{exportError}</StatusMessage>}
-    <AdminFilters filters={filters} onChange={next => setFilters({ ...next, psgcCode: undefined })} areaLabel={areaLabel} />
+    <AdminFilters filters={filters} onChange={next => setFilters({ ...next, psgcCode: undefined })} areaLabel={areaLabel} window={list.data?.window} />
     {list.error ? <ErrorState message={list.error} onRetry={list.retry} /> : !list.data ? <LoadingState /> : <>
       <DatasetNotice label={list.data.dataset.label ?? 'Listed-price history'} updateSchedule={list.data.updateSchedule} snapshotAt={list.data.snapshot?.observedAt ? list.data.snapshot.observedAt.toISOString() : null} currentAsOf={list.data.currentAsOf.toISOString()} explanation={list.data.explanation} />
       {list.data.items.length === 0 ? <AnalyticsNullState title="No comparable materials in this scope" reason="No published observation or current offer matches this area and period." />
@@ -108,21 +117,22 @@ export function MaterialsAnalyticsSection({ psgcCode, areaLabel }: { psgcCode: s
 
 export function AdminMaterialPriceDetailsPage() {
   const { groupId = '' } = useParams()
-  const [filters] = useAdminFilters()
+  const [filters, setFilters] = useAdminFilters()
   const detail = useLoad<AdminMaterialsAnalyticsDetail>(() => getAdminAnalyticsDetail(groupId, filters), [groupId, JSON.stringify(filters)])
   const back = new URLSearchParams({ view: 'materials', days: String(filters.presetDays ?? 30) })
+  if (filters.startDate && filters.endDate) { back.set('priceFrom', filters.startDate); back.set('priceTo', filters.endDate) }
   if (filters.psgcCode) back.set('area', filters.psgcCode)
   return <AdminShell activeHref="/analytics"><div className="space-y-6">
     <Link className="inline-flex min-h-11 items-center text-sm font-semibold text-action-primary" to={`/analytics?${back.toString()}`}>← Marketplace Analytics</Link>
-    {detail.error ? <ErrorState message={detail.error} onRetry={detail.retry} /> : !detail.data ? <LoadingState /> : <MaterialDetail detail={detail.data} />}
+    {detail.error ? <ErrorState message={detail.error} onRetry={detail.retry} /> : !detail.data ? <LoadingState /> : <MaterialDetail detail={detail.data} filters={filters} onChange={setFilters} />}
   </div></AdminShell>
 }
 
-function MaterialDetail({ detail }: { detail: AdminMaterialsAnalyticsDetail }) {
+function MaterialDetail({ detail, filters, onChange }: { detail: AdminMaterialsAnalyticsDetail; filters: AdminAnalyticsFilters; onChange: (next: Partial<AdminAnalyticsFilters>) => void }) {
   const group = detail.group
   const points: PricePoint[] = detail.series.map(point => ({ date: analyticsDay(point.date) ?? '', value: point.averagePhp ?? null, status: point.status, label: point.label ?? null, count: point.vendorCount ?? null, participantsChanged: point.participantsChanged ?? null }))
   return <>
-    <PageHeader eyebrow={`${group.category.name} · ${group.material.name}`} title={group.displayName} description={`Average public listed price per ${group.unit.name}. Current: ${group.current.vendorCount} Vendors, ${group.current.listingCount} listings.`} />
+    <PageHeader eyebrow={`${group.category.name} · ${group.material.name}`} title={group.displayName} description={`Average public listed price per ${group.unit.name}. Current: ${group.current.vendorCount} Vendors, ${group.current.listingCount} listings.`} actions={<MaterialsDateControl filters={filters} onChange={onChange} window={detail.window} />} />
     <div className="flex flex-wrap items-center gap-6 border-b border-border-default pb-5"><TrendSummary trend={group.trend} /></div>
     <PriceTrendPanel title={`Average for ${group.displayName}`} unit={group.unit.name} points={points} emptyReason="No published observation in this scope and period." />
     {detail.canInspectSources ? <SourceInspection groupId={group.groupId} dates={points.filter(point => point.value !== null).map(point => point.date)} /> : <p className="text-sm text-text-secondary">Source inspection requires the materials_analytics.inspect_sources permission.</p>}
@@ -173,10 +183,11 @@ function SourceInspection({ groupId, dates }: { groupId: string; dates: string[]
 export function AdminScoresPage() {
   const [q, setQ] = useState('')
   const [applied, setApplied] = useState('')
-  const list = useLoad<{ items: AdminScoreRow[]; total: number }>(() => listScores(applied), [applied])
+  const [page, setPage] = useState(1)
+  const list = useLoad<{ items: AdminScoreRow[]; total: number; perPage?: number }>(() => listScores(applied, page), [applied, page])
   return <AdminShell activeHref="/scores"><div className="space-y-6">
     <PageHeader eyebrow="Compliance & quality" title="Score & Badge Monitoring" description="Published Vendor scores, sample sizes and automatic badges. Admins can investigate sources and suppress a badge for a documented case, but never assign a score or award a badge." />
-    <form className="flex max-w-xl gap-2" role="search" onSubmit={event => { event.preventDefault(); setApplied(q.trim()) }}><label className="sr-only" htmlFor="score-search">Search stores</label><input id="score-search" className={control} value={q} onChange={event => setQ(event.target.value)} placeholder="Store name" /><Button type="submit" variant="secondary">Search</Button></form>
+    <form className="flex max-w-xl flex-wrap gap-2" role="search" onSubmit={event => { event.preventDefault(); setApplied(q.trim()); setPage(1) }}><SearchInput id="score-search" label="Search stores" placeholder="Store name" value={q} onChange={setQ} className="flex-1" /><Button type="submit" variant="secondary">Search</Button>{applied && <Button variant="quiet" onClick={() => { setQ(''); setApplied(''); setPage(1) }}>Reset search</Button>}</form>
     {list.error ? <ErrorState message={list.error} onRetry={list.retry} /> : !list.data ? <LoadingState /> : list.data.items.length === 0 ? <AnalyticsNullState title="No active stores" reason="No active store matches this search." />
       : <div className="overflow-x-auto rounded-control border border-border-default"><table className="w-full min-w-[820px] text-sm"><caption className="sr-only">Vendor scores</caption>
         <thead className="bg-surface-canvas text-left text-xs uppercase tracking-[0.08em] text-text-secondary"><tr><th className="px-4 py-2" scope="col">Store</th><th className="px-4 py-2" scope="col">Public label</th><th className="px-4 py-2" scope="col">VCS / MQS / OHS</th><th className="px-4 py-2" scope="col">CRR / FRR</th><th className="px-4 py-2" scope="col">Badges</th><th className="px-4 py-2" scope="col">Reviews</th></tr></thead>
@@ -186,6 +197,7 @@ export function AdminScoresPage() {
           <td className="px-4 py-3"><BadgeList badges={row.scores.badges} empty="None" /></td>
           <td className="px-4 py-3">{row.activeSuppressions > 0 && <StatusBadge label={`${row.activeSuppressions} suppressed`} tone="warning" />} {row.activeExclusions > 0 && <StatusBadge label={`${row.activeExclusions} excluded`} tone="info" />}</td>
         </tr>)}</tbody></table></div>}
+    {list.data && <Pager page={page} lastPage={Math.max(1, Math.ceil(list.data.total / (list.data.perPage ?? 20)))} total={list.data.total} onChange={setPage} />}
   </div></AdminShell>
 }
 
@@ -257,15 +269,19 @@ const ACTION_LABELS: Record<string, string> = { DISMISS_FLAG: 'Dismiss flag', RE
 
 export function AdminReviewModerationPage() {
   const [state, setState] = useState<ModerationState>('NEEDS_ACTION')
-  const queue = useLoad<{ items: ModerationQueueRow[]; total: number }>(() => listModeration(state), [state])
+  const [page, setPage] = useState(1)
+  const [range, setRange] = useState(ALL_DATES)
+  const queue = useLoad<{ items: ModerationQueueRow[]; total: number; perPage?: number }>(() => listModeration(state, page, range), [state, page, range.from, range.to])
   return <AdminShell activeHref="/reviews"><div className="space-y-6">
     <PageHeader eyebrow="Compliance & quality" title="Review Moderation" description="Reported and hidden verified-purchase reviews. Every decision needs a reason; the original content and history are preserved. A Vendor can never remove a review." />
-    <FilterChips label="Queue" value={state} chips={QUEUE_STATES} onChange={value => setState(value as ModerationState)} />
+    <FilterChips label="Queue" value={state} chips={QUEUE_STATES} onChange={value => { setState(value as ModerationState); setPage(1) }} />
+    <Toolbar filters={<><DateFilter title="Review submission dates" value={range} onChange={value => { setRange(value); setPage(1) }} />{(range.from || range.to) && <Button variant="quiet" onClick={() => { setRange(ALL_DATES); setPage(1) }}>Reset dates</Button>}</>} />
     {queue.error ? <ErrorState message={queue.error} onRetry={queue.retry} /> : !queue.data ? <LoadingState /> : queue.data.items.length === 0 ? <AnalyticsNullState title="Nothing to moderate" reason="No review matches this queue." />
       : <ul className="divide-y divide-border-default border-y border-border-default">{queue.data.items.map(row => <li key={row.id} className="grid gap-1 py-3">
         <p className="flex flex-wrap items-center gap-2"><Link className="font-semibold text-action-primary underline-offset-4 hover:underline" to={`/reviews/${row.id}`}>{row.type === 'PRODUCT' ? 'Product review' : row.type === 'VENDOR' ? 'Store rating' : 'Buyer rating'} · {row.storeName}</Link><StatusBadge label={row.moderationState.replaceAll('_', ' ').toLowerCase()} tone={row.moderationState === 'REMOVED' ? 'error' : 'warning'} />{row.openFlags > 0 && <StatusBadge label={`${row.openFlags} open report${row.openFlags === 1 ? '' : 's'}`} tone="info" />}</p>
         <p className="text-sm text-text-secondary">{row.displayName} · Order {row.orderReference}</p>{row.comment && <p className="text-sm">{row.comment}</p>}
       </li>)}</ul>}
+    {queue.data && <Pager page={page} lastPage={Math.max(1, Math.ceil(queue.data.total / (queue.data.perPage ?? 20)))} total={queue.data.total} onChange={setPage} />}
   </div></AdminShell>
 }
 

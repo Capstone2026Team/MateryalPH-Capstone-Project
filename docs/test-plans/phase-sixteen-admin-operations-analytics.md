@@ -67,7 +67,7 @@ Everything is labelled DEMO. There is no LIVE bypass.
 1. Run `docker compose exec api php artisan migrate` on the development database. The migration is additive and forward-only.
 2. Optional map: set `VITE_GOOGLE_MAPS_BROWSER_KEY` in `apps/admin-web/.env` (a referrer-restricted browser key) and import boundaries with `materyalph:psgc-boundaries-import --file=… --reference=…` (see `docs/architecture/psgc-import.md`). Without either, the tile view and the table remain fully usable.
 3. Optional DEMO data: `docker compose exec api php artisan materyalph:geo-analytics-demo --days=90`, then choose **DEMO dataset** on Marketplace Analytics.
-4. At 1280px and wider, the map and table sit side by side. Below 1280px they stack. At 320px there is no horizontal page scroll; wide tables scroll inside their own region.
+4. The full-width geographic map/tiles sit above the area comparison table. Tiles adapt to the available container width. At 320px there is no horizontal page scroll; the table scrolls inside its own region, keeping area names and column headers visible. Headers and numeric values remain readable without splitting words or amounts.
 5. Keyboard only: tab to a tile or table row, read the exact value in the status line, press Enter to drill, and use the breadcrumbs to return.
 6. Windows High Contrast: suppressed tiles keep their hatch and the word "Suppressed".
 

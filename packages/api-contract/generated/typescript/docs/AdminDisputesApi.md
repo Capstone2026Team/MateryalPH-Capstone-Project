@@ -746,7 +746,7 @@ This endpoint does not need any parameter.
 
 ## listAdminDisputes
 
-> DisputeListEnvelope listAdminDisputes(status, page)
+> DisputeListEnvelope listAdminDisputes(status, page, from, to)
 
 
 
@@ -776,6 +776,10 @@ async function example() {
     status: status_example,
     // number (optional)
     page: 56,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Case created_at (filing). Group counts retain their existing unrestricted scope. (optional)
+    from: 2013-10-20,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Case created_at (filing). Group counts retain their existing unrestricted scope. (optional)
+    to: 2013-10-20,
   } satisfies ListAdminDisputesRequest;
 
   try {
@@ -797,6 +801,8 @@ example().catch(console.error);
 |------------- | ------------- | ------------- | -------------|
 | **status** | `NEEDS_ADMIN`, `WITH_PARTIES`, `REMEDY_TRACKING`, `CONCLUDED`, `ALL` |  | [Optional] [Defaults to `undefined`] [Enum: NEEDS_ADMIN, WITH_PARTIES, REMEDY_TRACKING, CONCLUDED, ALL] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **from** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Case created_at (filing). Group counts retain their existing unrestricted scope. | [Optional] [Defaults to `undefined`] |
+| **to** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Case created_at (filing). Group counts retain their existing unrestricted scope. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 

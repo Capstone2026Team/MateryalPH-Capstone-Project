@@ -32,6 +32,24 @@ final class DeliveryRecommendationTest extends TestCase
         self::assertSame(22500, $result['candidates'][0]['estimated_charge_centavos']);
     }
 
+    public function test_recommendation_prefers_lowest_eligible_fee_then_fewer_trips_and_stable_vehicle_id(): void
+    {
+        $cheap = array_replace($this->vehicle(), ['id' => 'cheap', 'base_fee_centavos' => 5000]);
+        $large = array_replace($this->vehicle(), ['id' => 'large', 'capacity_kg' => 2000, 'base_fee_centavos' => 11250]);
+        $tie = array_replace($large, ['id' => 'another-large']);
+        $ineligible = array_replace($cheap, ['id' => 'unavailable', 'available' => false, 'base_fee_centavos' => 0]);
+        $service = app(DeliveryRecommendationService::class);
+        $first = $service->evaluate([$this->vehicle(), $large, $cheap, $ineligible], $this->load());
+        self::assertSame(['large', 'cheap', 'vehicle'], array_column($first['groups'][0]['candidates'], 'vehicle_id'));
+        self::assertSame(12500, $first['groups'][0]['candidates'][0]['estimated_charge_centavos']);
+        // Both alternatives cost 12,500; carrying the whole load in one trip wins.
+        self::assertSame(1, $first['groups'][0]['candidates'][0]['total_vehicle_trips']);
+        $forward = $service->evaluate([$large, $tie], $this->load());
+        $reverse = $service->evaluate([$tie, $large], $this->load());
+        self::assertSame('another-large', $forward['groups'][0]['candidates'][0]['vehicle_id']);
+        self::assertSame($forward['groups'][0]['candidates'], $reverse['groups'][0]['candidates']);
+    }
+
     public function test_mixer_uses_concrete_volume_and_weight_but_never_bagged_cement(): void
     {
         $vehicle = array_replace($this->vehicle(), ['vehicle_type' => 'CONCRETE_MIXER', 'mixer_capacity_m3' => 6, 'capacity_kg' => 24000, 'cargo_length_m' => null, 'cargo_width_m' => null, 'cargo_height_m' => null]);
@@ -88,8 +106,45 @@ final class DeliveryRecommendationTest extends TestCase
         self::assertSame(['units' => 25, 'weight_kg' => 1000.0], $candidate['capacity_per_trip']);
         self::assertSame('WEIGHT', $candidate['limiting_factor']);
         self::assertSame(2, $candidate['total_vehicle_trips']);
-        self::assertSame(['base_fee_centavos' => 10000, 'per_km_centavos' => 100, 'per_trip_centavos' => 11250, 'trips' => 2, 'total_centavos' => 22500, 'rounding' => DeliveryRecommendationService::FEE_ROUNDING], $candidate['fee']);
+        self::assertSame(['base_fee_centavos' => 10000, 'per_km_centavos' => 100, 'per_trip_centavos' => 11250, 'trips' => 2, 'trip_total_centavos' => 22500,
+            'mobilization_fee_centavos' => 0, 'mobilization_basis' => null, 'mobilization_units' => 0, 'mobilization_total_centavos' => 0,
+            'total_centavos' => 22500, 'rounding' => DeliveryRecommendationService::FEE_ROUNDING], $candidate['fee']);
         self::assertSame([['vehicle_id' => 'mixer', 'reasons' => ['INCOMPATIBLE_LOAD']]], $result['groups'][0]['excluded']);
+        self::assertNull($candidate['volume_plan']);
+    }
+
+    public function test_mixer_plans_full_loads_and_last_trip_from_ordered_volume(): void
+    {
+        // 7.5 m³ at 2,400 kg/m³ in 6 m³ drums with 24 t payload: one full load and a 1.5 m³ second trip.
+        $concrete = ['material_kind' => 'READY_MIXED_CONCRETE', 'weight_kg' => 18000, 'volume_m3' => 7.5];
+        $candidate = app(DeliveryRecommendationService::class)->evaluate([$this->mixer()], $this->grouped([$concrete]))['candidates'][0];
+        self::assertSame(2, $candidate['total_vehicle_trips']);
+        self::assertSame('VOLUME', $candidate['limiting_factor']);
+        self::assertSame(['total_m3' => 7.5, 'full_load_m3' => 6.0, 'full_trips' => 1, 'last_trip_m3' => 1.5], $candidate['volume_plan']);
+        // A payload below one drum of this concrete makes weight the limit and shrinks each load.
+        $light = array_replace($this->mixer(), ['capacity_kg' => 7200]);
+        $limited = app(DeliveryRecommendationService::class)->evaluate([$light], $this->grouped([$concrete]))['candidates'][0];
+        self::assertSame(3, $limited['total_vehicle_trips']);
+        self::assertSame('WEIGHT', $limited['limiting_factor']);
+        self::assertSame(['total_m3' => 7.5, 'full_load_m3' => 3.0, 'full_trips' => 2, 'last_trip_m3' => 1.5], $limited['volume_plan']);
+    }
+
+    public function test_mixer_mobilization_follows_the_vendor_chosen_basis(): void
+    {
+        // 25 m³ in 6 m³ drums = 5 trips on 2 available trucks.
+        $concrete = ['material_kind' => 'READY_MIXED_CONCRETE', 'weight_kg' => 60000, 'volume_m3' => 25];
+        $service = app(DeliveryRecommendationService::class);
+        $perTruck = $service->evaluate([array_replace($this->mixer(), ['mobilization_fee_centavos' => 150000, 'mobilization_basis' => 'PER_TRUCK'])], $this->grouped([$concrete]))['candidates'][0];
+        self::assertSame([5, 2], [$perTruck['total_vehicle_trips'], $perTruck['number_of_vehicles']]);
+        self::assertSame(['PER_TRUCK', 2, 300000], [$perTruck['fee']['mobilization_basis'], $perTruck['fee']['mobilization_units'], $perTruck['fee']['mobilization_total_centavos']]);
+        self::assertSame(11250 * 5 + 300000, $perTruck['estimated_charge_centavos']);
+        $perTrip = $service->evaluate([array_replace($this->mixer(), ['mobilization_fee_centavos' => 150000, 'mobilization_basis' => 'PER_TRIP'])], $this->grouped([$concrete]))['candidates'][0];
+        self::assertSame(11250 * 5 + 150000 * 5, $perTrip['estimated_charge_centavos']);
+        // No fee, or a fee without a recognised basis, adds nothing.
+        foreach ([['mobilization_fee_centavos' => 0, 'mobilization_basis' => null], ['mobilization_fee_centavos' => 150000, 'mobilization_basis' => 'PER_DAY']] as $rate) {
+            self::assertSame(11250 * 5, $service->evaluate([array_replace($this->mixer(), $rate)], $this->grouped([$concrete]))['candidates'][0]['estimated_charge_centavos']);
+        }
+        self::assertSame(11250 * 3 + 150000 * 2, DeliveryRecommendationService::charge(array_replace($this->mixer(), ['mobilization_fee_centavos' => 150000, 'mobilization_basis' => 'PER_TRUCK']), 2, 3, 12500)['total_centavos'] ?? null);
     }
 
     public function test_mixed_ready_mixed_and_ordinary_loads_stay_separate_groups(): void
@@ -121,6 +176,31 @@ final class DeliveryRecommendationTest extends TestCase
             self::assertSame($reasons, $result['groups'][0]['manual_review_reasons']);
             self::assertSame([], $result['candidates'], 'Unknown measurements never produce a zero load or zero fee.');
         }
+    }
+
+    public function test_automatic_dimension_failure_allows_manual_review_without_a_proven_fit_or_estimate(): void
+    {
+        $service = app(DeliveryRecommendationService::class);
+        $load = array_replace($this->load(), ['weight_kg' => 20, 'unit_count' => 1, 'length_m' => 2.31, 'width_m' => 3.23, 'height_m' => 1231.23]);
+        $result = $service->evaluate([$this->vehicle()], $load);
+        self::assertSame('MANUAL_REVIEW_REQUIRED', $result['status']);
+        self::assertSame(['UNIT_DIMENSIONS_REQUIRE_MANUAL_REVIEW'], $result['groups'][0]['manual_review_reasons']);
+        self::assertSame(['DIMENSIONS_INSUFFICIENT'], $result['groups'][0]['excluded'][0]['reasons']);
+        self::assertSame([], $result['candidates']);
+        self::assertSame([$this->vehicle()], $service->manualReviewVehicles([$this->vehicle()], $result['groups'][0], $load));
+
+        foreach ([['available' => false], ['maximum_distance_km' => 10], ['capacity_kg' => 10], ['vehicle_type' => 'CONCRETE_MIXER', 'mixer_capacity_m3' => 6]] as $change) {
+            self::assertSame([], $service->manualReviewVehicles([array_replace($this->vehicle(), $change)], $result['groups'][0], $load));
+        }
+        self::assertSame([], $service->manualReviewVehicles([$this->vehicle()], $result['groups'][0], array_replace($load, ['heavy_vehicle_access_confirmed' => false])));
+        self::assertSame('NO_ELIGIBLE_VEHICLE', $service->evaluate([array_replace($this->vehicle(), ['capacity_kg' => 10])], $load)['status']);
+    }
+
+    public function test_manual_review_trip_counts_cover_known_indivisible_payload_and_mixer_volume(): void
+    {
+        self::assertSame(4, DeliveryRecommendationService::manualReviewMinimumTrips($this->vehicle(), ['checked' => ['weight_kg' => 2400, 'unit_count' => 4]]));
+        self::assertSame(5, DeliveryRecommendationService::manualReviewMinimumTrips($this->mixer(), ['checked' => ['weight_kg' => 60000, 'volume_m3' => 25]]));
+        self::assertSame(1, DeliveryRecommendationService::manualReviewMinimumTrips($this->vehicle(), ['checked' => []]));
     }
 
     public function test_versioned_dimensional_weight_is_advisory_and_never_replaces_the_payload_check(): void

@@ -72,8 +72,21 @@ void main() {
       // TODO
     });
 
+    // One entry per Work Package line. Each line is filled from one specification option and never mixes two. `options` lists every option (ProjectSpecificationDetail `specifications`, lowest unit price, availability label) when there is more than one; `selection_required` is true until the Buyer chooses one, and until then the line is priced on a flagged basis option. Allocations carry `listing_id`, `variant_id`, `variant_label` and labelled `offered_specifications`.
     // BuiltList<BuiltMap<String, JsonObject>> lines
     test('to test the property `lines`', () async {
+      // TODO
+    });
+
+    // Some line still needs the Buyer's specification choice.
+    // bool selectionRequired
+    test('to test the property `selectionRequired`', () async {
+      // TODO
+    });
+
+    // Choices applied by selection-preview, keyed by line id.
+    // BuiltMap<String, String> specificationSelections
+    test('to test the property `specificationSelections`', () async {
       // TODO
     });
 
@@ -164,6 +177,12 @@ void main() {
 
     // String currentQuotationState
     test('to test the property `currentQuotationState`', () async {
+      // TODO
+    });
+
+    // The Buyer saved this store as a preferred seller.
+    // bool isFavorite
+    test('to test the property `isFavorite`', () async {
       // TODO
     });
 

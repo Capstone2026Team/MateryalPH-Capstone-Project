@@ -464,42 +464,54 @@ void main() {
     },
   );
 
-  testWidgets(
-    'invoices separate the store copy from MateryalPH documents and send one keyed request',
-    (tester) async {
-      await _tall(tester);
-      final repository = FakeDisputesRepository()..invoiceData = invoicesView();
-      await tester.pumpWidget(
-        _app(
-          OrderInvoicesScreen(
-            orderId: 'order-1',
-            repository: repository,
-            now: _now,
-          ),
+  testWidgets('invoices show the store copy and send one keyed request', (
+    tester,
+  ) async {
+    await _tall(tester);
+    final repository = FakeDisputesRepository()..invoiceData = invoicesView();
+    await tester.pumpWidget(
+      _app(
+        OrderInvoicesScreen(
+          orderId: 'order-1',
+          repository: repository,
+          now: _now,
         ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('No invoice copy uploaded yet.'), findsOneWidget);
-      expect(find.textContaining('Not a tax invoice'), findsOneWidget);
-      expect(find.text('Request a correction'), findsNothing);
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('No invoice copy uploaded yet.'), findsOneWidget);
+    expect(find.text('Billing details'), findsNothing);
+    expect(find.text('MateryalPH documents'), findsNothing);
+    expect(find.text('Request a correction'), findsNothing);
 
-      await tester.tap(find.text('Request a copy'));
-      await tester.pumpAndSettle();
-      expect(
-        find.textContaining('not an extension of its legal duty'),
-        findsOneWidget,
-      );
-      await tester.enterText(
-        find.byType(TextField),
-        'Please send the sales invoice.',
-      );
-      await tester.tap(find.text('Send request'));
-      await tester.pumpAndSettle();
-      expect(repository.calls, contains('requestInvoice:COPY'));
-      expect(repository.keys, hasLength(1));
-      expect(find.text('Request sent to the store.'), findsOneWidget);
-    },
-  );
+    await tester.tap(find.text('Request a copy'));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('never extends its legal issuance deadline'),
+      findsOneWidget,
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Full name'),
+      'Juan Buyer',
+    );
+    await tester.enterText(
+      find.widgetWithText(
+        TextFormField,
+        'Street name, building, house no. / billing address',
+      ),
+      '123 Sample Street, Manila',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Details for the Vendor'),
+      'Please send the sales invoice.',
+    );
+    await tester.tap(find.byType(CheckboxListTile));
+    await tester.tap(find.text('Submit Request'));
+    await tester.pumpAndSettle();
+    expect(repository.calls, contains('requestInvoice:COPY'));
+    expect(repository.keys, hasLength(1));
+    expect(find.text('Request sent to the store.'), findsOneWidget);
+  });
 
   testWidgets('a mismatched invoice copy never changes what the Buyer pays', (
     tester,

@@ -16,6 +16,7 @@ import {
   type ListAdminInvoiceLogViewEnum,
 } from '@materyalph/api-client-ts'
 import { createWebApiConfiguration } from '@materyalph/web-ui'
+import { dateQuery, type CalendarRange } from './admin-format'
 
 export type { DisputeDetail, DisputeListMeta, DisputeSanctionInput, DisputeSummary, InvoiceListMeta, InvoiceLogRow }
 export type QueueStatus = ListAdminDisputesStatusEnum
@@ -27,8 +28,8 @@ const disputes = () => new AdminDisputesApi(createWebApiConfiguration(basePath, 
 const invoices = () => new AdminInvoicesApi(createWebApiConfiguration(basePath, { refreshSession: true }))
 export const newKey = (): string => crypto.randomUUID()
 
-export async function listQueue(status: QueueStatus, page = 1): Promise<{ items: DisputeSummary[]; meta: DisputeListMeta }> {
-  const response = await disputes().listAdminDisputes({ status, page })
+export async function listQueue(status: QueueStatus, page = 1, range?: CalendarRange): Promise<{ items: DisputeSummary[]; meta: DisputeListMeta }> {
+  const response = await disputes().listAdminDisputes({ status, page, ...dateQuery(range) })
   return { items: response.data, meta: response.meta }
 }
 
@@ -74,7 +75,7 @@ export async function confirmRemedy(caseId: string, remedyId: string, reason: st
   return (await disputes().confirmAdminDisputeRemedy({ caseId, remedyId, idempotencyKey: newKey(), disputeRemedyConfirmRequest: { reason } })).data
 }
 
-export async function listInvoiceLog(view: InvoiceLogView, page = 1): Promise<{ items: InvoiceLogRow[]; meta: InvoiceListMeta }> {
-  const response = await invoices().listAdminInvoiceLog({ view, page })
+export async function listInvoiceLog(view: InvoiceLogView, page = 1, range?: CalendarRange): Promise<{ items: InvoiceLogRow[]; meta: InvoiceListMeta }> {
+  const response = await invoices().listAdminInvoiceLog({ view, page, ...dateQuery(range) })
   return { items: response.data, meta: response.meta }
 }

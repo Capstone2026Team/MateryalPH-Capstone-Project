@@ -81,6 +81,60 @@ for (const portal of ['vendors', 'admin']) {
     if (method === 'get') assert.ok(hasMiddleware(route, 'signed', 'Illuminate\\Routing\\Middleware\\ValidateSignature'))
   }
 }
+for (const method of ['get', 'post']) {
+  const operation = spec.paths['/buyers/account/photo']?.[method]
+  assert.equal(operation?.operationId, method === 'get' ? 'getBuyerAccountPhoto' : 'uploadBuyerAccountPhoto')
+  assert.deepEqual(operation.security, [{ passportBearer: [] }])
+  const key = `${method.toUpperCase()} /api/v1/buyers/account/photo`
+  expected.add(key)
+  const route = actual.get(key)
+  assert.ok(route, `Buyer photo route missing: ${key}`)
+  assert.ok(hasMiddleware(route, 'auth:api', 'Illuminate\\Auth\\Middleware\\Authenticate:api'))
+  assert.ok(hasMiddleware(route, 'account.access:BUYER', 'App\\Http\\Middleware\\RequireAccountAccess:BUYER'))
+  assert.ok(hasMiddleware(route, 'auth.transport:MOBILE', 'App\\Http\\Middleware\\SetAuthTransport:MOBILE'))
+  if (method === 'get') {
+    assert.ok(hasMiddleware(route, 'signed', 'Illuminate\\Routing\\Middleware\\ValidateSignature'))
+    assert.deepEqual(operation.parameters.map(parameter => parameter.name), ['expires', 'owner', 'version', 'signature'], 'Buyer photo query order must preserve Laravel signed URLs')
+  }
+  else {
+    assert.deepEqual(operation.requestBody.content['multipart/form-data'].schema.required, ['photo', 'lock_version'])
+    assert.ok(operation.responses['409'] && operation.responses['422'] && operation.responses['503'])
+  }
+}
+for (const [path, method, operationId, throttled] of [
+  ['/buyers/account/two-factor', 'post', 'startBuyerTwoFactor', true],
+  ['/buyers/account/two-factor/confirm', 'post', 'confirmBuyerTwoFactor', true],
+  ['/buyers/account/two-factor/disable', 'post', 'disableBuyerTwoFactor', true],
+  ['/buyers/account/deletion', 'get', 'getBuyerAccountDeletionPreview', false],
+  ['/buyers/account/deletion', 'post', 'deleteBuyerAccount', true],
+]) {
+  const operation = spec.paths[path]?.[method]
+  assert.equal(operation?.operationId, operationId)
+  assert.deepEqual(operation.security, [{ passportBearer: [] }])
+  const key = `${method.toUpperCase()} /api/v1${path}`
+  expected.add(key)
+  const route = actual.get(key)
+  assert.ok(route, `Buyer security route missing: ${key}`)
+  assert.ok(hasMiddleware(route, 'auth:api', 'Illuminate\\Auth\\Middleware\\Authenticate:api'), `Passport guard missing: ${key}`)
+  assert.ok(hasMiddleware(route, 'account.access:BUYER', 'App\\Http\\Middleware\\RequireAccountAccess:BUYER'), `Buyer guard missing: ${key}`)
+  assert.ok(hasMiddleware(route, 'auth.transport:MOBILE', 'App\\Http\\Middleware\\SetAuthTransport:MOBILE'), `Transport guard missing: ${key}`)
+  assert.equal(route.middleware.some(name => /(?:throttle|ThrottleRequests):account-security/.test(name)), throttled, `Throttle mismatch: ${key}`)
+  for (const response of Object.values(operation.responses)) {
+    const reference = response.$ref ?? response.content?.['application/json']?.schema?.$ref
+    assert.ok(reference, `${operationId} needs a defined response`)
+  }
+}
+assert.deepEqual(spec.components.schemas.BuyerAccountDeletionRequest.properties.confirmation.enum, ['DELETE'])
+for (const id of ['completeBuyerMobileMfaChallenge', 'recoverBuyerMobileMfaChallenge']) {
+  const path = id.startsWith('complete') ? '/mobile/auth/mfa/challenge' : '/mobile/auth/mfa/recovery'
+  assert.equal(spec.paths[path]?.post?.operationId, id)
+  assert.ok(!spec.paths[path].post.security, `${id} authenticates with the challenge token, not a session`)
+  const route = actual.get(`POST /api/v1${path}`)
+  assert.ok(route, `Native MFA route missing: ${path}`)
+  assert.ok(hasMiddleware(route, 'auth.transport:MOBILE', 'App\\Http\\Middleware\\SetAuthTransport:MOBILE'), `Transport guard missing: ${path}`)
+  assert.ok(route.middleware.some(name => /(?:throttle|ThrottleRequests):auth-public/.test(name)), `Throttle missing: ${path}`)
+}
+assert.ok(spec.components.schemas.AuthEnvelope.allOf[1].properties.data.properties.challenge_token)
 for (const key of actual.keys()) {
   if (/ \/api\/v1\/(buyers|vendors|admin)\/account\//.test(key)) assert.ok(expected.has(key), `Laravel route missing from contract: ${key}`)
 }
@@ -102,3 +156,17 @@ assert.deepEqual(spec.components.schemas.VendorTeamDeletion.required, ['lock_ver
 assert.ok(spec.components.schemas.VendorTeamInvitationRecord.required.includes('can_delete'))
 assert.ok(spec.components.schemas.VendorTeamInvitationRecord.required.includes('lock_version'))
 console.log('Team deletion contract passed: versioned Owner deletion, cookie/CSRF guards and invitation eligibility.')
+
+const staffAcceptance = spec.paths['/auth/vendor-invitations/accept'].post
+assert.equal(staffAcceptance.operationId, 'acceptVendorStaffInvitation')
+assert.equal(staffAcceptance.requestBody.content['application/json'].schema.$ref, '#/components/schemas/VendorInvitationAcceptance')
+assert.ok(staffAcceptance.security.some(security => 'webCsrf' in security))
+assert.match(staffAcceptance.description, /ACTIVE or PENDING_VERIFICATION/)
+assert.match(staffAcceptance.description, /no retained Vendor membership/)
+assert.match(staffAcceptance.responses['429'].description, /OTP_RESEND_THROTTLED.*unconsumed/)
+assert.equal(spec.components.schemas.VendorInvitationAcceptance.properties.password.minLength, 1)
+assert.equal(spec.components.schemas.VendorInvitationAcceptance.properties.bot_protection.allOf[0].$ref, '#/components/schemas/VendorBotProtectionEvidence')
+assert.equal(staffAcceptance.responses['403'].$ref, '#/components/responses/BotStepUpResponse')
+assert.ok(staffAcceptance.responses['503'])
+assert.match(staffAcceptance.description, /vendor_invitation_accept/)
+console.log('Staff acceptance contract passed: pending identity reconnection, existing credentials, email verification and atomic OTP cooldown.')

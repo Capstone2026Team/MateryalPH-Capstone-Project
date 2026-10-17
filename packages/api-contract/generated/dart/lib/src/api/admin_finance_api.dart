@@ -10,6 +10,7 @@ import 'package:dio/dio.dart';
 import 'package:materyalph_api_client/src/api_util.dart';
 import 'package:materyalph_api_client/src/model/admin_payment_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/channel_fee_version_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/date.dart';
 import 'package:materyalph_api_client/src/model/fee_credit_proposal_request.dart';
 import 'package:materyalph_api_client/src/model/fee_statement_envelope.dart';
 import 'package:materyalph_api_client/src/model/fee_statement_list_envelope.dart';
@@ -398,7 +399,7 @@ class AdminFinanceApi {
   }
 
   /// listAdminPayments
-  /// finance.view. Payment log with evidence origin and reconciliation state.
+  /// finance.view. Payment log with evidence origin, reconciliation state, refunded_centavos, net_collected_centavos, refund_pending_count and refund_failed_count. Refunds are aggregated per original capture; only confirmed refunds reduce net collections, and a PAID payment retains its original state even when refunded.
   ///
   /// Parameters:
   /// * [page]
@@ -406,6 +407,8 @@ class AdminFinanceApi {
   /// * [purpose]
   /// * [evidenceOrigin]
   /// * [reconciliationState]
+  /// * [from] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Payment request created_at.
+  /// * [to] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Payment request created_at.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -421,6 +424,8 @@ class AdminFinanceApi {
     String? purpose,
     String? evidenceOrigin,
     String? reconciliationState,
+    Date? from,
+    Date? to,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -459,6 +464,8 @@ class AdminFinanceApi {
       if (purpose != null) r'purpose': encodeQueryParameter(_serializers, purpose, const FullType(String)),
       if (evidenceOrigin != null) r'evidence_origin': encodeQueryParameter(_serializers, evidenceOrigin, const FullType(String)),
       if (reconciliationState != null) r'reconciliation_state': encodeQueryParameter(_serializers, reconciliationState, const FullType(String)),
+      if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
     };
 
     final _response = await _dio.request<Object>(
@@ -587,12 +594,14 @@ class AdminFinanceApi {
   }
 
   /// listFeeStatements
-  /// finance.view. Monthly commission statements.
+  /// finance.view. Monthly commission statements shared with Vendor Finance. Inclusive Manila dates filter issued_on. overdue&#x3D;true returns only issued/partially paid positive balances past the due date; drafts, settled and voided statements are excluded. Approved credits reduce debt on the original statement and any paid excess becomes a separate original-payment refund payable.
   ///
   /// Parameters:
   /// * [overdue] - Issued balances past their due date.
   /// * [page]
   /// * [state]
+  /// * [from] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Statement issued_on, including drafts.
+  /// * [to] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Statement issued_on, including drafts.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -606,6 +615,8 @@ class AdminFinanceApi {
     bool? overdue,
     int? page,
     String? state,
+    Date? from,
+    Date? to,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -642,6 +653,8 @@ class AdminFinanceApi {
       if (overdue != null) r'overdue': encodeQueryParameter(_serializers, overdue, const FullType(bool)),
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
       if (state != null) r'state': encodeQueryParameter(_serializers, state, const FullType(String)),
+      if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
     };
 
     final _response = await _dio.request<Object>(
@@ -691,6 +704,8 @@ class AdminFinanceApi {
   /// * [page]
   /// * [state]
   /// * [kind]
+  /// * [from] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review item created_at.
+  /// * [to] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review item created_at.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -704,6 +719,8 @@ class AdminFinanceApi {
     int? page,
     String? state,
     String? kind,
+    Date? from,
+    Date? to,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -740,6 +757,8 @@ class AdminFinanceApi {
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
       if (state != null) r'state': encodeQueryParameter(_serializers, state, const FullType(String)),
       if (kind != null) r'kind': encodeQueryParameter(_serializers, kind, const FullType(String)),
+      if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
     };
 
     final _response = await _dio.request<Object>(

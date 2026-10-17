@@ -8,6 +8,7 @@ use App\Domain\Catalog\CatalogAccess;
 use App\Domain\Disputes\DisputeRules;
 use App\Domain\Orders\OrderAccess;
 use App\Domain\Orders\OrderStates;
+use App\Support\PortalDateRange;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
@@ -104,6 +105,11 @@ final class InvoiceQueries
                 fn (object $record): array => $this->recordRow($record, 'VENDOR', false) + ['order_reference' => self::orderReference((string) $record->order_id)]],
             default => [$requests->orderBy('service_target_at'), fn (object $row): array => $this->requestRow($row, 'VENDOR') + ['order_reference' => self::orderReference((string) $row->order_id)]],
         };
+        if (in_array($view, ['RECORDS', 'RECONCILIATION'], true)) {
+            PortalDateRange::apply($query, 'issued_on', $filters, true);
+        } else {
+            PortalDateRange::apply($query, $view === 'DUE' ? 'o.accepted_at' : 'created_at', $filters);
+        }
         $total = (clone $query)->count();
         $items = $query->offset(($page - 1) * self::PER_PAGE)->limit(self::PER_PAGE)->get()->map($present)->values()->all();
 
@@ -127,6 +133,7 @@ final class InvoiceQueries
             default => [DB::table('invoice_requests')->orderByRaw("CASE WHEN state = 'CLOSED' THEN 1 ELSE 0 END")->orderBy('service_target_at'),
                 fn (object $row): array => $this->requestRow($row, 'ADMIN') + ['order_reference' => self::orderReference((string) $row->order_id), 'vendor_name' => self::vendorName((string) $row->vendor_organization_id)]],
         };
+        PortalDateRange::apply($query, $view === 'REQUESTS' ? 'created_at' : 'issued_on', $filters, $view !== 'REQUESTS');
         $total = (clone $query)->count();
         $items = $query->offset(($page - 1) * self::PER_PAGE)->limit(self::PER_PAGE)->get()->map($present)->values()->all();
         $counts = ['REQUESTS_OPEN' => DB::table('invoice_requests')->where('state', '<>', 'CLOSED')->count(),

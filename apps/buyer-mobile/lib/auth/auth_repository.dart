@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:built_collection/built_collection.dart';
 import 'package:built_value/json_object.dart';
 import 'package:dio/dio.dart';
@@ -17,7 +19,13 @@ final class AuthRepository {
                'API_BASE_URL',
                defaultValue: 'http://10.0.2.2:8080/api/v1',
              ),
-           );
+           ) {
+    if (!_client.dio.interceptors.any(
+      (item) => item is _ProfilePhotoRequests,
+    )) {
+      _client.dio.interceptors.insert(0, _ProfilePhotoRequests());
+    }
+  }
 
   final TokenStore _tokenStore;
   final MateryalphApiClient _client;
@@ -103,13 +111,83 @@ final class AuthRepository {
         await clearAccountSession();
         throw const BuyerSessionExpired();
       }
-      throw BuyerAuthException(_messageFrom(error));
+      throw BuyerAuthException(_messageFrom(error), code: _codeFrom(error));
     }
   }
 
   Future<void> clearAccountSession() async {
     _client.setBearerAuth('passportBearer', '');
     await _tokenStore.clear();
+  }
+
+  Future<AccountProfile> uploadProfilePhoto(
+    Uint8List bytes,
+    String filename,
+    int version,
+  ) async {
+    final extension = filename.split('.').last.toLowerCase();
+    if (!['jpg', 'jpeg', 'png', 'webp'].contains(extension) ||
+        bytes.isEmpty ||
+        bytes.length > 2 * 1024 * 1024) {
+      throw const BuyerAuthException('Choose a JPEG, PNG or WebP up to 2 MB.');
+    }
+    final response = await accountOperation((api) async {
+      try {
+        return await api.uploadBuyerAccountPhoto(
+          photo: MultipartFile.fromBytes(bytes, filename: filename),
+          lockVersion: version,
+        );
+      } on DioException catch (error) {
+        if (error.type == DioExceptionType.receiveTimeout) {
+          throw const BuyerAuthException(
+            'The photo upload is taking longer than expected. Refresh your profile to check whether it finished before uploading again.',
+          );
+        }
+        rethrow;
+      }
+    });
+    final profile = response.data?.data;
+    if (profile == null || profile.accountType != 'BUYER') {
+      throw const BuyerAuthException(
+        'Your profile could not be refreshed. Please retry.',
+      );
+    }
+    return profile;
+  }
+
+  Future<Uint8List?> profilePhoto(AccountProfile profile) async {
+    if (profile.avatarUrl == null) return null;
+    final query = Uri.tryParse(profile.avatarUrl!)?.queryParameters;
+    final expires = int.tryParse(query?['expires'] ?? '');
+    final version = int.tryParse(query?['version'] ?? '');
+    final signature = query?['signature'];
+    final owner = query?['owner'];
+    if (expires == null ||
+        version != profile.lockVersion ||
+        signature == null ||
+        signature.isEmpty ||
+        owner != profile.id) {
+      throw const BuyerAuthException(
+        'Your profile photo is unavailable. Refresh to retry.',
+      );
+    }
+    // Only signed query fields are used; the authenticated generated client
+    // always requests the configured API, never a URL-provided host.
+    final response = await accountOperation(
+      (api) => api.getBuyerAccountPhoto(
+        expires: expires,
+        signature: signature,
+        version: version!,
+        owner: owner!,
+      ),
+    );
+    final bytes = response.data;
+    if (bytes == null || bytes.isEmpty) {
+      throw const BuyerAuthException(
+        'Your profile photo is unavailable. Refresh to retry.',
+      );
+    }
+    return bytes;
   }
 
   Future<bool> restoreSession() async {
@@ -147,9 +225,51 @@ final class AuthRepository {
             ..riskProofToken = proof,
         ),
       );
-      await _saveTokens(response.data?.data);
+      await _saveTokensOrChallenge(response.data?.data);
     } on DioException catch (error) {
       throw BuyerAuthException(_messageFrom(error));
+    }
+  }
+
+  /// Completes a sign-in that returned [BuyerTwoFactorRequired] with the current authenticator code.
+  Future<void> completeTwoFactorSignIn(
+    BuyerTwoFactorRequired challenge,
+    String code,
+  ) async {
+    try {
+      final response = await _authentication.completeBuyerMobileMfaChallenge(
+        buyerMobileMfaChallengeRequest: BuyerMobileMfaChallengeRequest(
+          (b) => b
+            ..challengeToken = challenge.challengeToken
+            ..code = code,
+        ),
+      );
+      await _saveTokens(response.data?.data);
+    } on DioException catch (error) {
+      throw BuyerAuthException(_messageFrom(error), code: _codeFrom(error));
+    }
+  }
+
+  /// Completes the sign-in with a single-use recovery code and returns the replacement codes,
+  /// which the server shows only once.
+  Future<List<String>> recoverTwoFactorSignIn(
+    BuyerTwoFactorRequired challenge,
+    String recoveryCode,
+  ) async {
+    try {
+      final response = await _authentication.recoverBuyerMobileMfaChallenge(
+        buyerMobileMfaRecoveryRequest: BuyerMobileMfaRecoveryRequest(
+          (b) => b
+            ..challengeToken = challenge.challengeToken
+            ..recoveryCode = recoveryCode.trim(),
+        ),
+      );
+      final data = response.data?.data;
+      await _saveTokens(data);
+      final codes = data?['recovery_codes']?.value;
+      return codes is List ? codes.whereType<String>().toList() : const [];
+    } on DioException catch (error) {
+      throw BuyerAuthException(_messageFrom(error), code: _codeFrom(error));
     }
   }
 
@@ -266,7 +386,7 @@ final class AuthRepository {
           (builder) => builder.exchangeCode = exchangeCode,
         ),
       );
-      await _saveTokens(response.data?.data);
+      await _saveTokensOrChallenge(response.data?.data);
     } on DioException catch (error) {
       throw BuyerAuthException(_messageFrom(error, google: true));
     }
@@ -375,6 +495,25 @@ final class AuthRepository {
     }
   }
 
+  /// A Buyer with an authenticator gets a short-lived challenge instead of tokens. The token stays
+  /// in memory on the thrown signal only; it is never written to storage or logs.
+  Future<void> _saveTokensOrChallenge(BuiltMap<String, JsonObject?>? data) {
+    if (data?['mfa_required']?.value == true) {
+      final token = data?['challenge_token']?.value;
+      final expiresIn = data?['challenge_expires_in']?.value;
+      if (token is! String || token.isEmpty) {
+        throw const BuyerAuthException(
+          'Two-factor sign-in could not start. Please try again.',
+        );
+      }
+      throw BuyerTwoFactorRequired(
+        token,
+        expiresIn is num ? expiresIn.toInt() : 300,
+      );
+    }
+    return _saveTokens(data);
+  }
+
   Future<void> _saveTokens(BuiltMap<String, JsonObject?>? data) async {
     final accessToken = data?['access_token']?.value;
     final refreshToken = data?['refresh_token']?.value;
@@ -388,6 +527,17 @@ final class AuthRepository {
       AuthTokens(accessToken: accessToken, refreshToken: refreshToken),
     );
     _client.setBearerAuth('passportBearer', accessToken);
+  }
+
+  String? _codeFrom(DioException error) {
+    final body = error.response?.data;
+    if (body is! Map) return null;
+    final errors = body['errors'];
+    if (errors is! List || errors.isEmpty) return null;
+    final first = errors.first;
+    return first is Map && first['code'] is String
+        ? first['code'] as String
+        : null;
   }
 
   String _messageFrom(DioException error, {bool google = false}) {
@@ -451,10 +601,24 @@ final class BuyerRiskChallenge extends BuyerAuthException {
   final int resendAfterSeconds;
 }
 
+/// Password or Google sign-in succeeded, but this Buyer turned on two-factor authentication.
+final class BuyerTwoFactorRequired extends BuyerAuthException {
+  const BuyerTwoFactorRequired(this.challengeToken, this.expiresInSeconds)
+    : super('Enter the code from your authenticator app to finish signing in.');
+  final String challengeToken;
+  final int expiresInSeconds;
+}
+
 class BuyerAuthException implements Exception {
-  const BuyerAuthException(this.message);
+  const BuyerAuthException(this.message, {this.code});
 
   final String message;
+
+  /// The stable API error code when the server sent one, such as RECENT_AUTHENTICATION_REQUIRED.
+  final String? code;
+
+  bool get needsRecentAuthentication =>
+      code == 'RECENT_AUTHENTICATION_REQUIRED';
 
   @override
   String toString() => message;
@@ -462,4 +626,21 @@ class BuyerAuthException implements Exception {
 
 final class BuyerSessionExpired extends BuyerAuthException {
   const BuyerSessionExpired() : super('Your session expired. Sign in again.');
+}
+
+/// Photo processing can spend up to 30 seconds in the fail-closed malware scan.
+/// Give only these requests enough time; ordinary account reads keep their budget.
+final class _ProfilePhotoRequests extends Interceptor {
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    if (options.path == '/buyers/account/photo') {
+      if (options.method == 'POST') {
+        options.sendTimeout = const Duration(seconds: 30);
+        options.receiveTimeout = const Duration(seconds: 45);
+      } else if (options.method == 'GET') {
+        options.receiveTimeout = const Duration(seconds: 15);
+      }
+    }
+    handler.next(options);
+  }
 }

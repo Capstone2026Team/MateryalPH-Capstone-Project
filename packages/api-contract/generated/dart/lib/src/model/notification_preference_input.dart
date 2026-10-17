@@ -11,12 +11,13 @@ part 'notification_preference_input.g.dart';
 /// NotificationPreferenceInput
 ///
 /// Properties:
-/// * [category]
+/// * [category] - A supported notification category, including MESSAGES for received Vendor conversation messages. MESSAGES preferences apply to both SALES and FULFILLMENT conversations.
 /// * [inApp]
 /// * [email]
 /// * [push]
 @BuiltValue()
 abstract class NotificationPreferenceInput implements Built<NotificationPreferenceInput, NotificationPreferenceInputBuilder> {
+  /// A supported notification category, including MESSAGES for received Vendor conversation messages. MESSAGES preferences apply to both SALES and FULFILLMENT conversations.
   @BuiltValueField(wireName: r'category')
   String get category;
 

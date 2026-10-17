@@ -12,6 +12,12 @@ void main() {
       // TODO
     });
 
+    // Source record for contextual export history; null for aggregate reports.
+    // String resourceId
+    test('to test the property `resourceId`', () async {
+      // TODO
+    });
+
     // String type
     test('to test the property `type`', () async {
       // TODO

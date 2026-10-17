@@ -26,7 +26,9 @@ part 'project_candidate.g.dart';
 /// * [complete]
 /// * [fulfillmentPercent]
 /// * [missingLines]
-/// * [lines]
+/// * [lines] - One entry per Work Package line. Each line is filled from one specification option and never mixes two. `options` lists every option (ProjectSpecificationDetail `specifications`, lowest unit price, availability label) when there is more than one; `selection_required` is true until the Buyer chooses one, and until then the line is priced on a flagged basis option. Allocations carry `listing_id`, `variant_id`, `variant_label` and labelled `offered_specifications`.
+/// * [selectionRequired] - Some line still needs the Buyer's specification choice.
+/// * [specificationSelections] - Choices applied by selection-preview, keyed by line id.
 /// * [materialsCentavos]
 /// * [includedVatCentavos]
 /// * [deliveryCentavos]
@@ -45,6 +47,7 @@ part 'project_candidate.g.dart';
 /// * [stale]
 /// * [label]
 /// * [currentQuotationState]
+/// * [isFavorite] - The Buyer saved this store as a preferred seller.
 @BuiltValue()
 abstract class ProjectCandidate implements Built<ProjectCandidate, ProjectCandidateBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -86,8 +89,17 @@ abstract class ProjectCandidate implements Built<ProjectCandidate, ProjectCandid
   @BuiltValueField(wireName: r'missing_lines')
   BuiltList<BuiltMap<String, JsonObject?>> get missingLines;
 
+  /// One entry per Work Package line. Each line is filled from one specification option and never mixes two. `options` lists every option (ProjectSpecificationDetail `specifications`, lowest unit price, availability label) when there is more than one; `selection_required` is true until the Buyer chooses one, and until then the line is priced on a flagged basis option. Allocations carry `listing_id`, `variant_id`, `variant_label` and labelled `offered_specifications`.
   @BuiltValueField(wireName: r'lines')
   BuiltList<BuiltMap<String, JsonObject?>> get lines;
+
+  /// Some line still needs the Buyer's specification choice.
+  @BuiltValueField(wireName: r'selection_required')
+  bool? get selectionRequired;
+
+  /// Choices applied by selection-preview, keyed by line id.
+  @BuiltValueField(wireName: r'specification_selections')
+  BuiltMap<String, String>? get specificationSelections;
 
   @BuiltValueField(wireName: r'materials_centavos')
   int get materialsCentavos;
@@ -142,6 +154,10 @@ abstract class ProjectCandidate implements Built<ProjectCandidate, ProjectCandid
 
   @BuiltValueField(wireName: r'current_quotation_state')
   String get currentQuotationState;
+
+  /// The Buyer saved this store as a preferred seller.
+  @BuiltValueField(wireName: r'is_favorite')
+  bool? get isFavorite;
 
   ProjectCandidate._();
 
@@ -238,6 +254,20 @@ class _$ProjectCandidateSerializer implements PrimitiveSerializer<ProjectCandida
       object.lines,
       specifiedType: const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])]),
     );
+    if (object.selectionRequired != null) {
+      yield r'selection_required';
+      yield serializers.serialize(
+        object.selectionRequired,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.specificationSelections != null) {
+      yield r'specification_selections';
+      yield serializers.serialize(
+        object.specificationSelections,
+        specifiedType: const FullType(BuiltMap, [FullType(String), FullType(String)]),
+      );
+    }
     yield r'materials_centavos';
     yield serializers.serialize(
       object.materialsCentavos,
@@ -336,6 +366,13 @@ class _$ProjectCandidateSerializer implements PrimitiveSerializer<ProjectCandida
       object.currentQuotationState,
       specifiedType: const FullType(String),
     );
+    if (object.isFavorite != null) {
+      yield r'is_favorite';
+      yield serializers.serialize(
+        object.isFavorite,
+        specifiedType: const FullType(bool),
+      );
+    }
   }
 
   @override
@@ -457,6 +494,22 @@ class _$ProjectCandidateSerializer implements PrimitiveSerializer<ProjectCandida
             specifiedType: const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])]),
           ) as BuiltList<BuiltMap<String, JsonObject?>>;
           result.lines.replace(valueDes);
+          break;
+        case r'selection_required':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.selectionRequired = valueDes;
+          break;
+        case r'specification_selections':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltMap, [FullType(String), FullType(String)]),
+          ) as BuiltMap<String, String>?;
+          if (valueDes == null) continue;
+          result.specificationSelections.replace(valueDes);
           break;
         case r'materials_centavos':
           final valueDes = serializers.deserialize(
@@ -587,6 +640,14 @@ class _$ProjectCandidateSerializer implements PrimitiveSerializer<ProjectCandida
             specifiedType: const FullType(String),
           ) as String;
           result.currentQuotationState = valueDes;
+          break;
+        case r'is_favorite':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.isFavorite = valueDes;
           break;
         default:
           unhandled.add(key);

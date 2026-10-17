@@ -11,11 +11,6 @@ import 'delivery_widgets.dart';
 import 'procurement_models.dart';
 import 'procurement_repository.dart';
 
-String _label(String key) {
-  final text = key.replaceAll('_', ' ');
-  return text.isEmpty ? text : '${text[0].toUpperCase()}${text.substring(1)}';
-}
-
 class _Label extends StatelessWidget {
   const _Label(this.text, {this.bottom = 6});
 
@@ -59,12 +54,13 @@ class ProductFinalizationSheet extends StatefulWidget {
   chooseDropOff;
   final ListingDetailView Function() detail;
   final String variantId;
-  final int quantity;
+  /// Decimal quantity text; ready-mixed concrete is a volume in m³.
+  final String quantity;
   final String? fulfillment;
   final bool buy;
   final Future<String?> Function(
     String variantId,
-    int quantity,
+    String quantity,
     String? fulfillment,
   )
   onConfirm;
@@ -75,7 +71,7 @@ class ProductFinalizationSheet extends StatefulWidget {
 
 class _ProductFinalizationSheetState extends State<ProductFinalizationSheet> {
   late String _variantId = widget.variantId;
-  late int _quantity = widget.quantity;
+  late String _quantity = widget.quantity;
   late String? _fulfillment = widget.fulfillment;
   bool _busy = false;
   String? _error;
@@ -114,14 +110,15 @@ class _ProductFinalizationSheetState extends State<ProductFinalizationSheet> {
     setState(() {
       _delivery = null;
       _deliveryError = null;
-      _deliveryLoading = _fulfillment == 'DELIVERY';
+      _deliveryLoading =
+          _fulfillment == 'DELIVERY' && validDecimalQuantity(_quantity, 4);
     });
-    if (_fulfillment != 'DELIVERY') return;
+    if (!_deliveryLoading) return;
     _deliveryDebounce = Timer(const Duration(milliseconds: 300), () async {
       try {
         final result = await widget.repository.productDeliveryPreview(
           variantId: _variantId,
-          quantity: '$_quantity',
+          quantity: _quantity,
         );
         if (!mounted || sequence != _deliverySequence) return;
         setState(() => _delivery = result);
@@ -134,6 +131,14 @@ class _ProductFinalizationSheetState extends State<ProductFinalizationSheet> {
         }
       }
     });
+  }
+
+  void _setQuantity(Object value) {
+    setState(() {
+      _quantity = '$value';
+      _error = null;
+    });
+    _refreshDelivery();
   }
 
   @override
@@ -153,7 +158,12 @@ class _ProductFinalizationSheetState extends State<ProductFinalizationSheet> {
     final variant = detail.variants
         .where((item) => item.variantId == _variantId)
         .firstOrNull;
-    final price = variant?.priceForQuantity(_quantity);
+    final quantity = validDecimalQuantity(_quantity, 4) ? _quantity : null;
+    final price = quantity == null
+        ? null
+        : variant?.priceForQuantity(num.parse(quantity));
+    final materials = price == null ? null : lineAmountCentavos(quantity!, price);
+    final readyMixed = detail.readyMixed;
     final estimate = _fulfillment == 'DELIVERY' ? _delivery?.estimate : null;
     return PopScope(
       canPop: !_busy,
@@ -258,13 +268,18 @@ class _ProductFinalizationSheetState extends State<ProductFinalizationSheet> {
                         ...detail.attributes,
                         ...?variant?.attributes,
                       }.entries)
-                        SpecificationRow(_label(entry.key), entry.value),
+                        SpecificationRow(
+                          detail.attributeLabel(entry.key),
+                          entry.value,
+                        ),
                       if (variant?.sku != null)
                         SpecificationRow('SKU', variant!.sku!),
                       if (variant != null)
                         SpecificationRow(
                           'Quantity',
-                          '$_quantity ${variant.unitName}',
+                          quantity == null
+                              ? 'Not entered'
+                              : '${formatQuantity(quantity)} ${variant.unitName}',
                         ),
                       if (variant != null && price != null)
                         SpecificationRow(
@@ -278,11 +293,11 @@ class _ProductFinalizationSheetState extends State<ProductFinalizationSheet> {
                               ? 'Self-Pickup'
                               : 'Site Delivery',
                         ),
-                      if (price != null) ...[
+                      if (materials != null) ...[
                         if (_fulfillment == 'DELIVERY') ...[
                           SpecificationRow(
                             'Materials subtotal',
-                            formatPeso(price * _quantity),
+                            formatPeso(materials),
                           ),
                           SpecificationRow(
                             'Estimated delivery fee',
@@ -304,10 +319,10 @@ class _ProductFinalizationSheetState extends State<ProductFinalizationSheet> {
                               ? 'Total before delivery'
                               : 'Total amount',
                           estimate == null
-                              ? formatPeso(price * _quantity)
+                              ? formatPeso(materials)
                               : _range(
-                                  price * _quantity + estimate.feeMinCentavos,
-                                  price * _quantity + estimate.feeMaxCentavos,
+                                  materials + estimate.feeMinCentavos,
+                                  materials + estimate.feeMaxCentavos,
                                 ),
                           strong: true,
                         ),
@@ -316,7 +331,7 @@ class _ProductFinalizationSheetState extends State<ProductFinalizationSheet> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const _Label('Options'),
+                _Label(readyMixed?.strengthLabel ?? 'Options'),
                 Wrap(
                   spacing: 8,
                   children: [
@@ -344,20 +359,24 @@ class _ProductFinalizationSheetState extends State<ProductFinalizationSheet> {
                     crossAxisAlignment: WrapCrossAlignment.center,
                     spacing: 12,
                     children: [
-                      const _Label('Quantity', bottom: 0),
-                      QuantityStepper(
-                        compact: true,
-                        quantity: _quantity,
-                        unitName: variant.unitName,
-                        enabled: !_busy && variant.available,
-                        onChanged: (value) {
-                          setState(() {
-                            _quantity = value;
-                            _error = null;
-                          });
-                          _refreshDelivery();
-                        },
-                      ),
+                      if (variant.wholeUnits) ...[
+                        const _Label('Quantity', bottom: 0),
+                        QuantityStepper(
+                          compact: true,
+                          quantity: int.tryParse(_quantity) ?? 1,
+                          unitName: variant.unitName,
+                          enabled: !_busy && variant.available,
+                          onChanged: _setQuantity,
+                        ),
+                      ] else
+                        DecimalQuantityField(
+                          label: readyMixed?.quantityLabel ?? 'Quantity',
+                          value: _quantity,
+                          unitName: variant.unitName,
+                          decimals: stepDecimals(variant.quantityStep),
+                          enabled: !_busy && variant.available,
+                          onChanged: _setQuantity,
+                        ),
                     ],
                   ),
                 ],
@@ -391,6 +410,14 @@ class _ProductFinalizationSheetState extends State<ProductFinalizationSheet> {
                   ],
                 ),
                 const SizedBox(height: 8),
+                if (readyMixed != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      readyMixed.notice,
+                      style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
+                    ),
+                  ),
                 if (_fulfillment == 'DELIVERY') ...[
                   if (widget.cart.cart != null)
                     CartDestinationSection(
@@ -446,6 +473,7 @@ class _ProductFinalizationSheetState extends State<ProductFinalizationSheet> {
                           widget.cart.busy ||
                           (widget.buy && _deliveryLoading) ||
                           variant?.available != true ||
+                          quantity == null ||
                           !detail.purchasable ||
                           _fulfillment == null
                       ? null

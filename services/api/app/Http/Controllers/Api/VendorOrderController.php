@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Domain\Finance\VendorDiscount;
 use App\Domain\Orders\OrderConfirmationService;
 use App\Domain\Orders\OrderQueries;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Support\PortalDateRange;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -24,7 +26,7 @@ final class VendorOrderController extends Controller
             'closed_state' => ['sometimes', Rule::in(OrderQueries::VENDOR_GROUPS['CLOSED']), Rule::prohibitedIf($request->input('group') !== 'CLOSED')],
             'q' => ['sometimes', 'string', 'max:120'],
             'page' => ['sometimes', 'integer', 'between:1,1000'],
-        ]);
+        ] + PortalDateRange::rules($request));
         $result = $this->queries->vendorList($request, $filters);
 
         return ApiResponse::success($result['items'], $result['meta']);
@@ -53,7 +55,10 @@ final class VendorOrderController extends Controller
             'lines' => ['required', 'array', 'min:1', 'max:100'],
             'lines.*.order_line_id' => ['required', 'uuid', 'distinct'],
             'lines.*.confirmed_quantity' => ['required'],
-            'vendor_discount_centavos' => ['sometimes', 'integer', 'min:0', 'max:100000000000'],
+            'vendor_discount_centavos' => ['sometimes', 'integer', 'min:0', 'max:100000000000', Rule::prohibitedIf($request->has('discount'))],
+            'discount' => ['sometimes', 'array:scope,percent', 'min:2'],
+            'discount.scope' => ['required_with:discount', 'in:MATERIALS,DELIVERY'],
+            'discount.percent' => ['required_with:discount', 'string', 'regex:'.VendorDiscount::PERCENT_PATTERN, 'numeric', 'between:0,100'],
             'nrpc' => ['sometimes', 'nullable', 'array'],
             'nrpc.amount_centavos' => ['required_with:nrpc', 'integer', 'min:1', 'max:100000000000'],
             'nrpc.reason' => ['required_with:nrpc', 'string', 'min:10', 'max:1000'],
@@ -74,6 +79,7 @@ final class VendorOrderController extends Controller
             'delivery.access_confirmed' => ['required_with:delivery', 'boolean'],
             'delivery.heavy_vehicle_access_confirmed' => ['sometimes', 'boolean'],
             'delivery.manual_review_note' => ['sometimes', 'nullable', 'string', 'min:10', 'max:2000'],
+            'delivery.change_reason' => ['sometimes', 'nullable', 'string', 'min:10', 'max:2000'],
         ]);
         $this->confirmations->confirm($request, $orderId, $input);
 

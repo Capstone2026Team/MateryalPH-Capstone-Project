@@ -43,7 +43,8 @@ final class DocumentRenderer
         $options->set('defaultFont', 'DejaVu Sans');
         $pdf = new Dompdf($options);
         $pdf->loadHtml(view('reports.document', ['document' => $snapshot, 'watermark' => self::WATERMARK])->render());
-        $pdf->setPaper('A4');
+        $columns = max(array_map(count(...), $snapshot['rows']) ?: [1]);
+        $pdf->setPaper('A4', $columns > 6 ? 'landscape' : 'portrait');
         $pdf->render();
 
         return $pdf->output();

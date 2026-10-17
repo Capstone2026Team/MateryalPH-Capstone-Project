@@ -30,6 +30,8 @@ Name | Type | Description | Notes
 **baseFeeCentavos** | **int** |  | [optional]
 **perKmCentavos** | **int** |  | [optional]
 **maximumDistanceKm** | **int** |  | [optional]
+**mobilizationFeeCentavos** | **int** | Mixer mobilization fee on the current rate; zero for other vehicles. | [optional]
+**mobilizationBasis** | **String** |  | [optional]
 **eligibility** | [**FleetVehicleEligibility**](FleetVehicleEligibility.md) |  |
 **updatedAt** | **String** |  | [optional]
 

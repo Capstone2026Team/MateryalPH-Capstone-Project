@@ -28,11 +28,11 @@ export interface NotificationItem {
      */
     category: string;
     /**
-     *
+     * Actual event title. MESSAGES identifies the public sender display name and store name.
      */
     title: string;
     /**
-     *
+     * Actual event summary; MESSAGES contains a short single-line message preview, capped at 320 display characters. Attachment and product-only messages use a type summary. Private contacts and attachment details are excluded. Mobile push displays this title and bounded summary after queued recipient authorization.
      */
     body: string;
     /**
@@ -40,7 +40,7 @@ export interface NotificationItem {
      */
     mandatory: boolean;
     /**
-     * A non-null timestamp identifies a read notice retained in the recipient's Archived view. Required notices remain stored and authorized deep links remain available.
+     * A non-null timestamp identifies a read notice, which is retained but no longer listed in the recipient's inbox. Required notices remain stored and authorized deep links remain available.
      */
     readAt: string | null;
     /**

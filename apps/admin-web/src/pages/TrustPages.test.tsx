@@ -1,11 +1,12 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
+import { parseDate } from '@materyalph/api-client-ts'
 import * as api from '../lib/trust-api'
 import type { AdminScoreDetail, ModerationDetail } from '../lib/trust-api'
-import { AdminMaterialPriceDetailsPage, AdminReviewModerationDetailPage, AdminScoreDetailPage } from './TrustPages'
+import { AdminMaterialPriceDetailsPage, AdminReviewModerationDetailPage, AdminScoreDetailPage, MaterialsAnalyticsSection } from './TrustPages'
 
-vi.mock('../lib/trust-api', async original => ({ ...await original<typeof import('../lib/trust-api')>(), getModeration: vi.fn(), moderate: vi.fn(), getScore: vi.fn(), getAdminAnalyticsDetail: vi.fn(), listSources: vi.fn(), correctRun: vi.fn() }))
+vi.mock('../lib/trust-api', async original => ({ ...await original<typeof import('../lib/trust-api')>(), getModeration: vi.fn(), moderate: vi.fn(), getScore: vi.fn(), getAdminAnalyticsDetail: vi.fn(), listSources: vi.fn(), correctRun: vi.fn(), listAdminAnalytics: vi.fn(), listRuns: vi.fn() }))
 vi.mock('./PhaseThreeAdminPages', async original => ({ ...await original<typeof import('./PhaseThreeAdminPages')>(), AdminShell: ({ children }: { children: React.ReactNode }) => <main>{children}</main> }))
 
 const review = (overrides: Partial<ModerationDetail> = {}): ModerationDetail => ({
@@ -15,6 +16,30 @@ const review = (overrides: Partial<ModerationDetail> = {}): ModerationDetail => 
 }) as ModerationDetail
 
 beforeEach(() => { vi.clearAllMocks() })
+
+function LocationProbe() { const location = useLocation(); return <output data-testid="material-location">{location.search}</output> }
+
+test('Materials presets stay anchored to the latest published snapshot and custom dates preserve geographic filters', async () => {
+  vi.mocked(api.listRuns).mockResolvedValue([])
+  vi.mocked(api.listAdminAnalytics).mockResolvedValue({ dataset: { kind: 'TEST', label: 'TEST' }, window: { presetDays: 30, startDate: parseDate('2026-08-31'), endDate: parseDate('2026-09-30'), latestAvailableDate: parseDate('2026-09-30'), maxDays: 365, presets: [7, 30, 90] }, currentAsOf: new Date('2026-10-09T00:00:00Z'), snapshot: null, updateSchedule: 'Daily', explanation: 'Public prices.', items: [] } as never)
+  render(<MemoryRouter initialEntries={['/analytics?view=materials&area=1300000000&paymentMethod=ONLINE']}><MaterialsAnalyticsSection psgcCode="1300000000" areaLabel="NCR" /><LocationProbe /></MemoryRouter>)
+  await screen.findByText('No comparable materials in this scope')
+  fireEvent.click(screen.getByRole('button', { name: '30-day comparison' }))
+  expect(screen.getByLabelText('From')).toHaveValue('2026-08-31')
+  expect(screen.getByLabelText('To')).toHaveValue('2026-09-30')
+  fireEvent.click(screen.getByRole('button', { name: '7-day comparison' }))
+  expect(screen.getByLabelText('From')).toHaveValue('2026-09-23')
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Listed price dates' })).getByRole('button', { name: 'Apply' }))
+  await waitFor(() => expect(api.listAdminAnalytics).toHaveBeenLastCalledWith(expect.objectContaining({ presetDays: 7, startDate: null, endDate: null, psgcCode: '1300000000' })))
+  fireEvent.click(screen.getByRole('button', { name: '7-day comparison' }))
+  fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-09-01' } })
+  fireEvent.change(screen.getByLabelText('To'), { target: { value: '2026-09-10' } })
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Listed price dates' })).getByRole('button', { name: 'Apply' }))
+  await waitFor(() => expect(api.listAdminAnalytics).toHaveBeenLastCalledWith(expect.objectContaining({ startDate: '2026-09-01', endDate: '2026-09-10', psgcCode: '1300000000' })))
+  expect(screen.getByTestId('material-location')).toHaveTextContent('area=1300000000')
+  expect(screen.getByTestId('material-location')).toHaveTextContent('paymentMethod=ONLINE')
+  expect(screen.getByTestId('material-location')).toHaveTextContent('priceFrom=2026-09-01')
+})
 
 test('moderation offers only server-allowed actions (never delete) and requires a recorded reason', async () => {
   vi.mocked(api.getModeration).mockResolvedValue(review())

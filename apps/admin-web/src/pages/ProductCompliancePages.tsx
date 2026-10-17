@@ -1,11 +1,12 @@
+import { useNavigationRefresh } from '@materyalph/web-ui'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AlertCircle, ArrowLeft, BadgeCheck, CheckCircle2, Clock, ExternalLink, FileSearch, ShieldCheck, XCircle } from 'lucide-react'
-import { Button, Field, PrivateEvidenceGallery, ResponsiveRecordList, ReviewWorkspace, StatusMessage, type PrivateEvidenceItem, type RecordColumn } from '@materyalph/web-ui'
+import { ALL_DATES, Button, DateFilter, Field, PrivateEvidenceGallery, ResponsiveRecordList, ReviewWorkspace, StatusMessage, manilaToday, type PrivateEvidenceItem, type RecordColumn } from '@materyalph/web-ui'
 import type { ComplianceReferenceResult, CompliancePath, ListProductComplianceQueueStatusEnum } from '@materyalph/api-client-ts'
 import { activateRegister, complianceErrorCode, decideCompliance, getComplianceCase, getComplianceFileUrl, importRegister, listComplianceQueue, listRegisters, type ComplianceRegister, type ProductComplianceCase, type ProductComplianceQueueItem } from '../lib/product-compliance-api'
 import { readableVerificationError } from '../lib/vendor-verification-api'
-import { formatDate, record, records, statusLabel, stringValue, numberValue } from '../lib/admin-format'
+import { dateQuery, formatDate, record, records, statusLabel, stringValue, numberValue } from '../lib/admin-format'
 import { AdminShell, ErrorState, LoadingState, PageHeader } from './PhaseThreeAdminPages'
 
 const apiBasePath = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'
@@ -17,8 +18,8 @@ function StateText({ status }: { status: string }) {
 }
 
 const referenceExplanation: Record<string, string> = {
-  MATCHED: 'Exact match with the active DTI-BPS register snapshot.',
-  UNCERTAIN: 'The number exists in the register but another detail differs. Check the company, standard and expiry.',
+  MATCHED: 'The number is listed in the active DTI-BPS register snapshot for this product.',
+  UNCERTAIN: 'The number is listed, but for a different product or on an expired record. Compare the product, standard and expiry.',
   UNMATCHED: 'The number was not found in the active register snapshot. This is not a counterfeit finding.',
   UNAVAILABLE: 'No active register snapshot was available when this was submitted.',
 }
@@ -26,26 +27,28 @@ const referenceExplanation: Record<string, string> = {
 export function AdminProductComplianceQueuePage() {
   const [filters, setFilters] = useState<{ status: ListProductComplianceQueueStatusEnum; path: string; referenceResult: string; sort: 'oldest' | 'newest' }>({ status: 'PENDING_ADMIN_REVIEW', path: '', referenceResult: '', sort: 'oldest' })
   const [applied, setApplied] = useState(filters)
+  const [range, setRange] = useState(ALL_DATES)
   const [page, setPage] = useState(1)
   const [items, setItems] = useState<ProductComplianceQueueItem[]>([])
   const [meta, setMeta] = useState<{ last_page?: number; total?: number }>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
+  useNavigationRefresh(() => setAttempt(value => value + 1))
   useEffect(() => {
     let active = true
     setLoading(true); setError(null)
-    void listComplianceQueue({ status: applied.status, sort: applied.sort, page, ...(applied.path ? { path: applied.path as CompliancePath } : {}), ...(applied.referenceResult ? { referenceResult: applied.referenceResult as ComplianceReferenceResult } : {}) })
+    void listComplianceQueue({ status: applied.status, sort: applied.sort, page, ...dateQuery(range), ...(applied.path ? { path: applied.path as CompliancePath } : {}), ...(applied.referenceResult ? { referenceResult: applied.referenceResult as ComplianceReferenceResult } : {}) })
       .then(result => { if (active) { setItems(result.items); setMeta(result.meta) } })
       .catch(async cause => { const message = await readableVerificationError(cause); if (active) setError(message) })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [applied, page, attempt])
+  }, [applied, page, range, attempt])
   const columns: RecordColumn<ProductComplianceQueueItem>[] = [
     { key: 'listing', header: 'Listing', cell: row => <Link className="font-semibold text-action-primary underline" to={`/product-compliance/${row.id}`}>{row.displayName}</Link> },
     { key: 'store', header: 'Store', cell: row => row.publicStoreName ?? '—' },
     { key: 'product', header: 'Regulated product', cell: row => <>{row.productName ?? row.materialName ?? '—'}<span className="block text-xs text-text-secondary">{row.referenceStandard ?? ''}</span></> },
-    { key: 'path', header: 'Path', cell: row => statusLabel(row.path) },
+    { key: 'path', header: 'Path', cell: row => <>{statusLabel(row.path)}{row.reviewMode === 'MANUAL_REVIEW' && <span className="block text-xs text-text-secondary">Vendor requested review</span>}</> },
     { key: 'reference', header: 'Register', cell: row => row.referenceResult ? <StateText status={row.referenceResult} /> : '—' },
     { key: 'status', header: 'Status', cell: row => <StateText status={row.status} /> },
     { key: 'submitted', header: 'Submitted', cell: row => `${formatDate(row.submittedAt)} · v${row.version}` },
@@ -54,11 +57,13 @@ export function AdminProductComplianceQueuePage() {
   return <AdminShell activeHref="/product-compliance"><div className="space-y-6">
     <PageHeader eyebrow="Compliance & quality" title="Product Compliance Queue" description="PS Mark and ICC sticker submissions for DTI-BPS regulated products. Oldest pending first. MateryalPH review is a marketplace control, not a government certification." actions={<Button variant="secondary" disabled={loading} onClick={() => setAttempt(value => value + 1)}>Refresh queue</Button>} />
     <form className="flex flex-wrap items-end gap-3 rounded-surface border border-border-default bg-surface-primary p-4" aria-label="Filter compliance queue" onSubmit={event => { event.preventDefault(); setPage(1); setApplied(filters) }}>
+      <DateFilter title="Submission dates" value={range} onChange={value => { setRange(value); setPage(1) }} />
       <label className="grid gap-2 text-sm font-semibold">Status<select className={control} value={filters.status} onChange={event => setFilters({ ...filters, status: event.target.value as ListProductComplianceQueueStatusEnum })}>{['PENDING_ADMIN_REVIEW', 'CHANGES_REQUIRED', 'VERIFIED', 'REJECTED', 'SUPERSEDED', 'ALL'].map(status => <option key={status} value={status}>{statusLabel(status)}</option>)}</select></label>
       <label className="grid gap-2 text-sm font-semibold">Input path<select className={control} value={filters.path} onChange={event => setFilters({ ...filters, path: event.target.value })}><option value="">All paths</option>{['PHOTO_OCR', 'QR', 'MANUAL'].map(path => <option key={path} value={path}>{statusLabel(path)}</option>)}</select></label>
       <label className="grid gap-2 text-sm font-semibold">Register result<select className={control} value={filters.referenceResult} onChange={event => setFilters({ ...filters, referenceResult: event.target.value })}><option value="">All results</option>{['MATCHED', 'UNCERTAIN', 'UNMATCHED', 'UNAVAILABLE'].map(result => <option key={result} value={result}>{statusLabel(result)}</option>)}</select></label>
       <label className="grid gap-2 text-sm font-semibold">Sort<select className={control} value={filters.sort} onChange={event => setFilters({ ...filters, sort: event.target.value as 'oldest' | 'newest' })}><option value="oldest">Oldest first</option><option value="newest">Newest first</option></select></label>
       <Button type="submit" disabled={loading}>Apply filters</Button>
+      <Button variant="quiet" onClick={() => { const reset = { status: 'PENDING_ADMIN_REVIEW' as const, path: '', referenceResult: '', sort: 'oldest' as const }; setFilters(reset); setApplied(reset); setRange(ALL_DATES); setPage(1) }}>Reset filters</Button>
     </form>
     {loading ? <LoadingState /> : error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} />
       : items.length === 0 ? <section className="grid min-h-48 place-items-center border-y border-border-default py-10 text-center"><div><CheckCircle2 className="mx-auto text-action-primary" size={28} aria-hidden="true" /><h2 className="mt-3 text-xl font-semibold">No submissions match this view.</h2><p className="mt-2 text-sm text-text-secondary">{applied.status === 'PENDING_ADMIN_REVIEW' ? 'Nothing is waiting for review. New PS/ICC submissions appear here automatically.' : 'Change the filters to see other submissions.'}</p></div></section>
@@ -80,7 +85,7 @@ function RegisterPanel() {
     const data = new FormData(form)
     const file = data.get('file')
     try {
-      if (!(file instanceof File) || file.size === 0) throw new Error('Choose the CSV export of the register.')
+      if (!(file instanceof File) || file.size === 0) throw new Error('Choose the register file (.xlsx or .csv).')
       const result = await importRegister(String(data.get('register_kind')) as 'PS_LICENSE' | 'ICC_CERTIFICATE', String(data.get('source_reference')), String(data.get('snapshot_date')), file)
       setImported(result); form.reset(); await load()
       setMessage({ tone: result.rejectedRowCount > 0 ? 'error' : 'success', text: `Imported ${result.rowCount} records as a draft snapshot${result.rejectedRowCount > 0 ? `; ${result.rejectedRowCount} rows were rejected and not imported` : ''}. Activate it to use it for matching.` })
@@ -92,17 +97,17 @@ function RegisterPanel() {
     catch (cause) { setMessage({ tone: 'error', text: await readableVerificationError(cause) }) } finally { setBusy(false) }
   }
   return <section aria-labelledby="register-heading" className="grid gap-4 border-t border-border-default pt-6">
-    <div><h2 id="register-heading" className="text-xl font-semibold">DTI-BPS register snapshots</h2><p className="mt-1 max-w-3xl text-sm text-text-secondary">The PS licensee and ICC certificate lists are maintained by DTI-BPS and change regularly. Upload a CSV export as a dated snapshot. An exact match with the active snapshot verifies a submission automatically; anything less comes to this queue.</p></div>
+    <div><h2 id="register-heading" className="text-xl font-semibold">DTI-BPS register snapshots</h2><p className="mt-1 max-w-3xl text-sm text-text-secondary">The List of PS Licensees and List of ICC Certificate Holders are maintained by DTI-BPS and updated monthly. Their Google Sheets disable downloading, so import the file DTI-BPS provides (.xlsx or .csv, official layout) as a dated snapshot. A PS License No. or ICC sticker serial listed for the product verifies a submission automatically; Vendors send anything else here only when they request manual review.</p></div>
     {message && <StatusMessage tone={message.tone}>{message.text}</StatusMessage>}
     <form className="grid grid-cols-1 gap-4 rounded-surface border border-border-default bg-surface-primary p-4 sm:grid-cols-2" onSubmit={submit} aria-busy={busy}>
       <label className="grid gap-2 text-sm font-semibold">Register<select name="register_kind" className="min-h-12 rounded-control border border-border-default bg-surface-primary px-3 text-base font-normal" required><option value="PS_LICENSE">PS licensees</option><option value="ICC_CERTIFICATE">ICC certificates</option></select></label>
-      <Field label="Snapshot date" name="snapshot_date" type="date" required max={new Date().toISOString().slice(0, 10)} />
+      <Field label="Snapshot date" name="snapshot_date" type="date" required max={manilaToday()} />
       <Field label="Source" name="source_reference" required minLength={3} maxLength={500} hint="Where the list came from, for example the DTI-BPS sheet link." />
-      <label className="grid min-w-0 gap-2 text-sm font-semibold">CSV export<span className="font-normal text-text-secondary">Needs a licence/certificate number column and a company column.</span><input name="file" type="file" accept=".csv,text/csv" required className="min-h-11 w-full min-w-0 text-sm" /></label>
+      <label className="grid min-w-0 gap-2 text-sm font-semibold">Register file<span className="font-normal text-text-secondary">Excel (.xlsx) or CSV in the official layout. Title rows are skipped; the ICC list needs its sticker serial from/to columns.</span><input name="file" type="file" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required className="min-h-11 w-full min-w-0 text-sm" /></label>
       <Button type="submit" className="w-fit" disabled={busy}>{busy ? 'Importing…' : 'Import snapshot'}</Button>
     </form>
     {imported && imported.rejectedRows && imported.rejectedRows.length > 0 && <details className="text-sm"><summary className="min-h-11 cursor-pointer py-2 font-semibold">Rejected rows ({imported.rejectedRowCount})</summary><ul className="mt-2 grid gap-1">{records(imported.rejectedRows).map(row => <li key={numberValue(row.row_number)}>Row {numberValue(row.row_number)}: {stringValue(row.reason)}</li>)}</ul></details>}
-    {registers.length > 0 && <div className="overflow-x-auto rounded-surface border border-border-default"><table className="w-full min-w-[640px] text-left text-sm"><caption className="sr-only">Register snapshots</caption><thead className="bg-surface-canvas"><tr>{['Register', 'Snapshot', 'Records', 'Status', 'Action'].map(label => <th key={label} scope="col" className="px-4 py-3">{label}</th>)}</tr></thead><tbody>{registers.map(register => <tr key={register.id} className="border-t border-border-default"><td className="px-4 py-3">{register.registerKind === 'PS_LICENSE' ? 'PS licensees' : 'ICC certificates'}</td><td className="px-4 py-3">{formatDate(register.snapshotDate)}</td><td className="px-4 py-3">{register.rowCount}{register.rejectedRowCount ? ` (${register.rejectedRowCount} rejected)` : ''}</td><td className="px-4 py-3">{statusLabel(register.status)}</td><td className="px-4 py-3">{register.status === 'DRAFT' ? <Button variant="secondary" disabled={busy} onClick={() => void activate(register)}>Activate</Button> : '—'}</td></tr>)}</tbody></table></div>}
+    {registers.length > 0 && <div className="overflow-x-auto rounded-surface border border-border-default"><table className="w-full min-w-[640px] text-left text-sm"><caption className="sr-only">Register snapshots</caption><thead className="bg-surface-canvas"><tr>{['Register', 'Snapshot', 'Records', 'Status', 'Source', 'Action'].map(label => <th key={label} scope="col" className="px-4 py-3">{label}</th>)}</tr></thead><tbody>{registers.map(register => <tr key={register.id} className="border-t border-border-default"><td className="px-4 py-3">{register.registerKind === 'PS_LICENSE' ? 'PS licensees' : 'ICC certificates'}</td><td className="px-4 py-3">{formatDate(register.snapshotDate)}</td><td className="px-4 py-3">{register.rowCount}{register.rejectedRowCount ? ` (${register.rejectedRowCount} rejected)` : ''}</td><td className="px-4 py-3">{statusLabel(register.status)}{register.stale && <span className="mt-1 flex items-center gap-1 text-xs font-semibold text-amber-900"><AlertCircle size={14} aria-hidden="true" />Older than a month — import the latest list</span>}</td><td className="px-4 py-3">{register.sourceChannel === 'FEED' ? 'Authorized feed' : 'Admin upload'}</td><td className="px-4 py-3">{register.status === 'DRAFT' ? <Button variant="secondary" disabled={busy} onClick={() => void activate(register)}>Activate</Button> : '—'}</td></tr>)}</tbody></table></div>}
   </section>
 }
 
@@ -143,7 +148,7 @@ export function AdminProductComplianceCasePage() {
   const match = detail.reference_match ? record(detail.reference_match) : null
   const pending = stringValue(submission.status) === 'PENDING_ADMIN_REVIEW'
   const evidenceItems: PrivateEvidenceItem[] = evidence.map(item => ({ id: stringValue(item.file_id), label: `${stringValue(item.evidence_kind) === 'QR_IMAGE' ? 'QR image' : 'Marking photo'} · ${statusLabel(stringValue(item.path))}`, loadUrl: () => getComplianceFileUrl(stringValue(item.file_id)) }))
-  const mediaItems: PrivateEvidenceItem[] = (Array.isArray(listing.media_file_ids) ? listing.media_file_ids.filter((id): id is string => typeof id === 'string') : []).slice(0, 2).map((id, index) => ({ id, label: `Public product photo ${index + 1}`, loadUrl: () => getComplianceFileUrl(id) }))
+  const mediaItems: PrivateEvidenceItem[] = (Array.isArray(listing.media_file_ids) ? listing.media_file_ids.filter((id): id is string => typeof id === 'string') : []).slice(0, 2).map((id, index) => ({ id, label: `Public product photo ${index + 1}`, loadUrl: () => getComplianceFileUrl(id), publicImage: true }))
 
   async function submitDecision(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -164,10 +169,10 @@ export function AdminProductComplianceCasePage() {
     {section === 'listing' && <div className="mt-4 grid gap-5"><dl className="grid gap-3 sm:grid-cols-2">{datum('Display name', listing.display_name)}{datum('Vendor SKU', listing.vendor_sku)}{datum('Canonical material', listing.material_name)}{datum('Category', listing.category_name)}{datum('Brand', listing.brand)}{datum('Model', listing.model)}{datum('Manufacturer', listing.manufacturer)}{datum('Country of manufacture', listing.country_of_manufacture)}</dl>
       <div className="border-t border-border-default pt-4"><h3 className="font-semibold">{stringValue(rule.product_name, 'Regulated product')}</h3><dl className="mt-3 grid gap-3 sm:grid-cols-2">{datum('Reference standard', rule.reference_standard)}{datum('Technical regulation', rule.technical_regulation)}</dl><p className="mt-3 text-sm">{stringValue(rule.scope)}</p><h4 className="mt-4 text-sm font-semibold">Marking requirements</h4><ul className="mt-2 list-disc space-y-1 pl-5 text-sm">{(Array.isArray(rule.marking_requirements) ? rule.marking_requirements : []).map(item => <li key={String(item)}>{String(item)}</li>)}</ul></div>
       {mediaItems.length > 0 && <div className="border-t border-border-default pt-4"><h3 className="font-semibold">Public product photos</h3><div className="mt-3"><PrivateEvidenceGallery items={mediaItems} apiBasePath={apiBasePath} /></div></div>}</div>}
-    {section === 'declaration' && <div className="mt-4 grid gap-5 xl:grid-cols-2"><dl className="grid content-start gap-3">{datum('Marking type', statusLabel(stringValue(declared.marking_type)))}{datum(stringValue(declared.marking_type) === 'ICC_STICKER' ? 'ICC Certificate No.' : 'PS License No.', declared.certificate_number)}{datum('Manufacturer', declared.manufacturer_name)}{datum('Manufacturer address', declared.manufacturer_address)}{datum('Importer', declared.importer_name)}{datum('Importer address', declared.importer_address)}{datum('Country of manufacture', declared.country_of_manufacture)}{datum('Brand', declared.brand)}{datum('Batch or lot', declared.batch_number)}</dl>
+    {section === 'declaration' && <div className="mt-4 grid gap-5 xl:grid-cols-2"><dl className="grid content-start gap-3">{datum('Marking type', statusLabel(stringValue(declared.marking_type)))}{datum(stringValue(declared.marking_type) === 'ICC_STICKER' ? 'ICC sticker serial no.' : 'PS License No.', declared.certificate_number)}{datum('Review requested by the Vendor', stringValue(submission.review_mode) === 'MANUAL_REVIEW' ? 'Yes' : 'No')}{stringValue(declared.review_note) ? datum('Vendor note', declared.review_note) : null}{datum('Manufacturer', declared.manufacturer_name)}{datum('Manufacturer address', declared.manufacturer_address)}{datum('Importer', declared.importer_name)}{datum('Importer address', declared.importer_address)}{datum('Country of manufacture', declared.country_of_manufacture)}{datum('Brand', declared.brand)}{datum('Batch or lot', declared.batch_number)}</dl>
       <div className="min-w-0"><h3 className="font-semibold">Private evidence</h3>{evidence.map(item => <p key={stringValue(item.id)} className="mt-1 text-xs text-text-secondary">{stringValue(item.evidence_kind) === 'QR_IMAGE' ? 'QR image' : 'Marking photo'} · scan {stringValue(item.scan_state) === 'CLEAN' ? 'passed' : stringValue(item.scan_state).toLowerCase()} · {stringValue(item.content_type)} · sha256 {stringValue(item.checksum_prefix)}…</p>)}<div className="mt-3">{evidenceItems.length ? <PrivateEvidenceGallery items={evidenceItems} apiBasePath={apiBasePath} /> : <p className="text-sm text-text-secondary">No evidence file is attached.</p>}</div></div></div>}
     {section === 'assistance' && <div className="mt-4 grid gap-5">
-      <div><h3 className="font-semibold">Register comparison</h3>{match ? <><p className="mt-2"><StateText status={stringValue(match.result)} /></p><p className="mt-1 text-sm">{referenceExplanation[stringValue(match.result)] ?? ''}</p><p className="mt-1 text-xs text-text-secondary">{stringValue(match.source_reference, 'No register snapshot')} · checked {formatDate(match.checked_at)}</p>{records(record(match.details).candidates).map(candidate => <p key={stringValue(candidate.record_id)} className="mt-1 text-sm">Register record differs on: {(Array.isArray(candidate.failed_checks) ? candidate.failed_checks : []).map(check => statusLabel(String(check))).join(', ')}</p>)}</> : <p className="mt-2 text-sm text-text-secondary">No comparison recorded.</p>}</div>
+      <div><h3 className="font-semibold">Register comparison</h3>{match ? <><p className="mt-2"><StateText status={stringValue(match.result)} /></p><p className="mt-1 text-sm">{referenceExplanation[stringValue(match.result)] ?? ''}</p><p className="mt-1 text-xs text-text-secondary">{stringValue(match.source_reference, 'No register snapshot')} · checked {formatDate(match.checked_at)}</p>{Object.keys(record(record(match.details).record)).length > 0 && <dl className="mt-3 grid gap-3 sm:grid-cols-2">{datum('Register company', record(record(match.details).record).company_name)}{datum('Register product', record(record(match.details).record).product_description)}{datum('Product standard', record(record(match.details).record).reference_standard)}{datum('Brand', record(record(match.details).record).brand)}{datum('ICC certificate no.', record(record(match.details).record).icc_certificate_number)}{datum('Sticker serial range', record(record(match.details).record).serial_range)}</dl>}{records(record(match.details).candidates).map(candidate => <p key={stringValue(candidate.record_id)} className="mt-1 text-sm">Register record differs on: {(Array.isArray(candidate.failed_checks) ? candidate.failed_checks : []).map(check => statusLabel(String(check))).join(', ')}</p>)}</> : <p className="mt-2 text-sm text-text-secondary">No comparison recorded.</p>}</div>
       <div className="border-t border-border-default pt-4"><h3 className="font-semibold">Extraction assistance</h3><p className="mt-1 text-sm text-text-secondary">OCR and QR values are suggestions the Vendor confirmed or corrected; they are never evidence of authenticity.</p>{records(detail.extractions).length === 0 ? <p className="mt-2 text-sm">Manual entry — no extraction.</p> : records(detail.extractions).map((item, index) => <div key={index} className="mt-2 text-sm"><p className="font-semibold">{statusLabel(stringValue(item.source))} · {statusLabel(stringValue(item.status))}{typeof item.confidence === 'number' ? ` · confidence ${Math.round(item.confidence * 100)}%` : ''}</p><ul className="mt-1 grid gap-0.5">{Object.entries(record(item.suggestions)).map(([key, value]) => <li key={key}>{statusLabel(key)}: {String(value)}</li>)}</ul></div>)}</div>
     </div>}
     {section === 'history' && <div className="mt-4 grid gap-5"><div><h3 className="font-semibold">Previous submissions</h3>{records(detail.previous_submissions).length === 0 ? <p className="mt-2 text-sm text-text-secondary">This is the first submission for the listing.</p> : <ul className="mt-2 divide-y divide-border-default text-sm">{records(detail.previous_submissions).map(item => <li key={stringValue(item.id)} className="py-2">Version {numberValue(item.version)} · {statusLabel(stringValue(item.path))} · <StateText status={stringValue(item.status)} /> · {formatDate(item.submitted_at)}</li>)}</ul>}</div>

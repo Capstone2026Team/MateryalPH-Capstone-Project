@@ -81,6 +81,26 @@ export interface ListDocumentExportsRequest {
      *
      */
     page?: number;
+    /**
+     *
+     */
+    type?: ListDocumentExportsTypeEnum;
+    /**
+     *
+     */
+    resourceId?: string;
+    /**
+     *
+     */
+    format?: ListDocumentExportsFormatEnum;
+    /**
+     * Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Export requested_at (created_at); each download rechecks current permissions.
+     */
+    from?: Date;
+    /**
+     * Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Export requested_at (created_at); each download rechecks current permissions.
+     */
+    to?: Date;
 }
 
 export interface ListTaxPackagesRequest {
@@ -88,6 +108,14 @@ export interface ListTaxPackagesRequest {
      *
      */
     page?: number;
+    /**
+     * Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Report package created_at; statutory reporting periods remain immutable.
+     */
+    from?: Date;
+    /**
+     * Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Report package created_at; statutory reporting periods remain immutable.
+     */
+    to?: Date;
 }
 
 export interface PrepareTaxPackageRequest {
@@ -274,6 +302,26 @@ export class ReportingApi extends runtime.BaseAPI {
             queryParameters['page'] = requestParameters['page'];
         }
 
+        if (requestParameters['type'] != null) {
+            queryParameters['type'] = requestParameters['type'];
+        }
+
+        if (requestParameters['resourceId'] != null) {
+            queryParameters['resource_id'] = requestParameters['resourceId'];
+        }
+
+        if (requestParameters['format'] != null) {
+            queryParameters['format'] = requestParameters['format'];
+        }
+
+        if (requestParameters['from'] != null) {
+            queryParameters['from'] = runtime.serializeDate(requestParameters['from'] as any);
+        }
+
+        if (requestParameters['to'] != null) {
+            queryParameters['to'] = runtime.serializeDate(requestParameters['to'] as any);
+        }
+
         const headerParameters: runtime.HTTPHeaders = {};
 
         if (this.configuration && this.configuration.accessToken) {
@@ -297,7 +345,7 @@ export class ReportingApi extends runtime.BaseAPI {
     }
 
     /**
-     *
+     * Lists the actor\'s currently authorized exports, optionally scoped to the document type, source record and format. READY artifacts past their download deadline are returned as EXPIRED.
      * list Document Exports
      */
     async listDocumentExportsRaw(requestParameters: ListDocumentExportsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ListDocumentExports200Response>> {
@@ -308,7 +356,7 @@ export class ReportingApi extends runtime.BaseAPI {
     }
 
     /**
-     *
+     * Lists the actor\'s currently authorized exports, optionally scoped to the document type, source record and format. READY artifacts past their download deadline are returned as EXPIRED.
      * list Document Exports
      */
     async listDocumentExports(requestParameters: ListDocumentExportsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ListDocumentExports200Response> {
@@ -324,6 +372,14 @@ export class ReportingApi extends runtime.BaseAPI {
 
         if (requestParameters['page'] != null) {
             queryParameters['page'] = requestParameters['page'];
+        }
+
+        if (requestParameters['from'] != null) {
+            queryParameters['from'] = runtime.serializeDate(requestParameters['from'] as any);
+        }
+
+        if (requestParameters['to'] != null) {
+            queryParameters['to'] = runtime.serializeDate(requestParameters['to'] as any);
         }
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -651,6 +707,32 @@ export const ListDocumentExportsAudienceEnum = {
     Admin: 'admin',
 } as const;
 export type ListDocumentExportsAudienceEnum = typeof ListDocumentExportsAudienceEnum[keyof typeof ListDocumentExportsAudienceEnum];
+/**
+ * @export
+ */
+export const ListDocumentExportsTypeEnum = {
+    PurchaseOrder: 'PURCHASE_ORDER',
+    PaymentConfirmation: 'PAYMENT_CONFIRMATION',
+    ProjectSummary: 'PROJECT_SUMMARY',
+    BudgetReport: 'BUDGET_REPORT',
+    OperationalOrder: 'OPERATIONAL_ORDER',
+    FeeStatement: 'FEE_STATEMENT',
+    MaterialsAnalytics: 'MATERIALS_ANALYTICS',
+    TaxPackage: 'TAX_PACKAGE',
+    AuditLog: 'AUDIT_LOG',
+    GeoAnalytics: 'GEO_ANALYTICS',
+    TransactionHistory: 'TRANSACTION_HISTORY',
+    Earnings: 'EARNINGS',
+} as const;
+export type ListDocumentExportsTypeEnum = typeof ListDocumentExportsTypeEnum[keyof typeof ListDocumentExportsTypeEnum];
+/**
+ * @export
+ */
+export const ListDocumentExportsFormatEnum = {
+    Pdf: 'PDF',
+    Csv: 'CSV',
+} as const;
+export type ListDocumentExportsFormatEnum = typeof ListDocumentExportsFormatEnum[keyof typeof ListDocumentExportsFormatEnum];
 /**
  * @export
  */

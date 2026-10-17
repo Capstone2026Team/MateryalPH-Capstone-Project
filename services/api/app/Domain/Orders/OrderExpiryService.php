@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Orders;
 
+use App\Domain\Messaging\FulfillmentThreadService;
 use App\Domain\Payments\PaymentReconciliationService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -75,6 +76,7 @@ final class OrderExpiryService
             $this->release->release($order, OrderStates::EXPIRED, $reason, $actor);
             $changes = [OrderStates::ORDER => OrderStates::EXPIRED] + ($order->payment_state === 'PENDING' ? [OrderStates::PAYMENT => 'EXPIRED'] : []);
             $order = $this->transitions->apply($order, $changes, $actor, $reason, null, ['vendor_response_due_at' => null, 'buyer_response_due_at' => null]);
+            app(FulfillmentThreadService::class)->close($order, $actor->userId, OrderStates::EXPIRED);
             $message = match ($reason) {
                 'VENDOR_RESPONSE_TIMEOUT' => 'The Vendor did not respond within 24 hours, so the request expired. You were not charged.',
                 'BUYER_RESPONSE_TIMEOUT' => 'The confirmed version was not accepted within 24 hours, so the request expired and the stock was released.',

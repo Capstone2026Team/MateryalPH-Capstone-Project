@@ -75,7 +75,7 @@ Name | Type | Description  | Notes
 
 
 
-orders.operations.view. Counts of failed and pending refunds, pending reimbursements, open cancellation requests and recent NFR events.
+orders.operations.view. All-record refund and order-linked reimbursement totals, independent of list filters, plus counts of failed and pending refunds, pending reimbursements, open cancellation requests and recent NFR events.
 
 ### Example
 ```dart
@@ -118,7 +118,7 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listAdminCancellationRequests**
-> AdminCancellationRequestListEnvelope listAdminCancellationRequests()
+> AdminCancellationRequestListEnvelope listAdminCancellationRequests(from, to)
 
 
 
@@ -137,9 +137,11 @@ import 'package:materyalph_api_client/api.dart';
 //defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
 
 final api = MateryalphApiClient().getAdminOrderOperationsApi();
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Open cancellation request created_at; existing 100-record bound retained.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Open cancellation request created_at; existing 100-record bound retained.
 
 try {
-    final response = api.listAdminCancellationRequests();
+    final response = api.listAdminCancellationRequests(from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling AdminOrderOperationsApi->listAdminCancellationRequests: $e\n');
@@ -147,7 +149,11 @@ try {
 ```
 
 ### Parameters
-This endpoint does not need any parameter.
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Open cancellation request created_at; existing 100-record bound retained. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Open cancellation request created_at; existing 100-record bound retained. | [optional]
 
 ### Return type
 
@@ -165,7 +171,7 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listAdminRefunds**
-> AdminRefundListEnvelope listAdminRefunds(state, trigger, page)
+> AdminRefundListEnvelope listAdminRefunds(state, trigger, page, from, to)
 
 
 
@@ -187,9 +193,11 @@ final api = MateryalphApiClient().getAdminOrderOperationsApi();
 final String state = state_example; // String |
 final String trigger = trigger_example; // String |
 final int page = 56; // int |
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Refund requested_at with created_at fallback.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Refund requested_at with created_at fallback.
 
 try {
-    final response = api.listAdminRefunds(state, trigger, page);
+    final response = api.listAdminRefunds(state, trigger, page, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling AdminOrderOperationsApi->listAdminRefunds: $e\n');
@@ -203,6 +211,8 @@ Name | Type | Description  | Notes
  **state** | **String**|  | [optional]
  **trigger** | **String**|  | [optional]
  **page** | **int**|  | [optional]
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Refund requested_at with created_at fallback. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Refund requested_at with created_at fallback. | [optional]
 
 ### Return type
 
@@ -220,7 +230,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listAdminReimbursements**
-> AdminReimbursementListEnvelope listAdminReimbursements()
+> AdminReimbursementListEnvelope listAdminReimbursements(from, to)
 
 
 
@@ -239,9 +249,11 @@ import 'package:materyalph_api_client/api.dart';
 //defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
 
 final api = MateryalphApiClient().getAdminOrderOperationsApi();
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Reimbursement instruction created_at; existing 100-record bound retained.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Reimbursement instruction created_at; existing 100-record bound retained.
 
 try {
-    final response = api.listAdminReimbursements();
+    final response = api.listAdminReimbursements(from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling AdminOrderOperationsApi->listAdminReimbursements: $e\n');
@@ -249,7 +261,11 @@ try {
 ```
 
 ### Parameters
-This endpoint does not need any parameter.
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Reimbursement instruction created_at; existing 100-record bound retained. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Reimbursement instruction created_at; existing 100-record bound retained. | [optional]
 
 ### Return type
 

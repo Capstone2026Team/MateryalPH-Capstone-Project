@@ -36,7 +36,7 @@ export interface PasswordRecoveryRequest {
      */
     portal: PasswordRecoveryRequestPortalEnum;
     /**
-     * Vendor web password recovery only; prohibited for Admin recovery.
+     * Vendor and Admin web password recovery; required when bot protection is enabled unless a matching single-use HttpOnly proof cookie is present.
      */
     botProtection?: VendorBotProtectionEvidence | null;
 }

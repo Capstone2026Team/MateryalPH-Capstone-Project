@@ -13,6 +13,14 @@
  */
 
 import { mapValues } from '../runtime';
+import type { CheckoutInvoiceDetails } from './CheckoutInvoiceDetails';
+import {
+    CheckoutInvoiceDetailsFromJSON,
+    CheckoutInvoiceDetailsFromJSONTyped,
+    CheckoutInvoiceDetailsToJSON,
+    CheckoutInvoiceDetailsToJSONTyped,
+} from './CheckoutInvoiceDetails';
+
 /**
  *
  * @export
@@ -31,6 +39,22 @@ export interface CheckoutSubmitRequest {
      * Required when fewer Vendor groups are submitted than the cart holds.
      */
     splitConfirmed?: boolean;
+    /**
+     * Optional owned open Work Package under an Active Project. Each submitted child remains ITEM_BASED and contributes to its budget; this does not fulfill missing lines or select the Project Vendor. Tagged cart lines must belong to this version.
+     */
+    workPackageId?: string;
+    /**
+     * Required with work_package_id; stale versions return PROJECT_VERSION_CONFLICT (409).
+     */
+    workPackageLockVersion?: number;
+    /**
+     * Explicit Buyer acknowledgement when the combined submitted amount exceeds the Project or Work Package budget. Final acceptance rechecks committed spend.
+     */
+    budgetOverrideReason?: string;
+    /**
+     *
+     */
+    invoiceDetails?: CheckoutInvoiceDetails;
     /**
      * Vendor id => chosen method; Online when omitted. COD pairs with Site Delivery, In-Store with Self-Pickup, each only when the Vendor enabled it.
      */
@@ -71,6 +95,10 @@ export function CheckoutSubmitRequestFromJSONTyped(json: any, ignoreDiscriminato
         'cartLockVersion': json['cart_lock_version'],
         'vendorIds': new Set(json['vendor_ids']),
         'splitConfirmed': json['split_confirmed'] == null ? undefined : json['split_confirmed'],
+        'workPackageId': json['work_package_id'] == null ? undefined : json['work_package_id'],
+        'workPackageLockVersion': json['work_package_lock_version'] == null ? undefined : json['work_package_lock_version'],
+        'budgetOverrideReason': json['budget_override_reason'] == null ? undefined : json['budget_override_reason'],
+        'invoiceDetails': json['invoice_details'] == null ? undefined : CheckoutInvoiceDetailsFromJSON(json['invoice_details']),
         'paymentMethods': json['payment_methods'] == null ? undefined : json['payment_methods'],
     };
 }
@@ -89,6 +117,10 @@ export function CheckoutSubmitRequestToJSONTyped(value?: CheckoutSubmitRequest |
         'cart_lock_version': value['cartLockVersion'],
         'vendor_ids': Array.from(value['vendorIds'] as Set<any>),
         'split_confirmed': value['splitConfirmed'],
+        'work_package_id': value['workPackageId'],
+        'work_package_lock_version': value['workPackageLockVersion'],
+        'budget_override_reason': value['budgetOverrideReason'],
+        'invoice_details': CheckoutInvoiceDetailsToJSON(value['invoiceDetails']),
         'payment_methods': value['paymentMethods'],
     };
 }

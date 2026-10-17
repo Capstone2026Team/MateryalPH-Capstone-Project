@@ -400,7 +400,7 @@ example().catch(console.error);
 
 
 
-Imports a CSV snapshot of the DTI-BPS PS licensee or ICC certificate register as an immutable DRAFT. It is used for matching only after activation.
+Imports an XLSX or CSV snapshot of the DTI-BPS List of PS Licensees or List of ICC Certificate Holders, in the official layout (title rows above the header are skipped; the ICC sticker serial from/to columns become serial ranges), as an immutable DRAFT. It is used for matching only after activation. An ICC file without sticker serial ranges is rejected with REGISTER_SERIALS_NOT_FOUND.
 
 ### Example
 
@@ -553,7 +553,7 @@ example().catch(console.error);
 
 ## listProductComplianceQueue
 
-> ProductComplianceQueueEnvelope listProductComplianceQueue(status, path, referenceResult, sort, page)
+> ProductComplianceQueueEnvelope listProductComplianceQueue(status, path, referenceResult, sort, page, from, to)
 
 
 
@@ -585,6 +585,10 @@ async function example() {
     sort: sort_example,
     // number (optional)
     page: 56,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Immutable submission submitted_at. (optional)
+    from: 2013-10-20,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Immutable submission submitted_at. (optional)
+    to: 2013-10-20,
   } satisfies ListProductComplianceQueueRequest;
 
   try {
@@ -609,6 +613,8 @@ example().catch(console.error);
 | **referenceResult** | `ComplianceReferenceResult` |  | [Optional] [Defaults to `undefined`] [Enum: MATCHED, UNMATCHED, UNCERTAIN, UNAVAILABLE] |
 | **sort** | `oldest`, `newest` |  | [Optional] [Defaults to `&#39;oldest&#39;`] [Enum: oldest, newest] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **from** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Immutable submission submitted_at. | [Optional] [Defaults to `undefined`] |
+| **to** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Immutable submission submitted_at. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 

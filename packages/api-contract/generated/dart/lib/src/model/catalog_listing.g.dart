@@ -104,6 +104,8 @@ class _$CatalogListing extends CatalogListing {
   @override
   final BuiltList<String> tagIds;
   @override
+  final BuiltList<String> customTags;
+  @override
   final BuiltMap<String, String> technicalAttributes;
   @override
   final String? brand;
@@ -159,6 +161,7 @@ class _$CatalogListing extends CatalogListing {
       this.materialCategoryId,
       this.otherLabel,
       required this.tagIds,
+      required this.customTags,
       required this.technicalAttributes,
       this.brand,
       this.model,
@@ -202,6 +205,7 @@ class _$CatalogListing extends CatalogListing {
         materialCategoryId == other.materialCategoryId &&
         otherLabel == other.otherLabel &&
         tagIds == other.tagIds &&
+        customTags == other.customTags &&
         technicalAttributes == other.technicalAttributes &&
         brand == other.brand &&
         model == other.model &&
@@ -238,6 +242,7 @@ class _$CatalogListing extends CatalogListing {
     _$hash = $jc(_$hash, materialCategoryId.hashCode);
     _$hash = $jc(_$hash, otherLabel.hashCode);
     _$hash = $jc(_$hash, tagIds.hashCode);
+    _$hash = $jc(_$hash, customTags.hashCode);
     _$hash = $jc(_$hash, technicalAttributes.hashCode);
     _$hash = $jc(_$hash, brand.hashCode);
     _$hash = $jc(_$hash, model.hashCode);
@@ -276,6 +281,7 @@ class _$CatalogListing extends CatalogListing {
           ..add('materialCategoryId', materialCategoryId)
           ..add('otherLabel', otherLabel)
           ..add('tagIds', tagIds)
+          ..add('customTags', customTags)
           ..add('technicalAttributes', technicalAttributes)
           ..add('brand', brand)
           ..add('model', model)
@@ -351,6 +357,12 @@ class CatalogListingBuilder
   ListBuilder<String>? _tagIds;
   ListBuilder<String> get tagIds => _$this._tagIds ??= ListBuilder<String>();
   set tagIds(ListBuilder<String>? tagIds) => _$this._tagIds = tagIds;
+
+  ListBuilder<String>? _customTags;
+  ListBuilder<String> get customTags =>
+      _$this._customTags ??= ListBuilder<String>();
+  set customTags(ListBuilder<String>? customTags) =>
+      _$this._customTags = customTags;
 
   MapBuilder<String, String>? _technicalAttributes;
   MapBuilder<String, String> get technicalAttributes =>
@@ -475,6 +487,7 @@ class CatalogListingBuilder
       _materialCategoryId = $v.materialCategoryId;
       _otherLabel = $v.otherLabel;
       _tagIds = $v.tagIds.toBuilder();
+      _customTags = $v.customTags.toBuilder();
       _technicalAttributes = $v.technicalAttributes.toBuilder();
       _brand = $v.brand;
       _model = $v.model;
@@ -535,6 +548,7 @@ class CatalogListingBuilder
             materialCategoryId: materialCategoryId,
             otherLabel: otherLabel,
             tagIds: tagIds.build(),
+            customTags: customTags.build(),
             technicalAttributes: technicalAttributes.build(),
             brand: brand,
             model: model,
@@ -567,6 +581,8 @@ class CatalogListingBuilder
 
         _$failedField = 'tagIds';
         tagIds.build();
+        _$failedField = 'customTags';
+        customTags.build();
         _$failedField = 'technicalAttributes';
         technicalAttributes.build();
 

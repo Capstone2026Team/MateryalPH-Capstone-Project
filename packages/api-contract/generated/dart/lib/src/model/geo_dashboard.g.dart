@@ -18,7 +18,7 @@ class _$GeoDashboard extends GeoDashboard {
   @override
   final BuiltList<GeoFilterApplicability> filterApplicability;
   @override
-  final GeoDashboardDisclosure disclosure;
+  final AdminDashboardMarketplaceDisclosure disclosure;
   @override
   final GeoKpis kpis;
   @override
@@ -142,10 +142,10 @@ class GeoDashboardBuilder
           ListBuilder<GeoFilterApplicability>? filterApplicability) =>
       _$this._filterApplicability = filterApplicability;
 
-  GeoDashboardDisclosureBuilder? _disclosure;
-  GeoDashboardDisclosureBuilder get disclosure =>
-      _$this._disclosure ??= GeoDashboardDisclosureBuilder();
-  set disclosure(GeoDashboardDisclosureBuilder? disclosure) =>
+  AdminDashboardMarketplaceDisclosureBuilder? _disclosure;
+  AdminDashboardMarketplaceDisclosureBuilder get disclosure =>
+      _$this._disclosure ??= AdminDashboardMarketplaceDisclosureBuilder();
+  set disclosure(AdminDashboardMarketplaceDisclosureBuilder? disclosure) =>
       _$this._disclosure = disclosure;
 
   GeoKpisBuilder? _kpis;

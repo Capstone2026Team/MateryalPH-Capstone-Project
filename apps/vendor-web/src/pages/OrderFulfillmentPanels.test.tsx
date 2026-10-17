@@ -7,8 +7,8 @@ import * as orders from '../lib/orders-api'
 import type { OrderDetail } from '../lib/orders-api'
 import { CancellationPanel, FulfillmentWorkspace, RefundsPanel } from './OrderFulfillmentPanels'
 
-vi.mock('../lib/orders-api', async original => ({ ...await original<typeof import('../lib/orders-api')>(), recordMilestone: vi.fn(), listAssignees: vi.fn(), assignFulfillment: vi.fn(),
-  cancelOrder: vi.fn(), getCancellationPreview: vi.fn(), finalizeCancellationRequest: vi.fn(), retryRefund: vi.fn() }))
+vi.mock('../lib/orders-api', async original => ({ ...await original<typeof import('../lib/orders-api')>(), recordMilestone: vi.fn(), listAssignees: vi.fn(), listDeliveryVehicles: vi.fn(), assignFulfillment: vi.fn(),
+  recordTrip: vi.fn(), cancelOrder: vi.fn(), getCancellationPreview: vi.fn(), finalizeCancellationRequest: vi.fn(), retryRefund: vi.fn() }))
 
 const step = (key: string, label: string, status: FulfillmentStep['status'], proofRequired = false): FulfillmentStep => ({ key, label, status, proofRequired, proofRequirements: proofRequired ? ['DELIVERY_PHOTO', 'RECEIVER_NAME', 'SIGNATURE_OPTIONAL'] : [] })
 
@@ -40,38 +40,145 @@ const wrap = (node: React.ReactNode) => render(<MemoryRouter>{node}</MemoryRoute
 beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(orders.listAssignees).mockResolvedValue([])
+  vi.mocked(orders.listDeliveryVehicles).mockResolvedValue([])
 })
 
-test('the stepper shows server-derived status as text and attaches dispatch to the current step using only accepted vehicles', async () => {
+test('Owner sees the required staff selector directly in Out for Delivery and confirms dispatch atomically', async () => {
+  vi.mocked(orders.listAssignees).mockResolvedValue([{ userId: 12, displayName: 'Delivery Staff', assigned: false }])
+  vi.mocked(orders.listDeliveryVehicles).mockResolvedValue([{ vehicleIndex: 0, vehicleId: 'vehicle-1', name: 'Box truck', vehicleType: 'TRUCK', numberOfVehicles: 1, totalVehicleTrips: 2, available: true, unavailableReason: '' }])
+  vi.mocked(orders.assignFulfillment).mockResolvedValue(order())
   const changed = vi.fn()
-  vi.mocked(orders.recordMilestone).mockResolvedValue(order())
-  wrap(<FulfillmentWorkspace order={order()} onChanged={changed} onReload={vi.fn()} />)
+  wrap(<FulfillmentWorkspace order={order({}, { canAssignFulfillment: true })} onChanged={changed} onReload={vi.fn()} />)
+  expect(screen.getByRole('heading', { name: 'Confirm delivery assignment' })).toBeVisible()
+  expect(screen.getByText(/Assign a Fulfillment Staff member.*before proceeding to Out for Delivery/)).toBeVisible()
+  const staff = await screen.findByRole('combobox', { name: 'Fulfillment Staff' })
+  await waitFor(() => expect(staff).toHaveValue('12'))
+  expect(screen.getByRole('combobox', { name: 'Delivery vehicle' })).toHaveValue('0')
+  const dispatchStep = within(screen.getByRole('list', { name: 'Fulfillment milestones' })).getAllByRole('listitem')[2]!
+  expect(within(dispatchStep).getByRole('combobox', { name: 'Fulfillment Staff' })).toBe(staff)
+  fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+  await waitFor(() => expect(orders.assignFulfillment).toHaveBeenCalledWith('order-1', 12, 'Confirmed delivery dispatch', { lockVersion: 7, vehicleIndex: 0, dispatch: true }, expect.any(String)))
+  expect(orders.recordMilestone).not.toHaveBeenCalled()
+  expect(changed).toHaveBeenCalled()
+})
+
+test('unavailable accepted vehicles block dispatch and link to fleet management', async () => {
+  vi.mocked(orders.listAssignees).mockResolvedValue([{ userId: 12, displayName: 'Delivery Staff', assigned: false }])
+  vi.mocked(orders.listDeliveryVehicles).mockResolvedValue([{ vehicleIndex: 0, vehicleId: 'vehicle-1', name: 'Box truck', vehicleType: 'TRUCK', numberOfVehicles: 1, totalVehicleTrips: 2, available: false, unavailableReason: 'Already allocated to another delivery.' }])
+  wrap(<FulfillmentWorkspace order={order({}, { canAssignFulfillment: true })} onChanged={vi.fn()} onReload={vi.fn()} />)
+  expect(await screen.findByText(/No accepted vehicles are available/)).toBeVisible()
+  expect(screen.getByRole('link', { name: 'Vehicles' })).toHaveAttribute('href', '/vehicles')
+  expect(screen.getByRole('button', { name: 'Done' })).toBeDisabled()
+  expect(orders.assignFulfillment).not.toHaveBeenCalled()
+})
+
+test('the vendor stepper preserves status and arrangement without staff proof fields or separate assignment controls', () => {
+  wrap(<FulfillmentWorkspace order={order({ fulfillment: fulfillment({ assignment: { displayName: 'Assigned staff', role: 'FULFILLMENT', assignedAt: new Date(), userId: 12 } }) })} onChanged={vi.fn()} onReload={vi.fn()} />)
   const stepper = screen.getByRole('list', { name: 'Fulfillment milestones' })
   const items = within(stepper).getAllByRole('listitem')
   expect(items[1]).toHaveTextContent('Completed')
   expect(items[2]).toHaveAttribute('aria-current', 'step')
-  expect(items[3]).toHaveTextContent('Proof required: delivery photo, receiver name, signature (optional).')
+  expect(items[3]).not.toHaveTextContent('Proof required')
+  expect(items[2]).toHaveTextContent('Assigned staff')
   expect(screen.getByText(/no live GPS tracking/)).toBeInTheDocument()
   expect(screen.getByText(/never change this arrangement or its fee/)).toBeInTheDocument()
   expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument()
-  fireEvent.change(screen.getByRole('combobox', { name: 'Trip' }), { target: { value: '2' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Dispatch — out for delivery' }))
-  await waitFor(() => expect(orders.recordMilestone).toHaveBeenCalledWith('order-1', { milestone: 'OUT_FOR_DELIVERY', lockVersion: 7, vehicleIndex: 0, tripNumber: 2 }, expect.any(String)))
-  expect(changed).toHaveBeenCalled()
+  expect(screen.queryByRole('heading', { name: 'Fulfillment assignment' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /Dispatch —/ })).not.toBeInTheDocument()
+  expect(screen.queryByRole('combobox', { name: 'Fulfillment Staff' })).not.toBeInTheDocument()
+  expect(orders.listAssignees).not.toHaveBeenCalled()
+  expect(orders.listDeliveryVehicles).not.toHaveBeenCalled()
+})
+
+test('dispatch without active Fulfillment Staff cannot be completed', async () => {
+  wrap(<FulfillmentWorkspace order={order({}, { canAssignFulfillment: true })} onChanged={vi.fn()} onReload={vi.fn()} />)
+  expect(await screen.findByText(/No active Fulfillment Staff are available/)).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Done' })).not.toBeInTheDocument()
+  expect(orders.assignFulfillment).not.toHaveBeenCalled()
+  expect(orders.recordMilestone).not.toHaveBeenCalled()
+})
+
+test('multiple Fulfillment Staff require selecting the delivery assignee before Done', async () => {
+  vi.mocked(orders.listAssignees).mockResolvedValue([{ userId: 12, displayName: 'First Staff', assigned: false }, { userId: 13, displayName: 'Second Staff', assigned: false }])
+  vi.mocked(orders.listDeliveryVehicles).mockResolvedValue([{ vehicleIndex: 0, vehicleId: 'vehicle-1', name: 'Box truck', vehicleType: 'TRUCK', numberOfVehicles: 1, totalVehicleTrips: 2, available: true, unavailableReason: '' }])
+  vi.mocked(orders.assignFulfillment).mockResolvedValue(order())
+  wrap(<FulfillmentWorkspace order={order({}, { canAssignFulfillment: true })} onChanged={vi.fn()} onReload={vi.fn()} />)
+  const staff = await screen.findByRole('combobox', { name: 'Fulfillment Staff' })
+  expect(staff).toHaveValue('')
+  expect(within(staff).getByRole('option', { name: 'First Staff' })).toBeVisible()
+  expect(within(staff).getByRole('option', { name: 'Second Staff' })).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Done' })).toBeDisabled()
+  fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+  expect(orders.assignFulfillment).not.toHaveBeenCalled()
+  fireEvent.change(staff, { target: { value: '13' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+  await waitFor(() => expect(orders.assignFulfillment).toHaveBeenCalledWith('order-1', 13, 'Confirmed delivery dispatch', { lockVersion: 7, vehicleIndex: 0, dispatch: true }, expect.any(String)))
 })
 
 test('delivery proof is required before the Delivered milestone is sent', async () => {
   const current = order({ fulfillment: fulfillment({ nextAction: 'RECORD_DELIVERY', steps: [step('CONFIRMED', 'Confirmed', 'COMPLETE'), step('DELIVERED', 'Delivered', 'CURRENT', true)] }) })
-  wrap(<FulfillmentWorkspace order={current} onChanged={vi.fn()} onReload={vi.fn()} />)
+  wrap(<FulfillmentWorkspace staffWorkspace order={current} onChanged={vi.fn()} onReload={vi.fn()} />)
   fireEvent.click(screen.getByRole('button', { name: 'Record delivery' }))
   expect(await screen.findByText('Add a delivery photo.')).toBeInTheDocument()
   expect(screen.getByText('Enter the receiver\'s name.')).toBeInTheDocument()
   expect(orders.recordMilestone).not.toHaveBeenCalled()
 })
 
+test('vendor Delivered is managed by assigned staff even if stale permissions still allow milestones', () => {
+  const current = order({ fulfillment: fulfillment({ state: 'OUT_FOR_DELIVERY', nextAction: 'RECORD_DELIVERY', assignment: { displayName: 'Assigned staff', role: 'FULFILLMENT', userId: 12 }, steps: [step('OUT_FOR_DELIVERY', 'Out for delivery', 'COMPLETE'), step('DELIVERED', 'Delivered', 'CURRENT', true)] }) })
+  wrap(<FulfillmentWorkspace order={current} onChanged={vi.fn()} onReload={vi.fn()} />)
+  expect(screen.getByText(/Assigned staff records Delivered/)).toBeVisible()
+  expect(screen.queryByRole('textbox', { name: 'Receiver name' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Choose photo' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Choose signature' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Record delivery' })).not.toBeInTheDocument()
+  expect(screen.queryByText(/Proof required:/)).not.toBeInTheDocument()
+})
+
+test('delivery reassign stays inside Out for Delivery while the staff completion step is current', () => {
+  const current = order({ fulfillment: fulfillment({ state: 'OUT_FOR_DELIVERY', nextAction: 'NONE', assignment: { displayName: 'Assigned staff', role: 'FULFILLMENT', userId: 12 }, steps: [step('OUT_FOR_DELIVERY', 'Out for delivery', 'COMPLETE'), step('DELIVERED', 'Delivered', 'CURRENT', true)] }) }, { canRecordMilestone: false, canAssignFulfillment: true })
+  wrap(<FulfillmentWorkspace order={current} onChanged={vi.fn()} onReload={vi.fn()} />)
+  const dispatchStep = within(screen.getByRole('list', { name: 'Fulfillment milestones' })).getAllByRole('listitem')[0]!
+  expect(within(dispatchStep).getByRole('button', { name: 'Reassign Fulfillment Staff' })).toBeVisible()
+  expect(screen.getByText(/Assigned staff records Delivered/)).toBeVisible()
+})
+
+test('vendor oversight can still record an accepted trip while staff owns delivery proof', async () => {
+  vi.mocked(orders.recordTrip).mockResolvedValue(order())
+  const current = order({ fulfillment: fulfillment({ state: 'OUT_FOR_DELIVERY', nextAction: 'NONE', trips: [{ vehicleIndex: 0, tripNumber: 1, totalVehicleTrips: 2, name: 'Box truck' }] }) }, { canRecordMilestone: false, canReportVehicleIssue: true })
+  wrap(<FulfillmentWorkspace order={current} onChanged={vi.fn()} onReload={vi.fn()} />)
+  fireEvent.click(screen.getByRole('button', { name: 'Record next accepted trip (Box truck, trip 2)' }))
+  await waitFor(() => expect(orders.recordTrip).toHaveBeenCalledWith('order-1', 0, 2))
+  expect(screen.queryByRole('button', { name: 'Record delivery' })).not.toBeInTheDocument()
+})
+
+test('an existing Out for Delivery order without staff can be assigned inside its dispatch phase', async () => {
+  vi.mocked(orders.listAssignees).mockResolvedValue([{ userId: 12, displayName: 'Delivery Staff', assigned: false }])
+  vi.mocked(orders.listDeliveryVehicles).mockResolvedValue([{ vehicleIndex: 0, vehicleId: 'vehicle-1', name: 'Box truck', vehicleType: 'TRUCK', numberOfVehicles: 1, totalVehicleTrips: 2, available: true, unavailableReason: '' }])
+  vi.mocked(orders.assignFulfillment).mockResolvedValue(order())
+  const current = order({ fulfillment: fulfillment({ state: 'OUT_FOR_DELIVERY', nextAction: 'NONE', steps: [step('OUT_FOR_DELIVERY', 'Out for delivery', 'COMPLETE'), step('DELIVERED', 'Delivered', 'CURRENT', true)] }) }, { canRecordMilestone: false, canAssignFulfillment: true })
+  wrap(<FulfillmentWorkspace order={current} onChanged={vi.fn()} onReload={vi.fn()} />)
+  const dispatchStep = within(screen.getByRole('list', { name: 'Fulfillment milestones' })).getAllByRole('listitem')[0]!
+  fireEvent.click(within(dispatchStep).getByRole('button', { name: 'Assign Fulfillment Staff' }))
+  await screen.findByRole('combobox', { name: 'Fulfillment Staff' })
+  fireEvent.change(screen.getByRole('textbox', { name: 'Reason' }), { target: { value: 'Assign staff to complete this existing delivery.' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Assign' }))
+  await waitFor(() => expect(orders.assignFulfillment).toHaveBeenCalledWith('order-1', 12, 'Assign staff to complete this existing delivery.', { lockVersion: 7, vehicleIndex: 0, dispatch: false }, expect.any(String)))
+  expect(orders.recordMilestone).not.toHaveBeenCalled()
+})
+
+test('Self-Pickup retains vendor handover proof and its optional staff assignment', async () => {
+  const current = order({ fulfillmentMethod: 'PICKUP', fulfillment: fulfillment({ method: 'PICKUP', state: 'READY_FOR_PICKUP', nextAction: 'RECORD_PICKUP', acceptedArrangement: null, steps: [step('PICKED_UP', 'Picked up', 'CURRENT', true)] }) }, { canAssignFulfillment: true })
+  wrap(<FulfillmentWorkspace order={current} onChanged={vi.fn()} onReload={vi.fn()} />)
+  expect(screen.getByRole('textbox', { name: 'Collected by' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Record handover' })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'Fulfillment assignment' })).toBeInTheDocument()
+  expect(await screen.findByText(/No active Fulfillment Staff are available/)).toBeVisible()
+})
+
 test('a role without milestone authority sees why instead of a disabled control', () => {
   wrap(<FulfillmentWorkspace order={order({}, { canRecordMilestone: false })} onChanged={vi.fn()} onReload={vi.fn()} />)
-  expect(screen.getByText(/Only the Owner, Store Manager or the assigned Fulfillment Staff record this milestone/)).toBeInTheDocument()
+  expect(screen.getByText(/The Owner or Store Manager confirms the staff and vehicle assignment/)).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /Dispatch/ })).not.toBeInTheDocument()
 })
 

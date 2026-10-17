@@ -1,7 +1,7 @@
 
 # ComplianceSubmission
 
-Vendor-confirmed declaration from Review and Confirm. Extraction output is never submitted as truth.
+Vendor-confirmed declaration from Review and Confirm. Extraction output is never submitted as truth. Only the marking number is required; when the register matches, its record replaces the manufacturer/importer fields.
 
 ## Properties
 
@@ -12,6 +12,8 @@ Name | Type
 `evidenceIds` | Array&lt;string&gt;
 `markingType` | [MarkingType](MarkingType.md)
 `certificateNumber` | string
+`reviewMode` | string
+`reviewNote` | string
 `manufacturerName` | string
 `manufacturerAddress` | string
 `importerName` | string
@@ -33,6 +35,8 @@ const example = {
   "evidenceIds": null,
   "markingType": null,
   "certificateNumber": null,
+  "reviewMode": null,
+  "reviewNote": null,
   "manufacturerName": null,
   "manufacturerAddress": null,
   "importerName": null,

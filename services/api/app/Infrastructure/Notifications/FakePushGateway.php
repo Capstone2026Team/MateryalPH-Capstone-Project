@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Notifications;
 
 use App\Domain\Notifications\PushGateway;
+use App\Domain\Notifications\PushNotification;
 use RuntimeException;
 
 final class FakePushGateway implements PushGateway
@@ -15,7 +16,9 @@ final class FakePushGateway implements PushGateway
 
     public bool $revoked = false;
 
-    public function send(#[\SensitiveParameter] string $token, string $notificationId, string $platform): string
+    public ?PushNotification $lastNotification = null;
+
+    public function send(#[\SensitiveParameter] string $token, PushNotification $notification, string $platform): string
     {
         if ($this->fail) {
             throw new RuntimeException('PUSH_UNAVAILABLE');
@@ -24,6 +27,7 @@ final class FakePushGateway implements PushGateway
             return 'REVOKED';
         }
         $this->sent++;
+        $this->lastNotification = $notification;
 
         return 'SENT';
     }

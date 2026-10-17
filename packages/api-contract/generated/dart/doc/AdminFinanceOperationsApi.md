@@ -23,7 +23,7 @@ Method | HTTP request | Description
 
 
 
-finance.view. Gross and net GMV beside assessed CWT, commission, platform revenue, collected cash and receivables (DEMO).
+finance.view. Recorded commission earnings, approved credits, verified allocated collections, confirmed fee refunds, pending and overdue commissions, and net platform earnings after fee VAT and platform processing costs. Earnings/credits, collections and refunds use their event dates; current debt uses statement issue dates. GMV and CWT stay separate. Monthly activity is bounded to the most recent 120 recorded periods. TEST origins are retained; this endpoint does not enable live payments.
 
 ### Example
 ```dart
@@ -72,7 +72,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listRemittanceQueue**
-> RemittanceQueueEnvelope listRemittanceQueue(reconciliationState, calculationState, deductionEvidenceState, page)
+> RemittanceQueueEnvelope listRemittanceQueue(reconciliationState, calculationState, deductionEvidenceState, page, from, to)
 
 
 
@@ -95,9 +95,11 @@ final String reconciliationState = reconciliationState_example; // String |
 final String calculationState = calculationState_example; // String |
 final String deductionEvidenceState = deductionEvidenceState_example; // String |
 final int page = 56; // int |
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Assessment created_at.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Assessment created_at.
 
 try {
-    final response = api.listRemittanceQueue(reconciliationState, calculationState, deductionEvidenceState, page);
+    final response = api.listRemittanceQueue(reconciliationState, calculationState, deductionEvidenceState, page, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling AdminFinanceOperationsApi->listRemittanceQueue: $e\n');
@@ -112,6 +114,8 @@ Name | Type | Description  | Notes
  **calculationState** | **String**|  | [optional]
  **deductionEvidenceState** | **String**|  | [optional]
  **page** | **int**|  | [optional]
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Assessment created_at. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Assessment created_at. | [optional]
 
 ### Return type
 
@@ -129,7 +133,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listTaxAdjustments**
-> TaxAdjustmentListEnvelope listTaxAdjustments(state, page)
+> TaxAdjustmentListEnvelope listTaxAdjustments(state, page, from, to)
 
 
 
@@ -150,9 +154,11 @@ import 'package:materyalph_api_client/api.dart';
 final api = MateryalphApiClient().getAdminFinanceOperationsApi();
 final String state = state_example; // String |
 final int page = 56; // int |
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Adjustment created_at.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Adjustment created_at.
 
 try {
-    final response = api.listTaxAdjustments(state, page);
+    final response = api.listTaxAdjustments(state, page, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling AdminFinanceOperationsApi->listTaxAdjustments: $e\n');
@@ -165,6 +171,8 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **state** | **String**|  | [optional]
  **page** | **int**|  | [optional]
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Adjustment created_at. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Adjustment created_at. | [optional]
 
 ### Return type
 
@@ -182,7 +190,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listTaxEvidenceQueue**
-> TaxEvidenceQueueEnvelope listTaxEvidenceQueue(reviewState, page)
+> TaxEvidenceQueueEnvelope listTaxEvidenceQueue(reviewState, page, from, to)
 
 
 
@@ -203,9 +211,11 @@ import 'package:materyalph_api_client/api.dart';
 final api = MateryalphApiClient().getAdminFinanceOperationsApi();
 final String reviewState = reviewState_example; // String |
 final int page = 56; // int |
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Evidence created_at.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Evidence created_at.
 
 try {
-    final response = api.listTaxEvidenceQueue(reviewState, page);
+    final response = api.listTaxEvidenceQueue(reviewState, page, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling AdminFinanceOperationsApi->listTaxEvidenceQueue: $e\n');
@@ -218,6 +228,8 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **reviewState** | **String**|  | [optional]
  **page** | **int**|  | [optional]
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Evidence created_at. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Evidence created_at. | [optional]
 
 ### Return type
 

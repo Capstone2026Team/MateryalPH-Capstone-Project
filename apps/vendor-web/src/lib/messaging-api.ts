@@ -1,4 +1,4 @@
-import { MessagingApi, type ChatDraftContent } from '@materyalph/api-client-ts'
+import { MessagingApi, type ChatDraftContent, type SiteInspectionDecision } from '@materyalph/api-client-ts'
 import { createWebApiConfiguration } from '@materyalph/web-ui'
 export { readableOnboardingError as readableChatError } from './onboarding-api'
 
@@ -6,6 +6,7 @@ const basePath = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api
 const api = () => new MessagingApi(createWebApiConfiguration(basePath, { refreshSession: true }))
 const scope = { messagingPortal: 'vendor' as const }
 export const chatApi = {
+  projectInquiries: async (conversationId: string, page = 1) => (await api().listChatProjectInquiries({ ...scope, conversationId, page })).data,
   fulfillmentConversations: async (conversationId: string, page = 1) => (await api().listVendorFulfillmentConversations({ conversationId, page })).data,
   forOrder: async (orderId: string, idempotencyKey: string) => (await api().openVendorOrderConversation({ orderId, idempotencyKey })).data.id,
   list: async (page = 1) => (await api().listConversations({ ...scope, page })).data,
@@ -26,6 +27,8 @@ export const chatApi = {
   withdraw: (conversationId: string, versionId: string, idempotencyKey: string) => api().decideChatQuotation({ ...scope, conversationId, idempotencyKey, action: 'withdraw', chatDecision: { versionId } }),
   upload: (conversationId: string, file: Blob, clientMessageId: string) => api().uploadChatAttachment({ ...scope, conversationId, file, clientMessageId }),
   download: (conversationId: string, attachmentId: string) => api().downloadChatAttachment({ ...scope, conversationId, attachmentId }),
+  siteInspection: async (conversationId: string, inspectionId: string, action: 'schedule' | 'decline' | 'complete', siteInspectionDecision: SiteInspectionDecision) =>
+    (await api().decideSiteInspection({ ...scope, conversationId, inspectionId, action, siteInspectionDecision })).data.siteInspections,
 }
 export async function loadChatAvatar(path: string): Promise<Blob> {
   const match = /^\/conversations\/([0-9a-f-]+)\/avatars\/(\d+)$/i.exec(path)

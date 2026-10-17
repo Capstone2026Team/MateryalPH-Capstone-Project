@@ -40,4 +40,39 @@ assert.equal(schemas.ProjectCandidate.properties.projected_total_centavos.nullab
 assert.ok(schemas.ChatDraftLine.properties.specifications)
 assert.ok(schemas.ChatDecision.properties.budget_override_reason)
 assert.ok(schemas.OrderDetail.properties.project_context)
+// Owner decision 2026-10-12: unlisted lines, catalog details and an advisory materials-only estimate.
+assert.equal(schemas.WorkPackageLineInput.properties.material_id.nullable, true)
+assert.ok(schemas.WorkPackageLineInput.properties.description && schemas.WorkPackageLineInput.properties.color)
+assert.deepEqual(schemas.ProjectMaterial.properties.match_type.enum, ['EXACT', 'ALIAS', 'FUZZY'])
+assert.ok(schemas.ProjectMaterialPage.required.includes('units'))
+assert.deepEqual(schemas.WorkPackageBudgetEstimateLine.properties.status.enum, ['PRICED', 'NO_PRICE_DATA', 'UNLISTED'])
+assert.equal(schemas.WorkPackageBudgetEstimateLine.properties.amount_centavos.nullable, true)
+// Vendor selection sorts/filters on the server; missing lines source separate, tagged Item-Based purchases.
+const estimateParams = spec.paths['/buyers/work-packages/{packageId}/estimates'].get.parameters.map(p => p.name)
+assert.ok(['sort', 'favorites_only', 'complete_only', 'within_budget'].every(name => estimateParams.includes(name)))
+assert.ok(schemas.ProjectCandidate.properties.is_favorite)
+assert.equal(schemas.WorkPackageAlternative.properties.stock_label.type, 'string')
+assert.equal(schemas.WorkPackageAlternative.properties.available, undefined, 'exact inventory is never exposed')
+assert.ok(schemas.CartItemCreate.properties.work_package_line_id && schemas.CartLine.properties.work_package_line_id)
+assert.equal(schemas.WorkPackageInput.properties.source_version_id.format, 'uuid')
+assert.equal(schemas.WorkPackageView.properties.can_delete_draft.type, 'boolean')
+for (const [path, method] of [
+  ['/buyers/work-packages/{packageId}/versions/{versionId}/reactivate', 'post'],
+  ['/buyers/work-packages/{packageId}/versions/{versionId}', 'delete'],
+]) {
+  const operation = spec.paths[path][method]
+  assert.ok(operation.parameters.some(p => p.name === 'Idempotency-Key' && p.required))
+  assert.ok(operation.parameters.some(p => p.name === 'versionId' && p.required && p.schema.format === 'uuid'))
+  assert.equal(operation.requestBody.content['application/json'].schema.$ref, '#/components/schemas/ProjectVersionRequest')
+}
+// Owner request 2026-10-16: open details become a Buyer specification choice that select/inquiry carry.
+assert.equal(schemas.ProjectCandidateRequest.properties.selections.items.$ref, '#/components/schemas/ProjectSpecificationSelection')
+assert.deepEqual(schemas.ProjectSpecificationSelection.required, ['line_id', 'option_id'])
+const preview = spec.paths['/buyers/work-packages/{packageId}/candidates/{candidateId}/selection-preview'].post
+assert.equal(preview.requestBody.content['application/json'].schema.$ref, '#/components/schemas/ProjectSelectionPreview')
+assert.equal(preview.responses['200'].content['application/json'].schema.$ref, '#/components/schemas/ProjectCandidateResponse')
+assert.equal(schemas.ProjectCandidate.properties.selection_required.type, 'boolean')
+assert.equal(schemas.WorkPackageAlternative.properties.specifications.items.$ref, '#/components/schemas/ProjectSpecificationDetail')
+assert.equal(schemas.ProjectMaterialAttribute.properties.offered_values.items.type, 'string')
+assert.equal(schemas.ListingDetails.properties.attribute_labels.items.$ref, '#/components/schemas/ListingAttributeLabel')
 console.log(`Project contract passed: ${expected.size} operations, protected routes and shared quotation/budget fields`)

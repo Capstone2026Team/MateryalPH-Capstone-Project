@@ -20,6 +20,8 @@ class _$VendorEarnings extends VendorEarnings {
   @override
   final int onlineCollectionsCentavos;
   @override
+  final int onlineRefundsCentavos;
+  @override
   final int buyerProcessingFeesCentavos;
   @override
   final int physicalCollectionsCentavos;
@@ -30,11 +32,21 @@ class _$VendorEarnings extends VendorEarnings {
   @override
   final int estimatedRemittanceCashCentavos;
   @override
+  final int remittanceCollectionsCentavos;
+  @override
+  final int remittanceRefundsCentavos;
+  @override
   final int earnedCommissionCentavos;
   @override
   final int estimatedCommissionCentavos;
   @override
   final int unpaidStatementsCentavos;
+  @override
+  final VendorEarningsBreakdown breakdown;
+  @override
+  final VendorEarningsProducts products;
+  @override
+  final VendorEarningsTrend trend;
 
   factory _$VendorEarnings([void Function(VendorEarningsBuilder)? updates]) =>
       (VendorEarningsBuilder()..update(updates))._build();
@@ -46,14 +58,20 @@ class _$VendorEarnings extends VendorEarnings {
       required this.commercialSalesCentavos,
       required this.includedVatCentavos,
       required this.onlineCollectionsCentavos,
+      required this.onlineRefundsCentavos,
       required this.buyerProcessingFeesCentavos,
       required this.physicalCollectionsCentavos,
       required this.providerChargesCentavos,
       required this.simulatedCwtCentavos,
       required this.estimatedRemittanceCashCentavos,
+      required this.remittanceCollectionsCentavos,
+      required this.remittanceRefundsCentavos,
       required this.earnedCommissionCentavos,
       required this.estimatedCommissionCentavos,
-      required this.unpaidStatementsCentavos})
+      required this.unpaidStatementsCentavos,
+      required this.breakdown,
+      required this.products,
+      required this.trend})
       : super._();
   @override
   VendorEarnings rebuild(void Function(VendorEarningsBuilder) updates) =>
@@ -72,15 +90,21 @@ class _$VendorEarnings extends VendorEarnings {
         commercialSalesCentavos == other.commercialSalesCentavos &&
         includedVatCentavos == other.includedVatCentavos &&
         onlineCollectionsCentavos == other.onlineCollectionsCentavos &&
+        onlineRefundsCentavos == other.onlineRefundsCentavos &&
         buyerProcessingFeesCentavos == other.buyerProcessingFeesCentavos &&
         physicalCollectionsCentavos == other.physicalCollectionsCentavos &&
         providerChargesCentavos == other.providerChargesCentavos &&
         simulatedCwtCentavos == other.simulatedCwtCentavos &&
         estimatedRemittanceCashCentavos ==
             other.estimatedRemittanceCashCentavos &&
+        remittanceCollectionsCentavos == other.remittanceCollectionsCentavos &&
+        remittanceRefundsCentavos == other.remittanceRefundsCentavos &&
         earnedCommissionCentavos == other.earnedCommissionCentavos &&
         estimatedCommissionCentavos == other.estimatedCommissionCentavos &&
-        unpaidStatementsCentavos == other.unpaidStatementsCentavos;
+        unpaidStatementsCentavos == other.unpaidStatementsCentavos &&
+        breakdown == other.breakdown &&
+        products == other.products &&
+        trend == other.trend;
   }
 
   @override
@@ -92,14 +116,20 @@ class _$VendorEarnings extends VendorEarnings {
     _$hash = $jc(_$hash, commercialSalesCentavos.hashCode);
     _$hash = $jc(_$hash, includedVatCentavos.hashCode);
     _$hash = $jc(_$hash, onlineCollectionsCentavos.hashCode);
+    _$hash = $jc(_$hash, onlineRefundsCentavos.hashCode);
     _$hash = $jc(_$hash, buyerProcessingFeesCentavos.hashCode);
     _$hash = $jc(_$hash, physicalCollectionsCentavos.hashCode);
     _$hash = $jc(_$hash, providerChargesCentavos.hashCode);
     _$hash = $jc(_$hash, simulatedCwtCentavos.hashCode);
     _$hash = $jc(_$hash, estimatedRemittanceCashCentavos.hashCode);
+    _$hash = $jc(_$hash, remittanceCollectionsCentavos.hashCode);
+    _$hash = $jc(_$hash, remittanceRefundsCentavos.hashCode);
     _$hash = $jc(_$hash, earnedCommissionCentavos.hashCode);
     _$hash = $jc(_$hash, estimatedCommissionCentavos.hashCode);
     _$hash = $jc(_$hash, unpaidStatementsCentavos.hashCode);
+    _$hash = $jc(_$hash, breakdown.hashCode);
+    _$hash = $jc(_$hash, products.hashCode);
+    _$hash = $jc(_$hash, trend.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -113,15 +143,21 @@ class _$VendorEarnings extends VendorEarnings {
           ..add('commercialSalesCentavos', commercialSalesCentavos)
           ..add('includedVatCentavos', includedVatCentavos)
           ..add('onlineCollectionsCentavos', onlineCollectionsCentavos)
+          ..add('onlineRefundsCentavos', onlineRefundsCentavos)
           ..add('buyerProcessingFeesCentavos', buyerProcessingFeesCentavos)
           ..add('physicalCollectionsCentavos', physicalCollectionsCentavos)
           ..add('providerChargesCentavos', providerChargesCentavos)
           ..add('simulatedCwtCentavos', simulatedCwtCentavos)
           ..add('estimatedRemittanceCashCentavos',
               estimatedRemittanceCashCentavos)
+          ..add('remittanceCollectionsCentavos', remittanceCollectionsCentavos)
+          ..add('remittanceRefundsCentavos', remittanceRefundsCentavos)
           ..add('earnedCommissionCentavos', earnedCommissionCentavos)
           ..add('estimatedCommissionCentavos', estimatedCommissionCentavos)
-          ..add('unpaidStatementsCentavos', unpaidStatementsCentavos))
+          ..add('unpaidStatementsCentavos', unpaidStatementsCentavos)
+          ..add('breakdown', breakdown)
+          ..add('products', products)
+          ..add('trend', trend))
         .toString();
   }
 }
@@ -157,6 +193,11 @@ class VendorEarningsBuilder
   set onlineCollectionsCentavos(int? onlineCollectionsCentavos) =>
       _$this._onlineCollectionsCentavos = onlineCollectionsCentavos;
 
+  int? _onlineRefundsCentavos;
+  int? get onlineRefundsCentavos => _$this._onlineRefundsCentavos;
+  set onlineRefundsCentavos(int? onlineRefundsCentavos) =>
+      _$this._onlineRefundsCentavos = onlineRefundsCentavos;
+
   int? _buyerProcessingFeesCentavos;
   int? get buyerProcessingFeesCentavos => _$this._buyerProcessingFeesCentavos;
   set buyerProcessingFeesCentavos(int? buyerProcessingFeesCentavos) =>
@@ -183,6 +224,17 @@ class VendorEarningsBuilder
   set estimatedRemittanceCashCentavos(int? estimatedRemittanceCashCentavos) =>
       _$this._estimatedRemittanceCashCentavos = estimatedRemittanceCashCentavos;
 
+  int? _remittanceCollectionsCentavos;
+  int? get remittanceCollectionsCentavos =>
+      _$this._remittanceCollectionsCentavos;
+  set remittanceCollectionsCentavos(int? remittanceCollectionsCentavos) =>
+      _$this._remittanceCollectionsCentavos = remittanceCollectionsCentavos;
+
+  int? _remittanceRefundsCentavos;
+  int? get remittanceRefundsCentavos => _$this._remittanceRefundsCentavos;
+  set remittanceRefundsCentavos(int? remittanceRefundsCentavos) =>
+      _$this._remittanceRefundsCentavos = remittanceRefundsCentavos;
+
   int? _earnedCommissionCentavos;
   int? get earnedCommissionCentavos => _$this._earnedCommissionCentavos;
   set earnedCommissionCentavos(int? earnedCommissionCentavos) =>
@@ -198,6 +250,23 @@ class VendorEarningsBuilder
   set unpaidStatementsCentavos(int? unpaidStatementsCentavos) =>
       _$this._unpaidStatementsCentavos = unpaidStatementsCentavos;
 
+  VendorEarningsBreakdownBuilder? _breakdown;
+  VendorEarningsBreakdownBuilder get breakdown =>
+      _$this._breakdown ??= VendorEarningsBreakdownBuilder();
+  set breakdown(VendorEarningsBreakdownBuilder? breakdown) =>
+      _$this._breakdown = breakdown;
+
+  VendorEarningsProductsBuilder? _products;
+  VendorEarningsProductsBuilder get products =>
+      _$this._products ??= VendorEarningsProductsBuilder();
+  set products(VendorEarningsProductsBuilder? products) =>
+      _$this._products = products;
+
+  VendorEarningsTrendBuilder? _trend;
+  VendorEarningsTrendBuilder get trend =>
+      _$this._trend ??= VendorEarningsTrendBuilder();
+  set trend(VendorEarningsTrendBuilder? trend) => _$this._trend = trend;
+
   VendorEarningsBuilder() {
     VendorEarnings._defaults(this);
   }
@@ -211,14 +280,20 @@ class VendorEarningsBuilder
       _commercialSalesCentavos = $v.commercialSalesCentavos;
       _includedVatCentavos = $v.includedVatCentavos;
       _onlineCollectionsCentavos = $v.onlineCollectionsCentavos;
+      _onlineRefundsCentavos = $v.onlineRefundsCentavos;
       _buyerProcessingFeesCentavos = $v.buyerProcessingFeesCentavos;
       _physicalCollectionsCentavos = $v.physicalCollectionsCentavos;
       _providerChargesCentavos = $v.providerChargesCentavos;
       _simulatedCwtCentavos = $v.simulatedCwtCentavos;
       _estimatedRemittanceCashCentavos = $v.estimatedRemittanceCashCentavos;
+      _remittanceCollectionsCentavos = $v.remittanceCollectionsCentavos;
+      _remittanceRefundsCentavos = $v.remittanceRefundsCentavos;
       _earnedCommissionCentavos = $v.earnedCommissionCentavos;
       _estimatedCommissionCentavos = $v.estimatedCommissionCentavos;
       _unpaidStatementsCentavos = $v.unpaidStatementsCentavos;
+      _breakdown = $v.breakdown.toBuilder();
+      _products = $v.products.toBuilder();
+      _trend = $v.trend.toBuilder();
       _$v = null;
     }
     return this;
@@ -238,56 +313,91 @@ class VendorEarningsBuilder
   VendorEarnings build() => _build();
 
   _$VendorEarnings _build() {
-    final _$result = _$v ??
-        _$VendorEarnings._(
-          demo: BuiltValueNullFieldError.checkNotNull(
-              demo, r'VendorEarnings', 'demo'),
-          environment: BuiltValueNullFieldError.checkNotNull(
-              environment, r'VendorEarnings', 'environment'),
-          notice: BuiltValueNullFieldError.checkNotNull(
-              notice, r'VendorEarnings', 'notice'),
-          commercialSalesCentavos: BuiltValueNullFieldError.checkNotNull(
-              commercialSalesCentavos,
-              r'VendorEarnings',
-              'commercialSalesCentavos'),
-          includedVatCentavos: BuiltValueNullFieldError.checkNotNull(
-              includedVatCentavos, r'VendorEarnings', 'includedVatCentavos'),
-          onlineCollectionsCentavos: BuiltValueNullFieldError.checkNotNull(
-              onlineCollectionsCentavos,
-              r'VendorEarnings',
-              'onlineCollectionsCentavos'),
-          buyerProcessingFeesCentavos: BuiltValueNullFieldError.checkNotNull(
-              buyerProcessingFeesCentavos,
-              r'VendorEarnings',
-              'buyerProcessingFeesCentavos'),
-          physicalCollectionsCentavos: BuiltValueNullFieldError.checkNotNull(
-              physicalCollectionsCentavos,
-              r'VendorEarnings',
-              'physicalCollectionsCentavos'),
-          providerChargesCentavos: BuiltValueNullFieldError.checkNotNull(
-              providerChargesCentavos,
-              r'VendorEarnings',
-              'providerChargesCentavos'),
-          simulatedCwtCentavos: BuiltValueNullFieldError.checkNotNull(
-              simulatedCwtCentavos, r'VendorEarnings', 'simulatedCwtCentavos'),
-          estimatedRemittanceCashCentavos:
-              BuiltValueNullFieldError.checkNotNull(
-                  estimatedRemittanceCashCentavos,
-                  r'VendorEarnings',
-                  'estimatedRemittanceCashCentavos'),
-          earnedCommissionCentavos: BuiltValueNullFieldError.checkNotNull(
-              earnedCommissionCentavos,
-              r'VendorEarnings',
-              'earnedCommissionCentavos'),
-          estimatedCommissionCentavos: BuiltValueNullFieldError.checkNotNull(
-              estimatedCommissionCentavos,
-              r'VendorEarnings',
-              'estimatedCommissionCentavos'),
-          unpaidStatementsCentavos: BuiltValueNullFieldError.checkNotNull(
-              unpaidStatementsCentavos,
-              r'VendorEarnings',
-              'unpaidStatementsCentavos'),
-        );
+    _$VendorEarnings _$result;
+    try {
+      _$result = _$v ??
+          _$VendorEarnings._(
+            demo: BuiltValueNullFieldError.checkNotNull(
+                demo, r'VendorEarnings', 'demo'),
+            environment: BuiltValueNullFieldError.checkNotNull(
+                environment, r'VendorEarnings', 'environment'),
+            notice: BuiltValueNullFieldError.checkNotNull(
+                notice, r'VendorEarnings', 'notice'),
+            commercialSalesCentavos: BuiltValueNullFieldError.checkNotNull(
+                commercialSalesCentavos,
+                r'VendorEarnings',
+                'commercialSalesCentavos'),
+            includedVatCentavos: BuiltValueNullFieldError.checkNotNull(
+                includedVatCentavos, r'VendorEarnings', 'includedVatCentavos'),
+            onlineCollectionsCentavos: BuiltValueNullFieldError.checkNotNull(
+                onlineCollectionsCentavos,
+                r'VendorEarnings',
+                'onlineCollectionsCentavos'),
+            onlineRefundsCentavos: BuiltValueNullFieldError.checkNotNull(
+                onlineRefundsCentavos,
+                r'VendorEarnings',
+                'onlineRefundsCentavos'),
+            buyerProcessingFeesCentavos: BuiltValueNullFieldError.checkNotNull(
+                buyerProcessingFeesCentavos,
+                r'VendorEarnings',
+                'buyerProcessingFeesCentavos'),
+            physicalCollectionsCentavos: BuiltValueNullFieldError.checkNotNull(
+                physicalCollectionsCentavos,
+                r'VendorEarnings',
+                'physicalCollectionsCentavos'),
+            providerChargesCentavos: BuiltValueNullFieldError.checkNotNull(
+                providerChargesCentavos,
+                r'VendorEarnings',
+                'providerChargesCentavos'),
+            simulatedCwtCentavos: BuiltValueNullFieldError.checkNotNull(
+                simulatedCwtCentavos,
+                r'VendorEarnings',
+                'simulatedCwtCentavos'),
+            estimatedRemittanceCashCentavos:
+                BuiltValueNullFieldError.checkNotNull(
+                    estimatedRemittanceCashCentavos,
+                    r'VendorEarnings',
+                    'estimatedRemittanceCashCentavos'),
+            remittanceCollectionsCentavos:
+                BuiltValueNullFieldError.checkNotNull(
+                    remittanceCollectionsCentavos,
+                    r'VendorEarnings',
+                    'remittanceCollectionsCentavos'),
+            remittanceRefundsCentavos: BuiltValueNullFieldError.checkNotNull(
+                remittanceRefundsCentavos,
+                r'VendorEarnings',
+                'remittanceRefundsCentavos'),
+            earnedCommissionCentavos: BuiltValueNullFieldError.checkNotNull(
+                earnedCommissionCentavos,
+                r'VendorEarnings',
+                'earnedCommissionCentavos'),
+            estimatedCommissionCentavos: BuiltValueNullFieldError.checkNotNull(
+                estimatedCommissionCentavos,
+                r'VendorEarnings',
+                'estimatedCommissionCentavos'),
+            unpaidStatementsCentavos: BuiltValueNullFieldError.checkNotNull(
+                unpaidStatementsCentavos,
+                r'VendorEarnings',
+                'unpaidStatementsCentavos'),
+            breakdown: breakdown.build(),
+            products: products.build(),
+            trend: trend.build(),
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'breakdown';
+        breakdown.build();
+        _$failedField = 'products';
+        products.build();
+        _$failedField = 'trend';
+        trend.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'VendorEarnings', _$failedField, e.toString());
+      }
+      rethrow;
+    }
     replace(_$result);
     return _$result;
   }

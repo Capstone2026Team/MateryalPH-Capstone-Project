@@ -20,6 +20,8 @@ part 'project_estimate_page.g.dart';
 /// * [hasMore]
 /// * [total]
 /// * [suggestedRadiusKm]
+/// * [unfilteredTotal] - Candidates in this estimate before filters.
+/// * [sort]
 @BuiltValue()
 abstract class ProjectEstimatePage implements Built<ProjectEstimatePage, ProjectEstimatePageBuilder> {
   @BuiltValueField(wireName: r'estimate')
@@ -39,6 +41,13 @@ abstract class ProjectEstimatePage implements Built<ProjectEstimatePage, Project
 
   @BuiltValueField(wireName: r'suggested_radius_km')
   int? get suggestedRadiusKm;
+
+  /// Candidates in this estimate before filters.
+  @BuiltValueField(wireName: r'unfiltered_total')
+  int? get unfilteredTotal;
+
+  @BuiltValueField(wireName: r'sort')
+  String? get sort;
 
   ProjectEstimatePage._();
 
@@ -95,6 +104,20 @@ class _$ProjectEstimatePageSerializer implements PrimitiveSerializer<ProjectEsti
       yield serializers.serialize(
         object.suggestedRadiusKm,
         specifiedType: const FullType(int),
+      );
+    }
+    if (object.unfilteredTotal != null) {
+      yield r'unfiltered_total';
+      yield serializers.serialize(
+        object.unfilteredTotal,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.sort != null) {
+      yield r'sort';
+      yield serializers.serialize(
+        object.sort,
+        specifiedType: const FullType(String),
       );
     }
   }
@@ -163,6 +186,22 @@ class _$ProjectEstimatePageSerializer implements PrimitiveSerializer<ProjectEsti
           ) as int?;
           if (valueDes == null) continue;
           result.suggestedRadiusKm = valueDes;
+          break;
+        case r'unfiltered_total':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.unfilteredTotal = valueDes;
+          break;
+        case r'sort':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.sort = valueDes;
           break;
         default:
           unhandled.add(key);

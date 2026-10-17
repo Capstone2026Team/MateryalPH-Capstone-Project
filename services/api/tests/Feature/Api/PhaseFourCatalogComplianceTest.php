@@ -7,6 +7,7 @@ namespace Tests\Feature\Api;
 use App\Domain\Catalog\CatalogImportService;
 use App\Domain\Catalog\ComparableMappingService;
 use App\Domain\Catalog\MarketplaceDiscoverability;
+use App\Domain\Compliance\ComplianceTextExtractor;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\TokenSessionService;
 use App\Domain\Vendors\StoreActivationGate;
@@ -22,10 +23,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Laravel\Passport\AccessToken;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 final class PhaseFourCatalogComplianceTest extends TestCase
@@ -39,6 +42,7 @@ final class PhaseFourCatalogComplianceTest extends TestCase
         parent::setUp();
         $this->seed(SystemFoundationSeeder::class);
         config()->set('materyalph.files.disk', 'local');
+        config()->set('materyalph.compliance_ocr.driver', 'none');
         config()->set('services.cloudinary.cloud_name', '');
         Storage::fake('local');
         $this->mock(VendorFileScanner::class)->shouldReceive('assertClean')->andReturnUsing(function (): void {
@@ -60,6 +64,94 @@ final class PhaseFourCatalogComplianceTest extends TestCase
         self::assertSame(['status' => 'NOT_DISCOVERABLE', 'reason' => 'NO_ELIGIBLE_LISTINGS', 'eligible_listings' => 0], $state);
         $this->assertDatabaseHas('vendor_organizations', ['id' => $organization->id, 'store_activation_status' => 'ACTIVE', 'marketplace_discoverability_status' => 'NOT_DISCOVERABLE']);
         $this->getJson('/api/v1/stores/'.$organization->id.'/profile')->assertNotFound();
+    }
+
+    public function test_photo_ocr_suggestions_stay_private_and_require_confirmed_values_and_separate_verification(): void
+    {
+        [, $owner] = $this->activeStore();
+        $this->signInVendor($owner);
+        $listing = $this->publishableListing('PORTLAND_CEMENT', 'OCR-PS', ['cement_type' => 'Type I', 'bag_weight_kg' => '40'], regulated: true);
+        $suggestions = ['marking_type' => 'PS_MARK', 'certificate_number' => 'Q-1234', 'manufacturer_name' => 'OCR manufacturer'];
+        $this->mock(ComplianceTextExtractor::class, function ($mock) use ($suggestions): void {
+            $mock->shouldReceive('provider')->andReturn('TESSERACT');
+            $mock->shouldReceive('extract')->once()->andReturn(['status' => 'EXTRACTED', 'confidence' => 0.92, 'suggestions' => $suggestions]);
+        });
+        $evidence = $this->post('/api/v1/vendor/catalog/listings/'.$listing.'/compliance/evidence', ['path' => 'PHOTO_OCR', 'file' => UploadedFile::fake()->image('marking.jpg')])
+            ->assertCreated()->assertJsonPath('data.extraction.source', 'OCR')->assertJsonPath('data.extraction.provider', 'TESSERACT')
+            ->assertJsonPath('data.extraction.assistance_only', true)->assertJsonPath('data.extraction.suggestions.certificate_number', 'Q-1234')->json('data');
+        $this->assertDatabaseHas('files', ['id' => $evidence['file_id'], 'visibility' => 'PRIVATE', 'scan_state' => 'CLEAN']);
+        $this->assertDatabaseHas('vendor_listings', ['id' => $listing, 'compliance_status' => 'NOT_SUBMITTED', 'publication_version' => 0]);
+        self::assertSame(0, DB::table('compliance_reviews')->count());
+        $input = ['listing_lock_version' => (int) DB::table('vendor_listings')->where('id', $listing)->value('lock_version'), 'path' => 'PHOTO_OCR', 'evidence_ids' => [$evidence['evidence_id']], 'marking_type' => 'PS_MARK', 'certificate_number' => 'Q-5678', 'manufacturer_name' => 'Vendor corrected manufacturer', 'confirmed' => false];
+        $this->postJson('/api/v1/vendor/catalog/listings/'.$listing.'/compliance', $input, ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable();
+        $input['confirmed'] = true;
+        // Without a register match nothing is submitted automatically; the Vendor decides to ask for review.
+        $this->postJson('/api/v1/vendor/catalog/listings/'.$listing.'/compliance', $input, ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable()
+            ->assertJsonPath('errors.0.code', 'COMPLIANCE_REGISTER_NOT_MATCHED')->assertJsonPath('errors.0.details.lookup.result', 'UNAVAILABLE');
+        self::assertSame(0, DB::table('compliance_submissions')->count());
+        $this->postJson('/api/v1/vendor/catalog/listings/'.$listing.'/compliance', $input + ['review_mode' => 'MANUAL_REVIEW'], ['Idempotency-Key' => (string) Str::uuid7()])->assertCreated()->assertJsonPath('data.compliance_status', 'PENDING_ADMIN_REVIEW')
+            ->assertJsonPath('data.compliance_submissions.0.review_mode', 'MANUAL_REVIEW');
+        $submission = DB::table('compliance_submissions')->where('vendor_listing_id', $listing)->first();
+        self::assertSame('Q-5678', json_decode($submission->declared, true)['certificate_number']);
+        $extraction = DB::table('compliance_extractions')->where('compliance_submission_id', $submission->id)->first();
+        self::assertEquals($suggestions, json_decode($extraction->payload, true)['suggestions']);
+        self::assertSame(0, DB::table('compliance_reviews')->count());
+    }
+
+    public function test_failed_ocr_keeps_evidence_for_manual_icc_confirmation(): void
+    {
+        [, $owner] = $this->activeStore();
+        $this->signInVendor($owner);
+        $listing = $this->publishableListing('PORTLAND_CEMENT', 'OCR-ICC', ['cement_type' => 'Type I', 'bag_weight_kg' => '40'], regulated: true);
+        $this->mock(ComplianceTextExtractor::class, function ($mock): void {
+            $mock->shouldReceive('provider')->andReturn('TESSERACT');
+            $mock->shouldReceive('extract')->once()->andReturn(['status' => 'FAILED', 'confidence' => null, 'suggestions' => []]);
+        });
+        $evidence = $this->post('/api/v1/vendor/catalog/listings/'.$listing.'/compliance/evidence', ['path' => 'PHOTO_OCR', 'file' => UploadedFile::fake()->image('icc.jpg')])->assertCreated()->assertJsonPath('data.extraction.status', 'FAILED')->json('data');
+        $this->postJson('/api/v1/vendor/catalog/listings/'.$listing.'/compliance', [
+            'listing_lock_version' => (int) DB::table('vendor_listings')->where('id', $listing)->value('lock_version'), 'path' => 'PHOTO_OCR', 'evidence_ids' => [$evidence['evidence_id']],
+            'marking_type' => 'ICC_STICKER', 'certificate_number' => 'ICC-2026-1234', 'importer_name' => 'Vendor entered importer', 'confirmed' => true, 'review_mode' => 'MANUAL_REVIEW',
+        ], ['Idempotency-Key' => (string) Str::uuid7()])->assertCreated()->assertJsonPath('data.compliance_status', 'PENDING_ADMIN_REVIEW');
+        $this->assertDatabaseHas('compliance_extractions', ['compliance_evidence_id' => $evidence['evidence_id'], 'status' => 'FAILED']);
+    }
+
+    #[DataProvider('ocrAccessChanges')]
+    public function test_ocr_does_not_run_before_scanning_and_rechecks_membership_after_extraction(string $change): void
+    {
+        [$organization] = $this->activeStore();
+        [$otherOrganization] = $this->activeStore('Other OCR store');
+        $owner = $this->member($organization, 'INVENTORY');
+        $this->signInVendor($owner);
+        $listing = $this->publishableListing('PORTLAND_CEMENT', 'OCR-AUTH', ['cement_type' => 'Type I', 'bag_weight_kg' => '40'], regulated: true);
+        $filesBefore = DB::table('files')->count();
+        $this->mock(ComplianceTextExtractor::class, function ($mock) use ($organization, $owner, $otherOrganization, $change): void {
+            $mock->shouldReceive('provider')->andReturn('TESSERACT');
+            $mock->shouldReceive('extract')->once()->andReturnUsing(function () use ($organization, $owner, $otherOrganization, $change): array {
+                if ($change === 'ACCOUNT') {
+                    DB::table('users')->where('id', $owner->id)->update(['account_status' => 'SUSPENDED']);
+                } else {
+                    DB::table('vendor_memberships')->where('vendor_organization_id', $organization->id)->where('user_id', $owner->id)
+                        ->update($change === 'ORGANIZATION' ? ['vendor_organization_id' => $otherOrganization->id] : ['role' => 'CUSTOMER_SERVICE']);
+                }
+
+                return ['status' => 'EXTRACTED', 'confidence' => 0.95, 'suggestions' => ['certificate_number' => 'Q-1234']];
+            });
+        });
+        $upload = fn () => $this->post('/api/v1/vendor/catalog/listings/'.$listing.'/compliance/evidence', ['path' => 'PHOTO_OCR', 'file' => UploadedFile::fake()->image('mark.jpg')]);
+        $this->scannerAvailable = false;
+        $upload()->assertStatus(503);
+        self::assertSame($filesBefore, DB::table('files')->count());
+        $this->scannerAvailable = true;
+        $upload()->assertForbidden();
+        self::assertSame($filesBefore, DB::table('files')->count());
+        self::assertSame(0, DB::table('compliance_evidence')->count());
+        self::assertSame(0, DB::table('compliance_extractions')->count());
+    }
+
+    /** @return array<string, array{string}> */
+    public static function ocrAccessChanges(): array
+    {
+        return ['role revoked' => ['ROLE'], 'account suspended' => ['ACCOUNT'], 'organization changed' => ['ORGANIZATION']];
     }
 
     public function test_an_eligible_listing_makes_the_store_discoverable_and_later_loss_of_eligibility_hides_it(): void
@@ -158,6 +250,28 @@ final class PhaseFourCatalogComplianceTest extends TestCase
         self::assertFalse(DB::table('material_aliases')->where('normalized_alias', 'bamboo poles')->exists());
         self::assertNotContains('Bamboo poles', collect($this->getJson('/api/v1/vendor/catalog/taxonomy')->json('data.categories'))->pluck('name')->all());
         $this->getJson('/api/v1/vendor/catalog/materials/search?q=bamboo%20poles')->assertOk()->assertJsonCount(0, 'data');
+    }
+
+    public function test_custom_search_tags_count_toward_the_one_tag_minimum_and_never_write_shared_taxonomy(): void
+    {
+        [, $owner] = $this->activeStore();
+        $this->signInVendor($owner);
+        $listing = $this->createListing('Rebar bundle', 'REBAR-1');
+        $url = '/api/v1/vendor/catalog/listings/'.$listing;
+        $tagBlocked = fn (array $data): bool => in_array('tag_ids', array_column($data['blockers'], 'key'), true);
+        self::assertTrue($tagBlocked($this->getJson($url)->json('data')));
+
+        $tags = DB::table('material_tags')->count();
+        $this->patchJson($url, ['lock_version' => 1, 'custom_tags' => ['Rebar 10mm', 'rebar  10MM', 'Deformed bar']])
+            ->assertOk()->assertJsonPath('data.custom_tags', ['Rebar 10mm', 'Deformed bar'])->assertJsonPath('data.tag_ids', []);
+        self::assertFalse($tagBlocked($this->getJson($url)->json('data')));
+        self::assertSame($tags, DB::table('material_tags')->count());
+
+        $lock = (int) $this->getJson($url)->json('data.lock_version');
+        $this->patchJson($url, ['lock_version' => $lock, 'custom_tags' => ['<script>']])->assertUnprocessable()->assertJsonStructure(['errors' => [['details' => ['custom_tags']]]]);
+        $this->patchJson($url, ['lock_version' => $lock, 'tag_ids' => DB::table('material_tags')->limit(4)->pluck('id')->all()])->assertUnprocessable();
+        $this->patchJson($url, ['lock_version' => $lock, 'custom_tags' => []])->assertOk()->assertJsonPath('data.custom_tags', []);
+        self::assertTrue($tagBlocked($this->getJson($url)->json('data')));
     }
 
     public function test_rental_services_are_excluded_but_equipment_sold_as_products_is_allowed(): void
@@ -261,44 +375,212 @@ final class PhaseFourCatalogComplianceTest extends TestCase
         $this->assertDatabaseHas('vendor_organizations', ['id' => $organization->id, 'marketplace_discoverability_status' => 'NOT_DISCOVERABLE']);
     }
 
-    public function test_exact_register_match_auto_verifies_and_partial_match_routes_to_admin_review(): void
+    public function test_ps_licence_number_alone_prefills_from_the_register_and_auto_verifies_only_for_the_product(): void
     {
         $admin = $this->admin('ADMIN_PRODUCT_COMPLIANCE');
         $this->signInAdmin($admin);
-        $csv = "DTI-BPS PS Licensees\n\nPS License No.,Name of Licensee,Product,Standard,Address,Expiry Date\nQ-7001,Sample Cement Corporation,Portland Cement Type I,PNS 07:2018,Test City,2099-12-31\n,Missing Number Inc.,Cement,PNS 07:2018,Test City,\nQ-7002,Expired Cement Co.,Portland Cement,PNS 07:2018,Test City,2020-01-01\n";
-        $register = $this->post('/api/v1/admin/product-compliance/registers', ['register_kind' => 'PS_LICENSE', 'source_reference' => 'DTI-BPS PS Licensees sheet', 'snapshot_date' => now()->toDateString(), 'file' => UploadedFile::fake()->createWithContent('ps-licensees.csv', $csv)])
+        $register = $this->post('/api/v1/admin/product-compliance/registers', ['register_kind' => 'PS_LICENSE', 'source_reference' => 'DTI-BPS List of PS Licensees', 'snapshot_date' => now()->toDateString(), 'file' => UploadedFile::fake()->createWithContent('ps-licensees.csv', self::psRegisterCsv())])
             ->assertCreated()->assertJsonPath('data.status', 'DRAFT')->assertJsonPath('data.row_count', 2)->assertJsonPath('data.rejected_row_count', 1)->json('data');
         [, $owner] = $this->activeStore();
         $this->signInVendor($owner);
-        $pending = $this->publishableListing('PORTLAND_CEMENT', 'CEM-A', ['cement_type' => 'Type I', 'bag_weight_kg' => '40'], regulated: true);
-        $this->publish($pending)->assertOk();
+        $listing = $this->publishableListing('PORTLAND_CEMENT', 'CEM-A', ['cement_type' => 'Type I', 'bag_weight_kg' => '40'], regulated: true);
+        $this->publish($listing)->assertOk();
         // A draft snapshot is not used for matching.
-        $this->submitCompliance($pending, 'MANUAL', ['certificate_number' => 'Q-7001', 'manufacturer_name' => 'Sample Cement Corporation'])->assertJsonPath('data.compliance_status', 'PENDING_ADMIN_REVIEW');
+        $this->lookup($listing, 'PS_MARK', 'Q-7001')->assertOk()->assertJsonPath('data.result', 'UNAVAILABLE')->assertJsonPath('data.can_verify_automatically', false);
 
         $this->signInAdmin($admin);
         $this->postJson('/api/v1/admin/product-compliance/registers/'.$register['id'].'/activate')->assertOk()->assertJsonPath('data.status', 'ACTIVE');
         $this->signInVendor($owner);
-        $exact = $this->publishableListing('PORTLAND_CEMENT', 'CEM-B', ['cement_type' => 'Type I', 'bag_weight_kg' => '40'], regulated: true);
-        $this->publish($exact)->assertOk();
-        $this->submitCompliance($exact, 'MANUAL', ['certificate_number' => 'q 7001', 'manufacturer_name' => 'SAMPLE CEMENT CORPORATION.'])->assertCreated()
-            ->assertJsonPath('data.compliance_status', 'VERIFIED')->assertJsonPath('data.status', 'ACTIVE')
-            ->assertJsonPath('data.compliance_submissions.0.latest_review.source', 'SYSTEM_REGISTER_MATCH');
-        $submissionId = DB::table('compliance_submissions')->where('vendor_listing_id', $exact)->value('id');
-        $this->assertDatabaseHas('compliance_reviews', ['compliance_submission_id' => $submissionId, 'decision' => 'APPROVED', 'reviewer_user_id' => null]);
-        $this->assertDatabaseHas('compliance_reference_matches', ['compliance_submission_id' => $submissionId, 'result' => 'MATCHED']);
+        $this->lookup($listing, 'PS_MARK', 'q 7001')->assertOk()->assertJsonPath('data.result', 'MATCHED')->assertJsonPath('data.can_verify_automatically', true)
+            ->assertJsonPath('data.record.company_name', 'Sample Cement Corporation')->assertJsonPath('data.record.product_description', 'PORTLAND CEMENT TYPE I')
+            ->assertJsonPath('data.record.reference_standard', 'PNS 07:2018')->assertJsonPath('data.record.origin', 'Local')->assertJsonPath('data.record.license_number', 'Q-7001')
+            ->assertJsonPath('data.record.model_type', null)->assertJsonPath('data.register.snapshot_date', now()->toDateString());
+        self::assertSame(0, DB::table('compliance_submissions')->count());
 
-        foreach (['CEM-C' => ['certificate_number' => 'Q-7001', 'manufacturer_name' => 'Another Company'], 'CEM-D' => ['certificate_number' => 'Q-7002', 'manufacturer_name' => 'Expired Cement Co.'], 'CEM-E' => ['certificate_number' => 'Q-9999', 'manufacturer_name' => 'Sample Cement Corporation']] as $sku => $declared) {
-            $listing = $this->publishableListing('PORTLAND_CEMENT', $sku, ['cement_type' => 'Type I', 'bag_weight_kg' => '40'], regulated: true);
-            $this->submitCompliance($listing, 'MANUAL', $declared)->assertCreated()->assertJsonPath('data.compliance_status', 'PENDING_ADMIN_REVIEW');
-            $result = DB::table('compliance_reference_matches as m')->join('compliance_submissions as s', 's.id', '=', 'm.compliance_submission_id')->where('s.vendor_listing_id', $listing)->value('m.result');
-            self::assertSame($sku === 'CEM-E' ? 'UNMATCHED' : 'UNCERTAIN', $result);
-        }
+        // The Vendor supplies only the number; the register supplies the manufacturer.
+        $this->submitCompliance($listing, 'MANUAL', ['certificate_number' => 'Q-7001', 'review_mode' => 'AUTOMATIC'])->assertCreated()
+            ->assertJsonPath('data.compliance_status', 'VERIFIED')->assertJsonPath('data.status', 'ACTIVE')
+            ->assertJsonPath('data.compliance_submissions.0.latest_review.source', 'SYSTEM_REGISTER_MATCH')->assertJsonPath('data.compliance_submissions.0.review_mode', 'AUTOMATIC');
+        $submission = DB::table('compliance_submissions')->where('vendor_listing_id', $listing)->first();
+        $declared = json_decode($submission->declared, true);
+        self::assertSame('Sample Cement Corporation', $declared['manufacturer_name']);
+        self::assertSame('PORTLAND CEMENT TYPE I', $declared['register_record']['product_description']);
+        self::assertNotNull($submission->compliance_reference_record_id);
+        $this->assertDatabaseHas('compliance_reviews', ['compliance_submission_id' => $submission->id, 'decision' => 'APPROVED', 'reviewer_user_id' => null]);
+        $this->assertDatabaseHas('compliance_reference_matches', ['compliance_submission_id' => $submission->id, 'result' => 'MATCHED']);
+
+        // A listed licence for another product never verifies cement, and nothing reaches Admins automatically.
+        $other = $this->publishableListing('PORTLAND_CEMENT', 'CEM-B', ['cement_type' => 'Type I', 'bag_weight_kg' => '40'], regulated: true);
+        $this->lookup($other, 'PS_MARK', 'Q-894')->assertOk()->assertJsonPath('data.result', 'UNCERTAIN')->assertJsonPath('data.reason', 'PRODUCT_NOT_COVERED')
+            ->assertJsonPath('data.record.product_description', 'ELECTRIC FANS');
+        $this->submitCompliance($other, 'MANUAL', ['certificate_number' => 'Q-0894', 'review_mode' => 'AUTOMATIC'])->assertUnprocessable()
+            ->assertJsonPath('errors.0.code', 'COMPLIANCE_REGISTER_NOT_MATCHED')->assertJsonPath('errors.0.details.lookup.reason', 'PRODUCT_NOT_COVERED');
+        $this->lookup($other, 'PS_MARK', 'Q-9999')->assertOk()->assertJsonPath('data.result', 'UNMATCHED')->assertJsonPath('data.reason', 'NUMBER_NOT_FOUND')->assertJsonPath('data.record', null);
+        $this->submitCompliance($other, 'MANUAL', ['certificate_number' => 'Q-9999', 'review_mode' => 'AUTOMATIC'])->assertUnprocessable()->assertJsonPath('errors.0.details.lookup.result', 'UNMATCHED');
+        self::assertSame(0, DB::table('compliance_submissions')->where('vendor_listing_id', $other)->count());
+        self::assertSame(0, DB::table('compliance_submissions')->where('status', 'PENDING_ADMIN_REVIEW')->count());
+
+        // Manual review happens only when the Vendor asks for it.
+        $this->submitCompliance($other, 'MANUAL', ['certificate_number' => 'Q-9999', 'review_note' => 'Licence issued this month; not yet on the list.'])->assertCreated()
+            ->assertJsonPath('data.compliance_status', 'PENDING_ADMIN_REVIEW')->assertJsonPath('data.compliance_submissions.0.review_mode', 'MANUAL_REVIEW');
+        $pending = DB::table('compliance_submissions')->where('vendor_listing_id', $other)->first();
+        self::assertSame('Licence issued this month; not yet on the list.', json_decode($pending->declared, true)['review_note']);
+        $this->assertDatabaseHas('compliance_reference_matches', ['compliance_submission_id' => $pending->id, 'result' => 'UNMATCHED']);
+        $this->signInAdmin($admin);
+        $this->getJson('/api/v1/admin/product-compliance')->assertOk()->assertJsonPath('data.0.id', $pending->id)->assertJsonPath('data.0.review_mode', 'MANUAL_REVIEW');
+        $this->getJson('/api/v1/admin/product-compliance/'.$pending->id)->assertOk()->assertJsonPath('data.submission.review_mode', 'MANUAL_REVIEW');
         try {
             DB::transaction(fn () => DB::table('compliance_reference_records')->where('compliance_reference_register_id', $register['id'])->update(['company_name' => 'Changed']));
             self::fail('A register snapshot record was modified.');
         } catch (QueryException) {
             self::assertTrue(true);
         }
+    }
+
+    public function test_icc_sticker_serial_is_matched_within_its_listed_serial_range(): void
+    {
+        $this->signInAdmin($this->admin('ADMIN_PRODUCT_COMPLIANCE'));
+        $this->importRegister('ICC_CERTIFICATE', 'icc-holders.csv', self::iccRegisterCsv());
+        $this->assertDatabaseHas('compliance_reference_records', ['record_number_display' => '002541/0524', 'serial_prefix' => 'A', 'serial_from' => 988239313, 'serial_to' => 988295070, 'serial_digits' => 9]);
+        [, $owner] = $this->activeStore();
+        $this->signInVendor($owner);
+        $tile = $this->publishableListing('CERAMIC_TILE', 'TILE-1', ['work_size_mm' => '600 x 600'], regulated: true);
+        $this->lookup($tile, 'ICC_STICKER', 'A 988 239 400')->assertOk()->assertJsonPath('data.result', 'MATCHED')
+            ->assertJsonPath('data.record.company_name', '21TH CONSTRUCTION DEVELOPMENT')->assertJsonPath('data.record.icc_certificate_number', '002541/0524')
+            ->assertJsonPath('data.record.serial_range', 'A988239313 – A988295070')->assertJsonPath('data.record.model_type', 'GLAZED - FLOOR TILES - 600MMX600MM')
+            ->assertJsonPath('data.record.reference_standard', 'PNS ISO 13006:2019');
+        $this->lookup($tile, 'ICC_STICKER', 'A988295071')->assertOk()->assertJsonPath('data.result', 'UNMATCHED')->assertJsonPath('data.reason', 'NUMBER_NOT_FOUND');
+        $this->lookup($tile, 'ICC_STICKER', '002541/0524')->assertOk()->assertJsonPath('data.result', 'UNMATCHED')->assertJsonPath('data.reason', 'CERTIFICATE_NUMBER_GIVEN');
+        $this->lookup($tile, 'ICC_STICKER', 'B012717020')->assertOk()->assertJsonPath('data.result', 'UNCERTAIN')->assertJsonPath('data.reason', 'PRODUCT_NOT_COVERED');
+        $this->submitCompliance($tile, 'MANUAL', ['marking_type' => 'ICC_STICKER', 'certificate_number' => 'A988239400', 'review_mode' => 'AUTOMATIC'])->assertCreated()->assertJsonPath('data.compliance_status', 'VERIFIED');
+        $declared = json_decode((string) DB::table('compliance_submissions')->where('vendor_listing_id', $tile)->value('declared'), true);
+        self::assertSame(['21TH CONSTRUCTION DEVELOPMENT', null, 'BEETHOVEN', 'A988239313 – A988295070'], [$declared['importer_name'], $declared['manufacturer_name'], $declared['brand'], $declared['register_record']['serial_range']]);
+    }
+
+    public function test_icc_register_imports_separate_from_and_to_serial_columns(): void
+    {
+        $this->signInAdmin($this->admin('ADMIN_PRODUCT_COMPLIANCE'));
+        $csv = "Company Name,Product,PNS,Brand,Type,Model(s),Certificate Number,ICC Sticker Serial No. (From),ICC Sticker Serial No. (To)\n"
+            ."(GPTE) GOLDEN PREMIUM TRUCKS AND EQUIPMENTS INC.,PNEUMATIC TIRES,PNS 25:1994,BEARWAY,155R12C 8PR,Not indicated,002762/0524,B012717015,B012717192\n"
+            ."220 TAPS N' TILES INC.,CERAMIC PLUMBING FIXTURES,\"PNS 156:2010\nPNS 2085:2011\",toto,\"LAVATORY: LW1535A#XW, LW1536A#XW\",Not indicated,001858/1124,B091933878,B091936367\n";
+        $this->post('/api/v1/admin/product-compliance/registers', ['register_kind' => 'ICC_CERTIFICATE', 'source_reference' => 'DTI-BPS List of ICC Certificate Holders', 'snapshot_date' => now()->toDateString(), 'file' => UploadedFile::fake()->createWithContent('List_of_ICC_Certificate_Holders.csv', $csv)])
+            ->assertCreated()->assertJsonPath('data.row_count', 2)->assertJsonPath('data.rejected_row_count', 0)->assertJsonPath('data.serial_range_count', 2);
+        $this->assertDatabaseHas('compliance_reference_records', ['record_number_display' => '001858/1124', 'serial_prefix' => 'B', 'serial_from' => 91933878, 'serial_to' => 91936367, 'serial_digits' => 9, 'reference_standard' => "PNS 156:2010\nPNS 2085:2011"]);
+    }
+
+    public function test_ocr_and_qr_readings_resolve_to_the_number_the_register_lists(): void
+    {
+        $this->signInAdmin($this->admin('ADMIN_PRODUCT_COMPLIANCE'));
+        $this->importRegister('ICC_CERTIFICATE', 'icc-holders.csv', self::iccRegisterCsv());
+        [, $owner] = $this->activeStore();
+        $this->signInVendor($owner);
+        $tile = $this->publishableListing('CERAMIC_TILE', 'TILE-OCR', ['work_size_mm' => '600 x 600'], regulated: true);
+        // OCR read the serial with a look-alike character; the register confirms which reading exists.
+        $this->mock(ComplianceTextExtractor::class, function ($mock): void {
+            $mock->shouldReceive('provider')->andReturn('TESSERACT');
+            $mock->shouldReceive('extract')->once()->withArgs(fn (string $path, string $type, ?string $marking): bool => $marking === 'ICC_STICKER')
+                ->andReturn(['status' => 'EXTRACTED', 'confidence' => 0.61, 'suggestions' => ['marking_type' => 'ICC_STICKER', 'certificate_number' => 'A988299461'], 'candidates' => ['A988299461', 'A988239401']]);
+        });
+        $upload = fn (array $extra): TestResponse => $this->post('/api/v1/vendor/catalog/listings/'.$tile.'/compliance/evidence', ['path' => 'PHOTO_OCR', 'marking_type' => 'ICC_STICKER', 'file' => UploadedFile::fake()->image('sticker.jpg')] + $extra);
+        $upload([])->assertCreated()->assertJsonPath('data.extraction.source', 'OCR')->assertJsonPath('data.extraction.suggestions.certificate_number', 'A988239401')->assertJsonPath('data.extraction.register_listed', true);
+        // A QR code readable in the same photo is exact, so OCR is not run again.
+        $upload(['qr_payload' => 'https://icc.example.gov.ph/verify?serial=A988239313'])->assertCreated()->assertJsonPath('data.extraction.source', 'QR')
+            ->assertJsonPath('data.extraction.suggestions.certificate_number', 'A988239313')->assertJsonPath('data.extraction.register_listed', true);
+        $this->post('/api/v1/vendor/catalog/listings/'.$tile.'/compliance/evidence', ['path' => 'QR', 'marking_type' => 'ICC_STICKER', 'qr_payload' => 'Z123', 'file' => UploadedFile::fake()->image('qr.png')])
+            ->assertCreated()->assertJsonPath('data.extraction.status', 'FAILED')->assertJsonPath('data.extraction.register_listed', false);
+    }
+
+    public function test_register_lookup_is_scoped_to_submitting_roles_owned_regulated_listings(): void
+    {
+        [$organization, $owner] = $this->activeStore();
+        [, $otherOwner] = $this->activeStore('Other lookup store');
+        $this->signInVendor($owner);
+        $listing = $this->publishableListing('PORTLAND_CEMENT', 'CEM-LOOK', ['cement_type' => 'Type I', 'bag_weight_kg' => '40'], regulated: true);
+        $plain = $this->publishableListing('CONCRETE_HOLLOW_BLOCK', 'CHB-LOOK', ['thickness_mm' => '100']);
+        $this->lookup($plain, 'PS_MARK', 'Q-1234')->assertUnprocessable()->assertJsonPath('errors.0.code', 'COMPLIANCE_NOT_REQUIRED');
+        $this->lookup($listing, 'PS_MARK', 'Q;1234')->assertUnprocessable();
+        $this->lookup($listing, 'OTHER', 'Q-1234')->assertUnprocessable();
+        $this->lookup($listing, 'ICC_STICKER', '12345')->assertOk()->assertJsonPath('data.result', 'UNAVAILABLE');
+        $this->signInVendor($this->member($organization, 'CUSTOMER_SERVICE'));
+        $this->lookup($listing, 'PS_MARK', 'Q-1234')->assertForbidden();
+        $this->signInVendor($otherOwner);
+        $this->lookup($listing, 'PS_MARK', 'Q-1234')->assertNotFound();
+    }
+
+    public function test_registers_import_from_xlsx_and_sync_only_from_an_allow_listed_authorized_feed(): void
+    {
+        $this->signInAdmin($this->admin('ADMIN_PRODUCT_COMPLIANCE'));
+        $rows = array_map(static fn (string $line): array => str_getcsv($line, ',', '"', ''), array_filter(explode("\n", self::psRegisterCsv())));
+        $this->post('/api/v1/admin/product-compliance/registers', ['register_kind' => 'PS_LICENSE', 'source_reference' => 'DTI-BPS List of PS Licensees (xlsx)', 'snapshot_date' => now()->toDateString(), 'file' => UploadedFile::fake()->createWithContent('ps-licensees.xlsx', self::xlsx($rows))])
+            ->assertCreated()->assertJsonPath('data.row_count', 2)->assertJsonPath('data.rejected_row_count', 1);
+        $this->assertDatabaseHas('compliance_reference_records', ['record_number' => 'Q0894', 'product_description' => 'ELECTRIC FANS', 'model_type' => 'NSF16-3, NSF16-116BD', 'reference_standard' => 'PNS IEC 60335-2-80:2016']);
+        $this->post('/api/v1/admin/product-compliance/registers', ['register_kind' => 'PS_LICENSE', 'source_reference' => 'Wrong type', 'snapshot_date' => now()->toDateString(), 'file' => UploadedFile::fake()->createWithContent('list.txt', 'License No.,Company')])
+            ->assertUnprocessable()->assertJsonPath('errors.0.code', 'FILE_VALIDATION_FAILED');
+        $this->post('/api/v1/admin/product-compliance/registers', ['register_kind' => 'ICC_CERTIFICATE', 'source_reference' => 'No serials', 'snapshot_date' => now()->toDateString(), 'file' => UploadedFile::fake()->createWithContent('icc.csv', "Company Name,Certificate Number\nImporter Inc.,001/0524\n")])
+            ->assertUnprocessable()->assertJsonPath('errors.0.code', 'REGISTER_SERIALS_NOT_FOUND');
+
+        Http::fake(['registers.example.gov.ph/*' => Http::sequence()->push(self::psRegisterCsv(), 200, ['Content-Type' => 'text/csv'])->push(self::psRegisterCsv(), 200, ['Content-Type' => 'text/csv'])
+            ->push(self::psRegisterCsv()."Q-7003,Third Cement Inc.,Local,3,PORTLAND CEMENT,THIRD,N/A,N/A,N/A,PNS 07:2018\n", 200, ['Content-Type' => 'text/csv'])->push('', 200)]);
+        // No feed is configured by default: the sync makes no request at all.
+        $this->artisan('materyalph:compliance-registers-sync')->expectsOutputToContain('PS_LICENSE: NOT_CONFIGURED')->assertExitCode(0);
+        Http::assertNothingSent();
+        // A configured URL on a host that is not allow-listed is never contacted either.
+        config()->set('materyalph.compliance_registers.feeds.PS_LICENSE', 'https://registers.example.gov.ph/ps-licensees.csv');
+        $this->artisan('materyalph:compliance-registers-sync')->expectsOutputToContain('PS_LICENSE: NOT_CONFIGURED')->assertExitCode(0);
+        Http::assertNothingSent();
+
+        config()->set('materyalph.compliance_registers.allowed_hosts', 'registers.example.gov.ph');
+        $this->artisan('materyalph:compliance-registers-sync')->expectsOutputToContain('PS_LICENSE: DRAFT_CREATED (2 rows)')->assertExitCode(0);
+        $this->assertDatabaseHas('compliance_reference_registers', ['register_kind' => 'PS_LICENSE', 'source_channel' => 'FEED', 'status' => 'DRAFT', 'imported_by_user_id' => null]);
+        $this->artisan('materyalph:compliance-registers-sync')->expectsOutputToContain('PS_LICENSE: UNCHANGED')->assertExitCode(0);
+        config()->set('materyalph.compliance_registers.auto_activate', true);
+        $this->artisan('materyalph:compliance-registers-sync')->expectsOutputToContain('PS_LICENSE: ACTIVATED (3 rows)')->assertExitCode(0);
+        $this->assertDatabaseHas('compliance_reference_registers', ['register_kind' => 'PS_LICENSE', 'source_channel' => 'FEED', 'status' => 'ACTIVE', 'row_count' => 3]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'COMPLIANCE_REGISTER_ACTIVATED', 'actor_role' => 'SYSTEM']);
+        // A failed download keeps the active snapshot.
+        $this->artisan('materyalph:compliance-registers-sync')->expectsOutputToContain('PS_LICENSE: REGISTER_FEED_UNAVAILABLE')->assertExitCode(1);
+        self::assertSame(1, DB::table('compliance_reference_registers')->where('register_kind', 'PS_LICENSE')->where('status', 'ACTIVE')->count());
+        Http::assertSentCount(4);
+    }
+
+    /** @param list<list<string>> $rows */
+    private static function xlsx(array $rows): string
+    {
+        $path = (string) tempnam(sys_get_temp_dir(), 'register-xlsx-');
+        $zip = new \ZipArchive;
+        $zip->open($path, \ZipArchive::OVERWRITE);
+        $main = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+        $relationships = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+        $zip->addFromString('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/></Types>');
+        $zip->addFromString('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="'.$relationships.'/officeDocument" Target="xl/workbook.xml"/></Relationships>');
+        $zip->addFromString('xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="'.$main.'" xmlns:r="'.$relationships.'"><sheets><sheet name="MASTERLIST" sheetId="1" r:id="rId1"/></sheets></workbook>');
+        $zip->addFromString('xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="'.$relationships.'/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="'.$relationships.'/sharedStrings" Target="sharedStrings.xml"/></Relationships>');
+        // Even rows use the shared string table, odd rows inline strings; empty cells are omitted as Excel does.
+        $shared = [];
+        $sheet = '';
+        foreach ($rows as $index => $cells) {
+            $sheet .= '<row r="'.($index + 1).'">';
+            foreach ($cells as $column => $value) {
+                if ($value === '') {
+                    continue;
+                }
+                $reference = chr(65 + $column).($index + 1);
+                if ($index % 2 === 0) {
+                    $shared[] = '<si><t xml:space="preserve">'.htmlspecialchars($value, ENT_XML1).'</t></si>';
+                    $sheet .= '<c r="'.$reference.'" t="s"><v>'.(count($shared) - 1).'</v></c>';
+                } else {
+                    $sheet .= '<c r="'.$reference.'" t="inlineStr"><is><t>'.htmlspecialchars($value, ENT_XML1).'</t></is></c>';
+                }
+            }
+            $sheet .= '</row>';
+        }
+        $zip->addFromString('xl/sharedStrings.xml', '<?xml version="1.0" encoding="UTF-8"?><sst xmlns="'.$main.'" count="'.count($shared).'">'.implode('', $shared).'</sst>');
+        $zip->addFromString('xl/worksheets/sheet1.xml', '<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="'.$main.'"><sheetData>'.$sheet.'</sheetData></worksheet>');
+        $zip->close();
+        $content = (string) file_get_contents($path);
+        @unlink($path);
+
+        return $content;
     }
 
     public function test_material_search_prefers_aliases_and_uses_pg_trgm_for_typos(): void
@@ -661,7 +943,12 @@ final class PhaseFourCatalogComplianceTest extends TestCase
         return $this->postJson('/api/v1/vendor/catalog/listings/'.$listing.'/publish', ['lock_version' => (int) DB::table('vendor_listings')->where('id', $listing)->value('lock_version')], ['Idempotency-Key' => (string) Str::uuid7()]);
     }
 
-    /** @param array<string, string> $declared */
+    /**
+     * Submits with an uploaded marking photo. Manual review is the default here because most
+     * tests exercise Admin review; register-match tests pass 'review_mode' => 'AUTOMATIC'.
+     *
+     * @param  array<string, string>  $declared
+     */
     private function submitCompliance(string $listing, string $path, array $declared): TestResponse
     {
         $evidence = $this->post('/api/v1/vendor/catalog/listings/'.$listing.'/compliance/evidence', ['path' => $path, 'file' => UploadedFile::fake()->image('marking.jpg')])->assertCreated()->json('data');
@@ -671,8 +958,41 @@ final class PhaseFourCatalogComplianceTest extends TestCase
 
         return $this->postJson('/api/v1/vendor/catalog/listings/'.$listing.'/compliance', $declared + [
             'listing_lock_version' => (int) DB::table('vendor_listings')->where('id', $listing)->value('lock_version'), 'path' => $path, 'evidence_ids' => [$evidence['evidence_id']],
-            'marking_type' => 'PS_MARK', 'confirmed' => true,
+            'marking_type' => 'PS_MARK', 'confirmed' => true, 'review_mode' => 'MANUAL_REVIEW',
         ], ['Idempotency-Key' => (string) Str::uuid7()]);
+    }
+
+    private function lookup(string $listing, string $markingType, string $number): TestResponse
+    {
+        return $this->postJson('/api/v1/vendor/catalog/listings/'.$listing.'/compliance/lookup', ['marking_type' => $markingType, 'number' => $number]);
+    }
+
+    private function importRegister(string $kind, string $name, string $content): string
+    {
+        $register = $this->post('/api/v1/admin/product-compliance/registers', ['register_kind' => $kind, 'source_reference' => 'DTI-BPS '.$kind.' list', 'snapshot_date' => now()->toDateString(), 'file' => UploadedFile::fake()->createWithContent($name, $content)])
+            ->assertCreated()->assertJsonPath('data.status', 'DRAFT')->json('data.id');
+        $this->postJson('/api/v1/admin/product-compliance/registers/'.$register.'/activate')->assertOk();
+
+        return (string) $register;
+    }
+
+    /** The official List of PS Licensees layout: title and note rows above the header. */
+    private static function psRegisterCsv(): string
+    {
+        return "List of PS Licensee,,,,,,,,,\nas of 30 September 2026*,,,,,,,,,\nNote: 1-In case that a PS Licensee is missing in the list you may directly verify it to BPS.,,,,,,,,,\n,,,,,,,,,\n*-updating is per month basis,,,,,,,,,\n"
+            ."License No.,Company name,Foreign/Local,Region (if Local),Product,Brand Name,Model/Type,Size,Class,Product Standard\n"
+            ."Q-7001,Sample Cement Corporation,Local,4A,PORTLAND CEMENT TYPE I,SAMPLECEM,Not Applicable,40 kg,N/A,PNS 07:2018\n"
+            ."Q-0894,Fan Makers Inc.,Local,NCR,ELECTRIC FANS,BREEZE,\"NSF16-3, NSF16-116BD\",Not Applicable,Not Applicable,PNS IEC 60335-2-80:2016\n"
+            .",Missing Number Inc.,Local,NCR,Cement,X,N/A,N/A,N/A,PNS 07:2018\n";
+    }
+
+    /** The official List of ICC Certificate Holders layout: the serial heading spans the from and to columns. */
+    private static function iccRegisterCsv(): string
+    {
+        return "List of ICC Certificate Holders,,,,,,,,\nas of 30 September 2026*,,,,,,,,\n,,,,,,,,\n,,,,,,,,\n,,,,,,,,\n,,,,,,,,\n"
+            ."Company Name,Product,PNS,Brand,Type,Model(s),Certificate Number,ICC Sticker Serial No.,\n"
+            ."21TH CONSTRUCTION DEVELOPMENT,CERAMIC  TILES,PNS ISO 13006:2019,BEETHOVEN,GLAZED - FLOOR TILES - 600MMX600MM,Not indicated,002541/0524,A988239313,A988295070\n"
+            ."(GPTE) GOLDEN PREMIUM TRUCKS,PNEUMATIC TIRES,PNS 25:1994,BEARWAY,155R12C 8PR,Not indicated,002762/0524,B012717015,B012717192\n";
     }
 
     /** @return array{VendorOrganization, User} */

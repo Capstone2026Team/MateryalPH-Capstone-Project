@@ -46,7 +46,7 @@ abstract class TaxAdjustment implements Built<TaxAdjustment, TaxAdjustmentBuilde
 
   @BuiltValueField(wireName: r'state')
   TaxAdjustmentStateEnum get state;
-  // enum stateEnum {  ADJUSTMENT_REQUIRED,  UNDER_REVIEW,  APPROVED,  POSTED,  REJECTED,  };
+  // enum stateEnum {  ADJUSTMENT_REQUIRED,  UNDER_REVIEW,  APPROVED,  POSTED,  REJECTED,  NOT_REQUIRED,  };
 
   @BuiltValueField(wireName: r'environment')
   String get environment;
@@ -483,6 +483,8 @@ class TaxAdjustmentStateEnum extends EnumClass {
   static const TaxAdjustmentStateEnum POSTED = _$taxAdjustmentStateEnum_POSTED;
   @BuiltValueEnumConst(wireName: r'REJECTED')
   static const TaxAdjustmentStateEnum REJECTED = _$taxAdjustmentStateEnum_REJECTED;
+  @BuiltValueEnumConst(wireName: r'NOT_REQUIRED')
+  static const TaxAdjustmentStateEnum NOT_REQUIRED = _$taxAdjustmentStateEnum_NOT_REQUIRED;
 
   static Serializer<TaxAdjustmentStateEnum> get serializer => _$taxAdjustmentStateEnumSerializer;
 

@@ -22,6 +22,7 @@ use Laravel\Passport\HasApiTokens;
  * @property int $lock_version
  * @property Carbon|null $email_verified_at
  * @property CarbonImmutable|null $last_authenticated_at
+ * @property CarbonImmutable|null $account_deleted_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property string|null $profile_photo_key
@@ -74,6 +75,7 @@ class User extends Authenticatable implements OAuthenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'last_authenticated_at' => 'immutable_datetime',
+            'account_deleted_at' => 'immutable_datetime',
         ];
     }
 }

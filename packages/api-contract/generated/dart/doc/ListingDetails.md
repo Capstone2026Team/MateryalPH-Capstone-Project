@@ -18,7 +18,9 @@ Name | Type | Description | Notes
 **countryOfManufacture** | **String** |  |
 **category** | [**ListingCategoryRef**](ListingCategoryRef.md) |  |
 **technicalAttributes** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  |
+**attributeLabels** | [**BuiltList&lt;ListingAttributeLabel&gt;**](ListingAttributeLabel.md) | The category's names for listing and variant technical attributes, in category order; the same labels a Work Package quotation shows. | [optional]
 **images** | [**BuiltList&lt;ListingImage&gt;**](ListingImage.md) |  |
+**readyMixedConcrete** | [**ReadyMixedConcreteDetail**](ReadyMixedConcreteDetail.md) | Present only for ready-mixed concrete; Self-Pickup is then never available. | [optional]
 **compliance** | [**ListingCompliance**](ListingCompliance.md) |  |
 **productRating** | [**ProductRatingSummary**](ProductRatingSummary.md) |  |
 **unitsSold** | **String** |  |

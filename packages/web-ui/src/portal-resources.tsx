@@ -27,6 +27,12 @@ export function usePortalResource<T>(key: string, loader: () => Promise<T>, enab
   const state = useSyncExternalStore(store.subscribe, read, read)
   const refresh = useCallback(() => store.load(key, loader), [store, key, loader])
   const publish = useCallback((value: T | ((previous: T | null) => T)) => store.publish(key, value), [store, key])
-  useEffect(() => { if (enabled) void store.load(key, loader, false) }, [store, key, loader, enabled])
-  return { ...state, refresh, publish }
+  const synchronize = useCallback(() => store.synchronize(key, loader), [store, key, loader])
+  useEffect(() => {
+    if (!enabled) return
+    const release = store.retain(key)
+    void store.load(key, loader, false)
+    return release
+  }, [store, key, loader, enabled])
+  return { ...state, refresh, publish, synchronize }
 }

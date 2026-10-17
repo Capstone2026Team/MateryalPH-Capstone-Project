@@ -1,6 +1,6 @@
 import type { NotificationItem, NotificationsApi } from '@materyalph/api-client-ts'
 
-export type NotificationFilters = { status: 'unread' | 'archived'; type: string }
+export type NotificationFilters = { type: string; from?: string; to?: string; dateLabel?: string }
 
 const typeLabels: Record<string, string> = {
   SECURITY: 'Account security update',
@@ -19,29 +19,32 @@ export function notificationTypeLabel(category: string): string {
 
 export function notificationFilters(search: string): NotificationFilters {
   const params = new URLSearchParams(search)
-  const status = params.get('status')
-  return { status: status === 'archived' ? 'archived' : 'unread', type: params.get('type') ?? '' }
+  return { type: params.get('type') ?? '', ...(params.get('from') ? { from: params.get('from')! } : {}), ...(params.get('to') ? { to: params.get('to')! } : {}), ...(params.get('date_label') ? { dateLabel: params.get('date_label')! } : {}) }
 }
 
 export function notificationFilterSearch(search: string, filters: NotificationFilters): string {
   const params = new URLSearchParams(search)
-  if (filters.status === 'unread') params.delete('status'); else params.set('status', filters.status)
+  params.delete('status') // Saved links from the removed Status filter are dropped.
   if (filters.type) params.set('type', filters.type); else params.delete('type')
+  for (const [key, value] of [['from', filters.from], ['to', filters.to], ['date_label', filters.dateLabel]]) {
+    if (value) params.set(key!, value); else params.delete(key!)
+  }
   return params.toString()
 }
 
 export function notificationView(items: readonly NotificationItem[], filters: NotificationFilters) {
   // Existing URLs used display titles. Resolve them to their category without filling the dropdown with order references.
   const type = items.find(item => item.title === filters.type)?.category ?? filters.type
-  const matchingType = items.filter(item => !type || item.category === type)
-  const unread = matchingType.filter(item => !item.readAt)
-  const archived = matchingType.filter(item => Boolean(item.readAt))
+  const start = filters.from ? Date.parse(`${filters.from}T00:00:00+08:00`) : -Infinity
+  const end = filters.to ? Date.parse(`${filters.to}T00:00:00+08:00`) + 86400000 : Infinity
+  // The inbox lists unread notices only; a notice leaves it once read. Read notices stay stored server-side.
+  const pending = items.filter(item => !item.readAt)
+  const unread = pending.filter(item => (!type || item.category === type) && Date.parse(item.createdAt) >= start && Date.parse(item.createdAt) < end)
   return {
     type,
     types: [...new Set(items.map(item => item.category))].map(value => ({ value, label: notificationTypeLabel(value) })).sort((a, b) => a.label.localeCompare(b.label)),
-    counts: { unread: unread.length, archived: archived.length },
-    visible: filters.status === 'archived' ? archived : unread,
-    unread: filters.status === 'archived' ? [] : unread,
+    visible: unread,
+    unread,
   }
 }
 

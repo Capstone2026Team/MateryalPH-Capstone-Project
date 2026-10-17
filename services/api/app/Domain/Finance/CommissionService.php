@@ -7,6 +7,7 @@ namespace App\Domain\Finance;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Operations\OutboxPublisher;
 use App\Domain\Payments\RefundService;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -25,6 +26,19 @@ use Illuminate\Support\Str;
 final class CommissionService
 {
     public function __construct(private readonly FinancialLedgerService $ledger, private readonly OutboxPublisher $outbox) {}
+
+    /** One signed movement per earning or approved credit, shared by both portals; collections never earn it again. */
+    public static function movements(?string $organizationId = null): Builder
+    {
+        $earned = DB::table('fee_assessments')->where('state', 'EARNED')
+            ->when($organizationId, fn (Builder $q, string $id) => $q->where('vendor_organization_id', $id))
+            ->selectRaw("id AS assessment_id, vendor_organization_id, earned_at AS occurred_at, earned_centavos AS amount_centavos, 'EARNED' AS kind");
+        $credits = DB::table('fee_adjustments as a')->join('fee_assessments as f', 'f.id', '=', 'a.fee_assessment_id')->where('a.kind', 'CREDIT')
+            ->when($organizationId, fn (Builder $q, string $id) => $q->where('f.vendor_organization_id', $id))
+            ->selectRaw("f.id AS assessment_id, f.vendor_organization_id, a.approved_at AS occurred_at, -a.amount_centavos AS amount_centavos, 'CREDIT' AS kind");
+
+        return DB::query()->fromSub($earned->unionAll($credits), 'commission_movements');
+    }
 
     /** @return array{target_centavos: int, credit_centavos: int} */
     public static function creditTarget(int $originalExclusiveCentavos, int $originalTargetCentavos, int $alreadyCreditedCentavos, int $returnedExclusiveCentavos): array
@@ -46,6 +60,53 @@ final class CommissionService
         $vat = $profile === 'DEMO_VAT_12' ? Money::proportion($feeCentavos, 12, 112) : 0;
 
         return ['fee_centavos' => $feeCentavos, 'vat_centavos' => $vat, 'revenue_centavos' => $feeCentavos - $vat];
+    }
+
+    /**
+     * Preserve the original posted VAT treatment and consume rounding residue on the final reversal.
+     *
+     * @return array{vat_centavos: int, revenue_centavos: int}
+     */
+    public static function creditSplit(int $earned, int $originalVat, int $creditedFee, int $creditedVat, int $credit): array
+    {
+        $remaining = max(0, $earned - $creditedFee - $credit);
+        $targetVat = $originalVat === 0 ? 0 : Money::proportion($remaining, 12, 112);
+        $vat = min($credit, max(0, $originalVat - $creditedVat - $targetVat));
+
+        return ['vat_centavos' => $vat, 'revenue_centavos' => $credit - $vat];
+    }
+
+    /** Correct historical rounding/tax-treatment differences through balanced compensating postings. */
+    public function synchronizeCreditVat(string $correlationId): void
+    {
+        DB::table('fee_assessments')->where('state', 'EARNED')->where('credited_centavos', '>', 0)->eachById(function (object $row) use ($correlationId): void {
+            DB::transaction(function () use ($row, $correlationId): void {
+                $assessment = DB::table('fee_assessments')->where('id', $row->id)->lockForUpdate()->first();
+                $originalVat = (int) DB::table('financial_ledger_entries')->where('source_type', 'FEE_ASSESSMENT')->where('source_id', $row->id)->where('account_code', 'OUTPUT_VAT')->where('direction', 'CREDIT')->sum('amount_centavos');
+                $creditedVat = self::creditedVat((string) $row->id);
+                $target = $originalVat === 0 ? 0 : Money::proportion(max(0, (int) $assessment->earned_centavos - (int) $assessment->credited_centavos), 12, 112);
+                $difference = $target - ($originalVat - $creditedVat);
+                if ($difference === 0) {
+                    return;
+                }
+                $adjustmentId = DB::table('fee_adjustments')->where('fee_assessment_id', $row->id)->where('kind', 'CREDIT')->orderByDesc('approved_at')->orderByDesc('id')->value('id');
+                if ($adjustmentId === null) {
+                    return;
+                }
+                $source = ['FEE_ADJUSTMENT', (string) $adjustmentId];
+                $this->ledger->post(FinancialLedgerService::PLATFORM_FEE, 'FEE_CREDIT_VAT_CORRECTION', 'PLATFORM_FEE:CREDIT_VAT_CORRECTION:'.$row->id, [
+                    FinancialLedgerService::debit($difference > 0 ? 'FEE_REVENUE' : 'OUTPUT_VAT', abs($difference), ...$source),
+                    FinancialLedgerService::credit($difference > 0 ? 'OUTPUT_VAT' : 'FEE_REVENUE', abs($difference), ...$source),
+                ], $correlationId);
+            });
+        });
+    }
+
+    private static function creditedVat(string $assessmentId): int
+    {
+        return (int) DB::table('financial_ledger_entries')->where('source_type', 'FEE_ADJUSTMENT')
+            ->whereIn('source_id', DB::table('fee_adjustments')->where('fee_assessment_id', $assessmentId)->select('id'))->where('account_code', 'OUTPUT_VAT')
+            ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'DEBIT' THEN amount_centavos ELSE -amount_centavos END), 0) AS amount")->value('amount');
     }
 
     /** Posts the PLATFORM_FEE earning batch once per earned assessment, inside the earning transaction. */
@@ -111,21 +172,24 @@ final class CommissionService
             $credited = (int) $assessment->credited_centavos + $computed['credit_centavos'];
             DB::table('fee_assessments')->where('id', $assessment->id)->update(['credited_centavos' => $credited,
                 'credited_state' => $credited >= (int) $assessment->earned_centavos ? 'CREDITED' : 'PARTIALLY_CREDITED', 'updated_at' => now()]);
-            $paid = DB::table('fee_statement_lines as l')->join('fee_statements as s', 's.id', '=', 'l.fee_statement_id')->where('l.fee_assessment_id', $assessment->id)->where('s.state', 'PAID')->exists();
-            $split = self::feeVat($computed['credit_centavos']);
+            $adjustment = DB::table('fee_adjustments')->where('id', $adjustmentId)->first();
+            $allocation = app(StatementService::class)->applyCredit($adjustment);
+            $originalVat = (int) DB::table('financial_ledger_entries')->where('source_type', 'FEE_ASSESSMENT')->where('source_id', $assessment->id)->where('account_code', 'OUTPUT_VAT')->where('direction', 'CREDIT')->sum('amount_centavos');
+            $creditedVat = self::creditedVat((string) $assessment->id);
+            $split = self::creditSplit((int) $assessment->earned_centavos, $originalVat, (int) $assessment->credited_centavos, $creditedVat, $computed['credit_centavos']);
             $source = ['FEE_ADJUSTMENT', $adjustmentId];
             $this->ledger->post(FinancialLedgerService::PLATFORM_FEE, 'FEE_CREDIT', 'PLATFORM_FEE:CREDIT:'.$adjustmentId, [
                 FinancialLedgerService::debit('FEE_REVENUE', $split['revenue_centavos'], ...$source), FinancialLedgerService::debit('OUTPUT_VAT', $split['vat_centavos'], ...$source),
-                FinancialLedgerService::credit($paid ? 'FEE_REFUND_PAYABLE' : 'FEE_RECEIVABLE', $computed['credit_centavos'], ...$source),
+                FinancialLedgerService::credit('FEE_RECEIVABLE', $computed['credit_centavos'] - $allocation['refund_centavos'], ...$source),
+                FinancialLedgerService::credit('FEE_REFUND_PAYABLE', $allocation['refund_centavos'], ...$source),
             ], $correlationId, $approverUserId, 'FINANCE_REVIEWER');
-            if ($paid) {
+            if ($allocation['refund_centavos'] > 0) {
                 // FIN-07 PLATFORM_FEE target: refund through the original fee captures only; never another party's funds.
-                $adjustment = DB::table('fee_adjustments')->where('id', $adjustmentId)->first();
-                $covered = app(RefundService::class)->createFeeCreditRefunds($adjustment, $assessment, $correlationId);
-                if ($covered < $computed['credit_centavos']) {
+                $covered = app(RefundService::class)->createFeeCreditRefunds($adjustment, $assessment, $correlationId, $allocation['refund_centavos']);
+                if ($covered < $allocation['refund_centavos']) {
                     app(WithholdingThresholdService::class)->reviewItem('TEST', (string) $assessment->vendor_organization_id, 'PAID_FEE_CREDIT_PAYABLE', $adjustmentId, 'CREDIT_ON_PAID_STATEMENT',
-                        'A fee credit applies to an already paid statement and no supported original fee capture covers ₱'.WithholdingThresholdService::pesos($computed['credit_centavos'] - $covered).'. Record the audited payable.',
-                        ['credit_centavos' => $computed['credit_centavos'], 'refund_covered_centavos' => $covered], [], 'FEE_ADJUSTMENT');
+                        'A fee credit exceeds the unpaid debt and no supported original fee capture covers ₱'.WithholdingThresholdService::pesos($allocation['refund_centavos'] - $covered).'. Record the audited payable.',
+                        ['credit_centavos' => $allocation['refund_centavos'], 'refund_covered_centavos' => $covered], [], 'FEE_ADJUSTMENT');
                 }
             }
             DB::table('finance_review_items')->where('id', $proposalId)->update(['state' => 'RESOLVED', 'resolution' => 'Approved as fee adjustment '.$adjustmentId, 'resolved_by_user_id' => $approverUserId, 'resolved_at' => now(), 'updated_at' => now()]);

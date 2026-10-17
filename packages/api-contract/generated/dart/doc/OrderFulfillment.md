@@ -23,6 +23,8 @@ Name | Type | Description | Notes
 **vehicleIssues** | [**BuiltList&lt;FulfillmentVehicleIssue&gt;**](FulfillmentVehicleIssue.md) |  |
 **thread** | [**FulfillmentThreadRef**](FulfillmentThreadRef.md) |  |
 **nextAction** | **String** |  |
+**assignmentHistory** | [**BuiltList&lt;DeliveryAssignmentHistory&gt;**](DeliveryAssignmentHistory.md) |  | [optional]
+**proofUploadLimitKb** | **int** |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

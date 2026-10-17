@@ -18,6 +18,7 @@ part 'delivery_plan_group.g.dart';
 /// * [status]
 /// * [manualReviewReasons]
 /// * [candidates]
+/// * [manualReviewVehicles] - Configured vehicles permitted for a recorded Owner or Store Manager manual load review, including an automatic dimensional-fit rejection. Availability, material compatibility, known payload, route range and access still apply. Trip counts cover known payload or mixer volume only and do not prove cargo fit. Empty outside MANUAL_REVIEW_REQUIRED; automatic candidates remain separate.
 @BuiltValue()
 abstract class DeliveryPlanGroup implements Built<DeliveryPlanGroup, DeliveryPlanGroupBuilder> {
   @BuiltValueField(wireName: r'key')
@@ -35,6 +36,10 @@ abstract class DeliveryPlanGroup implements Built<DeliveryPlanGroup, DeliveryPla
 
   @BuiltValueField(wireName: r'candidates')
   BuiltList<DeliveryPlanVehicle> get candidates;
+
+  /// Configured vehicles permitted for a recorded Owner or Store Manager manual load review, including an automatic dimensional-fit rejection. Availability, material compatibility, known payload, route range and access still apply. Trip counts cover known payload or mixer volume only and do not prove cargo fit. Empty outside MANUAL_REVIEW_REQUIRED; automatic candidates remain separate.
+  @BuiltValueField(wireName: r'manual_review_vehicles')
+  BuiltList<DeliveryPlanVehicle>? get manualReviewVehicles;
 
   DeliveryPlanGroup._();
 
@@ -84,6 +89,13 @@ class _$DeliveryPlanGroupSerializer implements PrimitiveSerializer<DeliveryPlanG
       object.candidates,
       specifiedType: const FullType(BuiltList, [FullType(DeliveryPlanVehicle)]),
     );
+    if (object.manualReviewVehicles != null) {
+      yield r'manual_review_vehicles';
+      yield serializers.serialize(
+        object.manualReviewVehicles,
+        specifiedType: const FullType(BuiltList, [FullType(DeliveryPlanVehicle)]),
+      );
+    }
   }
 
   @override
@@ -141,6 +153,14 @@ class _$DeliveryPlanGroupSerializer implements PrimitiveSerializer<DeliveryPlanG
             specifiedType: const FullType(BuiltList, [FullType(DeliveryPlanVehicle)]),
           ) as BuiltList<DeliveryPlanVehicle>;
           result.candidates.replace(valueDes);
+          break;
+        case r'manual_review_vehicles':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(DeliveryPlanVehicle)]),
+          ) as BuiltList<DeliveryPlanVehicle>?;
+          if (valueDes == null) continue;
+          result.manualReviewVehicles.replace(valueDes);
           break;
         default:
           unhandled.add(key);

@@ -12,10 +12,20 @@ part 'order_buyer_ref.g.dart';
 ///
 /// Properties:
 /// * [displayName]
+/// * [mobileE164] - Current Buyer phone for delivery coordination. Only Owner/Manager or current active assigned Fulfillment Staff on an accepted, open Site Delivery order receives it. Other roles and closed/pickup orders receive null.
+/// * [avatarPath] - Authorized order-scoped API photo path with the Buyer profile version. Uses the same delivery-contact authorization as mobile_e164; never a public storage URL. Null when the Buyer has no photo or contact is unavailable.
 @BuiltValue()
 abstract class OrderBuyerRef implements Built<OrderBuyerRef, OrderBuyerRefBuilder> {
   @BuiltValueField(wireName: r'display_name')
   String get displayName;
+
+  /// Current Buyer phone for delivery coordination. Only Owner/Manager or current active assigned Fulfillment Staff on an accepted, open Site Delivery order receives it. Other roles and closed/pickup orders receive null.
+  @BuiltValueField(wireName: r'mobile_e164')
+  String? get mobileE164;
+
+  /// Authorized order-scoped API photo path with the Buyer profile version. Uses the same delivery-contact authorization as mobile_e164; never a public storage URL. Null when the Buyer has no photo or contact is unavailable.
+  @BuiltValueField(wireName: r'avatar_path')
+  String? get avatarPath;
 
   OrderBuyerRef._();
 
@@ -45,6 +55,20 @@ class _$OrderBuyerRefSerializer implements PrimitiveSerializer<OrderBuyerRef> {
       object.displayName,
       specifiedType: const FullType(String),
     );
+    if (object.mobileE164 != null) {
+      yield r'mobile_e164';
+      yield serializers.serialize(
+        object.mobileE164,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.avatarPath != null) {
+      yield r'avatar_path';
+      yield serializers.serialize(
+        object.avatarPath,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
   }
 
   @override
@@ -74,6 +98,22 @@ class _$OrderBuyerRefSerializer implements PrimitiveSerializer<OrderBuyerRef> {
             specifiedType: const FullType(String),
           ) as String;
           result.displayName = valueDes;
+          break;
+        case r'mobile_e164':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.mobileE164 = valueDes;
+          break;
+        case r'avatar_path':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.avatarPath = valueDes;
           break;
         default:
           unhandled.add(key);

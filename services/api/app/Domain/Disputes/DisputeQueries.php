@@ -6,6 +6,7 @@ namespace App\Domain\Disputes;
 
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Orders\OrderRefundTimeline;
+use App\Support\PortalDateRange;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
@@ -34,6 +35,21 @@ final class DisputeQueries
 
     public function __construct(private readonly DisputeAccess $access, private readonly DisputeFiles $files) {}
 
+    public function activeCount(Request $request): int
+    {
+        $query = DB::table('dispute_cases')->whereIn('status', DisputeRules::ACTIVE);
+        if ($request->user()->account_type === 'BUYER') {
+            return $query->where('buyer_profile_id', $this->access->buyerProfileId($request))->count();
+        }
+        $scope = $this->access->vendorScope($request, true);
+        $query->where('vendor_organization_id', $scope['organization_id']);
+        if (! DisputeAccess::allows($scope, DisputeAccess::PORTAL)) {
+            $query->whereIn('order_id', DB::table('order_fulfillment_assignments')->select('order_id')->where('user_id', $scope['user_id'])->whereNull('ended_at'));
+        }
+
+        return $query->count();
+    }
+
     /** @return array{items: list<array<string, mixed>>, meta: array<string, mixed>} */
     public function buyerList(Request $request, int $page): array
     {
@@ -61,6 +77,7 @@ final class DisputeQueries
         if (! DisputeAccess::allows($scope, DisputeAccess::PORTAL)) {
             $query->whereIn('order_id', DB::table('order_fulfillment_assignments')->select('order_id')->where('user_id', $scope['user_id'])->whereNull('ended_at'))->whereIn('status', DisputeRules::ACTIVE);
         }
+        PortalDateRange::apply($query, 'created_at', $filters);
         $group = $filters['group'] ?? 'ACTIVE';
         if ($group !== 'ALL' && isset(self::VENDOR_GROUPS[$group])) {
             $query->whereIn('status', self::VENDOR_GROUPS[$group]);
@@ -95,6 +112,7 @@ final class DisputeQueries
     {
         $this->access->admin($request, DisputeAccess::ADMIN_VIEW);
         $query = DB::table('dispute_cases');
+        PortalDateRange::apply($query, 'created_at', $filters);
         $status = $filters['status'] ?? 'NEEDS_ADMIN';
         $query->whereIn('status', match ($status) {
             'NEEDS_ADMIN' => [DisputeRules::ESCALATED_ADMIN_REVIEW, DisputeRules::AWAITING_CLARIFICATION, DisputeRules::APPEAL_OPEN],

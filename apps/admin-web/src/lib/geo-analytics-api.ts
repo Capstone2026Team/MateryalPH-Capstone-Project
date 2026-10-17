@@ -1,3 +1,4 @@
+import { parseDate } from '@materyalph/api-client-ts'
 import {
   AdminGeographicAnalyticsApi,
   type GeoBoundaryCollection,
@@ -20,7 +21,7 @@ export const TRANSACTION_FILTER_KEYS = ['procurementType', 'categoryId', 'materi
 
 const basePath = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'
 const api = () => new AdminGeographicAnalyticsApi(createWebApiConfiguration(basePath, { refreshSession: true }))
-const day = (value: string) => new Date(`${value}T00:00:00Z`)
+const day = (value: string) => parseDate(value)
 
 function params(filters: GeoFilters): GetGeoAnalyticsDashboardRequest {
   return {

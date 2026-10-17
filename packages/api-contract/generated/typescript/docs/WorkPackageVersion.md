@@ -7,7 +7,6 @@
 Name | Type
 ------------ | -------------
 `id` | string
-`version` | number
 `contentHash` | string
 `lockedAt` | string
 `content` | { [key: string]: any; }
@@ -20,7 +19,6 @@ import type { WorkPackageVersion } from '@materyalph/api-client-ts'
 // TODO: Update the object below with actual values
 const example = {
   "id": null,
-  "version": null,
   "contentHash": null,
   "lockedAt": null,
   "content": null,

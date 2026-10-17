@@ -68,6 +68,8 @@ class _$FleetVehicleListMetaScopeEnumSerializer
 
 class _$FleetVehicleListMeta extends FleetVehicleListMeta {
   @override
+  final VendorDeliverySetup? deliverySetup;
+  @override
   final FleetVehicleListMetaScopeEnum scope;
   @override
   final FleetSummary? summary;
@@ -83,7 +85,8 @@ class _$FleetVehicleListMeta extends FleetVehicleListMeta {
       (FleetVehicleListMetaBuilder()..update(updates))._build();
 
   _$FleetVehicleListMeta._(
-      {required this.scope,
+      {this.deliverySetup,
+      required this.scope,
       this.summary,
       this.delivery,
       required this.permissions,
@@ -102,6 +105,7 @@ class _$FleetVehicleListMeta extends FleetVehicleListMeta {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is FleetVehicleListMeta &&
+        deliverySetup == other.deliverySetup &&
         scope == other.scope &&
         summary == other.summary &&
         delivery == other.delivery &&
@@ -112,6 +116,7 @@ class _$FleetVehicleListMeta extends FleetVehicleListMeta {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, deliverySetup.hashCode);
     _$hash = $jc(_$hash, scope.hashCode);
     _$hash = $jc(_$hash, summary.hashCode);
     _$hash = $jc(_$hash, delivery.hashCode);
@@ -124,6 +129,7 @@ class _$FleetVehicleListMeta extends FleetVehicleListMeta {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'FleetVehicleListMeta')
+          ..add('deliverySetup', deliverySetup)
           ..add('scope', scope)
           ..add('summary', summary)
           ..add('delivery', delivery)
@@ -136,6 +142,12 @@ class _$FleetVehicleListMeta extends FleetVehicleListMeta {
 class FleetVehicleListMetaBuilder
     implements Builder<FleetVehicleListMeta, FleetVehicleListMetaBuilder> {
   _$FleetVehicleListMeta? _$v;
+
+  VendorDeliverySetupBuilder? _deliverySetup;
+  VendorDeliverySetupBuilder get deliverySetup =>
+      _$this._deliverySetup ??= VendorDeliverySetupBuilder();
+  set deliverySetup(VendorDeliverySetupBuilder? deliverySetup) =>
+      _$this._deliverySetup = deliverySetup;
 
   FleetVehicleListMetaScopeEnum? _scope;
   FleetVehicleListMetaScopeEnum? get scope => _$this._scope;
@@ -170,6 +182,7 @@ class FleetVehicleListMetaBuilder
   FleetVehicleListMetaBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _deliverySetup = $v.deliverySetup?.toBuilder();
       _scope = $v.scope;
       _summary = $v.summary?.toBuilder();
       _delivery = $v.delivery?.toBuilder();
@@ -198,6 +211,7 @@ class FleetVehicleListMetaBuilder
     try {
       _$result = _$v ??
           _$FleetVehicleListMeta._(
+            deliverySetup: _deliverySetup?.build(),
             scope: BuiltValueNullFieldError.checkNotNull(
                 scope, r'FleetVehicleListMeta', 'scope'),
             summary: _summary?.build(),
@@ -208,6 +222,9 @@ class FleetVehicleListMetaBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'deliverySetup';
+        _deliverySetup?.build();
+
         _$failedField = 'summary';
         _summary?.build();
         _$failedField = 'delivery';

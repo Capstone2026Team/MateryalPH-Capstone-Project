@@ -34,6 +34,13 @@ import {
     FleetVehicleListMetaLimitsToJSON,
     FleetVehicleListMetaLimitsToJSONTyped,
 } from './FleetVehicleListMetaLimits';
+import type { VendorDeliverySetup } from './VendorDeliverySetup';
+import {
+    VendorDeliverySetupFromJSON,
+    VendorDeliverySetupFromJSONTyped,
+    VendorDeliverySetupToJSON,
+    VendorDeliverySetupToJSONTyped,
+} from './VendorDeliverySetup';
 import type { FleetVehicleListMetaDelivery } from './FleetVehicleListMetaDelivery';
 import {
     FleetVehicleListMetaDeliveryFromJSON,
@@ -49,6 +56,10 @@ import {
  */
 export interface FleetVehicleListMeta {
     [key: string]: any | any;
+    /**
+     *
+     */
+    deliverySetup?: VendorDeliverySetup;
     /**
      *
      */
@@ -102,6 +113,7 @@ export function FleetVehicleListMetaFromJSONTyped(json: any, ignoreDiscriminator
     return {
 
             ...json,
+        'deliverySetup': json['delivery_setup'] == null ? undefined : VendorDeliverySetupFromJSON(json['delivery_setup']),
         'scope': json['scope'],
         'summary': json['summary'] == null ? undefined : FleetSummaryFromJSON(json['summary']),
         'delivery': json['delivery'] === undefined ? undefined : json['delivery'] === null ? null : FleetVehicleListMetaDeliveryFromJSON(json['delivery']),
@@ -122,6 +134,7 @@ export function FleetVehicleListMetaToJSONTyped(value?: FleetVehicleListMeta | n
     return {
 
             ...value,
+        'delivery_setup': VendorDeliverySetupToJSON(value['deliverySetup']),
         'scope': value['scope'],
         'summary': FleetSummaryToJSON(value['summary']),
         'delivery': FleetVehicleListMetaDeliveryToJSON(value['delivery']),

@@ -19,10 +19,17 @@ Route::prefix('buyers/orders/{orderId}')->whereUuid('orderId')->middleware(['aut
 });
 
 // Phase 12 Vendor fulfillment workspace: web cookies with CSRF; role and assignment scope enforced in the domain.
+Route::get('vendor/fulfillment', [VendorFulfillmentController::class, 'workspace'])->middleware([
+    'auth.transport:WEB', 'auth.cookie', VerifyAccountCsrf::class, 'auth:api', 'account.access:VENDOR',
+]);
 Route::prefix('vendor/orders/{orderId}')->whereUuid('orderId')->middleware([
     'auth.transport:WEB', 'auth.cookie', VerifyAccountCsrf::class, 'auth:api', 'account.access:VENDOR',
 ])->group(function (): void {
     Route::get('/fulfillment/assignees', [VendorFulfillmentController::class, 'assignees']);
+    Route::get('/fulfillment/vehicles', [VendorFulfillmentController::class, 'vehicles']);
+    Route::get('/fulfillment/route', [VendorFulfillmentController::class, 'route']);
+    Route::get('/fulfillment/buyer-photo', [VendorFulfillmentController::class, 'buyerPhoto']);
+    Route::post('/fulfillment/acknowledge', [VendorFulfillmentController::class, 'acknowledge']);
     Route::post('/fulfillment/assignment', [VendorFulfillmentController::class, 'assign']);
     Route::post('/fulfillment/milestones', [VendorFulfillmentController::class, 'milestone']);
     Route::post('/fulfillment/trips', [VendorFulfillmentController::class, 'trip']);

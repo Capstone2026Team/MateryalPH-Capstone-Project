@@ -19,6 +19,11 @@ Name | Type
 `updatedAt` | string
 `canTransfer` | boolean
 `canListFulfillmentConversations` | boolean
+`mainConversationId` | string
+`projectInquiryCount` | number
+`projectUnreadCount` | number
+`inquiryLabel` | string
+`fulfillmentUnreadCount` | number
 `fulfillmentEntryEnabled` | boolean
 `readOnly` | boolean
 `readOnlyReason` | string
@@ -51,6 +56,11 @@ const example = {
   "updatedAt": null,
   "canTransfer": null,
   "canListFulfillmentConversations": null,
+  "mainConversationId": null,
+  "projectInquiryCount": null,
+  "projectUnreadCount": null,
+  "inquiryLabel": null,
+  "fulfillmentUnreadCount": null,
   "fulfillmentEntryEnabled": null,
   "readOnly": null,
   "readOnlyReason": null,

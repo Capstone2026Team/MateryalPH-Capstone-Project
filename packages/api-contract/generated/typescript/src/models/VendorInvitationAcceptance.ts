@@ -13,6 +13,14 @@
  */
 
 import { mapValues } from '../runtime';
+import type { VendorBotProtectionEvidence } from './VendorBotProtectionEvidence';
+import {
+    VendorBotProtectionEvidenceFromJSON,
+    VendorBotProtectionEvidenceFromJSONTyped,
+    VendorBotProtectionEvidenceToJSON,
+    VendorBotProtectionEvidenceToJSONTyped,
+} from './VendorBotProtectionEvidence';
+
 /**
  *
  * @export
@@ -32,13 +40,17 @@ export interface VendorInvitationAcceptance {
      */
     fullName: string;
     /**
-     * New Vendor identities require at least 14 characters, mixed case, and a number. Existing eligible Vendor identities use their current password.
+     * New Vendor identities require at least 14 characters, mixed case, and a number. Existing ACTIVE or PENDING_VERIFICATION Vendor identities with no retained membership use their current password. Pending identities must complete email verification before signing in.
      */
     password: string;
     /**
      *
      */
     passwordConfirmation: string;
+    /**
+     * Required when Vendor bot protection is enabled. Use the invitation checkbox token or accessible email check; a verified single-use proof is supplied by HttpOnly cookie.
+     */
+    botProtection?: VendorBotProtectionEvidence | null;
 }
 
 /**
@@ -68,6 +80,7 @@ export function VendorInvitationAcceptanceFromJSONTyped(json: any, ignoreDiscrim
         'fullName': json['full_name'],
         'password': json['password'],
         'passwordConfirmation': json['password_confirmation'],
+        'botProtection': json['bot_protection'] === undefined ? undefined : json['bot_protection'] === null ? null : VendorBotProtectionEvidenceFromJSON(json['bot_protection']),
     };
 }
 
@@ -87,6 +100,7 @@ export function VendorInvitationAcceptanceToJSONTyped(value?: VendorInvitationAc
         'full_name': value['fullName'],
         'password': value['password'],
         'password_confirmation': value['passwordConfirmation'],
+        'bot_protection': VendorBotProtectionEvidenceToJSON(value['botProtection']),
     };
 }
 

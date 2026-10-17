@@ -9,11 +9,13 @@ import 'package:dio/dio.dart';
 
 import 'dart:typed_data';
 import 'package:materyalph_api_client/src/api_util.dart';
+import 'package:materyalph_api_client/src/model/date.dart';
 import 'package:materyalph_api_client/src/model/review_flag_request.dart';
 import 'package:materyalph_api_client/src/model/review_reported_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_buyer_rating_request.dart';
 import 'package:materyalph_api_client/src/model/vendor_order_reviews_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_review_edit_request.dart';
+import 'package:materyalph_api_client/src/model/vendor_review_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_review_list_envelope.dart';
 
 class VendorReviewsApi {
@@ -220,6 +222,93 @@ class VendorReviewsApi {
     );
   }
 
+  /// getVendorReview
+  /// reviews.view. Read one review belonging to the current store with its privacy-safe author, immutable purchased-product snapshot, rating, comment and authorized media links. Received reviews must still satisfy blind reveal, dispute withholding, moderation and score-exclusion visibility. The store may also read its own Buyer ratings. Foreign and unavailable reviews return 404.
+  ///
+  /// Parameters:
+  /// * [reviewId]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [VendorReviewEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<VendorReviewEnvelope>> getVendorReview({
+    required String reviewId,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendor/reviews/{reviewId}'.replaceAll('{' r'reviewId' '}', encodeQueryParameter(_serializers, reviewId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    VendorReviewEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(VendorReviewEnvelope),
+      ) as VendorReviewEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<VendorReviewEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
   /// getVendorReviewPhoto
   /// Photo of a visible review of your store behind a signed link.
   ///
@@ -318,11 +407,14 @@ class VendorReviewsApi {
   }
 
   /// listVendorReviews
-  /// reviews.view (Owner, Store Manager, Store Staff, Customer Service). Visible received Vendor ratings or Product Reviews, or your store&#39;s Buyer ratings. There is no delete operation.
+  /// reviews.view (Owner, Store Manager, Store Staff, Customer Service). Visible received Vendor ratings or Product Reviews, or your store&#39;s Buyer ratings. Optional listing_id restricts PRODUCT reviews to a listing owned by the current store. PRODUCT results include a rating summary of every visible review matching the product and date filters, calculated before pagination. There is no delete operation.
   ///
   /// Parameters:
   /// * [type]
+  /// * [listingId] - Current store's listing UUID. Accepted only with type PRODUCT; foreign or unavailable listings return 404.
   /// * [page]
+  /// * [from] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review submitted_at.
+  /// * [to] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review submitted_at.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -334,7 +426,10 @@ class VendorReviewsApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<VendorReviewListEnvelope>> listVendorReviews({
     String? type,
+    String? listingId,
     int? page,
+    Date? from,
+    Date? to,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -369,7 +464,10 @@ class VendorReviewsApi {
 
     final _queryParameters = <String, dynamic>{
       if (type != null) r'type': encodeQueryParameter(_serializers, type, const FullType(String)),
+      if (listingId != null) r'listing_id': encodeQueryParameter(_serializers, listingId, const FullType(String)),
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+      if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
     };
 
     final _response = await _dio.request<Object>(

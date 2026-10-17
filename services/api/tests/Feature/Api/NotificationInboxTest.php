@@ -45,6 +45,30 @@ final class NotificationInboxTest extends TestCase
         return $id;
     }
 
+    public function test_date_filtered_feed_and_bulk_read_share_inclusive_manila_boundaries(): void
+    {
+        [, $owner] = $this->activeStore('Dated inbox', false);
+        [, $foreignOwner] = $this->activeStore('Foreign dated inbox', false);
+        $ids = [];
+        foreach (['2026-10-08 15:59:59+00', '2026-10-08 16:00:00+00', '2026-10-09 15:59:59+00', '2026-10-09 16:00:00+00'] as $created) {
+            $id = $this->notice($owner);
+            DB::table('notifications')->where('id', $id)->update(['created_at' => $created]);
+            $ids[] = $id;
+        }
+        $foreign = $this->notice($foreignOwner);
+        $this->signInStoreMember($owner);
+        $page = $this->getJson('/api/v1/vendor/notifications?from=2026-10-09&to=2026-10-09')->assertOk()->assertJsonCount(2, 'data');
+        self::assertEqualsCanonicalizing([$ids[1], $ids[2]], array_column($page->json('data'), 'id'));
+        $input = ['through_id' => $ids[3], 'category' => 'SECURITY', 'from' => '2026-10-09', 'to' => '2026-10-09'];
+        $this->postJson('/api/v1/vendor/notifications/read-all', $input)->assertOk()->assertJsonPath('data.read_count', 2);
+        foreach ([$ids[0], $ids[3], $foreign] as $id) {
+            self::assertNull(DB::table('notifications')->where('id', $id)->value('read_at'));
+        }
+        $this->postJson('/api/v1/vendor/notifications/read-all', $input)->assertOk()->assertJsonPath('data.read_count', 0);
+        $this->postJson('/api/v1/vendor/notifications/read-all', ['from' => '2026-10-10', 'to' => '2026-10-09', 'through_id' => $ids[3]])->assertUnprocessable();
+        $this->getJson('/api/v1/vendor/notifications?from=2026-10-10&to=2026-10-09')->assertUnprocessable();
+    }
+
     public function test_filtered_bulk_read_retains_all_pages_and_leaves_other_types_and_new_arrivals_unread(): void
     {
         [$store, $owner] = $this->activeStore('Retained inbox', false);

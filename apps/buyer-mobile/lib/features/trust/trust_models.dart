@@ -335,9 +335,63 @@ class ListingReviewsView {
     required this.average,
     required this.count,
     required this.items,
+    this.distribution = const {},
+    this.page = 1,
+    this.perPage = 20,
   });
 
   final String? average;
   final int count;
   final List<PublicReviewView> items;
+
+  /// Counts across all visible Product Reviews, never inferred from one page.
+  final Map<int, int> distribution;
+  final int page;
+  final int perPage;
+
+  bool get hasMore => page < 500 && page * perPage < count;
+}
+
+/// One active, unsuppressed automatic badge with its public rule text.
+@immutable
+class StoreBadgeView {
+  const StoreBadgeView({
+    required this.code,
+    required this.name,
+    required this.description,
+    this.scopeLabel,
+  });
+
+  final String code;
+  final String name;
+  final String description;
+  final String? scopeLabel;
+}
+
+/// A store's public rating summary: averages of its visible verified Vendor ratings (Service Quality
+/// and Delivery/Processing Speed) beside the published VCS, MQS and VPS. A score below its sample
+/// gate is null, and the store then reads "New Vendor — Building Track Record".
+@immutable
+class StoreRatingView {
+  const StoreRatingView({
+    required this.ratingCount,
+    required this.scoreLabel,
+    required this.newVendor,
+    this.serviceQuality,
+    this.speed,
+    this.vcs,
+    this.mqs,
+    this.vps,
+    this.badges = const [],
+  });
+
+  final int ratingCount;
+  final String? serviceQuality;
+  final String? speed;
+  final String scoreLabel;
+  final bool newVendor;
+  final String? vcs;
+  final String? mqs;
+  final String? vps;
+  final List<StoreBadgeView> badges;
 }

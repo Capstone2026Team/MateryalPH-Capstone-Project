@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { ChatQuotationDiscountAssessment } from './ChatQuotationDiscountAssessment';
+import {
+    ChatQuotationDiscountAssessmentFromJSON,
+    ChatQuotationDiscountAssessmentFromJSONTyped,
+    ChatQuotationDiscountAssessmentToJSON,
+    ChatQuotationDiscountAssessmentToJSONTyped,
+} from './ChatQuotationDiscountAssessment';
 import type { MoneyDelivery } from './MoneyDelivery';
 import {
     MoneyDeliveryFromJSON,
@@ -41,6 +48,10 @@ import {
  * @interface MoneyBreakdown
  */
 export interface MoneyBreakdown {
+    /**
+     *
+     */
+    discount?: ChatQuotationDiscountAssessment | null;
     /**
      *
      */
@@ -199,6 +210,7 @@ export function MoneyBreakdownFromJSONTyped(json: any, ignoreDiscriminator: bool
     }
     return {
 
+        'discount': json['discount'] === undefined ? undefined : json['discount'] === null ? null : ChatQuotationDiscountAssessmentFromJSON(json['discount']),
         'currency': json['currency'],
         'calculationVersion': json['calculation_version'],
         'status': json['status'],
@@ -231,6 +243,7 @@ export function MoneyBreakdownToJSONTyped(value?: MoneyBreakdown | null, ignoreD
 
     return {
 
+        'discount': ChatQuotationDiscountAssessmentToJSON(value['discount']),
         'currency': value['currency'],
         'calculation_version': value['calculationVersion'],
         'status': value['status'],

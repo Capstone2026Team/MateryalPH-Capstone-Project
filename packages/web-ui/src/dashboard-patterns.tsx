@@ -1,10 +1,10 @@
-import { EmptyState, StatCard, PortalPagePatterns } from './page-patterns'
+import { EmptyState, PageHeader, StatCard, PortalPagePatterns } from './page-patterns'
 import { useContext, type ReactNode } from 'react'
 
 import { ChartNoAxesCombined } from 'lucide-react'
 
 export function DashboardHeader({ eyebrow, title = 'Dashboard', description, actions, status }: { eyebrow: string; title?: string; description: string; actions?: ReactNode; status?: ReactNode }) {
-  return <header className="flex flex-col justify-center gap-5 rounded-surface border border-border-default border-l-4 border-l-brand-orange-500 bg-surface-primary p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between"><div className="min-w-0 max-w-3xl"><p className="text-xs font-semibold uppercase tracking-widest text-action-primary">{eyebrow}</p><div className="mt-2 flex flex-wrap items-center gap-3"><h1 className="break-words text-2xl font-semibold tracking-tight text-text-strong sm:text-3xl">{title}</h1>{status}</div><p className="mt-2 text-sm leading-6 text-text-secondary">{description}</p></div>{actions && <div className="flex shrink-0 flex-wrap items-center gap-3">{actions}</div>}</header>
+  return <PageHeader eyebrow={eyebrow} title={title} description={description} actions={actions} status={status} />
 }
 
 export function MetricCard({ label, value, description, icon, accent = false, compact = false }: { label: string; value: ReactNode; description: string; icon?: ReactNode; accent?: boolean; compact?: boolean }) {

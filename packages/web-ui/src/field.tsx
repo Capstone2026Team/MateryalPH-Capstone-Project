@@ -6,10 +6,11 @@ export interface FieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string
   error?: string | undefined
   hint?: ReactNode
+  startAdornment?: ReactNode
 }
 
 export const Field = forwardRef<HTMLInputElement, FieldProps>(
-  ({ className = '', error, hint, id, label, required, type, ...props }, ref) => {
+  ({ className = '', error, hint, startAdornment, id, label, required, type, ...props }, ref) => {
     const errors = useContext(FormErrors)
     error = error || errors[props.name ?? '']
     const generatedId = useId()
@@ -23,10 +24,11 @@ export const Field = forwardRef<HTMLInputElement, FieldProps>(
           {label} {required && <span className="text-status-error" aria-hidden="true">*</span>}
         </label>
         <div className="relative">
+        {startAdornment && <span aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base font-normal text-text-secondary">{startAdornment}</span>}
         <input
           aria-describedby={descriptionId}
           aria-invalid={Boolean(error)}
-          className={`min-h-12 w-full min-w-0 rounded-control border bg-surface-primary px-3 text-base font-normal text-text-strong transition-[border-color,box-shadow] placeholder:text-text-secondary focus:border-focus-ring focus:ring-2 focus:ring-focus-ring/20 ${type === 'password' ? 'pr-20' : ''} ${error ? 'border-status-error' : 'border-border-default'} ${className}`}
+          className={`min-h-12 w-full min-w-0 rounded-control border bg-surface-primary px-3 py-2 text-base font-normal text-text-strong transition-[border-color,box-shadow] motion-reduce:transition-none sm:min-h-11 placeholder:text-text-secondary focus:border-focus-ring focus:ring-2 focus:ring-focus-ring/20 disabled:cursor-not-allowed disabled:bg-surface-canvas disabled:opacity-60 ${startAdornment ? 'pl-8' : ''} ${type === 'password' ? 'pr-20' : ''} ${error ? 'border-status-error' : 'border-border-default'} ${className}`}
           id={fieldId}
           ref={ref}
           required={required}

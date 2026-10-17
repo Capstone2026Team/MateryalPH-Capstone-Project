@@ -503,6 +503,7 @@ void main() {
         'thread': {
           'available': true,
           'conversation_id': 'conversation-1',
+          'unread_count': 5,
           'read_only': false,
           'read_only_reason': null,
           'notice': null,
@@ -579,6 +580,7 @@ void main() {
       expect(order.fulfillment!.steps.single.proof!.receiverKind, 'BUYER');
       expect(order.fulfillment!.receipt.windowHours, 48);
       expect(order.fulfillment!.thread.conversationId, 'conversation-1');
+      expect(order.fulfillment!.thread.unreadCount, 5);
       expect(order.cancellation!.mode, 'UNAVAILABLE');
       expect(order.cancellation!.remedies.single.code, 'REPORT_PROBLEM');
       expect(order.refundTimeline!.refunds.single.displayState, 'INITIATED');

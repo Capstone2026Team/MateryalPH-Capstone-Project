@@ -31,7 +31,7 @@ final class RegisterRequest extends FormRequest
             'mobile_e164' => ['required', 'regex:/^\+[1-9]\d{7,14}$/'],
             'password' => ['required', 'confirmed', Password::min(12)->mixedCase()->numbers()],
             'account_type' => ['prohibited'],
-            'business_name' => [Rule::requiredIf($transport === AuthTransport::WEB), 'nullable', 'string', 'max:180'],
+            'business_name' => ['nullable', 'string', 'max:180'],
             'buyer_type' => [Rule::requiredIf($transport === AuthTransport::MOBILE), 'nullable', 'string', 'max:32'],
             'company_name' => ['nullable', 'string', 'max:180'],
             'terms_accepted' => ['accepted'],

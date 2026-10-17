@@ -9,6 +9,7 @@ use App\Domain\Catalog\ComparableMappingService;
 use App\Domain\Catalog\ListingTaxPolicy;
 use App\Domain\Catalog\RentalServicePolicy;
 use App\Domain\Catalog\VolumePricing;
+use App\Domain\Compliance\ProductRelevance;
 use App\Domain\Compliance\QrPayloadParser;
 use App\Domain\Compliance\RegisterNormalizer;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -62,8 +63,42 @@ final class CatalogComplianceRulesTest extends TestCase
         self::assertSame('A AND B STEEL INC', RegisterNormalizer::company('A & B Steel, Inc.'));
         self::assertSame(['PNS07'], RegisterNormalizer::standards('PNS 07:2018'));
         self::assertSame(['PNS156', 'PNS2085'], RegisterNormalizer::standards('PNS 156:2010; PNS 2085:2011'));
-        self::assertSame(['PNSISO4427'], RegisterNormalizer::standards('PNS ISO 4427:2002 Amd. 01:2002'));
+        // The adopted-standard body is not part of the comparison: the rule and the register spell it differently.
+        self::assertSame(['PNS4427'], RegisterNormalizer::standards('PNS ISO 4427:2002 Amd. 01:2002'));
+        self::assertSame(['PNS13006'], RegisterNormalizer::standards('PNS ISO 13006:2019.'));
+        self::assertSame(RegisterNormalizer::standards('PNS 13006:2019'), RegisterNormalizer::standards('PNS ISO 13006:2019'));
+        self::assertSame(['PNS60335', 'PNSC1693'], RegisterNormalizer::standards("PNS IEC 60335-2-80:2016\nPNS ASTM C1693:2019"));
         self::assertSame([], RegisterNormalizer::standards(null));
+    }
+
+    public function test_ps_licence_numbers_and_icc_serials_normalize_for_lookup(): void
+    {
+        self::assertSame(['Q0894', 'Q894'], RegisterNormalizer::psLicenceCandidates('Q-0894'));
+        self::assertSame(['Q894', 'Q0894'], RegisterNormalizer::psLicenceCandidates('q 894'));
+        self::assertContains('Q3850', RegisterNormalizer::psLicenceCandidates('PS License No. Q-3850'));
+        self::assertContains('Q3850', RegisterNormalizer::psLicenceCandidates('3850'));
+        self::assertSame([], RegisterNormalizer::psLicenceCandidates(' - '));
+        self::assertSame(['prefix' => 'A', 'number' => 500000001, 'digits' => 9, 'display' => 'A500000001'], RegisterNormalizer::serial('A 500 000 001'));
+        self::assertSame(12717015, RegisterNormalizer::serial('B012717015')['number'] ?? null);
+        self::assertNull(RegisterNormalizer::serial('002762/0524'));
+        self::assertNull(RegisterNormalizer::serial('123456789'));
+        // OCR look-alikes fan out to a bounded set of readings, keeping the leading letter.
+        self::assertSame(['A500000001'], RegisterNormalizer::ocrVariants('A', 'S0000000I'));
+        self::assertSame(['A500000061', 'A500000001'], RegisterNormalizer::ocrVariants('A', 'S000000G1'));
+        self::assertSame([], RegisterNormalizer::ocrVariants('Q', '12#4'));
+    }
+
+    public function test_product_relevance_needs_a_matching_standard_or_product_name(): void
+    {
+        $cement = ProductRelevance::from('PNS 07:2018', ['PORTLAND CEMENT', 'Portland cement', 'ordinary portland cement']);
+        self::assertTrue($cement->covers('PNS 07:2018', null));
+        self::assertTrue($cement->covers(null, 'Portland Cements Type I'));
+        self::assertTrue($cement->covers('PNS 07:1990', 'cement'));
+        self::assertFalse($cement->covers('PNS IEC 60335-2-80:2016', 'ELECTRIC FANS'));
+        self::assertFalse($cement->covers(null, 'Blended cement'));
+        $tiles = ProductRelevance::from('PNS 13006:2019', ['CERAMIC TILES']);
+        self::assertTrue($tiles->covers('PNS ISO 13006:2019', 'GLAZED FLOOR TILES'));
+        self::assertTrue($tiles->covers(null, 'CERAMIC  TILES'));
     }
 
     public function test_qr_payloads_are_untrusted_suggestions(): void
@@ -71,12 +106,20 @@ final class CatalogComplianceRulesTest extends TestCase
         $parser = new QrPayloadParser;
         self::assertSame('UNAVAILABLE', $parser->parse(null)['status']);
         $ps = $parser->parse('PS License No. Q-1234; Manufacturer: Sample Cement Corporation');
-        self::assertSame(['status' => 'EXTRACTED', 'confidence' => 0.6], ['status' => $ps['status'], 'confidence' => $ps['confidence']]);
+        self::assertSame(['status' => 'EXTRACTED', 'confidence' => 0.9], ['status' => $ps['status'], 'confidence' => $ps['confidence']]);
         self::assertSame(['marking_type' => 'PS_MARK', 'certificate_number' => 'Q-1234', 'manufacturer_name' => 'Sample Cement Corporation'], $ps['suggestions']);
-        $icc = $parser->parse('https://bps.dti.gov.ph/verify?ref=1 ICC Certificate No: ICC-2026-0001 importer=Import Co');
+        self::assertSame(['Q1234'], $ps['candidates']);
+        // A sticker QR may hold a verification URL with the serial, or labelled fields with the certificate number.
+        $url = $parser->parse('https://icc.example.gov.ph/verify?serial=A500000001');
+        self::assertSame(['verification_reference' => 'https://icc.example.gov.ph/verify?serial=A500000001', 'marking_type' => 'ICC_STICKER', 'certificate_number' => 'A500000001'], $url['suggestions']);
+        $icc = $parser->parse('ICC Certificate No: 002762/0524; Serial: B012717020; importer=Import Co');
         self::assertSame('ICC_STICKER', $icc['suggestions']['marking_type']);
-        self::assertSame('ICC-2026-0001', $icc['suggestions']['certificate_number']);
+        self::assertSame('B012717020', $icc['suggestions']['certificate_number']);
+        self::assertSame('002762/0524', $icc['suggestions']['icc_certificate_number']);
         self::assertSame('Import Co', $icc['suggestions']['importer_name']);
+        // The Vendor's chosen marking type decides which number is read; a bare serial is not a PS licence.
+        self::assertArrayNotHasKey('certificate_number', $parser->parse('A500000001', 'PS_MARK')['suggestions']);
+        self::assertSame('A500000001', $parser->parse('A500000001')['suggestions']['certificate_number']);
         self::assertSame('FAILED', $parser->parse("\x00\x01random")['status']);
         self::assertLessThanOrEqual(QrPayloadParser::MAX_LENGTH, mb_strlen((string) ($parser->parse(str_repeat('A', 5000))['suggestions']['verification_reference'] ?? '')));
     }

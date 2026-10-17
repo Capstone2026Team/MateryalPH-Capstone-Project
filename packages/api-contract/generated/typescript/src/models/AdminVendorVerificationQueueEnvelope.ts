@@ -32,7 +32,7 @@ export interface AdminVendorVerificationQueueEnvelope {
      */
     data: Array<AdminVendorVerificationQueueItem>;
     /**
-     *
+     * Pagination, region options and status_counts: case counts per review status (PENDING_VERIFICATION, CHANGES_REQUIRED, REJECTED, APPROVED, EXPIRED) under every active filter except status.
      */
     meta: { [key: string]: any; };
     /**

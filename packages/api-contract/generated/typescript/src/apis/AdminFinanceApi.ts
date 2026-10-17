@@ -125,6 +125,14 @@ export interface ListAdminPaymentsRequest {
      *
      */
     reconciliationState?: ListAdminPaymentsReconciliationStateEnum;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Payment request created_at.
+     */
+    from?: Date;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Payment request created_at.
+     */
+    to?: Date;
 }
 
 export interface ListFeeStatementsRequest {
@@ -140,6 +148,14 @@ export interface ListFeeStatementsRequest {
      *
      */
     state?: ListFeeStatementsStateEnum;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Statement issued_on, including drafts.
+     */
+    from?: Date;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Statement issued_on, including drafts.
+     */
+    to?: Date;
 }
 
 export interface ListFinanceReviewItemsRequest {
@@ -155,6 +171,14 @@ export interface ListFinanceReviewItemsRequest {
      *
      */
     kind?: string;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review item created_at.
+     */
+    from?: Date;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review item created_at.
+     */
+    to?: Date;
 }
 
 export interface ListWithholdingAccumulatorsRequest {
@@ -430,6 +454,14 @@ export class AdminFinanceApi extends runtime.BaseAPI {
             queryParameters['reconciliation_state'] = requestParameters['reconciliationState'];
         }
 
+        if (requestParameters['from'] != null) {
+            queryParameters['from'] = runtime.serializeDate(requestParameters['from'] as any);
+        }
+
+        if (requestParameters['to'] != null) {
+            queryParameters['to'] = runtime.serializeDate(requestParameters['to'] as any);
+        }
+
         const headerParameters: runtime.HTTPHeaders = {};
 
         if (this.configuration && this.configuration.apiKey) {
@@ -448,7 +480,7 @@ export class AdminFinanceApi extends runtime.BaseAPI {
     }
 
     /**
-     * finance.view. Payment log with evidence origin and reconciliation state.
+     * finance.view. Payment log with evidence origin, reconciliation state, refunded_centavos, net_collected_centavos, refund_pending_count and refund_failed_count. Refunds are aggregated per original capture; only confirmed refunds reduce net collections, and a PAID payment retains its original state even when refunded.
      */
     async listAdminPaymentsRaw(requestParameters: ListAdminPaymentsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AdminPaymentListEnvelope>> {
         const requestOptions = await this.listAdminPaymentsRequestOpts(requestParameters);
@@ -458,7 +490,7 @@ export class AdminFinanceApi extends runtime.BaseAPI {
     }
 
     /**
-     * finance.view. Payment log with evidence origin and reconciliation state.
+     * finance.view. Payment log with evidence origin, reconciliation state, refunded_centavos, net_collected_centavos, refund_pending_count and refund_failed_count. Refunds are aggregated per original capture; only confirmed refunds reduce net collections, and a PAID payment retains its original state even when refunded.
      */
     async listAdminPayments(requestParameters: ListAdminPaymentsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AdminPaymentListEnvelope> {
         const response = await this.listAdminPaymentsRaw(requestParameters, initOverrides);
@@ -524,6 +556,14 @@ export class AdminFinanceApi extends runtime.BaseAPI {
             queryParameters['state'] = requestParameters['state'];
         }
 
+        if (requestParameters['from'] != null) {
+            queryParameters['from'] = runtime.serializeDate(requestParameters['from'] as any);
+        }
+
+        if (requestParameters['to'] != null) {
+            queryParameters['to'] = runtime.serializeDate(requestParameters['to'] as any);
+        }
+
         const headerParameters: runtime.HTTPHeaders = {};
 
         if (this.configuration && this.configuration.apiKey) {
@@ -542,7 +582,7 @@ export class AdminFinanceApi extends runtime.BaseAPI {
     }
 
     /**
-     * finance.view. Monthly commission statements.
+     * finance.view. Monthly commission statements shared with Vendor Finance. Inclusive Manila dates filter issued_on. overdue=true returns only issued/partially paid positive balances past the due date; drafts, settled and voided statements are excluded. Approved credits reduce debt on the original statement and any paid excess becomes a separate original-payment refund payable.
      */
     async listFeeStatementsRaw(requestParameters: ListFeeStatementsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<FeeStatementListEnvelope>> {
         const requestOptions = await this.listFeeStatementsRequestOpts(requestParameters);
@@ -552,7 +592,7 @@ export class AdminFinanceApi extends runtime.BaseAPI {
     }
 
     /**
-     * finance.view. Monthly commission statements.
+     * finance.view. Monthly commission statements shared with Vendor Finance. Inclusive Manila dates filter issued_on. overdue=true returns only issued/partially paid positive balances past the due date; drafts, settled and voided statements are excluded. Approved credits reduce debt on the original statement and any paid excess becomes a separate original-payment refund payable.
      */
     async listFeeStatements(requestParameters: ListFeeStatementsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<FeeStatementListEnvelope> {
         const response = await this.listFeeStatementsRaw(requestParameters, initOverrides);
@@ -575,6 +615,14 @@ export class AdminFinanceApi extends runtime.BaseAPI {
 
         if (requestParameters['kind'] != null) {
             queryParameters['kind'] = requestParameters['kind'];
+        }
+
+        if (requestParameters['from'] != null) {
+            queryParameters['from'] = runtime.serializeDate(requestParameters['from'] as any);
+        }
+
+        if (requestParameters['to'] != null) {
+            queryParameters['to'] = runtime.serializeDate(requestParameters['to'] as any);
         }
 
         const headerParameters: runtime.HTTPHeaders = {};

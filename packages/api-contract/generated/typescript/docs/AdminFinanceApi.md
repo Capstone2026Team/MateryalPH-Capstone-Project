@@ -323,11 +323,11 @@ example().catch(console.error);
 
 ## listAdminPayments
 
-> AdminPaymentListEnvelope listAdminPayments(page, state, purpose, evidenceOrigin, reconciliationState)
+> AdminPaymentListEnvelope listAdminPayments(page, state, purpose, evidenceOrigin, reconciliationState, from, to)
 
 
 
-finance.view. Payment log with evidence origin and reconciliation state.
+finance.view. Payment log with evidence origin, reconciliation state, refunded_centavos, net_collected_centavos, refund_pending_count and refund_failed_count. Refunds are aggregated per original capture; only confirmed refunds reduce net collections, and a PAID payment retains its original state even when refunded.
 
 ### Example
 
@@ -359,6 +359,10 @@ async function example() {
     evidenceOrigin: evidenceOrigin_example,
     // 'NOT_REQUIRED' | 'PENDING' | 'RECONCILED' | 'EXCEPTION' (optional)
     reconciliationState: reconciliationState_example,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Payment request created_at. (optional)
+    from: 2013-10-20,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Payment request created_at. (optional)
+    to: 2013-10-20,
   } satisfies ListAdminPaymentsRequest;
 
   try {
@@ -383,6 +387,8 @@ example().catch(console.error);
 | **purpose** | `FULL_ORDER_PAYMENT`, `NRPC_ASSURANCE_PAYMENT`, `ORDER_BALANCE_PAYMENT`, `PLATFORM_FEE_PAYMENT` |  | [Optional] [Defaults to `undefined`] [Enum: FULL_ORDER_PAYMENT, NRPC_ASSURANCE_PAYMENT, ORDER_BALANCE_PAYMENT, PLATFORM_FEE_PAYMENT] |
 | **evidenceOrigin** | `XENDIT_TEST`, `SIMULATED` |  | [Optional] [Defaults to `undefined`] [Enum: XENDIT_TEST, SIMULATED] |
 | **reconciliationState** | `NOT_REQUIRED`, `PENDING`, `RECONCILED`, `EXCEPTION` |  | [Optional] [Defaults to `undefined`] [Enum: NOT_REQUIRED, PENDING, RECONCILED, EXCEPTION] |
+| **from** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Payment request created_at. | [Optional] [Defaults to `undefined`] |
+| **to** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Payment request created_at. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 
@@ -478,11 +484,11 @@ This endpoint does not need any parameter.
 
 ## listFeeStatements
 
-> FeeStatementListEnvelope listFeeStatements(overdue, page, state)
+> FeeStatementListEnvelope listFeeStatements(overdue, page, state, from, to)
 
 
 
-finance.view. Monthly commission statements.
+finance.view. Monthly commission statements shared with Vendor Finance. Inclusive Manila dates filter issued_on. overdue&#x3D;true returns only issued/partially paid positive balances past the due date; drafts, settled and voided statements are excluded. Approved credits reduce debt on the original statement and any paid excess becomes a separate original-payment refund payable.
 
 ### Example
 
@@ -510,6 +516,10 @@ async function example() {
     page: 56,
     // 'DRAFT' | 'ISSUED' | 'PARTIALLY_PAID' | 'PAID' | 'VOIDED' (optional)
     state: state_example,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Statement issued_on, including drafts. (optional)
+    from: 2013-10-20,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Statement issued_on, including drafts. (optional)
+    to: 2013-10-20,
   } satisfies ListFeeStatementsRequest;
 
   try {
@@ -532,6 +542,8 @@ example().catch(console.error);
 | **overdue** | `boolean` | Issued balances past their due date. | [Optional] [Defaults to `undefined`] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
 | **state** | `DRAFT`, `ISSUED`, `PARTIALLY_PAID`, `PAID`, `VOIDED` |  | [Optional] [Defaults to `undefined`] [Enum: DRAFT, ISSUED, PARTIALLY_PAID, PAID, VOIDED] |
+| **from** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Statement issued_on, including drafts. | [Optional] [Defaults to `undefined`] |
+| **to** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Statement issued_on, including drafts. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 
@@ -560,7 +572,7 @@ example().catch(console.error);
 
 ## listFinanceReviewItems
 
-> FinanceReviewItemListEnvelope listFinanceReviewItems(page, state, kind)
+> FinanceReviewItemListEnvelope listFinanceReviewItems(page, state, kind, from, to)
 
 
 
@@ -592,6 +604,10 @@ async function example() {
     state: state_example,
     // string (optional)
     kind: kind_example,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review item created_at. (optional)
+    from: 2013-10-20,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review item created_at. (optional)
+    to: 2013-10-20,
   } satisfies ListFinanceReviewItemsRequest;
 
   try {
@@ -614,6 +630,8 @@ example().catch(console.error);
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
 | **state** | `OPEN`, `RESOLVED` |  | [Optional] [Defaults to `undefined`] [Enum: OPEN, RESOLVED] |
 | **kind** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **from** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review item created_at. | [Optional] [Defaults to `undefined`] |
+| **to** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Review item created_at. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 

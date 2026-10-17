@@ -9,6 +9,7 @@ use App\Domain\Analytics\AnalyticsRequest;
 use App\Domain\Analytics\AnalyticsWindow;
 use App\Domain\Analytics\Geo\GeoAnalyticsService;
 use App\Domain\Analytics\MaterialsAnalyticsAssembler;
+use App\Domain\Finance\VendorFinanceService;
 use App\Domain\Geography\GeographyScopeResolver;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Operations\AuditSearchService;
@@ -17,6 +18,7 @@ use App\Domain\Projects\ProjectBudget;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 /** Explicit projection: no provider bodies, contacts, private evidence, stock or tax identifiers. */
 final class DocumentSnapshot
@@ -99,6 +101,43 @@ final class DocumentSnapshot
             $rows[] = ['Nominal due date', $package->nominal_due_date, 'Actual due date', $package->actual_due_date ?? $package->nominal_due_date];
             $rows[] = ['Due-date source', $package->due_date_source, 'Reviewer', (string) $package->due_date_reviewer_id];
             $versions = ['package' => $id, 'version' => $package->lock_version, 'hash' => $package->content_hash, 'calendar' => $package->filing_calendar_version_id, 'sources' => $data['versions']];
+        } elseif (in_array($type, ['TRANSACTION_HISTORY', 'EARNINGS'], true)) {
+            if (array_diff(array_keys($filters), $type === 'EARNINGS' ? ['from', 'to'] : ['tab', 'status', 'from', 'to']) !== []) {
+                throw new AuthenticationException('EXPORT_FILTER_UNSUPPORTED', 'This filter is not available for this finance report.', 422);
+            }
+            Validator::make($filters, ['from' => ['sometimes', 'date_format:Y-m-d'], 'to' => ['sometimes', 'date_format:Y-m-d', ...(isset($filters['from']) ? ['after_or_equal:from'] : [])],
+                'tab' => ['sometimes', Rule::in(VendorFinanceService::TABS)], 'status' => ['sometimes', Rule::in(VendorFinanceService::PAYMENT_STATUSES)]])->validate();
+            $finance = app(VendorFinanceService::class);
+            $rows[] = ['Internal Operational Report — Not a Tax Invoice. TEST/DEMO figures; no BIR filing.'];
+            if ($type === 'EARNINGS') {
+                $data = $finance->earnings($request, $filters);
+                foreach ($data as $key => $value) {
+                    if (is_scalar($value) && ! is_bool($value)) {
+                        $rows[] = [self::label($key), str_ends_with($key, '_centavos') ? self::money((int) $value) : (string) $value];
+                    }
+                }
+            } else {
+                $data = [];
+                $page = 1;
+                do {
+                    $result = $finance->transactions($request, $filters + ['page' => $page++]);
+                    array_push($data, ...$result['items']);
+                    if (count($data) > 5000) {
+                        throw new AuthenticationException('EXPORT_TOO_LARGE', 'Narrow the date filters and try again.', 422);
+                    }
+                } while ($result['meta']['has_more']);
+                if ($data !== []) {
+                    $rows[] = array_map(self::label(...), array_keys($data[0]));
+                    foreach ($data as $record) {
+                        $row = [];
+                        foreach ($record as $key => $value) {
+                            $row[] = $value !== null && str_ends_with($key, '_centavos') ? self::money((int) $value) : (is_scalar($value) || $value === null ? (string) $value : json_encode($value, JSON_THROW_ON_ERROR));
+                        }
+                        $rows[] = $row;
+                    }
+                }
+            }
+            $versions = ['content_hash' => hash('sha256', json_encode($data, JSON_THROW_ON_ERROR)), 'filters' => $filters];
         } elseif ($type === 'MATERIALS_ANALYTICS') {
             $scope = $request->attributes->get('account_scope');
             $vendor = $request->user()->account_type === 'VENDOR';

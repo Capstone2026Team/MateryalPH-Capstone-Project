@@ -25,5 +25,17 @@ void main() {
       // TODO
     });
 
+    // Inclusive Asia/Manila notification created_at lower boundary. Omit for an open boundary.
+    // Date from
+    test('to test the property `from`', () async {
+      // TODO
+    });
+
+    // Inclusive Asia/Manila notification created_at upper boundary. Must be on or after from when both are provided.
+    // Date to
+    test('to test the property `to`', () async {
+      // TODO
+    });
+
   });
 }

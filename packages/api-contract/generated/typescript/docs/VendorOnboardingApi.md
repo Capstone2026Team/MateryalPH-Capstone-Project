@@ -15,6 +15,7 @@ All URIs are relative to */api/v1*
 | [**getAuthoritativeVendorOnboarding**](VendorOnboardingApi.md#getauthoritativevendoronboarding) | **GET** /vendor/onboarding |  |
 | [**getVendorOnboarding**](VendorOnboardingApi.md#getvendoronboarding) | **GET** /vendors/onboarding |  |
 | [**getVendorPrivateFileUrl**](VendorOnboardingApi.md#getvendorprivatefileurl) | **GET** /vendors/onboarding/files/{fileId} |  |
+| [**getVendorTeamPerformance**](VendorOnboardingApi.md#getvendorteamperformance) | **GET** /vendors/account/activity/performance |  |
 | [**inviteVendorTeamMember**](VendorOnboardingApi.md#invitevendorteammember) | **POST** /vendors/account/invitations |  |
 | [**listVendorTeamActivity**](VendorOnboardingApi.md#listvendorteamactivity) | **GET** /vendors/account/activity |  |
 | [**listVendorTeamInvitations**](VendorOnboardingApi.md#listvendorteaminvitations) | **GET** /vendors/account/invitations |  |
@@ -835,6 +836,86 @@ example().catch(console.error);
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## getVendorTeamPerformance
+
+> VendorTeamPerformanceEnvelope getVendorTeamPerformance(memberId, from, to)
+
+
+
+Team Tracking statistics for one team member, chosen by the member\&#39;s current fixed role. Store Manager and Owner members report every work area; Store Staff sales, quotations, order confirmations, disputes and inventory; Customer Service Staff sales, quotation drafts, order confirmations and disputes; Inventory Staff inventory; Fulfillment Staff fulfillment. Same authority as Team Tracking history; refresh on team.activity.changed.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  VendorOnboardingApi,
+} from '@materyalph/api-client-ts';
+import type { GetVendorTeamPerformanceRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+  });
+  const api = new VendorOnboardingApi(config);
+
+  const body = {
+    // string
+    memberId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // Date | Inclusive Asia/Manila calendar date; omit both dates for All dates. (optional)
+    from: 2013-10-20,
+    // Date | Inclusive Asia/Manila calendar date; omit both dates for All dates. (optional)
+    to: 2013-10-20,
+  } satisfies GetVendorTeamPerformanceRequest;
+
+  try {
+    const data = await api.getVendorTeamPerformance(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **memberId** | `string` |  | [Defaults to `undefined`] |
+| **from** | `Date` | Inclusive Asia/Manila calendar date; omit both dates for All dates. | [Optional] [Defaults to `undefined`] |
+| **to** | `Date` | Inclusive Asia/Manila calendar date; omit both dates for All dates. | [Optional] [Defaults to `undefined`] |
+
+### Return type
+
+[**VendorTeamPerformanceEnvelope**](VendorTeamPerformanceEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Figures read only records that store the actual actor. Sales follow Sales Attribution: a quotation order belongs to the member handling the inquiry when the Buyer accepted; any other order to the member who manually confirmed it; auto-accepted orders have no sales owner. Reply time runs from the first unanswered Buyer message to the next Vendor reply and is credited to that reply\&#39;s sender. Peso values appear only with finance.view (Owner). |  -  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **404** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## inviteVendorTeamMember
 
 > VendorInvitationEnvelope inviteVendorTeamMember(idempotencyKey, vendorInvitationRequest)
@@ -915,7 +996,7 @@ example().catch(console.error);
 
 ## listVendorTeamActivity
 
-> VendorTeamActivityEnvelope listVendorTeamActivity(page, memberId, role, days, category)
+> VendorTeamActivityEnvelope listVendorTeamActivity(page, memberId, role, days, category, from, to)
 
 
 
@@ -949,6 +1030,10 @@ async function example() {
     days: 56,
     // 'SALES' | 'INVENTORY' | 'FULFILLMENT' | 'DISPUTES' | 'TEAM' | 'OTHER' (optional)
     category: category_example,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Immutable operation timestamp; messages use sent_at. Omitted days and dates mean All dates. (optional)
+    from: 2013-10-20,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Immutable operation timestamp; messages use sent_at. Omitted days and dates mean All dates. (optional)
+    to: 2013-10-20,
   } satisfies ListVendorTeamActivityRequest;
 
   try {
@@ -973,6 +1058,8 @@ example().catch(console.error);
 | **role** | `OWNER`, `STORE_MANAGER`, `STORE_STAFF`, `CUSTOMER_SERVICE`, `INVENTORY`, `FULFILLMENT` | Role recorded at the time of the action. | [Optional] [Defaults to `undefined`] [Enum: OWNER, STORE_MANAGER, STORE_STAFF, CUSTOMER_SERVICE, INVENTORY, FULFILLMENT] |
 | **days** | `7`, `30`, `90` |  | [Optional] [Defaults to `30`] [Enum: 7, 30, 90] |
 | **category** | `SALES`, `INVENTORY`, `FULFILLMENT`, `DISPUTES`, `TEAM`, `OTHER` |  | [Optional] [Defaults to `undefined`] [Enum: SALES, INVENTORY, FULFILLMENT, DISPUTES, TEAM, OTHER] |
+| **from** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Immutable operation timestamp; messages use sent_at. Omitted days and dates mean All dates. | [Optional] [Defaults to `undefined`] |
+| **to** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Immutable operation timestamp; messages use sent_at. Omitted days and dates mean All dates. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 
@@ -991,7 +1078,7 @@ example().catch(console.error);
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Organization-scoped immutable audit history. Delegated Managers see only non-manager employee activity. Before and after values are restricted to safe role, status and fulfillment milestone fields. Summary counts cover all matching events across pages before the category filter; these are audit-event counts, not sales or productivity metrics. The default window is the last 30 days. |  -  |
+| **200** | Organization-scoped immutable audit history. Delegated Managers see only non-manager employee activity. Before and after values are restricted to safe role, status and fulfillment milestone fields. Summary counts cover all matching events across pages before the category filter; these are audit-event counts, not sales or productivity metrics. Omitted days and date boundaries select All dates; legacy days selects the requested Manila calendar period. |  -  |
 | **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **404** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |

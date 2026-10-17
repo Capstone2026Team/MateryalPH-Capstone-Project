@@ -67,12 +67,41 @@ final BuiltSet<FleetVehicleHeavyClassificationEnum>
   _$fleetVehicleHeavyClassificationEnum_NOT_HEAVY,
 ]);
 
+const FleetVehicleMobilizationBasisEnum
+    _$fleetVehicleMobilizationBasisEnum_PER_TRUCK =
+    const FleetVehicleMobilizationBasisEnum._('PER_TRUCK');
+const FleetVehicleMobilizationBasisEnum
+    _$fleetVehicleMobilizationBasisEnum_PER_TRIP =
+    const FleetVehicleMobilizationBasisEnum._('PER_TRIP');
+
+FleetVehicleMobilizationBasisEnum _$fleetVehicleMobilizationBasisEnumValueOf(
+    String name) {
+  switch (name) {
+    case 'PER_TRUCK':
+      return _$fleetVehicleMobilizationBasisEnum_PER_TRUCK;
+    case 'PER_TRIP':
+      return _$fleetVehicleMobilizationBasisEnum_PER_TRIP;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<FleetVehicleMobilizationBasisEnum>
+    _$fleetVehicleMobilizationBasisEnumValues = BuiltSet<
+        FleetVehicleMobilizationBasisEnum>(const <FleetVehicleMobilizationBasisEnum>[
+  _$fleetVehicleMobilizationBasisEnum_PER_TRUCK,
+  _$fleetVehicleMobilizationBasisEnum_PER_TRIP,
+]);
+
 Serializer<FleetVehicleVehicleCategoryEnum>
     _$fleetVehicleVehicleCategoryEnumSerializer =
     _$FleetVehicleVehicleCategoryEnumSerializer();
 Serializer<FleetVehicleHeavyClassificationEnum>
     _$fleetVehicleHeavyClassificationEnumSerializer =
     _$FleetVehicleHeavyClassificationEnumSerializer();
+Serializer<FleetVehicleMobilizationBasisEnum>
+    _$fleetVehicleMobilizationBasisEnumSerializer =
+    _$FleetVehicleMobilizationBasisEnumSerializer();
 
 class _$FleetVehicleVehicleCategoryEnumSerializer
     implements PrimitiveSerializer<FleetVehicleVehicleCategoryEnum> {
@@ -140,6 +169,36 @@ class _$FleetVehicleHeavyClassificationEnumSerializer
           _fromWire[serialized] ?? (serialized is String ? serialized : ''));
 }
 
+class _$FleetVehicleMobilizationBasisEnumSerializer
+    implements PrimitiveSerializer<FleetVehicleMobilizationBasisEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'PER_TRUCK': 'PER_TRUCK',
+    'PER_TRIP': 'PER_TRIP',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'PER_TRUCK': 'PER_TRUCK',
+    'PER_TRIP': 'PER_TRIP',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[FleetVehicleMobilizationBasisEnum];
+  @override
+  final String wireName = 'FleetVehicleMobilizationBasisEnum';
+
+  @override
+  Object serialize(
+          Serializers serializers, FleetVehicleMobilizationBasisEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  FleetVehicleMobilizationBasisEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      FleetVehicleMobilizationBasisEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$FleetVehicle extends FleetVehicle {
   @override
   final String id;
@@ -186,6 +245,10 @@ class _$FleetVehicle extends FleetVehicle {
   @override
   final int? maximumDistanceKm;
   @override
+  final int? mobilizationFeeCentavos;
+  @override
+  final FleetVehicleMobilizationBasisEnum? mobilizationBasis;
+  @override
   final FleetVehicleEligibility eligibility;
   @override
   final String? updatedAt;
@@ -216,6 +279,8 @@ class _$FleetVehicle extends FleetVehicle {
       this.baseFeeCentavos,
       this.perKmCentavos,
       this.maximumDistanceKm,
+      this.mobilizationFeeCentavos,
+      this.mobilizationBasis,
       required this.eligibility,
       this.updatedAt})
       : super._();
@@ -252,6 +317,8 @@ class _$FleetVehicle extends FleetVehicle {
         baseFeeCentavos == other.baseFeeCentavos &&
         perKmCentavos == other.perKmCentavos &&
         maximumDistanceKm == other.maximumDistanceKm &&
+        mobilizationFeeCentavos == other.mobilizationFeeCentavos &&
+        mobilizationBasis == other.mobilizationBasis &&
         eligibility == other.eligibility &&
         updatedAt == other.updatedAt;
   }
@@ -281,6 +348,8 @@ class _$FleetVehicle extends FleetVehicle {
     _$hash = $jc(_$hash, baseFeeCentavos.hashCode);
     _$hash = $jc(_$hash, perKmCentavos.hashCode);
     _$hash = $jc(_$hash, maximumDistanceKm.hashCode);
+    _$hash = $jc(_$hash, mobilizationFeeCentavos.hashCode);
+    _$hash = $jc(_$hash, mobilizationBasis.hashCode);
     _$hash = $jc(_$hash, eligibility.hashCode);
     _$hash = $jc(_$hash, updatedAt.hashCode);
     _$hash = $jf(_$hash);
@@ -312,6 +381,8 @@ class _$FleetVehicle extends FleetVehicle {
           ..add('baseFeeCentavos', baseFeeCentavos)
           ..add('perKmCentavos', perKmCentavos)
           ..add('maximumDistanceKm', maximumDistanceKm)
+          ..add('mobilizationFeeCentavos', mobilizationFeeCentavos)
+          ..add('mobilizationBasis', mobilizationBasis)
           ..add('eligibility', eligibility)
           ..add('updatedAt', updatedAt))
         .toString();
@@ -422,6 +493,17 @@ class FleetVehicleBuilder
   set maximumDistanceKm(int? maximumDistanceKm) =>
       _$this._maximumDistanceKm = maximumDistanceKm;
 
+  int? _mobilizationFeeCentavos;
+  int? get mobilizationFeeCentavos => _$this._mobilizationFeeCentavos;
+  set mobilizationFeeCentavos(int? mobilizationFeeCentavos) =>
+      _$this._mobilizationFeeCentavos = mobilizationFeeCentavos;
+
+  FleetVehicleMobilizationBasisEnum? _mobilizationBasis;
+  FleetVehicleMobilizationBasisEnum? get mobilizationBasis =>
+      _$this._mobilizationBasis;
+  set mobilizationBasis(FleetVehicleMobilizationBasisEnum? mobilizationBasis) =>
+      _$this._mobilizationBasis = mobilizationBasis;
+
   FleetVehicleEligibilityBuilder? _eligibility;
   FleetVehicleEligibilityBuilder get eligibility =>
       _$this._eligibility ??= FleetVehicleEligibilityBuilder();
@@ -461,6 +543,8 @@ class FleetVehicleBuilder
       _baseFeeCentavos = $v.baseFeeCentavos;
       _perKmCentavos = $v.perKmCentavos;
       _maximumDistanceKm = $v.maximumDistanceKm;
+      _mobilizationFeeCentavos = $v.mobilizationFeeCentavos;
+      _mobilizationBasis = $v.mobilizationBasis;
       _eligibility = $v.eligibility.toBuilder();
       _updatedAt = $v.updatedAt;
       _$v = null;
@@ -517,6 +601,8 @@ class FleetVehicleBuilder
             baseFeeCentavos: baseFeeCentavos,
             perKmCentavos: perKmCentavos,
             maximumDistanceKm: maximumDistanceKm,
+            mobilizationFeeCentavos: mobilizationFeeCentavos,
+            mobilizationBasis: mobilizationBasis,
             eligibility: eligibility.build(),
             updatedAt: updatedAt,
           );

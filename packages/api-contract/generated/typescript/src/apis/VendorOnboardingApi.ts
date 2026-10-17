@@ -134,6 +134,11 @@ import {
     VendorTeamInvitationListEnvelopeToJSON,
 } from '../models/VendorTeamInvitationListEnvelope';
 import {
+    type VendorTeamPerformanceEnvelope,
+    VendorTeamPerformanceEnvelopeFromJSON,
+    VendorTeamPerformanceEnvelopeToJSON,
+} from '../models/VendorTeamPerformanceEnvelope';
+import {
     type VendorVerificationDraft,
     VendorVerificationDraftFromJSON,
     VendorVerificationDraftToJSON,
@@ -218,6 +223,21 @@ export interface GetVendorPrivateFileUrlRequest {
     fileId: string;
 }
 
+export interface GetVendorTeamPerformanceRequest {
+    /**
+     *
+     */
+    memberId: string;
+    /**
+     * Inclusive Asia/Manila calendar date; omit both dates for All dates.
+     */
+    from?: Date;
+    /**
+     * Inclusive Asia/Manila calendar date; omit both dates for All dates.
+     */
+    to?: Date;
+}
+
 export interface InviteVendorTeamMemberRequest {
     /**
      *
@@ -250,6 +270,14 @@ export interface ListVendorTeamActivityRequest {
      *
      */
     category?: ListVendorTeamActivityCategoryEnum;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Immutable operation timestamp; messages use sent_at. Omitted days and dates mean All dates.
+     */
+    from?: Date;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Immutable operation timestamp; messages use sent_at. Omitted days and dates mean All dates.
+     */
+    to?: Date;
 }
 
 export interface ListVendorTeamInvitationsRequest {
@@ -942,6 +970,62 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for getVendorTeamPerformance without sending the request
+     */
+    async getVendorTeamPerformanceRequestOpts(requestParameters: GetVendorTeamPerformanceRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['memberId'] == null) {
+            throw new runtime.RequiredError(
+                'memberId',
+                'Required parameter "memberId" was null or undefined when calling getVendorTeamPerformance().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['memberId'] != null) {
+            queryParameters['member_id'] = requestParameters['memberId'];
+        }
+
+        if (requestParameters['from'] != null) {
+            queryParameters['from'] = runtime.serializeDate(requestParameters['from'] as any);
+        }
+
+        if (requestParameters['to'] != null) {
+            queryParameters['to'] = runtime.serializeDate(requestParameters['to'] as any);
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/vendors/account/activity/performance`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Team Tracking statistics for one team member, chosen by the member\'s current fixed role. Store Manager and Owner members report every work area; Store Staff sales, quotations, order confirmations, disputes and inventory; Customer Service Staff sales, quotation drafts, order confirmations and disputes; Inventory Staff inventory; Fulfillment Staff fulfillment. Same authority as Team Tracking history; refresh on team.activity.changed.
+     */
+    async getVendorTeamPerformanceRaw(requestParameters: GetVendorTeamPerformanceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorTeamPerformanceEnvelope>> {
+        const requestOptions = await this.getVendorTeamPerformanceRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorTeamPerformanceEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Team Tracking statistics for one team member, chosen by the member\'s current fixed role. Store Manager and Owner members report every work area; Store Staff sales, quotations, order confirmations, disputes and inventory; Customer Service Staff sales, quotation drafts, order confirmations and disputes; Inventory Staff inventory; Fulfillment Staff fulfillment. Same authority as Team Tracking history; refresh on team.activity.changed.
+     */
+    async getVendorTeamPerformance(requestParameters: GetVendorTeamPerformanceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorTeamPerformanceEnvelope> {
+        const response = await this.getVendorTeamPerformanceRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for inviteVendorTeamMember without sending the request
      */
     async inviteVendorTeamMemberRequestOpts(requestParameters: InviteVendorTeamMemberRequest): Promise<runtime.RequestOpts> {
@@ -1025,6 +1109,14 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
 
         if (requestParameters['category'] != null) {
             queryParameters['category'] = requestParameters['category'];
+        }
+
+        if (requestParameters['from'] != null) {
+            queryParameters['from'] = runtime.serializeDate(requestParameters['from'] as any);
+        }
+
+        if (requestParameters['to'] != null) {
+            queryParameters['to'] = runtime.serializeDate(requestParameters['to'] as any);
         }
 
         const headerParameters: runtime.HTTPHeaders = {};

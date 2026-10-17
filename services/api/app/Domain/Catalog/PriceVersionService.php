@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Catalog;
 
+use App\Support\PortalDateRange;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -40,14 +41,14 @@ final class PriceVersionService
     }
 
     /**
-     * Every price version of a variant, newest first, including retired and superseded rows.
-     *
+     * @param  array<string, mixed>  $filters
+     *                                         Every price version of a variant, newest first, including retired and superseded rows.
      * @return list<array<string, mixed>>
      */
-    public function history(string $variantId, int $limit = 50): array
+    public function history(string $variantId, int $limit = 50, array $filters = []): array
     {
-        return DB::table('listing_price_versions as pv')->leftJoin('user_profiles as up', 'up.user_id', '=', 'pv.created_by_user_id')
-            ->where('pv.listing_variant_id', $variantId)->orderByDesc('pv.version')->limit($limit)
+        return PortalDateRange::apply(DB::table('listing_price_versions as pv')->leftJoin('user_profiles as up', 'up.user_id', '=', 'pv.created_by_user_id')
+            ->where('pv.listing_variant_id', $variantId), 'pv.effective_at', $filters)->orderByDesc('pv.version')->limit($limit)
             ->get(['pv.id', 'pv.version', 'pv.price_kind', 'pv.amount_centavos', 'pv.tax_category', 'pv.tax_basis', 'pv.minimum_quantity', 'pv.effective_at', 'pv.retired_at', 'pv.supersedes_price_version_id', 'up.full_name'])
             ->map(static fn (object $row): array => [
                 'price_version_id' => $row->id, 'version' => (int) $row->version, 'price_kind' => $row->price_kind, 'amount_centavos' => (int) $row->amount_centavos,

@@ -37,7 +37,7 @@ test('the queue opens on cases needing an Admin and links each case', async () =
   vi.mocked(api.listQueue).mockResolvedValue({ items: [{ ...detail(), decisions: 0 }], meta: { counts: { NEEDS_ADMIN: 1 } } })
   at('/disputes')
   expect(await screen.findByRole('link', { name: 'CASE-261004-ABC123' })).toHaveAttribute('href', '/disputes/case-1')
-  expect(api.listQueue).toHaveBeenCalledWith('NEEDS_ADMIN')
+  expect(api.listQueue).toHaveBeenCalledWith('NEEDS_ADMIN', 1, { label: 'All dates', from: '', to: '' })
 })
 
 test('a decision requires the reason, partial amount and conflict check before it is sent once', async () => {

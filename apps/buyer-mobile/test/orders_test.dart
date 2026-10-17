@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:materyalph/design_system/components/count_badge.dart';
 import 'package:materyalph/design_system/components/order_components.dart';
+import 'package:materyalph/design_system/components/procurement_components.dart';
 import 'package:materyalph/design_system/theme.dart';
 import 'package:materyalph/features/item_procurement/cart_controller.dart';
 import 'package:materyalph/features/item_procurement/checkout_preview_screen.dart';
@@ -47,7 +49,9 @@ void main() {
         ),
       );
       await tester.pumpWidget(
-        _app(OrdersScreen(repository: repository, initialGroup: 'ALL')),
+        _app(
+          OrdersScreen(repository: repository, initialGroup: 'CONFIRMATION'),
+        ),
       );
       await tester.pump();
       expect(find.text('Re-process payment'), findsOneWidget);
@@ -59,7 +63,9 @@ void main() {
           .onExpired!();
       await tester.pump();
       expect(
-        repository.calls.where((call) => call == 'orders:ALL:1'),
+        repository.calls.where(
+          (call) => call == 'orders:ITEM_BASED:CONFIRMATION:1',
+        ),
         hasLength(2),
       );
       expect(find.text('Re-process payment'), findsNothing);
@@ -403,8 +409,10 @@ void main() {
   );
 
   testWidgets(
-    'the order hub groups orders and shows the next action with its deadline',
+    'My Orders filters by Item or Project and status chip and shows the card facts',
     (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
       final repository = FakeOrdersRepository(
         list: OrderListPage(
           items: [
@@ -413,9 +421,17 @@ void main() {
                 kind: 'BUYER_RESPONSE',
                 at: DateTime.utc(2026, 10, 6, 1),
               ),
+              fulfillmentMethod: 'DELIVERY',
+              paymentChannelName: 'GCash',
+              expectedFulfillmentDate: '2026-10-07',
             ),
           ],
-          counts: const {'ALL': 3, 'AWAITING_ACTION': 1, 'ACTIVE': 2},
+          counts: const {
+            'ALL': 9,
+            'CONFIRMATION': 1,
+            'PROCESSING': 3,
+            'COMPLETED': 5,
+          },
           page: 1,
           hasMore: false,
           total: 1,
@@ -423,26 +439,229 @@ void main() {
       );
       await tester.pumpWidget(_app(OrdersScreen(repository: repository)));
       await tester.pumpAndSettle();
-      expect(find.text('Needs action (1)'), findsOneWidget);
+      // There is no All chip; My Orders opens on Confirmation.
+      expect(repository.calls.single, 'orders:ITEM_BASED:CONFIRMATION:1');
+      expect(find.text('All'), findsNothing);
+      for (final chip in [
+        'Confirmation',
+        'Processing',
+        'To ship',
+        'To receive',
+        'Completed',
+      ]) {
+        expect(find.text(chip), findsOneWidget);
+      }
+      // Open chips carry their count for this tab; Completed history does not.
+      final badges = find.descendant(
+        of: find.byType(FilterPillRow),
+        matching: find.byType(CountBadge),
+      );
+      expect(
+        tester.widgetList<CountBadge>(badges).map((badge) => badge.quantity),
+        ['1', '3'],
+      );
+      expect(find.bySemanticsLabel('Processing, 3 orders'), findsOneWidget);
+      expect(find.bySemanticsLabel('Completed'), findsOneWidget);
+      expect(find.text('ORD-2026-ABCD1234'), findsOneWidget);
+      expect(find.text('Needs your approval'), findsOneWidget);
+      expect(find.text('Oct 5, 2026'), findsOneWidget);
+      expect(find.text('Delivery date'), findsOneWidget);
+      expect(find.text('Oct 7, 2026'), findsOneWidget);
+      expect(find.text('2 items'), findsOneWidget);
+      expect(find.text('GCash'), findsOneWidget);
+      expect(find.text('₱180.00'), findsOneWidget);
       expect(
         find.textContaining(
           'Review the Vendor’s confirmed version · Respond by Oct 6, 2026, 9:00 AM PHT',
         ),
         findsOneWidget,
       );
-      expect(find.text('Needs your approval'), findsOneWidget);
-      expect(find.text('Payment: No payment due'), findsOneWidget);
+      // Without a conversation callback the card offers no message button.
+      expect(find.byTooltip('Fulfillment messages'), findsNothing);
+
       repository.list = const OrderListPage(
         items: [],
-        counts: {'ALL': 3},
+        counts: {'ALL': 0},
         page: 1,
         hasMore: false,
         total: 0,
       );
+      await tester.tap(find.text('Project'));
+      await tester.pumpAndSettle();
+      expect(repository.calls.last, 'orders:PROJECT_BASED:CONFIRMATION:1');
+      expect(
+        badges,
+        findsNothing,
+        reason: 'Project counts replace Item counts',
+      );
+      // The chips scroll sideways; Completed starts off-screen at 390 px.
+      await tester.ensureVisible(find.text('Completed'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Completed'));
       await tester.pumpAndSettle();
-      expect(repository.calls.last, 'orders:COMPLETED:1');
-      expect(find.text('No orders here yet'), findsOneWidget);
+      expect(repository.calls.last, 'orders:PROJECT_BASED:COMPLETED:1');
+      expect(find.text('No completed orders'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'the card message button opens the order’s Fulfillment Messages, starting an older order’s thread',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final repository =
+          FakeOrdersRepository(
+              list: OrderListPage(
+                items: [
+                  orderSummary(
+                    id: 'with-thread',
+                    state: 'PROCESSING',
+                    nextAction: null,
+                    conversation: const OrderConversationRefView(
+                      id: 'thread-1',
+                      readOnly: false,
+                      unreadCount: 2,
+                    ),
+                  ),
+                  orderSummary(
+                    id: 'older',
+                    state: 'CONFIRMED',
+                    nextAction: null,
+                  ),
+                  orderSummary(
+                    id: 'closed',
+                    state: 'EXPIRED',
+                    nextAction: null,
+                  ),
+                ],
+                counts: const {'ALL': 3},
+                page: 1,
+                hasMore: false,
+                total: 3,
+              ),
+            )
+            ..openedThread = const OrderConversationRefView(
+              id: 'thread-2',
+              readOnly: false,
+            );
+      final opened = <String>[];
+      await tester.pumpWidget(
+        _app(
+          OrdersScreen(
+            repository: repository,
+            openConversation: (_, id) async => opened.add(id),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Fulfillment messages, 2 unread'));
+      await tester.pumpAndSettle();
+      expect(opened, ['thread-1']);
+      expect(
+        repository.calls,
+        isNot(contains(startsWith('openFulfillmentConversation'))),
+      );
+
+      await tester.tap(find.byTooltip('Fulfillment messages').first);
+      await tester.pumpAndSettle();
+      expect(repository.calls, contains('openFulfillmentConversation:older'));
+      expect(opened, ['thread-1', 'thread-2']);
+
+      final closed = tester.widget<IconButton>(
+        find.ancestor(
+          of: find.byTooltip('No fulfillment messages for this order'),
+          matching: find.byType(IconButton),
+        ),
+      );
+      expect(closed.onPressed, isNull);
+    },
+  );
+
+  testWidgets(
+    'card actions confirm receipt, report a problem and buy again only as the server allows',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final repository =
+          FakeOrdersRepository(
+              list: OrderListPage(
+                items: [
+                  orderSummary(
+                    id: 'received',
+                    state: 'DELIVERED',
+                    nextAction: 'CONFIRM_RECEIPT',
+                    cardActions: const {'CONFIRM_RECEIPT', 'REPORT_PROBLEM'},
+                  ),
+                  orderSummary(
+                    id: 'cancelled',
+                    state: 'CANCELLED',
+                    nextAction: null,
+                    paymentMethod: 'CASH_ON_DELIVERY',
+                    cardActions: const {'BUY_AGAIN', 'VIEW_CANCELLATION'},
+                    closureReason: 'Item out of stock',
+                  ),
+                ],
+                counts: const {'ALL': 2},
+                page: 1,
+                hasMore: false,
+                total: 2,
+              ),
+              detail: orderDetail(state: 'DELIVERED'),
+            )
+            ..buyAgainResult = const BuyAgainResultView(
+              added: ['Concrete Hollow Block 4"'],
+              skipped: [
+                BuyAgainSkippedView(
+                  displayName: 'Rebar 10mm',
+                  message: 'The store cannot currently confirm this quantity.',
+                ),
+              ],
+            );
+      var cartOpened = false;
+      await tester.pumpWidget(
+        _app(
+          OrdersScreen(
+            repository: repository,
+            onOpenCart: () => cartOpened = true,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Reason: Item out of stock'), findsOneWidget);
+      expect(find.text('Cash on Delivery'), findsOneWidget);
+      expect(find.text('Return/Refund'), findsNothing);
+
+      await tester.tap(find.text('Confirm receipt'));
+      await tester.pumpAndSettle();
+      expect(find.text('Confirm you received this order?'), findsOneWidget);
+      await tester.tap(find.text('Not now'));
+      await tester.pumpAndSettle();
+      expect(repository.calls, isNot(contains('confirmReceipt')));
+      await tester.tap(find.text('Confirm receipt'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.widgetWithText(FilledButton, 'Confirm receipt').last,
+      );
+      await tester.pumpAndSettle();
+      expect(repository.calls, contains('confirmReceipt'));
+
+      await tester.tap(find.text('Buy again'));
+      await tester.pumpAndSettle();
+      expect(repository.calls, contains('buyAgain:cancelled'));
+      expect(find.text('Some items were not added'), findsOneWidget);
+      expect(
+        find.text(
+          'Rebar 10mm: The store cannot currently confirm this quantity.',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+      expect(cartOpened, isTrue);
+      expect(
+        find.text('1 item added to your cart at today’s prices.'),
+        findsOneWidget,
+      );
     },
   );
 

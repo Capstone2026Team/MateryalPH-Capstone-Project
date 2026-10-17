@@ -30,7 +30,7 @@ void main() {
 
     // invoices.view. Open requests, orders without an invoice copy yet, uploaded records and reconciliation items. Never Earnings or other protected finance.
     //
-    //Future<InvoiceLogEnvelope> listVendorInvoices({ String view, int page }) async
+    //Future<InvoiceLogEnvelope> listVendorInvoices({ String view, int page, Date from, Date to }) async
     test('test listVendorInvoices', () async {
       // TODO
     });

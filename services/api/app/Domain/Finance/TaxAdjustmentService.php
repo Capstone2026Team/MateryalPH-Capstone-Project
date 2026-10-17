@@ -7,6 +7,7 @@ namespace App\Domain\Finance;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Notifications\NotificationService;
+use App\Support\PortalDateRange;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
@@ -41,6 +42,7 @@ final class TaxAdjustmentService
     {
         $viewer = $this->access->admin($request, 'finance.view');
         $query = $this->base()->when($filters['state'] ?? null, fn (Builder $q, string $state) => $q->where('t.state', $state));
+        PortalDateRange::apply($query, 't.created_at', $filters);
         $total = (clone $query)->count();
         $page = max(1, min(1000, (int) ($filters['page'] ?? 1)));
         $rows = $query->orderByRaw("CASE t.state WHEN 'ADJUSTMENT_REQUIRED' THEN 0 WHEN 'UNDER_REVIEW' THEN 1 WHEN 'APPROVED' THEN 2 ELSE 3 END")->orderBy('t.created_at')

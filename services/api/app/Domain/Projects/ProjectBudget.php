@@ -30,6 +30,23 @@ final class ProjectBudget
         return ['pending' => $accepted ? max(0, $cost - $recovered) : 0, 'actual' => 0, 'recovery' => 0];
     }
 
+    /** Owner decision 2026-10-12: every non-cancelled Work Package budget, Draft included, is deducted from the Project budget. */
+    public static function allocated(string $projectId, ?string $exceptPackageId = null): int
+    {
+        return (int) DB::table('work_packages')->where('project_id', $projectId)->where('status', '<>', 'CANCELLED')
+            ->when($exceptPackageId !== null, fn ($query) => $query->where('id', '<>', $exceptPackageId))->sum('budget_centavos');
+    }
+
+    /** Allocations never exceed the Project budget. Callers hold the Project row lock. */
+    public static function assertAllocation(object $project, ?string $packageId, int $budget): void
+    {
+        $unallocated = (int) $project->budget_centavos - self::allocated((string) $project->id, $packageId);
+        if ($budget > $unallocated) {
+            throw new AuthenticationException('WORK_PACKAGE_BUDGET_EXCEEDS_PROJECT', 'This Work Package budget is more than the unallocated Project budget.', 422,
+                ['unallocated_centavos' => max(0, $unallocated), 'requested_centavos' => $budget]);
+        }
+    }
+
     /** The versioned Platform Setting projects.budget_warning_percent (approved default 90%). */
     public static function warningPercent(): int
     {
@@ -87,10 +104,20 @@ final class ProjectBudget
             }
         }
         $budget = (int) ($package->budget_centavos ?? $project->budget_centavos);
-        $allocated = (int) DB::table('work_packages')->where('project_id', $project->id)->whereNotIn('status', ['DRAFT', 'CANCELLED'])->sum('budget_centavos');
+        $allocated = self::allocated((string) $project->id);
 
         return self::buckets($budget, $pending, $actual, $recovery) + ['allocated_centavos' => $allocated, 'unallocated_centavos' => (int) $project->budget_centavos - $allocated,
             'pending_confirmation_count' => $confirmations, 'processing_fee_status' => 'PENDING_PAYMENT_CHANNEL_UNTIL_QUOTED'];
+    }
+
+    /** Call under Project then Work Package locks. Pending confirmations are not committed spend. */
+    public function wouldExceed(object $package, int $amount, ?string $orderId = null): bool
+    {
+        $project = DB::table('projects')->where('id', $package->project_id)->first();
+        $p = $this->metrics($project, excludeOrder: $orderId);
+        $w = $this->metrics($project, $package, $orderId);
+
+        return (int) $project->budget_centavos < $p['committed_centavos'] + $amount || (int) $package->budget_centavos < $w['committed_centavos'] + $amount;
     }
 
     /** Must run under project then package locks before accepting a purchase.

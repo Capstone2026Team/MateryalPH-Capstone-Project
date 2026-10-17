@@ -155,6 +155,9 @@ class _BooleanConstSerializer<T> implements PrimitiveSerializer<T> {
       if (relativePath === "lib/src/api/buyer_reviews_api.dart") {
         contents = contents.replace("r'files': files.toList(),", "r'files[]': files.toList(),");
       }
+      if (relativePath === "lib/src/api/vendor_fulfillment_api.dart") {
+        contents = contents.replace("r'additional_photos': additionalPhotos.toList(),", "r'additional_photos[]': additionalPhotos.toList(),");
+      }
       // Nullable inline objects use nested built_value builders. dart-dio
       // currently assigns the deserialized value to the builder field directly.
       const nestedFields = {
@@ -167,6 +170,7 @@ class _BooleanConstSerializer<T> implements PrimitiveSerializer<T> {
         "lib/src/model/inventory_movement_list_envelope.dart": ["meta"],
         "lib/src/model/fleet_vehicle_list_envelope.dart": ["meta"],
         "lib/src/model/order_list_envelope.dart": ["meta"],
+        "lib/src/model/delivery_workspace_page.dart": ["meta"],
       }[relativePath] ?? [];
       for (const field of nestedFields) {
         contents = contents.replace(`result.${field} = valueDes;`, `result.${field} = valueDes.toBuilder();`);
@@ -193,6 +197,9 @@ class _BooleanConstSerializer<T> implements PrimitiveSerializer<T> {
     }
     if (relativePath === "src/apis/BuyerReviewsApi.ts") {
       contents = contents.replace("formParams.append('files', element as any);", "formParams.append('files[]', element as any);");
+    }
+    if (relativePath === "src/apis/VendorFulfillmentApi.ts") {
+      contents = contents.replace("formParams.append('additional_photos', element as any);", "formParams.append('additional_photos[]', element as any);");
     }
     const normalized = contents.replace(/[\t ]+$/gmu, "").replace(relativePath === "lib/src/model/vendor_setup_complete.dart" ? /(?:\r?\n){2,}$/u : /$^/u, "\n");
     if (normalized !== originalContents) writeFileSync(generatedPath, normalized);

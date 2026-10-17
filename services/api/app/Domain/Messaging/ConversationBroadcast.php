@@ -43,10 +43,18 @@ final class ConversationBroadcast
         $ids = DB::table('vendor_memberships')->where('vendor_organization_id', $c->vendor_organization_id)->where('status', 'ACTIVE')->pluck('user_id')->all();
         $ids[] = $buyerId;
         $access = app(ConversationAccess::class);
+        $main = $c->purpose === 'SALES' && $c->context_type === 'PROJECT_BASED'
+            ? DB::table('conversations')->where('buyer_profile_id', $c->buyer_profile_id)->where('vendor_organization_id', $c->vendor_organization_id)
+                ->where('purpose', 'SALES')->where('context_type', 'ITEM_BASED')->whereNull('canonical_conversation_id')->first()
+            : null;
         foreach (User::query()->whereIn('id', $ids)->cursor() as $user) {
             if ($access->allows($user, $c)) {
                 // No message text, commercial data or files are ever sent to a socket. REST reauthorizes each fetch.
                 Broadcast::connection('reverb')->broadcast(['private-'.$access->channel($user, $c)], 'conversation.changed', ['conversation_id' => $id]);
+                if ($main !== null && $access->allows($user, $main)) {
+                    // Refresh the main thread's project badge through its own authorized channel.
+                    Broadcast::connection('reverb')->broadcast(['private-'.$access->channel($user, $main)], 'conversation.changed', ['conversation_id' => $main->id]);
+                }
                 $inbox = app(BuyerInboxChannel::class)->name($user);
                 if ($inbox !== null) {
                     Broadcast::connection('reverb')->broadcast(['private-'.$inbox], 'inbox.changed', []);

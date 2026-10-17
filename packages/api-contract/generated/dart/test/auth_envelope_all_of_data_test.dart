@@ -57,6 +57,12 @@ void main() {
       // TODO
     });
 
+    // MOBILE transport only, present with mfa_required. Opaque single-use login challenge; keep it in memory and never persist or log it.
+    // String challengeToken
+    test('to test the property `challengeToken`', () async {
+      // TODO
+    });
+
     // Present only immediately after enrollment or recovery; store offline because these values are not returned again.
     // BuiltList<String> recoveryCodes
     test('to test the property `recoveryCodes`', () async {

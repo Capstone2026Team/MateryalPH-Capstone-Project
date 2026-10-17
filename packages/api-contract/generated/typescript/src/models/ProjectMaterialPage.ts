@@ -13,6 +13,21 @@
  */
 
 import { mapValues } from '../runtime';
+import type { ProjectMaterial } from './ProjectMaterial';
+import {
+    ProjectMaterialFromJSON,
+    ProjectMaterialFromJSONTyped,
+    ProjectMaterialToJSON,
+    ProjectMaterialToJSONTyped,
+} from './ProjectMaterial';
+import type { ProjectMaterialUnit } from './ProjectMaterialUnit';
+import {
+    ProjectMaterialUnitFromJSON,
+    ProjectMaterialUnitFromJSONTyped,
+    ProjectMaterialUnitToJSON,
+    ProjectMaterialUnitToJSONTyped,
+} from './ProjectMaterialUnit';
+
 /**
  *
  * @export
@@ -22,7 +37,11 @@ export interface ProjectMaterialPage {
     /**
      *
      */
-    items: Array<{ [key: string]: any; }>;
+    items: Array<ProjectMaterial>;
+    /**
+     * Every normalized unit, for an unlisted material.
+     */
+    units: Array<ProjectMaterialUnit>;
 }
 
 /**
@@ -30,6 +49,7 @@ export interface ProjectMaterialPage {
  */
 export function instanceOfProjectMaterialPage(value: object): value is ProjectMaterialPage {
     if (!('items' in value) || value['items'] === undefined) return false;
+    if (!('units' in value) || value['units'] === undefined) return false;
     return true;
 }
 
@@ -43,7 +63,8 @@ export function ProjectMaterialPageFromJSONTyped(json: any, ignoreDiscriminator:
     }
     return {
 
-        'items': json['items'],
+        'items': ((json['items'] as Array<any>).map(ProjectMaterialFromJSON)),
+        'units': ((json['units'] as Array<any>).map(ProjectMaterialUnitFromJSON)),
     };
 }
 
@@ -58,7 +79,8 @@ export function ProjectMaterialPageToJSONTyped(value?: ProjectMaterialPage | nul
 
     return {
 
-        'items': value['items'],
+        'items': ((value['items'] as Array<any>).map(ProjectMaterialToJSON)),
+        'units': ((value['units'] as Array<any>).map(ProjectMaterialUnitToJSON)),
     };
 }
 

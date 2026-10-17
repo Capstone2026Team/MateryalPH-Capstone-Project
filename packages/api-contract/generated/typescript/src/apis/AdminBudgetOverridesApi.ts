@@ -29,6 +29,14 @@ export interface ListBudgetOverridesRequest {
      *
      */
     page?: number;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Decision created_at.
+     */
+    from?: Date;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Decision created_at.
+     */
+    to?: Date;
 }
 
 /**
@@ -44,6 +52,14 @@ export class AdminBudgetOverridesApi extends runtime.BaseAPI {
 
         if (requestParameters['page'] != null) {
             queryParameters['page'] = requestParameters['page'];
+        }
+
+        if (requestParameters['from'] != null) {
+            queryParameters['from'] = runtime.serializeDate(requestParameters['from'] as any);
+        }
+
+        if (requestParameters['to'] != null) {
+            queryParameters['to'] = runtime.serializeDate(requestParameters['to'] as any);
         }
 
         const headerParameters: runtime.HTTPHeaders = {};

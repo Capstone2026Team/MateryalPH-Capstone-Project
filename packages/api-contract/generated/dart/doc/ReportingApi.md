@@ -108,11 +108,11 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listDocumentExports**
-> ListDocumentExports200Response listDocumentExports(audience, page)
+> ListDocumentExports200Response listDocumentExports(audience, page, type, resourceId, format, from, to)
 
 list Document Exports
 
-
+Lists the actor's currently authorized exports, optionally scoped to the document type, source record and format. READY artifacts past their download deadline are returned as EXPIRED.
 
 ### Example
 ```dart
@@ -121,9 +121,14 @@ import 'package:materyalph_api_client/api.dart';
 final api = MateryalphApiClient().getReportingApi();
 final String audience = audience_example; // String | Authenticated surface. The server rejects mismatched account types.
 final int page = 56; // int |
+final String type = type_example; // String |
+final String resourceId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String format = format_example; // String |
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Export requested_at (created_at); each download rechecks current permissions.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Export requested_at (created_at); each download rechecks current permissions.
 
 try {
-    final response = api.listDocumentExports(audience, page);
+    final response = api.listDocumentExports(audience, page, type, resourceId, format, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling ReportingApi->listDocumentExports: $e\n');
@@ -136,6 +141,11 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **audience** | **String**| Authenticated surface. The server rejects mismatched account types. |
  **page** | **int**|  | [optional]
+ **type** | **String**|  | [optional]
+ **resourceId** | **String**|  | [optional]
+ **format** | **String**|  | [optional]
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Export requested_at (created_at); each download rechecks current permissions. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Export requested_at (created_at); each download rechecks current permissions. | [optional]
 
 ### Return type
 
@@ -153,7 +163,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listTaxPackages**
-> ListTaxPackages200Response listTaxPackages(page)
+> ListTaxPackages200Response listTaxPackages(page, from, to)
 
 list Tax Packages
 
@@ -165,9 +175,11 @@ import 'package:materyalph_api_client/api.dart';
 
 final api = MateryalphApiClient().getReportingApi();
 final int page = 56; // int |
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Report package created_at; statutory reporting periods remain immutable.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Report package created_at; statutory reporting periods remain immutable.
 
 try {
-    final response = api.listTaxPackages(page);
+    final response = api.listTaxPackages(page, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling ReportingApi->listTaxPackages: $e\n');
@@ -179,6 +191,8 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **page** | **int**|  | [optional]
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Report package created_at; statutory reporting periods remain immutable. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Report package created_at; statutory reporting periods remain immutable. | [optional]
 
 ### Return type
 

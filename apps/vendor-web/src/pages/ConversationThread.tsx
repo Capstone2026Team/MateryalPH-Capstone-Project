@@ -1,21 +1,25 @@
 import { Toolbar } from '@materyalph/web-ui'
 import { WorkPackageAttachment } from '../components/WorkPackageAttachment'
+import { SiteInspectionPanel } from '../components/SiteInspectionPanel'
 import { listFleet } from '../lib/inventory-api'
-import type { FleetVehicle } from '@materyalph/api-client-ts'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ChatDraftContentFromJSON, ChatDraftContentToJSON, ChatQuotationContentToJSON, type ChatDraftContent, type ChatMessage, type ChatProduct, type ChatHandler, type ChatQuotation, type ConversationDetail, type CatalogListingSummary, type CatalogVariant } from '@materyalph/api-client-ts'
-import { Button, FormDialog, ChatMessageBubble, ConversationHeader, QuotationVersionCard, StatusMessage, chatRoleLabel, conversationLabel, formatPesoCentavos } from '@materyalph/web-ui'
+import { ChatDraftContentFromJSON, ChatDraftContentToJSON, ChatQuotationContentToJSON, type ChatDraftContent, type ChatMessage, type ChatProduct, type ChatHandler, type ChatQuotation, type ConversationDetail } from '@materyalph/api-client-ts'
+import { Button, CatalogProductPicker, CountBadge, FormDialog, ChatMessageBubble, ChatTypingIndicator, ConversationHeader, NrpcPreparationEditor, QuotationDeliveryArrangement, QuotationDiscountEditor, QuotationMaterialsEditor, QuotationVersionCard, StatusMessage, useNavigationRefresh, chatRoleLabel, conversationLabel, formatPesoCentavos, nrpcPreparationAssessment, quotationDiscountPreview, type NrpcPreparedMaterial, type NrpcPreparationValue } from '@materyalph/web-ui'
 import { ArrowLeft, FileText, MessageSquare, Paperclip, Send, UsersRound } from 'lucide-react'
 import { chatApi, loadChatAvatar, readableChatError, watchConversation } from '../lib/messaging-api'
-import { getListing, listListings } from '../lib/catalog-api'
+import { getListing, listListings, readableCatalogError } from '../lib/catalog-api'
 import { newIdempotencyKey } from '../lib/onboarding-api'
+import { quotationDraftForSave } from '../lib/quotation-draft'
 import { ErrorState, LoadingState } from './PhaseThreeVendorPages'
 
 const control = 'min-h-12 w-full min-w-0 rounded-control border border-border-default bg-surface-primary px-3 text-base'
 
-export function ConversationThread({ selected, role, onBack, onRead, onMessage, onFulfillmentList, obscured = false, onBusyChange }: {
-  selected: string | null; role: string; onBack?: () => void; onRead?: (id: string) => void; onMessage?: () => void; onFulfillmentList?: () => void; obscured?: boolean; onBusyChange?: (busy: boolean) => void
+const loadQuotationProducts = (query: string, page: number) => listListings({ ...(query ? { q: query } : {}), status: 'ACTIVE', page })
+const loadQuotationVehicles = async () => (await listFleet()).items
+
+export function ConversationThread({ selected, role, onBack, onRead, onMessage, onFulfillmentList, onProjectList, onOpenMain, obscured = false, onBusyChange }: {
+  selected: string | null; role: string; onBack?: () => void; onRead?: (id: string) => void; onMessage?: () => void; onFulfillmentList?: () => void; onProjectList?: () => void; onOpenMain?: (id: string) => void; obscured?: boolean; onBusyChange?: (busy: boolean) => void
 }) {
   const navigate = useNavigate()
   const callbacks = useRef({ onRead, onMessage, obscured })
@@ -23,6 +27,7 @@ export function ConversationThread({ selected, role, onBack, onRead, onMessage, 
   const [reload, setReload] = useState(0)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [detail, setDetail] = useState<ConversationDetail | null>(null)
+  const fulfillmentCountId = useId()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -96,6 +101,11 @@ export function ConversationThread({ selected, role, onBack, onRead, onMessage, 
     finally { if (g === generation.current) { running.current = false; setLoading(false); if (reloadPending.current) { reloadPending.current = false; setReload(value => value + 1) } } }
   }, [selected])
 
+  // Sibling-thread activity refreshes the aggregate badges without replacing composer state.
+  useNavigationRefresh(() => {
+    if (selected && (onProjectList || (onFulfillmentList && currentDetail.current?.conversation.canListFulfillmentConversations))) void load()
+  })
+
   useEffect(() => {
     generation.current++; currentDetail.current = null; reloadPending.current = false; running.current = false; lastRead.current = ''; setLoading(true); setDetail(null); setError(null); setText(''); setProduct(null); setPicker(false); setPending([]); setTyping(false); typingAt.current = 0; clearTimeout(typingTimer.current); clearTimeout(typingSendTimer.current); setEditor(false); setHandlers(null); setHistoryOpen(false)
     void load()
@@ -120,6 +130,12 @@ export function ConversationThread({ selected, role, onBack, onRead, onMessage, 
   useEffect(() => {
     if (!callbacks.current.obscured && threadBody.current) threadBody.current.scrollTop = historyOpen || handlers ? 0 : threadBody.current.scrollHeight
   }, [newestMessageId, historyOpen, handlers])
+  // Reveal the typing bubble only for a reader already at the latest message; never pull someone reading history.
+  useEffect(() => {
+    const body = threadBody.current
+    if (!typing || !body || callbacks.current.obscured || body.scrollHeight - body.scrollTop - body.clientHeight > 160) return
+    body.scrollTop = body.scrollHeight
+  }, [typing])
 
   async function mutate(action: () => Promise<unknown>, refresh = true) {
     if (busy) return
@@ -156,34 +172,41 @@ export function ConversationThread({ selected, role, onBack, onRead, onMessage, 
     const g = generation.current
     await mutate(async () => { const result = await chatApi.products(selected, productQuery, page); if (g !== generation.current) return; setProducts(result.items); setProductPage(page); setMoreProducts(result.hasMore); setPicker(true) }, false)
   }
-  async function openFile(id: string) {
+  async function openFile(id: string, name?: string) {
     if (!selected) return
-    try { const blob = await chatApi.download(selected, id); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'attachment'; a.click(); window.setTimeout(() => URL.revokeObjectURL(url), 1000) }
+    try { const blob = await chatApi.download(selected, id); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name ?? 'attachment'; a.click(); window.setTimeout(() => URL.revokeObjectURL(url), 1000) }
     catch (e) { setError(await readableChatError(e)) }
   }
+  // Stable per conversation so polling re-renders never re-download a previewed image.
+  const loadAttachment = useCallback((id: string) => selected ? chatApi.download(selected, id) : Promise.reject(new Error('No conversation selected')), [selected])
   const c = detail?.conversation
+  const fulfillmentUnreadCount = c?.fulfillmentUnreadCount ?? 0
   const canStartQuotation = c?.purpose === 'SALES' && c.contextType === 'ITEM_BASED' && !c.canonicalConversationId && role !== 'FULFILLMENT' && detail?.quotations.quotation?.state === 'ACCEPTED'
   const canPrepare = c?.purpose === 'SALES' && role !== 'FULFILLMENT' && detail?.quotations.quotation?.state !== 'ACCEPTED'
   return (
       <section className="chat-thread flex-1" aria-label="Selected conversation">
         {error && <StatusMessage tone="error">{error} <Button variant="quiet" onClick={() => void load()}>Retry conversation</Button></StatusMessage>}
         {!selected ? <div className="chat-empty-thread"><MessageSquare size={36} aria-hidden="true" /><h2>Your conversations, in one place</h2><p>{role === 'FULFILLMENT' ? 'Choose an assigned order conversation to coordinate fulfillment.' : 'Choose an inquiry from the inbox to reply or prepare a quotation.'}</p></div> : <>
-          <div className="chat-toolbar">{onBack && <Button className="chat-back" aria-label="Back to inbox" variant="quiet" disabled={busy} onClick={onBack}><ArrowLeft size={16} aria-hidden="true" /><span className="chat-action-label">Back to inbox</span></Button>}<span className="chat-toolbar-label">{c ? conversationLabel(c) : 'Conversation'}</span>{c && <>{c.canListFulfillmentConversations && onFulfillmentList && <Button variant="quiet" onClick={onFulfillmentList} aria-haspopup="dialog"><MessageSquare size={16} aria-hidden="true" /><span>Fulfillment conversations</span></Button>}{c.purpose === 'SALES' && <Button variant="quiet" aria-label="Quotation history" aria-expanded={historyOpen} aria-controls="chat-quotation-history" onClick={() => setHistoryOpen(value => !value)}><FileText size={16} aria-hidden="true" /><span className="chat-action-label">Quotation history</span></Button>}{c.canTransfer && <Button variant="quiet" aria-label="Transfer handler" disabled={busy} onClick={() => void mutate(async () => { const result = await chatApi.handlers(c.id); setHandlers(result.data); setHandlerPage(1); setMoreHandlers(Boolean(result.meta.has_more)) }, false)}><UsersRound size={16} aria-hidden="true" /><span className="chat-action-label">Transfer handler</span></Button>}</>}</div>
+          <div className="chat-toolbar">{onBack && <Button className="chat-back" aria-label="Back to inbox" variant="quiet" disabled={busy} onClick={onBack}><ArrowLeft size={16} aria-hidden="true" /><span className="chat-action-label">Back to inbox</span></Button>}{c?.contextType === 'PROJECT_BASED' && c.mainConversationId && onOpenMain && <Button variant="quiet" disabled={busy} onClick={() => onOpenMain(c.mainConversationId!)}>Item inquiry</Button>}<span className="chat-toolbar-label">{c ? conversationLabel(c) : 'Conversation'}</span>{c?.purpose === 'SALES' && onProjectList && <Button variant="quiet" disabled={busy} onClick={onProjectList} aria-haspopup="dialog"><MessageSquare size={16} aria-hidden="true" /><span>Project inquiries</span><CountBadge count={c.projectUnreadCount ?? 0} /><span className="sr-only">{c.projectUnreadCount ?? 0} unread project messages</span></Button>}{c && <>{c.canListFulfillmentConversations && onFulfillmentList && <><Button variant="quiet" onClick={onFulfillmentList} aria-haspopup="dialog" aria-describedby={fulfillmentCountId}><MessageSquare size={16} aria-hidden="true" /><span>Fulfillment conversations</span><CountBadge count={fulfillmentUnreadCount} /></Button><span id={fulfillmentCountId} className="sr-only" role="status">{fulfillmentUnreadCount > 0 ? `${fulfillmentUnreadCount} unread fulfillment messages` : 'No unread fulfillment messages'}</span></>}{c.purpose === 'SALES' && <Button variant="quiet" aria-label="Quotation history" aria-expanded={historyOpen} aria-controls="chat-quotation-history" onClick={() => setHistoryOpen(value => !value)}><FileText size={16} aria-hidden="true" /><span className="chat-action-label">Quotation history</span></Button>}{c.canTransfer && <Button variant="quiet" aria-label="Transfer handler" disabled={busy} onClick={() => void mutate(async () => { const result = await chatApi.handlers(c.id); setHandlers(result.data); setHandlerPage(1); setMoreHandlers(Boolean(result.meta.has_more)) }, false)}><UsersRound size={16} aria-hidden="true" /><span className="chat-action-label">Transfer handler</span></Button>}</>}</div>
           {loading ? <LoadingState label="Loading conversation…" /> : detail && c ? <>
-            {canPrepare && <QuotationDraftEditor key={c.id} open={editor} onClose={() => setEditor(false)} reference={c.lockedReference} conversationId={c.id} quotation={detail.quotations.quotation ?? null} role={role} onSaved={load} />}
+            {canPrepare && <QuotationDraftEditor key={c.id} open={editor} onClose={() => setEditor(false)} reference={c.lockedReference} conversationId={c.id} quotation={detail.quotations.quotation ?? null} sourceNames={Object.fromEntries(detail.quotations.versions.find(version => version.latest)?.content.lines.map(line => [line.variantId, line.description]) ?? [])} role={role} onSaved={load} />}
             <ConversationHeader store={c.store} buyer={c.buyer} handler={c.handler} purpose={c.purpose} loadAvatar={loadChatAvatar} />
             <div className="chat-thread-body" ref={threadBody}>
         {handlers && <form className="grid gap-3 border-b border-border-default p-5 sm:grid-cols-2" onSubmit={e => { e.preventDefault(); void mutate(async () => { await chatApi.transfer(c.id, Number(target), c.lockVersion, reason); setHandlers(null) }) }}><label className="grid gap-2 text-sm font-semibold">New handler<select className={control} required value={target} onChange={e => setTarget(e.target.value)}><option value="">Choose active staff</option>{handlers.map(h => <option key={h.id} value={h.id}>{h.displayName} · {chatRoleLabel(h.role)}</option>)}</select></label><label className="grid gap-2 text-sm font-semibold">Transfer reason<input className={control} required maxLength={500} value={reason} onChange={e => setReason(e.target.value)} /></label><div>{moreHandlers && <Button variant="secondary" onClick={() => void mutate(async () => { const result = await chatApi.handlers(c.id, handlerPage + 1); setHandlers([...handlers, ...result.data]); setHandlerPage(handlerPage + 1); setMoreHandlers(Boolean(result.meta.has_more)) }, false)}>More handlers</Button>}</div><p className="text-sm text-text-secondary sm:col-span-2">Transfer changes the handler. Their fixed role continues to determine what they may do.</p><Button disabled={busy || !target} type="submit">Confirm transfer</Button><Button variant="secondary" onClick={() => setHandlers(null)}>Cancel</Button></form>}
               <WorkPackageAttachment reference={c.lockedReference} proposal={detail.quotations.versions[0] ? ChatQuotationContentToJSON(detail.quotations.versions[0].content) : undefined} />
+              <SiteInspectionPanel inspections={detail.siteInspections ?? []} busy={busy} onPrepareQuotation={canPrepare ? () => setEditor(true) : undefined} onDecide={async (inspection, action, decision) => {
+                try { await chatApi.siteInspection(c.id, inspection.id, action, decision) } catch (cause) { throw new Error(await readableChatError(cause)) }
+                await load()
+              }} />
               {historyOpen && <aside id="chat-quotation-history" className="chat-history" aria-label="Quotation history"><h3>Quotation history</h3><div className="chat-history-cards">{detail.quotations.versions.length === 0 ? <p className="py-6 text-sm text-text-secondary">Published quotations and their changes appear here.</p> : detail.quotations.versions.map(version => <QuotationVersionCard key={version.id} version={version} busy={busy} onAction={(_, v) => { if (window.confirm('Withdraw this quotation? Its history will remain available.')) void mutate(() => chatApi.withdraw(c.id, v.id, actionKey.current)) }} />)}{detail.quotations.hasMore && <Button variant="secondary" onClick={() => void mutate(async () => { const older = await chatApi.get(c.id, undefined, (detail.quotations.page ?? 1) + 1); setDetail({ ...detail, quotations: { ...older.quotations, versions: [...detail.quotations.versions, ...older.quotations.versions] } }) }, false)}>Older versions</Button>}</div></aside>}
               {detail.quotations.versions.filter(version => version.acceptedOrderId).map(version => <Link key={version.id} className="inline-flex min-h-11 items-center px-5 font-semibold underline" to={`/orders/${version.acceptedOrderId}`}>Open accepted order · {new Date(version.publishedAt).toLocaleDateString('en-PH')}</Link>)}
               <div className="chat-timeline">
                 {detail.messages.hasMore && <div className="mb-5 text-center"><Button variant="secondary" disabled={busy} onClick={() => void mutate(async () => { const older = await chatApi.get(c.id, detail.messages.nextBefore ?? undefined); currentDetail.current = { ...detail, messages: { ...older.messages, items: [...older.messages.items, ...detail.messages.items] } }; setDetail(currentDetail.current) }, false)}>Earlier messages</Button></div>}
-                <ol aria-label="Conversation messages">{detail.messages.items.map(message => <ChatMessageBubble key={message.id} message={message} onOpenAttachment={id => void openFile(id)} onOpenProduct={id => navigate(`/products/${id}`)} />)}{pending.map(message => <ChatMessageBubble key={message.id} message={message} deliveryState={message.deliveryState} onRetry={() => void sendMessage(message)} onOpenAttachment={() => undefined} onOpenProduct={id => navigate(`/products/${id}`)} />)}</ol>
+                <ol aria-label="Conversation messages">{detail.messages.items.map(message => <ChatMessageBubble key={message.id} message={message} onOpenAttachment={(id, file) => void openFile(id, file?.displayName)} loadAttachment={loadAttachment} onOpenProduct={id => navigate(`/products/${id}`)} />)}{pending.map(message => <ChatMessageBubble key={message.id} message={message} deliveryState={message.deliveryState} onRetry={() => void sendMessage(message)} onOpenAttachment={() => undefined} onOpenProduct={id => navigate(`/products/${id}`)} />)}</ol>
                 {detail.messages.items.length === 0 && <p className="py-10 text-center text-sm text-text-secondary">Start with a helpful reply about products or fulfillment.</p>}
+                <ChatTypingIndicator active={typing} />
               </div>
             </div>
-            {typing && <p role="status" className="px-5 text-sm">typing...</p>}
             {c.canonicalConversationId && <Link className="min-h-11 px-5 underline" to={`/messages?conversation=${c.canonicalConversationId}`}>Open current conversation</Link>}
             {picker && <section className="p-4" aria-label="Attach product"><Toolbar search={{ label: 'Search store products', placeholder: 'Product name or SKU', value: productQuery, onChange: setProductQuery, disabled: busy, onSubmit: event => { event.preventDefault(); if (!busy) void findProducts() } }} viewToggle={<Button variant="quiet" onClick={() => setPicker(false)}>Close</Button>} /><div className="max-h-60 overflow-y-auto">{products.map(item => <button type="button" className="flex min-h-11 w-full items-center gap-3 p-3 text-left" key={item.productId} onClick={() => { setProduct(item); setPicker(false) }}>{item.imageUrl && <img src={item.imageUrl} alt="" className="size-10 object-cover" />}{item.name} · {formatPesoCentavos(item.priceCentavos)}</button>)}{products.length === 0 && <p>No available products</p>}</div><Button variant="quiet" disabled={busy || productPage === 1} onClick={() => void findProducts(productPage - 1)}>Previous</Button><Button variant="quiet" disabled={busy || !moreProducts} onClick={() => void findProducts(productPage + 1)}>Next</Button></section>}
             {c.purpose === 'FULFILLMENT' && c.orderId && <Link className="inline-flex min-h-11 items-center px-5 text-sm font-semibold underline" to={`/orders/${c.orderId}`}>Open order {c.orderReference ?? ''}</Link>}
@@ -208,46 +231,77 @@ export function ConversationThread({ selected, role, onBack, onRead, onMessage, 
   )
 }
 
-function QuotationDraftEditor({ open, onClose, conversationId, quotation, role, onSaved, reference }: { open: boolean; onClose: () => void; conversationId: string; quotation?: ChatQuotation | null; role: string; onSaved: () => Promise<void>; reference?: unknown }) {
-  const [draft, setDraft] = useState<ChatDraftContent>(() => quotation?.draft ? ChatDraftContentFromJSON(quotation.draft) : { lines: [], fulfillmentMethod: 'PICKUP', paymentMethod: 'ONLINE', fulfillmentDate: '', deadlineHours: 24, vendorDiscountCentavos: 0 })
-  const [query, setQuery] = useState('')
-  const [products, setProducts] = useState<CatalogListingSummary[]>([])
-  const [variants, setVariants] = useState<CatalogVariant[]>([])
+function QuotationDraftEditor({ open, onClose, conversationId, quotation, role, onSaved, reference, sourceNames = {} }: { open: boolean; onClose: () => void; conversationId: string; quotation?: ChatQuotation | null; role: string; onSaved: () => Promise<void>; reference?: unknown; sourceNames?: Record<string, string> }) {
+  const [draft, setDraft] = useState<ChatDraftContent>(() => quotation?.draft ? ChatDraftContentFromJSON(quotation.draft) : { lines: [], fulfillmentMethod: 'PICKUP', paymentMethod: 'ONLINE', fulfillmentDate: '', deadlineHours: 24, discount: { scope: 'MATERIALS', percent: '' } })
+  const nrpcBuffer = useRef<NrpcPreparationValue | null>(null)
   const [names, setNames] = useState<Record<string, string>>({})
+  const [productDetails, setProductDetails] = useState<Record<string, { variantLabel: string; specifications: Record<string, string> }>>({})
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [lock, setLock] = useState(quotation?.lockVersion ?? 1)
   const [saved, setSaved] = useState(false)
-  const [fleet, setFleet] = useState<FleetVehicle[]>([])
   useEffect(() => { if (!dirty && quotation) { setLock(quotation.lockVersion); if (quotation.draft) setDraft(ChatDraftContentFromJSON(quotation.draft)) } }, [quotation, dirty])
   const delivery = draft.delivery ?? {}
-  const vehicles = Array.isArray(delivery.vehicles) ? delivery.vehicles as { vehicle_id: string; number_of_vehicles: number; total_vehicle_trips: number }[] : []
-  const allocations = (draft.nrpc?.allocations ?? {}) as Record<string, number>
+  const nrpcValues = { reason: typeof draft.nrpc?.reason === 'string' ? draft.nrpc.reason : '', allocations: Object.fromEntries(Object.entries(draft.nrpc?.allocations ?? {}).map(([id, amount]) => [id, typeof amount === 'number' ? amount : null])) }
   const deliveryEdit = (patch: Record<string, unknown>) => edit({ ...draft, delivery: { ...delivery, ...patch } })
   const key = useRef(newIdempotencyKey())
   const edit = (value: ChatDraftContent) => { setDraft(value); setDirty(true); setSaved(false); key.current = newIdempotencyKey() }
+  const materialNames = { ...sourceNames, ...names }
+  const amounts = quotationDiscountPreview(draft)
+  const nrpcMaterials: NrpcPreparedMaterial[] = draft.lines.map((line, index) => ({ id: line.variantId, name: materialNames[line.variantId] ?? (line.description?.trim() || `Material ${index + 1}`), detail: `Quantity ${line.quantity}`, payableCentavos: amounts.valid ? amounts.linePayableCentavos[line.variantId] ?? 0 : null }))
+  const nrpcAssessment = nrpcPreparationAssessment(nrpcMaterials, nrpcValues, { min: 3, max: 2000 })
+  const moneyValid = amounts.valid && (role === 'CUSTOMER_SERVICE' || !draft.nrpc || nrpcAssessment.valid)
   async function act(action: () => Promise<void>) { setBusy(true); setError(null); try { await action() } catch (e) { setError(await readableChatError(e)) } finally { setBusy(false) } }
-  return <FormDialog open={open} onClose={onClose} busy={busy} title="Prepare quotation" description={role === 'CUSTOMER_SERVICE' ? 'Save a draft for an authorized publisher to review.' : 'Add materials, confirm fulfillment, then save and publish your quotation.'} footer={<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end"><p className="text-sm text-text-secondary sm:mr-auto">{busy ? 'Saving changes...' : dirty ? 'Unsaved changes' : saved ? 'Draft saved' : 'Review your draft before publishing.'}</p><Button variant="quiet" disabled={busy} onClick={onClose}>Close</Button><Button disabled={busy || !draft.lines.length || !draft.fulfillmentDate} onClick={() => void act(async () => { const result = await chatApi.draft(conversationId, lock, draft); setLock(result.quotation?.lockVersion ?? lock + 1); setDirty(false); setSaved(true); await onSaved() })}>Save draft</Button>{role !== 'CUSTOMER_SERVICE' && <Button variant="secondary" disabled={busy || dirty || !quotation?.draft} onClick={() => { if (window.confirm('Publish these terms? This starts a new Buyer deadline and supersedes the previous version.')) void act(async () => { await chatApi.publish(conversationId, lock, key.current); key.current = newIdempotencyKey(); await onSaved() }) }}>Publish quotation</Button>}</div>}>
+  return <FormDialog open={open} onClose={onClose} busy={busy} title="Prepare quotation" description={role === 'CUSTOMER_SERVICE' ? 'Save a draft for an authorized publisher to review.' : 'Add materials, confirm fulfillment, then save and publish your quotation.'} footer={<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end"><p className="text-sm text-text-secondary sm:mr-auto">{busy ? 'Saving changes...' : dirty ? 'Unsaved changes' : saved ? 'Draft saved' : 'Review your draft before publishing.'}</p><Button variant="quiet" disabled={busy} onClick={onClose}>Close</Button><Button disabled={busy || !moneyValid || !draft.lines.length || !draft.fulfillmentDate} onClick={() => void act(async () => { const result = await chatApi.draft(conversationId, lock, quotationDraftForSave(draft)); setLock(result.quotation?.lockVersion ?? lock + 1); setDirty(false); setSaved(true); await onSaved() })}>Save draft</Button>{role !== 'CUSTOMER_SERVICE' && <Button variant="secondary" disabled={busy || !moneyValid || dirty || !quotation?.draft} onClick={() => { if (window.confirm('Publish these terms? This starts a new Buyer deadline and supersedes the previous version.')) void act(async () => { await chatApi.publish(conversationId, lock, key.current); key.current = newIdempotencyKey(); await onSaved() }) }}>Publish quotation</Button>}</div>}>
     <section aria-label="Quotation draft" className="space-y-6">
     {error && <StatusMessage tone="error">{error}</StatusMessage>}{saved && <StatusMessage tone="success">Draft saved.</StatusMessage>}
     <WorkPackageAttachment reference={reference} proposal={ChatDraftContentToJSON(draft)} />
-    <section className="space-y-4"><div><h3 className="font-semibold">Materials</h3><p className="mt-1 text-sm text-text-secondary">Find products from your store and add the variants to quote.</p></div>
-    <Toolbar search={{ label: 'Find store products', placeholder: 'Product name or SKU', value: query, onChange: setQuery, disabled: busy, onSubmit: event => { event.preventDefault(); if (!busy) void act(async () => setProducts((await listListings({ q: query, status: 'ACTIVE' })).items)) } }} />
-    <div className="mt-3 flex flex-wrap gap-2">{products.map(product => <Button key={product.id} variant="secondary" onClick={() => void act(async () => { const listing = await getListing(product.id); setVariants(listing.variants); setNames(n => ({ ...n, ...Object.fromEntries(listing.variants.map(v => [v.id, `${listing.displayName} · ${v.label ?? v.sku}`])) })) })}>{product.displayName}</Button>)}</div>
-    {variants.length > 0 && <label className="mt-3 grid gap-2 text-sm font-semibold">Add variant<select className={control} value="" onChange={e => { const v = variants.find(row => row.id === e.target.value); if (v && !draft.lines.some(line => line.variantId === v.id)) edit({ ...draft, lines: [...draft.lines, { variantId: v.id, quantity: '1', unitPriceCentavos: v.price?.amountCentavos ?? 1 }] }) }}><option value="">Choose a variant</option>{variants.map(v => <option key={v.id} value={v.id}>{v.label ?? v.sku}</option>)}</select></label>}
-    {!draft.lines.length && <p className="rounded-control border border-dashed border-border-default bg-surface-canvas p-5 text-center text-sm text-text-secondary">No materials added yet. Search for a product to start your quotation.</p>}
-    <div className="divide-y divide-border-default">{draft.lines.map((line, index) => <div key={line.variantId} className="grid gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_110px_150px_auto]"><p className="self-center text-sm font-semibold">{line.description ?? names[line.variantId] ?? `Product line ${index + 1}`}</p><label className="grid gap-1 text-sm">Quantity<input className={control} inputMode="decimal" value={line.quantity} onChange={e => edit({ ...draft, lines: draft.lines.map((l, i) => i === index ? { ...l, quantity: e.target.value } : l) })} /></label><label className="grid gap-1 text-sm">Unit price (centavos)<input className={control} type="number" min="1" step="1" value={line.unitPriceCentavos} onChange={e => edit({ ...draft, lines: draft.lines.map((l, i) => i === index ? { ...l, unitPriceCentavos: Number(e.target.value) } : l) })} /><span className="text-xs">{formatPesoCentavos(line.unitPriceCentavos)}</span></label><Button variant="secondary" className="self-center" onClick={() => edit({ ...draft, lines: draft.lines.filter((_, i) => i !== index) })}>Remove</Button><div className="grid gap-3 sm:col-span-4 sm:grid-cols-2"><label className="grid gap-2 text-sm">Description<input className={control} maxLength={200} value={line.description ?? ''} onChange={e => edit({ ...draft, lines: draft.lines.map((l, i) => i === index ? { ...l, description: e.target.value } : l) })} /></label><label className="grid gap-2 text-sm">Specifications (key=value per line)<textarea className={control} value={Object.entries(line.specifications ?? {}).map(([k,v]) => `${k}=${v}`).join('\n')} onChange={e => edit({ ...draft, lines: draft.lines.map((l, i) => i === index ? { ...l, specifications: Object.fromEntries(e.target.value.split('\n').filter(v => v.includes('=')).map(v => { const n = v.indexOf('='); return [v.slice(0,n).trim(), v.slice(n+1).trim()] })) } : l) })} /></label></div></div>)}</div>
+    <section className="space-y-3"><div className="sticky top-0 z-10 space-y-2 bg-surface-primary pb-2"><div><h3 className="font-semibold">Materials</h3><p className="mt-1 text-sm text-text-secondary">Add products below. Expand a material to edit its description and specifications.</p></div>
+    <CatalogProductPicker active={open} disabled={busy} selectedVariantIds={draft.lines.map(line => line.variantId)} loadProducts={loadQuotationProducts} loadProduct={getListing} readableError={readableCatalogError} onAdd={(listing, variant) => {
+      if (busy || !variant.price || draft.lines.some(line => line.variantId === variant.id)) return
+      setNames(current => ({ ...current, [variant.id]: `${listing.displayName} · ${variant.label ?? variant.sku}` }))
+      setProductDetails(current => ({ ...current, [variant.id]: { variantLabel: variant.label?.trim() || variant.sku, specifications: { ...listing.technicalAttributes, ...variant.attributes } } }))
+      edit({ ...draft, lines: [...draft.lines, { variantId: variant.id, quantity: '1', unitPriceCentavos: variant.price.amountCentavos }] })
+    }} />
+    </div>
+    {!draft.lines.length && <p className="rounded-control border border-dashed border-border-default bg-surface-canvas p-5 text-center text-sm text-text-secondary">No materials added yet. Select a product and add a variant to start your quotation.</p>}
+    <QuotationMaterialsEditor lines={draft.lines} names={materialNames} productDetails={productDetails} disabled={busy} onChange={(variantId, patch) => edit({ ...draft, lines: draft.lines.map(line => line.variantId === variantId ? { ...line, ...patch } : line) })} onRemove={variantId => {
+      const remaining = draft.lines.filter(line => line.variantId !== variantId)
+      if (draft.nrpc && role !== 'CUSTOMER_SERVICE') {
+        const nextAllocations = { ...nrpcValues.allocations }
+        delete nextAllocations[variantId]
+        const next = nrpcPreparationAssessment(nrpcMaterials.filter(line => line.id !== variantId), { ...nrpcValues, allocations: nextAllocations }, { min: 3, max: 2000 })
+        edit({ ...draft, lines: remaining, nrpc: { ...draft.nrpc, allocations: nextAllocations, amount_centavos: next.totalCentavos ?? 0 } })
+      } else edit({ ...draft, lines: remaining })
+    }} />
     </section>
 
-    <section className="space-y-4 border-t border-border-default pt-6"><h3 className="font-semibold">Fulfillment & payment</h3><div className="grid gap-4 sm:grid-cols-2"><label className="grid gap-2 text-sm font-semibold">Fulfillment date<input className={control} type="date" value={draft.fulfillmentDate} onChange={e => edit({ ...draft, fulfillmentDate: e.target.value })} /></label><label className="grid gap-2 text-sm font-semibold">Buyer deadline (hours)<input className={control} type="number" min="1" max="72" value={draft.deadlineHours ?? 24} onChange={e => edit({ ...draft, deadlineHours: Number(e.target.value) })} /></label><label className="grid gap-2 text-sm font-semibold">Vendor discount (centavos)<input className={control} type="number" min="0" value={draft.vendorDiscountCentavos ?? 0} onChange={e => edit({ ...draft, vendorDiscountCentavos: Number(e.target.value) })} /></label><div className="self-center text-sm text-text-secondary">Online payment<br />Processing fee is disclosed at payment-channel selection.</div></div>
+    <section className="space-y-4 border-t border-border-default pt-6"><h3 className="font-semibold">Fulfillment & payment</h3><div className="grid gap-4 sm:grid-cols-2">
+      <label className="grid gap-2 text-sm font-semibold">Fulfillment date<input className={control} type="date" value={draft.fulfillmentDate} onChange={e => edit({ ...draft, fulfillmentDate: e.target.value })} /></label>
+      <label className="grid gap-2 text-sm font-semibold">Buyer deadline (hours)<input className={control} type="number" min="1" max="72" value={draft.deadlineHours ?? 24} onChange={e => edit({ ...draft, deadlineHours: Number(e.target.value) })} /></label>
+    </div>
+    <p className="text-xs text-text-secondary">Online payment · Processing fee is disclosed at payment-channel selection.</p>
     <div className="mt-4 space-y-4">
-      <label className="grid gap-2 text-sm font-semibold">Fulfillment<select className={control} value={draft.fulfillmentMethod} onChange={e => { edit({ ...draft, fulfillmentMethod: e.target.value as ChatDraftContent['fulfillmentMethod'] }); if (e.target.value === 'DELIVERY') void act(async () => setFleet((await listFleet()).items.filter(v => v.active && v.available))) }}><option value="PICKUP">Self-Pickup</option><option value="DELIVERY">Site Delivery</option></select></label>
-      {draft.fulfillmentMethod === 'DELIVERY' && <fieldset className="space-y-3 rounded-control border border-border-default p-4"><legend className="px-2 font-semibold">Delivery arrangement</legend><p className="text-sm text-text-secondary">Uses the Buyer's saved inquiry destination. Vehicle capacity, road distance and current rates are validated before publication.</p><Button variant="secondary" onClick={() => void act(async () => setFleet((await listFleet()).items.filter(v => v.active && v.available)))}>Load available vehicles</Button>
-      <select aria-label="Add delivery vehicle" className={control} value="" onChange={e => { if (e.target.value && !vehicles.some(v => v.vehicle_id === e.target.value)) deliveryEdit({ vehicles: [...vehicles, { vehicle_id: e.target.value, number_of_vehicles: 1, total_vehicle_trips: 1 }] }) }}><option value="">Choose vehicle</option>{fleet.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}</select>
-      {vehicles.map((v, i) => <div key={v.vehicle_id} className="grid gap-3 sm:grid-cols-3"><span className="self-center font-medium">{fleet.find(f => f.id === v.vehicle_id)?.name ?? `Vehicle ${i + 1}`}</span>{(['number_of_vehicles', 'total_vehicle_trips'] as const).map(field => <label key={field} className="grid gap-1 text-sm">{field === 'number_of_vehicles' ? 'Vehicles' : 'Total vehicle trips'}<input className={control} type="number" min="1" value={v[field]} onChange={e => deliveryEdit({ vehicles: vehicles.map((row, n) => n === i ? { ...row, [field]: Number(e.target.value) } : row) })} /></label>)}<Button variant="secondary" onClick={() => deliveryEdit({ vehicles: vehicles.filter((_, n) => n !== i) })}>Remove vehicle</Button></div>)}
-      <label className="grid gap-2 text-sm">Final delivery charge (centavos)<input className={control} type="number" min="0" value={Number(delivery.final_fee_centavos ?? 0)} onChange={e => deliveryEdit({ final_fee_centavos: Number(e.target.value) })} /></label><label className="grid gap-2 text-sm">Delivery arrangement<textarea className={control} value={String(delivery.arrangement ?? '')} onChange={e => deliveryEdit({ arrangement: e.target.value })} /></label><label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={Boolean(delivery.access_confirmed)} onChange={e => deliveryEdit({ access_confirmed: e.target.checked })} />Delivery access confirmed with Buyer</label><label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={Boolean(delivery.heavy_vehicle_access_confirmed)} onChange={e => deliveryEdit({ heavy_vehicle_access_confirmed: e.target.checked })} />Heavy vehicle access confirmed</label><label className="grid gap-2 text-sm">Manual review note (when required)<textarea className={control} value={String(delivery.manual_review_note ?? '')} onChange={e => deliveryEdit({ manual_review_note: e.target.value })} /></label></fieldset>}
-      {role !== 'CUSTOMER_SERVICE' && <fieldset className="space-y-3 rounded-control border border-border-default p-4"><legend className="px-2 font-semibold">Non-Refundable Preparation Charge</legend><label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={Boolean(draft.nrpc)} onChange={e => { const { nrpc: previous, ...rest } = draft; void previous; edit(e.target.checked ? { ...draft, nrpc: { reason: '', amount_centavos: 0, allocations: {} } } : rest) }} />Include NRPC</label>{draft.nrpc && <><label className="grid gap-2 text-sm">Reason<textarea className={control} value={String(draft.nrpc.reason ?? '')} onChange={e => edit({ ...draft, nrpc: { ...draft.nrpc, reason: e.target.value } })} /></label><p className="text-sm text-text-secondary">Allocate the charge to affected lines. It is included in the materials amount and requires Buyer acceptance of the current Terms.</p>{draft.lines.map((line, i) => <label key={line.variantId} className="grid gap-2 text-sm">{names[line.variantId] ?? `Line ${i + 1}`} · NRPC (centavos)<input className={control} type="number" min="0" value={allocations[line.variantId] ?? 0} onChange={e => { const next = { ...allocations, [line.variantId]: Number(e.target.value) }; const nonzero = Object.fromEntries(Object.entries(next).filter(([, value]) => value > 0)); edit({ ...draft, nrpc: { ...draft.nrpc, allocations: nonzero, amount_centavos: Object.values(nonzero).reduce((sum, value) => sum + value, 0) } }) }} /></label>)}</>}</fieldset>}
+      <label className="grid gap-2 text-sm font-semibold">Fulfillment<select className={control} disabled={busy} value={draft.fulfillmentMethod} onChange={e => edit({ ...draft, fulfillmentMethod: e.target.value as ChatDraftContent['fulfillmentMethod'], ...(e.target.value === 'PICKUP' && draft.discount?.scope === 'DELIVERY' ? { discount: { scope: 'MATERIALS', percent: '' } } : {}) })}><option value="PICKUP">Self-Pickup</option><option value="DELIVERY">Site Delivery</option></select></label>
+      {draft.fulfillmentMethod === 'DELIVERY' && <QuotationDeliveryArrangement value={delivery} onChange={deliveryEdit} active={open} disabled={busy} loadVehicles={loadQuotationVehicles} readableError={readableChatError} />}
+      <QuotationDiscountEditor draft={draft} disabled={busy} onChange={discount => edit({ ...draft, discount })} />
+      {role !== 'CUSTOMER_SERVICE' && <NrpcPreparationEditor enabled={Boolean(draft.nrpc)} value={nrpcValues} materials={nrpcMaterials} reasonLimits={{ min: 3, max: 2000 }} disabled={busy} onToggle={enabled => {
+        if (enabled) {
+          const value = nrpcBuffer.current ?? { reason: '', allocations: {} }
+          const restored = { ...value, allocations: Object.fromEntries(Object.entries(value.allocations).filter(([id]) => draft.lines.some(line => line.variantId === id))) }
+          const next = nrpcPreparationAssessment(nrpcMaterials, restored, { min: 3, max: 2000 })
+          edit({ ...draft, nrpc: { reason: restored.reason, allocations: restored.allocations, amount_centavos: next.totalCentavos ?? 0 } })
+        } else {
+          nrpcBuffer.current = nrpcValues
+          const { nrpc: previous, ...rest } = draft
+          void previous
+          edit(rest)
+        }
+      }} onChange={value => {
+        const next = nrpcPreparationAssessment(nrpcMaterials, value, { min: 3, max: 2000 })
+        edit({ ...draft, nrpc: { ...draft.nrpc, reason: value.reason, allocations: value.allocations, amount_centavos: next.totalCentavos ?? 0 } })
+      }} />}
     </div>
 
     </section>

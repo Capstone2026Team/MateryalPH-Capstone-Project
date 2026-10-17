@@ -24,19 +24,27 @@ export interface ComplianceExtraction {
      */
     source?: ComplianceExtractionSourceEnum | null;
     /**
+     * Extraction provenance, such as TESSERACT, NONE or BROWSER_QR_DECODER. Null for manual entry.
+     */
+    provider?: string | null;
+    /**
      *
      */
     status: ComplianceExtractionStatusEnum;
     /**
-     *
+     * Mean OCR word recognition confidence; never a probability of authenticity or approval.
      */
     confidence?: number | null;
     /**
-     *
+     * Editable marking_type, certificate_number (the PS License No. or ICC sticker serial), icc_certificate_number, verification_reference, manufacturer_name, manufacturer_address, importer_name, importer_address, country_of_manufacture, brand and batch_number where read unambiguously. PNS standard numbers are never marking numbers.
      */
     suggestions: { [key: string]: string; };
     /**
-     *
+     * True when the suggested certificate_number exists in the active DTI-BPS register snapshot. Still a suggestion: the Vendor confirms it against the physical marking.
+     */
+    registerListed?: boolean;
+    /**
+     * Always true. The Vendor must review and confirm values before a separate official-register comparison or Admin decision.
      */
     assistanceOnly?: boolean;
 }
@@ -83,9 +91,11 @@ export function ComplianceExtractionFromJSONTyped(json: any, ignoreDiscriminator
     return {
 
         'source': json['source'] === undefined ? undefined : json['source'] === null ? null : json['source'],
+        'provider': json['provider'] === undefined ? undefined : json['provider'] === null ? null : json['provider'],
         'status': json['status'],
         'confidence': json['confidence'] === undefined ? undefined : json['confidence'] === null ? null : json['confidence'],
         'suggestions': json['suggestions'],
+        'registerListed': json['register_listed'] == null ? undefined : json['register_listed'],
         'assistanceOnly': json['assistance_only'] == null ? undefined : json['assistance_only'],
     };
 }
@@ -102,9 +112,11 @@ export function ComplianceExtractionToJSONTyped(value?: ComplianceExtraction | n
     return {
 
         'source': value['source'],
+        'provider': value['provider'],
         'status': value['status'],
         'confidence': value['confidence'],
         'suggestions': value['suggestions'],
+        'register_listed': value['registerListed'],
         'assistance_only': value['assistanceOnly'],
     };
 }

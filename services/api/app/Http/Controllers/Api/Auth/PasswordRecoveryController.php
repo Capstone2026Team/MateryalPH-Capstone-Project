@@ -36,7 +36,7 @@ final class PasswordRecoveryController extends Controller
             ->first();
 
         $usedProof = false;
-        if (in_array($portal, ['BUYER', 'VENDOR'], true)) {
+        if (in_array($portal, ['BUYER', 'VENDOR', 'ADMIN'], true)) {
             $usedProof = $botProtection->guard(
                 $request,
                 $email,

@@ -19,6 +19,7 @@ use App\Domain\Settings\PlatformSettings;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\PortalDateRange;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -46,7 +47,7 @@ final class DisputeController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $filters = $request->validate(['group' => ['sometimes', Rule::in(['ALL', ...array_keys(DisputeQueries::VENDOR_GROUPS)])], 'q' => ['sometimes', 'string', 'max:120'], 'page' => ['sometimes', 'integer', 'between:1,1000']]);
+        $filters = $request->validate(['group' => ['sometimes', Rule::in(['ALL', ...array_keys(DisputeQueries::VENDOR_GROUPS)])], 'q' => ['sometimes', 'string', 'max:120'], 'page' => ['sometimes', 'integer', 'between:1,1000']] + PortalDateRange::rules($request));
         $result = self::party($request) === 'BUYER' ? $this->queries->buyerList($request, (int) ($filters['page'] ?? 1)) : $this->queries->vendorList($request, $filters);
 
         return ApiResponse::success($result['items'], $result['meta']);
@@ -222,7 +223,7 @@ final class DisputeController extends Controller
 
     public function queue(Request $request): JsonResponse
     {
-        $filters = $request->validate(['status' => ['sometimes', Rule::in(['NEEDS_ADMIN', 'WITH_PARTIES', 'REMEDY_TRACKING', 'CONCLUDED', 'ALL'])], 'page' => ['sometimes', 'integer', 'between:1,1000']]);
+        $filters = $request->validate(['status' => ['sometimes', Rule::in(['NEEDS_ADMIN', 'WITH_PARTIES', 'REMEDY_TRACKING', 'CONCLUDED', 'ALL'])], 'page' => ['sometimes', 'integer', 'between:1,1000']] + PortalDateRange::rules($request));
         $result = $this->queries->adminQueue($request, $filters);
 
         return ApiResponse::success($result['items'], $result['meta']);

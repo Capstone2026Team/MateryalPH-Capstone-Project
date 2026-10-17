@@ -494,7 +494,8 @@ final class PhaseThirteenDisputesTest extends TestCase
         $this->getJson('/api/v1/vendor/navigation-updates')->assertOk()->assertJsonPath('data.sections./invoices', 1);
         $invoiceNotice = DB::table('notifications')->where('user_id', $service->id)->where('category', 'INVOICES')->sole();
         $this->postJson('/api/v1/vendor/notifications/'.$invoiceNotice->id.'/read')->assertOk();
-        $this->getJson('/api/v1/vendor/navigation-updates')->assertOk()->assertJsonMissingPath('data.sections./invoices');
+        // Reading the notice does not fulfill the still-pending invoice request.
+        $this->getJson('/api/v1/vendor/navigation-updates')->assertOk()->assertJsonPath('data.sections./invoices', 1);
         $this->post('/api/v1/vendor/orders/'.$orderId.'/invoices', $upload, $this->key() + ['Accept' => 'application/json'])->assertForbidden();
         $this->getJson('/api/v1/vendor/orders/'.$orderId.'/invoices')->assertOk()->assertJsonPath('data.can_upload', false)->assertJsonPath('data.billing_details.tin', null);
         $this->signInStoreMember($inventory);

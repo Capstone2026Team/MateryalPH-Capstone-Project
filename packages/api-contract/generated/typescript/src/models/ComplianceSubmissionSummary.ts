@@ -57,6 +57,10 @@ export interface ComplianceSubmissionSummary {
     /**
      *
      */
+    reviewMode?: ComplianceSubmissionSummaryReviewModeEnum;
+    /**
+     *
+     */
     submittedAt?: string | null;
     /**
      *
@@ -80,6 +84,15 @@ export const ComplianceSubmissionSummaryStatusEnum = {
     Superseded: 'SUPERSEDED',
 } as const;
 export type ComplianceSubmissionSummaryStatusEnum = typeof ComplianceSubmissionSummaryStatusEnum[keyof typeof ComplianceSubmissionSummaryStatusEnum];
+
+/**
+ * @export
+ */
+export const ComplianceSubmissionSummaryReviewModeEnum = {
+    Automatic: 'AUTOMATIC',
+    ManualReview: 'MANUAL_REVIEW',
+} as const;
+export type ComplianceSubmissionSummaryReviewModeEnum = typeof ComplianceSubmissionSummaryReviewModeEnum[keyof typeof ComplianceSubmissionSummaryReviewModeEnum];
 
 
 /**
@@ -108,6 +121,7 @@ export function ComplianceSubmissionSummaryFromJSONTyped(json: any, ignoreDiscri
         'path': CompliancePathFromJSON(json['path']),
         'status': json['status'],
         'markingType': json['marking_type'] === undefined ? undefined : json['marking_type'] === null ? null : json['marking_type'],
+        'reviewMode': json['review_mode'] == null ? undefined : json['review_mode'],
         'submittedAt': json['submitted_at'] === undefined ? undefined : json['submitted_at'] === null ? null : json['submitted_at'],
         'decidedAt': json['decided_at'] === undefined ? undefined : json['decided_at'] === null ? null : json['decided_at'],
         'latestReview': json['latest_review'] === undefined ? undefined : json['latest_review'] === null ? null : ComplianceReviewSummaryFromJSON(json['latest_review']),
@@ -130,6 +144,7 @@ export function ComplianceSubmissionSummaryToJSONTyped(value?: ComplianceSubmiss
         'path': CompliancePathToJSON(value['path']),
         'status': value['status'],
         'marking_type': value['markingType'],
+        'review_mode': value['reviewMode'],
         'submitted_at': value['submittedAt'],
         'decided_at': value['decidedAt'],
         'latest_review': ComplianceReviewSummaryToJSON(value['latestReview']),

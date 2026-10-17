@@ -100,7 +100,7 @@ void main() {
 
     // Owner and Store Manager; Store Staff and Customer Service while the Owner's staff dispute flag is on (403 otherwise); assigned Fulfillment Staff see a limited case and add fulfillment evidence only; Inventory Staff are denied. Paginated, active first.
     //
-    //Future<DisputeListEnvelope> listVendorDisputes({ String group, String q, int page }) async
+    //Future<DisputeListEnvelope> listVendorDisputes({ String group, String q, int page, Date from, Date to }) async
     test('test listVendorDisputes', () async {
       // TODO
     });

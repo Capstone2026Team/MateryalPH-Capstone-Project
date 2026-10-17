@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 
 import type { AccountsApi } from '@materyalph/api-client-ts'
 import { Button } from './button'
 import { Field } from './field'
+import { AuthenticatorCodeField } from './authenticator-code-field'
 import { FormDialog } from './form-dialog'
 import { StatusMessage } from './status-message'
 
@@ -71,10 +72,10 @@ export function AccountVerificationDialog({ api, portal, title, onClose, onVerif
     } catch (cause) { setError(await explainError(cause)) }
     finally { lock.current = false; setBusy(false) }
   }
-  return <FormDialog open title={title} description="Verify your identity to continue with this protected action." busy={busy} onClose={onClose} footer={<div className="flex justify-end gap-3"><Button variant="secondary" disabled={busy} onClick={onClose}>Cancel</Button><Button type="submit" form={formId} disabled={busy || totp === null}>{busy ? 'Verifying…' : 'Verify and continue'}</Button></div>}>
+  return <FormDialog open size="small" title={title} description="Verify your identity to continue with this protected action." busy={busy} onClose={onClose} footer={<div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><Button className="w-full sm:w-auto" variant="secondary" disabled={busy} onClick={onClose}>Cancel</Button><Button className="w-full sm:w-auto" type="submit" form={formId} disabled={busy || totp === null}>{busy ? 'Verifying…' : 'Verify and continue'}</Button></div>}>
     {error && <StatusMessage tone="error">{error}</StatusMessage>}
-    {totp === null ? <div className="py-4">{error ? <Button variant="secondary" onClick={() => setRetry(value => value + 1)}>Retry security check</Button> : <p role="status">Loading verification options…</p>}</div> : <form id={formId} onSubmit={event => void verify(event)} className="mt-4 space-y-4">
-      {totp ? <Field label="Authenticator code" name="code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} autoComplete="one-time-code" required /> : email ? <Field label="Current-email verification code" name="email_code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} autoComplete="one-time-code" required /> : <Field label="Current password" name="password" type="password" autoComplete="current-password" required />}
+    {totp === null ? <div className="py-4">{error ? <Button variant="secondary" onClick={() => setRetry(value => value + 1)}>Retry security check</Button> : <p role="status">Loading verification options…</p>}</div> : <form id={formId} onSubmit={event => void verify(event)} className="space-y-4">
+      {totp ? <AuthenticatorCodeField label="Authenticator code" name="code" disabled={busy} required /> : email ? <Field label="Current-email verification code" name="email_code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} autoComplete="one-time-code" required /> : <Field label="Current password" name="password" type="password" autoComplete="current-password" required />}
       {!totp && !email && <Button variant="quiet" disabled={busy} onClick={async () => { if (lock.current) return; lock.current = true; setBusy(true); setError(null); try { await api().sendAccountReauthenticationEmail({ accountPortal: portal }); setEmail(true) } catch (cause) { setError(await explainError(cause)) } finally { lock.current = false; setBusy(false) } }}>Send email verification instead</Button>}
     </form>}
   </FormDialog>

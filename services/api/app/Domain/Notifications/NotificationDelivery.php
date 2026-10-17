@@ -14,7 +14,6 @@ use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
@@ -35,7 +34,9 @@ final class NotificationDelivery
             $attempt = (int) $delivery->attempt_count + 1;
             try {
                 if ($user instanceof User && app(NotificationPolicy::class)->allows($user, $notice)) {
-                    if (! NotificationService::enabled($notice, $delivery->channel)) {
+                    if (($notice->category === 'MESSAGES' && $notice->read_at !== null) || ! NotificationService::enabled($notice, $delivery->channel)) {
+                        $state = 'SKIPPED';
+                    } elseif ($delivery->channel === 'EMAIL' && ! app(MailDeliveryPolicy::class)->allows((string) $notice->created_at)) {
                         $state = 'SKIPPED';
                     } elseif ($delivery->channel === 'EMAIL') {
                         $recipient = $delivery->sealed_recipient === null ? $user->email : Crypt::decryptString($delivery->sealed_recipient);
@@ -51,14 +52,15 @@ final class NotificationDelivery
                             $base = (string) config($user->account_type === 'VENDOR' ? 'app.vendor_frontend_url' : 'app.admin_frontend_url');
                             $mail->with('noticeUrl', rtrim($base, '/').'/notifications?notice='.rawurlencode($notice->id));
                         }
-                        Mail::to($recipient)->send($mail);
+                        app(MailProvider::class)->send($recipient, $mail);
                         $state = 'SENT';
                     } else {
                         $device = DB::table('notification_devices')->where('id', $delivery->device_id)->where('user_id', $user->getKey())->whereNull('revoked_at')->where('environment', app()->environment())->first();
                         if ($device !== null && ($device->platform !== 'WEB' || config('notifications.web_push_approved'))) {
                             $sessionActive = $device->session_id === null || DB::table('auth_sessions')->where('id', $device->session_id)->whereNull('revoked_at')->where('expires_at', '>', now())->exists();
                             if ($sessionActive) {
-                                $state = app(PushGateway::class)->send(Crypt::decryptString($device->sealed_token), $notice->id, $device->platform);
+                                $state = app(PushGateway::class)->send(Crypt::decryptString($device->sealed_token),
+                                    new PushNotification($notice->id, $notice->title, $notice->body), $device->platform);
                             }
                             if ($state === 'REVOKED') {
                                 DB::table('notification_devices')->where('id', $device->id)->update(['revoked_at' => now(), 'updated_at' => now()]);

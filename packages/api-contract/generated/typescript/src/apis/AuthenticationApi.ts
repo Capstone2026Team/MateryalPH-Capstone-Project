@@ -44,6 +44,16 @@ import {
     BuyerMobileLoginRequestToJSON,
 } from '../models/BuyerMobileLoginRequest';
 import {
+    type BuyerMobileMfaChallengeRequest,
+    BuyerMobileMfaChallengeRequestFromJSON,
+    BuyerMobileMfaChallengeRequestToJSON,
+} from '../models/BuyerMobileMfaChallengeRequest';
+import {
+    type BuyerMobileMfaRecoveryRequest,
+    BuyerMobileMfaRecoveryRequestFromJSON,
+    BuyerMobileMfaRecoveryRequestToJSON,
+} from '../models/BuyerMobileMfaRecoveryRequest';
+import {
     type BuyerMobilePasswordRecoveryRequest,
     BuyerMobilePasswordRecoveryRequestFromJSON,
     BuyerMobilePasswordRecoveryRequestToJSON,
@@ -148,12 +158,29 @@ import {
     VerifyEmailRequestFromJSON,
     VerifyEmailRequestToJSON,
 } from '../models/VerifyEmailRequest';
+import {
+    type WebResendBotChallengeRequest,
+    WebResendBotChallengeRequestFromJSON,
+    WebResendBotChallengeRequestToJSON,
+} from '../models/WebResendBotChallengeRequest';
+import {
+    type WebVerifyBotChallengeRequest,
+    WebVerifyBotChallengeRequestFromJSON,
+    WebVerifyBotChallengeRequestToJSON,
+} from '../models/WebVerifyBotChallengeRequest';
 
 export interface AcceptAdminInvitationRequest {
     /**
      *
      */
     adminInvitationRequest: AdminInvitationRequest;
+}
+
+export interface CompleteBuyerMobileMfaChallengeRequest {
+    /**
+     *
+     */
+    buyerMobileMfaChallengeRequest: BuyerMobileMfaChallengeRequest;
 }
 
 export interface CompleteGoogleOidcRequest {
@@ -202,6 +229,13 @@ export interface LoginBuyerMobileRequest {
     buyerMobileLoginRequest: BuyerMobileLoginRequest;
 }
 
+export interface RecoverBuyerMobileMfaChallengeRequest {
+    /**
+     *
+     */
+    buyerMobileMfaRecoveryRequest: BuyerMobileMfaRecoveryRequest;
+}
+
 export interface RecoverMfaChallengeRequest {
     /**
      *
@@ -244,17 +278,6 @@ export interface RequestPasswordRecoveryRequest {
     passwordRecoveryRequest: PasswordRecoveryRequest;
 }
 
-export interface ResendBotChallengeOperationRequest {
-    /**
-     *
-     */
-    challengeId: string;
-    /**
-     *
-     */
-    resendBotChallengeRequest: ResendBotChallengeRequest;
-}
-
 export interface ResendBuyerMobileBotChallengeRequest {
     /**
      *
@@ -278,6 +301,17 @@ export interface ResendEmailVerificationRequest {
      *
      */
     emailRequest: EmailRequest;
+}
+
+export interface ResendWebBotChallengeRequest {
+    /**
+     *
+     */
+    challengeId: string;
+    /**
+     *
+     */
+    webResendBotChallengeRequest: WebResendBotChallengeRequest;
 }
 
 export interface ResetBuyerMobilePasswordRequest {
@@ -308,17 +342,6 @@ export interface StartGoogleOidcRequest {
     googleOidcStartRequest: GoogleOidcStartRequest;
 }
 
-export interface VerifyBotChallengeOperationRequest {
-    /**
-     *
-     */
-    challengeId: string;
-    /**
-     *
-     */
-    verifyBotChallengeRequest: VerifyBotChallengeRequest;
-}
-
 export interface VerifyBuyerMobileBotChallengeRequest {
     /**
      *
@@ -342,6 +365,17 @@ export interface VerifyEmailOperationRequest {
      *
      */
     verifyEmailRequest: VerifyEmailRequest;
+}
+
+export interface VerifyWebBotChallengeRequest {
+    /**
+     *
+     */
+    challengeId: string;
+    /**
+     *
+     */
+    webVerifyBotChallengeRequest: WebVerifyBotChallengeRequest;
 }
 
 /**
@@ -383,6 +417,7 @@ export class AuthenticationApi extends runtime.BaseAPI {
     }
 
     /**
+     * Invitation-only Admin registration. Validates the invitation, recipient when supplied, and current inviter authority before bot verification or email delivery. When bot protection is enabled, requires the server-selected admin_invitation_accept checkbox action and configured hostname, or an accessible email proof bound to the invited email, portal, and action. Acceptance rechecks invitation availability after the provider call. No account or membership is created and no invitation consumed when bot validation fails. Authenticator enrollment remains required before staff access.
      */
     async acceptAdminInvitationRaw(requestParameters: AcceptAdminInvitationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RegistrationEnvelope>> {
         const requestOptions = await this.acceptAdminInvitationRequestOpts(requestParameters);
@@ -392,9 +427,57 @@ export class AuthenticationApi extends runtime.BaseAPI {
     }
 
     /**
+     * Invitation-only Admin registration. Validates the invitation, recipient when supplied, and current inviter authority before bot verification or email delivery. When bot protection is enabled, requires the server-selected admin_invitation_accept checkbox action and configured hostname, or an accessible email proof bound to the invited email, portal, and action. Acceptance rechecks invitation availability after the provider call. No account or membership is created and no invitation consumed when bot validation fails. Authenticator enrollment remains required before staff access.
      */
     async acceptAdminInvitation(requestParameters: AcceptAdminInvitationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RegistrationEnvelope> {
         const response = await this.acceptAdminInvitationRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for completeBuyerMobileMfaChallenge without sending the request
+     */
+    async completeBuyerMobileMfaChallengeRequestOpts(requestParameters: CompleteBuyerMobileMfaChallengeRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['buyerMobileMfaChallengeRequest'] == null) {
+            throw new runtime.RequiredError(
+                'buyerMobileMfaChallengeRequest',
+                'Required parameter "buyerMobileMfaChallengeRequest" was null or undefined when calling completeBuyerMobileMfaChallenge().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/mobile/auth/mfa/challenge`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: BuyerMobileMfaChallengeRequestToJSON(requestParameters['buyerMobileMfaChallengeRequest']),
+        };
+    }
+
+    /**
+     * Completes a Buyer sign-in (password or Google) when the Buyer enrolled an authenticator. The challenge_token comes from the login or Google exchange body, is opaque, single-use, expires with challenge_expires_in and is bound to the MOBILE transport. Five wrong codes end the challenge. Codes cannot be replayed.
+     */
+    async completeBuyerMobileMfaChallengeRaw(requestParameters: CompleteBuyerMobileMfaChallengeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AuthEnvelope>> {
+        const requestOptions = await this.completeBuyerMobileMfaChallengeRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => AuthEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Completes a Buyer sign-in (password or Google) when the Buyer enrolled an authenticator. The challenge_token comes from the login or Google exchange body, is opaque, single-use, expires with challenge_expires_in and is bound to the MOBILE transport. Five wrong codes end the challenge. Codes cannot be replayed.
+     */
+    async completeBuyerMobileMfaChallenge(requestParameters: CompleteBuyerMobileMfaChallengeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AuthEnvelope> {
+        const response = await this.completeBuyerMobileMfaChallengeRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -781,6 +864,7 @@ export class AuthenticationApi extends runtime.BaseAPI {
     }
 
     /**
+     * Vendor and Admin browser login requires an Enterprise checkbox assessment when bot protection is enabled, or an accessible single-use email security proof. The server selects vendor_login or admin_login and validates the configured hostname. Admin MFA remains mandatory after bot validation.
      */
     async loginRaw(requestParameters: LoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AuthEnvelope>> {
         const requestOptions = await this.loginRequestOpts(requestParameters);
@@ -790,6 +874,7 @@ export class AuthenticationApi extends runtime.BaseAPI {
     }
 
     /**
+     * Vendor and Admin browser login requires an Enterprise checkbox assessment when bot protection is enabled, or an accessible single-use email security proof. The server selects vendor_login or admin_login and validates the configured hostname. Admin MFA remains mandatory after bot validation.
      */
     async login(requestParameters: LoginOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AuthEnvelope> {
         const response = await this.loginRaw(requestParameters, initOverrides);
@@ -920,6 +1005,53 @@ export class AuthenticationApi extends runtime.BaseAPI {
      */
     async logoutBuyerMobile(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SuccessEnvelope> {
         const response = await this.logoutBuyerMobileRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for recoverBuyerMobileMfaChallenge without sending the request
+     */
+    async recoverBuyerMobileMfaChallengeRequestOpts(requestParameters: RecoverBuyerMobileMfaChallengeRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['buyerMobileMfaRecoveryRequest'] == null) {
+            throw new runtime.RequiredError(
+                'buyerMobileMfaRecoveryRequest',
+                'Required parameter "buyerMobileMfaRecoveryRequest" was null or undefined when calling recoverBuyerMobileMfaChallenge().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/mobile/auth/mfa/recovery`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: BuyerMobileMfaRecoveryRequestToJSON(requestParameters['buyerMobileMfaRecoveryRequest']),
+        };
+    }
+
+    /**
+     * Completes the Buyer challenge with a single-use recovery code when the authenticator is unavailable. All other sessions are revoked and a replacement set of recovery codes is returned once.
+     */
+    async recoverBuyerMobileMfaChallengeRaw(requestParameters: RecoverBuyerMobileMfaChallengeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AuthEnvelope>> {
+        const requestOptions = await this.recoverBuyerMobileMfaChallengeRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => AuthEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Completes the Buyer challenge with a single-use recovery code when the authenticator is unavailable. All other sessions are revoked and a replacement set of recovery codes is returned once.
+     */
+    async recoverBuyerMobileMfaChallenge(requestParameters: RecoverBuyerMobileMfaChallengeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AuthEnvelope> {
+        const response = await this.recoverBuyerMobileMfaChallengeRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1245,63 +1377,6 @@ export class AuthenticationApi extends runtime.BaseAPI {
     }
 
     /**
-     * Creates request options for resendBotChallenge without sending the request
-     */
-    async resendBotChallengeRequestOpts(requestParameters: ResendBotChallengeOperationRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['challengeId'] == null) {
-            throw new runtime.RequiredError(
-                'challengeId',
-                'Required parameter "challengeId" was null or undefined when calling resendBotChallenge().'
-            );
-        }
-
-        if (requestParameters['resendBotChallengeRequest'] == null) {
-            throw new runtime.RequiredError(
-                'resendBotChallengeRequest',
-                'Required parameter "resendBotChallengeRequest" was null or undefined when calling resendBotChallenge().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        headerParameters['Content-Type'] = 'application/json';
-
-        if (this.configuration && this.configuration.apiKey) {
-            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
-        }
-
-
-        let urlPath = `/auth/bot-challenges/{challenge_id}/resend`;
-        urlPath = urlPath.replace('{challenge_id}', encodeURIComponent(String(requestParameters['challengeId'])));
-
-        return {
-            path: urlPath,
-            method: 'POST',
-            headers: headerParameters,
-            query: queryParameters,
-            body: ResendBotChallengeRequestToJSON(requestParameters['resendBotChallengeRequest']),
-        };
-    }
-
-    /**
-     */
-    async resendBotChallengeRaw(requestParameters: ResendBotChallengeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SuccessEnvelope>> {
-        const requestOptions = await this.resendBotChallengeRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => SuccessEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     */
-    async resendBotChallenge(requestParameters: ResendBotChallengeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SuccessEnvelope> {
-        const response = await this.resendBotChallengeRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
      * Creates request options for resendBuyerMobileBotChallenge without sending the request
      */
     async resendBuyerMobileBotChallengeRequestOpts(requestParameters: ResendBuyerMobileBotChallengeRequest): Promise<runtime.RequestOpts> {
@@ -1447,6 +1522,63 @@ export class AuthenticationApi extends runtime.BaseAPI {
      */
     async resendEmailVerification(requestParameters: ResendEmailVerificationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SuccessEnvelope> {
         const response = await this.resendEmailVerificationRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for resendWebBotChallenge without sending the request
+     */
+    async resendWebBotChallengeRequestOpts(requestParameters: ResendWebBotChallengeRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['challengeId'] == null) {
+            throw new runtime.RequiredError(
+                'challengeId',
+                'Required parameter "challengeId" was null or undefined when calling resendWebBotChallenge().'
+            );
+        }
+
+        if (requestParameters['webResendBotChallengeRequest'] == null) {
+            throw new runtime.RequiredError(
+                'webResendBotChallengeRequest',
+                'Required parameter "webResendBotChallengeRequest" was null or undefined when calling resendWebBotChallenge().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/auth/bot-challenges/{challenge_id}/resend`;
+        urlPath = urlPath.replace('{challenge_id}', encodeURIComponent(String(requestParameters['challengeId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: WebResendBotChallengeRequestToJSON(requestParameters['webResendBotChallengeRequest']),
+        };
+    }
+
+    /**
+     */
+    async resendWebBotChallengeRaw(requestParameters: ResendWebBotChallengeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SuccessEnvelope>> {
+        const requestOptions = await this.resendWebBotChallengeRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => SuccessEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async resendWebBotChallenge(requestParameters: ResendWebBotChallengeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SuccessEnvelope> {
+        const response = await this.resendWebBotChallengeRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1678,63 +1810,6 @@ export class AuthenticationApi extends runtime.BaseAPI {
     }
 
     /**
-     * Creates request options for verifyBotChallenge without sending the request
-     */
-    async verifyBotChallengeRequestOpts(requestParameters: VerifyBotChallengeOperationRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['challengeId'] == null) {
-            throw new runtime.RequiredError(
-                'challengeId',
-                'Required parameter "challengeId" was null or undefined when calling verifyBotChallenge().'
-            );
-        }
-
-        if (requestParameters['verifyBotChallengeRequest'] == null) {
-            throw new runtime.RequiredError(
-                'verifyBotChallengeRequest',
-                'Required parameter "verifyBotChallengeRequest" was null or undefined when calling verifyBotChallenge().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        headerParameters['Content-Type'] = 'application/json';
-
-        if (this.configuration && this.configuration.apiKey) {
-            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
-        }
-
-
-        let urlPath = `/auth/bot-challenges/{challenge_id}/verify`;
-        urlPath = urlPath.replace('{challenge_id}', encodeURIComponent(String(requestParameters['challengeId'])));
-
-        return {
-            path: urlPath,
-            method: 'POST',
-            headers: headerParameters,
-            query: queryParameters,
-            body: VerifyBotChallengeRequestToJSON(requestParameters['verifyBotChallengeRequest']),
-        };
-    }
-
-    /**
-     */
-    async verifyBotChallengeRaw(requestParameters: VerifyBotChallengeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<BotProofEnvelope>> {
-        const requestOptions = await this.verifyBotChallengeRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => BotProofEnvelopeFromJSON(jsonValue));
-    }
-
-    /**
-     */
-    async verifyBotChallenge(requestParameters: VerifyBotChallengeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<BotProofEnvelope> {
-        const response = await this.verifyBotChallengeRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
      * Creates request options for verifyBuyerMobileBotChallenge without sending the request
      */
     async verifyBuyerMobileBotChallengeRequestOpts(requestParameters: VerifyBuyerMobileBotChallengeRequest): Promise<runtime.RequestOpts> {
@@ -1878,6 +1953,63 @@ export class AuthenticationApi extends runtime.BaseAPI {
      */
     async verifyEmail(requestParameters: VerifyEmailOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SuccessEnvelope> {
         const response = await this.verifyEmailRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for verifyWebBotChallenge without sending the request
+     */
+    async verifyWebBotChallengeRequestOpts(requestParameters: VerifyWebBotChallengeRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['challengeId'] == null) {
+            throw new runtime.RequiredError(
+                'challengeId',
+                'Required parameter "challengeId" was null or undefined when calling verifyWebBotChallenge().'
+            );
+        }
+
+        if (requestParameters['webVerifyBotChallengeRequest'] == null) {
+            throw new runtime.RequiredError(
+                'webVerifyBotChallengeRequest',
+                'Required parameter "webVerifyBotChallengeRequest" was null or undefined when calling verifyWebBotChallenge().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/auth/bot-challenges/{challenge_id}/verify`;
+        urlPath = urlPath.replace('{challenge_id}', encodeURIComponent(String(requestParameters['challengeId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: WebVerifyBotChallengeRequestToJSON(requestParameters['webVerifyBotChallengeRequest']),
+        };
+    }
+
+    /**
+     */
+    async verifyWebBotChallengeRaw(requestParameters: VerifyWebBotChallengeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<BotProofEnvelope>> {
+        const requestOptions = await this.verifyWebBotChallengeRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => BotProofEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async verifyWebBotChallenge(requestParameters: VerifyWebBotChallengeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<BotProofEnvelope> {
+        const response = await this.verifyWebBotChallengeRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

@@ -7,10 +7,12 @@ namespace Tests\Feature\Api;
 use App\Domain\Geography\PlacesProvider;
 use App\Domain\Geography\RouteProvider;
 use App\Domain\Identity\TokenSessionService;
+use App\Domain\Operations\OutboxProcessor;
 use App\Domain\Reporting\DocumentExportService;
 use App\Domain\Reporting\TaxReminderService;
 use App\Domain\Vendors\AddressGeocoder;
 use App\Domain\Vendors\VendorFileScanner;
+use App\Jobs\ProcessOutboxEvent;
 use App\Models\AuthSession;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -23,6 +25,7 @@ use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Passport\AccessToken;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\CreatesDiscoveryFixtures;
 use Tests\Support\CreatesOrderFixtures;
 use Tests\Support\CreatesPaymentFixtures;
@@ -80,7 +83,73 @@ final class PhaseFifteenExportsTest extends TestCase
         $this->getJson('/api/v1/buyers/reports/'.$export['id'].'/download')->assertForbidden();
         $this->signInBuyer($buyer);
         DB::table('data_exports')->where('id', $export['id'])->update(['expires_at' => now()->subMinute()]);
+        $this->getJson('/api/v1/buyers/reports?type=PURCHASE_ORDER&resource_id='.$order.'&format=CSV')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.state', 'EXPIRED');
+        $this->getJson('/api/v1/buyers/reports?type=PAYMENT_CONFIRMATION&resource_id='.$order)->assertOk()->assertJsonCount(0, 'data');
         $this->getJson('/api/v1/buyers/reports/'.$export['id'].'/download')->assertGone()->assertJsonPath('errors.0.code', 'EXPORT_EXPIRED');
+    }
+
+    /** @return array<string, array{string}> */
+    public static function exportRetryTargets(): array
+    {
+        return ['outbox delivery' => ['OUTBOX_EVENT'], 'failed job' => ['FAILED_JOB']];
+    }
+
+    #[DataProvider('exportRetryTargets')]
+    public function test_retry_regenerates_the_failed_original_snapshot_and_preserves_current_access_checks(string $target): void
+    {
+        [, , $buyer, $order] = $this->awaitingPayment('Failed PDF retry');
+        Queue::fake();
+        $export = $this->export('buyers', 'PURCHASE_ORDER', $order, 'PDF');
+        $snapshot = DB::table('data_exports')->where('id', $export['id'])->value('source_snapshot');
+        $event = (string) DB::table('outbox_events')->where('event_type', 'DOCUMENT_EXPORT_REQUESTED')->where('aggregate_id', $export['id'])->value('id');
+        DB::table('outbox_events')->where('id', $event)->update(['attempts' => OutboxProcessor::MAX_ATTEMPTS]);
+        DB::table('data_exports')->where('id', $export['id'])->update(['state' => 'FAILED', 'failure_code' => 'GENERATION_FAILED']);
+        $reference = $event;
+        if ($target === 'FAILED_JOB') {
+            $reference = (string) Str::uuid();
+            DB::table('failed_jobs')->insert(['uuid' => $reference, 'connection' => 'database', 'queue' => 'default', 'failed_at' => now(),
+                'payload' => json_encode(['displayName' => ProcessOutboxEvent::class, 'data' => ['command' => serialize(new ProcessOutboxEvent($event))]]),
+                'exception' => 'Error: Synthetic missing PDF dependency']);
+        }
+        $this->signInAdmin($this->admin());
+        $this->postJson('/api/v1/admin/integrations/retries', ['target_type' => $target, 'reference' => $reference, 'reason' => 'PDF dependency restored; retry original snapshot'], ['Idempotency-Key' => (string) Str::uuid7()])->assertAccepted();
+        self::assertSame('QUEUED', DB::table('data_exports')->where('id', $export['id'])->value('state'));
+        self::assertNull(DB::table('data_exports')->where('id', $export['id'])->value('failure_code'));
+        if ($target === 'FAILED_JOB') {
+            $buyer->update(['account_status' => 'SUSPENDED']);
+        }
+        app(OutboxProcessor::class)->process($event);
+        app(OutboxProcessor::class)->process($event);
+        self::assertNotNull(DB::table('outbox_events')->where('id', $event)->value('processed_at'));
+        self::assertSame($snapshot, DB::table('data_exports')->where('id', $export['id'])->value('source_snapshot'));
+        self::assertSame($target === 'FAILED_JOB' ? 'REVOKED' : 'READY', DB::table('data_exports')->where('id', $export['id'])->value('state'));
+        self::assertSame($target === 'FAILED_JOB' ? 0 : 1, DB::table('files')->where('purpose', 'DOCUMENT_EXPORT')->count());
+    }
+
+    public function test_missing_pdf_is_recoverable_and_cannot_be_downloaded(): void
+    {
+        [, , , $order] = $this->awaitingPayment('Missing export');
+        Queue::fake();
+        $export = $this->export('buyers', 'PURCHASE_ORDER', $order, 'PDF');
+        app(DocumentExportService::class)->process($export['id']);
+        $file = DB::table('files')->where('id', DB::table('data_exports')->where('id', $export['id'])->value('file_id'))->first();
+        Storage::disk('local')->delete($file->object_key);
+        $this->getJson('/api/v1/buyers/reports/'.$export['id'].'/download')->assertGone()->assertJsonPath('errors.0.code', 'EXPORT_FILE_UNAVAILABLE');
+    }
+
+    public function test_store_finance_pdf_uses_owner_projection_and_rechecks_revocation(): void
+    {
+        [, $owner] = $this->awaitingPayment('Finance export');
+        $this->signInStoreMember($owner);
+        Queue::fake();
+        foreach (['TRANSACTION_HISTORY', 'EARNINGS'] as $type) {
+            $input = ['type' => $type, 'format' => 'PDF', 'purpose' => 'Internal operational review', 'filters' => $type === 'TRANSACTION_HISTORY' ? ['tab' => 'PAYMENTS'] : []];
+            $export = $this->postJson('/api/v1/vendor/reports', $input, ['Idempotency-Key' => (string) Str::uuid7()])->assertAccepted()->json('data');
+            app(DocumentExportService::class)->process($export['id']);
+            self::assertStringStartsWith('%PDF-', $this->get('/api/v1/vendor/reports/'.$export['id'].'/download')->assertOk()->streamedContent());
+        }
+        DB::table('vendor_memberships')->where('user_id', $owner->id)->update(['status' => 'SUSPENDED']);
+        $this->getJson('/api/v1/vendor/reports/'.$export['id'].'/download')->assertForbidden();
     }
 
     public function test_revoked_membership_blocks_queued_generation_and_ready_download_preserving_audit(): void

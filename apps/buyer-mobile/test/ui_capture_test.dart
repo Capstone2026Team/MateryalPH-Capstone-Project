@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:materyalph/design_system/theme.dart';
 import 'package:materyalph/screens/buyer_home_screen.dart';
+import 'package:materyalph/widgets/buyer_account_widgets.dart';
 import 'buyer_account_test.dart' as fixtures;
 
 void main() {
@@ -62,11 +63,32 @@ void main() {
         '../../../docs/design/evidence/ui-refinement/buyer-settings.png',
       ),
     );
-    await tester.tap(find.byTooltip('Edit profile picture'));
+    // The photo is now changed from the avatar's edit badge.
+    expect(find.bySemanticsLabel('Change profile photo'), findsOneWidget);
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Help Center'), 180);
+    await tester.tap(find.text('Help Center'));
+    await tester.pumpAndSettle();
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile(
+        '../../../docs/design/evidence/ui-refinement/buyer-help-center.png',
+      ),
+    );
+    // Every Profile row is wired here, so push the shared fallback a missing destination uses.
+    tester
+        .state<NavigatorState>(find.byType(Navigator).first)
+        .push(
+          MaterialPageRoute<void>(
+            builder: (_) =>
+                const BuyerUnavailableScreen(title: 'Ranking Preferences'),
+          ),
+        );
     await tester.pumpAndSettle();
     await tester.runAsync(
       () => precacheImage(
-        const AssetImage('assets/states/not-implemented.png'),
+        const AssetImage('assets/states/no-results.png'),
         tester.element(find.byType(Image)),
       ),
     );

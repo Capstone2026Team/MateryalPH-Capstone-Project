@@ -9,6 +9,7 @@ use App\Domain\Catalog\CatalogFileStore;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Scores\PublicScores;
 use App\Models\User;
+use App\Support\PortalDateRange;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -61,7 +62,7 @@ final class ReviewQueries
     }
 
     /**
-     * @param  array{type?: string, page?: int}  $filters
+     * @param  array{type?: string, page?: int, listing_id?: string, from?: string, to?: string}  $filters
      * @return array{items: list<array<string, mixed>>, meta: array<string, mixed>}
      */
     public function vendorReviews(Request $request, array $filters): array
@@ -69,16 +70,72 @@ final class ReviewQueries
         $scope = $this->access->vendorScope($request, ReviewAccess::VIEW);
         $type = $filters['type'] ?? ReviewRules::VENDOR;
         $base = DB::table('reviews as r')->where('r.vendor_organization_id', $scope['organization_id'])->where('r.review_type', $type)->whereNotNull('r.submitted_at');
+        if (isset($filters['listing_id'])) {
+            $listing = DB::table('vendor_listings')->where('id', $filters['listing_id'])->where('vendor_organization_id', $scope['organization_id'])->first(['id']);
+            if ($listing === null) {
+                throw new AuthenticationException('LISTING_NOT_FOUND', 'This product is unavailable.', 404);
+            }
+            // Archived listings retain their received reviews and commercial history.
+            $base->where('r.vendor_listing_id', $listing->id);
+        }
         if ($type !== ReviewRules::BUYER) {
             ReviewRules::constrainVisible($base);
         }
         $page = max(1, (int) ($filters['page'] ?? 1));
+        PortalDateRange::apply($base, 'r.submitted_at', $filters);
         $total = (clone $base)->count();
         $rows = (clone $base)->join('orders as o', 'o.id', '=', 'r.order_id')->orderByDesc('r.submitted_at')->orderByDesc('r.id')->forPage($page, self::PER_PAGE)->get(['r.*', 'o.reference as order_reference']);
 
-        return ['items' => $rows->map(fn (object $review): array => ($type === ReviewRules::BUYER ? $this->presenter->own($review, 'VENDOR') : $this->presenter->public($review, 'VENDOR'))
-            + ['order_id' => (string) $review->order_id, 'order_reference' => (string) $review->order_reference, 'can_report' => $type !== ReviewRules::BUYER && in_array(ReviewAccess::REPORT, $scope['permissions'], true)])->all(),
-            'meta' => ['page' => $page, 'per_page' => self::PER_PAGE, 'total' => $total, 'type' => $type]];
+        $meta = ['page' => $page, 'per_page' => self::PER_PAGE, 'total' => $total, 'type' => $type];
+        if ($type === ReviewRules::PRODUCT) {
+            $summary = (clone $base)->selectRaw('count(*) AS total, avg(r.rating)::numeric AS average')->first();
+            $distribution = (clone $base)->groupBy('r.rating')->selectRaw('r.rating, count(*) AS total')->pluck('total', 'rating');
+            $meta['summary'] = ['count' => (int) $summary->total, 'average' => $summary->total > 0 ? (float) PublicScores::round((string) $summary->average) : null,
+                'distribution' => array_map(static fn (int $stars): array => ['stars' => $stars, 'count' => (int) ($distribution[$stars] ?? 0)], [5, 4, 3, 2, 1])];
+        }
+
+        return ['items' => $rows->map(fn (object $review): array => $this->vendorRow($review, $scope['permissions']))->all(), 'meta' => $meta];
+    }
+
+    /** @return array<string, mixed> */
+    public function vendorDetail(Request $request, string $reviewId): array
+    {
+        $scope = $this->access->vendorScope($request, ReviewAccess::VIEW);
+        $base = DB::table('reviews as r')->where('r.id', ReviewAccess::uuid($reviewId))->where('r.vendor_organization_id', $scope['organization_id'])->whereNotNull('r.submitted_at');
+        $base->where(function (Builder $query): void {
+            $query->where('r.review_type', ReviewRules::BUYER)->orWhere(function (Builder $received): void {
+                ReviewRules::constrainVisible($received);
+            });
+        });
+        $review = $base->join('orders as o', 'o.id', '=', 'r.order_id')->first(['r.*', 'o.reference as order_reference']);
+        if ($review === null) {
+            throw new AuthenticationException('REVIEW_NOT_FOUND', 'This review is unavailable.', 404);
+        }
+
+        return $this->vendorRow($review, $scope['permissions']);
+    }
+
+    /**
+     * @param  list<string>  $permissions
+     * @return array<string, mixed>
+     */
+    private function vendorRow(object $review, array $permissions): array
+    {
+        $own = $review->review_type === ReviewRules::BUYER;
+        $row = $own ? $this->presenter->own($review, 'VENDOR') : $this->presenter->public($review, 'VENDOR');
+        $product = null;
+        if ($review->review_type === ReviewRules::PRODUCT) {
+            $line = DB::table('order_lines as ol')->leftJoin('listing_variants as v', 'v.id', '=', 'ol.listing_variant_id')->leftJoin('vendor_listings as l', 'l.id', '=', 'v.vendor_listing_id')
+                ->where('ol.id', $review->order_line_id)->first(['ol.snapshot', 'l.display_name', 'v.label as variant_label']);
+            $snapshot = json_decode((string) ($line->snapshot ?? '{}'), true);
+            $snapshot = is_array($snapshot) ? $snapshot : [];
+            $product = ['listing_id' => (string) $review->vendor_listing_id, 'name' => (string) ($snapshot['display_name'] ?? $line->display_name ?? 'Product'),
+                'variant_label' => array_key_exists('variant_label', $snapshot) ? $snapshot['variant_label'] : $line?->variant_label];
+            $row['variant_label'] = $product['variant_label'];
+        }
+
+        return $row + ['order_id' => (string) $review->order_id, 'order_reference' => (string) $review->order_reference, 'product' => $product,
+            'can_report' => ! $own && in_array(ReviewAccess::REPORT, $permissions, true)];
     }
 
     /**
@@ -97,6 +154,7 @@ final class ReviewQueries
             default => $query->where('r.moderation_state', $state),
         };
         $page = max(1, (int) ($filters['page'] ?? 1));
+        PortalDateRange::apply($query, 'r.submitted_at', $filters);
         $total = (clone $query)->count();
         $rows = $query->orderByDesc('r.updated_at')->orderByDesc('r.id')->forPage($page, self::PER_PAGE)->get(['r.*', 'o.reference as order_reference', 'vo.store_name']);
         $flags = DB::table('review_flags')->whereIn('review_id', $rows->pluck('id'))->where('state', 'OPEN')->groupBy('review_id')->selectRaw('review_id, count(*) AS total')->pluck('total', 'review_id');

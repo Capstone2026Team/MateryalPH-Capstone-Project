@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Domain\Catalog\CatalogAccess;
+use App\Domain\Fulfillment\DeliveryAssignments;
+use App\Domain\Fulfillment\DeliveryBuyerContact;
+use App\Domain\Fulfillment\DeliveryWorkspace;
 use App\Domain\Fulfillment\FulfillmentService;
 use App\Domain\Fulfillment\OrderEvidenceFiles;
 use App\Domain\Identity\AuthenticationException;
@@ -37,10 +40,48 @@ final class VendorFulfillmentController extends Controller
         return ApiResponse::success($this->fulfillment->assignees($request, $orderId));
     }
 
+    public function workspace(Request $request, DeliveryWorkspace $workspace): JsonResponse
+    {
+        $filters = $request->validate(['status' => ['sometimes', Rule::in(['ALL', 'PENDING', 'OUT_FOR_DELIVERY', 'DELIVERED', 'ISSUES'])],
+            'sort' => ['sometimes', Rule::in(['SCHEDULED', 'NEWEST'])], 'q' => ['sometimes', 'string', 'max:120'], 'page' => ['sometimes', 'integer', 'min:1']]);
+        $page = $workspace->listing($request, $filters);
+
+        return ApiResponse::success($page['items'], $page['meta']);
+    }
+
+    public function vehicles(Request $request, string $orderId, OrderAccess $access, DeliveryAssignments $assignments): JsonResponse
+    {
+        $scope = $access->vendorScope($request);
+        $access->require($scope, OrderAccess::ASSIGN_FULFILLMENT, 'Only the Owner or Store Manager assigns delivery vehicles.');
+
+        return ApiResponse::success($assignments->vehicles($access->vendorOrder($scope, $orderId)));
+    }
+
+    public function acknowledge(Request $request, string $orderId, DeliveryWorkspace $workspace): JsonResponse
+    {
+        $workspace->acknowledge($request, $orderId);
+
+        return ApiResponse::success($this->queries->vendorDetail($request, $orderId));
+    }
+
+    public function route(Request $request, string $orderId, DeliveryWorkspace $workspace): JsonResponse
+    {
+        return ApiResponse::success($workspace->route($request, $orderId));
+    }
+
+    public function buyerPhoto(Request $request, string $orderId, DeliveryBuyerContact $contact): StreamedResponse
+    {
+        $input = $request->validate(['version' => ['sometimes', 'integer', 'min:1']]);
+
+        return $contact->photo($request, $orderId, isset($input['version']) ? (int) $input['version'] : null);
+    }
+
     public function assign(Request $request, string $orderId): JsonResponse
     {
-        $input = $request->validate(['user_id' => ['required', 'integer', 'min:1'], 'reason' => ['required', 'string', 'min:5', 'max:500']]);
-        $this->fulfillment->assign($request, $orderId, (int) $input['user_id'], (string) $input['reason']);
+        $input = $request->validate(['user_id' => ['required', 'integer', 'min:1'], 'reason' => ['required', 'string', 'min:5', 'max:500'],
+            'vehicle_index' => ['sometimes', 'integer', 'min:0', 'max:50'], 'lock_version' => ['required_with:vehicle_index,dispatch', 'integer', 'min:1'], 'dispatch' => ['sometimes', 'boolean']]);
+        $this->fulfillment->assign($request, $orderId, (int) $input['user_id'], (string) $input['reason'], isset($input['vehicle_index']) ? (int) $input['vehicle_index'] : null,
+            isset($input['lock_version']) ? (int) $input['lock_version'] : null, (bool) ($input['dispatch'] ?? false));
 
         return ApiResponse::success($this->queries->vendorDetail($request, $orderId));
     }
@@ -62,8 +103,14 @@ final class VendorFulfillmentController extends Controller
         ]);
         $photo = $request->file('file');
         $signature = $request->file('signature');
+        /** @var mixed $uploaded */
+        $uploaded = $request->file('additional_photos', []);
+        $additional = array_values(array_filter($uploaded instanceof UploadedFile ? [$uploaded] : (array) $uploaded, static fn (mixed $file): bool => $file instanceof UploadedFile));
+        if (count($additional) > 3 || array_filter($additional, static fn (UploadedFile $file): bool => $file->getSize() > PlatformSettings::current()->uploadKb('case_evidence') * 1024) !== []) {
+            throw new AuthenticationException('FILE_VALIDATION_FAILED', 'Attach up to three additional photos within the evidence upload limit.', 422);
+        }
         /** @var array{milestone: string, lock_version: int, vehicle_index?: int|null, trip_number?: int|null, receiver_name?: string|null, receiver_kind?: string|null, handover_confirmed?: bool|null, note?: string|null} $input */
-        $this->fulfillment->record($request, $orderId, $input, $photo instanceof UploadedFile ? $photo : null, $signature instanceof UploadedFile ? $signature : null);
+        $this->fulfillment->record($request, $orderId, $input, $photo instanceof UploadedFile ? $photo : null, $signature instanceof UploadedFile ? $signature : null, $additional);
 
         return ApiResponse::success($this->queries->vendorDetail($request, $orderId));
     }

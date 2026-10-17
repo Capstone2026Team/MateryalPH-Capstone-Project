@@ -95,6 +95,17 @@ void main() {
       // TODO
     });
 
+    // Concrete Mixer Truck / Transit Mixer only; a positive fee needs mobilization_basis.
+    // int mobilizationFeeCentavos
+    test('to test the property `mobilizationFeeCentavos`', () async {
+      // TODO
+    });
+
+    // String mobilizationBasis
+    test('to test the property `mobilizationBasis`', () async {
+      // TODO
+    });
+
     // Omission retains the saved limit; new coverage defaults to the approved 50 km procurement limit. New vehicle rates inherit coverage.
     // int maximumDistanceKm
     test('to test the property `maximumDistanceKm`', () async {

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design_system/components/buyer_overlays.dart';
-import '../../design_system/components/star_rating.dart';
+import '../../design_system/components/product_reviews.dart';
 import '../../design_system/theme.dart';
 import '../item_procurement/procurement_models.dart' show formatManilaTimestamp;
 import '../map_discovery/discovery_models.dart';
@@ -27,10 +27,14 @@ class ListingReviewsSection extends StatefulWidget {
     super.key,
     required this.repository,
     required this.listingId,
+    this.soldLabel,
+    this.onCountChanged,
   });
 
   final ReviewsRepository repository;
   final String listingId;
+  final String? soldLabel;
+  final ValueChanged<int>? onCountChanged;
 
   @override
   State<ListingReviewsSection> createState() => _ListingReviewsSectionState();
@@ -39,6 +43,9 @@ class ListingReviewsSection extends StatefulWidget {
 class _ListingReviewsSectionState extends State<ListingReviewsSection> {
   ListingReviewsView? _reviews;
   DiscoveryFailure? _failure;
+  DiscoveryFailure? _pageFailure;
+  bool _loadingMore = false;
+  int _generation = 0;
 
   @override
   void initState() {
@@ -46,13 +53,73 @@ class _ListingReviewsSectionState extends State<ListingReviewsSection> {
     _load();
   }
 
+  @override
+  void didUpdateWidget(covariant ListingReviewsSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.listingId != widget.listingId ||
+        oldWidget.repository != widget.repository) {
+      _load();
+    }
+  }
+
   Future<void> _load() async {
-    setState(() => _failure = null);
+    final generation = ++_generation;
+    setState(() {
+      _reviews = null;
+      _failure = null;
+      _pageFailure = null;
+      _loadingMore = false;
+    });
     try {
       final reviews = await widget.repository.listingReviews(widget.listingId);
-      if (mounted) setState(() => _reviews = reviews);
+      if (mounted && generation == _generation) {
+        setState(() => _reviews = reviews);
+        widget.onCountChanged?.call(reviews.count);
+      }
     } on DiscoveryFailure catch (failure) {
-      if (mounted) setState(() => _failure = failure);
+      if (mounted && generation == _generation) {
+        setState(() => _failure = failure);
+      }
+    }
+  }
+
+  Future<void> _loadMore() async {
+    final current = _reviews;
+    if (current == null || !current.hasMore || _loadingMore) return;
+    final generation = _generation;
+    setState(() {
+      _loadingMore = true;
+      _pageFailure = null;
+    });
+    try {
+      final next = await widget.repository.listingReviews(
+        widget.listingId,
+        page: current.page + 1,
+      );
+      if (!mounted || generation != _generation) return;
+      final items = {
+        for (final review in [...current.items, ...next.items])
+          review.id: review,
+      };
+      setState(
+        () => _reviews = ListingReviewsView(
+          average: next.average,
+          count: next.count,
+          distribution: next.distribution,
+          page: next.page,
+          perPage: next.perPage,
+          items: items.values.toList(growable: false),
+        ),
+      );
+      widget.onCountChanged?.call(next.count);
+    } on DiscoveryFailure catch (failure) {
+      if (mounted && generation == _generation) {
+        setState(() => _pageFailure = failure);
+      }
+    } finally {
+      if (mounted && generation == _generation) {
+        setState(() => _loadingMore = false);
+      }
     }
   }
 
@@ -105,100 +172,133 @@ class _ListingReviewsSectionState extends State<ListingReviewsSection> {
   @override
   Widget build(BuildContext context) {
     if (_failure != null) {
-      return Row(
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Text(
-              _failure!.message,
-              style: const TextStyle(color: BuyerTheme.muted),
-            ),
+          const Text(
+            'Product reviews could not load',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _failure!.message,
+            style: const TextStyle(color: BuyerTheme.muted),
           ),
           TextButton(onPressed: _load, child: const Text('Retry')),
         ],
       );
     }
     final reviews = _reviews;
-    if (reviews == null) return const LinearProgressIndicator();
-    if (reviews.items.isEmpty) {
-      return const Text(
-        'No written reviews yet. Reviews come only from completed, verified purchases.',
-        style: TextStyle(color: BuyerTheme.muted),
+    if (reviews == null) {
+      return Semantics(
+        label: 'Loading product reviews',
+        child: const LinearProgressIndicator(),
       );
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '${reviews.count} verified review${reviews.count == 1 ? '' : 's'}',
-          style: const TextStyle(fontWeight: FontWeight.w700),
+        ProductRatingSummary(
+          average: reviews.average,
+          count: reviews.count,
+          distribution: reviews.distribution,
+          soldLabel: widget.soldLabel,
         ),
-        for (final review in reviews.items)
+        const SizedBox(height: 16),
+        if (reviews.items.isEmpty)
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: BuyerTheme.border)),
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              border: Border.all(color: BuyerTheme.border),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: const Column(
               children: [
-                Row(
-                  children: [
-                    const Icon(
-                      LucideIcons.badgeCheck,
-                      size: 14,
-                      color: BuyerTheme.action,
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        '${review.displayName} · Verified purchase',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Report review by ${review.displayName}',
-                      constraints: const BoxConstraints(
-                        minWidth: 44,
-                        minHeight: 44,
-                      ),
-                      onPressed: () => _report(review),
-                      icon: const Icon(LucideIcons.flag, size: 16),
-                    ),
-                  ],
+                Icon(
+                  LucideIcons.messageSquare,
+                  size: 28,
+                  color: BuyerTheme.muted,
                 ),
-                if (review.ratings.productQuality != null)
-                  StarRatingLine(
-                    label: 'Product Quality',
-                    value: review.ratings.productQuality!,
-                  ),
-                if (review.media.isNotEmpty)
-                  ReviewMediaSection(
-                    repository: widget.repository,
-                    reviewId: review.id,
-                    media: review.media,
-                    onRefresh: _load,
-                  ),
-                if (review.comment != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(review.comment!),
-                  ),
+                SizedBox(height: 8),
                 Text(
-                  [
-                    if (review.variantLabel != null) review.variantLabel!,
-                    if (review.submittedAt != null)
-                      formatManilaTimestamp(review.submittedAt!),
-                    if (review.edited) 'Edited',
-                  ].join(' · '),
-                  style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
+                  'No reviews yet',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Reviews appear after completed, verified purchases.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
                 ),
               ],
+            ),
+          ),
+        for (final review in reviews.items)
+          Padding(
+            key: ValueKey(review.id),
+            padding: const EdgeInsets.only(bottom: 12),
+            child: ProductReviewCard(
+              displayName: review.displayName,
+              rating: review.ratings.productQuality,
+              comment: review.comment,
+              variantLabel: review.variantLabel,
+              edited: review.edited,
+              timestamp: review.submittedAt == null
+                  ? null
+                  : _reviewAge(review.submittedAt!),
+              timestampDetails: review.submittedAt == null
+                  ? null
+                  : formatManilaTimestamp(review.submittedAt!),
+              onReport: () => _report(review),
+              mediaTrailing: review.media.firstOrNull?.video ?? false,
+              media: review.media.isEmpty
+                  ? null
+                  : ReviewMediaSection(
+                      repository: widget.repository,
+                      reviewId: review.id,
+                      media: review.media,
+                      onRefresh: _load,
+                      compact: true,
+                    ),
+            ),
+          ),
+        if (_pageFailure != null)
+          Text(
+            _pageFailure!.message,
+            style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
+          ),
+        if (reviews.hasMore)
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: _loadingMore ? null : _loadMore,
+              child: Text(
+                _loadingMore
+                    ? 'Loading reviews…'
+                    : _pageFailure != null
+                    ? 'Retry loading reviews'
+                    : 'Load more reviews',
+              ),
             ),
           ),
       ],
     );
   }
+}
+
+String _reviewAge(DateTime submittedAt) {
+  final elapsed = DateTime.now().difference(submittedAt);
+  if (elapsed.inMinutes < 1) return 'Just now';
+  if (elapsed.inHours < 1) {
+    return '${elapsed.inMinutes} minute${elapsed.inMinutes == 1 ? '' : 's'} ago';
+  }
+  if (elapsed.inDays < 1) {
+    return '${elapsed.inHours} hour${elapsed.inHours == 1 ? '' : 's'} ago';
+  }
+  if (elapsed.inDays < 7) {
+    return '${elapsed.inDays} day${elapsed.inDays == 1 ? '' : 's'} ago';
+  }
+  return formatManilaTimestamp(submittedAt);
 }

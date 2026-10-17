@@ -59,6 +59,31 @@ final class PhaseEightOrdersTest extends TestCase
         parent::tearDown();
     }
 
+    public function test_vendor_date_filters_use_inclusive_manila_submission_dates_before_pagination(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Date Filter Store');
+        $ids = [];
+        foreach (['2026-10-08 15:59:59+00', '2026-10-08 16:00:00+00', '2026-10-09 15:59:59+00', '2026-10-09 16:00:00+00'] as $submitted) {
+            [, $id] = $this->pickupOrder($store, $listing, [['variant' => 0, 'quantity' => '1']]);
+            DB::table('orders')->where('id', $id)->update(['submitted_at' => $submitted]);
+            $ids[] = $id;
+        }
+        [$foreignStore, , $foreignListing] = $this->pickupStore('Foreign Date Store');
+        [, $foreign] = $this->pickupOrder($foreignStore, $foreignListing, [['variant' => 0, 'quantity' => '1']]);
+        DB::table('orders')->where('id', $foreign)->update(['submitted_at' => '2026-10-09 00:00:00+00']);
+        $this->signInStoreMember($owner);
+
+        $selected = $this->getJson('/api/v1/vendor/orders?from=2026-10-09&to=2026-10-09')->assertOk()->assertJsonPath('meta.total', 2)->json('data');
+        self::assertEqualsCanonicalizing([$ids[1], $ids[2]], array_column($selected, 'id'));
+        $this->getJson('/api/v1/vendor/orders?to=2026-10-09')->assertOk()->assertJsonPath('meta.total', 3);
+        $this->getJson('/api/v1/vendor/orders?from=2026-10-09')->assertOk()->assertJsonPath('meta.total', 3);
+        $this->getJson('/api/v1/vendor/orders')->assertOk()->assertJsonPath('meta.total', 4);
+        $reference = DB::table('orders')->where('id', $ids[1])->value('reference');
+        $this->getJson('/api/v1/vendor/orders?from=2026-10-09&to=2026-10-09&q='.$reference)->assertOk()->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.id', $ids[1]);
+        $this->getJson('/api/v1/vendor/orders?from=2026-10-10&to=2026-10-09')->assertUnprocessable();
+        $this->getJson('/api/v1/vendor/orders?from=2026-02-30')->assertUnprocessable();
+    }
+
     // ── Submission ──────────────────────────────────────────────────────────────────────────────────
 
     public function test_submission_creates_one_parent_and_one_child_per_vendor_without_reserving_and_is_idempotent(): void
@@ -116,8 +141,8 @@ final class PhaseEightOrdersTest extends TestCase
 
     public function test_unchanged_manual_confirmation_reserves_freezes_the_snapshot_and_the_24_hour_window_expires_cleanly(): void
     {
-        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-10-05 09:00:00', 'Asia/Manila'));
-        Carbon::setTestNow(Carbon::parse('2026-10-05 09:00:00', 'Asia/Manila'));
+        $confirmedAt = CarbonImmutable::now('Asia/Manila')->addDay()->startOfDay()->setTime(9, 0);
+        $this->travelTo($confirmedAt);
         [$store, $owner, $listing] = $this->pickupStore('Confirm Hardware');
         $variant = $this->variantIds($listing)[0];
         [$buyer, $orderId] = $this->pickupOrder($store, $listing);
@@ -127,7 +152,7 @@ final class PhaseEightOrdersTest extends TestCase
         self::assertSame('4.0000', $this->reserved($variant));
         self::assertSame('20.0000', (string) DB::table('inventory_items')->where('listing_variant_id', $variant)->value('quantity_on_hand'), 'Reservation never changes physical stock.');
         $order = DB::table('orders')->where('id', $orderId)->first();
-        self::assertSame('2026-10-06 01:00:00', CarbonImmutable::parse((string) $order->payment_expires_at)->utc()->format('Y-m-d H:i:s'), '24 hours from entering AWAITING_PAYMENT.');
+        self::assertSame($confirmedAt->addDay()->utc()->format('Y-m-d H:i:s'), CarbonImmutable::parse((string) $order->payment_expires_at)->utc()->format('Y-m-d H:i:s'), '24 hours from entering AWAITING_PAYMENT.');
         $snapshot = DB::table('financial_snapshots')->where('order_id', $orderId)->first();
         self::assertSame([1, 7200, 7200, 0, 7200, 0, 7200], [(int) $snapshot->version, (int) $snapshot->materials_gross_centavos, (int) $snapshot->materials_payable_centavos, (int) $snapshot->materials_vat_centavos,
             (int) $snapshot->materials_exclusive_centavos, (int) $snapshot->delivery_centavos, (int) $snapshot->buyer_total_centavos]);
@@ -156,9 +181,9 @@ final class PhaseEightOrdersTest extends TestCase
         }
 
         // 1 second before 24 hours nothing expires; at 24:00:00 the read resolves the order to EXPIRED and releases the stock.
-        $this->travelTo(CarbonImmutable::parse('2026-10-06 08:59:59', 'Asia/Manila'));
+        $this->travelTo($confirmedAt->addDay()->subSecond());
         self::assertSame(0, app(OrderExpiryService::class)->sweep());
-        $this->travelTo(CarbonImmutable::parse('2026-10-06 09:00:00', 'Asia/Manila'));
+        $this->travelTo($confirmedAt->addDay());
         $expired = $this->buyerOrder($buyer, $orderId);
         self::assertSame(['EXPIRED', 'EXPIRED'], [$expired['states'][0]['state'], $expired['states'][1]['state']]);
         self::assertSame('PAYMENT_WINDOW_EXPIRED', $expired['terminal_reason_code']);
@@ -178,6 +203,78 @@ final class PhaseEightOrdersTest extends TestCase
         self::assertSame(1, app(OrderExpiryService::class)->sweep());
         self::assertSame(['EXPIRED', 'NOT_REQUIRED', 'VENDOR_RESPONSE_TIMEOUT'], [$this->buyerOrder($buyer, $orderId)['states'][0]['state'], $this->buyerOrder($buyer, $orderId)['states'][1]['state'], $this->buyerOrder($buyer, $orderId)['terminal_reason_code']]);
         self::assertSame(0, DB::table('inventory_holds')->count());
+    }
+
+    public function test_percentage_order_materials_discount_requires_approval_and_freezes_once(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Percentage materials');
+        [$buyer, $id] = $this->pickupOrder($store, $listing);
+        $key = (string) Str::uuid7();
+        $extra = ['discount' => ['scope' => 'MATERIALS', 'percent' => '20']];
+        $detail = $this->vendorOrder($owner, $id);
+        $body = ['lock_version' => $detail['lock_version'], 'lines' => array_map(static fn (array $line): array => ['order_line_id' => $line['id'], 'confirmed_quantity' => $line['requested_quantity']], $detail['lines']), 'pickup' => ['ready_date' => now('Asia/Manila')->addDay()->toDateString()]] + $extra;
+        $this->postJson('/api/v1/vendor/orders/'.$id.'/confirm', $body, ['Idempotency-Key' => $key])->assertOk()->assertJsonPath('data.states.0.state', 'AWAITING_BUYER_APPROVAL');
+        $this->postJson('/api/v1/vendor/orders/'.$id.'/confirm', $body, ['Idempotency-Key' => $key])->assertOk();
+        $review = $this->buyerOrder($buyer, $id);
+        self::assertSame(['scope' => 'MATERIALS', 'percent' => '20.00', 'basis_centavos' => 7200, 'deduction_centavos' => 1440], $review['money']['discount']);
+        self::assertSame(5760, $review['money']['commercial_total_centavos']);
+        $this->postJson('/api/v1/buyers/orders/'.$id.'/revision/approve', ['snapshot_version' => 2], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
+        self::assertSame(5760, (int) DB::table('financial_snapshots')->where('order_id', $id)->value('buyer_total_centavos'));
+        self::assertSame(1, DB::table('vendor_confirmations')->where('order_id', $id)->count());
+        self::assertSame(1, DB::table('financial_snapshots')->where('order_id', $id)->count());
+    }
+
+    /** @return array<string, array{string, int}> */
+    public static function percentageDeliveryRates(): array
+    {
+        return ['partial' => ['20', 48400], 'full' => ['100', 0]];
+    }
+
+    #[DataProvider('percentageDeliveryRates')]
+    public function test_percentage_order_delivery_discount_validates_gross_and_freezes_net(string $percent, int $net): void
+    {
+        [$store, $owner] = $this->activeStore('Discounted delivery', false, true);
+        $this->signInStoreMember($owner);
+        $listing = $this->orderListing('PCT-DEL', [['price' => 1800, 'qty' => '50']]);
+        $vehicle = $this->addVehicle($store->id);
+        DB::table('delivery_service_areas')->where('vendor_organization_id', $store->id)->update(['maximum_distance_km' => 10]);
+        $this->placeStore($store->id, 1000);
+        $this->connectOnlinePayments($store->id);
+        $buyer = $this->buyer();
+        $site = $this->savedLocation($buyer, 'Discount site', 0, 0, 'PROJECT_SITE', true);
+        $gate = $this->savedLocation($buyer, 'Discount gate', 1500, 0);
+        $this->addToCart($listing, '10', 'DELIVERY');
+        $lock = (int) $this->getJson('/api/v1/buyers/cart')->json('data.lock_version');
+        $this->putJson('/api/v1/buyers/cart/destination', ['lock_version' => $lock, 'intended_location_id' => $site, 'heavy_vehicle_restriction' => 'YES', 'alternate_drop_off_location_id' => $gate, 'access_instructions' => 'Unload at the north gate.'])->assertOk();
+        $id = (string) $this->submitCheckout([$store->id])->assertCreated()->json('data.orders.0.id');
+        $extra = ['discount' => ['scope' => 'DELIVERY', 'percent' => $percent], 'delivery' => ['vehicles' => [['vehicle_id' => $vehicle, 'number_of_vehicles' => 1, 'total_vehicle_trips' => 1]], 'final_fee_centavos' => 60500, 'fulfillment_date' => now('Asia/Manila')->addDay()->toDateString(), 'arrangement' => 'Truck delivery to the gate', 'access_confirmed' => true, 'heavy_vehicle_access_confirmed' => true]];
+        $this->confirmOrder($owner, $id, [], array_replace_recursive($extra, ['delivery' => ['final_fee_centavos' => 60501]]))->assertConflict()->assertJsonPath('errors.0.code', 'DELIVERY_FEE_CHANGED');
+        $this->confirmOrder($owner, $id, [], $extra + ['nrpc' => ['amount_centavos' => 18001, 'reason' => 'Preparation of all delivered materials', 'lines' => [['order_line_id' => $this->vendorOrder($owner, $id)['lines'][0]['id'], 'principal_centavos' => 18001]]]])->assertUnprocessable();
+        self::assertSame(0, DB::table('order_delivery_snapshots')->where('order_id', $id)->count());
+        self::assertSame(0, DB::table('inventory_holds')->where('source_id', $id)->count());
+        $this->confirmOrder($owner, $id, [], $extra)->assertOk()->assertJsonPath('data.money.delivery.amount_centavos', $net);
+        $review = $this->buyerOrder($buyer, $id);
+        self::assertSame([60500, 60500 - $net], [$review['money']['discount']['basis_centavos'], $review['money']['discount']['deduction_centavos']]);
+        self::assertSame(18000 + $net, $review['money']['commercial_total_centavos']);
+        self::assertSame(0, $review['money']['vendor_discount_centavos']);
+        $snapshot = DB::table('order_delivery_snapshots')->where('order_id', $id)->first();
+        self::assertSame($net, (int) $snapshot->final_charge_centavos);
+        self::assertSame(60500, json_decode($snapshot->snapshot, true)['gross_charge_centavos']);
+        $this->postJson('/api/v1/buyers/orders/'.$id.'/revision/approve', ['snapshot_version' => 2], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
+        self::assertSame(18000 + $net, (int) DB::table('financial_snapshots')->where('order_id', $id)->value('buyer_total_centavos'));
+    }
+
+    public function test_percentage_order_discount_rejects_invalid_values_and_unauthorized_roles_without_reserving(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Percentage validation');
+        [, $id] = $this->pickupOrder($store, $listing);
+        $service = $this->teamMember($store, 'CUSTOMER_SERVICE');
+        $this->confirmOrder($service, $id, [], ['discount' => ['scope' => 'MATERIALS', 'percent' => '10']])->assertForbidden();
+        foreach ([[], ['scope' => 'MATERIALS', 'percent' => '100.01'], ['scope' => 'MATERIALS', 'percent' => '1.001'], ['scope' => 'DELIVERY', 'percent' => '10'], ['scope' => 'MATERIALS', 'percent' => '100']] as $discount) {
+            $this->confirmOrder($owner, $id, [], ['discount' => $discount])->assertUnprocessable();
+        }
+        $this->confirmOrder($owner, $id, [], ['vendor_discount_centavos' => 10, 'discount' => ['scope' => 'MATERIALS', 'percent' => '10']])->assertUnprocessable();
+        self::assertSame(0, DB::table('inventory_holds')->where('source_id', $id)->count());
     }
 
     // ── Revision, Buyer approval and roles ───────────────────────────────────────────────────────────
@@ -433,6 +530,168 @@ final class PhaseEightOrdersTest extends TestCase
 
     // ── Site Delivery: authority, snapshot retention and address separation ─────────────────────────
 
+    public function test_delivery_route_failure_preserves_the_cart_and_recovery_allows_idempotent_submission(): void
+    {
+        [$store, $owner] = $this->activeStore('Retry Delivery', false, true);
+        $this->signInStoreMember($owner);
+        $listing = $this->orderListing('RETRY-DLV', [['price' => 1800, 'qty' => '50']]);
+        $this->addVehicle($store->id);
+        DB::table('listing_variants')->where('vendor_listing_id', $listing)->update(['weight_kg' => null]);
+        $this->placeStore($store->id, 1000);
+        $this->connectOnlinePayments($store->id);
+        $buyer = $this->buyer();
+        $site = $this->savedLocation($buyer, 'Delivery site', 0, 0, 'PROJECT_SITE', true);
+        $this->addToCart($listing, '10', 'DELIVERY');
+        $lock = (int) $this->getJson('/api/v1/buyers/cart')->json('data.lock_version');
+        $this->putJson('/api/v1/buyers/cart/destination', ['lock_version' => $lock, 'intended_location_id' => $site, 'heavy_vehicle_restriction' => 'NO'])->assertOk();
+        $lock = (int) $this->getJson('/api/v1/buyers/cart')->json('data.lock_version');
+        $request = ['cart_lock_version' => $lock, 'vendor_ids' => [$store->id]];
+        $headers = ['Idempotency-Key' => (string) Str::uuid7()];
+
+        $this->routes->failure = 'TIMEOUT';
+        $this->postJson('/api/v1/buyers/cart/checkout-preview', [])->assertOk()
+            ->assertJsonPath('data.groups.0.status', 'BLOCKED')
+            ->assertJsonPath('data.groups.0.delivery.issues.0.code', 'ROUTE_UNAVAILABLE')
+            ->assertJsonPath('data.groups.0.delivery.estimate', null);
+        $this->postJson('/api/v1/buyers/checkouts', $request, $headers)->assertConflict()
+            ->assertJsonPath('errors.0.code', 'CHECKOUT_GROUP_NOT_READY');
+        self::assertSame(1, DB::table('cart_items')->count());
+        self::assertSame($lock, (int) DB::table('carts')->where('buyer_profile_id', $this->buyerProfileId($buyer))->value('lock_version'));
+        self::assertSame(0, DB::table('checkout_groups')->count());
+        self::assertSame(0, DB::table('orders')->count());
+        self::assertSame(0, DB::table('inventory_holds')->count());
+
+        $this->routes->failure = null;
+        $this->postJson('/api/v1/buyers/cart/checkout-preview', [])->assertOk()
+            ->assertJsonPath('data.groups.0.status', 'READY')
+            ->assertJsonPath('data.groups.0.delivery.status', 'MANUAL_REVIEW')
+            ->assertJsonPath('data.groups.0.delivery.estimate', null);
+        // A previously ready preview never bypasses live staff eligibility on selection or submission.
+        DB::table('vendor_memberships')->where('vendor_organization_id', $store->id)->where('role', 'FULFILLMENT')->update(['status' => 'INACTIVE']);
+        $this->postJson('/api/v1/buyers/cart/checkout-preview', [])->assertOk()->assertJsonPath('data.groups.0.fulfillment_options', ['PICKUP']);
+        $this->putJson('/api/v1/buyers/cart/vendor-groups/'.$store->id.'/fulfillment', ['lock_version' => $lock, 'fulfillment_method' => 'DELIVERY'])->assertStatus(422);
+        $this->postJson('/api/v1/buyers/checkouts', $request, $headers)->assertConflict()->assertJsonPath('errors.0.code', 'CHECKOUT_GROUP_NOT_READY');
+        self::assertSame(0, DB::table('orders')->count());
+        self::assertSame(1, DB::table('cart_items')->count());
+        DB::table('vendor_memberships')->where('vendor_organization_id', $store->id)->where('role', 'FULFILLMENT')->update(['status' => 'ACTIVE']);
+        $checkout = $this->postJson('/api/v1/buyers/checkouts', $request, $headers)->assertCreated()
+            ->assertJsonPath('data.orders.0.order_state', 'AWAITING_VENDOR_CONFIRMATION')->json('data.id');
+        $this->postJson('/api/v1/buyers/checkouts', $request, $headers)->assertOk()
+            ->assertJsonPath('data.id', $checkout)->assertJsonPath('meta.replayed', true);
+        self::assertSame(1, DB::table('checkout_groups')->count());
+        self::assertSame(1, DB::table('orders')->count());
+        self::assertSame(0, DB::table('cart_items')->count());
+        self::assertSame(0, DB::table('inventory_holds')->count());
+    }
+
+    public function test_manual_dimension_review_can_confirm_a_selected_vehicle_and_preserves_payload_fee_authorization_and_snapshots(): void
+    {
+        [$store, $owner] = $this->activeStore('Manual Fit Delivery', false, true);
+        $this->signInStoreMember($owner);
+        $listing = $this->orderListing('MANUAL-FIT', [['price' => 1800, 'qty' => '50']]);
+        $variant = $this->variantIds($listing)[0];
+        DB::table('listing_variants')->where('id', $variant)->update(['weight_kg' => 600, 'length_cm' => 231, 'width_cm' => 323, 'height_cm' => 123123]);
+        $vehicle = $this->addVehicle($store->id);
+        DB::table('delivery_service_areas')->where('vendor_organization_id', $store->id)->update(['maximum_distance_km' => 10]);
+        $this->placeStore($store->id, 1000);
+        $this->connectOnlinePayments($store->id);
+        $staff = $this->teamMember($store, 'STORE_STAFF');
+        $buyer = $this->buyer();
+        $site = $this->savedLocation($buyer, 'Delivery site', 0, 0, 'PROJECT_SITE', true);
+        $this->addToCart($listing, '4', 'DELIVERY');
+        $lock = (int) $this->getJson('/api/v1/buyers/cart')->json('data.lock_version');
+        $this->putJson('/api/v1/buyers/cart/destination', ['lock_version' => $lock, 'intended_location_id' => $site, 'heavy_vehicle_restriction' => 'NO'])->assertOk();
+        $this->postJson('/api/v1/buyers/cart/checkout-preview', [])->assertOk()
+            ->assertJsonPath('data.groups.0.delivery.status', 'MANUAL_REVIEW')
+            ->assertJsonPath('data.groups.0.delivery.estimate', null);
+        $orderId = (string) $this->submitCheckout([$store->id])->assertCreated()->json('data.orders.0.id');
+        $lineSnapshot = DB::table('order_lines')->where('order_id', $orderId)->value('snapshot');
+        // A later catalog correction does not replace the submitted order's measurements.
+        DB::table('listing_variants')->where('id', $variant)->update(['height_cm' => 20, 'width_cm' => 10]);
+        $this->signInStoreMember($owner);
+        $plan = $this->postJson('/api/v1/vendor/orders/'.$orderId.'/delivery-recommendations', [])->assertOk()
+            ->assertJsonPath('data.status', 'MANUAL_REVIEW_REQUIRED')
+            ->assertJsonPath('data.groups.0.manual_review_reasons.0', 'UNIT_DIMENSIONS_REQUIRE_MANUAL_REVIEW')
+            ->assertJsonCount(0, 'data.groups.0.candidates')
+            ->assertJsonPath('data.groups.0.manual_review_vehicles.0.vehicle_id', $vehicle)
+            ->assertJsonPath('data.groups.0.manual_review_vehicles.0.total_vehicle_trips', 4)->json('data');
+        $perTrip = $plan['groups'][0]['manual_review_vehicles'][0]['per_trip_centavos'];
+        $delivery = ['delivery' => ['vehicles' => [['vehicle_id' => $vehicle, 'number_of_vehicles' => 1, 'total_vehicle_trips' => 4]],
+            'final_fee_centavos' => $perTrip * 4, 'fulfillment_date' => CarbonImmutable::now('Asia/Manila')->addDays(2)->toDateString(),
+            'arrangement' => 'Four trips with the load checked at the yard.', 'access_confirmed' => true, 'heavy_vehicle_access_confirmed' => true]];
+        $this->confirmOrder($owner, $orderId, [], $delivery)->assertUnprocessable()->assertJsonPath('errors.0.code', 'DELIVERY_MANUAL_REVIEW_REQUIRED');
+        $delivery['delivery']['manual_review_note'] = 'Checked the actual load and secured one 600 kg unit per truck trip.';
+        $this->confirmOrder($staff, $orderId, [], $delivery)->assertForbidden()->assertJsonPath('errors.0.code', 'PERMISSION_DENIED');
+        $this->confirmOrder($owner, $orderId, [], array_replace_recursive($delivery, ['delivery' => ['heavy_vehicle_access_confirmed' => false]]))
+            ->assertUnprocessable()->assertJsonPath('errors.0.code', 'DELIVERY_ROUTE_REQUIRED');
+        $this->confirmOrder($owner, $orderId, [], array_replace_recursive($delivery, ['delivery' => ['vehicles' => [['total_vehicle_trips' => 1]], 'final_fee_centavos' => $perTrip]]))
+            ->assertUnprocessable()->assertJsonPath('errors.0.code', 'DELIVERY_CAPACITY_INSUFFICIENT');
+        $this->confirmOrder($owner, $orderId, [], array_replace_recursive($delivery, ['delivery' => ['final_fee_centavos' => $perTrip * 4 + 1]]))
+            ->assertConflict()->assertJsonPath('errors.0.code', 'DELIVERY_FEE_CHANGED');
+        self::assertSame(0, $this->activeHolds($orderId));
+        self::assertSame(0, DB::table('order_delivery_snapshots')->where('order_id', $orderId)->count());
+        $this->confirmOrder($owner, $orderId, [], $delivery)->assertOk()->assertJsonPath('data.states.0.state', 'AWAITING_BUYER_APPROVAL');
+        $snapshot = json_decode((string) DB::table('order_delivery_snapshots')->where('order_id', $orderId)->value('snapshot'), true);
+        self::assertSame('MANUAL_REVIEW', $snapshot['basis']);
+        self::assertSame($delivery['delivery']['manual_review_note'], $snapshot['manual_review_note']);
+        self::assertSame(['UNIT_DIMENSIONS_REQUIRE_MANUAL_REVIEW'], $snapshot['groups'][0]['manual_review_reasons']);
+        self::assertSame($lineSnapshot, DB::table('order_lines')->where('order_id', $orderId)->value('snapshot'));
+        self::assertSame('4.0000', $this->reserved($variant));
+        self::assertSame(4, $this->buyerOrder($buyer, $orderId)['delivery']['confirmed']['vehicles'][0]['total_vehicle_trips']);
+        $this->postJson('/api/v1/buyers/orders/'.$orderId.'/revision/approve', ['snapshot_version' => 2], ['Idempotency-Key' => (string) Str::uuid7()])
+            ->assertOk()->assertJsonPath('data.states.0.state', 'AWAITING_PAYMENT');
+    }
+
+    #[DataProvider('deliveryRecommendationChanges')]
+    public function test_delivery_change_explanation_is_frozen_for_buyer_approval_before_payment(string $change): void
+    {
+        [$store, $owner] = $this->activeStore('Explained delivery', false, true);
+        $this->signInStoreMember($owner);
+        $listing = $this->orderListing('DELIVERY-CHANGE', [['price' => 1800, 'qty' => '50']]);
+        $vehicle = $this->addVehicle($store->id);
+        DB::table('delivery_service_areas')->where('vendor_organization_id', $store->id)->update(['maximum_distance_km' => 10]);
+        $this->placeStore($store->id, 1000);
+        $this->connectOnlinePayments($store->id);
+        $buyer = $this->buyer();
+        $site = $this->savedLocation($buyer, 'Delivery site', 0, 0, 'PROJECT_SITE', true);
+        $this->addToCart($listing, '10', 'DELIVERY');
+        $lock = (int) $this->getJson('/api/v1/buyers/cart')->json('data.lock_version');
+        $this->putJson('/api/v1/buyers/cart/destination', ['lock_version' => $lock, 'intended_location_id' => $site, 'heavy_vehicle_restriction' => 'NO'])->assertOk();
+        $id = (string) $this->submitCheckout([$store->id])->assertCreated()->json('data.orders.0.id');
+        $this->signInStoreMember($owner);
+        $plan = $this->postJson('/api/v1/vendor/orders/'.$id.'/delivery-recommendations', [])->assertOk()->json('data');
+        $perTrip = $plan['groups'][0]['candidates'][0]['per_trip_centavos'];
+        $trips = $change === 'TRIPS' ? 2 : 1;
+        if ($change === 'RATE') {
+            DB::table('vehicle_rate_versions')->insert(['id' => (string) Str::uuid7(), 'vendor_vehicle_id' => $vehicle,
+                'version' => (int) DB::table('vehicle_rate_versions')->where('vendor_vehicle_id', $vehicle)->max('version') + 1,
+                'base_fee_centavos' => 60000, 'per_km_centavos' => 2500, 'maximum_distance_km' => 40, 'effective_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+            $perTrip += 10000;
+        }
+        $delivery = ['delivery' => ['vehicles' => [['vehicle_id' => $vehicle, 'number_of_vehicles' => 1, 'total_vehicle_trips' => $trips]],
+            'final_fee_centavos' => $perTrip * $trips, 'fulfillment_date' => now('Asia/Manila')->addDay()->toDateString(),
+            'arrangement' => 'Two separate deliveries to the same site.', 'access_confirmed' => true, 'heavy_vehicle_access_confirmed' => true]];
+        $this->confirmOrder($owner, $id, [], $delivery)->assertUnprocessable()->assertJsonPath('errors.0.code', 'DELIVERY_CHANGE_REASON_REQUIRED');
+        self::assertSame(0, DB::table('order_delivery_snapshots')->where('order_id', $id)->count());
+        $delivery['delivery']['change_reason'] = 'The site can unload only half of the materials on each visit.';
+        $this->confirmOrder($owner, $id, [], $delivery)->assertOk()->assertJsonPath('data.states.0.state', 'AWAITING_BUYER_APPROVAL');
+        $review = $this->buyerOrder($buyer, $id);
+        self::assertTrue($review['delivery']['confirmed']['recommendation_changed']);
+        self::assertSame($delivery['delivery']['change_reason'], $review['delivery']['confirmed']['change_reason']);
+        self::assertSame(1, $review['delivery']['confirmed']['system_recommendation'][0]['trips']);
+        self::assertSame($trips, $review['delivery']['confirmed']['vehicles'][0]['total_vehicle_trips']);
+        self::assertFalse($review['payment']['available']);
+        self::assertNotContains('PAY', $review['available_actions']);
+        $this->postJson('/api/v1/buyers/orders/'.$id.'/revision/approve', ['snapshot_version' => $review['commercial_version']['current']], ['Idempotency-Key' => (string) Str::uuid7()])
+            ->assertOk()->assertJsonPath('data.states.0.state', 'AWAITING_PAYMENT')->assertJsonPath('data.payment.available', true);
+    }
+
+    /** @return list<array{string}> */
+    public static function deliveryRecommendationChanges(): array
+    {
+        return [['TRIPS'], ['RATE']];
+    }
+
     public function test_delivery_confirmation_is_owner_or_manager_only_and_freezes_the_drop_off_vehicles_and_fee(): void
     {
         [$store, $owner] = $this->activeStore('Delivery Orders', false, true);
@@ -461,6 +720,8 @@ final class PhaseEightOrdersTest extends TestCase
         $this->signInStoreMember($owner);
         $plan = $this->postJson('/api/v1/vendor/orders/'.$orderId.'/delivery-recommendations', [])->assertOk()->json('data');
         self::assertSame([true, 'ALTERNATE_DROP_OFF', 4200, 60500], [$plan['advisory'], $plan['endpoint']['kind'], $plan['route']['distance_meters'], $plan['groups'][0]['candidates'][0]['estimated_charge_centavos']]);
+        self::assertTrue($plan['groups'][0]['candidates'][0]['recommended']);
+        self::assertSame($vehicle, $submitted['delivery']['estimate']['options'][0]['vehicle_id']);
         $delivery = ['delivery' => ['vehicles' => [['vehicle_id' => $vehicle, 'number_of_vehicles' => 1, 'total_vehicle_trips' => 1]], 'final_fee_centavos' => 60500,
             'fulfillment_date' => CarbonImmutable::now('Asia/Manila')->addDays(2)->toDateString(), 'arrangement' => 'One box-truck trip to the north gate.', 'access_confirmed' => true, 'heavy_vehicle_access_confirmed' => true]];
 
@@ -472,9 +733,16 @@ final class PhaseEightOrdersTest extends TestCase
         $this->confirmOrder($owner, $orderId, [], array_replace_recursive($delivery, ['delivery' => ['final_fee_centavos' => 70000]]))->assertStatus(409)->assertJsonPath('errors.0.code', 'DELIVERY_FEE_CHANGED');
         self::assertSame(0, DB::table('inventory_holds')->count());
 
+        $changedPlan = array_replace_recursive($delivery, ['delivery' => ['vehicles' => [['total_vehicle_trips' => 2]], 'final_fee_centavos' => 121000]]);
+        $this->confirmOrder($owner, $orderId, [], $changedPlan)->assertUnprocessable()->assertJsonPath('errors.0.code', 'DELIVERY_CHANGE_REASON_REQUIRED');
+        self::assertSame(0, DB::table('order_delivery_snapshots')->where('order_id', $orderId)->count());
         $this->confirmOrder($owner, $orderId, [], $delivery)->assertOk()->assertJsonPath('data.states.0.state', 'AWAITING_BUYER_APPROVAL');
         $review = $this->buyerOrder($buyer, $orderId);
         $confirmed = $review['delivery']['confirmed'];
+        self::assertFalse($confirmed['recommendation_changed']);
+        self::assertNull($confirmed['change_reason']);
+        self::assertSame($vehicle, $confirmed['system_recommendation'][0]['vehicle_id']);
+        self::assertFalse($review['payment']['available']);
         self::assertSame(['ALTERNATE_DROP_OFF', 'Project site', 'North gate', 4200, 60500, 'Box truck', 'Isuzu', 1, 'OWNER'],
             [$confirmed['endpoint'], $confirmed['intended']['label'], $confirmed['alternate_drop_off']['label'], $confirmed['distance_meters'], $confirmed['final_fee_centavos'],
                 $confirmed['vehicles'][0]['name'], $confirmed['vehicles'][0]['brand'], $confirmed['vehicles'][0]['total_vehicle_trips'], $confirmed['confirmed_by_role']]);

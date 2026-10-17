@@ -17,6 +17,7 @@ Name | Type | Description | Notes
 **longitude** | **double** |  | [optional]
 **originSource** | **String** |  | [optional]
 **radiusKm** | **int** |  | [optional]
+**workPackageLineId** | **String** | Work Package line this purchase covers; same material and unit only (422 MISSING_LINE_TAG_INVALID). | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

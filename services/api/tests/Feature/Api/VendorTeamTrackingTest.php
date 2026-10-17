@@ -52,7 +52,7 @@ final class VendorTeamTrackingTest extends TestCase
         $other = $this->organization();
         $this->event($other, $staff, 'INVENTORY', 'INVENTORY_ROW_UPDATED');
         $this->signIn($owner);
-        $url = '/api/v1/vendors/account/activity?member_id='.$membership->id;
+        $url = '/api/v1/vendors/account/activity?member_id='.$membership->id.'&days=30';
         $response = $this->getJson($url)->assertOk()->assertJsonCount(20, 'data')
             ->assertJsonPath('meta.total_events', 26)->assertJsonPath('meta.succeeded_events', 25)
             ->assertJsonPath('meta.failed_events', 1)->assertJsonPath('meta.last_page', 2);
@@ -60,8 +60,16 @@ final class VendorTeamTrackingTest extends TestCase
         $this->getJson($url.'&page=2')->assertOk()->assertJsonCount(6, 'data')->assertJsonPath('meta.total_events', 26);
         $this->getJson($url.'&role=STORE_STAFF')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.actor_role', 'STORE_STAFF');
         $this->getJson($url.'&category=SALES')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('meta.total_events', 26);
-        $this->getJson($url.'&days=90')->assertOk()->assertJsonPath('meta.total_events', 27);
-        $this->getJson($url.'&days=365')->assertUnprocessable();
+        $allDatesUrl = '/api/v1/vendors/account/activity?member_id='.$membership->id;
+        $this->getJson($allDatesUrl)->assertOk()->assertJsonPath('meta.total_events', 27)->assertJsonPath('meta.succeeded_events', 26);
+        $this->getJson($allDatesUrl.'&days=90')->assertOk()->assertJsonPath('meta.total_events', 27);
+        $this->getJson($allDatesUrl.'&days=365')->assertUnprocessable();
+        $today = now('Asia/Manila')->toDateString();
+        $yesterday = now('Asia/Manila')->subDay()->toDateString();
+        $this->getJson($allDatesUrl.'&from='.$today.'&to='.$today)->assertOk()->assertJsonPath('meta.total_events', 26);
+        $this->getJson($allDatesUrl.'&from='.$today)->assertOk()->assertJsonPath('meta.total_events', 26);
+        $this->getJson($allDatesUrl.'&to='.$yesterday)->assertOk()->assertJsonPath('meta.total_events', 1);
+        $this->getJson($allDatesUrl.'&from='.$today.'&to='.$yesterday)->assertUnprocessable();
     }
 
     public function test_delegated_managers_cannot_monitor_other_managers_or_other_organizations(): void
@@ -196,6 +204,127 @@ final class VendorTeamTrackingTest extends TestCase
             self::assertSame(['vendor_organization_id' => $org->id, 'actor_role' => 'CUSTOMER_SERVICE'], json_decode($payload, true, flags: JSON_THROW_ON_ERROR));
             self::assertStringNotContainsString('private-', $payload);
         }
+    }
+
+    public function test_sales_statistics_follow_sales_attribution_reply_time_and_owner_only_values(): void
+    {
+        $org = $this->organization();
+        [$owner] = $this->member($org, 'OWNER');
+        [$manager] = $this->member($org, 'STORE_MANAGER', true);
+        [$service, $serviceMembership] = $this->member($org, 'CUSTOMER_SERVICE');
+        [$staff, $staffMembership] = $this->member($org, 'STORE_STAFF');
+        [$buyer, $buyerId] = $this->buyer();
+        $conversation = (string) Str::uuid7();
+        $start = now()->subHours(3);
+        DB::table('conversations')->insert(['id' => $conversation, 'buyer_profile_id' => $buyerId, 'vendor_organization_id' => $org->id, 'context_type' => 'ITEM_BASED', 'purpose' => 'SALES', 'handler_user_id' => $service->id, 'created_at' => $start, 'updated_at' => now()]);
+        DB::table('conversation_assignments')->insert(['id' => (string) Str::uuid7(), 'conversation_id' => $conversation, 'assigned_user_id' => $service->id, 'assigned_role' => 'CUSTOMER_SERVICE', 'created_at' => $start, 'updated_at' => $start]);
+        // Two Buyer waits answered by Customer Service (20 and 30 minutes), one by Store Staff, and a final unanswered message.
+        foreach ([[$buyer, 'BUYER', 0], [$buyer, 'BUYER', 5], [$service, 'CUSTOMER_SERVICE', 20], [$service, 'CUSTOMER_SERVICE', 22], [$buyer, 'BUYER', 60], [$staff, 'STORE_STAFF', 90],
+            [$buyer, 'BUYER', 100], [$service, 'SYSTEM', 105], [$service, 'CUSTOMER_SERVICE', 130], [$buyer, 'BUYER', 140]] as [$sender, $role, $minutes]) {
+            DB::table('messages')->insert(['id' => (string) Str::uuid7(), 'conversation_id' => $conversation, 'sender_user_id' => $sender->id, 'client_message_id' => (string) Str::uuid7(), 'body' => 'private-test-value',
+                'kind' => $role === 'SYSTEM' ? 'SYSTEM' : 'TEXT', 'public_sender' => json_encode(['role' => $role]), 'sent_at' => $start->copy()->addMinutes($minutes), 'created_at' => now(), 'updated_at' => now()]);
+        }
+        // A quotation published by Store Staff but accepted while Customer Service handled the inquiry belongs to Customer Service.
+        $quotation = (string) Str::uuid7();
+        $version = (string) Str::uuid7();
+        DB::table('quotations')->insert(['id' => $quotation, 'conversation_id' => $conversation, 'buyer_profile_id' => $buyerId, 'vendor_organization_id' => $org->id, 'procurement_type' => 'ITEM_BASED', 'state' => 'ACCEPTED', 'created_at' => $start, 'updated_at' => now()]);
+        DB::table('quotation_versions')->insert(['id' => $version, 'quotation_id' => $quotation, 'version' => 1, 'created_by_user_id' => $staff->id, 'actor_role' => 'STORE_STAFF', 'published_at' => $start, 'content_hash' => 'tracking-test', 'created_at' => $start, 'updated_at' => $start]);
+        $this->order($org, $buyerId, 'CONFIRMED', 50000, quotationVersion: $version);
+        $this->order($org, $buyerId, 'COMPLETED', 100000, confirmedBy: [$service, 'CONFIRMED']);
+        $this->order($org, $buyerId, 'AWAITING_BUYER_APPROVAL', 70000, confirmedBy: [$service, 'REVISED']);
+        $this->order($org, $buyerId, 'CONFIRMED', 90000); // Auto-accepted: no human sales owner.
+        $this->order($this->organization(), $buyerId, 'COMPLETED', 30000, confirmedBy: [$service, 'CONFIRMED']);
+
+        $this->signIn($owner);
+        $url = '/api/v1/vendors/account/activity/performance?member_id='.$serviceMembership->id;
+        $response = $this->getJson($url)->assertOk()
+            ->assertJsonPath('data.role', 'CUSTOMER_SERVICE')->assertJsonPath('data.sales_value_visible', true)
+            ->assertJsonPath('data.sales.orders', 2)->assertJsonPath('data.sales.completed', 1)->assertJsonPath('data.sales.value_centavos', 150000)
+            ->assertJsonPath('data.sales.conversations', 1)->assertJsonPath('data.sales.messages', 3)->assertJsonPath('data.sales.awaiting_reply', 1)
+            ->assertJsonPath('data.sales.reply.measured', 2)->assertJsonPath('data.sales.reply.average_seconds', 1500)->assertJsonPath('data.sales.reply.median_seconds', 1500)
+            ->assertJsonPath('data.orders.confirmed', 1)->assertJsonPath('data.orders.revised', 1)
+            ->assertJsonPath('data.trend.metric', 'SALES')->assertJsonMissingPath('data.inventory')->assertJsonMissingPath('data.fulfillment');
+        self::assertSame(2, array_sum(array_column($response->json('data.trend.points'), 'value')));
+        self::assertStringNotContainsString('private-test-value', $response->getContent());
+        $this->getJson($url.'&from='.now('Asia/Manila')->addDay()->toDateString())->assertOk()->assertJsonPath('data.sales.orders', 0)->assertJsonPath('data.sales.reply.measured', 0)
+            ->assertJsonPath('data.sales.reply.average_seconds', null)->assertJsonPath('data.sales.awaiting_reply', 1);
+        $this->getJson('/api/v1/vendors/account/activity/performance?member_id='.$staffMembership->id)->assertOk()
+            ->assertJsonPath('data.sales.orders', 0)->assertJsonPath('data.sales.reply.measured', 1)->assertJsonPath('data.sales.reply.average_seconds', 1800)
+            ->assertJsonPath('data.quotations.published', 1)->assertJsonPath('data.quotations.accepted', 1);
+
+        $this->signIn($manager);
+        $this->getJson($url)->assertOk()->assertJsonPath('data.sales_value_visible', false)->assertJsonPath('data.sales.orders', 2)->assertJsonMissingPath('data.sales.value_centavos');
+    }
+
+    public function test_inventory_and_fulfillment_statistics_stay_within_their_role_and_scope(): void
+    {
+        $org = $this->organization();
+        [$owner, $ownerMembership] = $this->member($org, 'OWNER');
+        [$manager] = $this->member($org, 'STORE_MANAGER', true);
+        [, $otherManagerMembership] = $this->member($org, 'STORE_MANAGER');
+        [$inventory, $inventoryMembership] = $this->member($org, 'INVENTORY');
+        [$fulfillment, $fulfillmentMembership] = $this->member($org, 'FULFILLMENT');
+        [, $foreignMembership] = $this->member($this->organization(), 'INVENTORY');
+        [, $buyerId] = $this->buyer();
+        foreach (['INVENTORY_ROW_UPDATED', 'INVENTORY_ROW_UPDATED', 'CATALOG_LISTING_CREATED', 'CATALOG_VARIANTS_SAVED', 'PRODUCT_COMPLIANCE_SUBMITTED', 'AUTO_ACCEPT_ALLOTMENT_UPDATED'] as $action) {
+            $this->event($org, $inventory, 'INVENTORY', $action);
+        }
+        $this->event($org, $inventory, 'INVENTORY', 'INVENTORY_ROW_UPDATED', false);
+        $today = now('Asia/Manila')->toDateString();
+        foreach ([['DELIVERED', $today], ['PICKED_UP', now('Asia/Manila')->subDay()->toDateString()]] as [$milestone, $expected]) {
+            $order = $this->order($org, $buyerId, 'COMPLETED', 1000, expected: $expected);
+            $fulfillmentId = (string) Str::uuid7();
+            DB::table('order_fulfillment_assignments')->insert(['id' => (string) Str::uuid7(), 'order_id' => $order, 'user_id' => $fulfillment->id, 'assigned_by_user_id' => $owner->id, 'ended_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+            DB::table('fulfillments')->insert(['id' => $fulfillmentId, 'order_id' => $order, 'state' => 'COMPLETED', 'created_at' => now(), 'updated_at' => now()]);
+            foreach (['PROCESSING', $milestone] as $type) {
+                DB::table('fulfillment_milestones')->insert(['id' => (string) Str::uuid7(), 'fulfillment_id' => $fulfillmentId, 'order_id' => $order, 'actor_user_id' => $fulfillment->id, 'actor_role' => 'FULFILLMENT', 'event_type' => $type, 'occurred_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+            }
+        }
+
+        $this->signIn($owner);
+        $this->getJson('/api/v1/vendors/account/activity/performance?member_id='.$inventoryMembership->id)->assertOk()
+            ->assertJsonPath('data.inventory.stock_updates', 2)->assertJsonPath('data.inventory.listings_created', 1)->assertJsonPath('data.inventory.listing_updates', 1)
+            ->assertJsonPath('data.inventory.compliance_submissions', 1)->assertJsonPath('data.inventory.allotment_updates', 1)->assertJsonPath('data.inventory.unsuccessful', 1)
+            ->assertJsonPath('data.activity.total', 7)->assertJsonPath('data.trend.metric', 'INVENTORY_UPDATES')->assertJsonMissingPath('data.sales');
+        $this->getJson('/api/v1/vendors/account/activity/performance?member_id='.$fulfillmentMembership->id)->assertOk()
+            ->assertJsonPath('data.fulfillment.assigned', 2)->assertJsonPath('data.fulfillment.active', 0)->assertJsonPath('data.fulfillment.handovers', 2)
+            ->assertJsonPath('data.fulfillment.on_time', 1)->assertJsonPath('data.fulfillment.on_time_measured', 2)->assertJsonPath('data.fulfillment.milestones', 4)
+            ->assertJsonPath('data.trend.metric', 'HANDOVERS')->assertJsonMissingPath('data.inventory')->assertJsonMissingPath('data.sales');
+        $this->getJson('/api/v1/vendors/account/activity/performance?member_id='.$ownerMembership->id)->assertOk()->assertJsonPath('data.trend.metric', 'ACTIONS');
+        $this->getJson('/api/v1/vendors/account/activity/performance?member_id='.$foreignMembership->id)->assertNotFound();
+        $this->getJson('/api/v1/vendors/account/activity/performance')->assertUnprocessable();
+
+        $this->signIn($manager);
+        $this->getJson('/api/v1/vendors/account/activity/performance?member_id='.$inventoryMembership->id)->assertOk();
+        foreach ([$ownerMembership, $otherManagerMembership] as $membership) {
+            $this->getJson('/api/v1/vendors/account/activity/performance?member_id='.$membership->id)->assertNotFound();
+        }
+        $this->signIn($inventory);
+        $this->getJson('/api/v1/vendors/account/activity/performance?member_id='.$fulfillmentMembership->id)->assertForbidden();
+    }
+
+    /** @return array{User, string} */
+    private function buyer(): array
+    {
+        $buyer = User::factory()->create(['account_type' => 'BUYER', 'account_status' => 'ACTIVE']);
+        $buyerId = (string) Str::uuid7();
+        DB::table('buyer_profiles')->insert(['id' => $buyerId, 'user_id' => $buyer->id, 'buyer_type' => 'INDIVIDUAL', 'created_at' => now(), 'updated_at' => now()]);
+
+        return [$buyer, $buyerId];
+    }
+
+    /** @param array{User, string}|null $confirmedBy */
+    private function order(VendorOrganization $org, string $buyerId, string $state, int $materials, ?string $quotationVersion = null, ?array $confirmedBy = null, ?string $expected = null): string
+    {
+        $id = (string) Str::uuid7();
+        DB::table('orders')->insert(['id' => $id, 'reference' => 'TEAM-'.Str::upper(Str::random(10)), 'buyer_profile_id' => $buyerId, 'vendor_organization_id' => $org->id, 'quotation_version_id' => $quotationVersion,
+            'procurement_type' => 'ITEM_BASED', 'order_state' => $state, 'fulfillment_method' => 'PICKUP', 'payment_method' => 'ONLINE', 'materials_centavos' => $materials, 'commercial_total_centavos' => $materials,
+            'expected_fulfillment_date' => $expected, 'closed_at' => $state === 'COMPLETED' ? now() : null, 'created_at' => now(), 'updated_at' => now()]);
+        if ($confirmedBy !== null) {
+            DB::table('vendor_confirmations')->insert(['id' => (string) Str::uuid7(), 'order_id' => $id, 'actor_user_id' => $confirmedBy[0]->id, 'actor_role' => 'CUSTOMER_SERVICE', 'state' => $confirmedBy[1], 'source' => 'MANUAL', 'created_at' => now(), 'updated_at' => now()]);
+        }
+
+        return $id;
     }
 
     private function organization(): VendorOrganization

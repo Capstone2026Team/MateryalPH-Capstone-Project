@@ -10,6 +10,7 @@ All URIs are relative to */api/v1*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**acceptAdminInvitation**](AuthenticationApi.md#acceptadmininvitation) | **POST** /auth/admin-invitations/accept |
+[**completeBuyerMobileMfaChallenge**](AuthenticationApi.md#completebuyermobilemfachallenge) | **POST** /mobile/auth/mfa/challenge |
 [**completeGoogleOidc**](AuthenticationApi.md#completegoogleoidc) | **GET** /auth/google/callback |
 [**completeMfaChallenge**](AuthenticationApi.md#completemfachallenge) | **POST** /auth/mfa/challenge |
 [**confirmMfaEnrollment**](AuthenticationApi.md#confirmmfaenrollment) | **POST** /auth/mfa/enrollment/confirm |
@@ -22,6 +23,7 @@ Method | HTTP request | Description
 [**loginBuyerMobile**](AuthenticationApi.md#loginbuyermobile) | **POST** /mobile/auth/login |
 [**logout**](AuthenticationApi.md#logout) | **POST** /auth/logout |
 [**logoutBuyerMobile**](AuthenticationApi.md#logoutbuyermobile) | **POST** /mobile/auth/logout |
+[**recoverBuyerMobileMfaChallenge**](AuthenticationApi.md#recoverbuyermobilemfachallenge) | **POST** /mobile/auth/mfa/recovery |
 [**recoverMfaChallenge**](AuthenticationApi.md#recovermfachallenge) | **POST** /auth/mfa/recovery |
 [**refreshBuyerMobileSession**](AuthenticationApi.md#refreshbuyermobilesession) | **POST** /mobile/auth/refresh |
 [**refreshSession**](AuthenticationApi.md#refreshsession) | **POST** /auth/refresh |
@@ -29,25 +31,27 @@ Method | HTTP request | Description
 [**registerBuyerMobile**](AuthenticationApi.md#registerbuyermobile) | **POST** /mobile/auth/register |
 [**requestBuyerMobilePasswordRecovery**](AuthenticationApi.md#requestbuyermobilepasswordrecovery) | **POST** /mobile/auth/password/forgot |
 [**requestPasswordRecovery**](AuthenticationApi.md#requestpasswordrecovery) | **POST** /auth/password/forgot |
-[**resendBotChallenge**](AuthenticationApi.md#resendbotchallenge) | **POST** /auth/bot-challenges/{challenge_id}/resend |
 [**resendBuyerMobileBotChallenge**](AuthenticationApi.md#resendbuyermobilebotchallenge) | **POST** /mobile/auth/bot-challenges/{challenge_id}/resend |
 [**resendBuyerMobileEmailVerification**](AuthenticationApi.md#resendbuyermobileemailverification) | **POST** /mobile/auth/verify-email/resend |
 [**resendEmailVerification**](AuthenticationApi.md#resendemailverification) | **POST** /auth/verify-email/resend |
+[**resendWebBotChallenge**](AuthenticationApi.md#resendwebbotchallenge) | **POST** /auth/bot-challenges/{challenge_id}/resend |
 [**resetBuyerMobilePassword**](AuthenticationApi.md#resetbuyermobilepassword) | **POST** /mobile/auth/password/reset |
 [**resetPassword**](AuthenticationApi.md#resetpassword) | **POST** /auth/password/reset |
 [**startBuyerMobileGoogleOidc**](AuthenticationApi.md#startbuyermobilegoogleoidc) | **POST** /mobile/auth/google/start |
 [**startGoogleOidc**](AuthenticationApi.md#startgoogleoidc) | **POST** /auth/google/start |
 [**startMfaEnrollment**](AuthenticationApi.md#startmfaenrollment) | **POST** /auth/mfa/enrollment |
-[**verifyBotChallenge**](AuthenticationApi.md#verifybotchallenge) | **POST** /auth/bot-challenges/{challenge_id}/verify |
 [**verifyBuyerMobileBotChallenge**](AuthenticationApi.md#verifybuyermobilebotchallenge) | **POST** /mobile/auth/bot-challenges/{challenge_id}/verify |
 [**verifyBuyerMobileEmail**](AuthenticationApi.md#verifybuyermobileemail) | **POST** /mobile/auth/verify-email |
 [**verifyEmail**](AuthenticationApi.md#verifyemail) | **POST** /auth/verify-email |
+[**verifyWebBotChallenge**](AuthenticationApi.md#verifywebbotchallenge) | **POST** /auth/bot-challenges/{challenge_id}/verify |
 
 
 # **acceptAdminInvitation**
 > RegistrationEnvelope acceptAdminInvitation(adminInvitationRequest)
 
 
+
+Invitation-only Admin registration. Validates the invitation, recipient when supplied, and current inviter authority before bot verification or email delivery. When bot protection is enabled, requires the server-selected admin_invitation_accept checkbox action and configured hostname, or an accessible email proof bound to the invited email, portal, and action. Acceptance rechecks invitation availability after the provider call. No account or membership is created and no invitation consumed when bot validation fails. Authenticator enrollment remains required before staff access.
 
 ### Example
 ```dart
@@ -81,6 +85,49 @@ Name | Type | Description  | Notes
 ### Authorization
 
 [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **completeBuyerMobileMfaChallenge**
+> AuthEnvelope completeBuyerMobileMfaChallenge(buyerMobileMfaChallengeRequest)
+
+
+
+Completes a Buyer sign-in (password or Google) when the Buyer enrolled an authenticator. The challenge_token comes from the login or Google exchange body, is opaque, single-use, expires with challenge_expires_in and is bound to the MOBILE transport. Five wrong codes end the challenge. Codes cannot be replayed.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getAuthenticationApi();
+final BuyerMobileMfaChallengeRequest buyerMobileMfaChallengeRequest = ; // BuyerMobileMfaChallengeRequest |
+
+try {
+    final response = api.completeBuyerMobileMfaChallenge(buyerMobileMfaChallengeRequest);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AuthenticationApi->completeBuyerMobileMfaChallenge: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **buyerMobileMfaChallengeRequest** | [**BuyerMobileMfaChallengeRequest**](BuyerMobileMfaChallengeRequest.md)|  |
+
+### Return type
+
+[**AuthEnvelope**](AuthEnvelope.md)
+
+### Authorization
+
+No authorization required
 
 ### HTTP request headers
 
@@ -433,6 +480,8 @@ No authorization required
 
 
 
+Vendor and Admin browser login requires an Enterprise checkbox assessment when bot protection is enabled, or an accessible single-use email security proof. The server selects vendor_login or admin_login and validates the configured hostname. Admin MFA remains mandatory after bot validation.
+
 ### Example
 ```dart
 import 'package:materyalph_api_client/api.dart';
@@ -592,6 +641,49 @@ This endpoint does not need any parameter.
 ### HTTP request headers
 
  - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **recoverBuyerMobileMfaChallenge**
+> AuthEnvelope recoverBuyerMobileMfaChallenge(buyerMobileMfaRecoveryRequest)
+
+
+
+Completes the Buyer challenge with a single-use recovery code when the authenticator is unavailable. All other sessions are revoked and a replacement set of recovery codes is returned once.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getAuthenticationApi();
+final BuyerMobileMfaRecoveryRequest buyerMobileMfaRecoveryRequest = ; // BuyerMobileMfaRecoveryRequest |
+
+try {
+    final response = api.recoverBuyerMobileMfaChallenge(buyerMobileMfaRecoveryRequest);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AuthenticationApi->recoverBuyerMobileMfaChallenge: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **buyerMobileMfaRecoveryRequest** | [**BuyerMobileMfaRecoveryRequest**](BuyerMobileMfaRecoveryRequest.md)|  |
+
+### Return type
+
+[**AuthEnvelope**](AuthEnvelope.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
@@ -899,53 +991,6 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **resendBotChallenge**
-> SuccessEnvelope resendBotChallenge(challengeId, resendBotChallengeRequest)
-
-
-
-### Example
-```dart
-import 'package:materyalph_api_client/api.dart';
-// TODO Configure API key authorization: webCsrf
-//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
-// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
-//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
-
-final api = MateryalphApiClient().getAuthenticationApi();
-final String challengeId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
-final ResendBotChallengeRequest resendBotChallengeRequest = ; // ResendBotChallengeRequest |
-
-try {
-    final response = api.resendBotChallenge(challengeId, resendBotChallengeRequest);
-    print(response);
-} on DioException catch (e) {
-    print('Exception when calling AuthenticationApi->resendBotChallenge: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **challengeId** | **String**|  |
- **resendBotChallengeRequest** | [**ResendBotChallengeRequest**](ResendBotChallengeRequest.md)|  |
-
-### Return type
-
-[**SuccessEnvelope**](SuccessEnvelope.md)
-
-### Authorization
-
-[webCsrf](../README.md#webCsrf)
-
-### HTTP request headers
-
- - **Content-Type**: application/json
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
 # **resendBuyerMobileBotChallenge**
 > SuccessEnvelope resendBuyerMobileBotChallenge(challengeId, resendBotChallengeRequest)
 
@@ -1061,6 +1106,53 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **emailRequest** | [**EmailRequest**](EmailRequest.md)|  |
+
+### Return type
+
+[**SuccessEnvelope**](SuccessEnvelope.md)
+
+### Authorization
+
+[webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **resendWebBotChallenge**
+> SuccessEnvelope resendWebBotChallenge(challengeId, webResendBotChallengeRequest)
+
+
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAuthenticationApi();
+final String challengeId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final WebResendBotChallengeRequest webResendBotChallengeRequest = ; // WebResendBotChallengeRequest |
+
+try {
+    final response = api.resendWebBotChallenge(challengeId, webResendBotChallengeRequest);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AuthenticationApi->resendWebBotChallenge: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **challengeId** | **String**|  |
+ **webResendBotChallengeRequest** | [**WebResendBotChallengeRequest**](WebResendBotChallengeRequest.md)|  |
 
 ### Return type
 
@@ -1294,53 +1386,6 @@ This endpoint does not need any parameter.
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
-# **verifyBotChallenge**
-> BotProofEnvelope verifyBotChallenge(challengeId, verifyBotChallengeRequest)
-
-
-
-### Example
-```dart
-import 'package:materyalph_api_client/api.dart';
-// TODO Configure API key authorization: webCsrf
-//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
-// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
-//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
-
-final api = MateryalphApiClient().getAuthenticationApi();
-final String challengeId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
-final VerifyBotChallengeRequest verifyBotChallengeRequest = ; // VerifyBotChallengeRequest |
-
-try {
-    final response = api.verifyBotChallenge(challengeId, verifyBotChallengeRequest);
-    print(response);
-} on DioException catch (e) {
-    print('Exception when calling AuthenticationApi->verifyBotChallenge: $e\n');
-}
-```
-
-### Parameters
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
- **challengeId** | **String**|  |
- **verifyBotChallengeRequest** | [**VerifyBotChallengeRequest**](VerifyBotChallengeRequest.md)|  |
-
-### Return type
-
-[**BotProofEnvelope**](BotProofEnvelope.md)
-
-### Authorization
-
-[webCsrf](../README.md#webCsrf)
-
-### HTTP request headers
-
- - **Content-Type**: application/json
- - **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
-
 # **verifyBuyerMobileBotChallenge**
 > BotProofEnvelope verifyBuyerMobileBotChallenge(challengeId, verifyBotChallengeRequest)
 
@@ -1458,6 +1503,53 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**SuccessEnvelope**](SuccessEnvelope.md)
+
+### Authorization
+
+[webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **verifyWebBotChallenge**
+> BotProofEnvelope verifyWebBotChallenge(challengeId, webVerifyBotChallengeRequest)
+
+
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAuthenticationApi();
+final String challengeId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final WebVerifyBotChallengeRequest webVerifyBotChallengeRequest = ; // WebVerifyBotChallengeRequest |
+
+try {
+    final response = api.verifyWebBotChallenge(challengeId, webVerifyBotChallengeRequest);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AuthenticationApi->verifyWebBotChallenge: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **challengeId** | **String**|  |
+ **webVerifyBotChallengeRequest** | [**WebVerifyBotChallengeRequest**](WebVerifyBotChallengeRequest.md)|  |
+
+### Return type
+
+[**BotProofEnvelope**](BotProofEnvelope.md)
 
 ### Authorization
 

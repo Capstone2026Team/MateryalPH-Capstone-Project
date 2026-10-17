@@ -13,6 +13,7 @@ use App\Domain\Notifications\NotificationService;
 use App\Domain\Operations\AdminAccess;
 use App\Domain\Vendors\StoreActivationGate;
 use App\Models\AuthSession;
+use App\Support\PortalDateRange;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -65,6 +66,7 @@ final class EnforcementService
             ->when($filters['action'] ?? null, fn ($q, string $action) => $q->where('e.action', $action))
             ->when($filters['source'] ?? null, fn ($q, string $source) => $q->where('e.source', $source))
             ->when($filters['subject_id'] ?? null, fn ($q, string $id) => $q->where('e.subject_id', $id));
+        PortalDateRange::apply($query, 'e.created_at', $filters);
         $total = (clone $query)->count();
         $page = max(1, min(1000, (int) ($filters['page'] ?? 1)));
         // Oldest referral first: pending account decisions must not age silently.
@@ -399,7 +401,8 @@ final class EnforcementService
             return; // Enforced by BuyerCommerceRestriction on every new-commerce entry point.
         }
         $userId = DB::table('buyer_profiles')->where('id', $subjectId)->value('user_id');
-        DB::table('users')->where('id', $userId)->update(['account_status' => $action === 'PERMANENT_BAN' ? 'DEACTIVATED' : 'SUSPENDED', 'lock_version' => DB::raw('lock_version + 1'), 'updated_at' => now()]);
+        // A self-deleted Buyer stays DELETED; a sanction neither changes nor later restores that final status.
+        DB::table('users')->where('id', $userId)->where('account_status', '!=', 'DELETED')->update(['account_status' => $action === 'PERMANENT_BAN' ? 'DEACTIVATED' : 'SUSPENDED', 'lock_version' => DB::raw('lock_version + 1'), 'updated_at' => now()]);
         foreach (AuthSession::query()->where('user_id', $userId)->whereNull('revoked_at')->orderBy('id')->lockForUpdate()->get() as $session) {
             $this->sessions->revoke($session, 'ACCOUNT_ENFORCEMENT');
         }
@@ -431,7 +434,7 @@ final class EnforcementService
         }
         $userId = DB::table('buyer_profiles')->where('id', $subjectId)->value('user_id');
         $priorStatus = (string) ($prior['account_status'] ?? 'ACTIVE');
-        DB::table('users')->where('id', $userId)->update(['account_status' => in_array($priorStatus, ['SUSPENDED', 'DEACTIVATED'], true) ? 'ACTIVE' : $priorStatus,
+        DB::table('users')->where('id', $userId)->where('account_status', '!=', 'DELETED')->update(['account_status' => in_array($priorStatus, ['SUSPENDED', 'DEACTIVATED'], true) ? 'ACTIVE' : $priorStatus,
             'lock_version' => DB::raw('lock_version + 1'), 'updated_at' => now()]);
     }
 

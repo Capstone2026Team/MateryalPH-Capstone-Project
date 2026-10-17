@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:materyalph_api_client/src/model/vendor_bot_protection_evidence.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -14,8 +15,9 @@ part 'vendor_invitation_acceptance.g.dart';
 /// * [token]
 /// * [email]
 /// * [fullName]
-/// * [password] - New Vendor identities require at least 14 characters, mixed case, and a number. Existing eligible Vendor identities use their current password.
+/// * [password] - New Vendor identities require at least 14 characters, mixed case, and a number. Existing ACTIVE or PENDING_VERIFICATION Vendor identities with no retained membership use their current password. Pending identities must complete email verification before signing in.
 /// * [passwordConfirmation]
+/// * [botProtection] - Required when Vendor bot protection is enabled. Use the invitation checkbox token or accessible email check; a verified single-use proof is supplied by HttpOnly cookie.
 @BuiltValue()
 abstract class VendorInvitationAcceptance implements Built<VendorInvitationAcceptance, VendorInvitationAcceptanceBuilder> {
   @BuiltValueField(wireName: r'token')
@@ -27,12 +29,16 @@ abstract class VendorInvitationAcceptance implements Built<VendorInvitationAccep
   @BuiltValueField(wireName: r'full_name')
   String get fullName;
 
-  /// New Vendor identities require at least 14 characters, mixed case, and a number. Existing eligible Vendor identities use their current password.
+  /// New Vendor identities require at least 14 characters, mixed case, and a number. Existing ACTIVE or PENDING_VERIFICATION Vendor identities with no retained membership use their current password. Pending identities must complete email verification before signing in.
   @BuiltValueField(wireName: r'password')
   String get password;
 
   @BuiltValueField(wireName: r'password_confirmation')
   String get passwordConfirmation;
+
+  /// Required when Vendor bot protection is enabled. Use the invitation checkbox token or accessible email check; a verified single-use proof is supplied by HttpOnly cookie.
+  @BuiltValueField(wireName: r'bot_protection')
+  VendorBotProtectionEvidence? get botProtection;
 
   VendorInvitationAcceptance._();
 
@@ -82,6 +88,13 @@ class _$VendorInvitationAcceptanceSerializer implements PrimitiveSerializer<Vend
       object.passwordConfirmation,
       specifiedType: const FullType(String),
     );
+    if (object.botProtection != null) {
+      yield r'bot_protection';
+      yield serializers.serialize(
+        object.botProtection,
+        specifiedType: const FullType.nullable(VendorBotProtectionEvidence),
+      );
+    }
   }
 
   @override
@@ -139,6 +152,14 @@ class _$VendorInvitationAcceptanceSerializer implements PrimitiveSerializer<Vend
             specifiedType: const FullType(String),
           ) as String;
           result.passwordConfirmation = valueDes;
+          break;
+        case r'bot_protection':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(VendorBotProtectionEvidence),
+          ) as VendorBotProtectionEvidence?;
+          if (valueDes == null) continue;
+          result.botProtection.replace(valueDes);
           break;
         default:
           unhandled.add(key);

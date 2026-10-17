@@ -22,11 +22,11 @@ export interface FinanceKpisPeriod {
     /**
      *
      */
-    from: Date;
+    from: Date | null;
     /**
      *
      */
-    to: Date;
+    to: Date | null;
 }
 
 /**
@@ -48,8 +48,8 @@ export function FinanceKpisPeriodFromJSONTyped(json: any, ignoreDiscriminator: b
     }
     return {
 
-        'from': (json['from'] == null ? json['from'] : parseDate(json['from'])),
-        'to': (json['to'] == null ? json['to'] : parseDate(json['to'])),
+        'from': (json['from'] == null ? null : parseDate(json['from'])),
+        'to': (json['to'] == null ? null : parseDate(json['to'])),
     };
 }
 

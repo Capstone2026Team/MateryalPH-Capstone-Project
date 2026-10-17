@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/threshold_status_event.dart';
+import 'package:materyalph_api_client/src/model/withholding_threshold_calculation.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -21,6 +22,7 @@ part 'withholding_threshold_panel.g.dart';
 /// * [cumulativeGrossCentavos]
 /// * [remainingAllowanceCentavos]
 /// * [localGrossCentavos]
+/// * [calculationBreakdown] - Null when no accumulator exists or historical assessment components do not reconcile to its on-platform gross. Never reconstructed from Earnings cash.
 /// * [externalDeclaredCentavos]
 /// * [externalOverlapCentavos]
 /// * [externalOverlapState]
@@ -60,6 +62,10 @@ abstract class WithholdingThresholdPanel implements Built<WithholdingThresholdPa
 
   @BuiltValueField(wireName: r'local_gross_centavos')
   int get localGrossCentavos;
+
+  /// Null when no accumulator exists or historical assessment components do not reconcile to its on-platform gross. Never reconstructed from Earnings cash.
+  @BuiltValueField(wireName: r'calculation_breakdown')
+  WithholdingThresholdCalculation? get calculationBreakdown;
 
   @BuiltValueField(wireName: r'external_declared_centavos')
   int get externalDeclaredCentavos;
@@ -167,6 +173,11 @@ class _$WithholdingThresholdPanelSerializer implements PrimitiveSerializer<Withh
     yield serializers.serialize(
       object.localGrossCentavos,
       specifiedType: const FullType(int),
+    );
+    yield r'calculation_breakdown';
+    yield object.calculationBreakdown == null ? null : serializers.serialize(
+      object.calculationBreakdown,
+      specifiedType: const FullType.nullable(WithholdingThresholdCalculation),
     );
     yield r'external_declared_centavos';
     yield serializers.serialize(
@@ -324,6 +335,14 @@ class _$WithholdingThresholdPanelSerializer implements PrimitiveSerializer<Withh
             specifiedType: const FullType(int),
           ) as int;
           result.localGrossCentavos = valueDes;
+          break;
+        case r'calculation_breakdown':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(WithholdingThresholdCalculation),
+          ) as WithholdingThresholdCalculation?;
+          if (valueDes == null) continue;
+          result.calculationBreakdown.replace(valueDes);
           break;
         case r'external_declared_centavos':
           final valueDes = serializers.deserialize(

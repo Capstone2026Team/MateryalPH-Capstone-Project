@@ -11,9 +11,7 @@ foreach (['buyers' => ['BUYER', 'MOBILE'], 'vendor' => ['VENDOR', 'WEB'], 'admin
         $middleware = [...$middleware, 'auth.cookie', VerifyAccountCsrf::class];
     }
     Route::prefix($prefix)->middleware([...$middleware, 'auth:api', 'account.access:'.$portal])->group(function () use ($portal): void {
-        if ($portal === 'VENDOR') {
-            Route::get('/navigation-updates', [NotificationController::class, 'navigationUpdates']);
-        }
+        Route::get('/navigation-updates', [NotificationController::class, 'navigationUpdates']);
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
         Route::get('/notifications/realtime', [NotificationController::class, 'realtime']);

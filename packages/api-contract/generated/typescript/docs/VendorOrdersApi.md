@@ -339,7 +339,7 @@ example().catch(console.error);
 
 ## listVendorOrders
 
-> OrderListEnvelope listVendorOrders(group, closedState, q, page)
+> OrderListEnvelope listVendorOrders(group, closedState, q, page, from, to)
 
 
 
@@ -371,6 +371,10 @@ async function example() {
     q: q_example,
     // number (optional)
     page: 56,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Order submitted_at. (optional)
+    from: 2013-10-20,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Order submitted_at. (optional)
+    to: 2013-10-20,
   } satisfies ListVendorOrdersRequest;
 
   try {
@@ -394,6 +398,8 @@ example().catch(console.error);
 | **closedState** | `COMPLETED`, `DECLINED`, `EXPIRED`, `CANCELLED` | Only valid with group CLOSED. Filters before pagination; group counts remain unfiltered. | [Optional] [Defaults to `undefined`] [Enum: COMPLETED, DECLINED, EXPIRED, CANCELLED] |
 | **q** | `string` |  | [Optional] [Defaults to `undefined`] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **from** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Order submitted_at. | [Optional] [Defaults to `undefined`] |
+| **to** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Order submitted_at. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 

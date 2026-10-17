@@ -10,13 +10,13 @@ export type RecordColumn<T> = { key: string; header: string; cell: (row: T) => R
  * cards below, rendered from one column definition so both views stay in sync.
  * Wide tables scroll inside their own container, never the page.
  */
-export function ResponsiveRecordList<T>({ caption, rows, columns, rowKey, cardTitle, cardAction }: {
+export function ResponsiveRecordList<T>({ caption, rows, columns, rowKey, cardTitle, cardAction, tableClassName = '' }: {
   caption: string; rows: T[]; columns: RecordColumn<T>[]; rowKey: (row: T) => string
-  cardTitle: (row: T) => ReactNode; cardAction?: (row: T) => ReactNode
+  cardTitle: (row: T) => ReactNode; cardAction?: (row: T) => ReactNode; tableClassName?: string
 }) {
   return <>
-    <div className="hidden overflow-x-auto rounded-surface border border-border-default bg-surface-primary lg:block">
-      <table className="w-full min-w-[960px] text-left text-sm">
+    <div role="region" aria-label={`${caption} table`} tabIndex={0} className="hidden min-w-0 max-w-full overflow-x-auto rounded-surface border border-border-default bg-surface-primary lg:block">
+      <table className={`w-full min-w-[960px] table-auto text-left text-sm ${tableClassName}`}>
         <caption className="sr-only">{caption}</caption>
         <thead className="border-b border-border-default bg-surface-canvas"><tr>{columns.map(column => <th key={column.key} scope="col" className="px-4 py-3 font-semibold text-text-strong">{column.header}</th>)}</tr></thead>
         <tbody>{rows.map(row => <tr key={rowKey(row)} className="border-t border-border-default align-top">{columns.map(column => <td key={column.key} className={`px-4 py-3 ${column.className ?? ''}`}>{column.cell(row)}</td>)}</tr>)}</tbody>

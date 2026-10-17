@@ -6,6 +6,32 @@ part of 'compliance_submission.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
+const ComplianceSubmissionReviewModeEnum
+    _$complianceSubmissionReviewModeEnum_AUTOMATIC =
+    const ComplianceSubmissionReviewModeEnum._('AUTOMATIC');
+const ComplianceSubmissionReviewModeEnum
+    _$complianceSubmissionReviewModeEnum_MANUAL_REVIEW =
+    const ComplianceSubmissionReviewModeEnum._('MANUAL_REVIEW');
+
+ComplianceSubmissionReviewModeEnum _$complianceSubmissionReviewModeEnumValueOf(
+    String name) {
+  switch (name) {
+    case 'AUTOMATIC':
+      return _$complianceSubmissionReviewModeEnum_AUTOMATIC;
+    case 'MANUAL_REVIEW':
+      return _$complianceSubmissionReviewModeEnum_MANUAL_REVIEW;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<ComplianceSubmissionReviewModeEnum>
+    _$complianceSubmissionReviewModeEnumValues = BuiltSet<
+        ComplianceSubmissionReviewModeEnum>(const <ComplianceSubmissionReviewModeEnum>[
+  _$complianceSubmissionReviewModeEnum_AUTOMATIC,
+  _$complianceSubmissionReviewModeEnum_MANUAL_REVIEW,
+]);
+
 const ComplianceSubmissionConfirmedEnum
     _$complianceSubmissionConfirmedEnum_true_ =
     const ComplianceSubmissionConfirmedEnum._('true_');
@@ -26,9 +52,42 @@ final BuiltSet<ComplianceSubmissionConfirmedEnum>
   _$complianceSubmissionConfirmedEnum_true_,
 ]);
 
+Serializer<ComplianceSubmissionReviewModeEnum>
+    _$complianceSubmissionReviewModeEnumSerializer =
+    _$ComplianceSubmissionReviewModeEnumSerializer();
 Serializer<ComplianceSubmissionConfirmedEnum>
     _$complianceSubmissionConfirmedEnumSerializer =
     _$ComplianceSubmissionConfirmedEnumSerializer();
+
+class _$ComplianceSubmissionReviewModeEnumSerializer
+    implements PrimitiveSerializer<ComplianceSubmissionReviewModeEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'AUTOMATIC': 'AUTOMATIC',
+    'MANUAL_REVIEW': 'MANUAL_REVIEW',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'AUTOMATIC': 'AUTOMATIC',
+    'MANUAL_REVIEW': 'MANUAL_REVIEW',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[ComplianceSubmissionReviewModeEnum];
+  @override
+  final String wireName = 'ComplianceSubmissionReviewModeEnum';
+
+  @override
+  Object serialize(
+          Serializers serializers, ComplianceSubmissionReviewModeEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  ComplianceSubmissionReviewModeEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      ComplianceSubmissionReviewModeEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
 
 class _$ComplianceSubmissionConfirmedEnumSerializer
     implements PrimitiveSerializer<ComplianceSubmissionConfirmedEnum> {
@@ -70,6 +129,10 @@ class _$ComplianceSubmission extends ComplianceSubmission {
   @override
   final String certificateNumber;
   @override
+  final ComplianceSubmissionReviewModeEnum? reviewMode;
+  @override
+  final String? reviewNote;
+  @override
   final String? manufacturerName;
   @override
   final String? manufacturerAddress;
@@ -96,6 +159,8 @@ class _$ComplianceSubmission extends ComplianceSubmission {
       required this.evidenceIds,
       required this.markingType,
       required this.certificateNumber,
+      this.reviewMode,
+      this.reviewNote,
       this.manufacturerName,
       this.manufacturerAddress,
       this.importerName,
@@ -123,6 +188,8 @@ class _$ComplianceSubmission extends ComplianceSubmission {
         evidenceIds == other.evidenceIds &&
         markingType == other.markingType &&
         certificateNumber == other.certificateNumber &&
+        reviewMode == other.reviewMode &&
+        reviewNote == other.reviewNote &&
         manufacturerName == other.manufacturerName &&
         manufacturerAddress == other.manufacturerAddress &&
         importerName == other.importerName &&
@@ -141,6 +208,8 @@ class _$ComplianceSubmission extends ComplianceSubmission {
     _$hash = $jc(_$hash, evidenceIds.hashCode);
     _$hash = $jc(_$hash, markingType.hashCode);
     _$hash = $jc(_$hash, certificateNumber.hashCode);
+    _$hash = $jc(_$hash, reviewMode.hashCode);
+    _$hash = $jc(_$hash, reviewNote.hashCode);
     _$hash = $jc(_$hash, manufacturerName.hashCode);
     _$hash = $jc(_$hash, manufacturerAddress.hashCode);
     _$hash = $jc(_$hash, importerName.hashCode);
@@ -161,6 +230,8 @@ class _$ComplianceSubmission extends ComplianceSubmission {
           ..add('evidenceIds', evidenceIds)
           ..add('markingType', markingType)
           ..add('certificateNumber', certificateNumber)
+          ..add('reviewMode', reviewMode)
+          ..add('reviewNote', reviewNote)
           ..add('manufacturerName', manufacturerName)
           ..add('manufacturerAddress', manufacturerAddress)
           ..add('importerName', importerName)
@@ -201,6 +272,15 @@ class ComplianceSubmissionBuilder
   String? get certificateNumber => _$this._certificateNumber;
   set certificateNumber(String? certificateNumber) =>
       _$this._certificateNumber = certificateNumber;
+
+  ComplianceSubmissionReviewModeEnum? _reviewMode;
+  ComplianceSubmissionReviewModeEnum? get reviewMode => _$this._reviewMode;
+  set reviewMode(ComplianceSubmissionReviewModeEnum? reviewMode) =>
+      _$this._reviewMode = reviewMode;
+
+  String? _reviewNote;
+  String? get reviewNote => _$this._reviewNote;
+  set reviewNote(String? reviewNote) => _$this._reviewNote = reviewNote;
 
   String? _manufacturerName;
   String? get manufacturerName => _$this._manufacturerName;
@@ -251,6 +331,8 @@ class ComplianceSubmissionBuilder
       _evidenceIds = $v.evidenceIds.toBuilder();
       _markingType = $v.markingType;
       _certificateNumber = $v.certificateNumber;
+      _reviewMode = $v.reviewMode;
+      _reviewNote = $v.reviewNote;
       _manufacturerName = $v.manufacturerName;
       _manufacturerAddress = $v.manufacturerAddress;
       _importerName = $v.importerName;
@@ -295,6 +377,8 @@ class ComplianceSubmissionBuilder
                 certificateNumber,
                 r'ComplianceSubmission',
                 'certificateNumber'),
+            reviewMode: reviewMode,
+            reviewNote: reviewNote,
             manufacturerName: manufacturerName,
             manufacturerAddress: manufacturerAddress,
             importerName: importerName,

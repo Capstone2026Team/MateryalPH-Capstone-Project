@@ -13,12 +13,24 @@
  */
 
 import { mapValues } from '../runtime';
+import type { DeliveryEstimateOption } from './DeliveryEstimateOption';
+import {
+    DeliveryEstimateOptionFromJSON,
+    DeliveryEstimateOptionFromJSONTyped,
+    DeliveryEstimateOptionToJSON,
+    DeliveryEstimateOptionToJSONTyped,
+} from './DeliveryEstimateOption';
+
 /**
  *
  * @export
  * @interface OrderDeliveryEstimate
  */
 export interface OrderDeliveryEstimate {
+    /**
+     * Frozen system recommendation; absent on historical orders.
+     */
+    options?: Array<DeliveryEstimateOption>;
     /**
      *
      */
@@ -58,6 +70,7 @@ export function OrderDeliveryEstimateFromJSONTyped(json: any, ignoreDiscriminato
     }
     return {
 
+        'options': json['options'] == null ? undefined : ((json['options'] as Array<any>).map(DeliveryEstimateOptionFromJSON)),
         'feeMinCentavos': json['fee_min_centavos'],
         'feeMaxCentavos': json['fee_max_centavos'],
         'tripsMin': json['trips_min'],
@@ -76,6 +89,7 @@ export function OrderDeliveryEstimateToJSONTyped(value?: OrderDeliveryEstimate |
 
     return {
 
+        'options': value['options'] == null ? undefined : ((value['options'] as Array<any>).map(DeliveryEstimateOptionToJSON)),
         'fee_min_centavos': value['feeMinCentavos'],
         'fee_max_centavos': value['feeMaxCentavos'],
         'trips_min': value['tripsMin'],

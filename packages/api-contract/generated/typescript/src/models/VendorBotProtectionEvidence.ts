@@ -14,7 +14,7 @@
 
 import { mapValues } from '../runtime';
 /**
- * Vendor web only. Supply a checkbox token or explicitly request the accessible email fallback. After successful email risk verification, an empty object is permitted because the one-time proof is carried in the HttpOnly mp_bot_proof cookie.
+ * Vendor and Admin web only. Supply a checkbox token or explicitly request the accessible email fallback. After successful email risk verification, an empty object is permitted because the one-time proof is carried in the HttpOnly mp_bot_proof cookie.
  * @export
  * @interface VendorBotProtectionEvidence
  */

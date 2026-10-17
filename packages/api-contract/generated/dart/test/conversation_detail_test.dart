@@ -22,5 +22,11 @@ void main() {
       // TODO
     });
 
+    // The Item-Based conversation's ten most recent free site inspection requests, newest first; empty for other conversations.
+    // BuiltList<SiteInspection> siteInspections
+    test('to test the property `siteInspections`', () async {
+      // TODO
+    });
+
   });
 }

@@ -90,7 +90,11 @@ class _$ListingDetails extends ListingDetails {
   @override
   final BuiltMap<String, JsonObject?> technicalAttributes;
   @override
+  final BuiltList<ListingAttributeLabel>? attributeLabels;
+  @override
   final BuiltList<ListingImage> images;
+  @override
+  final ReadyMixedConcreteDetail? readyMixedConcrete;
   @override
   final ListingCompliance compliance;
   @override
@@ -132,7 +136,9 @@ class _$ListingDetails extends ListingDetails {
       this.countryOfManufacture,
       this.category,
       required this.technicalAttributes,
+      this.attributeLabels,
       required this.images,
+      this.readyMixedConcrete,
       required this.compliance,
       required this.productRating,
       required this.unitsSold,
@@ -168,7 +174,9 @@ class _$ListingDetails extends ListingDetails {
         countryOfManufacture == other.countryOfManufacture &&
         category == other.category &&
         technicalAttributes == other.technicalAttributes &&
+        attributeLabels == other.attributeLabels &&
         images == other.images &&
+        readyMixedConcrete == other.readyMixedConcrete &&
         compliance == other.compliance &&
         productRating == other.productRating &&
         unitsSold == other.unitsSold &&
@@ -197,7 +205,9 @@ class _$ListingDetails extends ListingDetails {
     _$hash = $jc(_$hash, countryOfManufacture.hashCode);
     _$hash = $jc(_$hash, category.hashCode);
     _$hash = $jc(_$hash, technicalAttributes.hashCode);
+    _$hash = $jc(_$hash, attributeLabels.hashCode);
     _$hash = $jc(_$hash, images.hashCode);
+    _$hash = $jc(_$hash, readyMixedConcrete.hashCode);
     _$hash = $jc(_$hash, compliance.hashCode);
     _$hash = $jc(_$hash, productRating.hashCode);
     _$hash = $jc(_$hash, unitsSold.hashCode);
@@ -228,7 +238,9 @@ class _$ListingDetails extends ListingDetails {
           ..add('countryOfManufacture', countryOfManufacture)
           ..add('category', category)
           ..add('technicalAttributes', technicalAttributes)
+          ..add('attributeLabels', attributeLabels)
           ..add('images', images)
+          ..add('readyMixedConcrete', readyMixedConcrete)
           ..add('compliance', compliance)
           ..add('productRating', productRating)
           ..add('unitsSold', unitsSold)
@@ -297,10 +309,22 @@ class ListingDetailsBuilder
           MapBuilder<String, JsonObject?>? technicalAttributes) =>
       _$this._technicalAttributes = technicalAttributes;
 
+  ListBuilder<ListingAttributeLabel>? _attributeLabels;
+  ListBuilder<ListingAttributeLabel> get attributeLabels =>
+      _$this._attributeLabels ??= ListBuilder<ListingAttributeLabel>();
+  set attributeLabels(ListBuilder<ListingAttributeLabel>? attributeLabels) =>
+      _$this._attributeLabels = attributeLabels;
+
   ListBuilder<ListingImage>? _images;
   ListBuilder<ListingImage> get images =>
       _$this._images ??= ListBuilder<ListingImage>();
   set images(ListBuilder<ListingImage>? images) => _$this._images = images;
+
+  ReadyMixedConcreteDetailBuilder? _readyMixedConcrete;
+  ReadyMixedConcreteDetailBuilder get readyMixedConcrete =>
+      _$this._readyMixedConcrete ??= ReadyMixedConcreteDetailBuilder();
+  set readyMixedConcrete(ReadyMixedConcreteDetailBuilder? readyMixedConcrete) =>
+      _$this._readyMixedConcrete = readyMixedConcrete;
 
   ListingComplianceBuilder? _compliance;
   ListingComplianceBuilder get compliance =>
@@ -385,7 +409,9 @@ class ListingDetailsBuilder
       _countryOfManufacture = $v.countryOfManufacture;
       _category = $v.category?.toBuilder();
       _technicalAttributes = $v.technicalAttributes.toBuilder();
+      _attributeLabels = $v.attributeLabels?.toBuilder();
       _images = $v.images.toBuilder();
+      _readyMixedConcrete = $v.readyMixedConcrete?.toBuilder();
       _compliance = $v.compliance.toBuilder();
       _productRating = $v.productRating.toBuilder();
       _unitsSold = $v.unitsSold;
@@ -435,7 +461,9 @@ class ListingDetailsBuilder
             countryOfManufacture: countryOfManufacture,
             category: _category?.build(),
             technicalAttributes: technicalAttributes.build(),
+            attributeLabels: _attributeLabels?.build(),
             images: images.build(),
+            readyMixedConcrete: _readyMixedConcrete?.build(),
             compliance: compliance.build(),
             productRating: productRating.build(),
             unitsSold: BuiltValueNullFieldError.checkNotNull(
@@ -463,8 +491,12 @@ class ListingDetailsBuilder
         _category?.build();
         _$failedField = 'technicalAttributes';
         technicalAttributes.build();
+        _$failedField = 'attributeLabels';
+        _attributeLabels?.build();
         _$failedField = 'images';
         images.build();
+        _$failedField = 'readyMixedConcrete';
+        _readyMixedConcrete?.build();
         _$failedField = 'compliance';
         compliance.build();
         _$failedField = 'productRating';

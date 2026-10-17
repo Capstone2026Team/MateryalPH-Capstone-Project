@@ -48,9 +48,9 @@ export interface RegisterRequest {
      */
     passwordConfirmation: string;
     /**
-     *
+     * Optional and no longer collected at registration; the Public Store Name is entered in Business Information.
      */
-    businessName: string;
+    businessName?: string;
     /**
      *
      */
@@ -92,7 +92,6 @@ export function instanceOfRegisterRequest(value: object): value is RegisterReque
     if ((!('mobileE164' in (value as Record<string, any>)) && !('mobile_e164' in (value as Record<string, any>))) || ((value as Record<string, any>)['mobileE164'] === undefined && (value as Record<string, any>)['mobile_e164'] === undefined)) return false;
     if (!('password' in value) || value['password'] === undefined) return false;
     if ((!('passwordConfirmation' in (value as Record<string, any>)) && !('password_confirmation' in (value as Record<string, any>))) || ((value as Record<string, any>)['passwordConfirmation'] === undefined && (value as Record<string, any>)['password_confirmation'] === undefined)) return false;
-    if ((!('businessName' in (value as Record<string, any>)) && !('business_name' in (value as Record<string, any>))) || ((value as Record<string, any>)['businessName'] === undefined && (value as Record<string, any>)['business_name'] === undefined)) return false;
     if ((!('termsAccepted' in (value as Record<string, any>)) && !('terms_accepted' in (value as Record<string, any>))) || ((value as Record<string, any>)['termsAccepted'] === undefined && (value as Record<string, any>)['terms_accepted'] === undefined)) return false;
 
     if ((value as Record<string, any>)['termsAccepted'] !== true && (value as Record<string, any>)['terms_accepted'] !== true) return false;
@@ -117,7 +116,7 @@ export function RegisterRequestFromJSONTyped(json: any, ignoreDiscriminator: boo
         'mobileE164': json['mobile_e164'],
         'password': json['password'],
         'passwordConfirmation': json['password_confirmation'],
-        'businessName': json['business_name'],
+        'businessName': json['business_name'] == null ? undefined : json['business_name'],
         'termsAccepted': json['terms_accepted'],
         'privacyAccepted': json['privacy_accepted'],
         'botProtection': json['bot_protection'] === undefined ? undefined : json['bot_protection'] === null ? null : VendorBotProtectionEvidenceFromJSON(json['bot_protection']),

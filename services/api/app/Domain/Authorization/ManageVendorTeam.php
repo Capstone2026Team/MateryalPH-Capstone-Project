@@ -12,6 +12,7 @@ use App\Domain\Identity\ManageAccount;
 use App\Domain\Identity\TokenSessionService;
 use App\Domain\Orders\OrderActor;
 use App\Domain\Vendors\IssueVendorInvitation;
+use App\Domain\Vendors\OnboardingRequirementResolver;
 use App\Models\AuthSession;
 use App\Models\VendorMembership;
 use Illuminate\Http\Request;
@@ -51,6 +52,9 @@ final class ManageVendorTeam
                 $this->sessions->revoke($session, 'MEMBERSHIP_CHANGED');
             }
             $this->audit->account($request, 'VENDOR_STAFF_UPDATED', 'VENDOR_MEMBERSHIP', $id, $before, ['role' => $input['role'], 'can_manage_staff' => $target->can_manage_staff, 'name_changed' => $user?->name !== $input['full_name']]);
+            if ($before['role'] === 'FULFILLMENT' || $input['role'] === 'FULFILLMENT') {
+                app(OnboardingRequirementResolver::class)->synchronize($organizationId);
+            }
             $owner = DB::table('vendor_memberships as m')->join('users as u', 'u.id', '=', 'm.user_id')->where('m.vendor_organization_id', $scope['organization_id'])->where('m.role', 'OWNER')->where('m.status', 'ACTIVE')->first(['u.email', 'u.public_id']);
             if ($owner !== null) {
                 $this->accounts->notice($owner->email, $owner->public_id, 'A Vendor team member was updated. Review Team Accounts.');

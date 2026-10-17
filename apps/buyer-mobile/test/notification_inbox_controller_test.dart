@@ -93,7 +93,7 @@ Future<NotificationInboxController> loaded(FakeTransport transport) async {
 
 void main() {
   test(
-    'categories group order titles and status counts respect instant retained filters',
+    'categories group order titles and the inbox lists unread notices only',
     () async {
       final source = FakeTransport()
         ..items = [
@@ -103,8 +103,8 @@ void main() {
           notice('00', 'NEW_CATEGORY'),
         ];
       final inbox = await loaded(source);
-      expect(inbox.status, NotificationInboxStatus.unread);
       expect(inbox.visible.map((item) => item.id), ['03', '02', '00']);
+      expect(inbox.categories, contains('SECURITY'));
       expect(
         inbox.categories.where((category) => category == 'ORDERS'),
         hasLength(1),
@@ -113,22 +113,20 @@ void main() {
       expect(notificationCategoryLabel('NEW_CATEGORY'), 'New category');
       inbox.filter(type: 'ORDERS');
       expect(inbox.filteredUnreadCount, 2);
-      expect(inbox.filteredArchivedCount, 0);
       expect(inbox.unreadCount, 3);
       inbox.setActive(false);
       inbox.setActive(true);
       await inbox.refresh();
       expect(inbox.category, 'ORDERS');
-      inbox.filter(selectedStatus: NotificationInboxStatus.archived);
+      inbox.filter(type: 'SECURITY');
       expect(inbox.visible, isEmpty);
       inbox.clearFilters();
       expect(inbox.category, isNull);
-      expect(inbox.status, NotificationInboxStatus.unread);
     },
   );
 
   test(
-    'read-all archives matching unread instantly and keeps later arrivals unread',
+    'read-all marks matching unread instantly and keeps later arrivals unread',
     () async {
       final source = FakeTransport()
         ..items = [
@@ -142,7 +140,6 @@ void main() {
       final action = inbox.markAllRead();
       expect(inbox.visible, isEmpty);
       expect(inbox.unreadCount, 1);
-      expect(inbox.filteredArchivedCount, 2);
       expect(source.through, '03');
       expect(source.category, 'ORDERS');
       source.items.insert(0, notice('04', 'ORDERS'));
@@ -159,9 +156,8 @@ void main() {
       await action;
       await inbox.refresh();
       expect(inbox.visible.single.id, '04');
-      inbox.filter(selectedStatus: NotificationInboxStatus.archived);
-      expect(inbox.visible.map((item) => item.id), ['03', '01']);
-      expect(inbox.canMarkAll, isFalse);
+      expect(inbox.filteredUnreadCount, 1);
+      expect(inbox.canMarkAll, isTrue);
     },
   );
 
@@ -191,7 +187,7 @@ void main() {
   );
 
   test(
-    'view details keeps notice unread until authoritative success and then archives it',
+    'view details keeps notice unread until authoritative success and then marks it read',
     () async {
       final source = FakeTransport()
         ..items = [notice('01', 'SECURITY')]
@@ -201,10 +197,8 @@ void main() {
       expect(inbox.unreadCount, 1);
       source.destination!.complete('/settings');
       expect(await opening, '/settings');
-      expect(inbox.visible, isEmpty);
       expect(inbox.unreadCount, 0);
-      inbox.filter(selectedStatus: NotificationInboxStatus.archived);
-      expect(inbox.visible.single.id, '01');
+      expect(inbox.visible, isEmpty);
     },
   );
 

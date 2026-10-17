@@ -504,7 +504,7 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listAdminDisputes**
-> DisputeListEnvelope listAdminDisputes(status, page)
+> DisputeListEnvelope listAdminDisputes(status, page, from, to)
 
 
 
@@ -525,9 +525,11 @@ import 'package:materyalph_api_client/api.dart';
 final api = MateryalphApiClient().getAdminDisputesApi();
 final String status = status_example; // String |
 final int page = 56; // int |
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Case created_at (filing). Group counts retain their existing unrestricted scope.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Case created_at (filing). Group counts retain their existing unrestricted scope.
 
 try {
-    final response = api.listAdminDisputes(status, page);
+    final response = api.listAdminDisputes(status, page, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling AdminDisputesApi->listAdminDisputes: $e\n');
@@ -540,6 +542,8 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **status** | **String**|  | [optional]
  **page** | **int**|  | [optional]
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Case created_at (filing). Group counts retain their existing unrestricted scope. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Case created_at (filing). Group counts retain their existing unrestricted scope. | [optional]
 
 ### Return type
 

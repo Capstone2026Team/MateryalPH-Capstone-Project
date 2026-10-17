@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import type { ConversationView } from '@materyalph/api-client-ts'
-import { Button, ConversationInbox, StatusMessage } from '@materyalph/web-ui'
+import { Button, ConversationInbox, StatusMessage, useNavigationRefresh } from '@materyalph/web-ui'
 import { chatApi, loadChatAvatar, readableChatError, watchConversation } from '../lib/messaging-api'
 import { useOnboardingSnapshot } from '../lib/vendor-status'
 import { ErrorState, LoadingState, VendorShell } from './PhaseThreeVendorPages'
 import { ConversationThread } from './ConversationThread'
 import { FulfillmentConversationDialog } from './FulfillmentConversationDialog'
+import { ProjectInquiryDialog } from './ProjectInquiryDialog'
 
 export function VendorMessagesPage() {
   const { snapshot, loading, error, refresh } = useOnboardingSnapshot()
@@ -19,6 +20,7 @@ export function MessagingWorkspace({ role }: { role: string }) {
   const [params, setParams] = useSearchParams()
   const selected = params.get('conversation')
   const [fulfillmentOpen, setFulfillmentOpen] = useState(false)
+  const [projectsOpen, setProjectsOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [rows, setRows] = useState<ConversationView[]>([])
   const [page, setPage] = useState(1)
@@ -26,12 +28,15 @@ export function MessagingWorkspace({ role }: { role: string }) {
   const [inboxLoading, setInboxLoading] = useState(true)
   const [inboxError, setInboxError] = useState<string | null>(null)
   const [inboxRefresh, setInboxRefresh] = useState(0)
+  const refreshInbox = useRef<() => void>(() => {})
+  useNavigationRefresh(() => refreshInbox.current())
   useEffect(() => {
     let active = true
     let fetching = false
     let pendingFetch = false
     setInboxLoading(true); setInboxError(null)
     async function fetchInbox() {
+      if (!active) return
       if (fetching) { pendingFetch = true; return }
       fetching = true
       try {
@@ -40,6 +45,7 @@ export function MessagingWorkspace({ role }: { role: string }) {
       } catch (e) { const message = await readableChatError(e); if (active) setInboxError(message) }
       finally { fetching = false; if (active) { setInboxLoading(false); if (pendingFetch) { pendingFetch = false; void fetchInbox() } } }
     }
+    refreshInbox.current = () => void fetchInbox()
     void fetchInbox()
     let stop: (() => void) | undefined
     let live = false
@@ -47,7 +53,14 @@ export function MessagingWorkspace({ role }: { role: string }) {
     void watchConversation(null, () => void fetchInbox(), undefined, undefined, value => { live = value }).then(close => { if (active) stop = close; else close() })
     // Realtime pushes changes; poll every 4 seconds only while the socket is down, otherwise every 45.
     const timer = window.setInterval(() => { quiet += 1; if (document.visibilityState === 'visible' && (!live || quiet >= 11)) { quiet = 0; void fetchInbox() } }, 4000)
-    return () => { active = false; stop?.(); window.clearInterval(timer) }
+    const clearSession = () => {
+      active = false
+      refreshInbox.current = () => {}
+      stop?.(); window.clearInterval(timer)
+      setRows([]); setMore(false); setProjectsOpen(false); setFulfillmentOpen(false)
+    }
+    window.addEventListener('materyalph:session-cleared', clearSession)
+    return () => { active = false; refreshInbox.current = () => {}; stop?.(); window.clearInterval(timer); window.removeEventListener('materyalph:session-cleared', clearSession) }
   }, [page, inboxRefresh])
 
   return <div className="chat-workspace">
@@ -60,10 +73,11 @@ export function MessagingWorkspace({ role }: { role: string }) {
         </div>
         <div className="chat-pagination"><Button variant="quiet" disabled={page === 1 || inboxLoading} onClick={() => setPage(value => value - 1)}>Previous</Button><Button variant="quiet" disabled={!more || inboxLoading} onClick={() => setPage(value => value + 1)}>Next</Button></div>
       </aside>
-      <ConversationThread selected={selected} role={role} onBack={() => setParams({})} obscured={fulfillmentOpen} onBusyChange={setBusy}
-        onRead={id => setRows(current => current.map(row => row.id === id ? { ...row, unreadCount: 0 } : row))}
+      <ConversationThread selected={selected} role={role} onBack={() => setParams({})} obscured={fulfillmentOpen || projectsOpen} onBusyChange={setBusy}
+        onRead={() => refreshInbox.current()} onProjectList={() => setProjectsOpen(true)} onOpenMain={id => setParams({ conversation: id })}
         onMessage={() => setInboxRefresh(value => value + 1)} onFulfillmentList={() => setFulfillmentOpen(true)} />
     </div>
     {fulfillmentOpen && selected && <FulfillmentConversationDialog inquiryId={selected} onClose={() => setFulfillmentOpen(false)} />}
+    {projectsOpen && selected && <ProjectInquiryDialog inquiryId={selected} role={role} onClose={() => { setProjectsOpen(false); refreshInbox.current(); window.dispatchEvent(new Event('materyalph:domain-refresh')) }} />}
   </div>
 }

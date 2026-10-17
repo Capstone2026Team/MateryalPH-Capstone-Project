@@ -11,6 +11,7 @@ import 'package:dio/dio.dart';
 import 'dart:typed_data';
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/api_util.dart';
+import 'package:materyalph_api_client/src/model/date.dart';
 import 'package:materyalph_api_client/src/model/dispute_channel_auth_request.dart';
 import 'package:materyalph_api_client/src/model/dispute_detail_envelope.dart';
 import 'package:materyalph_api_client/src/model/dispute_eligibility_envelope.dart';
@@ -1383,6 +1384,8 @@ class VendorDisputesApi {
   /// * [group]
   /// * [q]
   /// * [page]
+  /// * [from] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Case created_at (filing). Group counts retain their existing unrestricted scope.
+  /// * [to] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Case created_at (filing). Group counts retain their existing unrestricted scope.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1396,6 +1399,8 @@ class VendorDisputesApi {
     String? group,
     String? q,
     int? page,
+    Date? from,
+    Date? to,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -1432,6 +1437,8 @@ class VendorDisputesApi {
       if (group != null) r'group': encodeQueryParameter(_serializers, group, const FullType(String)),
       if (q != null) r'q': encodeQueryParameter(_serializers, q, const FullType(String)),
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+      if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
     };
 
     final _response = await _dio.request<Object>(

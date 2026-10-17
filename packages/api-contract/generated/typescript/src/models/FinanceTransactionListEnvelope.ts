@@ -22,7 +22,7 @@ import {
 } from './ApiError';
 
 /**
- *
+ * Owner-only paginated transaction rows. PAYMENTS rows preserve the original payment status and gross/Buyer-fee amounts and additionally return refund_state (NOT_REQUESTED, REFUND_PENDING, REFUND_FAILED, PARTIALLY_REFUNDED or REFUNDED), refunded_centavos (confirmed refunds only) and net_collected_centavos (verified gross less confirmed refunds; zero for unpaid attempts). Refunds are aggregated per original payment, never inferred from order cancellation. REMITTANCES rows additionally return calculation_state; VOIDED marks a collection whose whole payment was confirmed refunded, which is no remittance and no longer counts toward the FIN-04A threshold (a crossed taxable year is never lowered).
  * @export
  * @interface FinanceTransactionListEnvelope
  */

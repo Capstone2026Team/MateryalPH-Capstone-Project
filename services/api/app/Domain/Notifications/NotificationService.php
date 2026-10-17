@@ -7,6 +7,7 @@ namespace App\Domain\Notifications;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Operations\OutboxPublisher;
 use App\Models\User;
+use App\Support\PortalDateRange;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -41,7 +42,10 @@ final class NotificationService
         if (! $user instanceof User || ! app(NotificationPolicy::class)->allows($user, $notice)) {
             return;
         }
-        $destinations = [['EMAIL', 'EMAIL', null]];
+        if ($notice->category === 'MESSAGES' && $notice->read_at !== null) {
+            return;
+        }
+        $destinations = $notice->category === 'MESSAGES' && ! self::enabled($notice, 'EMAIL') ? [] : [['EMAIL', 'EMAIL', null]];
         foreach (DB::table('notification_devices')->where('user_id', $user->getKey())->whereNull('revoked_at')->where('environment', app()->environment())->get() as $device) {
             $destinations[] = ['PUSH', (string) $device->id, (string) $device->id];
         }
@@ -65,7 +69,7 @@ final class NotificationService
         }
         $value = DB::table('notification_preferences')->where('user_id', $notice->user_id)->where('category', $notice->category)->value(strtolower($channel));
 
-        return $value === null || (bool) $value;
+        return $value === null ? NotificationPolicy::defaultEnabled($notice->category, $channel) : (bool) $value;
     }
 
     public function unreadCount(User $user): int
@@ -82,8 +86,11 @@ final class NotificationService
         return $count;
     }
 
-    /** @return array<string, mixed> */
-    public function feed(User $user, ?string $cursor): array
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return array<string, mixed>
+     */
+    public function feed(User $user, ?string $cursor, array $filters = []): array
     {
         $query = DB::table('notifications')->where('user_id', $user->getKey())->orderByDesc('id');
         if ($cursor !== null) {
@@ -92,6 +99,7 @@ final class NotificationService
             }
             $query->where('id', '<', $cursor);
         }
+        PortalDateRange::apply($query, 'created_at', $filters);
         // Advance across revoked rows without disclosing either their count or contents.
         $rows = $query->limit(51)->get();
         $hasMore = $rows->count() > 50;

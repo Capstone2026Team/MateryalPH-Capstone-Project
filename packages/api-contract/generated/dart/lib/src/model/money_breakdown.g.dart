@@ -290,6 +290,8 @@ class _$MoneyBreakdownExcludesEnumSerializer
 
 class _$MoneyBreakdown extends MoneyBreakdown {
   @override
+  final ChatQuotationDiscountAssessment? discount;
+  @override
   final MoneyBreakdownCurrencyEnum currency;
   @override
   final String calculationVersion;
@@ -330,7 +332,8 @@ class _$MoneyBreakdown extends MoneyBreakdown {
       (MoneyBreakdownBuilder()..update(updates))._build();
 
   _$MoneyBreakdown._(
-      {required this.currency,
+      {this.discount,
+      required this.currency,
       required this.calculationVersion,
       required this.status,
       required this.materialsGrossCentavos,
@@ -360,6 +363,7 @@ class _$MoneyBreakdown extends MoneyBreakdown {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is MoneyBreakdown &&
+        discount == other.discount &&
         currency == other.currency &&
         calculationVersion == other.calculationVersion &&
         status == other.status &&
@@ -383,6 +387,7 @@ class _$MoneyBreakdown extends MoneyBreakdown {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, discount.hashCode);
     _$hash = $jc(_$hash, currency.hashCode);
     _$hash = $jc(_$hash, calculationVersion.hashCode);
     _$hash = $jc(_$hash, status.hashCode);
@@ -408,6 +413,7 @@ class _$MoneyBreakdown extends MoneyBreakdown {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'MoneyBreakdown')
+          ..add('discount', discount)
           ..add('currency', currency)
           ..add('calculationVersion', calculationVersion)
           ..add('status', status)
@@ -433,6 +439,12 @@ class _$MoneyBreakdown extends MoneyBreakdown {
 class MoneyBreakdownBuilder
     implements Builder<MoneyBreakdown, MoneyBreakdownBuilder> {
   _$MoneyBreakdown? _$v;
+
+  ChatQuotationDiscountAssessmentBuilder? _discount;
+  ChatQuotationDiscountAssessmentBuilder get discount =>
+      _$this._discount ??= ChatQuotationDiscountAssessmentBuilder();
+  set discount(ChatQuotationDiscountAssessmentBuilder? discount) =>
+      _$this._discount = discount;
 
   MoneyBreakdownCurrencyEnum? _currency;
   MoneyBreakdownCurrencyEnum? get currency => _$this._currency;
@@ -532,6 +544,7 @@ class MoneyBreakdownBuilder
   MoneyBreakdownBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _discount = $v.discount?.toBuilder();
       _currency = $v.currency;
       _calculationVersion = $v.calculationVersion;
       _status = $v.status;
@@ -573,6 +586,7 @@ class MoneyBreakdownBuilder
     try {
       _$result = _$v ??
           _$MoneyBreakdown._(
+            discount: _discount?.build(),
             currency: BuiltValueNullFieldError.checkNotNull(
                 currency, r'MoneyBreakdown', 'currency'),
             calculationVersion: BuiltValueNullFieldError.checkNotNull(
@@ -612,6 +626,9 @@ class MoneyBreakdownBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'discount';
+        _discount?.build();
+
         _$failedField = 'delivery';
         delivery.build();
         _$failedField = 'nrpc';

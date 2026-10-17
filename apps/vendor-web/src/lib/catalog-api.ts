@@ -12,15 +12,19 @@ import {
   type CatalogVolumeTier,
   type CatalogVolumeTierInput,
   type ComplianceEvidence,
+  type ComplianceLookup,
+  ComplianceLookupFromJSON,
   type ComplianceSubmission,
   type CompliancePath,
   type ListingStatus,
+  type MarkingType,
+  ResponseError,
 } from '@materyalph/api-client-ts'
 import { createWebApiConfiguration } from '@materyalph/web-ui'
 import { newIdempotencyKey } from './onboarding-api'
 
 export { readableOnboardingError as readableCatalogError, onboardingFieldErrors as catalogFieldErrors } from './onboarding-api'
-export type { CatalogImportJob, CatalogListing, CatalogListingListMeta, CatalogListingSummary, CatalogMaterial, CatalogMaterialMatch, CatalogTaxonomy, CatalogVariantInput, CatalogVolumeTier, CatalogVolumeTierInput, ComplianceEvidence, CompliancePath }
+export type { CatalogImportJob, CatalogListing, CatalogListingListMeta, CatalogListingSummary, CatalogMaterial, CatalogMaterialMatch, CatalogTaxonomy, CatalogVariantInput, CatalogVolumeTier, CatalogVolumeTierInput, ComplianceEvidence, ComplianceLookup, CompliancePath, MarkingType }
 
 const basePath = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'
 
@@ -81,12 +85,25 @@ export async function deleteListing(listingId: string, lockVersion: number): Pro
   await catalogApi().deleteVendorCatalogListing({ listingId, lockVersion })
 }
 
-export async function uploadComplianceEvidence(listingId: string, path: CompliancePath, file: Blob, qrPayload: string | null): Promise<ComplianceEvidence> {
-  return (await catalogApi().uploadListingComplianceEvidence({ listingId, path, file, qrPayload })).data
+export async function uploadComplianceEvidence(listingId: string, path: CompliancePath, file: Blob, qrPayload: string | null, markingType: MarkingType): Promise<ComplianceEvidence> {
+  return (await catalogApi().uploadListingComplianceEvidence({ listingId, path, file, qrPayload, markingType })).data
+}
+
+/** Read-only DTI-BPS register lookup for a PS License No. or ICC sticker serial. */
+export async function lookupCompliance(listingId: string, markingType: MarkingType, number: string): Promise<ComplianceLookup> {
+  return (await catalogApi().lookupListingCompliance({ listingId, complianceLookupRequest: { markingType, number } })).data
 }
 
 export async function submitCompliance(listingId: string, submission: ComplianceSubmission): Promise<CatalogListing> {
   return (await catalogApi().submitListingCompliance({ listingId, idempotencyKey: newIdempotencyKey(), complianceSubmission: submission })).data
+}
+
+/** The register result attached to a refused automatic submission (422 COMPLIANCE_REGISTER_NOT_MATCHED). */
+export async function refusedComplianceLookup(error: unknown): Promise<ComplianceLookup | null> {
+  if (!(error instanceof ResponseError) || error.response.status !== 422) return null
+  const payload: unknown = await error.response.clone().json().catch(() => null)
+  const first = payload && typeof payload === 'object' && Array.isArray((payload as { errors?: unknown }).errors) ? (payload as { errors: { code?: unknown; details?: { lookup?: unknown } }[] }).errors[0] : undefined
+  return first?.code === 'COMPLIANCE_REGISTER_NOT_MATCHED' && first.details?.lookup && typeof first.details.lookup === 'object' ? ComplianceLookupFromJSON(first.details.lookup) : null
 }
 
 export async function getCatalogFileUrl(fileId: string): Promise<string> {

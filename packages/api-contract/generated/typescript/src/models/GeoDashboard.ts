@@ -27,6 +27,13 @@ import {
     GeoFilterApplicabilityToJSON,
     GeoFilterApplicabilityToJSONTyped,
 } from './GeoFilterApplicability';
+import type { AdminDashboardMarketplaceDisclosure } from './AdminDashboardMarketplaceDisclosure';
+import {
+    AdminDashboardMarketplaceDisclosureFromJSON,
+    AdminDashboardMarketplaceDisclosureFromJSONTyped,
+    AdminDashboardMarketplaceDisclosureToJSON,
+    AdminDashboardMarketplaceDisclosureToJSONTyped,
+} from './AdminDashboardMarketplaceDisclosure';
 import type { GeoDashboardUnresolved } from './GeoDashboardUnresolved';
 import {
     GeoDashboardUnresolvedFromJSON,
@@ -41,13 +48,6 @@ import {
     GeoKpisToJSON,
     GeoKpisToJSONTyped,
 } from './GeoKpis';
-import type { GeoDashboardDisclosure } from './GeoDashboardDisclosure';
-import {
-    GeoDashboardDisclosureFromJSON,
-    GeoDashboardDisclosureFromJSONTyped,
-    GeoDashboardDisclosureToJSON,
-    GeoDashboardDisclosureToJSONTyped,
-} from './GeoDashboardDisclosure';
 import type { GeoDashboardPeriod } from './GeoDashboardPeriod';
 import {
     GeoDashboardPeriodFromJSON,
@@ -113,7 +113,7 @@ export interface GeoDashboard {
     /**
      *
      */
-    disclosure: GeoDashboardDisclosure;
+    disclosure: AdminDashboardMarketplaceDisclosure;
     /**
      *
      */
@@ -174,7 +174,7 @@ export function GeoDashboardFromJSONTyped(json: any, ignoreDiscriminator: boolea
         'period': GeoDashboardPeriodFromJSON(json['period']),
         'filters': json['filters'],
         'filterApplicability': ((json['filter_applicability'] as Array<any>).map(GeoFilterApplicabilityFromJSON)),
-        'disclosure': GeoDashboardDisclosureFromJSON(json['disclosure']),
+        'disclosure': AdminDashboardMarketplaceDisclosureFromJSON(json['disclosure']),
         'kpis': GeoKpisFromJSON(json['kpis']),
         'trends': ((json['trends'] as Array<any>).map(GeoTrendPointFromJSON)),
         'activityTrend': ((json['activity_trend'] as Array<any>).map(GeoActivityPointFromJSON)),
@@ -200,7 +200,7 @@ export function GeoDashboardToJSONTyped(value?: GeoDashboard | null, ignoreDiscr
         'period': GeoDashboardPeriodToJSON(value['period']),
         'filters': value['filters'],
         'filter_applicability': ((value['filterApplicability'] as Array<any>).map(GeoFilterApplicabilityToJSON)),
-        'disclosure': GeoDashboardDisclosureToJSON(value['disclosure']),
+        'disclosure': AdminDashboardMarketplaceDisclosureToJSON(value['disclosure']),
         'kpis': GeoKpisToJSON(value['kpis']),
         'trends': ((value['trends'] as Array<any>).map(GeoTrendPointToJSON)),
         'activity_trend': ((value['activityTrend'] as Array<any>).map(GeoActivityPointToJSON)),

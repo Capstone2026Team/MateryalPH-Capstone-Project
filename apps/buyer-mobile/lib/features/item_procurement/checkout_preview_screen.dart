@@ -6,14 +6,15 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/components/buyer_app_bar.dart';
 import '../../design_system/components/procurement_components.dart';
+import '../../design_system/components/invoice_request_form.dart';
 import '../../design_system/theme.dart';
-import '../../widgets/buyer_account_widgets.dart' show BuyerUnavailableScreen;
 import '../map_discovery/discovery_models.dart';
 import '../map_discovery/discovery_repository.dart' show newIdempotencyKey;
 import '../orders/order_submitted_screen.dart';
 import '../orders/orders_repository.dart';
 import 'cart_controller.dart';
-import 'checkout_previews.dart';
+import '../projects/projects_repository.dart';
+import 'checkout_project_screen.dart';
 import 'delivery_widgets.dart';
 import 'procurement_models.dart';
 
@@ -26,6 +27,7 @@ class CheckoutPreviewScreen extends StatefulWidget {
     required this.controller,
     required this.savedLocations,
     this.orders,
+    this.projects,
     this.chooseDropOff,
   });
 
@@ -42,6 +44,7 @@ class CheckoutPreviewScreen extends StatefulWidget {
 
   /// Order submission; without it the submit action stays unavailable.
   final OrdersRepository? orders;
+  final ProjectsRepository? projects;
 
   @override
   State<CheckoutPreviewScreen> createState() => _CheckoutPreviewScreenState();
@@ -51,10 +54,22 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
   CartController get _controller => widget.controller;
   bool _submitting = false;
   String? _submitError;
+  String? _projectError;
 
   /// Vendor id => chosen payment method; Online unless the Buyer picks an offered alternative.
   final Map<String, String> _methods = {};
   String? _submitKey;
+  String? _submitBody;
+  CheckoutProjectLink? _projectLink;
+  InvoiceBillingInput? _invoice;
+  final _budgetReason = TextEditingController();
+  bool _budgetOverrideRequired = false;
+
+  @override
+  void dispose() {
+    _budgetReason.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -66,8 +81,48 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
     });
   }
 
-  void _push(Widget page) =>
-      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+  Future<void> _chooseProject() async {
+    if (_submitting) return;
+    // Some checkout entries have no separately injected Project service.
+    // Reuse the checkout's authenticated client and session handling in that case.
+    final projects = widget.projects ?? widget.orders?.projects;
+    if (projects == null) {
+      setState(
+        () => _projectError =
+            'Projects are unavailable. Reopen Checkout and try again.',
+      );
+      return;
+    }
+    setState(() => _projectError = null);
+    final result = await Navigator.of(context).push<Object>(
+      MaterialPageRoute(
+        builder: (_) =>
+            CheckoutProjectScreen(repository: projects, selected: _projectLink),
+      ),
+    );
+    if (!mounted || result == null) return;
+    setState(() {
+      _projectLink = result is CheckoutProjectLink ? result : null;
+      _budgetOverrideRequired = false;
+      _budgetReason.clear();
+    });
+  }
+
+  Future<void> _editInvoice() async {
+    if (_submitting) return;
+    final value = await Navigator.of(context).push<InvoiceBillingInput>(
+      MaterialPageRoute(
+        builder: (_) => InvoiceRequestFormScreen(
+          initial: _invoice,
+          notice:
+              'These billing details will be saved for each order when you submit checkout. After the sale is confirmed, request a copy or correction from Order Details. Business TIN is optional and used only for the invoice.',
+          submitLabel: 'Use these invoice details',
+          onSubmit: (_) async {},
+        ),
+      ),
+    );
+    if (mounted && value != null) setState(() => _invoice = value);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -159,26 +214,63 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
               onMethod: (method) =>
                   setState(() => _methods[group.vendorId] = method),
             ),
+          if (_projectError != null) ...[
+            StatusBand(
+              tone: BandTone.warning,
+              title: 'Projects could not open',
+              message: _projectError,
+              action: TextButton(
+                onPressed: _chooseProject,
+                child: const Text('Retry'),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           ProcurementReviewCard(
             padding: EdgeInsets.zero,
             children: [
               _LinkRow(
                 icon: LucideIcons.clipboardList,
                 title: 'Project Procurement',
-                hint: 'Link this order to your Project',
-                onTap: () => _push(
-                  const BuyerUnavailableScreen(title: 'Project Procurement'),
-                ),
+                hint: _projectLink == null
+                    ? 'Link this order to your Project'
+                    : '${_projectLink!.projectName} · ${_projectLink!.packageName}',
+                onTap: _chooseProject,
               ),
               const Divider(height: 1),
               _LinkRow(
                 icon: LucideIcons.receiptText,
                 title: 'Request E-Invoice',
-                hint: 'Preview',
-                onTap: () => _push(const EInvoiceRequestPreviewScreen()),
+                hint: _invoice == null ? 'Add billing details' : _invoice!.name,
+                onTap: _editInvoice,
               ),
+              if (_invoice != null)
+                TextButton(
+                  onPressed: _submitting
+                      ? null
+                      : () => setState(() => _invoice = null),
+                  child: const Text('Remove invoice details'),
+                ),
             ],
           ),
+          if (_budgetOverrideRequired) ...[
+            const StatusBand(
+              tone: BandTone.warning,
+              title: 'Budget Override required',
+              message:
+                  'This purchase exceeds the Project or Work Package budget. Enter your reason to acknowledge the deficit and continue.',
+            ),
+            TextField(
+              controller: _budgetReason,
+              maxLength: 2000,
+              minLines: 2,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                labelText: 'Budget Override reason',
+                helperText: 'At least 10 characters.',
+              ),
+            ),
+          ],
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
             child: Text(
@@ -191,12 +283,21 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
     );
   }
 
+  bool _canSubmit(CheckoutPreviewView preview) =>
+      widget.orders != null &&
+      !_submitting &&
+      !_controller.busy &&
+      !_controller.previewLoading &&
+      _controller.previewFailure == null &&
+      identical(_controller.preview, preview) &&
+      preview.groups.any((group) => group.status == 'READY');
+
   /// Submits every READY Vendor group as its own order request. Groups that still need action stay
   /// in the cart, and the Buyer confirms that split first. One Idempotency-Key covers retries of the
   /// same submission so a repeated tap never creates a second checkout.
   Future<void> _submit(CheckoutPreviewView preview) async {
     final orders = widget.orders;
-    if (orders == null || _submitting) return;
+    if (orders == null || !_canSubmit(preview)) return;
     final ready = preview.groups
         .where((group) => group.status == 'READY')
         .toList();
@@ -226,6 +327,22 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
       );
       if (confirmed != true || !mounted) return;
     }
+    if (!_canSubmit(preview)) return;
+    final body = [
+      preview.cartLockVersion,
+      ready.map((g) => '${g.vendorId}:${_methodFor(g)}').join(','),
+      split,
+      _projectLink?.packageId,
+      _projectLink?.lockVersion,
+      _budgetReason.text.trim(),
+      _invoice?.name,
+      _invoice?.address,
+      _invoice?.tin,
+    ].toString();
+    if (_submitBody != body) {
+      _submitKey = null;
+      _submitBody = body;
+    }
     final key = _submitKey ??= newIdempotencyKey();
     setState(() {
       _submitting = true;
@@ -240,6 +357,12 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
         paymentMethods: {
           for (final group in ready) group.vendorId: _methodFor(group),
         },
+        workPackageId: _projectLink?.packageId,
+        workPackageLockVersion: _projectLink?.lockVersion,
+        budgetOverrideReason: _budgetReason.text.trim().isEmpty
+            ? null
+            : _budgetReason.text.trim(),
+        invoiceDetails: _invoice,
       );
       _submitKey = null;
       unawaited(_controller.load());
@@ -255,6 +378,9 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
       if (error.kind != DiscoveryFailureKind.offline) _submitKey = null;
       if (!mounted) return;
       setState(() => _submitError = error.message);
+      if (error.code == 'BUDGET_OVERRIDE_REQUIRED') {
+        setState(() => _budgetOverrideRequired = true);
+      }
       if (error.kind == DiscoveryFailureKind.conflict) {
         await _controller.loadPreview();
       }
@@ -279,7 +405,7 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
     final ready = preview.groups
         .where((group) => group.status == 'READY')
         .length;
-    final available = widget.orders != null && ready > 0 && !_submitting;
+    final available = _canSubmit(preview);
     return SafeArea(
       top: false,
       child: Container(
@@ -301,6 +427,8 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
               child: Text(
                 _submitting
                     ? 'Submitting…'
+                    : _controller.previewLoading
+                    ? 'Checking checkout…'
                     : ready <= 1
                     ? 'Submit order request'
                     : 'Submit $ready order requests',
@@ -469,6 +597,20 @@ class _GroupPreview extends StatelessWidget {
               message: group.issues.isEmpty
                   ? null
                   : group.issues.map((issue) => issue.message).join('\n'),
+              action:
+                  group.issues.any((issue) => issue.code == 'ROUTE_UNAVAILABLE')
+                  ? OutlinedButton.icon(
+                      onPressed: controller.previewLoading || controller.busy
+                          ? null
+                          : controller.loadPreview,
+                      icon: const Icon(LucideIcons.refreshCw, size: 18),
+                      label: Text(
+                        controller.previewLoading
+                            ? 'Checking delivery route…'
+                            : 'Retry delivery route',
+                      ),
+                    )
+                  : null,
             ),
           ),
         const SizedBox(height: 10),

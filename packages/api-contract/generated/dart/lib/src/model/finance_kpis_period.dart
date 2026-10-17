@@ -17,10 +17,10 @@ part 'finance_kpis_period.g.dart';
 @BuiltValue()
 abstract class FinanceKpisPeriod implements Built<FinanceKpisPeriod, FinanceKpisPeriodBuilder> {
   @BuiltValueField(wireName: r'from')
-  Date get from;
+  Date? get from;
 
   @BuiltValueField(wireName: r'to')
-  Date get to;
+  Date? get to;
 
   FinanceKpisPeriod._();
 
@@ -46,14 +46,14 @@ class _$FinanceKpisPeriodSerializer implements PrimitiveSerializer<FinanceKpisPe
     FullType specifiedType = FullType.unspecified,
   }) sync* {
     yield r'from';
-    yield serializers.serialize(
+    yield object.from == null ? null : serializers.serialize(
       object.from,
-      specifiedType: const FullType(Date),
+      specifiedType: const FullType.nullable(Date),
     );
     yield r'to';
-    yield serializers.serialize(
+    yield object.to == null ? null : serializers.serialize(
       object.to,
-      specifiedType: const FullType(Date),
+      specifiedType: const FullType.nullable(Date),
     );
   }
 
@@ -81,15 +81,17 @@ class _$FinanceKpisPeriodSerializer implements PrimitiveSerializer<FinanceKpisPe
         case r'from':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(Date),
-          ) as Date;
+            specifiedType: const FullType.nullable(Date),
+          ) as Date?;
+          if (valueDes == null) continue;
           result.from = valueDes;
           break;
         case r'to':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(Date),
-          ) as Date;
+            specifiedType: const FullType.nullable(Date),
+          ) as Date?;
+          if (valueDes == null) continue;
           result.to = valueDes;
           break;
         default:

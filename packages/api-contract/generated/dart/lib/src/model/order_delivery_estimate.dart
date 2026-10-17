@@ -3,6 +3,8 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/delivery_estimate_option.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -11,12 +13,17 @@ part 'order_delivery_estimate.g.dart';
 /// OrderDeliveryEstimate
 ///
 /// Properties:
+/// * [options] - Frozen system recommendation; absent on historical orders.
 /// * [feeMinCentavos]
 /// * [feeMaxCentavos]
 /// * [tripsMin]
 /// * [tripsMax]
 @BuiltValue()
 abstract class OrderDeliveryEstimate implements Built<OrderDeliveryEstimate, OrderDeliveryEstimateBuilder> {
+  /// Frozen system recommendation; absent on historical orders.
+  @BuiltValueField(wireName: r'options')
+  BuiltList<DeliveryEstimateOption>? get options;
+
   @BuiltValueField(wireName: r'fee_min_centavos')
   int get feeMinCentavos;
 
@@ -52,6 +59,13 @@ class _$OrderDeliveryEstimateSerializer implements PrimitiveSerializer<OrderDeli
     OrderDeliveryEstimate object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.options != null) {
+      yield r'options';
+      yield serializers.serialize(
+        object.options,
+        specifiedType: const FullType(BuiltList, [FullType(DeliveryEstimateOption)]),
+      );
+    }
     yield r'fee_min_centavos';
     yield serializers.serialize(
       object.feeMinCentavos,
@@ -95,6 +109,14 @@ class _$OrderDeliveryEstimateSerializer implements PrimitiveSerializer<OrderDeli
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'options':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(DeliveryEstimateOption)]),
+          ) as BuiltList<DeliveryEstimateOption>?;
+          if (valueDes == null) continue;
+          result.options.replace(valueDes);
+          break;
         case r'fee_min_centavos':
           final valueDes = serializers.deserialize(
             value,

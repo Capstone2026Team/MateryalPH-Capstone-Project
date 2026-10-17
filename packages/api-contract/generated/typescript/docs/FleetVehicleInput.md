@@ -27,6 +27,8 @@ Name | Type
 `baseFeeCentavos` | number
 `perKmCentavos` | number
 `maximumDistanceKm` | number
+`mobilizationFeeCentavos` | number
+`mobilizationBasis` | string
 
 ## Example
 
@@ -56,6 +58,8 @@ const example = {
   "baseFeeCentavos": null,
   "perKmCentavos": null,
   "maximumDistanceKm": null,
+  "mobilizationFeeCentavos": null,
+  "mobilizationBasis": null,
 } satisfies FleetVehicleInput
 
 console.log(example)

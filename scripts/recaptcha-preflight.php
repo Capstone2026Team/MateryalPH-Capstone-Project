@@ -13,6 +13,7 @@ foreach ([
     'RECAPTCHA_GOOGLE_CLOUD_PROJECT_ID' => 'services.recaptcha.project_id',
     'RECAPTCHA_ENTERPRISE_API_KEY' => 'services.recaptcha.api_key',
     'RECAPTCHA_VENDOR_WEB_SITE_KEY' => 'materyalph.bot_protection.site_keys.WEB',
+    'RECAPTCHA_ADMIN_WEB_SITE_KEY (or Vendor fallback)' => 'materyalph.bot_protection.site_keys.ADMIN_WEB',
 ] as $name => $path) {
     $present = trim((string) config($path)) !== '';
     $ready = $ready && $present;
@@ -46,5 +47,5 @@ try {
     echo 'VENDOR_WEB: provider unavailable or unusable response'.PHP_EOL;
     $failed = true;
 }
-echo 'A real Vendor browser checkbox-token smoke test is still required.'.PHP_EOL;
+echo 'Real Vendor and Admin browser checkbox-token smoke tests are still required.'.PHP_EOL;
 exit($failed ? 1 : 0);

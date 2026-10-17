@@ -89,7 +89,7 @@ example().catch(console.error);
 
 ## listPrivacyRequests
 
-> PrivacyRequestListEnvelope listPrivacyRequests(state, requestType, handler, page)
+> PrivacyRequestListEnvelope listPrivacyRequests(state, requestType, handler, page, from, to)
 
 
 
@@ -123,6 +123,10 @@ async function example() {
     handler: handler_example,
     // number (optional)
     page: 56,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Request received_at. (optional)
+    from: 2013-10-20,
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Request received_at. (optional)
+    to: 2013-10-20,
   } satisfies ListPrivacyRequestsRequest;
 
   try {
@@ -146,6 +150,8 @@ example().catch(console.error);
 | **requestType** | `ACCESS`, `CORRECTION`, `OBJECTION`, `DELETION`, `RESTRICTION`, `PORTABILITY`, `OTHER` |  | [Optional] [Defaults to `undefined`] [Enum: ACCESS, CORRECTION, OBJECTION, DELETION, RESTRICTION, PORTABILITY, OTHER] |
 | **handler** | `UNASSIGNED` |  | [Optional] [Defaults to `undefined`] [Enum: UNASSIGNED] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **from** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Request received_at. | [Optional] [Defaults to `undefined`] |
+| **to** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Request received_at. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 

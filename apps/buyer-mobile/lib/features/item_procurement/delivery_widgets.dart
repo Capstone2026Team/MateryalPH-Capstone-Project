@@ -487,6 +487,25 @@ class _LocationPicker extends StatelessWidget {
 }
 
 /// Advisory delivery estimate versus the Vendor's confirmed offer, always labelled apart.
+/// One recommended vehicle line. A mixer also shows how the concrete volume is
+/// split into trips and the mobilization fee its Vendor charges.
+String deliveryOptionLine(DeliveryOptionView option) {
+  String plural(int count, String noun) =>
+      '$count $noun${count == 1 ? '' : 's'}';
+  final mixer = option.vehicleType == 'CONCRETE_MIXER';
+  return [
+    option.vehicleName,
+    mixer
+        ? plural(option.vehicles, 'mixer truck')
+        : '${option.vehicles} vehicle(s)',
+    mixer ? plural(option.trips, 'trip') : '${option.trips} trip(s)',
+    if (option.volumePlan != null) option.volumePlan!.tripLoads,
+    if (option.mobilizationTotalCentavos > 0)
+      'includes ${formatPeso(option.mobilizationTotalCentavos)} mobilization ${option.mobilizationBasis == 'PER_TRIP' ? 'per trip' : 'per truck'}',
+    formatPeso(option.feeCentavos),
+  ].join(' · ');
+}
+
 class DeliveryPreviewPanel extends StatelessWidget {
   const DeliveryPreviewPanel({super.key, required this.delivery});
 
@@ -534,26 +553,8 @@ class DeliveryPreviewPanel extends StatelessWidget {
               estimate.options.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Recommended vehicle',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                  ),
-                  for (final option in estimate.options)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text(
-                        '${option.vehicleName} · ${option.vehicles} vehicle${option.vehicles == 1 ? '' : 's'} · ${option.trips} trip${option.trips == 1 ? '' : 's'} · ${formatPeso(option.feeCentavos)}',
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ),
-                  const Text(
-                    'Advisory only — the Vendor confirms the vehicle, number of trips and final fee.',
-                    style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
-                  ),
-                ],
+              child: BuyerDeliveryRecommendation(
+                lines: estimate.options.map(deliveryOptionLine).toList(),
               ),
             ),
           if (delivery.routeDistanceMeters != null)

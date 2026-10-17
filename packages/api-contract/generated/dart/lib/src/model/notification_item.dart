@@ -13,10 +13,10 @@ part 'notification_item.g.dart';
 /// Properties:
 /// * [id]
 /// * [category]
-/// * [title]
-/// * [body]
+/// * [title] - Actual event title. MESSAGES identifies the public sender display name and store name.
+/// * [body] - Actual event summary; MESSAGES contains a short single-line message preview, capped at 320 display characters. Attachment and product-only messages use a type summary. Private contacts and attachment details are excluded. Mobile push displays this title and bounded summary after queued recipient authorization.
 /// * [mandatory]
-/// * [readAt] - A non-null timestamp identifies a read notice retained in the recipient's Archived view. Required notices remain stored and authorized deep links remain available.
+/// * [readAt] - A non-null timestamp identifies a read notice, which is retained but no longer listed in the recipient's inbox. Required notices remain stored and authorized deep links remain available.
 /// * [createdAt]
 @BuiltValue()
 abstract class NotificationItem implements Built<NotificationItem, NotificationItemBuilder> {
@@ -26,16 +26,18 @@ abstract class NotificationItem implements Built<NotificationItem, NotificationI
   @BuiltValueField(wireName: r'category')
   String get category;
 
+  /// Actual event title. MESSAGES identifies the public sender display name and store name.
   @BuiltValueField(wireName: r'title')
   String get title;
 
+  /// Actual event summary; MESSAGES contains a short single-line message preview, capped at 320 display characters. Attachment and product-only messages use a type summary. Private contacts and attachment details are excluded. Mobile push displays this title and bounded summary after queued recipient authorization.
   @BuiltValueField(wireName: r'body')
   String get body;
 
   @BuiltValueField(wireName: r'mandatory')
   bool get mandatory;
 
-  /// A non-null timestamp identifies a read notice retained in the recipient's Archived view. Required notices remain stored and authorized deep links remain available.
+  /// A non-null timestamp identifies a read notice, which is retained but no longer listed in the recipient's inbox. Required notices remain stored and authorized deep links remain available.
   @BuiltValueField(wireName: r'read_at')
   String? get readAt;
 

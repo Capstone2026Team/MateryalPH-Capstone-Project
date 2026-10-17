@@ -23,12 +23,14 @@ use App\Domain\Vendors\VendorAddressResolver;
 use App\Domain\Vendors\VendorExpiryService;
 use App\Domain\Vendors\VendorFileScanner;
 use App\Domain\Vendors\VendorOnboardingService;
+use App\Domain\Vendors\VendorVacationSchedule;
 use App\Domain\Vendors\XenditAccountVerificationGateway;
 use App\Domain\Vendors\XenditProviderUnavailable;
 use App\Models\AuthSession;
 use App\Models\User;
 use App\Models\VendorMembership;
 use App\Models\VendorOrganization;
+use Carbon\CarbonImmutable;
 use Database\Seeders\SystemFoundationSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -59,7 +61,9 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         DB::table('store_profiles')->where('vendor_organization_id', $organization->id)->update(['status' => 'COMPLETED']);
         DB::table('vendor_organizations')->where('id', $organization->id)->update(['store_setup_status' => 'COMPLETED', 'store_activation_status' => 'ACTIVE', 'marketplace_discoverability_status' => 'DISCOVERABLE']);
         $version = $organization->refresh()->lock_version;
-        $this->patchJson('/api/v1/vendors/onboarding/setup', ['organization_lock_version' => $version, 'vacation_mode' => true])->assertOk()->assertJsonPath('data.setup.vacation_mode', true)->assertJsonPath('data.setup.status', 'COMPLETED')->assertJsonCount(7, 'data.setup.operating_schedule');
+        $today = now('Asia/Manila')->toDateString();
+        $window = ['vacation_starts_on' => $today, 'vacation_ends_on' => now('Asia/Manila')->addDays(3)->toDateString()];
+        $this->patchJson('/api/v1/vendors/onboarding/setup', ['organization_lock_version' => $version, 'vacation_mode' => true] + $window)->assertOk()->assertJsonPath('data.setup.vacation_mode', true)->assertJsonPath('data.setup.vacation_status', 'ACTIVE')->assertJsonPath('data.setup.vacation_starts_on', $today)->assertJsonPath('data.setup.vacation_ends_on', $window['vacation_ends_on'])->assertJsonPath('data.setup.status', 'COMPLETED')->assertJsonCount(7, 'data.setup.operating_schedule');
         $this->assertDatabaseHas('audit_logs', ['action' => 'VENDOR_VACATION_MODE_UPDATED', 'actor_user_id' => $owner->id]);
         $this->getJson('/api/v1/stores/'.$organization->id.'/profile')->assertOk()->assertJsonPath('data.vacation_mode', true);
         $this->patchJson('/api/v1/vendors/onboarding/setup', ['organization_lock_version' => $version, 'vacation_mode' => false])->assertConflict();
@@ -69,15 +73,73 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         } catch (AuthenticationException $exception) {
             self::assertSame('STORE_ON_VACATION', $exception->errorCode);
         }
-        $this->patchJson('/api/v1/vendors/onboarding/setup', ['organization_lock_version' => $organization->refresh()->lock_version, 'vacation_mode' => false])->assertOk()->assertJsonPath('data.setup.vacation_mode', false);
+        $this->patchJson('/api/v1/vendors/onboarding/setup', ['organization_lock_version' => $organization->refresh()->lock_version, 'vacation_mode' => false])->assertOk()->assertJsonPath('data.setup.vacation_mode', false)->assertJsonPath('data.setup.vacation_status', 'OFF')->assertJsonPath('data.setup.vacation_starts_on', null)->assertJsonPath('data.setup.vacation_ends_on', null);
         DB::transaction(fn () => app(NewProcurementAvailability::class)->assertAvailable($organization->id));
+    }
+
+    public function test_vacation_mode_requires_a_valid_date_window(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $today = now('Asia/Manila');
+        $send = fn (array $extra) => $this->patchJson('/api/v1/vendors/onboarding/setup', ['organization_lock_version' => 1, 'vacation_mode' => true] + $extra);
+        $send([])->assertUnprocessable()->assertJsonPath('errors.0.code', 'VALIDATION_FAILED')->assertJsonStructure(['errors' => [['details' => ['vacation_starts_on', 'vacation_ends_on']]]]);
+        $send(['vacation_starts_on' => $today->toDateString()])->assertUnprocessable()->assertJsonStructure(['errors' => [['details' => ['vacation_ends_on']]]]);
+        $send(['vacation_starts_on' => $today->copy()->addDays(5)->toDateString(), 'vacation_ends_on' => $today->copy()->addDays(2)->toDateString()])->assertUnprocessable()->assertJsonStructure(['errors' => [['details' => ['vacation_ends_on']]]]);
+        $send(['vacation_starts_on' => $today->copy()->subDay()->toDateString(), 'vacation_ends_on' => $today->toDateString()])->assertUnprocessable()->assertJsonStructure(['errors' => [['details' => ['vacation_starts_on']]]]);
+        $this->assertDatabaseMissing('store_profiles', ['vendor_organization_id' => $organization->id, 'vacation_mode' => true]);
+    }
+
+    public function test_vacation_window_starts_and_ends_on_manila_calendar_days(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        DB::table('vendor_organizations')->where('id', $organization->id)->update(['store_activation_status' => 'ACTIVE']);
+        $first = now('Asia/Manila')->addDays(3)->toDateString();
+        $last = now('Asia/Manila')->addDays(4)->toDateString();
+        $after = now('Asia/Manila')->addDays(5)->toDateString();
+        $this->patchJson('/api/v1/vendors/onboarding/setup', ['organization_lock_version' => 1, 'vacation_mode' => true, 'vacation_starts_on' => $first, 'vacation_ends_on' => $last])->assertOk()
+            ->assertJsonPath('data.setup.vacation_mode', false)->assertJsonPath('data.setup.vacation_status', 'SCHEDULED')->assertJsonPath('data.setup.vacation_starts_on', $first)->assertJsonPath('data.setup.vacation_ends_on', $last);
+        $schedule = app(VendorVacationSchedule::class);
+        self::assertSame(0, $schedule->sweep());
+        DB::transaction(fn () => app(NewProcurementAvailability::class)->assertAvailable($organization->id));
+
+        $this->travelTo(CarbonImmutable::parse($first.' 00:00:00', 'Asia/Manila'));
+        self::assertSame(1, $schedule->sweep());
+        self::assertTrue((bool) DB::table('store_profiles')->where('vendor_organization_id', $organization->id)->value('vacation_mode'));
+        $this->assertDatabaseHas('audit_logs', ['action' => 'VENDOR_VACATION_MODE_STARTED', 'actor_user_id' => null, 'vendor_organization_id' => $organization->id]);
+        $this->expectProcurementPaused($organization->id);
+
+        $this->travelTo(CarbonImmutable::parse($last.' 23:59:00', 'Asia/Manila'));
+        self::assertSame(0, $schedule->sweep());
+        $this->expectProcurementPaused($organization->id);
+
+        $this->travelTo(CarbonImmutable::parse($after.' 00:00:00', 'Asia/Manila'));
+        self::assertSame(1, $schedule->sweep());
+        $profile = DB::table('store_profiles')->where('vendor_organization_id', $organization->id)->first();
+        self::assertFalse((bool) $profile->vacation_mode);
+        self::assertNull($profile->vacation_starts_at);
+        self::assertNull($profile->vacation_ends_at);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'VENDOR_VACATION_MODE_ENDED', 'actor_user_id' => null, 'vendor_organization_id' => $organization->id]);
+        DB::transaction(fn () => app(NewProcurementAvailability::class)->assertAvailable($organization->id));
+        self::assertSame(0, $schedule->sweep());
     }
 
     public function test_staff_cannot_change_vacation_mode(): void
     {
         [$organization, $staff] = $this->vendorFixture('STORE_STAFF');
         $this->signInVendor($staff);
-        $this->patchJson('/api/v1/vendors/onboarding/setup', ['organization_lock_version' => 1, 'vacation_mode' => true])->assertForbidden();
+        $this->patchJson('/api/v1/vendors/onboarding/setup', ['organization_lock_version' => 1, 'vacation_mode' => true, 'vacation_starts_on' => now('Asia/Manila')->toDateString(), 'vacation_ends_on' => now('Asia/Manila')->addDay()->toDateString()])->assertForbidden();
+    }
+
+    private function expectProcurementPaused(string $organizationId): void
+    {
+        try {
+            DB::transaction(fn () => app(NewProcurementAvailability::class)->assertAvailable($organizationId));
+            self::fail('Vacation Mode must reject new procurement.');
+        } catch (AuthenticationException $exception) {
+            self::assertSame('STORE_ON_VACATION', $exception->errorCode);
+        }
     }
 
     public function test_delivery_vehicles_support_categories_images_mixer_capacity_and_default_coverage(): void
@@ -667,10 +729,12 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
     public function test_removed_saved_vehicle_reopens_delivery_without_deleting_its_record(): void
     {
         [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->vendorFixture('FULFILLMENT', $organization);
         $this->signInVendor($owner);
+        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'address' => $this->resolvedAddressInput($organization)])->assertOk();
         $image = $this->post('/api/v1/vendors/onboarding/media', ['kind' => 'VEHICLE_IMAGE', 'file' => UploadedFile::fake()->image('truck.png')])->assertCreated()->json('data.file_id');
         $vehicle = ['vehicle_category' => 'TRUCK', 'vehicle_type' => 'FLATBED_TRUCK', 'name' => 'Delivery truck', 'capacity_kg' => 1000, 'number_available' => 1, 'cargo_length_m' => 2, 'cargo_width_m' => 2, 'cargo_height_m' => 2, 'heavy_classification' => 'NOT_HEAVY', 'image_file_id' => $image, 'base_fee_centavos' => 1000, 'per_km_centavos' => 100];
-        $saved = $this->patchJson('/api/v1/vendors/onboarding/setup', ['organization_lock_version' => $organization->refresh()->lock_version, 'fulfillment_method' => 'VENDOR_DELIVERY', 'delivery' => [], 'vehicles' => [$vehicle], 'form_state' => '{}'])->assertOk()->json('data');
+        $saved = $this->patchJson('/api/v1/vendors/onboarding/setup', ['organization_lock_version' => $organization->refresh()->lock_version, 'fulfillment_method' => 'VENDOR_DELIVERY', 'vendor_delivery_enabled' => true, 'delivery' => [], 'vehicles' => [$vehicle], 'form_state' => '{}'])->assertOk()->json('data');
         $id = $saved['setup']['vehicles'][0]['id'];
         self::assertSame('COMPLETED', collect($saved['requirements'])->firstWhere('key', 'delivery_configuration')['status']);
         $removed = $this->patchJson('/api/v1/vendors/onboarding/setup', ['organization_lock_version' => $organization->refresh()->lock_version, 'vehicles' => [['id' => $id, 'active' => false]], 'form_state' => '{}'])->assertOk()->json('data');

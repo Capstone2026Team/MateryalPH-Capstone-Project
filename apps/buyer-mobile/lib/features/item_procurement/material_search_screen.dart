@@ -138,7 +138,6 @@ class _MaterialSearchScreenState extends State<MaterialSearchScreen> {
         return const _Centered(
           child: StateMessage(
             kind: StateKind.empty,
-            artwork: 'assets/states/location.png',
             title: 'Search any materials',
             message:
                 'Type a material, brand or store. Results come from Verified Vendors within your selected radius.',
@@ -189,7 +188,6 @@ class _MaterialSearchScreenState extends State<MaterialSearchScreen> {
       return _Centered(
         child: StateMessage(
           kind: StateKind.needsLocation,
-          artwork: 'assets/states/location.png',
           title: 'Choose a location first',
           message:
               'Pick a saved location or a map pin to search nearby Verified Vendors. GPS is not required.',
@@ -224,7 +222,6 @@ class _MaterialSearchScreenState extends State<MaterialSearchScreen> {
       return _Centered(
         child: StateMessage(
           kind: StateKind.empty,
-          artwork: 'assets/states/location.png',
           title: 'Search not found',
           message:
               'No matching materials within $radius km using the current filters. Search anyway to change the filters or radius.',

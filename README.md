@@ -70,7 +70,7 @@ npm run dev
 ```powershell
 Set-Location apps/buyer-mobile
 flutter pub get
-flutter run
+flutter run --dart-define-from-file=config/development.json
 flutter run -d 110013341G000422 --dart-define-from-file=config/development.json
 ```
 
@@ -82,9 +82,33 @@ adb -s 110013341G000422 reverse tcp:8081 tcp:8081
 adb -s 110013341G000422 reverse --list
 ```
 
-## Validation
+### Temporary public demo with Cloudflare Quick Tunnel
 
-Phase 9 implementation, acceptance results, and local Reverb setup are documented in [the messaging test plan](docs/test-plans/phase-nine-messaging.md).
+This demo keeps the existing API and database local. The script checks that the API health route responds, builds the Admin and Vendor portals with same-origin `/api/v1` proxies, starts production previews on loopback ports 5183/5184, and opens one free Quick Tunnel for each portal. It does not start migrations, seed data, or expose PostgreSQL, Redis, MinIO, or Mailpit.
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File scripts/start-cloudflare-demo.ps1
+```
+
+Use the Vendor and Admin HTTPS URLs printed by the script. To build an Android Buyer demo package for the current Vendor URL, run the printed command with the Vendor root URL. If the C: drive is low on space, pass an empty scratch path on a drive with free space:
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File scripts/build-buyer-cloudflare-apk.ps1 `
+  -VendorTunnelUrl 'https://<vendor-name>.trycloudflare.com' `
+  -BuildWorkspace 'D:\MateryalPH-Buyer-Demo-Build'
+```
+
+The script publishes `buyer-demo.apk` on the Vendor tunnel. Open `https://<vendor-name>.trycloudflare.com/buyer-demo.apk` on an Android phone, download and install it, then sign in. The APK uses the Vendor tunnel’s `/api/v1` proxy, so no separate public API tunnel or CORS change is needed. The temporary APK is a debug build and the download URL is public to anyone who has it.
+
+Quick Tunnel hostnames change when restarted. Keep the PC and both tunnel processes online for the demo; rebuild the Buyer APK if the Vendor hostname changes. The tunnel scripts bind only to loopback and can be stopped with:
+
+```powershell
+pwsh -ExecutionPolicy Bypass -File scripts/stop-cloudflare-demo.ps1
+```
+
+The local reCAPTCHA allowlist does not include temporary `trycloudflare.com` hostnames. If the login page rejects its reCAPTCHA token, use the existing accessible email verification option and retrieve its code from Mailpit on the desktop before taking the remote devices to the demo. Mailpit itself stays local. Reverb is not exposed by this two-tunnel setup, so messaging and notification updates use their existing polling fallback instead of live WebSockets.
+
+## Validation
 
 Run the checks relevant to a change from the owning directory:
 
@@ -107,6 +131,13 @@ npm run build
 # apps/buyer-mobile
 flutter analyze
 flutter test
+
+
+# 10 Vendor Seeded 
+docker compose exec api php artisan materyalph:demo-vendors-seed
+
+# For new machine run this
+py tools/demo-assets/fetch_demo_photos.py
 ```
 
 The API test runner finds Docker Desktop on PATH or in its standard user/system
@@ -120,4 +151,5 @@ Real provider credentials belong only n ignored local files. See
 and Vendor reCAPTCHA Enterprise setup. Buyer iOS acceptance requires macOS with Xcode.
 
 The approved authentication target is Laravel Passport. See `docs/adr/0001-api-authentication-passport.md` for the controlled transition from the scaffold's Sanctum dependency.
+
 # MateryalPH-Capstone-Project

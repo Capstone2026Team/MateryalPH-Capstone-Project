@@ -79,6 +79,8 @@ Route::prefix('mobile/auth')->middleware('auth.transport:MOBILE')->group(functio
         Route::post('/password/reset', [PasswordRecoveryController::class, 'reset']);
         Route::post('/bot-challenges/{challengeId}/verify', [BotChallengeController::class, 'verify']);
         Route::post('/bot-challenges/{challengeId}/resend', [BotChallengeController::class, 'resend']);
+        Route::post('/mfa/challenge', [MfaController::class, 'challenge']);
+        Route::post('/mfa/recovery', [MfaController::class, 'recover']);
     });
     Route::post('/register', RegisterController::class)->middleware('throttle:auth-registration');
     Route::post('/refresh', RefreshController::class)->middleware('throttle:auth-refresh');

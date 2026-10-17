@@ -9,6 +9,7 @@ import 'package:built_value/serializer.dart';
 
 part 'listing_search_sort.g.dart';
 
+/// TOP_SELLING ranks by units_sold (quantity on COMPLETED orders in each listing's sale unit), then SRS, distance, price and listing id.
 class ListingSearchSort extends EnumClass {
 
   @BuiltValueEnumConst(wireName: r'BEST_DEAL')
@@ -27,6 +28,8 @@ class ListingSearchSort extends EnumClass {
   static const ListingSearchSort PRICE_DESC = _$PRICE_DESC;
   @BuiltValueEnumConst(wireName: r'RATING_ASC')
   static const ListingSearchSort RATING_ASC = _$RATING_ASC;
+  @BuiltValueEnumConst(wireName: r'TOP_SELLING')
+  static const ListingSearchSort TOP_SELLING = _$TOP_SELLING;
 
   static Serializer<ListingSearchSort> get serializer => _$listingSearchSortSerializer;
 

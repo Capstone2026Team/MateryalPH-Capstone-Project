@@ -4,7 +4,7 @@ import { resolve } from 'node:path'
 
 const noticeId = '01995000-0000-7000-8000-000000000001'
 for (const audience of ['vendor', 'admin'] as const) {
-  test(`${audience} notification preferences and authorized export workspace`, async ({ page }) => {
+  test(`${audience} notification preferences and revoked notice links`, async ({ page }) => {
     await page.route('**/api/v1/**', async route => {
       const path = new URL(route.request().url()).pathname
       let data: unknown = {}
@@ -24,19 +24,16 @@ for (const audience of ['vendor', 'admin'] as const) {
     await expect(page.getByRole('heading', { name: 'Account access changed' })).toBeVisible()
     await page.getByRole('button', { name: /View details/ }).click()
     await expect(page.getByRole('alert')).toContainText('You no longer have permission')
-    await page.getByRole('button', { name: 'Preferences', exact: true }).click()
+    await page.getByRole('button', { name: 'Notification preferences', exact: true }).click()
     await expect(page.getByText(/Always enabled/)).toBeVisible()
     await expect(page.getByRole('checkbox')).toHaveCount(3)
     const directory = resolve('../../docs/design/evidence/phase-15')
     mkdirSync(directory, { recursive: true })
     await page.evaluate(() => window.scrollTo(0, 0))
     await page.screenshot({ path: resolve(directory, `${audience}-${page.viewportSize()!.width}-preferences.png`), fullPage: true })
-    await page.getByRole('button', { name: 'Documents & exports', exact: true }).click()
-    await expect(page.getByText('Review the accepted procurement snapshot')).toBeVisible()
-    await page.getByRole('button', { name: 'Download', exact: true }).click()
-    await expect(page.getByRole('alert')).toContainText('You no longer have permission')
+    await expect(page.getByRole('button', { name: 'Documents & exports', exact: true })).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.evaluate(() => window.scrollTo(0, 0))
-    await page.screenshot({ path: resolve(directory, `${audience}-${page.viewportSize()!.width}-exports.png`), fullPage: true })
+    await page.screenshot({ path: resolve(directory, `${audience}-${page.viewportSize()!.width}-inbox.png`), fullPage: true })
   })
 }

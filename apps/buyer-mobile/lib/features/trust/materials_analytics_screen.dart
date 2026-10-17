@@ -137,6 +137,29 @@ class _MaterialsAnalyticsScreenState extends State<MaterialsAnalyticsScreen> {
   int get _selectedPeriod =>
       _window.isCustom ? 3 : _presetDays.indexOf(_window.presetDays ?? 30);
 
+  void _submitSearch(String value) {
+    _query = value.trim();
+    _load();
+  }
+
+  void _clearSearch() {
+    _search.clear();
+    _submitSearch('');
+  }
+
+  void _openDetails(ComparableGroupView item) => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => MaterialPriceDetailsScreen(
+        repository: widget.repository,
+        origin: widget.origin,
+        radiusKm: widget.radiusKm,
+        groupId: item.groupId,
+        window: _window,
+        onOpenListing: widget.onOpenListing,
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final groups = <String, List<ComparableGroupView>>{};
@@ -154,76 +177,32 @@ class _MaterialsAnalyticsScreenState extends State<MaterialsAnalyticsScreen> {
             key: const PageStorageKey('materials-analytics'),
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
-              Semantics(
-                container: true,
-                child: Row(
-                  children: [
-                    const Icon(
-                      LucideIcons.mapPin,
-                      size: 16,
-                      color: BuyerTheme.muted,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        'Within ${widget.radiusKm} km of ${widget.originLabel ?? widget.origin.label}',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: BuyerTheme.muted,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              _ScopeCard(
+                area:
+                    'Within ${widget.radiusKm} km of ${widget.originLabel ?? widget.origin.label}',
+                selected: _selectedPeriod,
+                onPeriod: _choosePeriod,
+                customRange: _window.isCustom
+                    ? '${analyticsDayLabel(_window.startDate!, year: true)} → ${analyticsDayLabel(_window.endDate!, year: true)}'
+                    : null,
               ),
               const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (var index = 0; index < _periods.length; index++)
-                    ChoiceChip(
-                      label: Text(_periods[index]),
-                      selected: _selectedPeriod == index,
-                      materialTapTargetSize: MaterialTapTargetSize.padded,
-                      onSelected: (_) => _choosePeriod(index),
-                    ),
-                ],
-              ),
-              if (_window.isCustom)
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(
-                    '${analyticsDayLabel(_window.startDate!, year: true)} → ${analyticsDayLabel(_window.endDate!, year: true)}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: BuyerTheme.muted,
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 12),
-              TextField(
+              PillSearchField(
                 controller: _search,
-                textInputAction: TextInputAction.search,
-                decoration: const InputDecoration(
-                  labelText: 'Search materials',
-                  prefixIcon: Icon(LucideIcons.search),
-                  border: OutlineInputBorder(),
-                ),
-                onSubmitted: (value) {
-                  _query = value;
-                  _load();
-                },
+                hintText: 'Search materials',
+                onSubmitted: _submitSearch,
+                onSearch: () => _submitSearch(_search.text),
+                onClear: _query.isEmpty ? null : _clearSearch,
               ),
               const SizedBox(height: 12),
               if (envelope != null) _DatasetBand(envelope: envelope),
-              const SizedBox(height: 12),
+              const SizedBox(height: 4),
               if (_loading)
                 ...List.generate(
-                  4,
+                  3,
                   (_) => const Padding(
-                    padding: EdgeInsets.only(bottom: 10),
-                    child: SkeletonBox(height: 96),
+                    padding: EdgeInsets.only(top: 12),
+                    child: SkeletonBox(height: 132),
                   ),
                 )
               else if (_failure != null)
@@ -239,52 +218,26 @@ class _MaterialsAnalyticsScreenState extends State<MaterialsAnalyticsScreen> {
                   ),
                 )
               else if (_items.isEmpty)
-                AnalyticsNullCard(
+                StateMessage(
+                  kind: StateKind.empty,
+                  compact: true,
                   title: 'No comparable materials here yet',
-                  reason: envelope?.latestDate == null
+                  message: envelope?.latestDate == null
                       ? 'No daily price snapshot has been published yet. Prices are captured daily at 00:10 Asia/Manila.'
                       : 'No comparable listing or recorded price matches this area and period. Try a larger radius on the Map or a longer period.',
+                  actionLabel: _query.isEmpty ? null : 'Clear search',
+                  onAction: _query.isEmpty ? null : _clearSearch,
                 )
               else ...[
-                for (final entry in groups.entries)
-                  Theme(
-                    data: Theme.of(
-                      context,
-                    ).copyWith(dividerColor: Colors.transparent),
-                    child: ExpansionTile(
-                      initiallyExpanded: true,
-                      tilePadding: EdgeInsets.zero,
-                      title: Text(
-                        entry.key,
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                      subtitle: Text(
-                        '${entry.value.length} variant${entry.value.length == 1 ? '' : 's'}',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      children: [
-                        for (final item in entry.value)
-                          _AnalyticsRow(
-                            item: item,
-                            onOpen: () => Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => MaterialPriceDetailsScreen(
-                                  repository: widget.repository,
-                                  origin: widget.origin,
-                                  radiusKm: widget.radiusKm,
-                                  groupId: item.groupId,
-                                  window: _window,
-                                  onOpenListing: widget.onOpenListing,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
+                for (final entry in groups.entries) ...[
+                  _CategoryHeading(name: entry.key, count: entry.value.length),
+                  for (final item in entry.value)
+                    _AnalyticsRow(item: item, onOpen: () => _openDetails(item)),
+                ],
                 if (_page?.nextCursor != null)
-                  Center(
-                    child: TextButton(
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: OutlinedButton(
                       onPressed: _loadingMore ? null : () => _load(more: true),
                       child: Text(_loadingMore ? 'Loading…' : 'Load more'),
                     ),
@@ -298,46 +251,195 @@ class _MaterialsAnalyticsScreenState extends State<MaterialsAnalyticsScreen> {
   }
 }
 
-class _DatasetBand extends StatelessWidget {
-  const _DatasetBand({required this.envelope});
+/// The inherited area and the history period, kept together so the scope reads as one choice.
+class _ScopeCard extends StatelessWidget {
+  const _ScopeCard({
+    required this.area,
+    required this.selected,
+    required this.onPeriod,
+    this.customRange,
+  });
 
-  final AnalyticsEnvelopeView envelope;
+  final String area;
+  final int selected;
+  final ValueChanged<int> onPeriod;
+  final String? customRange;
 
   @override
   Widget build(BuildContext context) => Container(
-    width: double.infinity,
     padding: const EdgeInsets.all(12),
-    decoration: const BoxDecoration(
-      color: BuyerTheme.brandSoft,
-      border: Border(left: BorderSide(color: BuyerTheme.action, width: 4)),
+    decoration: BoxDecoration(
+      color: BuyerTheme.canvas,
+      borderRadius: BorderRadius.circular(12),
     ),
     child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          envelope.datasetLabel,
-          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(top: 2),
+              child: Icon(
+                LucideIcons.mapPin,
+                size: 18,
+                color: BuyerTheme.action,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                area,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: BuyerTheme.ink,
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 4),
-        Text(
-          [
-            envelope.updateSchedule,
-            if (envelope.snapshotAt != null)
-              'Last capture ${formatManilaTimestamp(envelope.snapshotAt!)}',
-            'Current sellers as of ${formatManilaTimestamp(envelope.currentAsOf)}',
-          ].join(' · '),
-          style: const TextStyle(fontSize: 12, color: BuyerTheme.ink),
+        const SizedBox(height: 12),
+        SegmentedTabs(
+          labels: _periods,
+          selected: selected,
+          onChanged: onPeriod,
         ),
-        const SizedBox(height: 4),
+        if (customRange != null) ...[
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              const Icon(
+                LucideIcons.calendar,
+                size: 16,
+                color: BuyerTheme.muted,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  customRange!,
+                  style: const TextStyle(fontSize: 13, color: BuyerTheme.ink),
+                ),
+              ),
+              TextButton(
+                onPressed: () => onPeriod(3),
+                style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+                child: const Text(
+                  'Change',
+                  semanticsLabel: 'Change custom period',
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    ),
+  );
+}
+
+class _CategoryHeading extends StatelessWidget {
+  const _CategoryHeading({required this.name, required this.count});
+
+  final String name;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 20, bottom: 10),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: Semantics(
+            header: true,
+            child: Text(
+              name,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
         Text(
-          envelope.explanation,
-          style: const TextStyle(fontSize: 12, color: BuyerTheme.ink),
+          '$count variant${count == 1 ? '' : 's'}',
+          style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
         ),
       ],
     ),
   );
 }
 
+/// What the numbers are: dataset, capture timing and the not-a-quotation explanation.
+class _DatasetBand extends StatelessWidget {
+  const _DatasetBand({required this.envelope});
+
+  final AnalyticsEnvelopeView envelope;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    container: true,
+    child: Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: BuyerTheme.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 1),
+            child: Icon(LucideIcons.info, size: 18, color: BuyerTheme.action),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  switch (envelope.datasetLabel) {
+                    'TEST — Recorded Test Marketplace Prices' =>
+                      'Recorded Marketplace Prices',
+                    final label => label,
+                  },
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: BuyerTheme.ink,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  [
+                    envelope.updateSchedule,
+                    if (envelope.snapshotAt != null)
+                      'Last capture ${formatManilaTimestamp(envelope.snapshotAt!)}',
+                    'Current sellers as of ${formatManilaTimestamp(envelope.currentAsOf)}',
+                  ].join(' · '),
+                  style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  envelope.explanation,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: BuyerTheme.muted,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// One comparable variant: name and unit, the latest average with its date, the trend, and how
+/// many sellers offer it now. The whole card opens Material Price Details.
 class _AnalyticsRow extends StatelessWidget {
   const _AnalyticsRow({required this.item, required this.onOpen});
 
@@ -347,86 +449,153 @@ class _AnalyticsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final end = item.endPoint;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: BuyerTheme.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            item.displayName,
-            style: const TextStyle(fontWeight: FontWeight.w700),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Semantics(
+        button: true,
+        hint: 'View details',
+        child: Material(
+          color: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: BuyerTheme.border),
           ),
-          Text(
-            '${item.materialName} · PHP per ${item.unitName}',
-            style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 16,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Column(
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onOpen,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 14, 10, 12),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    end.hasValue ? pesoDecimal(end.average) : '—',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.displayName,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: BuyerTheme.ink,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${item.materialName} · PHP per ${item.unitName}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: BuyerTheme.muted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const ExcludeSemantics(
+                        child: Icon(
+                          LucideIcons.chevronRight,
+                          size: 20,
+                          color: BuyerTheme.muted,
+                        ),
+                      ),
+                    ],
                   ),
-                  Text(
-                    end.hasValue
-                        ? 'Average on ${analyticsDayLabel(end.date, year: true)}'
-                        : (end.label ??
-                              'No average on ${analyticsDayLabel(end.date, year: true)}'),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: BuyerTheme.muted,
-                    ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 10,
+                    crossAxisAlignment: WrapCrossAlignment.end,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            end.hasValue ? pesoDecimal(end.average) : '—',
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: BuyerTheme.ink,
+                            ),
+                          ),
+                          Text(
+                            end.hasValue
+                                ? 'Average on ${analyticsDayLabel(end.date, year: true)}'
+                                : (end.label ??
+                                      'No average on ${analyticsDayLabel(end.date, year: true)}'),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: BuyerTheme.muted,
+                            ),
+                          ),
+                          if (end.status == 'LIMITED_DATA')
+                            const Text(
+                              'Limited Local Data — 1 seller',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: BuyerTheme.muted,
+                              ),
+                            ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: BuyerTheme.canvas,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: TrendText(trend: item.trend, compact: true),
+                      ),
+                    ],
                   ),
-                  if (end.status == 'LIMITED_DATA')
-                    const Text(
-                      'Limited Local Data — 1 seller',
-                      style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
-                    ),
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Icon(
+                        LucideIcons.store,
+                        size: 16,
+                        color: item.currentVendors > 0
+                            ? BuyerTheme.successStrong
+                            : BuyerTheme.muted,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          item.currentVendors > 0
+                              ? '${item.currentVendors} seller${item.currentVendors == 1 ? '' : 's'} offering now'
+                              : 'No Current Offers',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: item.currentVendors > 0
+                                ? BuyerTheme.ink
+                                : BuyerTheme.muted,
+                          ),
+                        ),
+                      ),
+                      const Text(
+                        'View details',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: BuyerTheme.action,
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
-              TrendText(trend: item.trend, compact: true),
-            ],
+            ),
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  item.currentVendors > 0
-                      ? '${item.currentVendors} seller${item.currentVendors == 1 ? '' : 's'} offering now'
-                      : 'No Current Offers',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: onOpen,
-                style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
-                child: Text(
-                  'View details',
-                  semanticsLabel: 'View details for ${item.displayName}',
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -47,6 +47,10 @@ export interface DeliveryPlanGroup {
      *
      */
     candidates: Array<DeliveryPlanVehicle>;
+    /**
+     * Configured vehicles permitted for a recorded Owner or Store Manager manual load review, including an automatic dimensional-fit rejection. Availability, material compatibility, known payload, route range and access still apply. Trip counts cover known payload or mixer volume only and do not prove cargo fit. Empty outside MANUAL_REVIEW_REQUIRED; automatic candidates remain separate.
+     */
+    manualReviewVehicles?: Array<DeliveryPlanVehicle>;
 }
 
 
@@ -88,6 +92,7 @@ export function DeliveryPlanGroupFromJSONTyped(json: any, ignoreDiscriminator: b
         'status': json['status'],
         'manualReviewReasons': json['manual_review_reasons'],
         'candidates': ((json['candidates'] as Array<any>).map(DeliveryPlanVehicleFromJSON)),
+        'manualReviewVehicles': json['manual_review_vehicles'] == null ? undefined : ((json['manual_review_vehicles'] as Array<any>).map(DeliveryPlanVehicleFromJSON)),
     };
 }
 
@@ -107,6 +112,7 @@ export function DeliveryPlanGroupToJSONTyped(value?: DeliveryPlanGroup | null, i
         'status': value['status'],
         'manual_review_reasons': value['manualReviewReasons'],
         'candidates': ((value['candidates'] as Array<any>).map(DeliveryPlanVehicleToJSON)),
+        'manual_review_vehicles': value['manualReviewVehicles'] == null ? undefined : ((value['manualReviewVehicles'] as Array<any>).map(DeliveryPlanVehicleToJSON)),
     };
 }
 

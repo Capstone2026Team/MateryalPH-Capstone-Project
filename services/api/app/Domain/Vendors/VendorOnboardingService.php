@@ -134,7 +134,8 @@ final class VendorOnboardingService
             return [
                 'lock_version' => (int) $organization->lock_version, 'drafts' => [], 'requirements' => [], 'step_completion' => [],
                 'organization' => ['id' => (string) $organization->id, 'store_name' => $organization->store_name],
-                'sections' => [], 'verification' => [], 'setup' => ['status' => $organization->store_setup_status],
+                'sections' => [], 'verification' => [], 'setup' => ['status' => $organization->store_setup_status,
+                    ...($scope['role'] === 'STORE_MANAGER' ? ['delivery_setup' => app(VendorDeliveryEligibility::class)->snapshot($organizationId)] : [])],
                 'activation' => ['status' => $organization->store_activation_status, 'marketplace_discoverability_status' => $organization->marketplace_discoverability_status, 'readiness' => $readiness],
                 'welcome_required' => false, 'permissions' => $scope['permissions'],
             ];
@@ -212,8 +213,10 @@ final class VendorOnboardingService
                 'status' => $organization->store_setup_status,
                 'operating_schedule' => $operatingSchedule,
                 'vacation_mode' => (bool) ($profile->vacation_mode ?? false),
+                ...app(VendorVacationSchedule::class)->snapshot($profile),
                 'profile' => $profile === null ? null : ['public_store_name' => $profile->public_store_name, 'description' => $profile->description, 'bulk_capability' => $profile->bulk_capability === null ? null : (bool) $profile->bulk_capability, 'fulfillment_method' => $profile->fulfillment_method, 'public_email' => $profile->public_email, 'public_phone' => $profile->public_phone, 'status' => $profile->status, 'version' => (int) $profile->version, 'lock_version' => (int) $profile->lock_version],
                 'delivery' => $delivery === null ? null : (array) $delivery,
+                'delivery_setup' => app(VendorDeliveryEligibility::class)->snapshot($organizationId),
                 'vehicles' => $vehicles,
                 'media' => $media->map(fn (object $item): array => (array) $item)->all(),
                 'payment' => $payment === null ? null : $this->payment($payment),
@@ -442,14 +445,20 @@ final class VendorOnboardingService
                 return;
             }
             $existing = DB::table('store_profiles')->where('vendor_organization_id', $organizationId)->first();
+            if (isset($input['fulfillment_method']) && $input['fulfillment_method'] !== $existing?->fulfillment_method) {
+                app(VendorDeliveryEligibility::class)->assertMethodChange($organizationId, $input['fulfillment_method']);
+            }
             $publicProfileOnly = $existing !== null && $organization->store_setup_status === 'COMPLETED'
-                && array_diff(array_keys($input), ['organization_lock_version', 'draft_lock_version', 'public_store_name', 'description', 'public_email', 'public_phone', 'operating_schedule', 'vacation_mode']) === [];
-            $profile = [
-                'vacation_mode' => array_key_exists('vacation_mode', $input) ? (bool) $input['vacation_mode'] : (bool) ($existing->vacation_mode ?? false),
+                && array_diff(array_keys($input), ['organization_lock_version', 'draft_lock_version', 'public_store_name', 'description', 'public_email', 'public_phone', 'operating_schedule', 'vacation_mode', 'vacation_starts_on', 'vacation_ends_on']) === [];
+            $vacation = array_key_exists('vacation_mode', $input)
+                ? app(VendorVacationSchedule::class)->resolve($input, $existing)
+                : ['vacation_mode' => (bool) ($existing->vacation_mode ?? false)];
+            $profile = $vacation + [
                 'public_store_name' => trim((string) ($input['public_store_name'] ?? ($existing === null ? $organization->store_name : $existing->public_store_name))),
                 'description' => array_key_exists('description', $input) ? $input['description'] : ($existing === null ? null : $existing->description),
                 'bulk_capability' => array_key_exists('bulk_capability', $input) ? (bool) $input['bulk_capability'] : ($existing === null ? null : $existing->bulk_capability),
                 'fulfillment_method' => $input['fulfillment_method'] ?? ($existing === null ? null : $existing->fulfillment_method),
+                'vendor_delivery_enabled' => $input['vendor_delivery_enabled'] ?? (bool) ($existing->vendor_delivery_enabled ?? false),
                 'public_email' => array_key_exists('public_email', $input) ? $input['public_email'] : ($existing === null ? null : $existing->public_email),
                 'public_phone' => array_key_exists('public_phone', $input) ? $input['public_phone'] : ($existing === null ? null : $existing->public_phone),
                 'status' => $organization->store_setup_status === 'COMPLETED' ? 'COMPLETED' : 'DRAFT',
@@ -466,8 +475,12 @@ final class VendorOnboardingService
                 DB::table('store_profiles')->where('id', $existing->id)->update($profile);
             }
             $profileId = (string) ($existing->id ?? $profile['id']);
-            if (array_key_exists('vacation_mode', $input) && (bool) ($existing->vacation_mode ?? false) !== $profile['vacation_mode']) {
-                $this->audit->account($request, 'VENDOR_VACATION_MODE_UPDATED', 'STORE_PROFILE', $profileId, after: ['vacation_mode' => $profile['vacation_mode']]);
+            if (array_key_exists('vacation_mode', $input)) {
+                $vacationBefore = app(VendorVacationSchedule::class)->snapshot($existing);
+                $vacationAfter = app(VendorVacationSchedule::class)->snapshot(DB::table('store_profiles')->where('id', $profileId)->first());
+                if ($vacationBefore !== $vacationAfter) {
+                    $this->audit->account($request, 'VENDOR_VACATION_MODE_UPDATED', 'STORE_PROFILE', $profileId, before: $vacationBefore, after: $vacationAfter + ['vacation_mode' => $profile['vacation_mode']]);
+                }
             }
             if (isset($input['operating_schedule'])) {
                 $schedule = app(StoreOperatingSchedule::class);
@@ -488,6 +501,7 @@ final class VendorOnboardingService
             }
             $method = (string) ($profile['fulfillment_method'] ?? '');
             if ($method === 'SELF_PICKUP') {
+                DB::table('store_profiles')->where('id', $profileId)->update(['vendor_delivery_enabled' => false]);
                 DB::table('delivery_service_areas')->where('vendor_organization_id', $organizationId)->update(['active' => false, 'updated_at' => now()]);
             } elseif (in_array($method, ['VENDOR_DELIVERY', 'BOTH'], true)) {
                 $delivery = is_array($input['delivery'] ?? null) ? $input['delivery'] : [];
@@ -495,6 +509,17 @@ final class VendorOnboardingService
             }
             if (is_array($input['vehicles'] ?? null)) {
                 $this->saveVehicles($request, $organizationId, $input['vehicles']);
+            }
+            if (($input['vendor_delivery_enabled'] ?? false) === true) {
+                if (! in_array($method, ['VENDOR_DELIVERY', 'BOTH'], true)) {
+                    throw new AuthenticationException('FULFILLMENT_NOT_OFFERED', 'Select Vendor Delivery Only or Both before activating delivery.', 422);
+                }
+                app(VendorDeliveryEligibility::class)->assertReady($organizationId);
+            }
+            $enabled = (bool) DB::table('store_profiles')->where('id', $profileId)->value('vendor_delivery_enabled');
+            if ($enabled !== (bool) ($existing->vendor_delivery_enabled ?? false)) {
+                $this->audit->account($request, 'VENDOR_DELIVERY_ACTIVATION_CHANGED', 'STORE_PROFILE', $profileId,
+                    before: ['enabled' => (bool) ($existing->vendor_delivery_enabled ?? false)], after: ['enabled' => $enabled]);
             }
             DB::table('vendor_organizations')->where('id', $organizationId)->update(['store_setup_status' => $organization->store_setup_status === 'COMPLETED' ? 'COMPLETED' : 'IN_PROGRESS', 'lock_version' => (int) $organization->lock_version + 1, 'updated_at' => now()]);
             $this->audit->account($request, 'VENDOR_STORE_SETUP_DRAFT_SAVED', 'STORE_PROFILE', (string) ($existing->id ?? $profile['id']), after: ['fields' => array_keys($input)]);
@@ -535,6 +560,10 @@ final class VendorOnboardingService
                 throw new AuthenticationException('STORE_OPERATION_REQUIRED', 'Set a valid Open or Closed state for every day before finishing Store Setup.', 422);
             }
             if (in_array($profile->fulfillment_method, ['VENDOR_DELIVERY', 'BOTH'], true)) {
+                app(VendorDeliveryEligibility::class)->assertReady($organizationId);
+                if (! (bool) $profile->vendor_delivery_enabled) {
+                    throw new AuthenticationException('VENDOR_DELIVERY_NOT_ACTIVATED', 'Activate Vendor Delivery after completing its setup checklist.', 422);
+                }
                 $delivery = DB::table('delivery_service_areas')->where('vendor_organization_id', $organizationId)->where('active', true)->first();
                 if ($delivery === null || $delivery->maximum_distance_km === null || (int) $delivery->maximum_distance_km < 1) {
                     throw new AuthenticationException('DELIVERY_CONFIGURATION_REQUIRED', 'Add the delivery distance before finishing Store Setup.', 422);
@@ -1385,6 +1414,8 @@ final class VendorOnboardingService
                 'base_fee_centavos' => $rate === null ? null : (int) $rate->base_fee_centavos,
                 'per_km_centavos' => $rate === null ? null : (int) $rate->per_km_centavos,
                 'maximum_distance_km' => $rate === null ? null : (int) $rate->maximum_distance_km,
+                'mobilization_fee_centavos' => $rate === null ? null : (int) $rate->mobilization_fee_centavos,
+                'mobilization_basis' => $rate?->mobilization_basis,
             ];
         })->all();
     }

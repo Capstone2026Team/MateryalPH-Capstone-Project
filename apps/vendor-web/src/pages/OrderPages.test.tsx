@@ -6,14 +6,15 @@ import { DeadlineCountdown, MoneyBreakdown, OrderProgress, OrderStateRows } from
 import * as onboarding from '../lib/onboarding-api'
 import * as orders from '../lib/orders-api'
 import { chatApi } from '../lib/messaging-api'
+import type { ConversationDetail } from '@materyalph/api-client-ts'
 import * as disputes from '../lib/disputes-api'
 import type { OrderDetail, OrderLine, OrderSummary } from '../lib/orders-api'
 import { VendorOrderDetailPage, VendorOrdersPage } from './OrderPages'
 
 vi.mock('../lib/onboarding-api', async original => ({ ...await original<typeof import('../lib/onboarding-api')>(), getVendorOnboarding: vi.fn(), getVendorPrivateFileUrl: vi.fn() }))
-vi.mock('../lib/messaging-api', async original => ({ ...await original<typeof import('../lib/messaging-api')>(), chatApi: { forOrder: vi.fn() } }))
+vi.mock('../lib/messaging-api', async original => ({ ...await original<typeof import('../lib/messaging-api')>(), chatApi: { forOrder: vi.fn(), get: vi.fn() } }))
 vi.mock('./FulfillmentConversationDialog', () => ({ FulfillmentConversationDialog: ({ conversationId, onClose }: { conversationId: string; onClose: () => void }) => <div role="dialog" aria-label="Fulfillment conversations"><p>Thread {conversationId}</p><button onClick={onClose}>Close fulfillment popup</button></div> }))
-vi.mock('../lib/orders-api', async original => ({ ...await original<typeof import('../lib/orders-api')>(), listOrders: vi.fn(), getOrder: vi.fn(), confirmOrder: vi.fn(), declineOrder: vi.fn(), getDeliveryPlan: vi.fn() }))
+vi.mock('../lib/orders-api', async original => ({ ...await original<typeof import('../lib/orders-api')>(), listOrders: vi.fn(), getOrder: vi.fn(), confirmOrder: vi.fn(), declineOrder: vi.fn(), getDeliveryPlan: vi.fn(), listAssignees: vi.fn(), listDeliveryVehicles: vi.fn(), assignFulfillment: vi.fn() }))
 vi.mock('../lib/disputes-api', async original => ({ ...await original<typeof import('../lib/disputes-api')>(), getEligibility: vi.fn() }))
 
 const states = (order: string, payment = 'NOT_REQUIRED') => [
@@ -68,13 +69,82 @@ function failure(status: number, code: string, details: Record<string, unknown> 
   return new ResponseError(new Response(JSON.stringify({ data: null, meta: {}, errors: [{ code, message: 'Conflict', details }] }), { status, headers: { 'Content-Type': 'application/json' } }), 'failed')
 }
 
+function fulfillmentUnread(count: number): ConversationDetail {
+  return {
+    conversation: { id: 'fulfillment-1', purpose: 'FULFILLMENT', contextType: 'ITEM_BASED', lockVersion: 1,
+      store: { id: 'store-1', name: 'Supply', verified: true }, unreadCount: count, channel: 'private-thread',
+      lockedReference: {}, updatedAt: '2026-10-12T08:00:00Z', canTransfer: false, fulfillmentEntryEnabled: true, readOnly: false },
+    messages: { items: [], hasMore: false }, quotations: { versions: [], hasMore: false },
+  }
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.mocked(chatApi.get).mockResolvedValue(fulfillmentUnread(0))
   vi.mocked(onboarding.getVendorOnboarding).mockResolvedValue(snapshot(['portal.messages', 'portal.orders', 'orders.confirm', 'orders.revise']))
   vi.mocked(onboarding.getVendorPrivateFileUrl).mockResolvedValue({ url: 'https://example.test/logo', expiresAt: new Date() })
 })
 
 const openDetail = () => render(<MemoryRouter initialEntries={['/orders/order-1']}><Routes><Route path="/orders/:orderId" element={<VendorOrderDetailPage />} /></Routes></MemoryRouter>)
+
+test('a Fulfillment Staff order link opens their assigned workspace for delivery proof', async () => {
+  vi.mocked(onboarding.getVendorOnboarding).mockResolvedValue(snapshot(['portal.orders', 'portal.fulfillment', 'portal.messages']))
+  render(<MemoryRouter initialEntries={['/orders/order-1']}><Routes><Route path="/orders/:orderId" element={<VendorOrderDetailPage />} /><Route path="/fulfillment/:orderId" element={<MessageDestination />} /></Routes></MemoryRouter>)
+  expect(await screen.findByText('/fulfillment/order-1')).toBeVisible()
+  expect(orders.getOrder).not.toHaveBeenCalled()
+})
+
+test('Done dispatches the assigned delivery and a delayed automatic read cannot undo its assignment', async () => {
+  const preparing = detail({
+    acceptedAt: new Date(), fulfillmentMethod: 'DELIVERY', primaryAction: 'NONE', states: states('PROCESSING'),
+    fulfillment: { method: 'DELIVERY', state: 'PROCESSING', late: false, trackingNotice: 'Recorded milestones only.', trips: [], vehicleIssues: [], receipt: { paused: false, windowHours: 48 }, thread: { available: false, readOnly: false }, nextAction: 'DISPATCH',
+      steps: [{ key: 'OUT_FOR_DELIVERY', label: 'Out for delivery', status: 'CURRENT', proofRequired: false, proofRequirements: [] }, { key: 'DELIVERED', label: 'Delivered', status: 'UPCOMING', proofRequired: true, proofRequirements: ['DELIVERY_PHOTO', 'RECEIVER_NAME'] }] },
+  }, { canAssignFulfillment: true, canRecordMilestone: true })
+  const dispatched = detail({ ...preparing, lockVersion: 4, states: states('OUT_FOR_DELIVERY'), fulfillment: { ...preparing.fulfillment!, state: 'OUT_FOR_DELIVERY', nextAction: 'RECORD_DELIVERY',
+    assignment: { userId: 12, displayName: 'Delivery Staff', role: 'FULFILLMENT', assignedAt: new Date(), vehicle: { vehicleIndex: 0, name: 'Accepted truck', numberOfVehicles: 1, totalVehicleTrips: 1 } },
+    steps: [{ ...preparing.fulfillment!.steps[0]!, status: 'COMPLETE' }, { ...preparing.fulfillment!.steps[1]!, status: 'CURRENT' }] } }, { canAssignFulfillment: true, canRecordMilestone: false })
+  let completeRead!: (value: OrderDetail) => void
+  const oldRead = new Promise<OrderDetail>(resolve => { completeRead = resolve })
+  vi.mocked(orders.getOrder).mockReturnValue(oldRead).mockResolvedValueOnce(preparing)
+  vi.mocked(orders.listAssignees).mockResolvedValue([{ userId: 12, displayName: 'Delivery Staff', assigned: false }])
+  vi.mocked(orders.listDeliveryVehicles).mockResolvedValue([{ vehicleIndex: 0, vehicleId: 'accepted-truck', name: 'Accepted truck', vehicleType: 'TRUCK', numberOfVehicles: 1, totalVehicleTrips: 1, available: true, unavailableReason: '' }])
+  vi.mocked(orders.assignFulfillment).mockResolvedValue(dispatched)
+  openDetail()
+  await screen.findByRole('heading', { name: 'Confirm delivery assignment' })
+  await waitFor(() => expect(screen.getByRole('combobox', { name: 'Fulfillment Staff' })).toHaveValue('12'))
+  act(() => window.dispatchEvent(new Event('materyalph:domain-refresh')))
+  await waitFor(() => expect(orders.getOrder).toHaveBeenCalledTimes(2))
+  fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+  await waitFor(() => expect(orders.assignFulfillment).toHaveBeenCalledWith('order-1', 12, 'Confirmed delivery dispatch', { lockVersion: 3, vehicleIndex: 0, dispatch: true }, expect.any(String)))
+  expect(await screen.findByText('Delivery Staff')).toBeVisible()
+  // A new refresh can share the transport's still-pending read from before dispatch.
+  act(() => window.dispatchEvent(new Event('materyalph:domain-refresh')))
+  await waitFor(() => expect(orders.getOrder).toHaveBeenCalledTimes(3))
+  await act(async () => { completeRead(preparing); await oldRead })
+  expect(screen.getByText('Delivery Staff')).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Reassign Fulfillment Staff' })).toBeVisible()
+  expect(screen.queryByRole('button', { name: 'Out for Delivery' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('textbox', { name: /Receiver name/ })).not.toBeInTheDocument()
+})
+
+test('staff delivery proof reaches Vendor Order Details after a private invalidation', async () => {
+  const current = detail({
+    acceptedAt: new Date(), fulfillmentMethod: 'DELIVERY', primaryAction: 'NONE', states: states('OUT_FOR_DELIVERY'),
+    fulfillment: { method: 'DELIVERY', state: 'OUT_FOR_DELIVERY', late: false, trackingNotice: 'Recorded milestones only.', trips: [], vehicleIssues: [], receipt: { paused: false, windowHours: 48 }, thread: { available: false, readOnly: false }, nextAction: 'RECORD_DELIVERY',
+      assignment: { displayName: 'Delivery Staff', role: 'FULFILLMENT' }, steps: [{ key: 'DELIVERED', label: 'Delivered', status: 'CURRENT', proofRequired: true, proofRequirements: ['DELIVERY_PHOTO', 'RECEIVER_NAME'] }] },
+  }, { canAssignFulfillment: false, canRecordMilestone: false })
+  vi.mocked(orders.getOrder).mockResolvedValue(current)
+  openDetail()
+  expect(await screen.findByText(/records Delivered with the receiver/)).toBeVisible()
+  expect(screen.queryByRole('textbox', { name: /Receiver name/ })).not.toBeInTheDocument()
+  const proof = { milestone: 'DELIVERED' as const, receiverName: 'Site Foreman', handoverConfirmed: true, recordedBy: 'Delivery Staff', photoPath: '/vendor/orders/order-1/files/proof-photo', additionalPhotoPaths: [] }
+  vi.mocked(orders.getOrder).mockResolvedValue(detail({ ...current, lockVersion: 4, states: states('DELIVERED'), fulfillment: { ...current.fulfillment!, state: 'DELIVERED', nextAction: 'AWAIT_RECEIPT', proof,
+    steps: [{ ...current.fulfillment!.steps[0]!, status: 'COMPLETE', actorRole: 'FULFILLMENT', proof }] } }))
+  act(() => window.dispatchEvent(new Event('materyalph:domain-refresh')))
+  expect(await screen.findByText('Site Foreman')).toBeVisible()
+  expect(screen.getByRole('button', { name: 'View proof photo' })).toBeVisible()
+  expect(screen.queryByRole('button', { name: 'Record delivery' })).not.toBeInTheDocument()
+})
 
 test('File a case opens a popup over the order and closing restores the trigger focus', async () => {
   vi.mocked(orders.getOrder).mockResolvedValue(detail({ primaryAction: 'NONE' }, { canFileDispute: true }))
@@ -165,6 +235,22 @@ test('clearing filters from an empty Closed result retains the Closed section', 
   await waitFor(() => expect(orders.listOrders).toHaveBeenLastCalledWith({ group: 'CLOSED', q: '', page: 1 }))
   expect(screen.getByRole('combobox', { name: 'Closed status' })).toHaveValue('')
   expect(screen.queryByRole('button', { name: 'View all orders' })).not.toBeInTheDocument()
+})
+
+test('order dates are inclusive, preserve status and search, and reset pagination only after Apply', async () => {
+  HTMLDialogElement.prototype.showModal = function () { this.open = true }
+  HTMLDialogElement.prototype.close = function () { this.open = false }
+  vi.mocked(orders.listOrders).mockResolvedValue({ items: [], meta: { group: 'CLOSED', counts: { CLOSED: 1 }, page: 2, perPage: 20, total: 0, hasMore: false, currentAsOf: new Date() } })
+  render(<MemoryRouter initialEntries={['/orders?group=CLOSED&closed_state=EXPIRED&q=cement&page=2']}><Routes><Route path="/orders" element={<VendorOrdersPage />} /></Routes></MemoryRouter>)
+  await waitFor(() => expect(orders.listOrders).toHaveBeenCalled())
+  fireEvent.click(screen.getByRole('button', { name: 'All dates' }))
+  fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-10-09' } })
+  fireEvent.change(screen.getByLabelText('To'), { target: { value: '2026-10-09' } })
+  expect(orders.listOrders).toHaveBeenCalledTimes(1)
+  fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+  await waitFor(() => expect(orders.listOrders).toHaveBeenLastCalledWith({ group: 'CLOSED', closedState: 'EXPIRED', q: 'cement', page: 1, from: '2026-10-09', to: '2026-10-09' }))
+  fireEvent.click(screen.getByRole('button', { name: /Remove .*2026 filter/ }))
+  await waitFor(() => expect(orders.listOrders).toHaveBeenLastCalledWith({ group: 'CLOSED', closedState: 'EXPIRED', q: 'cement', page: 1 }))
 })
 
 test('an empty group explains itself instead of showing a false table', async () => {
@@ -304,6 +390,31 @@ test('five separate state rows name each area in text', () => {
   expect(screen.getByText('Payment due')).toBeInTheDocument()
 })
 
+
+test.each(['/orders/order-1', '/orders?order=order-1'])('fulfillment Message badge updates and clears without reloading the order at %s', async entry => {
+  vi.mocked(orders.listOrders).mockResolvedValue({ items: [summary()], meta: { group: 'NEW', counts: { NEW: 1 }, page: 1, perPage: 20, total: 1, hasMore: false, currentAsOf: new Date() } })
+  vi.mocked(orders.getOrder).mockResolvedValue(detail({
+    fulfillment: { method: 'PICKUP', state: 'READY_FOR_PICKUP', late: false, steps: [], trackingNotice: 'Recorded milestones only.', trips: [],
+      receipt: { paused: false, windowHours: 48 }, vehicleIssues: [], nextAction: 'NONE',
+      thread: { available: true, conversationId: 'fulfillment-1', readOnly: false } },
+  }))
+  vi.mocked(chatApi.get).mockResolvedValue(fulfillmentUnread(120))
+  render(<MemoryRouter initialEntries={[entry]}><Routes><Route path="/orders" element={<VendorOrdersPage />} /><Route path="/orders/:orderId" element={<VendorOrderDetailPage />} /></Routes></MemoryRouter>)
+  const button = await screen.findByRole('button', { name: 'Message' })
+  await within(button).findByText('99+')
+  expect(button).toHaveAccessibleDescription('120 unread fulfillment messages')
+  const orderReads = vi.mocked(orders.getOrder).mock.calls.length
+  vi.mocked(chatApi.get).mockResolvedValue(fulfillmentUnread(2))
+  act(() => window.dispatchEvent(new Event('materyalph:domain-refresh')))
+  await within(button).findByText('2')
+  vi.mocked(chatApi.get).mockResolvedValue(fulfillmentUnread(0))
+  act(() => window.dispatchEvent(new Event('materyalph:navigation-updates')))
+  await waitFor(() => expect(button.querySelector('.portal-count-badge')).toBeNull())
+  expect(button).toHaveAccessibleDescription('No unread fulfillment messages')
+  await waitFor(() => expect(vi.mocked(orders.getOrder).mock.calls.length).toBeGreaterThan(orderReads))
+  expect(chatApi.get).toHaveBeenLastCalledWith('fulfillment-1')
+  expect(chatApi.forOrder).not.toHaveBeenCalled()
+})
 
 function MessageDestination() {
   const location = useLocation()

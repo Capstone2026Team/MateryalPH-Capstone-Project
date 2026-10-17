@@ -10,8 +10,6 @@ class _$WorkPackageVersion extends WorkPackageVersion {
   @override
   final String id;
   @override
-  final int version;
-  @override
   final String contentHash;
   @override
   final String? lockedAt;
@@ -24,7 +22,6 @@ class _$WorkPackageVersion extends WorkPackageVersion {
 
   _$WorkPackageVersion._(
       {required this.id,
-      required this.version,
       required this.contentHash,
       this.lockedAt,
       required this.content})
@@ -43,7 +40,6 @@ class _$WorkPackageVersion extends WorkPackageVersion {
     if (identical(other, this)) return true;
     return other is WorkPackageVersion &&
         id == other.id &&
-        version == other.version &&
         contentHash == other.contentHash &&
         lockedAt == other.lockedAt &&
         content == other.content;
@@ -53,7 +49,6 @@ class _$WorkPackageVersion extends WorkPackageVersion {
   int get hashCode {
     var _$hash = 0;
     _$hash = $jc(_$hash, id.hashCode);
-    _$hash = $jc(_$hash, version.hashCode);
     _$hash = $jc(_$hash, contentHash.hashCode);
     _$hash = $jc(_$hash, lockedAt.hashCode);
     _$hash = $jc(_$hash, content.hashCode);
@@ -65,7 +60,6 @@ class _$WorkPackageVersion extends WorkPackageVersion {
   String toString() {
     return (newBuiltValueToStringHelper(r'WorkPackageVersion')
           ..add('id', id)
-          ..add('version', version)
           ..add('contentHash', contentHash)
           ..add('lockedAt', lockedAt)
           ..add('content', content))
@@ -80,10 +74,6 @@ class WorkPackageVersionBuilder
   String? _id;
   String? get id => _$this._id;
   set id(String? id) => _$this._id = id;
-
-  int? _version;
-  int? get version => _$this._version;
-  set version(int? version) => _$this._version = version;
 
   String? _contentHash;
   String? get contentHash => _$this._contentHash;
@@ -107,7 +97,6 @@ class WorkPackageVersionBuilder
     final $v = _$v;
     if ($v != null) {
       _id = $v.id;
-      _version = $v.version;
       _contentHash = $v.contentHash;
       _lockedAt = $v.lockedAt;
       _content = $v.content.toBuilder();
@@ -136,8 +125,6 @@ class WorkPackageVersionBuilder
           _$WorkPackageVersion._(
             id: BuiltValueNullFieldError.checkNotNull(
                 id, r'WorkPackageVersion', 'id'),
-            version: BuiltValueNullFieldError.checkNotNull(
-                version, r'WorkPackageVersion', 'version'),
             contentHash: BuiltValueNullFieldError.checkNotNull(
                 contentHash, r'WorkPackageVersion', 'contentHash'),
             lockedAt: lockedAt,

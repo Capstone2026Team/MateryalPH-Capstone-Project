@@ -8,6 +8,7 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**options** | [**BuiltList&lt;DeliveryEstimateOption&gt;**](DeliveryEstimateOption.md) | Frozen system recommendation; absent on historical orders. | [optional]
 **feeMinCentavos** | **int** |  |
 **feeMaxCentavos** | **int** |  |
 **tripsMin** | **int** |  |

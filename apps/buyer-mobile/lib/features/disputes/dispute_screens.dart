@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/components/buyer_app_bar.dart';
+import '../../design_system/components/invoice_request_form.dart';
 import '../../design_system/components/dispute_components.dart';
 import '../../design_system/components/fulfillment_components.dart'
     show RefundTimelineCard;
@@ -133,19 +134,9 @@ class _Section extends StatelessWidget {
 }
 
 class _PromptField {
-  const _PromptField(
-    this.label, {
-    this.initial,
-    this.helper,
-    this.numeric = false,
-    this.maxLines = 1,
-    this.maxLength,
-  });
+  const _PromptField(this.label, {this.maxLines = 1, this.maxLength});
 
   final String label;
-  final String? initial;
-  final String? helper;
-  final bool numeric;
   final int maxLines;
   final int? maxLength;
 }
@@ -191,8 +182,8 @@ class _PromptDialog extends StatefulWidget {
 
 class _PromptDialogState extends State<_PromptDialog> {
   late final _controllers = [
-    for (final field in widget.fields)
-      TextEditingController(text: field.initial),
+    for (var index = 0; index < widget.fields.length; index++)
+      TextEditingController(),
   ];
 
   @override
@@ -215,15 +206,11 @@ class _PromptDialogState extends State<_PromptDialog> {
           for (var index = 0; index < widget.fields.length; index++)
             TextField(
               controller: _controllers[index],
-              keyboardType: widget.fields[index].numeric
-                  ? TextInputType.number
-                  : null,
               minLines: widget.fields[index].maxLines > 1 ? 2 : 1,
               maxLines: widget.fields[index].maxLines,
               maxLength: widget.fields[index].maxLength,
               decoration: InputDecoration(
                 labelText: widget.fields[index].label,
-                helperText: widget.fields[index].helper,
               ),
             ),
         ],
@@ -379,11 +366,14 @@ class _DisputesScreenState extends State<DisputesScreen> {
               ],
             )
           : _items.isEmpty
-          ? const StateMessage(
-              kind: StateKind.empty,
-              title: 'No disputes',
-              message:
-                  'If an order has a problem, open it and choose File a dispute. Filing does not refund automatically.',
+          ? StatePage(
+              onRefresh: _load,
+              child: const StateMessage(
+                kind: StateKind.empty,
+                artwork: StateArtwork.inbox,
+                title: 'No disputes',
+                message: 'Your order disputes will appear here.',
+              ),
             )
           : RefreshIndicator(
               onRefresh: _load,
@@ -1770,8 +1760,7 @@ class _EscalateCardState extends State<_EscalateCard> {
 
 // ── Invoices ────────────────────────────────────────────────────────────────────────────────────
 
-/// The Vendor's uploaded invoice copies for one order, copy and correction requests, billing
-/// details, and MateryalPH documents labelled as not the Vendor's tax invoice.
+/// The Vendor's uploaded invoice copies and copy/correction requests for one order.
 class OrderInvoicesScreen extends StatefulWidget {
   const OrderInvoicesScreen({
     super.key,
@@ -1841,89 +1830,57 @@ class _OrderInvoicesScreenState extends State<OrderInvoicesScreen> {
   }
 
   Future<void> _request(String kind, {String? recordId}) async {
-    final values = await _PromptDialog.show(
-      context,
-      title: kind == 'CORRECTION'
-          ? 'Request an invoice correction'
-          : 'Request an invoice copy',
-      intro:
-          'The store aims to upload within three business days. This is a service target, not an extension of its legal duty to issue the invoice.',
-      confirmLabel: 'Send request',
-      fields: [
-        _PromptField(
-          kind == 'CORRECTION'
-              ? 'What needs correcting'
-              : 'Details for the store',
-          maxLines: 5,
-          maxLength: 2000,
+    final data = _data;
+    if (data == null || _busy) return;
+    var current = data;
+    String? key;
+    String? requestBody;
+    final result = await Navigator.of(context).push<InvoiceBillingInput>(
+      MaterialPageRoute(
+        builder: (_) => InvoiceRequestFormScreen(
+          initial: InvoiceBillingInput(
+            name: data.billingName ?? '',
+            address: data.billingAddress ?? '',
+          ),
+          tinMasked: data.tinMasked,
+          requestKind: kind,
+          submitLabel: 'Submit Request',
+          notice:
+              'The Vendor aims to provide the copy or correction within three business days. This service target never extends its legal issuance deadline. Business TIN is optional.',
+          onSubmit: (input) async {
+            final body = [
+              input.name,
+              input.address,
+              input.tin,
+              input.details,
+            ].toString();
+            if (requestBody != body) {
+              key = null;
+              requestBody = body;
+            }
+            key ??= newIdempotencyKey();
+            current = await widget.repository.saveBillingDetails(
+              widget.orderId,
+              billingName: input.name,
+              billingAddress: input.address,
+              tin: input.tin,
+              lockVersion: current.billingLockVersion,
+            );
+            if (mounted) setState(() => _data = current);
+            current = await widget.repository.requestInvoice(
+              widget.orderId,
+              kind: kind,
+              details: input.details!,
+              invoiceRecordId: recordId,
+              idempotencyKey: key!,
+            );
+            if (mounted) setState(() => _data = current);
+          },
         ),
-      ],
-    );
-    final details = values?.first;
-    if (details == null || !mounted) return;
-    if (details.length < 5) {
-      setState(() => _notice = 'Describe the request in a few words.');
-      return;
-    }
-    _key = null;
-    await _run(
-      (key) => widget.repository.requestInvoice(
-        widget.orderId,
-        kind: kind,
-        details: details,
-        invoiceRecordId: recordId,
-        idempotencyKey: key,
       ),
-      'Request sent to the store.',
     );
-  }
-
-  Future<void> _editBilling(BuyerInvoicesView data) async {
-    final entered = await _PromptDialog.show(
-      context,
-      title: 'Invoice billing details',
-      confirmLabel: 'Save',
-      fields: [
-        _PromptField('Billing name', initial: data.billingName),
-        _PromptField('Billing address', initial: data.billingAddress),
-        _PromptField(
-          'TIN (optional)',
-          numeric: true,
-          helper: data.tinMasked == null
-              ? null
-              : 'Saved: ${data.tinMasked}. Leave blank to keep it.',
-        ),
-      ],
-    );
-    if (entered == null || !mounted) return;
-    final values = (entered[0], entered[1], entered[2]);
-    if (values.$1.isEmpty || values.$2.isEmpty) {
-      setState(() => _notice = 'Enter the billing name and address.');
-      return;
-    }
-    setState(() {
-      _busy = true;
-      _notice = null;
-    });
-    try {
-      final value = await widget.repository.saveBillingDetails(
-        widget.orderId,
-        billingName: values.$1,
-        billingAddress: values.$2,
-        tin: values.$3.isEmpty ? null : values.$3,
-        lockVersion: data.billingLockVersion,
-      );
-      if (mounted) {
-        setState(() {
-          _data = value;
-          _notice = 'Billing details saved for this order.';
-        });
-      }
-    } on DiscoveryFailure catch (error) {
-      if (mounted) setState(() => _notice = error.message);
-      if (error.kind == DiscoveryFailureKind.conflict) await _load();
-    } finally {
-      if (mounted) setState(() => _busy = false);
+    if (result != null && mounted) {
+      setState(() => _notice = 'Request sent to the store.');
     }
   }
 
@@ -2049,36 +2006,6 @@ class _OrderInvoicesScreenState extends State<OrderInvoicesScreen> {
                           ],
                         ),
                       ),
-                    _Section(
-                      title: 'Billing details',
-                      icon: LucideIcons.building2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text(
-                            data.billingName == null
-                                ? 'Not provided. The store uses your account name.'
-                                : '${data.billingName}\n${data.billingAddress}${data.tinMasked != null ? '\nTIN ${data.tinMasked}' : ''}',
-                          ),
-                          if (data.canEditBillingDetails) ...[
-                            const SizedBox(height: 8),
-                            OutlinedButton(
-                              onPressed: _busy
-                                  ? null
-                                  : () => _editBilling(data),
-                              child: const Text('Edit billing details'),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    _Section(
-                      title: 'MateryalPH documents',
-                      icon: LucideIcons.fileX,
-                      child: PlatformDocumentsNotice(
-                        documents: data.platformDocuments,
-                      ),
-                    ),
                   ],
                 ),
               ),

@@ -5,8 +5,8 @@
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/api_error.dart';
+import 'package:materyalph_api_client/src/model/vendor_review_list_meta.dart';
 import 'package:materyalph_api_client/src/model/vendor_review_row.dart';
-import 'package:materyalph_api_client/src/model/review_list_meta.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -24,7 +24,7 @@ abstract class VendorReviewListEnvelope implements Built<VendorReviewListEnvelop
   BuiltList<VendorReviewRow> get data;
 
   @BuiltValueField(wireName: r'meta')
-  ReviewListMeta get meta;
+  VendorReviewListMeta get meta;
 
   @BuiltValueField(wireName: r'errors')
   BuiltList<ApiError> get errors;
@@ -60,7 +60,7 @@ class _$VendorReviewListEnvelopeSerializer implements PrimitiveSerializer<Vendor
     yield r'meta';
     yield serializers.serialize(
       object.meta,
-      specifiedType: const FullType(ReviewListMeta),
+      specifiedType: const FullType(VendorReviewListMeta),
     );
     yield r'errors';
     yield serializers.serialize(
@@ -100,8 +100,8 @@ class _$VendorReviewListEnvelopeSerializer implements PrimitiveSerializer<Vendor
         case r'meta':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(ReviewListMeta),
-          ) as ReviewListMeta;
+            specifiedType: const FullType(VendorReviewListMeta),
+          ) as VendorReviewListMeta;
           result.meta.replace(valueDes);
           break;
         case r'errors':

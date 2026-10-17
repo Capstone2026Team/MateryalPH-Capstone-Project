@@ -28,6 +28,8 @@ Name | Type
 `baseFeeCentavos` | number
 `perKmCentavos` | number
 `maximumDistanceKm` | number
+`mobilizationFeeCentavos` | number
+`mobilizationBasis` | string
 `eligibility` | [FleetVehicleEligibility](FleetVehicleEligibility.md)
 `updatedAt` | string
 
@@ -60,6 +62,8 @@ const example = {
   "baseFeeCentavos": null,
   "perKmCentavos": null,
   "maximumDistanceKm": null,
+  "mobilizationFeeCentavos": null,
+  "mobilizationBasis": null,
   "eligibility": null,
   "updatedAt": null,
 } satisfies FleetVehicle

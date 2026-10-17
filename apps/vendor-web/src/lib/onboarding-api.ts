@@ -1,8 +1,9 @@
-import { rateLimitMessage } from '@materyalph/web-ui'
+import { rateLimitMessage, webRequestErrorMessage } from '@materyalph/web-ui'
 import {
   ResponseError,
   AccountsApi,
   type ListVendorTeamActivityRequest,
+  type GetVendorTeamPerformanceRequest,
   type ListAccountMembershipsRequest,
   type VendorStaffUpdate,
   VendorOnboardingApi,
@@ -137,6 +138,10 @@ export async function listVendorTeamActivity(query: ListVendorTeamActivityReques
   return onboardingApi().listVendorTeamActivity(query)
 }
 
+export async function getVendorTeamPerformance(query: GetVendorTeamPerformanceRequest) {
+  return onboardingApi().getVendorTeamPerformance(query)
+}
+
 export function teamAccountsApi() { return new AccountsApi(createWebApiConfiguration(basePath, { refreshSession: true })) }
 export async function listVendorTeamMembers(query: Omit<ListAccountMembershipsRequest, 'accountPortal'>) {
   return teamAccountsApi().listAccountMemberships({ accountPortal: 'vendors', ...query })
@@ -162,6 +167,8 @@ export async function changeVendorStaffDisputes(enabled: boolean, lockVersion: n
 }
 
 export async function readableOnboardingError(error: unknown): Promise<string> {
+  const transportMessage = webRequestErrorMessage(error)
+  if (transportMessage) return transportMessage
   if (error instanceof ResponseError) {
     if (error.response.status === 429 && error.response.headers.has('Retry-After')) return rateLimitMessage(error.response)
     const payload: unknown = await error.response.clone().json().catch(() => null)

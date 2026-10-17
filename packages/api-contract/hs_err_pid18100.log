@@ -1,0 +1,237 @@
+#
+# There is insufficient memory for the Java Runtime Environment to continue.
+# Native memory allocation (mmap) failed to map 268435456 bytes. Error detail: G1 virtual space
+# Possible reasons:
+#   The system is out of physical RAM or swap space
+#   This process is running with CompressedOops enabled, and the Java Heap may be blocking the growth of the native heap
+# Possible solutions:
+#   Reduce memory load on the system
+#   Increase physical memory or swap space
+#   Check if swap backing store is full
+#   Decrease Java heap size (-Xmx/-Xms)
+#   Decrease number of Java threads
+#   Decrease Java thread stack sizes (-Xss)
+#   Set larger code cache with -XX:ReservedCodeCacheSize=
+#   JVM is running with Zero Based Compressed Oops mode in which the Java heap is
+#     placed in the first 32GB address space. The Java Heap base address is the
+#     maximum limit for the native heap growth. Please use -XX:HeapBaseMinAddress
+#     to set the Java Heap base and to place the Java Heap above 32GB virtual address.
+# This output file may be truncated or incomplete.
+#
+#  Out of Memory Error (os_windows.cpp:3631), pid=18100, tid=35008
+#
+# JRE version:  (22.0.1+8) (build )
+# Java VM: Java HotSpot(TM) 64-Bit Server VM (22.0.1+8-16, mixed mode, sharing, tiered, compressed oops, compressed class ptrs, g1 gc, windows-amd64)
+# No core dump will be written. Minidumps are not enabled by default on client versions of Windows
+#
+
+---------------  S U M M A R Y ------------
+
+Command Line: C:\Users\RJ\Downloads\Capstone Project System\Capstone_MateryalPH\packages\api-contract\node_modules\@openapitools\openapi-generator-cli\versions\7.25.0.jar completion
+
+Host: AMD Ryzen 5 5600 6-Core Processor              , 12 cores, 15G,  Windows 11 , 64 bit Build 26100 (10.0.26100.9549)
+Time: Tue Oct 13 13:14:48 2026 China Standard Time elapsed time: 2.094721 seconds (0d 0h 0m 2s)
+
+---------------  T H R E A D  ---------------
+
+Current thread (0x00000144912e1450):  JavaThread "Unknown thread" [_thread_in_vm, id=35008, stack(0x0000003d73200000,0x0000003d73300000) (1024K)]
+
+Stack: [0x0000003d73200000,0x0000003d73300000]
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+V  [jvm.dll+0x6e2279]  (no source info available)
+V  [jvm.dll+0x874e33]  (no source info available)
+V  [jvm.dll+0x87725e]  (no source info available)
+V  [jvm.dll+0x877933]  (no source info available)
+V  [jvm.dll+0x27fd76]  (no source info available)
+V  [jvm.dll+0x6de915]  (no source info available)
+V  [jvm.dll+0x6d341a]  (no source info available)
+V  [jvm.dll+0x3589da]  (no source info available)
+V  [jvm.dll+0x360f06]  (no source info available)
+V  [jvm.dll+0x3b3e2e]  (no source info available)
+V  [jvm.dll+0x3b40d8]  (no source info available)
+V  [jvm.dll+0x32c59c]  (no source info available)
+V  [jvm.dll+0x32d158]  (no source info available)
+V  [jvm.dll+0x83ccdc]  (no source info available)
+V  [jvm.dll+0x3c0d71]  (no source info available)
+V  [jvm.dll+0x825ccc]  (no source info available)
+V  [jvm.dll+0x45b8fe]  (no source info available)
+V  [jvm.dll+0x45d781]  (no source info available)
+C  [jli.dll+0x52a3]  (no source info available)
+C  [ucrtbase.dll+0x2cd30]  (no source info available)
+C  [KERNEL32.DLL+0x2cdf7]  (no source info available)
+C  [ntdll.dll+0x7ee4c]  (no source info available)
+
+
+---------------  P R O C E S S  ---------------
+
+Threads class SMR info:
+_java_thread_list=0x00007ff922adb1c8, length=0, elements={
+}
+
+Java Threads: ( => current thread )
+Total: 0
+
+Other Threads:
+  0x00000144917f91a0 WorkerThread "GC Thread#0"                     [id=20152, stack(0x0000003d73300000,0x0000003d73400000) (1024K)]
+  0x000001449180a060 ConcurrentGCThread "G1 Main Marker"            [id=13732, stack(0x0000003d73400000,0x0000003d73500000) (1024K)]
+  0x000001449180ab70 WorkerThread "G1 Conc#0"                       [id=22024, stack(0x0000003d73500000,0x0000003d73600000) (1024K)]
+
+[error occurred during error reporting (printing all threads), id 0xc0000005, EXCEPTION_ACCESS_VIOLATION (0xc0000005) at pc=0x00007ff92222f367]
+VM state: not at safepoint (not fully initialized)
+
+VM Mutex/Monitor currently owned by a thread:  ([mutex/lock_event])
+[0x00007ff922b5bcb8] Heap_lock - owner thread: 0x00000144912e1450
+
+Heap address: 0x0000000701200000, size: 4078 MB, Compressed Oops mode: Zero based, Oop shift amount: 3
+
+CDS archive(s) mapped at: [0x0000000000000000-0x0000000000000000-0x0000000000000000), size 0, SharedBaseAddress: 0x0000000800000000, ArchiveRelocationMode: 1.
+Narrow klass base: 0x0000000000000000, Narrow klass shift: 0, Narrow klass range: 0x0
+
+GC Precious Log:
+ CardTable entry size: 512
+ Card Set container configuration: InlinePtr #cards 4 size 8 Array Of Cards #cards 16 size 48 Howl #buckets 8 coarsen threshold 3686 Howl Bitmap #cards 512 size 80 coarsen threshold 460 Card regions per heap region 1 cards per card region 4096
+
+Heap:
+ garbage-first heap   total reserved 4175872K, committed 0K, used 0K [0x0000000701200000, 0x0000000800000000)
+  region size 2048K, 0 young (0K), 0 survivors (0K)
+
+[error occurred during error reporting (printing heap information), id 0xc0000005, EXCEPTION_ACCESS_VIOLATION (0xc0000005) at pc=0x00007ff92262e429]
+GC Heap History (0 events):
+No events
+
+Dll operation events (1 events):
+Event: 0.023 Loaded shared library C:\Program Files\Java\jdk-22\bin\java.dll
+
+Deoptimization events (0 events):
+No events
+
+Classes loaded (0 events):
+No events
+
+Classes unloaded (0 events):
+No events
+
+Classes redefined (0 events):
+No events
+
+Internal exceptions (0 events):
+No events
+
+ZGC Phase Switch (0 events):
+No events
+
+VM Operations (0 events):
+No events
+
+Events (0 events):
+No events
+
+
+Dynamic libraries:
+0x00007ff798d10000 - 0x00007ff798d20000 	C:\Program Files\Java\jdk-22\bin\java.exe
+0x00007ffa24160000 - 0x00007ffa243c7000 	C:\WINDOWS\SYSTEM32\ntdll.dll
+0x00007ffa23550000 - 0x00007ffa2361b000 	C:\WINDOWS\System32\KERNEL32.DLL
+0x00007ffa21650000 - 0x00007ffa21a51000 	C:\WINDOWS\System32\KERNELBASE.dll
+0x00007ffa214f0000 - 0x00007ffa2163c000 	C:\WINDOWS\System32\ucrtbase.dll
+0x00007ffa1ae00000 - 0x00007ffa1ae17000 	C:\Program Files\Java\jdk-22\bin\jli.dll
+0x00007ffa23440000 - 0x00007ffa234fb000 	C:\WINDOWS\System32\ADVAPI32.dll
+0x00007ffa22b70000 - 0x00007ffa22c19000 	C:\WINDOWS\System32\msvcrt.dll
+0x00007ffa1a8e0000 - 0x00007ffa1a8fb000 	C:\Program Files\Java\jdk-22\bin\VCRUNTIME140.dll
+0x00007ffa22e90000 - 0x00007ffa22f38000 	C:\WINDOWS\System32\sechost.dll
+0x00007ffa23130000 - 0x00007ffa23248000 	C:\WINDOWS\System32\RPCRT4.dll
+0x00007ffa22c20000 - 0x00007ffa22df7000 	C:\WINDOWS\System32\USER32.dll
+0x00007ffa21b10000 - 0x00007ffa21b37000 	C:\WINDOWS\System32\win32u.dll
+0x00007ffa23f80000 - 0x00007ffa23fab000 	C:\WINDOWS\System32\GDI32.dll
+0x00007ffa21d50000 - 0x00007ffa21e78000 	C:\WINDOWS\System32\gdi32full.dll
+0x00007ffa21a60000 - 0x00007ffa21b03000 	C:\WINDOWS\System32\msvcp_win.dll
+0x00007ffa1a130000 - 0x00007ffa1a13b000 	C:\WINDOWS\SYSTEM32\VERSION.dll
+0x00007ffa01510000 - 0x00007ffa017a0000 	C:\WINDOWS\WinSxS\amd64_microsoft.windows.common-controls_6595b64144ccf1df_6.0.26100.9549_none_3e0a0396e3330090\COMCTL32.dll
+0x00007ffa240e0000 - 0x00007ffa24111000 	C:\WINDOWS\System32\IMM32.DLL
+0x00007ffa1a830000 - 0x00007ffa1a83c000 	C:\Program Files\Java\jdk-22\bin\vcruntime140_1.dll
+0x00007ff9fd6d0000 - 0x00007ff9fd75e000 	C:\Program Files\Java\jdk-22\bin\msvcp140.dll
+0x00007ff921ef0000 - 0x00007ff922c37000 	C:\Program Files\Java\jdk-22\bin\server\jvm.dll
+0x00007ffa24050000 - 0x00007ffa240d1000 	C:\WINDOWS\System32\WS2_32.dll
+0x00007ffa20ff0000 - 0x00007ffa2104e000 	C:\WINDOWS\SYSTEM32\POWRPROF.dll
+0x00007ffa10380000 - 0x00007ffa103b7000 	C:\WINDOWS\SYSTEM32\WINMM.dll
+0x00007ffa20fd0000 - 0x00007ffa20fe5000 	C:\WINDOWS\SYSTEM32\UMPDC.dll
+0x00007ffa1ffd0000 - 0x00007ffa1ffeb000 	C:\WINDOWS\SYSTEM32\kernel.appcore.dll
+0x00007ffa08fd0000 - 0x00007ffa08fda000 	C:\Program Files\Java\jdk-22\bin\jimage.dll
+0x00007ffa053f0000 - 0x00007ffa0563c000 	C:\WINDOWS\SYSTEM32\DBGHELP.DLL
+0x00007ffa227e0000 - 0x00007ffa22b6a000 	C:\WINDOWS\System32\combase.dll
+0x00007ffa22f50000 - 0x00007ffa23029000 	C:\WINDOWS\System32\OLEAUT32.dll
+0x00007ff9f5470000 - 0x00007ff9f54ab000 	C:\WINDOWS\SYSTEM32\dbgcore.DLL
+0x00007ffa21c00000 - 0x00007ffa21cac000 	C:\WINDOWS\System32\bcryptPrimitives.dll
+0x00007ffa08790000 - 0x00007ffa087ae000 	C:\Program Files\Java\jdk-22\bin\java.dll
+0x00007ffa23620000 - 0x00007ffa23dbc000 	C:\WINDOWS\System32\SHELL32.dll
+0x00007ffa23dd0000 - 0x00007ffa23f6a000 	C:\WINDOWS\System32\ole32.dll
+
+dbghelp: loaded successfully - version: 4.0.5 - missing functions: none
+symbol engine: initialized successfully - sym options: 0x614 - pdb path: .;C:\Program Files\Java\jdk-22\bin;C:\WINDOWS\SYSTEM32;C:\WINDOWS\WinSxS\amd64_microsoft.windows.common-controls_6595b64144ccf1df_6.0.26100.9549_none_3e0a0396e3330090;C:\Program Files\Java\jdk-22\bin\server
+
+VM Arguments:
+java_command: C:\Users\RJ\Downloads\Capstone Project System\Capstone_MateryalPH\packages\api-contract\node_modules\@openapitools\openapi-generator-cli\versions\7.25.0.jar completion
+java_class_path (initial): C:\Users\RJ\Downloads\Capstone Project System\Capstone_MateryalPH\packages\api-contract\node_modules\@openapitools\openapi-generator-cli\versions\7.25.0.jar
+Launcher Type: SUN_STANDARD
+
+[Global flags]
+     intx CICompilerCount                          = 4                                         {product} {ergonomic}
+     uint ConcGCThreads                            = 3                                         {product} {ergonomic}
+     uint G1ConcRefinementThreads                  = 10                                        {product} {ergonomic}
+   size_t G1HeapRegionSize                         = 2097152                                   {product} {ergonomic}
+   size_t InitialHeapSize                          = 268435456                                 {product} {ergonomic}
+   size_t MarkStackSize                            = 4194304                                   {product} {ergonomic}
+   size_t MaxHeapSize                              = 4276092928                                {product} {ergonomic}
+   size_t MinHeapDeltaBytes                        = 2097152                                   {product} {ergonomic}
+   size_t MinHeapSize                              = 8388608                                   {product} {ergonomic}
+    uintx NonNMethodCodeHeapSize                   = 5839372                                {pd product} {ergonomic}
+    uintx NonProfiledCodeHeapSize                  = 122909434                              {pd product} {ergonomic}
+     bool PerfDisableSharedMem                     = true                                      {product} {ergonomic}
+    uintx ProfiledCodeHeapSize                     = 122909434                              {pd product} {ergonomic}
+    uintx ReservedCodeCacheSize                    = 251658240                              {pd product} {ergonomic}
+     bool SegmentedCodeCache                       = true                                      {product} {ergonomic}
+   size_t SoftMaxHeapSize                          = 4276092928                             {manageable} {ergonomic}
+     bool UseCompressedOops                        = true                           {product lp64_product} {ergonomic}
+     bool UseG1GC                                  = true                                      {product} {ergonomic}
+     bool UseLargePagesIndividualAllocation        = false                                  {pd product} {ergonomic}
+
+Logging:
+Log output configuration:
+ #0: stdout all=warning uptime,level,tags foldmultilines=false
+ #1: stderr all=off uptime,level,tags foldmultilines=false
+
+Environment Variables:
+PATH=C:\Users\RJ\Downloads\Capstone Project System\Capstone_MateryalPH\packages\api-contract\node_modules\.bin;C:\Users\RJ\Downloads\Capstone Project System\Capstone_MateryalPH\packages\node_modules\.bin;C:\Users\RJ\Downloads\Capstone Project System\Capstone_MateryalPH\node_modules\.bin;C:\Users\RJ\Downloads\Capstone Project System\node_modules\.bin;C:\Users\RJ\Downloads\node_modules\.bin;C:\Users\RJ\node_modules\.bin;C:\Users\node_modules\.bin;C:\node_modules\.bin;C:\Program Files\nodejs\node_modules\npm\node_modules\@npmcli\run-script\lib\node-gyp-bin;C:\Program Files\PowerShell\7;C:\Users\RJ\.codex\tmp\arg0\codex-arg0cQYv9a;C:\Python314\Scripts\;C:\Python314\;C:\Program Files\Common Files\Oracle\Java\javapath;C:\Program Files (x86)\Common Files\Oracle\Java\javapath;C:\ProgramData\Oracle\Java\javapath;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files\dotnet\;C:\ProgramData\ComposerSetup\bin;C:\Program Files\NVIDIA Corporation\NVIDIA App\NvDLISR;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\Git\cmd;C:\ProgramData\chocolatey\bin;C:\Program Files\nodejs\;C:\Program Files (x86)\Microsoft SQL Server\170\Tools\Binn\;C:\Program Files\Microsoft SQL Server\170\Tools\Binn\;C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\180\Tools\Binn\;C:\Program Files\Microsoft SQL Server\170\DTS\Binn\;C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\;C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\;C:\Users\RJ\.config\herd\bin\nvm;C:\Program Files\nodejs;C:\Program Files\PostgreSQL\18\bin;C:\Program Files\PowerShell\7\;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Users\RJ\AppData\Local\Programs\DockerDesktop\resources\bin;C:\Users\RJ\Documents\php\php-8.4.25-nts-Win32-vs17-x64;C:\Users\RJ\.config\herd\bin;c:\Users\RJ\AppData\Local\Programs\cursor\resources\app\codeBin;C:\Users\RJ\AppData\Local\Microsoft\WindowsApps;C:\Users\RJ\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\RJ\AppData\Roaming\Composer\vendor\bin;C:\Users\RJ\AppData\Local\Android\Sdk\platform-tools;C:\Users\RJ\AppData\Local\Android\Sdk\tools\bin;C:\Users\RJ\AppData\Local\Android\Sdk\emulator;C:\Users\RJ\AppData\Roaming\npm;C:\Users\RJ\Documents\flutter\bin;C:\Users\RJ\AppData\Local\Pub\Cache\bin;C:\Users\RJ\AppData\Roaming\Python\Python314\Scripts;C:\Users\RJ\.dotnet\tools;C:\Program Files\PostgreSQL\18\bin;'C:\Users\RJ\Documents\php\php-8.4.25-nts-Win32-vs17-x64';C:\Users\RJ\Documents\gitleaks_8.30.1_windows_x64;C:\Users\RJ\AppData\Local\Programs\DockerDesktop\resources\bin\docker.exe;C:\Users\RJ\AppData\Local\Microsoft\WindowsApps;;C:\Users\RJ\AppData\Local\Programs\DockerDesktop\resources\bin;c:\Users\RJ\.vscode\extensions\openai.chatgpt-26.928.31416-win32-x64\bin\windows-x86_64
+USERNAME=france
+LANG=C.UTF-8
+LC_ALL=C.UTF-8
+LC_CTYPE=C.UTF-8
+TERM=dumb
+OS=Windows_NT
+PROCESSOR_IDENTIFIER=AMD64 Family 25 Model 33 Stepping 2, AuthenticAMD
+TMP=C:\Users\RJ\AppData\Local\Temp
+TEMP=C:\Users\RJ\AppData\Local\Temp
+
+
+
+
+Periodic native trim disabled
+
+---------------  S Y S T E M  ---------------
+
+OS:
+ Windows 11 , 64 bit Build 26100 (10.0.26100.9549)
+OS uptime: 11 days 18:49 hours
+Hyper-V role detected
+
+CPU: total 12 (initial active 12) (12 cores per cpu, 2 threads per core) family 25 model 33 stepping 2 microcode 0xa20120e, cx8, cmov, fxsr, ht, mmx, 3dnowpref, sse, sse2, sse3, ssse3, sse4a, sse4.1, sse4.2, popcnt, lzcnt, tsc, tscinvbit, avx, avx2, aes, clmul, bmi1, bmi2, adx, sha, fma, vzeroupper, clflush, clflushopt, hv, rdtscp, rdpid, f16c, cet_ss
+Processor Information for all 12 processors :
+  Max Mhz: 3501, Current Mhz: 3501, Mhz Limit: 3501
+
+Memory: 4k page, system-wide physical 16309M (494M free)
+TotalPageFile size 50717M (AvailPageFile size 5M)
+current process WorkingSet (physical memory assigned to process): 14M, peak: 14M
+current process commit charge ("private bytes"): 65M, peak: 320M
+
+vm_info: Java HotSpot(TM) 64-Bit Server VM (22.0.1+8-16) for windows-amd64 JRE (22.0.1+8-16), built on 2024-03-12T10:33:16Z by "mach5one" with MS VC++ 17.6 (VS2022)
+
+END.

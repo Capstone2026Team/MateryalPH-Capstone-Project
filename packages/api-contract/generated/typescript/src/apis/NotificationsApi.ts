@@ -29,6 +29,11 @@ import {
     ErrorEnvelopeToJSON,
 } from '../models/ErrorEnvelope';
 import {
+    type GetNavigationUpdates200Response,
+    GetNavigationUpdates200ResponseFromJSON,
+    GetNavigationUpdates200ResponseToJSON,
+} from '../models/GetNavigationUpdates200Response';
+import {
     type GetNotificationPreferences200Response,
     GetNotificationPreferences200ResponseFromJSON,
     GetNotificationPreferences200ResponseToJSON,
@@ -105,6 +110,13 @@ export interface AuthorizeNotificationChannelRequest {
     chatChannelAuth: ChatChannelAuth;
 }
 
+export interface GetNavigationUpdatesRequest {
+    /**
+     *
+     */
+    audience: GetNavigationUpdatesAudienceEnum;
+}
+
 export interface GetNotificationPreferencesRequest {
     /**
      * Authenticated surface. The server rejects mismatched account types.
@@ -131,6 +143,14 @@ export interface ListNotificationFailuresRequest {
      *
      */
     page?: number;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Failure updated_at.
+     */
+    from?: Date;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Failure updated_at.
+     */
+    to?: Date;
 }
 
 export interface ListNotificationsRequest {
@@ -142,6 +162,14 @@ export interface ListNotificationsRequest {
      *
      */
     cursor?: string;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Notification created_at. Resource and membership authorization still applies.
+     */
+    from?: Date;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Notification created_at. Resource and membership authorization still applies.
+     */
+    to?: Date;
 }
 
 export interface MarkNotificationsReadRequest {
@@ -265,7 +293,7 @@ export class NotificationsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Pusher protocol signature only for the caller\'s current private-notifications channel. Foreign, stale and other domain channels are denied; current account, audience and membership are rechecked. Web requires HttpOnly cookies and CSRF; native Buyer uses bearer transport. Events carry only content-free notifications.changed invalidations and never authorize REST data access.
+     * Pusher protocol signature only for the caller\'s current private-notifications channel. Foreign, stale and other domain channels are denied; current account, audience and membership are rechecked. Web requires HttpOnly cookies and CSRF; native Buyer uses bearer transport. Events carry only content-free notifications.changed and navigation.changed invalidations and never authorize REST data access.
      */
     async authorizeNotificationChannelRaw(requestParameters: AuthorizeNotificationChannelRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<NotificationChannelAuthResponse>> {
         const requestOptions = await this.authorizeNotificationChannelRequestOpts(requestParameters);
@@ -275,10 +303,69 @@ export class NotificationsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Pusher protocol signature only for the caller\'s current private-notifications channel. Foreign, stale and other domain channels are denied; current account, audience and membership are rechecked. Web requires HttpOnly cookies and CSRF; native Buyer uses bearer transport. Events carry only content-free notifications.changed invalidations and never authorize REST data access.
+     * Pusher protocol signature only for the caller\'s current private-notifications channel. Foreign, stale and other domain channels are denied; current account, audience and membership are rechecked. Web requires HttpOnly cookies and CSRF; native Buyer uses bearer transport. Events carry only content-free notifications.changed and navigation.changed invalidations and never authorize REST data access.
      */
     async authorizeNotificationChannel(requestParameters: AuthorizeNotificationChannelRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<NotificationChannelAuthResponse> {
         const response = await this.authorizeNotificationChannelRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getNavigationUpdates without sending the request
+     */
+    async getNavigationUpdatesRequestOpts(requestParameters: GetNavigationUpdatesRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['audience'] == null) {
+            throw new runtime.RequiredError(
+                'audience',
+                'Required parameter "audience" was null or undefined when calling getNavigationUpdates().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/{audience}/navigation-updates`;
+        urlPath = urlPath.replace('{audience}', encodeURIComponent(String(requestParameters['audience'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Authoritative totals across all records, independent of list pagination. Buyer Messages counts unread received messages in the unarchived SALES inbox; Orders excludes COMPLETED, DECLINED, EXPIRED and CANCELLED; Disputes uses the existing active case states including DECIDED while remedies are pending. Buyer cart_quantity sums selected active cart quantities exactly, excludes saved-for-later lines, and retains material unit precision; cart_version prevents stale remote snapshots overwriting local cart changes. Admin sections count permission-scoped pending work, combining distinct dispute review and appeal queues. Vendor Messages counts unread received sales and fulfillment messages within current role and assignment access; the sales inbox contents remain unchanged. Realtime sends content-free navigation.changed invalidations on the current private notification channel; clients refetch after invalidation, reconnect, foreground resume and successful mutations, with REST recovery polling.
+     * Authorized navigation counters for the current account
+     */
+    async getNavigationUpdatesRaw(requestParameters: GetNavigationUpdatesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GetNavigationUpdates200Response>> {
+        const requestOptions = await this.getNavigationUpdatesRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => GetNavigationUpdates200ResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Authoritative totals across all records, independent of list pagination. Buyer Messages counts unread received messages in the unarchived SALES inbox; Orders excludes COMPLETED, DECLINED, EXPIRED and CANCELLED; Disputes uses the existing active case states including DECIDED while remedies are pending. Buyer cart_quantity sums selected active cart quantities exactly, excludes saved-for-later lines, and retains material unit precision; cart_version prevents stale remote snapshots overwriting local cart changes. Admin sections count permission-scoped pending work, combining distinct dispute review and appeal queues. Vendor Messages counts unread received sales and fulfillment messages within current role and assignment access; the sales inbox contents remain unchanged. Realtime sends content-free navigation.changed invalidations on the current private notification channel; clients refetch after invalidation, reconnect, foreground resume and successful mutations, with REST recovery polling.
+     * Authorized navigation counters for the current account
+     */
+    async getNavigationUpdates(requestParameters: GetNavigationUpdatesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GetNavigationUpdates200Response> {
+        const response = await this.getNavigationUpdatesRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -434,7 +521,7 @@ export class NotificationsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Current caller\'s authorized unread in-app notice count across all types. Archived, foreign, revoked and disabled optional notices are excluded. Web uses HttpOnly cookies; mobile Buyer uses bearer transport.
+     * Current caller\'s authorized unread in-app notice count across all types. Read, foreign, revoked and disabled optional notices are excluded. Web uses HttpOnly cookies; mobile Buyer uses bearer transport.
      */
     async getNotificationUnreadCountRaw(requestParameters: GetNotificationUnreadCountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GetNotificationUnreadCount200Response>> {
         const requestOptions = await this.getNotificationUnreadCountRequestOpts(requestParameters);
@@ -444,7 +531,7 @@ export class NotificationsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Current caller\'s authorized unread in-app notice count across all types. Archived, foreign, revoked and disabled optional notices are excluded. Web uses HttpOnly cookies; mobile Buyer uses bearer transport.
+     * Current caller\'s authorized unread in-app notice count across all types. Read, foreign, revoked and disabled optional notices are excluded. Web uses HttpOnly cookies; mobile Buyer uses bearer transport.
      */
     async getNotificationUnreadCount(requestParameters: GetNotificationUnreadCountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GetNotificationUnreadCount200Response> {
         const response = await this.getNotificationUnreadCountRaw(requestParameters, initOverrides);
@@ -479,7 +566,7 @@ export class NotificationsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Orders counts currently visible nonterminal orders, excluding COMPLETED, DECLINED, EXPIRED and CANCELLED, independently of notification history. Team Accounts counts manageable active non-Owner memberships whose user accounts are active; deleted memberships and unaccepted invitations are excluded, and delegated Managers count only non-manager staff. Other sections count unread in-app notifications by their authorized destination and unread messages in the current user\'s inbox. Store Profile has no indicator. Rechecks current membership, role, delegation, assignment and preferences. Only fixed sidebar paths and counts are returned; visiting a section does not mark updates read.
+     * Orders counts currently visible nonterminal orders, excluding COMPLETED, DECLINED, EXPIRED and CANCELLED, independently of notification history. Team Accounts counts manageable active non-Owner memberships whose user accounts are active; deleted memberships and unaccepted invitations are excluded, and delegated Managers count only non-manager staff. Fulfillment counts visible orders at confirmed, processing or handover stages. Disputes counts currently active authorized cases. E-Invoices counts outstanding requests. Products counts unread authorized notices; Messages counts unread received messages in the current inbox. Team headcounts are retained for compatibility and are not attention badges. Store Profile has no indicator. Rechecks current membership, role, delegation, assignment and preferences. Only fixed sidebar paths and counts are returned; visiting a section does not mark updates read.
      * Active orders and unread updates for Vendor navigation
      */
     async getVendorNavigationUpdatesRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GetVendorNavigationUpdates200Response>> {
@@ -490,7 +577,7 @@ export class NotificationsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Orders counts currently visible nonterminal orders, excluding COMPLETED, DECLINED, EXPIRED and CANCELLED, independently of notification history. Team Accounts counts manageable active non-Owner memberships whose user accounts are active; deleted memberships and unaccepted invitations are excluded, and delegated Managers count only non-manager staff. Other sections count unread in-app notifications by their authorized destination and unread messages in the current user\'s inbox. Store Profile has no indicator. Rechecks current membership, role, delegation, assignment and preferences. Only fixed sidebar paths and counts are returned; visiting a section does not mark updates read.
+     * Orders counts currently visible nonterminal orders, excluding COMPLETED, DECLINED, EXPIRED and CANCELLED, independently of notification history. Team Accounts counts manageable active non-Owner memberships whose user accounts are active; deleted memberships and unaccepted invitations are excluded, and delegated Managers count only non-manager staff. Fulfillment counts visible orders at confirmed, processing or handover stages. Disputes counts currently active authorized cases. E-Invoices counts outstanding requests. Products counts unread authorized notices; Messages counts unread received messages in the current inbox. Team headcounts are retained for compatibility and are not attention badges. Store Profile has no indicator. Rechecks current membership, role, delegation, assignment and preferences. Only fixed sidebar paths and counts are returned; visiting a section does not mark updates read.
      * Active orders and unread updates for Vendor navigation
      */
     async getVendorNavigationUpdates(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GetVendorNavigationUpdates200Response> {
@@ -506,6 +593,14 @@ export class NotificationsApi extends runtime.BaseAPI {
 
         if (requestParameters['page'] != null) {
             queryParameters['page'] = requestParameters['page'];
+        }
+
+        if (requestParameters['from'] != null) {
+            queryParameters['from'] = runtime.serializeDate(requestParameters['from'] as any);
+        }
+
+        if (requestParameters['to'] != null) {
+            queryParameters['to'] = runtime.serializeDate(requestParameters['to'] as any);
         }
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -566,6 +661,14 @@ export class NotificationsApi extends runtime.BaseAPI {
             queryParameters['cursor'] = requestParameters['cursor'];
         }
 
+        if (requestParameters['from'] != null) {
+            queryParameters['from'] = runtime.serializeDate(requestParameters['from'] as any);
+        }
+
+        if (requestParameters['to'] != null) {
+            queryParameters['to'] = runtime.serializeDate(requestParameters['to'] as any);
+        }
+
         const headerParameters: runtime.HTTPHeaders = {};
 
         if (this.configuration && this.configuration.accessToken) {
@@ -589,7 +692,7 @@ export class NotificationsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Cursor feed filtered by current membership, role, assignment and preferences, newest first. Read notices are retained and available in the Archived view; no notification is deleted by reading it. Clients can assemble cursor pages for immediate local status and notification-category filters. Authoritative records precede delivery.
+     * Cursor feed filtered by current membership, role, assignment and preferences, newest first. Read notices are retained server-side and clients list only unread notices; no notification is deleted by reading it. Clients can assemble cursor pages for immediate local status and notification-category filters. Authoritative records precede delivery.
      * list Notifications
      */
     async listNotificationsRaw(requestParameters: ListNotificationsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ListNotifications200Response>> {
@@ -600,7 +703,7 @@ export class NotificationsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Cursor feed filtered by current membership, role, assignment and preferences, newest first. Read notices are retained and available in the Archived view; no notification is deleted by reading it. Clients can assemble cursor pages for immediate local status and notification-category filters. Authoritative records precede delivery.
+     * Cursor feed filtered by current membership, role, assignment and preferences, newest first. Read notices are retained server-side and clients list only unread notices; no notification is deleted by reading it. Clients can assemble cursor pages for immediate local status and notification-category filters. Authoritative records precede delivery.
      * list Notifications
      */
     async listNotifications(requestParameters: ListNotificationsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ListNotifications200Response> {
@@ -654,8 +757,8 @@ export class NotificationsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Atomically marks the caller\'s authorized unread notices at or before through_id as read, optionally matching a notification category or legacy exact display title. The captured upper bound leaves later arrivals unread. Rechecks current account, membership, role, resource access and in-app preferences. Notices and required security history are retained and remain accessible in Archived. Naturally idempotent; retries do not change existing read timestamps. Audits the changed count and queues a private content-free inbox invalidation after commit.
-     * Mark the current filtered notification view read and archived
+     * Atomically marks the caller\'s authorized unread notices at or before through_id as read, optionally matching a notification category, legacy exact display title and inclusive Asia/Manila created_at date boundaries. The captured upper bound leaves later arrivals unread. Rechecks current account, membership, role, resource access and in-app preferences. Notices and required security history are retained. Naturally idempotent; retries do not change existing read timestamps. Audits the changed count and queues a private content-free inbox invalidation after commit.
+     * Mark the current filtered notification view read
      */
     async markNotificationsReadRaw(requestParameters: MarkNotificationsReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<MarkNotificationsRead200Response>> {
         const requestOptions = await this.markNotificationsReadRequestOpts(requestParameters);
@@ -665,8 +768,8 @@ export class NotificationsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Atomically marks the caller\'s authorized unread notices at or before through_id as read, optionally matching a notification category or legacy exact display title. The captured upper bound leaves later arrivals unread. Rechecks current account, membership, role, resource access and in-app preferences. Notices and required security history are retained and remain accessible in Archived. Naturally idempotent; retries do not change existing read timestamps. Audits the changed count and queues a private content-free inbox invalidation after commit.
-     * Mark the current filtered notification view read and archived
+     * Atomically marks the caller\'s authorized unread notices at or before through_id as read, optionally matching a notification category, legacy exact display title and inclusive Asia/Manila created_at date boundaries. The captured upper bound leaves later arrivals unread. Rechecks current account, membership, role, resource access and in-app preferences. Notices and required security history are retained. Naturally idempotent; retries do not change existing read timestamps. Audits the changed count and queues a private content-free inbox invalidation after commit.
+     * Mark the current filtered notification view read
      */
     async markNotificationsRead(requestParameters: MarkNotificationsReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<MarkNotificationsRead200Response> {
         const response = await this.markNotificationsReadRaw(requestParameters, initOverrides);
@@ -845,7 +948,7 @@ export class NotificationsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Fresh authenticated session and resource authorization required. Returns only an allowlisted same-application path; denied links return NOTICE_ACCESS_REVOKED.
+     * Fresh authenticated session and resource authorization required. Returns only an allowlisted same-application path; denied links return NOTICE_ACCESS_REVOKED. Buyer MESSAGES notifications resolve to /messages/{conversationId} after checking current conversation access.
      * resolve Notification
      */
     async resolveNotificationRaw(requestParameters: ResolveNotificationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ResolveNotification200Response>> {
@@ -856,7 +959,7 @@ export class NotificationsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Fresh authenticated session and resource authorization required. Returns only an allowlisted same-application path; denied links return NOTICE_ACCESS_REVOKED.
+     * Fresh authenticated session and resource authorization required. Returns only an allowlisted same-application path; denied links return NOTICE_ACCESS_REVOKED. Buyer MESSAGES notifications resolve to /messages/{conversationId} after checking current conversation access.
      * resolve Notification
      */
     async resolveNotification(requestParameters: ResolveNotificationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ResolveNotification200Response> {
@@ -1003,6 +1106,15 @@ export const AuthorizeNotificationChannelAudienceEnum = {
     Admin: 'admin',
 } as const;
 export type AuthorizeNotificationChannelAudienceEnum = typeof AuthorizeNotificationChannelAudienceEnum[keyof typeof AuthorizeNotificationChannelAudienceEnum];
+/**
+ * @export
+ */
+export const GetNavigationUpdatesAudienceEnum = {
+    Buyers: 'buyers',
+    Vendor: 'vendor',
+    Admin: 'admin',
+} as const;
+export type GetNavigationUpdatesAudienceEnum = typeof GetNavigationUpdatesAudienceEnum[keyof typeof GetNavigationUpdatesAudienceEnum];
 /**
  * @export
  */

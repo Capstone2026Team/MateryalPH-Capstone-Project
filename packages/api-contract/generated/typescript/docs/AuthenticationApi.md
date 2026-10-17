@@ -5,6 +5,7 @@ All URIs are relative to */api/v1*
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
 | [**acceptAdminInvitation**](AuthenticationApi.md#acceptadmininvitation) | **POST** /auth/admin-invitations/accept |  |
+| [**completeBuyerMobileMfaChallenge**](AuthenticationApi.md#completebuyermobilemfachallenge) | **POST** /mobile/auth/mfa/challenge |  |
 | [**completeGoogleOidc**](AuthenticationApi.md#completegoogleoidc) | **GET** /auth/google/callback |  |
 | [**completeMfaChallenge**](AuthenticationApi.md#completemfachallenge) | **POST** /auth/mfa/challenge |  |
 | [**confirmMfaEnrollment**](AuthenticationApi.md#confirmmfaenrollment) | **POST** /auth/mfa/enrollment/confirm |  |
@@ -17,6 +18,7 @@ All URIs are relative to */api/v1*
 | [**loginBuyerMobile**](AuthenticationApi.md#loginbuyermobile) | **POST** /mobile/auth/login |  |
 | [**logout**](AuthenticationApi.md#logout) | **POST** /auth/logout |  |
 | [**logoutBuyerMobile**](AuthenticationApi.md#logoutbuyermobile) | **POST** /mobile/auth/logout |  |
+| [**recoverBuyerMobileMfaChallenge**](AuthenticationApi.md#recoverbuyermobilemfachallenge) | **POST** /mobile/auth/mfa/recovery |  |
 | [**recoverMfaChallenge**](AuthenticationApi.md#recovermfachallenge) | **POST** /auth/mfa/recovery |  |
 | [**refreshBuyerMobileSession**](AuthenticationApi.md#refreshbuyermobilesession) | **POST** /mobile/auth/refresh |  |
 | [**refreshSession**](AuthenticationApi.md#refreshsession) | **POST** /auth/refresh |  |
@@ -24,19 +26,19 @@ All URIs are relative to */api/v1*
 | [**registerBuyerMobile**](AuthenticationApi.md#registerbuyermobile) | **POST** /mobile/auth/register |  |
 | [**requestBuyerMobilePasswordRecovery**](AuthenticationApi.md#requestbuyermobilepasswordrecovery) | **POST** /mobile/auth/password/forgot |  |
 | [**requestPasswordRecovery**](AuthenticationApi.md#requestpasswordrecovery) | **POST** /auth/password/forgot |  |
-| [**resendBotChallenge**](AuthenticationApi.md#resendbotchallengeoperation) | **POST** /auth/bot-challenges/{challenge_id}/resend |  |
 | [**resendBuyerMobileBotChallenge**](AuthenticationApi.md#resendbuyermobilebotchallenge) | **POST** /mobile/auth/bot-challenges/{challenge_id}/resend |  |
 | [**resendBuyerMobileEmailVerification**](AuthenticationApi.md#resendbuyermobileemailverification) | **POST** /mobile/auth/verify-email/resend |  |
 | [**resendEmailVerification**](AuthenticationApi.md#resendemailverification) | **POST** /auth/verify-email/resend |  |
+| [**resendWebBotChallenge**](AuthenticationApi.md#resendwebbotchallenge) | **POST** /auth/bot-challenges/{challenge_id}/resend |  |
 | [**resetBuyerMobilePassword**](AuthenticationApi.md#resetbuyermobilepassword) | **POST** /mobile/auth/password/reset |  |
 | [**resetPassword**](AuthenticationApi.md#resetpassword) | **POST** /auth/password/reset |  |
 | [**startBuyerMobileGoogleOidc**](AuthenticationApi.md#startbuyermobilegoogleoidc) | **POST** /mobile/auth/google/start |  |
 | [**startGoogleOidc**](AuthenticationApi.md#startgoogleoidc) | **POST** /auth/google/start |  |
 | [**startMfaEnrollment**](AuthenticationApi.md#startmfaenrollment) | **POST** /auth/mfa/enrollment |  |
-| [**verifyBotChallenge**](AuthenticationApi.md#verifybotchallengeoperation) | **POST** /auth/bot-challenges/{challenge_id}/verify |  |
 | [**verifyBuyerMobileBotChallenge**](AuthenticationApi.md#verifybuyermobilebotchallenge) | **POST** /mobile/auth/bot-challenges/{challenge_id}/verify |  |
 | [**verifyBuyerMobileEmail**](AuthenticationApi.md#verifybuyermobileemail) | **POST** /mobile/auth/verify-email |  |
 | [**verifyEmail**](AuthenticationApi.md#verifyemailoperation) | **POST** /auth/verify-email |  |
+| [**verifyWebBotChallenge**](AuthenticationApi.md#verifywebbotchallenge) | **POST** /auth/bot-challenges/{challenge_id}/verify |  |
 
 
 
@@ -45,6 +47,8 @@ All URIs are relative to */api/v1*
 > RegistrationEnvelope acceptAdminInvitation(adminInvitationRequest)
 
 
+
+Invitation-only Admin registration. Validates the invitation, recipient when supplied, and current inviter authority before bot verification or email delivery. When bot protection is enabled, requires the server-selected admin_invitation_accept checkbox action and configured hostname, or an accessible email proof bound to the invited email, portal, and action. Acceptance rechecks invitation availability after the provider call. No account or membership is created and no invitation consumed when bot validation fails. Authenticator enrollment remains required before staff access.
 
 ### Example
 
@@ -106,6 +110,81 @@ example().catch(console.error);
 |-------------|-------------|------------------|
 | **201** | Admin identity created; MFA enrollment is the next required step. |  -  |
 | **410** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **429** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **503** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## completeBuyerMobileMfaChallenge
+
+> AuthEnvelope completeBuyerMobileMfaChallenge(buyerMobileMfaChallengeRequest)
+
+
+
+Completes a Buyer sign-in (password or Google) when the Buyer enrolled an authenticator. The challenge_token comes from the login or Google exchange body, is opaque, single-use, expires with challenge_expires_in and is bound to the MOBILE transport. Five wrong codes end the challenge. Codes cannot be replayed.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  AuthenticationApi,
+} from '@materyalph/api-client-ts';
+import type { CompleteBuyerMobileMfaChallengeRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const api = new AuthenticationApi();
+
+  const body = {
+    // BuyerMobileMfaChallengeRequest
+    buyerMobileMfaChallengeRequest: ...,
+  } satisfies CompleteBuyerMobileMfaChallengeRequest;
+
+  try {
+    const data = await api.completeBuyerMobileMfaChallenge(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **buyerMobileMfaChallengeRequest** | [BuyerMobileMfaChallengeRequest](BuyerMobileMfaChallengeRequest.md) |  | |
+
+### Return type
+
+[**AuthEnvelope**](AuthEnvelope.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | TOTP verified; native Passport tokens returned in the body. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **429** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -391,7 +470,7 @@ No authorization required
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | One-time mobile exchange consumed and Passport session returned without browser cookies |  -  |
+| **200** | One-time mobile exchange consumed and Passport session returned without browser cookies. A Buyer with an enrolled authenticator receives mfa_required and a challenge_token instead of tokens |  -  |
 | **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
@@ -648,6 +727,8 @@ No authorization required
 
 
 
+Vendor and Admin browser login requires an Enterprise checkbox assessment when bot protection is enabled, or an accessible single-use email security proof. The server selects vendor_login or admin_login and validates the configured hostname. Admin MFA remains mandatory after bot validation.
+
 ### Example
 
 ```ts
@@ -776,7 +857,7 @@ No authorization required
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Native Passport access and refresh tokens returned in the response body; no browser authentication cookie is issued. |  -  |
+| **200** | Native Passport access and refresh tokens returned in the response body; no browser authentication cookie is issued. When the Buyer enrolled an authenticator, no tokens are issued; the body has mfa_required true and a challenge_token to complete at /mobile/auth/mfa/challenge. |  -  |
 | **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **403** | The requested auth operation requires a short-lived email risk-verification step. |  -  |
 | **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
@@ -905,6 +986,76 @@ This endpoint does not need any parameter.
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Native Passport session revoked without issuing browser cookies |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## recoverBuyerMobileMfaChallenge
+
+> AuthEnvelope recoverBuyerMobileMfaChallenge(buyerMobileMfaRecoveryRequest)
+
+
+
+Completes the Buyer challenge with a single-use recovery code when the authenticator is unavailable. All other sessions are revoked and a replacement set of recovery codes is returned once.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  AuthenticationApi,
+} from '@materyalph/api-client-ts';
+import type { RecoverBuyerMobileMfaChallengeRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const api = new AuthenticationApi();
+
+  const body = {
+    // BuyerMobileMfaRecoveryRequest
+    buyerMobileMfaRecoveryRequest: ...,
+  } satisfies RecoverBuyerMobileMfaChallengeRequest;
+
+  try {
+    const data = await api.recoverBuyerMobileMfaChallenge(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **buyerMobileMfaRecoveryRequest** | [BuyerMobileMfaRecoveryRequest](BuyerMobileMfaRecoveryRequest.md) |  | |
+
+### Return type
+
+[**AuthEnvelope**](AuthEnvelope.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Recovery code consumed, native Passport tokens and replacement recovery codes returned in the body. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **429** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1395,80 +1546,6 @@ example().catch(console.error);
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
-## resendBotChallenge
-
-> SuccessEnvelope resendBotChallenge(challengeId, resendBotChallengeRequest)
-
-
-
-### Example
-
-```ts
-import {
-  Configuration,
-  AuthenticationApi,
-} from '@materyalph/api-client-ts';
-import type { ResendBotChallengeOperationRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // To configure API key authorization: webCsrf
-    apiKey: "YOUR API KEY",
-  });
-  const api = new AuthenticationApi(config);
-
-  const body = {
-    // string
-    challengeId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // ResendBotChallengeRequest
-    resendBotChallengeRequest: ...,
-  } satisfies ResendBotChallengeOperationRequest;
-
-  try {
-    const data = await api.resendBotChallenge(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **challengeId** | `string` |  | [Defaults to `undefined`] |
-| **resendBotChallengeRequest** | [ResendBotChallengeRequest](ResendBotChallengeRequest.md) |  | |
-
-### Return type
-
-[**SuccessEnvelope**](SuccessEnvelope.md)
-
-### Authorization
-
-[webCsrf](../README.md#webCsrf)
-
-### HTTP request headers
-
-- **Content-Type**: `application/json`
-- **Accept**: `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Generic anti-enumeration resend response. |  -  |
-| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
-| **429** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
 ## resendBuyerMobileBotChallenge
 
 > SuccessEnvelope resendBuyerMobileBotChallenge(challengeId, resendBotChallengeRequest)
@@ -1672,6 +1749,80 @@ example().catch(console.error);
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | Generic anti-enumeration response. |  -  |
+| **429** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## resendWebBotChallenge
+
+> SuccessEnvelope resendWebBotChallenge(challengeId, webResendBotChallengeRequest)
+
+
+
+### Example
+
+```ts
+import {
+  Configuration,
+  AuthenticationApi,
+} from '@materyalph/api-client-ts';
+import type { ResendWebBotChallengeRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new AuthenticationApi(config);
+
+  const body = {
+    // string
+    challengeId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // WebResendBotChallengeRequest
+    webResendBotChallengeRequest: ...,
+  } satisfies ResendWebBotChallengeRequest;
+
+  try {
+    const data = await api.resendWebBotChallenge(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **challengeId** | `string` |  | [Defaults to `undefined`] |
+| **webResendBotChallengeRequest** | [WebResendBotChallengeRequest](WebResendBotChallengeRequest.md) |  | |
+
+### Return type
+
+[**SuccessEnvelope**](SuccessEnvelope.md)
+
+### Authorization
+
+[webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Generic anti-enumeration resend response. |  -  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **429** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
@@ -2015,80 +2166,6 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
-## verifyBotChallenge
-
-> BotProofEnvelope verifyBotChallenge(challengeId, verifyBotChallengeRequest)
-
-
-
-### Example
-
-```ts
-import {
-  Configuration,
-  AuthenticationApi,
-} from '@materyalph/api-client-ts';
-import type { VerifyBotChallengeOperationRequest } from '@materyalph/api-client-ts';
-
-async function example() {
-  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
-  const config = new Configuration({
-    // To configure API key authorization: webCsrf
-    apiKey: "YOUR API KEY",
-  });
-  const api = new AuthenticationApi(config);
-
-  const body = {
-    // string
-    challengeId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // VerifyBotChallengeRequest
-    verifyBotChallengeRequest: ...,
-  } satisfies VerifyBotChallengeOperationRequest;
-
-  try {
-    const data = await api.verifyBotChallenge(body);
-    console.log(data);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-// Run the test
-example().catch(console.error);
-```
-
-### Parameters
-
-
-| Name | Type | Description  | Notes |
-|------------- | ------------- | ------------- | -------------|
-| **challengeId** | `string` |  | [Defaults to `undefined`] |
-| **verifyBotChallengeRequest** | [VerifyBotChallengeRequest](VerifyBotChallengeRequest.md) |  | |
-
-### Return type
-
-[**BotProofEnvelope**](BotProofEnvelope.md)
-
-### Authorization
-
-[webCsrf](../README.md#webCsrf)
-
-### HTTP request headers
-
-- **Content-Type**: `application/json`
-- **Accept**: `application/json`
-
-
-### HTTP response details
-| Status code | Description | Response headers |
-|-------------|-------------|------------------|
-| **200** | Vendor risk OTP verified; the proof is returned only in an HttpOnly cookie. |  -  |
-| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
-| **429** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
-
-[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
-
-
 ## verifyBuyerMobileBotChallenge
 
 > BotProofEnvelope verifyBuyerMobileBotChallenge(challengeId, verifyBotChallengeRequest)
@@ -2291,6 +2368,80 @@ example().catch(console.error);
 |-------------|-------------|------------------|
 | **200** | Email ownership verified. |  -  |
 | **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## verifyWebBotChallenge
+
+> BotProofEnvelope verifyWebBotChallenge(challengeId, webVerifyBotChallengeRequest)
+
+
+
+### Example
+
+```ts
+import {
+  Configuration,
+  AuthenticationApi,
+} from '@materyalph/api-client-ts';
+import type { VerifyWebBotChallengeRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new AuthenticationApi(config);
+
+  const body = {
+    // string
+    challengeId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // WebVerifyBotChallengeRequest
+    webVerifyBotChallengeRequest: ...,
+  } satisfies VerifyWebBotChallengeRequest;
+
+  try {
+    const data = await api.verifyWebBotChallenge(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **challengeId** | `string` |  | [Defaults to `undefined`] |
+| **webVerifyBotChallengeRequest** | [WebVerifyBotChallengeRequest](WebVerifyBotChallengeRequest.md) |  | |
+
+### Return type
+
+[**BotProofEnvelope**](BotProofEnvelope.md)
+
+### Authorization
+
+[webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Vendor or Admin risk OTP verified for the selected portal; the proof is returned only in an HttpOnly cookie. |  -  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **429** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 

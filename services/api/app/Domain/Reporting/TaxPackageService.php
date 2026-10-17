@@ -46,7 +46,7 @@ final class TaxPackageService
             $start = CarbonImmutable::parse($period['start'], 'Asia/Manila')->utc();
             $end = CarbonImmutable::parse($period['end'], 'Asia/Manila')->addDay()->utc();
             $query = DB::table('remittance_assessments as a')->join('orders as o', 'o.id', '=', 'a.order_id')
-                ->where('a.environment', 'TEST')->where('a.assigned_withholding_entity', $input['withholding_entity'])
+                ->where('a.environment', 'TEST')->where('a.assigned_withholding_entity', $input['withholding_entity'])->where('a.calculation_state', '<>', 'VOIDED')
                 ->whereExists(fn ($q) => $q->selectRaw('1')->from('remittance_collections as c')->whereColumn('c.remittance_group_id', 'a.remittance_group_id')->where('c.collected_at', '>=', $start)->where('c.collected_at', '<', $end));
             if (! empty($input['vendor_organization_id'])) {
                 $query->where('o.vendor_organization_id', $input['vendor_organization_id']);

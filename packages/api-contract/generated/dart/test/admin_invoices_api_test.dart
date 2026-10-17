@@ -16,7 +16,7 @@ void main() {
 
     // invoices.view. Read-only Invoice Request Log with records, mismatches and download events.
     //
-    //Future<InvoiceLogEnvelope> listAdminInvoiceLog({ String view, int page }) async
+    //Future<InvoiceLogEnvelope> listAdminInvoiceLog({ String view, int page, Date from, Date to }) async
     test('test listAdminInvoiceLog', () async {
       // TODO
     });

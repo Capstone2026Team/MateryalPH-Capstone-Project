@@ -2,13 +2,15 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { FileImage, Upload } from 'lucide-react'
 import { Button } from './button'
 
-export function FileSelectionField({ label, accept, hint, chooseLabel = 'Choose file', file, disabled = false, required = false, error, onChange }: {
+export function FileSelectionField({ label, accept, hint, chooseLabel = 'Choose file', file, disabled = false, required = false, error, onChange, camera = false }: {
   label: string; accept: string; hint: string; chooseLabel?: string;
   file: File | null; disabled?: boolean; required?: boolean; error?: string | undefined;
   onChange: (file: File | null) => void;
+  camera?: boolean;
 }) {
   const id = useId()
   const input = useRef<HTMLInputElement>(null)
+  const cameraInput = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<{ file: File; url: string } | null>(null)
   const [failedPreview, setFailedPreview] = useState<string | null>(null)
   useEffect(() => {
@@ -32,6 +34,9 @@ export function FileSelectionField({ label, accept, hint, chooseLabel = 'Choose 
           if (selected) onChange(selected)
         }} />
       </label>
+      {camera && <label className={`relative inline-flex min-h-11 items-center rounded-control border border-border-default px-4 text-sm font-semibold focus-within:ring-2 focus-within:ring-focus-ring ${disabled ? 'opacity-50' : 'cursor-pointer'}`}>
+        Take photo<input ref={cameraInput} type="file" accept={accept} capture="environment" disabled={disabled} aria-label={`Take ${label.toLowerCase()}`} className="sr-only" onChange={event => { const selected = event.target.files?.[0]; if (selected) onChange(selected); event.target.value = '' }} />
+      </label>}
       <div className="min-w-0 flex-1 basis-40" aria-live="polite">
         {file && <p className="flex items-start gap-1.5 text-sm font-medium"><FileImage size={16} className="mt-0.5 shrink-0 text-text-secondary" aria-hidden="true" /><span className="min-w-0 break-all">{file.name}</span></p>}
         <p id={`${id}-hint`} className="text-xs leading-5 text-text-secondary">{file ? 'Selected · ' : ''}{hint}</p>

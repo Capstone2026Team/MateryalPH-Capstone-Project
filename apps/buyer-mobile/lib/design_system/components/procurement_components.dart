@@ -1,8 +1,35 @@
+import 'count_badge.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../generated/color_tokens.dart';
 import '../theme.dart';
+
+class BuyerDeliveryRecommendation extends StatelessWidget {
+  const BuyerDeliveryRecommendation({super.key, required this.lines});
+
+  final List<String> lines;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        'System recommendation',
+        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+      ),
+      for (final line in lines)
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Text(line, style: const TextStyle(fontSize: 13)),
+        ),
+      const Text(
+        'Estimated delivery fee. The Vendor confirms this plan; you approve any changes before paying.',
+        style: TextStyle(fontSize: 12),
+      ),
+    ],
+  );
+}
 
 /// Severity bands, stock labels, badges, summary cards, skeletons and state messages shared by the
 /// Item-Based screens. Status is always text plus an icon, never color alone.
@@ -304,6 +331,23 @@ class SummaryCountCard extends StatelessWidget {
 
 enum StateKind { empty, offline, error, needsLocation, forbidden }
 
+/// The approved empty-state illustration set in `assets/states/`.
+enum StateArtwork {
+  notifications('notifications'),
+  cart('cart'),
+  inbox('inbox'),
+  location('location'),
+  noResults('no-results'),
+  notFound('not-found'),
+  noConnection('no-connection'),
+  favorites('favorites'),
+  pictures('pictures');
+
+  const StateArtwork(this._file);
+  final String _file;
+  String get asset => 'assets/states/$_file.png';
+}
+
 /// Empty, offline, error and permission states with a specific cause and a next action.
 class StateMessage extends StatelessWidget {
   const StateMessage({
@@ -316,6 +360,7 @@ class StateMessage extends StatelessWidget {
     this.secondaryLabel,
     this.onSecondary,
     this.artwork,
+    this.compact = false,
   });
 
   final StateKind kind;
@@ -326,8 +371,12 @@ class StateMessage extends StatelessWidget {
   final String? secondaryLabel;
   final VoidCallback? onSecondary;
 
-  /// An optional decorative illustration from `assets/states/`, shown in place of the icon.
-  final String? artwork;
+  /// The decorative illustration; empty, offline and location states default to
+  /// their set member, while errors and denied access keep a plain icon.
+  final StateArtwork? artwork;
+
+  /// A smaller illustration for a state that fills one section of a page.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -338,51 +387,200 @@ class StateMessage extends StatelessWidget {
       StateKind.forbidden => LucideIcons.lock,
       StateKind.empty => LucideIcons.searchX,
     };
+    final art =
+        artwork ??
+        switch (kind) {
+          StateKind.empty => StateArtwork.noResults,
+          StateKind.offline => StateArtwork.noConnection,
+          StateKind.needsLocation => StateArtwork.location,
+          StateKind.error || StateKind.forbidden => null,
+        };
+    final textTheme = Theme.of(context).textTheme;
+    final fallback = Icon(icon, size: 40, color: BuyerTheme.muted);
     return Semantics(
       container: true,
       liveRegion: kind != StateKind.empty,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (artwork != null)
-              Image.asset(
-                artwork!,
-                height: 160,
-                excludeFromSemantics: true,
-                errorBuilder: (_, _, _) =>
-                    Icon(icon, size: 40, color: BuyerTheme.muted),
-              )
-            else
-              Icon(icon, size: 40, color: BuyerTheme.muted),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        padding: EdgeInsets.symmetric(
+          horizontal: 24,
+          vertical: compact ? 16 : 32,
+        ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 360),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (art != null)
+                  Image.asset(
+                    art.asset,
+                    width: compact ? 120 : 180,
+                    height: compact ? 120 : 180,
+                    excludeFromSemantics: true,
+                    errorBuilder: (_, _, _) => fallback,
+                  )
+                else
+                  fallback,
+                SizedBox(height: art == null ? 12 : 8),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: BuyerTheme.muted,
+                    height: 1.45,
+                  ),
+                ),
+                if (actionLabel != null && onAction != null) ...[
+                  const SizedBox(height: 24),
+                  FilledButton(onPressed: onAction, child: Text(actionLabel!)),
+                ],
+                if (secondaryLabel != null && onSecondary != null) ...[
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: onSecondary,
+                    child: Text(secondaryLabel!),
+                  ),
+                ],
+              ],
             ),
-            const SizedBox(height: 6),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: BuyerTheme.muted),
-            ),
-            if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: 16),
-              FilledButton(onPressed: onAction, child: Text(actionLabel!)),
-            ],
-            if (secondaryLabel != null && onSecondary != null) ...[
-              const SizedBox(height: 8),
-              TextButton(onPressed: onSecondary, child: Text(secondaryLabel!)),
-            ],
-          ],
+          ),
         ),
       ),
     );
   }
+}
+
+/// Centers a full-page [StateMessage] in the available height and keeps it
+/// scrollable at large text sizes, with optional pull-to-refresh.
+class StatePage extends StatelessWidget {
+  const StatePage({super.key, required this.child, this.onRefresh});
+
+  final Widget child;
+  final Future<void> Function()? onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final page = LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: onRefresh == null
+            ? null
+            : const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(child: child),
+        ),
+      ),
+    );
+    return onRefresh == null
+        ? page
+        : RefreshIndicator(onRefresh: onRefresh!, child: page);
+  }
+}
+
+/// Decimal places allowed by a sale unit's step: '1' → 0, '0.001' → 3.
+int stepDecimals(String step) {
+  final dot = step.indexOf('.');
+  return dot < 0 ? 0 : step.length - dot - 1;
+}
+
+/// Whether [text] is a positive quantity with at most [decimals] decimals.
+bool validDecimalQuantity(String text, int decimals) {
+  final pattern = decimals == 0
+      ? RegExp(r'^\d{1,7}$')
+      : RegExp('^\\d{1,7}(\\.\\d{1,$decimals})?\$');
+  return pattern.hasMatch(text.trim()) && (num.tryParse(text.trim()) ?? 0) > 0;
+}
+
+/// Quantity entry for units sold in fractions, such as ready-mixed concrete in
+/// m³. Reports only valid values; [commitOnSubmit] waits for Done so a cart line
+/// is not updated on every keystroke.
+class DecimalQuantityField extends StatefulWidget {
+  const DecimalQuantityField({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.unitName,
+    required this.decimals,
+    required this.onChanged,
+    this.enabled = true,
+    this.commitOnSubmit = false,
+    this.hint,
+  });
+
+  final String label;
+  final String value;
+  final String unitName;
+  final int decimals;
+  final ValueChanged<String> onChanged;
+  final bool enabled;
+  final bool commitOnSubmit;
+  final String? hint;
+
+  @override
+  State<DecimalQuantityField> createState() => _DecimalQuantityFieldState();
+}
+
+class _DecimalQuantityFieldState extends State<DecimalQuantityField> {
+  late final TextEditingController _text = TextEditingController(
+    text: widget.value,
+  );
+  String? _error;
+
+  @override
+  void didUpdateWidget(DecimalQuantityField old) {
+    super.didUpdateWidget(old);
+    final current = num.tryParse(_text.text.trim());
+    if (widget.value != old.value && num.tryParse(widget.value) != current) {
+      _text.text = widget.value;
+    }
+  }
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  void _check(String text, {required bool commit}) {
+    final valid = validDecimalQuantity(text, widget.decimals);
+    setState(
+      () => _error = text.trim().isEmpty || valid
+          ? null
+          : 'Enter an amount above zero with up to ${widget.decimals} decimal place${widget.decimals == 1 ? '' : 's'}.',
+    );
+    if (valid && (commit || !widget.commitOnSubmit)) {
+      widget.onChanged(text.trim());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => ConstrainedBox(
+    constraints: const BoxConstraints(maxWidth: 220),
+    child: TextField(
+      controller: _text,
+      enabled: widget.enabled,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      textInputAction: TextInputAction.done,
+      decoration: InputDecoration(
+        labelText: widget.label,
+        suffixText: widget.unitName,
+        helperText: _error == null ? widget.hint : null,
+        helperMaxLines: 3,
+        errorText: _error,
+        errorMaxLines: 3,
+      ),
+      onChanged: (text) => _check(text, commit: false),
+      onSubmitted: (text) => _check(text, commit: true),
+    ),
+  );
 }
 
 /// Quantity editor with 48 px targets and a readable value; step comes from the sale unit.
@@ -753,7 +951,8 @@ class SortTabBar extends StatelessWidget {
 }
 
 /// A rounded filter toggle. Selected pills are filled with a check icon; [onDeleted] adds a
-/// remove control for scope filters such as a category or store.
+/// remove control for scope filters such as a category or store; a positive [count] shows a
+/// count badge after the label, announced as "[count] [countNoun]".
 class FilterPill extends StatelessWidget {
   const FilterPill({
     super.key,
@@ -764,6 +963,8 @@ class FilterPill extends StatelessWidget {
     this.onDeleted,
     this.deleteTooltip,
     this.maxLines = 1,
+    this.count = 0,
+    this.countNoun = 'items',
   });
 
   final String label;
@@ -773,6 +974,8 @@ class FilterPill extends StatelessWidget {
   final VoidCallback? onDeleted;
   final String? deleteTooltip;
   final int maxLines;
+  final int count;
+  final String countNoun;
 
   @override
   Widget build(BuildContext context) {
@@ -780,7 +983,7 @@ class FilterPill extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
-      label: label,
+      label: count > 0 ? '$label, $count $countNoun' : label,
       excludeSemantics: onDeleted == null,
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 44),
@@ -827,6 +1030,10 @@ class FilterPill extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (count > 0) ...[
+                      const SizedBox(width: 6),
+                      CountBadge(quantity: '$count'),
+                    ],
                     if (trailingIcon != null) ...[
                       const SizedBox(width: 4),
                       Icon(trailingIcon, size: 16, color: foreground),
@@ -888,6 +1095,7 @@ class RoundIconButton extends StatelessWidget {
     required this.onPressed,
     this.filled = false,
     this.badgeCount = 0,
+    this.badgeQuantity,
   });
 
   final IconData icon;
@@ -895,6 +1103,7 @@ class RoundIconButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool filled;
   final int badgeCount;
+  final String? badgeQuantity;
 
   @override
   Widget build(BuildContext context) => IconButton(
@@ -904,10 +1113,8 @@ class RoundIconButton extends StatelessWidget {
       minimumSize: const Size(48, 48),
       padding: EdgeInsets.zero,
     ),
-    icon: Badge(
-      isLabelVisible: badgeCount > 0,
-      label: Text('$badgeCount'),
-      backgroundColor: BuyerTheme.ink,
+    icon: CountBadge(
+      quantity: badgeQuantity ?? '$badgeCount',
       child: Container(
         width: 36,
         height: 36,

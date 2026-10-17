@@ -23,6 +23,7 @@ part 'cart_line.g.dart';
 /// * [vendorId]
 /// * [displayName]
 /// * [variantLabel]
+/// * [workPackageLineId] - Work Package line this purchase covers.
 /// * [image]
 /// * [unitCode]
 /// * [unitName]
@@ -34,6 +35,7 @@ part 'cart_line.g.dart';
 /// * [lineTotalCentavos]
 /// * [issues]
 /// * [status]
+/// * [readyMixedConcrete] - Ready-mixed concrete; its Vendor group is Site Delivery only and Self-Pickup adds a SITE_DELIVERY_REQUIRED issue.
 @BuiltValue()
 abstract class CartLine implements Built<CartLine, CartLineBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -56,6 +58,10 @@ abstract class CartLine implements Built<CartLine, CartLineBuilder> {
 
   @BuiltValueField(wireName: r'variant_label')
   String? get variantLabel;
+
+  /// Work Package line this purchase covers.
+  @BuiltValueField(wireName: r'work_package_line_id')
+  String? get workPackageLineId;
 
   @BuiltValueField(wireName: r'image')
   ListingImage? get image;
@@ -91,6 +97,10 @@ abstract class CartLine implements Built<CartLine, CartLineBuilder> {
   @BuiltValueField(wireName: r'status')
   CartLineStatusEnum get status;
   // enum statusEnum {  READY,  ACTION_REQUIRED,  BLOCKED,  };
+
+  /// Ready-mixed concrete; its Vendor group is Site Delivery only and Self-Pickup adds a SITE_DELIVERY_REQUIRED issue.
+  @BuiltValueField(wireName: r'ready_mixed_concrete')
+  bool? get readyMixedConcrete;
 
   CartLine._();
 
@@ -150,6 +160,13 @@ class _$CartLineSerializer implements PrimitiveSerializer<CartLine> {
       object.variantLabel,
       specifiedType: const FullType.nullable(String),
     );
+    if (object.workPackageLineId != null) {
+      yield r'work_package_line_id';
+      yield serializers.serialize(
+        object.workPackageLineId,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
     yield r'image';
     yield object.image == null ? null : serializers.serialize(
       object.image,
@@ -205,6 +222,13 @@ class _$CartLineSerializer implements PrimitiveSerializer<CartLine> {
       object.status,
       specifiedType: const FullType(CartLineStatusEnum),
     );
+    if (object.readyMixedConcrete != null) {
+      yield r'ready_mixed_concrete';
+      yield serializers.serialize(
+        object.readyMixedConcrete,
+        specifiedType: const FullType(bool),
+      );
+    }
   }
 
   @override
@@ -277,6 +301,14 @@ class _$CartLineSerializer implements PrimitiveSerializer<CartLine> {
           ) as String?;
           if (valueDes == null) continue;
           result.variantLabel = valueDes;
+          break;
+        case r'work_package_line_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.workPackageLineId = valueDes;
           break;
         case r'image':
           final valueDes = serializers.deserialize(
@@ -357,6 +389,14 @@ class _$CartLineSerializer implements PrimitiveSerializer<CartLine> {
             specifiedType: const FullType(CartLineStatusEnum),
           ) as CartLineStatusEnum;
           result.status = valueDes;
+          break;
+        case r'ready_mixed_concrete':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.readyMixedConcrete = valueDes;
           break;
         default:
           unhandled.add(key);

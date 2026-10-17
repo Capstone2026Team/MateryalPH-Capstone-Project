@@ -23,6 +23,8 @@ Name | Type
 `heavyClassification` | string
 `baseFeeCentavos` | number
 `perKmCentavos` | number
+`mobilizationFeeCentavos` | number
+`mobilizationBasis` | string
 `maximumDistanceKm` | number
 
 ## Example
@@ -49,6 +51,8 @@ const example = {
   "heavyClassification": null,
   "baseFeeCentavos": null,
   "perKmCentavos": null,
+  "mobilizationFeeCentavos": null,
+  "mobilizationBasis": null,
   "maximumDistanceKm": null,
 } satisfies VendorSetupDraftVehiclesInner
 

@@ -13,6 +13,9 @@ part 'fulfillment_assignment_request.g.dart';
 /// Properties:
 /// * [userId]
 /// * [reason]
+/// * [vehicleIndex]
+/// * [lockVersion]
+/// * [dispatch] - Atomically assign and record Out for Delivery; requires vehicle_index and lock_version.
 @BuiltValue()
 abstract class FulfillmentAssignmentRequest implements Built<FulfillmentAssignmentRequest, FulfillmentAssignmentRequestBuilder> {
   @BuiltValueField(wireName: r'user_id')
@@ -21,12 +24,23 @@ abstract class FulfillmentAssignmentRequest implements Built<FulfillmentAssignme
   @BuiltValueField(wireName: r'reason')
   String get reason;
 
+  @BuiltValueField(wireName: r'vehicle_index')
+  int? get vehicleIndex;
+
+  @BuiltValueField(wireName: r'lock_version')
+  int? get lockVersion;
+
+  /// Atomically assign and record Out for Delivery; requires vehicle_index and lock_version.
+  @BuiltValueField(wireName: r'dispatch')
+  bool? get dispatch;
+
   FulfillmentAssignmentRequest._();
 
   factory FulfillmentAssignmentRequest([void updates(FulfillmentAssignmentRequestBuilder b)]) = _$FulfillmentAssignmentRequest;
 
   @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(FulfillmentAssignmentRequestBuilder b) => b;
+  static void _defaults(FulfillmentAssignmentRequestBuilder b) => b
+      ..dispatch = false;
 
   @BuiltValueSerializer(custom: true)
   static Serializer<FulfillmentAssignmentRequest> get serializer => _$FulfillmentAssignmentRequestSerializer();
@@ -54,6 +68,27 @@ class _$FulfillmentAssignmentRequestSerializer implements PrimitiveSerializer<Fu
       object.reason,
       specifiedType: const FullType(String),
     );
+    if (object.vehicleIndex != null) {
+      yield r'vehicle_index';
+      yield serializers.serialize(
+        object.vehicleIndex,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.lockVersion != null) {
+      yield r'lock_version';
+      yield serializers.serialize(
+        object.lockVersion,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.dispatch != null) {
+      yield r'dispatch';
+      yield serializers.serialize(
+        object.dispatch,
+        specifiedType: const FullType(bool),
+      );
+    }
   }
 
   @override
@@ -90,6 +125,30 @@ class _$FulfillmentAssignmentRequestSerializer implements PrimitiveSerializer<Fu
             specifiedType: const FullType(String),
           ) as String;
           result.reason = valueDes;
+          break;
+        case r'vehicle_index':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.vehicleIndex = valueDes;
+          break;
+        case r'lock_version':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.lockVersion = valueDes;
+          break;
+        case r'dispatch':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.dispatch = valueDes;
           break;
         default:
           unhandled.add(key);

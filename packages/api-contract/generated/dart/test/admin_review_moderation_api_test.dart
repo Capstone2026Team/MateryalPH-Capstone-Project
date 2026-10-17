@@ -23,7 +23,7 @@ void main() {
 
     // reviews.moderate (Super Admin, User Management Staff). The Product Review Moderation Queue.
     //
-    //Future<ModerationQueueEnvelope> listAdminReviewModeration({ String state, int page }) async
+    //Future<ModerationQueueEnvelope> listAdminReviewModeration({ String state, int page, Date from, Date to }) async
     test('test listAdminReviewModeration', () async {
       // TODO
     });

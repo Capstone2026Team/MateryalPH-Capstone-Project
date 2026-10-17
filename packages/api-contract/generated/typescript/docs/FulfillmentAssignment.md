@@ -10,6 +10,9 @@ Name | Type
 `role` | string
 `assignedAt` | Date
 `userId` | number
+`acknowledgedAt` | Date
+`endedAt` | Date
+`vehicle` | [FulfillmentArrangementVehicle](FulfillmentArrangementVehicle.md)
 
 ## Example
 
@@ -22,6 +25,9 @@ const example = {
   "role": null,
   "assignedAt": null,
   "userId": null,
+  "acknowledgedAt": null,
+  "endedAt": null,
+  "vehicle": null,
 } satisfies FulfillmentAssignment
 
 console.log(example)

@@ -19,54 +19,63 @@ DiscoveryController _controller(
 ) => DiscoveryController(repository: repo, store: store, now: now);
 
 void main() {
-  test('results survive an app restart and cost no request while fresh', () async {
-    var now = DateTime.utc(2026, 10, 3, 8);
-    final store = MemoryDiscoveryResultStore();
-    final firstRepo = FakeDiscoveryRepository();
-    final first = _controller(firstRepo, store, () => now);
-    await first.setOrigin(_saved);
-    expect(firstRepo.searches, hasLength(1));
-    expect(store.entries.keys, ['loc-loc-1-r5']);
+  test(
+    'results survive an app restart and cost no request while fresh',
+    () async {
+      var now = DateTime.utc(2026, 10, 3, 8);
+      final store = MemoryDiscoveryResultStore();
+      final firstRepo = FakeDiscoveryRepository();
+      final first = _controller(firstRepo, store, () => now);
+      await first.setOrigin(_saved);
+      expect(firstRepo.searches, hasLength(1));
+      expect(store.entries.keys, ['loc-loc-1-r5']);
 
-    // A new launch: new controller and repository, same store, two minutes later.
-    now = now.add(const Duration(minutes: 2));
-    final secondRepo = FakeDiscoveryRepository();
-    final second = _controller(secondRepo, store, () => now);
-    await second.setOrigin(_saved);
-    expect(secondRepo.searches, isEmpty);
-    expect(second.phase, DiscoveryPhase.ready);
-    expect(second.items.map((item) => item.resultId), ['v-1', 'd-1']);
-    expect(second.items.first.name, 'Sampaloc Lumber Hardware');
-    first.dispose();
-    second.dispose();
-  });
+      // A new launch: new controller and repository, same store, two minutes later.
+      now = now.add(const Duration(minutes: 2));
+      final secondRepo = FakeDiscoveryRepository();
+      final second = _controller(secondRepo, store, () => now);
+      await second.setOrigin(_saved);
+      expect(secondRepo.searches, isEmpty);
+      expect(second.phase, DiscoveryPhase.ready);
+      expect(second.items.map((item) => item.resultId), ['v-1', 'd-1']);
+      expect(second.items.first.name, 'Sampaloc Lumber Hardware');
+      first.dispose();
+      second.dispose();
+    },
+  );
 
-  test('a copy past the fresh window shows at once, then is confirmed by one request', () async {
-    var now = DateTime.utc(2026, 10, 3, 8);
-    final store = MemoryDiscoveryResultStore();
-    final seed = FakeDiscoveryRepository();
-    final first = _controller(seed, store, () => now);
-    await first.setOrigin(_saved);
+  test(
+    'a copy past the fresh window shows at once, then is confirmed by one request',
+    () async {
+      var now = DateTime.utc(2026, 10, 3, 8);
+      final store = MemoryDiscoveryResultStore();
+      final seed = FakeDiscoveryRepository();
+      final first = _controller(seed, store, () => now);
+      await first.setOrigin(_saved);
 
-    now = now.add(const Duration(hours: 3));
-    final repo = FakeDiscoveryRepository(
-      page: resultPage([verifiedSupplier('v-9', name: 'Fresh Hardware')]),
-    )..manual = true;
-    final second = _controller(repo, store, () => now);
-    final pending = second.setOrigin(_saved);
-    await Future<void>.delayed(Duration.zero);
-    // Instantly visible from the saved copy while the request is still in flight.
-    expect(second.showingSavedResults, isTrue);
-    expect(second.items.map((item) => item.resultId), ['v-1', 'd-1']);
-    expect(repo.searches, hasLength(1));
-    repo.searches.single.completer.complete(repo.page);
-    await pending;
-    expect(second.showingSavedResults, isFalse);
-    expect(second.items.map((item) => item.resultId), ['v-9']);
-    expect(store.entries['loc-loc-1-r5']!.items.single.name, 'Fresh Hardware');
-    first.dispose();
-    second.dispose();
-  });
+      now = now.add(const Duration(hours: 3));
+      final repo = FakeDiscoveryRepository(
+        page: resultPage([verifiedSupplier('v-9', name: 'Fresh Hardware')]),
+      )..manual = true;
+      final second = _controller(repo, store, () => now);
+      final pending = second.setOrigin(_saved);
+      await Future<void>.delayed(Duration.zero);
+      // Instantly visible from the saved copy while the request is still in flight.
+      expect(second.showingSavedResults, isTrue);
+      expect(second.items.map((item) => item.resultId), ['v-1', 'd-1']);
+      expect(repo.searches, hasLength(1));
+      repo.searches.single.completer.complete(repo.page);
+      await pending;
+      expect(second.showingSavedResults, isFalse);
+      expect(second.items.map((item) => item.resultId), ['v-9']);
+      expect(
+        store.entries['loc-loc-1-r5']!.items.single.name,
+        'Fresh Hardware',
+      );
+      first.dispose();
+      second.dispose();
+    },
+  );
 
   test('a copy older than 24 hours is never shown', () async {
     var now = DateTime.utc(2026, 10, 3, 8);
@@ -141,22 +150,29 @@ void main() {
     controller.dispose();
   });
 
-  test('Directory details are reused for the session instead of re-fetched', () async {
-    var now = DateTime.utc(2026, 10, 3, 8);
-    final repo = FakeDiscoveryRepository();
-    final controller = _controller(repo, MemoryDiscoveryResultStore(), () => now);
-    await controller.setOrigin(_saved);
-    await controller.select('d-1');
-    controller.clearSelection();
-    await controller.select('d-1');
-    expect(repo.detailCalls, 1);
-    expect(controller.directoryDetails, isNotNull);
-    now = now.add(const Duration(minutes: 16));
-    controller.clearSelection();
-    await controller.select('d-1');
-    expect(repo.detailCalls, 2);
-    controller.dispose();
-  });
+  test(
+    'Directory details are reused for the session instead of re-fetched',
+    () async {
+      var now = DateTime.utc(2026, 10, 3, 8);
+      final repo = FakeDiscoveryRepository();
+      final controller = _controller(
+        repo,
+        MemoryDiscoveryResultStore(),
+        () => now,
+      );
+      await controller.setOrigin(_saved);
+      await controller.select('d-1');
+      controller.clearSelection();
+      await controller.select('d-1');
+      expect(repo.detailCalls, 1);
+      expect(controller.directoryDetails, isNotNull);
+      now = now.add(const Duration(minutes: 16));
+      controller.clearSelection();
+      await controller.select('d-1');
+      expect(repo.detailCalls, 2);
+      controller.dispose();
+    },
+  );
 
   test('the cache file round-trips every field and rejects corrupt data', () {
     final page = resultPage([

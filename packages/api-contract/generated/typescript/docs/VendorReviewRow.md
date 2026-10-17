@@ -15,6 +15,7 @@ Name | Type
 `submittedAt` | Date
 `edited` | boolean
 `variantLabel` | string
+`product` | [ReviewProduct](ReviewProduct.md)
 `media` | [Array&lt;ReviewMediaLink&gt;](ReviewMediaLink.md)
 `visibility` | string
 `orderId` | string
@@ -37,6 +38,7 @@ const example = {
   "submittedAt": null,
   "edited": null,
   "variantLabel": null,
+  "product": null,
   "media": null,
   "visibility": null,
   "orderId": null,

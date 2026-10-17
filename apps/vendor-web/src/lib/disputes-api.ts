@@ -22,6 +22,7 @@ import {
 } from '@materyalph/api-client-ts'
 import { createWebApiConfiguration } from '@materyalph/web-ui'
 import { newIdempotencyKey } from './onboarding-api'
+import { apiDateFilters, type DateFilters } from './date-filters'
 
 export type { DisputeDetail, DisputeEligibility, DisputeExport, DisputeListMeta, DisputeSummary, InvoiceListMeta, InvoiceLogRow, VendorOrderInvoices }
 export type DisputeGroup = ListVendorDisputesGroupEnum
@@ -32,8 +33,8 @@ const disputes = () => new VendorDisputesApi(createWebApiConfiguration(basePath,
 const invoices = () => new VendorInvoicesApi(createWebApiConfiguration(basePath, { refreshSession: true }))
 export const disputeApiBasePath = basePath
 
-export async function listDisputes(filters: { group: DisputeGroup; q?: string; page?: number }): Promise<{ items: DisputeSummary[]; meta: DisputeListMeta }> {
-  const response = await disputes().listVendorDisputes({ group: filters.group, ...(filters.q ? { q: filters.q } : {}), ...(filters.page ? { page: filters.page } : {}) })
+export async function listDisputes(filters: { group: DisputeGroup; q?: string; page?: number } & DateFilters): Promise<{ items: DisputeSummary[]; meta: DisputeListMeta }> {
+  const response = await disputes().listVendorDisputes({ group: filters.group, ...(filters.q ? { q: filters.q } : {}), ...(filters.page ? { page: filters.page } : {}), ...apiDateFilters(filters) })
   return { items: response.data, meta: response.meta }
 }
 
@@ -108,8 +109,8 @@ export async function downloadExport(exportId: string): Promise<void> {
   URL.revokeObjectURL(url)
 }
 
-export async function listInvoices(filters: { view: InvoiceView; page?: number }): Promise<{ items: InvoiceLogRow[]; meta: InvoiceListMeta }> {
-  const response = await invoices().listVendorInvoices({ view: filters.view, ...(filters.page ? { page: filters.page } : {}) })
+export async function listInvoices(filters: { view: InvoiceView; page?: number } & DateFilters): Promise<{ items: InvoiceLogRow[]; meta: InvoiceListMeta }> {
+  const response = await invoices().listVendorInvoices({ view: filters.view, ...(filters.page ? { page: filters.page } : {}), ...apiDateFilters(filters) })
   return { items: response.data, meta: response.meta }
 }
 

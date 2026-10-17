@@ -108,7 +108,7 @@ final class PhaseElevenPendingPaymentWindowTest extends TestCase
         self::assertSame(0, app(OrderExpiryService::class)->sweep());
         $this->deliverWebhook($this->gateway->expire((string) DB::table('payments')->where('id', $first['id'])->value('provider_session_id')), 'wh-abandoned')->assertOk();
         self::assertSame(['EXPIRED', 'AWAITING_PAYMENT'], [$this->paymentState($first['id']), $this->orderState($orderId)]);
-        $this->getJson('/api/v1/buyers/orders?group=AWAITING_ACTION')->assertOk()->assertJsonPath('data.0.payment_retryable', true);
+        $this->getJson('/api/v1/buyers/orders?group=CONFIRMATION')->assertOk()->assertJsonPath('data.0.payment_retryable', true);
         self::assertSame($deadline->toIso8601String(), $this->deadline($orderId)->toIso8601String(), 'Re-paying never moves the deadline.');
 
         // Pay again: same order, same amount, a new session; the Buyer sees it as the order's second attempt.
@@ -116,7 +116,7 @@ final class PhaseElevenPendingPaymentWindowTest extends TestCase
         self::assertSame(2, (int) DB::table('payments')->where('id', $second['id'])->value('attempt_number'));
         self::assertSame($first['principal_centavos'], $second['principal_centavos']);
         self::assertSame(1, DB::table('payments')->where('order_id', $orderId)->whereIn('state', ['CREATING', 'PENDING'])->count());
-        $this->getJson('/api/v1/buyers/orders?group=AWAITING_ACTION')->assertOk()->assertJsonPath('data.0.payment_retryable', false);
+        $this->getJson('/api/v1/buyers/orders?group=CONFIRMATION')->assertOk()->assertJsonPath('data.0.payment_retryable', false);
 
         // A second open session is refused rather than charging twice; the response names the one in progress.
         $this->postJson('/api/v1/buyers/orders/'.$orderId.'/payments', ['channel_code' => 'MAYA', 'expected_total_centavos' => $second['total_centavos']], ['Idempotency-Key' => (string) Str::uuid7()])

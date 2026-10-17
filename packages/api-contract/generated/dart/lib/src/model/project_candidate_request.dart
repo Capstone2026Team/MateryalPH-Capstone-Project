@@ -3,6 +3,8 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/project_specification_selection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -15,6 +17,7 @@ part 'project_candidate_request.g.dart';
 /// * [candidateId]
 /// * [note]
 /// * [budgetOverrideReason]
+/// * [selections] - The Buyer's specification choice for each line whose `selection_required` is true. Selection and inquiry are rejected with SPECIFICATION_SELECTION_REQUIRED until every such line has one.
 @BuiltValue()
 abstract class ProjectCandidateRequest implements Built<ProjectCandidateRequest, ProjectCandidateRequestBuilder> {
   @BuiltValueField(wireName: r'lock_version')
@@ -28,6 +31,10 @@ abstract class ProjectCandidateRequest implements Built<ProjectCandidateRequest,
 
   @BuiltValueField(wireName: r'budget_override_reason')
   String? get budgetOverrideReason;
+
+  /// The Buyer's specification choice for each line whose `selection_required` is true. Selection and inquiry are rejected with SPECIFICATION_SELECTION_REQUIRED until every such line has one.
+  @BuiltValueField(wireName: r'selections')
+  BuiltList<ProjectSpecificationSelection>? get selections;
 
   ProjectCandidateRequest._();
 
@@ -74,6 +81,13 @@ class _$ProjectCandidateRequestSerializer implements PrimitiveSerializer<Project
       yield serializers.serialize(
         object.budgetOverrideReason,
         specifiedType: const FullType(String),
+      );
+    }
+    if (object.selections != null) {
+      yield r'selections';
+      yield serializers.serialize(
+        object.selections,
+        specifiedType: const FullType(BuiltList, [FullType(ProjectSpecificationSelection)]),
       );
     }
   }
@@ -128,6 +142,14 @@ class _$ProjectCandidateRequestSerializer implements PrimitiveSerializer<Project
           ) as String?;
           if (valueDes == null) continue;
           result.budgetOverrideReason = valueDes;
+          break;
+        case r'selections':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(ProjectSpecificationSelection)]),
+          ) as BuiltList<ProjectSpecificationSelection>?;
+          if (valueDes == null) continue;
+          result.selections.replace(valueDes);
           break;
         default:
           unhandled.add(key);

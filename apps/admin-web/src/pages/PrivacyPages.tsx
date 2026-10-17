@@ -1,4 +1,5 @@
-import { Button, EventTimeline, FactList, FilterTabs, InfoNote, ReasonedDecisionForm, SidePanel, StatusBadge, Toolbar } from '@materyalph/web-ui'
+import { ALL_DATES, Button, DateFilter, EventTimeline, FactList, FilterTabs, InfoNote, ReasonedDecisionForm, SidePanel, StatusBadge, Toolbar, analyticsDay, formatAnalyticsDate, manilaToday } from '@materyalph/web-ui'
+import { parseDate } from '@materyalph/api-client-ts'
 import { ArrowLeft, Plus, RefreshCw } from 'lucide-react'
 import { useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -6,6 +7,7 @@ import { Pager, Panel } from '../components/OperationsKit'
 import { control, label as humanize, labelClass, manilaDate, manilaDateTime, useLoad, useProtectedAction } from '../lib/operations-hooks'
 import { getPrivacy, isConflict, listPrivacy, newKey, problemText, recordPrivacy, transitionPrivacy, type PrivacyRequestDetail } from '../lib/operations-api'
 import { AdminShell, ErrorState, LoadingState, PageHeader } from './PhaseThreeAdminPages'
+import { dateQuery } from '../lib/admin-format'
 
 const TYPES = ['ACCESS', 'CORRECTION', 'OBJECTION', 'DELETION', 'RESTRICTION', 'PORTABILITY', 'OTHER']
 const CHANNELS = ['DPO_EMAIL', 'SUPPORT_CASE', 'WRITTEN_LETTER', 'IN_APP']
@@ -20,7 +22,8 @@ export function AdminPrivacyQueuePage() {
   const [handler, setHandler] = useState('')
   const [page, setPage] = useState(1)
   const [recording, setRecording] = useState(false)
-  const list = useLoad(() => listPrivacy({ ...(state ? { state: state as never } : {}), ...(type ? { requestType: type as never } : {}), ...(handler ? { handler: handler as never } : {}), page }), [state, type, handler, page])
+  const [range, setRange] = useState(ALL_DATES)
+  const list = useLoad(() => listPrivacy({ ...(state ? { state: state as never } : {}), ...(type ? { requestType: type as never } : {}), ...(handler ? { handler: handler as never } : {}), ...dateQuery(range), page }), [state, type, handler, range.from, range.to, page])
   const items = list.data?.items ?? []
   return <AdminShell activeHref="/privacy"><div className="space-y-6">
     <PageHeader eyebrow="Platform" title="Privacy Requests" description="Data-subject requests received through the DPO channels, from identity verification to a recorded outcome. Personal data is shown masked."
@@ -28,10 +31,12 @@ export function AdminPrivacyQueuePage() {
     <InfoNote>Record identity verification before disclosing or changing any data. A rejection or partial completion needs the legal exception relied on.</InfoNote>
     <FilterTabs label="Request state" value={state} onChange={value => { setState(value); setPage(1) }} chips={[{ value: '', label: 'All (open first)' }, { value: 'RECEIVED', label: 'Received' }, { value: 'IDENTITY_VERIFIED', label: 'Identity verified' }, { value: 'IN_PROGRESS', label: 'In progress' }, { value: 'COMPLETED', label: 'Completed' }, { value: 'REJECTED', label: 'Rejected' }, { value: 'WITHDRAWN', label: 'Withdrawn' }]} />
     <Toolbar filters={<>
+      <DateFilter title="Request received dates" value={range} onChange={value => { setRange(value); setPage(1) }} />
       <label className="sr-only" htmlFor="privacy-type">Request type</label>
       <select id="privacy-type" className={`${control} w-auto`} value={type} onChange={event => { setType(event.target.value); setPage(1) }}><option value="">All request types</option>{TYPES.map(item => <option key={item} value={item}>{humanize(item)}</option>)}</select>
       <label className="sr-only" htmlFor="privacy-handler">Handler</label>
       <select id="privacy-handler" className={`${control} w-auto`} value={handler} onChange={event => { setHandler(event.target.value); setPage(1) }}><option value="">Any handler</option><option value="UNASSIGNED">Unassigned</option></select>
+      {(state || type || handler || range.from || range.to) && <Button variant="quiet" onClick={() => { setState(''); setType(''); setHandler(''); setRange(ALL_DATES); setPage(1) }}>Reset filters</Button>}
     </>} />
     {list.error ? <ErrorState message={list.error} onRetry={list.retry} /> : !list.data ? <LoadingState /> : items.length === 0
       ? <p className="rounded-surface border border-dashed border-border-default bg-surface-primary px-6 py-10 text-center text-sm text-text-secondary">No privacy requests match this view.</p>
@@ -44,7 +49,7 @@ export function AdminPrivacyQueuePage() {
           <td className="px-4 py-3">{item.subjectDisplay}<p className="text-[13px] text-text-secondary">{humanize(item.subjectAccountType)}</p></td>
           <td className="px-4 py-3"><StatusBadge label={humanize(item.state)} tone={tone(item.state)} />{!item.identityVerified && !['REJECTED', 'WITHDRAWN'].includes(item.state) && <p className="mt-1 text-[13px] text-text-secondary">Identity not verified</p>}</td>
           <td className="px-4 py-3">{manilaDate(item.receivedAt)}</td>
-          <td className="px-4 py-3">{item.targetDate ? manilaDate(item.targetDate) : 'Not set'}</td>
+          <td className="px-4 py-3">{item.targetDate ? formatAnalyticsDate(item.targetDate) : 'Not set'}</td>
           <td className="px-4 py-3">{item.handler ?? 'Unassigned'}</td>
         </tr>)}</tbody>
       </table></div>}
@@ -63,7 +68,7 @@ function RecordPrivacyPanel({ onClose }: { onClose: () => void }) {
     event.preventDefault(); setError(null); setFields({})
     const data = new FormData(event.currentTarget)
     const input = { subjectEmail: String(data.get('subject_email')).trim(), requestType: String(data.get('request_type')) as never, intakeChannel: String(data.get('intake_channel')) as never,
-      receivedOn: new Date(`${String(data.get('received_on'))}T00:00:00Z`), scope: String(data.get('scope')).trim(), note: String(data.get('note')).trim() }
+      receivedOn: parseDate(String(data.get('received_on'))), scope: String(data.get('scope')).trim(), note: String(data.get('note')).trim() }
     const scope = JSON.stringify(input)
     if (key.current.scope !== scope) key.current = { scope, value: newKey() }
     const result = await run('Verify to record a privacy request', () => recordPrivacy(input, key.current.value))
@@ -72,11 +77,11 @@ function RecordPrivacyPanel({ onClose }: { onClose: () => void }) {
   }
   const fieldError = (name: string) => fields[name] ? <span role="alert" className="text-sm font-normal text-status-error">{fields[name]}</span> : null
   return <SidePanel open title="Record privacy request" description="Record a request received outside the app. The subject account must exist; its email is matched exactly." onClose={onClose}>
-    <form onSubmit={event => void submit(event)} className="grid gap-4" noValidate>
+    <form onSubmit={event => void submit(event)} className="grid gap-5" noValidate>
       <label className={labelClass}>Subject account email<input name="subject_email" type="email" required className={control} autoComplete="off" />{fieldError('subject_email')}</label>
       <label className={labelClass}>Request type<select name="request_type" className={control}>{TYPES.map(item => <option key={item} value={item}>{humanize(item)}</option>)}</select></label>
       <label className={labelClass}>Intake channel<select name="intake_channel" className={control}>{CHANNELS.map(item => <option key={item} value={item}>{humanize(item)}</option>)}</select></label>
-      <label className={labelClass}>Received on<input name="received_on" type="date" required className={control} defaultValue={new Date().toISOString().slice(0, 10)} />{fieldError('received_on')}</label>
+      <label className={labelClass}>Received on<input name="received_on" type="date" required className={control} defaultValue={manilaToday()} />{fieldError('received_on')}</label>
       <label className={labelClass}>Scope of the request<textarea name="scope" required minLength={10} maxLength={4000} className={`${control} min-h-24 py-2`} />{fieldError('scope')}</label>
       <label className={labelClass}>Intake note<textarea name="note" required minLength={3} maxLength={2000} className={`${control} min-h-16 py-2`} />{fieldError('note')}</label>
       {error && <p role="alert" className="rounded-control border border-status-error/30 bg-red-50 px-4 py-3 text-sm text-red-900">{error}</p>}
@@ -97,7 +102,7 @@ export function AdminPrivacyDetailPage() {
 
 function PrivacyCase({ detail, onChanged, onReload }: { detail: PrivacyRequestDetail; onChanged: (next: PrivacyRequestDetail) => void; onReload: () => void }) {
   const [command, setCommand] = useState<string | null>(null)
-  const [extra, setExtra] = useState({ handler: '', targetDate: detail.targetDate ? new Date(detail.targetDate).toISOString().slice(0, 10) : '', method: METHODS[0] ?? '', exception: '' })
+  const [extra, setExtra] = useState({ handler: '', targetDate: analyticsDay(detail.targetDate) ?? '', method: METHODS[0] ?? '', exception: '' })
   const [error, setError] = useState<string | null>(null)
   const [conflict, setConflict] = useState<string | null>(null)
   const { run, busy, dialog } = useProtectedAction()
@@ -105,7 +110,7 @@ function PrivacyCase({ detail, onChanged, onReload }: { detail: PrivacyRequestDe
     if (!command) return
     setError(null); setConflict(null)
     const input = { lockVersion: detail.lockVersion, note,
-      ...(command === 'ASSIGN' ? { handlerUserId: Number(extra.handler), ...(extra.targetDate ? { targetDate: new Date(`${extra.targetDate}T00:00:00Z`) } : {}) } : {}),
+      ...(command === 'ASSIGN' ? { handlerUserId: Number(extra.handler), ...(extra.targetDate ? { targetDate: parseDate(extra.targetDate) } : {}) } : {}),
       ...(command === 'VERIFY' ? { verificationMethod: extra.method as never } : {}),
       ...(['COMPLETE', 'REJECT'].includes(command) && extra.exception.trim() ? { legalException: extra.exception.trim() } : {}) }
     const result = await run('Verify to update this privacy request', () => transitionPrivacy(detail.id, command.toLowerCase() as never, input))
@@ -120,7 +125,7 @@ function PrivacyCase({ detail, onChanged, onReload }: { detail: PrivacyRequestDe
       <div className="grid min-w-0 gap-5">
         <Panel title="Request">
           <FactList facts={[{ label: 'Subject', value: `${detail.subjectDisplay} · ${detail.subjectMaskedEmail}` }, { label: 'Account type', value: humanize(detail.subjectAccountType) }, { label: 'Scope', value: detail.scope ?? '—' },
-            { label: 'Handler', value: detail.handler ?? 'Unassigned' }, { label: 'Target date', value: detail.targetDate ? manilaDate(detail.targetDate) : 'Not set' },
+            { label: 'Handler', value: detail.handler ?? 'Unassigned' }, { label: 'Target date', value: detail.targetDate ? formatAnalyticsDate(detail.targetDate) : 'Not set' },
             { label: 'Identity verification', value: detail.identityVerificationMethod ? `${humanize(detail.identityVerificationMethod)} · ${manilaDateTime(detail.identityVerifiedAt)}` : 'Not recorded' },
             ...(detail.legalException ? [{ label: 'Legal exception', value: detail.legalException }] : []), ...(detail.responseSummary ? [{ label: 'Response summary', value: detail.responseSummary }] : []),
             ...(detail.completedAt ? [{ label: 'Closed', value: manilaDateTime(detail.completedAt) }] : [])]} />

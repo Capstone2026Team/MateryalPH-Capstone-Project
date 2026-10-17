@@ -50,9 +50,38 @@ final BuiltSet<ComplianceSubmissionSummaryStatusEnum>
   _$complianceSubmissionSummaryStatusEnum_SUPERSEDED,
 ]);
 
+const ComplianceSubmissionSummaryReviewModeEnum
+    _$complianceSubmissionSummaryReviewModeEnum_AUTOMATIC =
+    const ComplianceSubmissionSummaryReviewModeEnum._('AUTOMATIC');
+const ComplianceSubmissionSummaryReviewModeEnum
+    _$complianceSubmissionSummaryReviewModeEnum_MANUAL_REVIEW =
+    const ComplianceSubmissionSummaryReviewModeEnum._('MANUAL_REVIEW');
+
+ComplianceSubmissionSummaryReviewModeEnum
+    _$complianceSubmissionSummaryReviewModeEnumValueOf(String name) {
+  switch (name) {
+    case 'AUTOMATIC':
+      return _$complianceSubmissionSummaryReviewModeEnum_AUTOMATIC;
+    case 'MANUAL_REVIEW':
+      return _$complianceSubmissionSummaryReviewModeEnum_MANUAL_REVIEW;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<ComplianceSubmissionSummaryReviewModeEnum>
+    _$complianceSubmissionSummaryReviewModeEnumValues = BuiltSet<
+        ComplianceSubmissionSummaryReviewModeEnum>(const <ComplianceSubmissionSummaryReviewModeEnum>[
+  _$complianceSubmissionSummaryReviewModeEnum_AUTOMATIC,
+  _$complianceSubmissionSummaryReviewModeEnum_MANUAL_REVIEW,
+]);
+
 Serializer<ComplianceSubmissionSummaryStatusEnum>
     _$complianceSubmissionSummaryStatusEnumSerializer =
     _$ComplianceSubmissionSummaryStatusEnumSerializer();
+Serializer<ComplianceSubmissionSummaryReviewModeEnum>
+    _$complianceSubmissionSummaryReviewModeEnumSerializer =
+    _$ComplianceSubmissionSummaryReviewModeEnumSerializer();
 
 class _$ComplianceSubmissionSummaryStatusEnumSerializer
     implements PrimitiveSerializer<ComplianceSubmissionSummaryStatusEnum> {
@@ -92,6 +121,38 @@ class _$ComplianceSubmissionSummaryStatusEnumSerializer
           _fromWire[serialized] ?? (serialized is String ? serialized : ''));
 }
 
+class _$ComplianceSubmissionSummaryReviewModeEnumSerializer
+    implements PrimitiveSerializer<ComplianceSubmissionSummaryReviewModeEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'AUTOMATIC': 'AUTOMATIC',
+    'MANUAL_REVIEW': 'MANUAL_REVIEW',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'AUTOMATIC': 'AUTOMATIC',
+    'MANUAL_REVIEW': 'MANUAL_REVIEW',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    ComplianceSubmissionSummaryReviewModeEnum
+  ];
+  @override
+  final String wireName = 'ComplianceSubmissionSummaryReviewModeEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          ComplianceSubmissionSummaryReviewModeEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  ComplianceSubmissionSummaryReviewModeEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      ComplianceSubmissionSummaryReviewModeEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$ComplianceSubmissionSummary extends ComplianceSubmissionSummary {
   @override
   final String id;
@@ -103,6 +164,8 @@ class _$ComplianceSubmissionSummary extends ComplianceSubmissionSummary {
   final ComplianceSubmissionSummaryStatusEnum status;
   @override
   final String? markingType;
+  @override
+  final ComplianceSubmissionSummaryReviewModeEnum? reviewMode;
   @override
   final String? submittedAt;
   @override
@@ -120,6 +183,7 @@ class _$ComplianceSubmissionSummary extends ComplianceSubmissionSummary {
       required this.path,
       required this.status,
       this.markingType,
+      this.reviewMode,
       this.submittedAt,
       this.decidedAt,
       this.latestReview})
@@ -142,6 +206,7 @@ class _$ComplianceSubmissionSummary extends ComplianceSubmissionSummary {
         path == other.path &&
         status == other.status &&
         markingType == other.markingType &&
+        reviewMode == other.reviewMode &&
         submittedAt == other.submittedAt &&
         decidedAt == other.decidedAt &&
         latestReview == other.latestReview;
@@ -155,6 +220,7 @@ class _$ComplianceSubmissionSummary extends ComplianceSubmissionSummary {
     _$hash = $jc(_$hash, path.hashCode);
     _$hash = $jc(_$hash, status.hashCode);
     _$hash = $jc(_$hash, markingType.hashCode);
+    _$hash = $jc(_$hash, reviewMode.hashCode);
     _$hash = $jc(_$hash, submittedAt.hashCode);
     _$hash = $jc(_$hash, decidedAt.hashCode);
     _$hash = $jc(_$hash, latestReview.hashCode);
@@ -170,6 +236,7 @@ class _$ComplianceSubmissionSummary extends ComplianceSubmissionSummary {
           ..add('path', path)
           ..add('status', status)
           ..add('markingType', markingType)
+          ..add('reviewMode', reviewMode)
           ..add('submittedAt', submittedAt)
           ..add('decidedAt', decidedAt)
           ..add('latestReview', latestReview))
@@ -204,6 +271,12 @@ class ComplianceSubmissionSummaryBuilder
   String? get markingType => _$this._markingType;
   set markingType(String? markingType) => _$this._markingType = markingType;
 
+  ComplianceSubmissionSummaryReviewModeEnum? _reviewMode;
+  ComplianceSubmissionSummaryReviewModeEnum? get reviewMode =>
+      _$this._reviewMode;
+  set reviewMode(ComplianceSubmissionSummaryReviewModeEnum? reviewMode) =>
+      _$this._reviewMode = reviewMode;
+
   String? _submittedAt;
   String? get submittedAt => _$this._submittedAt;
   set submittedAt(String? submittedAt) => _$this._submittedAt = submittedAt;
@@ -230,6 +303,7 @@ class ComplianceSubmissionSummaryBuilder
       _path = $v.path;
       _status = $v.status;
       _markingType = $v.markingType;
+      _reviewMode = $v.reviewMode;
       _submittedAt = $v.submittedAt;
       _decidedAt = $v.decidedAt;
       _latestReview = $v.latestReview?.toBuilder();
@@ -265,6 +339,7 @@ class ComplianceSubmissionSummaryBuilder
             status: BuiltValueNullFieldError.checkNotNull(
                 status, r'ComplianceSubmissionSummary', 'status'),
             markingType: markingType,
+            reviewMode: reviewMode,
             submittedAt: submittedAt,
             decidedAt: decidedAt,
             latestReview: _latestReview?.build(),

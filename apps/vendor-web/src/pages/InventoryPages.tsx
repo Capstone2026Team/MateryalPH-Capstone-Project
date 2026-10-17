@@ -3,8 +3,8 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { History, Pencil, Zap } from 'lucide-react'
 import {
-  AutoAcceptPanel, Button, ConfirmDialog, ConflictBanner, DenseLedgerTable, Field, SidePanel, StaleStockBand, StatusMessage, StockLabelBadge, StatCard, ActiveFilters, FormDialog, Toolbar, InfoNote, EmptyState,
-  formatManilaDateTime, type AutoAcceptPanelValues, type LedgerColumn,
+  ALL_DATES, AutoAcceptPanel, Button, ConfirmDialog, ConflictBanner, DateFilter, DenseLedgerTable, Field, Pagination, Select, SidePanel, StaleStockBand, StatusMessage, StockLabelBadge, StatCard, ActiveFilters, FormDialog, Toolbar, InfoNote, EmptyState,
+  dateFilterLabel, formatManilaDateTime, type AutoAcceptPanelValues, type DateFilterRange, type LedgerColumn,
 } from '@materyalph/web-ui'
 import {
   apiFailure, configureAutoAccept, confirmStock, conflictRow, getAutoAccept, getInventorySettings, inventoryFieldErrors, listInventory, listMovements, listPriceHistory,
@@ -159,28 +159,36 @@ function AutoAcceptEditor({ row, onChanged }: { row: InventoryRow; onChanged: (p
 }
 
 function RowHistory({ row }: { row: InventoryRow }) {
+  const [range, setRange] = useState(ALL_DATES)
+  const [page, setPage] = useState(1)
+  const [movementMeta, setMovementMeta] = useState<Awaited<ReturnType<typeof listMovements>>['meta'] | null>(null)
   const [movements, setMovements] = useState<InventoryMovement[] | null>(null)
   const [prices, setPrices] = useState<PriceHistoryEntry[]>([])
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
   useEffect(() => {
     let active = true
-    setError(null)
-    Promise.all([listMovements(row.listingVariantId), listPriceHistory(row.listingVariantId)])
-      .then(([loaded, history]) => { if (active) { setMovements(loaded.items); setPrices(history) } })
+    setMovements(null); setError(null)
+    const dates = { ...(range.from ? { from: range.from } : {}), ...(range.to ? { to: range.to } : {}) }
+    Promise.all([listMovements(row.listingVariantId, page, dates), listPriceHistory(row.listingVariantId, dates)])
+      .then(([loaded, history]) => { if (active) { setMovements(loaded.items); setMovementMeta(loaded.meta); setPrices(history) } })
       .catch(async cause => { const text = await readableInventoryError(cause); if (active) setError(text) })
     return () => { active = false }
-  }, [row.listingVariantId, attempt])
-  if (error) return <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} />
-  if (!movements) return <p className="text-sm text-text-secondary" role="status">Loading history…</p>
-  return <div className="grid min-w-0 gap-6 md:grid-cols-2 md:gap-0 md:divide-x md:divide-border-default">
+  }, [row.listingVariantId, page, range.from, range.to, attempt])
+  const changeDates = (next: DateFilterRange) => { setPage(1); setRange(next) }
+  return <div className="grid min-w-0 gap-5">
+    <Toolbar filters={<DateFilter title="Inventory history dates" value={range} onChange={changeDates} />} />
+    <ActiveFilters filters={range.from || range.to ? [{ key: 'dates', label: dateFilterLabel(range), onRemove: () => changeDates(ALL_DATES) }] : []} onClear={() => changeDates(ALL_DATES)} />
+    {error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} /> : !movements ? <p className="text-sm text-text-secondary" role="status">Loading history…</p> : <div className="grid min-w-0 gap-6 md:grid-cols-2 md:gap-0 md:divide-x md:divide-border-default">
     <section className="min-w-0 md:pr-6"><h3 className="font-semibold">Stock movements</h3>
-      {movements.length === 0 ? <p className="mt-2 text-sm text-text-secondary">No movements yet.</p>
+      {movements.length === 0 ? <p className="mt-2 text-sm text-text-secondary">{range.from || range.to ? 'No movements in this date range.' : 'No movements yet.'}</p>
         : <ol className="mt-2 grid gap-2 text-sm">{movements.map(movement => <li key={movement.id} className="border-t border-border-default pt-2"><span className="font-semibold">{statusLabel(movement.movementType)}</span> {Number(movement.quantityDelta) > 0 ? '+' : ''}{quantityDisplay(movement.quantityDelta)} → {quantityDisplay(movement.quantityOnHandAfter)} {row.unitCode}<br /><span className="text-text-secondary">{movement.actor} · {formatManilaDateTime(movement.recordedAt)}{movement.note ? ` · ${movement.note}` : ''}</span></li>)}</ol>}
+      {movementMeta && movementMeta.lastPage > 1 && <div className="mt-4"><Pagination page={page} lastPage={movementMeta.lastPage} total={movementMeta.total} onChange={setPage} /></div>}
     </section>
     <section className="min-w-0 border-t border-border-default pt-6 md:border-t-0 md:pl-6 md:pt-0"><h3 className="font-semibold">Price versions</h3>
-      {prices.length === 0 ? <p className="mt-2 text-sm text-text-secondary">No price versions yet.</p> : <ol className="mt-2 grid gap-2 text-sm">{prices.map(price => <li key={price.priceVersionId} className="border-t border-border-default pt-2"><span className="font-semibold">v{price.version} {formatCentavos(price.amountCentavos)}</span> {price.priceKind === 'VOLUME_TIER' ? `from ${quantityDisplay(price.minimumQuantity)} ${row.unitCode}` : ''} · {price.current ? 'Current' : 'Retired'}<br /><span className="text-text-secondary">{price.createdBy ?? 'Vendor user'} · {formatManilaDateTime(price.effectiveAt)}</span></li>)}</ol>}
+      {prices.length === 0 ? <p className="mt-2 text-sm text-text-secondary">{range.from || range.to ? 'No price versions in this date range.' : 'No price versions yet.'}</p> : <ol className="mt-2 grid gap-2 text-sm">{prices.map(price => <li key={price.priceVersionId} className="border-t border-border-default pt-2"><span className="font-semibold">v{price.version} {formatCentavos(price.amountCentavos)}</span> {price.priceKind === 'VOLUME_TIER' ? `from ${quantityDisplay(price.minimumQuantity)} ${row.unitCode}` : ''} · {price.current ? 'Current' : 'Retired'}<br /><span className="text-text-secondary">{price.createdBy ?? 'Vendor user'} · {formatManilaDateTime(price.effectiveAt)}</span></li>)}</ol>}
     </section>
+    </div>}
   </div>
 }
 
@@ -208,7 +216,7 @@ function ReminderSettings() {
     catch (cause) { setNotice({ tone: 'error', text: await readableInventoryError(cause) }) }
     finally { setBusy(false) }
   }
-  return <div className="p-4">
+  return <div>
     <form className="grid min-w-0 gap-4" onSubmit={event => void save(event)}>
       <Field label="Reminder time (Asia/Manila)" name="reminder_local_time" type="time" value={time} disabled={!settings.canEdit || busy} onChange={event => setTime(event.target.value)} />
       <label className="flex min-h-12 items-center gap-3 text-sm"><input type="checkbox" className="h-5 w-5 accent-action-primary" checked={email} disabled={!settings.canEdit || busy} onChange={event => setEmail(event.target.checked)} />Also email Day {settings.reminderDays.join(' and Day ')} reminders (in-app reminders are always on; no SMS)</label>
@@ -313,9 +321,9 @@ export function VendorInventoryPage() {
       {!access.canViewInventory ? <StatusMessage tone="error">Your role does not include the inventory ledger. Ask the store Owner if you need stock access.</StatusMessage> : <>
         <dl aria-label="Inventory summary" className="grid grid-cols-2 gap-4 xl:grid-cols-4">{kpis.map(item => <StatCard key={item.label} label={item.label} value={loading || error ? '—' : item.value ?? '—'} icon={<span aria-hidden="true">{item.icon}</span>} hint={item.hint} active={stock === item.filter} onClick={() => setParams({ stock: item.filter })} />)}</dl>
         <Toolbar searchFirst search={{ label: 'Search product or SKU', placeholder: 'Product or SKU', value: query, onChange: setQuery, maxLength: 120, onSubmit: event => { event.preventDefault(); setParams({ q: query.trim() }) } }} filters={<>
-          <select aria-label="Stock level" className={control} value={stock} onChange={event => setParams({ stock: event.target.value })}><option value="">All stock levels</option><option value="IN_STOCK">In stock</option><option value="LIMITED_STOCK">Limited stock</option><option value="OUT_OF_STOCK">Out of stock</option></select>
-          <select aria-label="Confirmation" className={control} value={confirmation} onChange={event => setParams({ confirmation: event.target.value })}><option value="">Any confirmation</option><option value="DUE">Due</option><option value="STALE">Not confirmed 15+ days</option></select>
-          <select aria-label="Category" className={control} value={categoryId} onChange={event => setParams({ category: event.target.value })}><option value="">All categories</option>{taxonomy?.categories.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
+          <Select label="Stock level" hideLabel value={stock} onChange={event => setParams({ stock: event.target.value })}><option value="">All stock levels</option><option value="IN_STOCK">In stock</option><option value="LIMITED_STOCK">Limited stock</option><option value="OUT_OF_STOCK">Out of stock</option></Select>
+          <Select label="Confirmation" hideLabel value={confirmation} onChange={event => setParams({ confirmation: event.target.value })}><option value="">Any confirmation</option><option value="DUE">Due</option><option value="STALE">Not confirmed 15+ days</option></Select>
+          <Select label="Category" hideLabel value={categoryId} onChange={event => setParams({ category: event.target.value })}><option value="">All categories</option>{taxonomy?.categories.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</Select>
         </>} viewToggle={<Button variant="secondary" onClick={() => setRemindersOpen(true)}><Settings2 size={16} aria-hidden="true" />Reminders</Button>} />
         <ActiveFilters filters={activeFilters} onClear={clearFilters} />
         <InfoNote dismissible>Exact stock is private to your team. Buyers see In Stock, Limited Stock or Out of Stock.</InfoNote>
@@ -330,7 +338,7 @@ export function VendorInventoryPage() {
                   {permissions?.canAdjust && counted.length > 0 && <Button variant="secondary" onClick={() => setConfirmOpen(true)}>Confirm counts on this page</Button>}
                 </div>
                 <DenseLedgerTable responsive caption="Inventory ledger" columns={columns} rows={rows} rowKey={row => row.listingVariantId} onRowClick={row => toggle(row, 'details')} />
-                {lastPage > 1 && <nav aria-label="Inventory pages" className="flex flex-wrap items-center gap-3"><Button variant="secondary" disabled={page <= 1} onClick={() => setParams({ page: String(page - 1) })}>Previous</Button><span>Page {page} of {lastPage}</span><Button variant="secondary" disabled={page >= lastPage} onClick={() => setParams({ page: String(page + 1) })}>Next</Button></nav>}
+                {lastPage > 1 && <Pagination page={page} lastPage={lastPage} total={meta?.total ?? 0} busy={loading} onChange={next => setParams({ page: String(next) })} />}
               </>}
       </>}
       {ready && !loading && !error && selectedRow && expanded && <FormDialog open title={variantName(selectedRow)} description={`SKU: ${selectedRow.sku}`} onClose={() => setExpanded(null)} footer={null}

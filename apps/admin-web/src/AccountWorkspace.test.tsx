@@ -11,6 +11,7 @@ const profile = {
 }
 let status = 200
 let verificationStatus = 200
+let photoUrl: string | null = null
 const requests: { path: string; method: string; body: string | undefined }[] = []
 const envelope = (data: unknown) => new Response(JSON.stringify({ data, meta: {}, errors: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 
@@ -18,6 +19,7 @@ describe('Account workspace access and security', () => {
   beforeEach(() => {
     status = 200
     verificationStatus = 200
+    photoUrl = null
     requests.length = 0
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const path = String(input)
@@ -25,8 +27,9 @@ describe('Account workspace access and security', () => {
       if (path.includes('/csrf')) return envelope({ csrf_token: 'test-csrf' })
       if (path.endsWith('/profile')) {
         if (status !== 200) return new Response(JSON.stringify({ data: null, meta: {}, errors: [{ code: 'UNAUTHENTICATED', message: 'Sign in again.' }] }), { status })
-        return envelope(profile)
+        return envelope({ ...profile, avatar_url: photoUrl })
       }
+      if (path.includes('/account/photo?')) return new Response('synthetic profile photo', { headers: { 'Content-Type': 'image/png' } })
       if (path.endsWith('/security')) return envelope({ totp_enrolled: true, recent_authentication_expires_at: null })
       if (path.endsWith('/reauthentication') && verificationStatus !== 200) return new Response(JSON.stringify({ data: null, meta: {}, errors: [{ code: 'REAUTHENTICATION_FAILED', message: 'The verification details are incorrect.' }] }), { status: verificationStatus, headers: { 'Content-Type': 'application/json' } })
       if (path.includes('/sessions')) return envelope([])
@@ -50,18 +53,37 @@ describe('Account workspace access and security', () => {
     open()
     await screen.findByRole('heading', { name: 'Settings' })
     for (let visit = 0; visit < 10; visit++) {
-      fireEvent.click(screen.getByRole('button', { name: 'Account' }))
+      fireEvent.click(screen.getByRole('tab', { name: 'Account' }))
       await screen.findByRole('heading', { name: 'Account' })
-      fireEvent.click(screen.getByRole('button', { name: 'Profile' }))
+      fireEvent.click(screen.getByRole('tab', { name: 'Profile' }))
       await screen.findByRole('textbox', { name: 'Full name' })
     }
     expect(requests.filter(request => request.path.endsWith('/profile'))).toHaveLength(1)
-    fireEvent.click(screen.getByRole('button', { name: 'Sessions / Devices' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Sessions / Devices' }))
     await waitFor(() => expect(requests.filter(request => request.path.includes('/sessions'))).toHaveLength(1))
     expect(requests.filter(request => request.path.endsWith('/profile'))).toHaveLength(1)
     await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh' })).toBeEnabled())
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
     await waitFor(() => expect(requests.filter(request => request.path.endsWith('/profile'))).toHaveLength(2))
+  })
+
+  test('profile photos use private previews and failed images show initials while retaining name edits', async () => {
+    photoUrl = 'https://api.example.test/api/v1/admin/account/photo?expires=123&signature=fixture'
+    const NativeURL = URL
+    const revokeObjectURL = vi.fn()
+    vi.stubGlobal('URL', class extends NativeURL {
+      static override createObjectURL = () => 'blob:private-profile'
+      static override revokeObjectURL = revokeObjectURL
+    })
+    open()
+    const photo = await screen.findByRole('img', { name: 'Your personal profile' })
+    expect(photo).toHaveAttribute('src', 'blob:private-profile')
+    fireEvent.change(screen.getByRole('textbox', { name: 'Full name' }), { target: { value: 'Unsaved name' } })
+    fireEvent.error(photo)
+    expect(screen.getByText('SE')).toBeVisible()
+    expect(screen.getByRole('textbox', { name: 'Full name' })).toHaveValue('Unsaved name')
+    fireEvent.click(screen.getByRole('tab', { name: 'Account' }))
+    await waitFor(() => expect(revokeObjectURL).toHaveBeenCalledWith('blob:private-profile'))
   })
 
   test('expired sessions remove account controls and offer sign-in', async () => {
@@ -75,7 +97,7 @@ describe('Account workspace access and security', () => {
   test('email change opens an authenticator dialog and runs only after verification', async () => {
     open()
     await screen.findByRole('heading', { name: 'Settings' })
-    fireEvent.click(screen.getByRole('button', { name: 'Security' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Security' }))
     const email = await screen.findByRole('textbox', { name: 'New email' })
     fireEvent.change(email, { target: { value: 'new@example.test' } })
     fireEvent.click(screen.getByRole('button', { name: 'Send verification' }))
@@ -96,7 +118,7 @@ describe('Account workspace access and security', () => {
     verificationStatus = 422
     open()
     await screen.findByRole('heading', { name: 'Settings' })
-    fireEvent.click(screen.getByRole('button', { name: 'Security' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Security' }))
     fireEvent.change(await screen.findByRole('textbox', { name: 'New email' }), { target: { value: 'new@example.test' } })
     fireEvent.click(screen.getByRole('button', { name: 'Send verification' }))
     fireEvent.change(await screen.findByRole('textbox', { name: 'Authenticator code' }), { target: { value: '123456' } })
@@ -109,7 +131,7 @@ describe('Account workspace access and security', () => {
   test('password and authenticator replacement each wait for the popup', async () => {
     open()
     await screen.findByRole('heading', { name: 'Settings' })
-    fireEvent.click(screen.getByRole('button', { name: 'Security' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Security' }))
     fireEvent.change(await screen.findByLabelText(/^New password/), { target: { value: 'AnewPassword12345' } })
     fireEvent.change(screen.getByLabelText(/^Confirm new password/), { target: { value: 'AnewPassword12345' } })
     fireEvent.click(screen.getByRole('button', { name: 'Change password' }))

@@ -37,5 +37,16 @@ void main() {
       // TODO
     });
 
+    // BuiltList<CommissionTrendPoint> trend
+    test('to test the property `trend`', () async {
+      // TODO
+    });
+
+    // DAY when the recorded range spans at most 92 days (empty days are zero-filled); otherwise MONTH, recorded months only.
+    // String trendGranularity
+    test('to test the property `trendGranularity`', () async {
+      // TODO
+    });
+
   });
 }

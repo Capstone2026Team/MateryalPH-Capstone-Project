@@ -8,6 +8,7 @@ use App\Domain\Orders\AdminOrderOperationsService;
 use App\Domain\Payments\ReimbursementService;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Support\PortalDateRange;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -28,7 +29,7 @@ final class AdminOrderOperationsController extends Controller
             'state' => ['sometimes', Rule::in(['REFUND_PENDING', 'REFUNDED', 'REFUND_FAILED'])],
             'trigger' => ['sometimes', Rule::in(['CANCELLATION', 'DISPUTE_CONCLUSION', 'TECHNICAL_COMPENSATION', 'FEE_CREDIT'])],
             'page' => ['sometimes', 'integer', 'between:1,1000'],
-        ]);
+        ] + PortalDateRange::rules($request));
         $result = $this->operations->refunds($request, $filters);
 
         return ApiResponse::success($result['items'], $result['meta']);
@@ -43,7 +44,9 @@ final class AdminOrderOperationsController extends Controller
 
     public function reimbursements(Request $request): JsonResponse
     {
-        return ApiResponse::success($this->operations->reimbursements($request));
+        $filters = $request->validate(PortalDateRange::rules($request));
+
+        return ApiResponse::success($this->operations->reimbursements($request, $filters));
     }
 
     public function decideReimbursement(Request $request, string $reimbursementId, ReimbursementService $reimbursements): JsonResponse
@@ -56,6 +59,8 @@ final class AdminOrderOperationsController extends Controller
 
     public function cancellationRequests(Request $request): JsonResponse
     {
-        return ApiResponse::success($this->operations->cancellationRequests($request));
+        $filters = $request->validate(PortalDateRange::rules($request));
+
+        return ApiResponse::success($this->operations->cancellationRequests($request, $filters));
     }
 }

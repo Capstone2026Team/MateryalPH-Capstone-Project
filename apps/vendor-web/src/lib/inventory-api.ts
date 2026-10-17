@@ -20,6 +20,7 @@ import {
 } from '@materyalph/api-client-ts'
 import { createWebApiConfiguration } from '@materyalph/web-ui'
 import { newIdempotencyKey } from './onboarding-api'
+import { apiDateFilters, type DateFilters } from './date-filters'
 
 export { readableOnboardingError as readableInventoryError, onboardingFieldErrors as inventoryFieldErrors } from './onboarding-api'
 export type { AutoAcceptPolicyDetail, FleetVehicle, FleetVehicleInput, FleetVehicleListMeta, InventoryLedgerMeta, InventoryMovement, InventoryRow, InventorySettings, PageMeta, PriceHistoryEntry, StockLabel }
@@ -45,13 +46,13 @@ export async function confirmStock(items: { listingVariantId: string; lockVersio
   return (await inventoryApi().confirmVendorStock({ stockConfirmationRequest: { items } })).data
 }
 
-export async function listMovements(variantId: string, page = 1): Promise<{ items: InventoryMovement[]; meta: PageMeta }> {
-  const response = await inventoryApi().listVendorInventoryMovements({ variantId, page })
+export async function listMovements(variantId: string, page = 1, filters: DateFilters = {}): Promise<{ items: InventoryMovement[]; meta: PageMeta }> {
+  const response = await inventoryApi().listVendorInventoryMovements({ variantId, page, ...apiDateFilters(filters) })
   return { items: response.data, meta: response.meta }
 }
 
-export async function listPriceHistory(variantId: string): Promise<PriceHistoryEntry[]> {
-  return (await inventoryApi().listVendorPriceHistory({ variantId })).data
+export async function listPriceHistory(variantId: string, filters: DateFilters = {}): Promise<PriceHistoryEntry[]> {
+  return (await inventoryApi().listVendorPriceHistory({ variantId, ...apiDateFilters(filters) })).data
 }
 
 export async function getInventorySettings(): Promise<InventorySettings> {

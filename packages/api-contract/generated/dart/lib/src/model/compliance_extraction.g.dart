@@ -142,11 +142,15 @@ class _$ComplianceExtraction extends ComplianceExtraction {
   @override
   final ComplianceExtractionSource_Enum? source_;
   @override
+  final String? provider;
+  @override
   final ComplianceExtractionStatusEnum status;
   @override
   final num? confidence;
   @override
   final BuiltMap<String, String> suggestions;
+  @override
+  final bool? registerListed;
   @override
   final bool? assistanceOnly;
 
@@ -156,9 +160,11 @@ class _$ComplianceExtraction extends ComplianceExtraction {
 
   _$ComplianceExtraction._(
       {this.source_,
+      this.provider,
       required this.status,
       this.confidence,
       required this.suggestions,
+      this.registerListed,
       this.assistanceOnly})
       : super._();
   @override
@@ -175,9 +181,11 @@ class _$ComplianceExtraction extends ComplianceExtraction {
     if (identical(other, this)) return true;
     return other is ComplianceExtraction &&
         source_ == other.source_ &&
+        provider == other.provider &&
         status == other.status &&
         confidence == other.confidence &&
         suggestions == other.suggestions &&
+        registerListed == other.registerListed &&
         assistanceOnly == other.assistanceOnly;
   }
 
@@ -185,9 +193,11 @@ class _$ComplianceExtraction extends ComplianceExtraction {
   int get hashCode {
     var _$hash = 0;
     _$hash = $jc(_$hash, source_.hashCode);
+    _$hash = $jc(_$hash, provider.hashCode);
     _$hash = $jc(_$hash, status.hashCode);
     _$hash = $jc(_$hash, confidence.hashCode);
     _$hash = $jc(_$hash, suggestions.hashCode);
+    _$hash = $jc(_$hash, registerListed.hashCode);
     _$hash = $jc(_$hash, assistanceOnly.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
@@ -197,9 +207,11 @@ class _$ComplianceExtraction extends ComplianceExtraction {
   String toString() {
     return (newBuiltValueToStringHelper(r'ComplianceExtraction')
           ..add('source_', source_)
+          ..add('provider', provider)
           ..add('status', status)
           ..add('confidence', confidence)
           ..add('suggestions', suggestions)
+          ..add('registerListed', registerListed)
           ..add('assistanceOnly', assistanceOnly))
         .toString();
   }
@@ -213,6 +225,10 @@ class ComplianceExtractionBuilder
   ComplianceExtractionSource_Enum? get source_ => _$this._source_;
   set source_(ComplianceExtractionSource_Enum? source_) =>
       _$this._source_ = source_;
+
+  String? _provider;
+  String? get provider => _$this._provider;
+  set provider(String? provider) => _$this._provider = provider;
 
   ComplianceExtractionStatusEnum? _status;
   ComplianceExtractionStatusEnum? get status => _$this._status;
@@ -228,6 +244,11 @@ class ComplianceExtractionBuilder
   set suggestions(MapBuilder<String, String>? suggestions) =>
       _$this._suggestions = suggestions;
 
+  bool? _registerListed;
+  bool? get registerListed => _$this._registerListed;
+  set registerListed(bool? registerListed) =>
+      _$this._registerListed = registerListed;
+
   bool? _assistanceOnly;
   bool? get assistanceOnly => _$this._assistanceOnly;
   set assistanceOnly(bool? assistanceOnly) =>
@@ -241,9 +262,11 @@ class ComplianceExtractionBuilder
     final $v = _$v;
     if ($v != null) {
       _source_ = $v.source_;
+      _provider = $v.provider;
       _status = $v.status;
       _confidence = $v.confidence;
       _suggestions = $v.suggestions.toBuilder();
+      _registerListed = $v.registerListed;
       _assistanceOnly = $v.assistanceOnly;
       _$v = null;
     }
@@ -269,10 +292,12 @@ class ComplianceExtractionBuilder
       _$result = _$v ??
           _$ComplianceExtraction._(
             source_: source_,
+            provider: provider,
             status: BuiltValueNullFieldError.checkNotNull(
                 status, r'ComplianceExtraction', 'status'),
             confidence: confidence,
             suggestions: suggestions.build(),
+            registerListed: registerListed,
             assistanceOnly: assistanceOnly,
           );
     } catch (_) {

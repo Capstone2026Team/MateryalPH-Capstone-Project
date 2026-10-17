@@ -51,6 +51,18 @@ export interface FulfillmentProof {
      *
      */
     vehicle?: { [key: string]: any; };
+    /**
+     *
+     */
+    note?: string;
+    /**
+     *
+     */
+    recordedBy?: string;
+    /**
+     *
+     */
+    additionalPhotoPaths?: Array<string>;
 }
 
 
@@ -100,6 +112,9 @@ export function FulfillmentProofFromJSONTyped(json: any, ignoreDiscriminator: bo
         'photoPath': json['photo_path'] == null ? undefined : json['photo_path'],
         'signaturePath': json['signature_path'] == null ? undefined : json['signature_path'],
         'vehicle': json['vehicle'] == null ? undefined : json['vehicle'],
+        'note': json['note'] == null ? undefined : json['note'],
+        'recordedBy': json['recorded_by'] == null ? undefined : json['recorded_by'],
+        'additionalPhotoPaths': json['additional_photo_paths'] == null ? undefined : json['additional_photo_paths'],
     };
 }
 
@@ -122,6 +137,9 @@ export function FulfillmentProofToJSONTyped(value?: FulfillmentProof | null, ign
         'photo_path': value['photoPath'],
         'signature_path': value['signaturePath'],
         'vehicle': value['vehicle'],
+        'note': value['note'],
+        'recorded_by': value['recordedBy'],
+        'additional_photo_paths': value['additionalPhotoPaths'],
     };
 }
 

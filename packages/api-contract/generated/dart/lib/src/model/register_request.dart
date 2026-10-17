@@ -18,7 +18,7 @@ part 'register_request.g.dart';
 /// * [mobileE164]
 /// * [password]
 /// * [passwordConfirmation]
-/// * [businessName]
+/// * [businessName] - Optional and no longer collected at registration; the Public Store Name is entered in Business Information.
 /// * [termsAccepted]
 /// * [privacyAccepted]
 /// * [botProtection] - Vendor checkbox or accessible email fallback evidence.
@@ -39,8 +39,9 @@ abstract class RegisterRequest implements Built<RegisterRequest, RegisterRequest
   @BuiltValueField(wireName: r'password_confirmation')
   String get passwordConfirmation;
 
+  /// Optional and no longer collected at registration; the Public Store Name is entered in Business Information.
   @BuiltValueField(wireName: r'business_name')
-  String get businessName;
+  String? get businessName;
 
   @BuiltValueField(wireName: r'terms_accepted')
   RegisterRequestTermsAcceptedEnum get termsAccepted;
@@ -102,11 +103,13 @@ class _$RegisterRequestSerializer implements PrimitiveSerializer<RegisterRequest
       object.passwordConfirmation,
       specifiedType: const FullType(String),
     );
-    yield r'business_name';
-    yield serializers.serialize(
-      object.businessName,
-      specifiedType: const FullType(String),
-    );
+    if (object.businessName != null) {
+      yield r'business_name';
+      yield serializers.serialize(
+        object.businessName,
+        specifiedType: const FullType(String),
+      );
+    }
     yield r'terms_accepted';
     yield serializers.serialize(
       object.termsAccepted,
@@ -185,8 +188,9 @@ class _$RegisterRequestSerializer implements PrimitiveSerializer<RegisterRequest
         case r'business_name':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(String),
-          ) as String;
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
           result.businessName = valueDes;
           break;
         case r'terms_accepted':

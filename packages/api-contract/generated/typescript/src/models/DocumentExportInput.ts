@@ -56,6 +56,8 @@ export const DocumentExportInputTypeEnum = {
     TaxPackage: 'TAX_PACKAGE',
     AuditLog: 'AUDIT_LOG',
     GeoAnalytics: 'GEO_ANALYTICS',
+    TransactionHistory: 'TRANSACTION_HISTORY',
+    Earnings: 'EARNINGS',
 } as const;
 export type DocumentExportInputTypeEnum = typeof DocumentExportInputTypeEnum[keyof typeof DocumentExportInputTypeEnum];
 

@@ -9,6 +9,7 @@ Future<void Function()> watchPrivateRealtime(
   void Function() refresh, {
   void Function(bool, int)? onTyping,
   void Function(bool)? onLive,
+  void Function(String)? onEvent,
   required Future<api.ChatRealtime?> Function() configuration,
   required Future<String> Function(String socketId, String channelName)
   authorize,
@@ -25,12 +26,16 @@ Future<void Function()> watchPrivateRealtime(
   var retrySeconds = 1;
   Timer? retry;
   Timer? handshake;
+  Timer? heartbeat;
+  Timer? authority;
   WebSocketChannel? socket;
   StreamSubscription<dynamic>? subscription;
   late Future<void> Function() connect;
 
   void disconnect() {
     handshake?.cancel();
+    heartbeat?.cancel();
+    authority?.cancel();
     final previous = subscription;
     subscription = null;
     if (previous != null) unawaited(previous.cancel());
@@ -79,15 +84,27 @@ Future<void Function()> watchPrivateRealtime(
       );
       connected = current;
       socket = current;
+      var lastReceived = DateTime.now();
       void reconnectCurrent() {
         if (!stopped && socket == current) reconnect();
       }
 
       // Bound a silent connection/auth handshake; reconnects always refetch the account epoch.
       handshake = Timer(const Duration(seconds: 15), reconnectCurrent);
+      heartbeat = Timer.periodic(const Duration(seconds: 25), (_) {
+        if (stopped || socket != current) return;
+        if (DateTime.now().difference(lastReceived).inSeconds > 60) {
+          reconnectCurrent();
+        } else {
+          current.sink.add(
+            jsonEncode({'event': 'pusher:ping', 'data': <String, Object>{}}),
+          );
+        }
+      });
       subscription = current.stream.listen(
         (event) async {
           if (stopped || socket != current) return;
+          lastReceived = DateTime.now();
           try {
             final message = jsonDecode(event as String) as Map<String, dynamic>;
             if (message['event'] == 'pusher:connection_established') {
@@ -118,6 +135,32 @@ Future<void Function()> watchPrivateRealtime(
               retrySeconds = 1;
               setLive(true);
               refresh(); // Catch changes between the first REST fetch and subscription/reconnection.
+              authority?.cancel();
+              var checking = false;
+              authority = Timer.periodic(const Duration(seconds: 30), (
+                _,
+              ) async {
+                if (checking || stopped || socket != current) return;
+                checking = true;
+                try {
+                  final next = await configuration();
+                  if (!stopped &&
+                      socket == current &&
+                      (next == null ||
+                          !next.enabled ||
+                          (channel == null && next.inboxChannel != target) ||
+                          next.key != config.key ||
+                          next.host != config.host ||
+                          next.port != config.port ||
+                          next.scheme != config.scheme)) {
+                    reconnectCurrent();
+                  }
+                } catch (_) {
+                  reconnectCurrent();
+                } finally {
+                  checking = false;
+                }
+              });
             } else if (message['channel'] == 'private-$target' &&
                 message['event'] == 'conversation.typing') {
               final data = message['data'] is String
@@ -128,7 +171,11 @@ Future<void Function()> watchPrivateRealtime(
               }
             } else if (message['channel'] == 'private-$target' &&
                 events.contains(message['event'])) {
-              refresh();
+              if (onEvent != null) {
+                onEvent(message['event'] as String);
+              } else {
+                refresh();
+              }
             } else if (message['event'] == 'pusher:error') {
               refresh();
               reconnectCurrent();

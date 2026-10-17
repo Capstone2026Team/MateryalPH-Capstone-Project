@@ -8,6 +8,8 @@ part of 'order_delivery_estimate.dart';
 
 class _$OrderDeliveryEstimate extends OrderDeliveryEstimate {
   @override
+  final BuiltList<DeliveryEstimateOption>? options;
+  @override
   final int feeMinCentavos;
   @override
   final int feeMaxCentavos;
@@ -21,7 +23,8 @@ class _$OrderDeliveryEstimate extends OrderDeliveryEstimate {
       (OrderDeliveryEstimateBuilder()..update(updates))._build();
 
   _$OrderDeliveryEstimate._(
-      {required this.feeMinCentavos,
+      {this.options,
+      required this.feeMinCentavos,
       required this.feeMaxCentavos,
       required this.tripsMin,
       required this.tripsMax})
@@ -39,6 +42,7 @@ class _$OrderDeliveryEstimate extends OrderDeliveryEstimate {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is OrderDeliveryEstimate &&
+        options == other.options &&
         feeMinCentavos == other.feeMinCentavos &&
         feeMaxCentavos == other.feeMaxCentavos &&
         tripsMin == other.tripsMin &&
@@ -48,6 +52,7 @@ class _$OrderDeliveryEstimate extends OrderDeliveryEstimate {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, options.hashCode);
     _$hash = $jc(_$hash, feeMinCentavos.hashCode);
     _$hash = $jc(_$hash, feeMaxCentavos.hashCode);
     _$hash = $jc(_$hash, tripsMin.hashCode);
@@ -59,6 +64,7 @@ class _$OrderDeliveryEstimate extends OrderDeliveryEstimate {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'OrderDeliveryEstimate')
+          ..add('options', options)
           ..add('feeMinCentavos', feeMinCentavos)
           ..add('feeMaxCentavos', feeMaxCentavos)
           ..add('tripsMin', tripsMin)
@@ -70,6 +76,12 @@ class _$OrderDeliveryEstimate extends OrderDeliveryEstimate {
 class OrderDeliveryEstimateBuilder
     implements Builder<OrderDeliveryEstimate, OrderDeliveryEstimateBuilder> {
   _$OrderDeliveryEstimate? _$v;
+
+  ListBuilder<DeliveryEstimateOption>? _options;
+  ListBuilder<DeliveryEstimateOption> get options =>
+      _$this._options ??= ListBuilder<DeliveryEstimateOption>();
+  set options(ListBuilder<DeliveryEstimateOption>? options) =>
+      _$this._options = options;
 
   int? _feeMinCentavos;
   int? get feeMinCentavos => _$this._feeMinCentavos;
@@ -96,6 +108,7 @@ class OrderDeliveryEstimateBuilder
   OrderDeliveryEstimateBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _options = $v.options?.toBuilder();
       _feeMinCentavos = $v.feeMinCentavos;
       _feeMaxCentavos = $v.feeMaxCentavos;
       _tripsMin = $v.tripsMin;
@@ -119,17 +132,31 @@ class OrderDeliveryEstimateBuilder
   OrderDeliveryEstimate build() => _build();
 
   _$OrderDeliveryEstimate _build() {
-    final _$result = _$v ??
-        _$OrderDeliveryEstimate._(
-          feeMinCentavos: BuiltValueNullFieldError.checkNotNull(
-              feeMinCentavos, r'OrderDeliveryEstimate', 'feeMinCentavos'),
-          feeMaxCentavos: BuiltValueNullFieldError.checkNotNull(
-              feeMaxCentavos, r'OrderDeliveryEstimate', 'feeMaxCentavos'),
-          tripsMin: BuiltValueNullFieldError.checkNotNull(
-              tripsMin, r'OrderDeliveryEstimate', 'tripsMin'),
-          tripsMax: BuiltValueNullFieldError.checkNotNull(
-              tripsMax, r'OrderDeliveryEstimate', 'tripsMax'),
-        );
+    _$OrderDeliveryEstimate _$result;
+    try {
+      _$result = _$v ??
+          _$OrderDeliveryEstimate._(
+            options: _options?.build(),
+            feeMinCentavos: BuiltValueNullFieldError.checkNotNull(
+                feeMinCentavos, r'OrderDeliveryEstimate', 'feeMinCentavos'),
+            feeMaxCentavos: BuiltValueNullFieldError.checkNotNull(
+                feeMaxCentavos, r'OrderDeliveryEstimate', 'feeMaxCentavos'),
+            tripsMin: BuiltValueNullFieldError.checkNotNull(
+                tripsMin, r'OrderDeliveryEstimate', 'tripsMin'),
+            tripsMax: BuiltValueNullFieldError.checkNotNull(
+                tripsMax, r'OrderDeliveryEstimate', 'tripsMax'),
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'options';
+        _options?.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'OrderDeliveryEstimate', _$failedField, e.toString());
+      }
+      rethrow;
+    }
     replace(_$result);
     return _$result;
   }

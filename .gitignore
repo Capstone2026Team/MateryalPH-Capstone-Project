@@ -33,18 +33,24 @@ services/api/storage/oauth-public.key
 services/api/vendor/
 apps/*/node_modules/
 apps/*/dist/
+apps/vendor-web/public/buyer-demo.apk
+# Demo Vendor photos: third-party product images fetched by tools/demo-assets/fetch_demo_photos.py, never committed
+services/api/database/demo-assets/photos/
 apps/*/playwright-report/
 apps/*/test-results/
 packages/*/node_modules/
 packages/*/dist/
 packages/api-contract/generated/dart/.dart_tool/
 packages/api-contract/generated/dart/build/
+packages/api-contract/.dart_tool/
 apps/buyer-mobile/.dart_tool/
 apps/buyer-mobile/build/
 
 # Local runtime data
 tmp/pdf-tools/
 services/api/phase15-*.log
+services/api/delivery-*.log
+packages/api-contract/**/delivery-*.log
 apps/*/phase15-*.log
 services/api/storage/logs/*.log
 services/api/.env.testing
@@ -71,3 +77,5 @@ services/api/.env.testing
 .impeccable/live/deferred-svelte-component-accepts.json
 .impeccable/live/*.png
 # impeccable-ignore-end
+# Local realtime count validation artifacts and pre-edit comparisons
+/.tmp/realtime-counts/

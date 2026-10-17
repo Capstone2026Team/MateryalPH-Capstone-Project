@@ -25,6 +25,7 @@ Route::prefix('vendor')->middleware([
     'auth.transport:WEB', 'auth.cookie', VerifyAccountCsrf::class, 'auth:api', 'account.access:VENDOR',
 ])->group(function (): void {
     Route::get('/finance', [VendorFinanceController::class, 'overview']);
+    Route::post('/tax-profile/tin/reveal', [VendorFinanceController::class, 'revealTin']);
     Route::put('/finance/physical-payments', [VendorFinanceController::class, 'updatePhysicalPayments']);
     Route::get('/finance/transactions', [VendorFinanceController::class, 'transactions']);
     Route::get('/finance/transactions/export', [VendorFinanceController::class, 'export']);

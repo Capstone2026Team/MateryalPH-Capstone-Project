@@ -287,8 +287,8 @@ final class GoogleOidcService
         $organizationId = (string) Str::uuid7();
         DB::table('vendor_organizations')->insert([
             'id' => $organizationId,
-            'legal_name' => $flow['business_name'],
-            'store_name' => $flow['business_name'],
+            'legal_name' => trim((string) ($flow['business_name'] ?? '')),
+            'store_name' => trim((string) ($flow['business_name'] ?? '')),
             'store_email' => $user->email,
             'store_email_verified_at' => now(),
             'account_status' => 'ACTIVE',

@@ -12,6 +12,7 @@ use App\Domain\Privacy\PrivacyRequestService;
 use App\Domain\Settings\PlatformSettingService;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Support\PortalDateRange;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -50,7 +51,7 @@ final class AdminOperationsController extends Controller
     {
         $filters = $request->validate(['state' => ['sometimes', Rule::in(['EFFECTIVE', 'REFERRED', 'APPLIED', 'LIFTED', 'DECLINED'])], 'subject_type' => ['sometimes', Rule::in(['BUYER', 'VENDOR_ORGANIZATION'])],
             'action' => ['sometimes', Rule::in(EnforcementService::ACTIONS)], 'source' => ['sometimes', Rule::in(['DISPUTE_REFERRAL', 'DIRECT'])], 'subject_id' => ['sometimes', 'uuid'],
-            'page' => ['sometimes', 'integer', 'between:1,1000']]);
+            'page' => ['sometimes', 'integer', 'between:1,1000']] + PortalDateRange::rules($request));
         $result = $enforcement->queue($request, $filters);
 
         return ApiResponse::success($result['items'], $result['meta']);
@@ -110,7 +111,7 @@ final class AdminOperationsController extends Controller
     public function privacyQueue(Request $request, PrivacyRequestService $privacy): JsonResponse
     {
         $filters = $request->validate(['state' => ['sometimes', Rule::in(['RECEIVED', 'IDENTITY_VERIFIED', 'IN_PROGRESS', 'COMPLETED', 'REJECTED', 'WITHDRAWN'])],
-            'request_type' => ['sometimes', Rule::in(PrivacyRequestService::TYPES)], 'handler' => ['sometimes', Rule::in(['UNASSIGNED'])], 'page' => ['sometimes', 'integer', 'between:1,1000']]);
+            'request_type' => ['sometimes', Rule::in(PrivacyRequestService::TYPES)], 'handler' => ['sometimes', Rule::in(['UNASSIGNED'])], 'page' => ['sometimes', 'integer', 'between:1,1000']] + PortalDateRange::rules($request));
         $result = $privacy->queue($request, $filters);
 
         return ApiResponse::success($result['items'], $result['meta']);
@@ -147,7 +148,7 @@ final class AdminOperationsController extends Controller
         $filters = $request->validate(['actor' => ['sometimes', 'string', 'max:120'], 'actor_role' => ['sometimes', 'string', 'max:48'], 'action' => ['sometimes', 'string', 'max:96', 'regex:/^[A-Za-z0-9_]+$/'],
             'resource_type' => ['sometimes', 'string', 'max:48', 'regex:/^[A-Z0-9_]+$/'], 'resource_id' => ['sometimes', 'uuid'], 'organization_id' => ['sometimes', 'uuid'],
             'result' => ['sometimes', Rule::in(['SUCCEEDED', 'FAILED'])], 'correlation_id' => ['sometimes', 'string', 'max:64'], 'reason' => ['sometimes', 'string', 'max:200'],
-            'from' => ['sometimes', 'date_format:Y-m-d'], 'to' => ['sometimes', 'date_format:Y-m-d'], 'cursor' => ['sometimes', 'string', 'max:300']]);
+            ...PortalDateRange::rules($request), 'cursor' => ['sometimes', 'string', 'max:300']]);
         $result = $audit->search($request, $filters);
 
         return ApiResponse::success($result['items'], $result['meta']);
@@ -170,7 +171,7 @@ final class AdminOperationsController extends Controller
 
     public function failures(Request $request, JobHealthService $health): JsonResponse
     {
-        $filters = $request->validate(['kind' => ['sometimes', Rule::in(['OUTBOX', 'JOBS'])], 'page' => ['sometimes', 'integer', 'between:1,1000']]);
+        $filters = $request->validate(['kind' => ['sometimes', Rule::in(['OUTBOX', 'JOBS'])], 'page' => ['sometimes', 'integer', 'between:1,1000']] + PortalDateRange::rules($request));
         $result = $health->failures($request, $filters);
 
         return ApiResponse::success($result['items'], $result['meta']);
@@ -195,10 +196,11 @@ final class AdminOperationsController extends Controller
     public function budgetOverrides(Request $request, AdminAccess $access): JsonResponse
     {
         $access->require($request, 'budget_overrides.view');
-        $input = $request->validate(['page' => ['sometimes', 'integer', 'between:1,1000']]);
-        $page = DB::table('budget_overrides as b')->join('projects as p', 'p.id', '=', 'b.project_id')->join('work_packages as w', 'w.id', '=', 'b.work_package_id')
-            ->leftJoin('orders as o', 'o.id', '=', 'b.order_id')->join('users as u', 'u.id', '=', 'b.buyer_user_id')->orderByDesc('b.created_at')
-            ->paginate(25, ['b.id', 'b.overage_centavos', 'b.reason', 'b.snapshot', 'b.created_at', 'p.name as project_name', 'w.name as work_package_name', 'o.reference as order_reference', 'u.public_id'], 'page', $input['page'] ?? 1);
+        $input = $request->validate(['page' => ['sometimes', 'integer', 'between:1,1000']] + PortalDateRange::rules($request));
+        $query = DB::table('budget_overrides as b')->join('projects as p', 'p.id', '=', 'b.project_id')->join('work_packages as w', 'w.id', '=', 'b.work_package_id')
+            ->leftJoin('orders as o', 'o.id', '=', 'b.order_id')->join('users as u', 'u.id', '=', 'b.buyer_user_id')->orderByDesc('b.created_at');
+        PortalDateRange::apply($query, 'b.created_at', $input);
+        $page = $query->paginate(25, ['b.id', 'b.overage_centavos', 'b.reason', 'b.snapshot', 'b.created_at', 'p.name as project_name', 'w.name as work_package_name', 'o.reference as order_reference', 'u.public_id'], 'page', $input['page'] ?? 1);
         $items = array_map(static function (object $row): array {
             $snapshot = json_decode((string) $row->snapshot, true) ?: [];
 

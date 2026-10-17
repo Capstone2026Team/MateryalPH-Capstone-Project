@@ -12,19 +12,28 @@ part 'work_package_line_input.g.dart';
 /// WorkPackageLineInput
 ///
 /// Properties:
-/// * [materialId]
+/// * [materialId] - Canonical catalog material; omitted or null for an unlisted material the Buyer names. Unlisted lines accept any normalized unit and are always missing lines.
 /// * [name]
+/// * [description]
+/// * [color]
 /// * [unitId]
 /// * [quantity] - Positive quantity within the selected normalized unit precision; maximum 1,000,000.
 /// * [specifications]
 /// * [preferredBrand]
 @BuiltValue()
 abstract class WorkPackageLineInput implements Built<WorkPackageLineInput, WorkPackageLineInputBuilder> {
+  /// Canonical catalog material; omitted or null for an unlisted material the Buyer names. Unlisted lines accept any normalized unit and are always missing lines.
   @BuiltValueField(wireName: r'material_id')
-  String get materialId;
+  String? get materialId;
 
   @BuiltValueField(wireName: r'name')
   String get name;
+
+  @BuiltValueField(wireName: r'description')
+  String? get description;
+
+  @BuiltValueField(wireName: r'color')
+  String? get color;
 
   @BuiltValueField(wireName: r'unit_id')
   String get unitId;
@@ -62,16 +71,32 @@ class _$WorkPackageLineInputSerializer implements PrimitiveSerializer<WorkPackag
     WorkPackageLineInput object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    yield r'material_id';
-    yield serializers.serialize(
-      object.materialId,
-      specifiedType: const FullType(String),
-    );
+    if (object.materialId != null) {
+      yield r'material_id';
+      yield serializers.serialize(
+        object.materialId,
+        specifiedType: const FullType(String),
+      );
+    }
     yield r'name';
     yield serializers.serialize(
       object.name,
       specifiedType: const FullType(String),
     );
+    if (object.description != null) {
+      yield r'description';
+      yield serializers.serialize(
+        object.description,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.color != null) {
+      yield r'color';
+      yield serializers.serialize(
+        object.color,
+        specifiedType: const FullType(String),
+      );
+    }
     yield r'unit_id';
     yield serializers.serialize(
       object.unitId,
@@ -120,8 +145,9 @@ class _$WorkPackageLineInputSerializer implements PrimitiveSerializer<WorkPackag
         case r'material_id':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(String),
-          ) as String;
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
           result.materialId = valueDes;
           break;
         case r'name':
@@ -130,6 +156,22 @@ class _$WorkPackageLineInputSerializer implements PrimitiveSerializer<WorkPackag
             specifiedType: const FullType(String),
           ) as String;
           result.name = valueDes;
+          break;
+        case r'description':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.description = valueDes;
+          break;
+        case r'color':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.color = valueDes;
           break;
         case r'unit_id':
           final valueDes = serializers.deserialize(

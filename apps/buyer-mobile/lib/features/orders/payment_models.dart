@@ -28,7 +28,8 @@ class PaymentChannelView {
   String get unavailableText => switch (unavailableReason) {
     'REFUND_ROUTE_UNAVAILABLE' => 'Not offered: no approved refund route',
     'PROVIDER_NOT_CONFIGURED' => 'Temporarily unavailable',
-    'BELOW_CHANNEL_MINIMUM' || 'ABOVE_CHANNEL_MAXIMUM' => 'Outside this channel’s limits',
+    'BELOW_CHANNEL_MINIMUM' ||
+    'ABOVE_CHANNEL_MAXIMUM' => 'Outside this channel’s limits',
     _ => 'Unavailable',
   };
 }

@@ -36,10 +36,14 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Laravel\Passport\AccessToken;
+use Tests\Support\CreatesDiscoveryFixtures;
 use Tests\TestCase;
 
 final class PhaseFiveInventoryDeliveryTest extends TestCase
 {
+    use CreatesDiscoveryFixtures {
+        placeStore as private placeDeliveryStore;
+    }
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -532,10 +536,15 @@ final class PhaseFiveInventoryDeliveryTest extends TestCase
         $staff = $this->member($organization, 'STORE_STAFF');
         $this->expectedDomainError(fn () => $snapshot->record($staff, $orderId, $load, [['vehicle_id' => $box['id'], 'number_of_vehicles' => 1, 'total_vehicle_trips' => $trips]], $fee, 'Staff attempt', $today), 'PERMISSION_DENIED');
 
-        $id = $snapshot->record($owner, $orderId, $load, [['vehicle_id' => $box['id'], 'number_of_vehicles' => 1, 'total_vehicle_trips' => $trips]], $fee, 'Two trips to the guarded gate.', $today);
+        $this->expectedDomainError(fn () => $snapshot->record($owner, $orderId, $load, [['vehicle_id' => $box['id'], 'number_of_vehicles' => 1, 'total_vehicle_trips' => $trips]], $fee, 'Two trips to the guarded gate.', $today), 'DELIVERY_CHANGE_REASON_REQUIRED');
+        $id = $snapshot->record($owner, $orderId, $load, [['vehicle_id' => $box['id'], 'number_of_vehicles' => 1, 'total_vehicle_trips' => $trips]], $fee, 'Two trips to the guarded gate.', $today,
+            changeReason: 'One vehicle will make both trips because the site can unload only one vehicle at a time.');
         $frozen = DB::table('order_delivery_snapshots')->where('id', $id)->first();
         $data = json_decode((string) $frozen->snapshot, true);
         self::assertSame($intended, $data['intended_location']);
+        self::assertTrue($data['recommendation_changed']);
+        self::assertSame(2, $data['system_recommendation'][0]['vehicles']);
+        self::assertNotEmpty($data['change_reason']);
         self::assertSame($alternative, $data['drop_off']);
         self::assertSame('ALTERNATIVE_DROP_OFF', $data['endpoint']);
         self::assertSame('ADVISORY_CONFIRMED', $frozen->basis);
@@ -573,12 +582,16 @@ final class PhaseFiveInventoryDeliveryTest extends TestCase
         $organization = VendorOrganization::query()->create(['legal_name' => $name.' Legal', 'store_name' => $name]);
         DB::table('vendor_organizations')->where('id', $organization->id)->update(['account_status' => 'ACTIVE', 'store_activation_status' => 'ACTIVE', 'store_verification_status' => 'APPROVED', 'store_setup_status' => 'COMPLETED']);
         $storeProfileId = (string) Str::uuid7();
-        DB::table('store_profiles')->insert(['id' => $storeProfileId, 'vendor_organization_id' => $organization->id, 'public_store_name' => $name, 'status' => 'COMPLETED', 'fulfillment_method' => $delivery ? 'BOTH' : 'SELF_PICKUP', 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('store_profiles')->insert(['id' => $storeProfileId, 'vendor_organization_id' => $organization->id, 'public_store_name' => $name, 'status' => 'COMPLETED', 'vendor_delivery_enabled' => $delivery, 'fulfillment_method' => $delivery ? 'BOTH' : 'SELF_PICKUP', 'created_at' => now(), 'updated_at' => now()]);
         if ($delivery) {
             DB::table('delivery_service_areas')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organization->id, 'area_type' => 'RADIUS', 'maximum_distance_km' => 50, 'active' => true, 'created_at' => now(), 'updated_at' => now()]);
         }
         app(StoreOperatingSchedule::class)->replaceWeekly($storeProfileId, array_map(fn (int $day): array => ['day_of_week' => $day, 'status' => 'OPEN', 'opens_at' => '08:00', 'closes_at' => '17:00'], range(1, 7)));
         $owner = $this->member($organization, 'OWNER');
+        if ($delivery) {
+            $this->member($organization, 'FULFILLMENT');
+            $this->placeDeliveryStore($organization->id, 1000);
+        }
         $profileId = (string) Str::uuid7();
         DB::table('vendor_tax_profiles')->insert(['id' => $profileId, 'vendor_organization_id' => $organization->id, 'status' => 'APPROVED', 'environment' => 'TEST', 'created_at' => now(), 'updated_at' => now()]);
         $versionId = (string) Str::uuid7();

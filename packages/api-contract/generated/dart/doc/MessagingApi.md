@@ -11,19 +11,23 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**archiveChatConversation**](MessagingApi.md#archivechatconversation) | **PUT** /{messagingPortal}/conversations/{conversationId}/archive |
 [**authorizeChatChannel**](MessagingApi.md#authorizechatchannel) | **POST** /{messagingPortal}/messaging/auth |
+[**cancelSiteInspection**](MessagingApi.md#cancelsiteinspection) | **POST** /{messagingPortal}/conversations/{conversationId}/site-inspections/{inspectionId}/cancel |
 [**createConversation**](MessagingApi.md#createconversation) | **POST** /{messagingPortal}/conversations |
 [**decideChatQuotation**](MessagingApi.md#decidechatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/{action} |
+[**decideSiteInspection**](MessagingApi.md#decidesiteinspection) | **POST** /{messagingPortal}/conversations/{conversationId}/site-inspections/{inspectionId}/{action} |
 [**downloadChatAttachment**](MessagingApi.md#downloadchatattachment) | **GET** /{messagingPortal}/conversations/{conversationId}/attachments/{attachmentId} |
 [**getChatAvatar**](MessagingApi.md#getchatavatar) | **GET** /{messagingPortal}/conversations/{conversationId}/avatars/{userId} |
 [**getChatRealtime**](MessagingApi.md#getchatrealtime) | **GET** /{messagingPortal}/messaging/realtime |
 [**getConversation**](MessagingApi.md#getconversation) | **GET** /{messagingPortal}/conversations/{conversationId} |
 [**listChatHandlers**](MessagingApi.md#listchathandlers) | **GET** /{messagingPortal}/conversations/{conversationId}/handlers |
 [**listChatProducts**](MessagingApi.md#listchatproducts) | **GET** /{messagingPortal}/conversations/{conversationId}/products |
+[**listChatProjectInquiries**](MessagingApi.md#listchatprojectinquiries) | **GET** /{messagingPortal}/conversations/{conversationId}/project-inquiries |
 [**listConversations**](MessagingApi.md#listconversations) | **GET** /{messagingPortal}/conversations |
 [**listVendorFulfillmentConversations**](MessagingApi.md#listvendorfulfillmentconversations) | **GET** /vendor/conversations/{conversationId}/fulfillment-conversations |
 [**openVendorOrderConversation**](MessagingApi.md#openvendororderconversation) | **POST** /vendor/orders/{orderId}/conversation |
 [**publishChatQuotation**](MessagingApi.md#publishchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/publish |
 [**readChatMessages**](MessagingApi.md#readchatmessages) | **POST** /{messagingPortal}/conversations/{conversationId}/read |
+[**requestSiteInspection**](MessagingApi.md#requestsiteinspection) | **POST** /{messagingPortal}/site-inspections |
 [**restoreChatConversation**](MessagingApi.md#restorechatconversation) | **DELETE** /{messagingPortal}/conversations/{conversationId}/archive |
 [**saveChatQuotationDraft**](MessagingApi.md#savechatquotationdraft) | **PUT** /{messagingPortal}/conversations/{conversationId}/quotation/draft |
 [**sendChatMessage**](MessagingApi.md#sendchatmessage) | **POST** /{messagingPortal}/conversations/{conversationId}/messages |
@@ -39,7 +43,7 @@ Method | HTTP request | Description
 
 
 
-Hides one sales or quotation conversation from the Buyer's own inbox. It is idempotent, personal and reversible; messages, quotations and orders are never changed or deleted. Fulfillment threads stay with their order (409 CONVERSATION_NOT_ARCHIVABLE). New activity returns the conversation to the inbox.
+Hides the Buyer and Store sales group, including its item and project inquiries, from this Buyer's inbox. It is idempotent, personal and reversible; messages, quotations and orders are never changed or deleted. Fulfillment threads stay with their order (409 CONVERSATION_NOT_ARCHIVABLE). New activity in any inquiry returns the group to the inbox.
 
 ### Example
 ```dart
@@ -124,6 +128,55 @@ Name | Type | Description  | Notes
 ### Authorization
 
 [accessCookie](../README.md#accessCookie), [passportBearer](../README.md#passportBearer), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **cancelSiteInspection**
+> SiteInspectionListResponse cancelSiteInspection(messagingPortal, conversationId, inspectionId, siteInspectionVersion)
+
+
+
+The Buyer cancels a REQUESTED or SCHEDULED inspection. A stale lock_version returns SITE_INSPECTION_VERSION_CONFLICT; a closed request returns SITE_INSPECTION_CLOSED.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getMessagingApi();
+final String messagingPortal = messagingPortal_example; // String |
+final String conversationId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String inspectionId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final SiteInspectionVersion siteInspectionVersion = ; // SiteInspectionVersion |
+
+try {
+    final response = api.cancelSiteInspection(messagingPortal, conversationId, inspectionId, siteInspectionVersion);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling MessagingApi->cancelSiteInspection: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **messagingPortal** | **String**|  |
+ **conversationId** | **String**|  |
+ **inspectionId** | **String**|  |
+ **siteInspectionVersion** | [**SiteInspectionVersion**](SiteInspectionVersion.md)|  |
+
+### Return type
+
+[**SiteInspectionListResponse**](SiteInspectionListResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
 
 ### HTTP request headers
 
@@ -230,6 +283,65 @@ Name | Type | Description  | Notes
 ### Authorization
 
 [accessCookie](../README.md#accessCookie), [passportBearer](../README.md#passportBearer), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **decideSiteInspection**
+> SiteInspectionListResponse decideSiteInspection(messagingPortal, conversationId, inspectionId, action, siteInspectionDecision)
+
+
+
+Store sales roles (Owner, Store Manager, Store Staff, Customer Service) schedule or reschedule (future scheduled_for), decline (reason) or complete a SCHEDULED inspection with the measured volume in m³. Each change posts a system message and notifies the Buyer. Fulfillment Staff are not sales participants and receive 404. Completing never creates a quotation; the store sends one through the existing quotation flow.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getMessagingApi();
+final String messagingPortal = messagingPortal_example; // String |
+final String conversationId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String inspectionId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String action = action_example; // String |
+final SiteInspectionDecision siteInspectionDecision = ; // SiteInspectionDecision |
+
+try {
+    final response = api.decideSiteInspection(messagingPortal, conversationId, inspectionId, action, siteInspectionDecision);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling MessagingApi->decideSiteInspection: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **messagingPortal** | **String**|  |
+ **conversationId** | **String**|  |
+ **inspectionId** | **String**|  |
+ **action** | **String**|  |
+ **siteInspectionDecision** | [**SiteInspectionDecision**](SiteInspectionDecision.md)|  |
+
+### Return type
+
+[**SiteInspectionListResponse**](SiteInspectionListResponse.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
 
 ### HTTP request headers
 
@@ -572,12 +684,63 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **listChatProjectInquiries**
+> ConversationPageResponse listChatProjectInquiries(messagingPortal, conversationId, page)
+
+
+
+Lists existing Project-Based conversations for this authorized sales conversation's Buyer and Store. Includes only currently authorized assignments, newest activity first. Preserves each Work Package and quotation history. Never creates an inquiry. Fulfillment threads cannot use this endpoint.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getMessagingApi();
+final String messagingPortal = messagingPortal_example; // String |
+final String conversationId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final int page = 56; // int |
+
+try {
+    final response = api.listChatProjectInquiries(messagingPortal, conversationId, page);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling MessagingApi->listChatProjectInquiries: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **messagingPortal** | **String**|  |
+ **conversationId** | **String**|  |
+ **page** | **int**|  | [optional] [default to 1]
+
+### Return type
+
+[**ConversationPageResponse**](ConversationPageResponse.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **listConversations**
 > ConversationPageResponse listConversations(messagingPortal, page, archived)
 
 
 
-Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
+One sales inbox entry per Buyer and Store. The authorized Item-Based conversation is the main thread; when unavailable to the viewer, use their oldest authorized project inquiry. Preview, activity ordering and unread count include all currently authorized sales inquiries in that group. Detail messages and read receipts remain conversation-specific. Assigned Fulfillment Staff retain their separate order threads. Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
 
 ### Example
 ```dart
@@ -594,7 +757,7 @@ import 'package:materyalph_api_client/api.dart';
 final api = MateryalphApiClient().getMessagingApi();
 final String messagingPortal = messagingPortal_example; // String |
 final int page = 56; // int |
-final bool archived = true; // bool | Buyer only. true lists the Buyer's archived sales conversations; omitted or false lists the active inbox. Order fulfillment threads are never listed for a Buyer; they open from Order Details.
+final bool archived = true; // bool | Buyer only. Archive and restore apply to the entire Buyer and Store sales group. New activity in any inquiry restores the group. true lists archived groups; omitted or false lists the active inbox. Order fulfillment threads are never listed for a Buyer; they open from Order Details.
 
 try {
     final response = api.listConversations(messagingPortal, page, archived);
@@ -610,7 +773,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **messagingPortal** | **String**|  |
  **page** | **int**|  | [optional]
- **archived** | **bool**| Buyer only. true lists the Buyer's archived sales conversations; omitted or false lists the active inbox. Order fulfillment threads are never listed for a Buyer; they open from Order Details. | [optional]
+ **archived** | **bool**| Buyer only. Archive and restore apply to the entire Buyer and Store sales group. New activity in any inquiry restores the group. true lists archived groups; omitted or false lists the active inbox. Order fulfillment threads are never listed for a Buyer; they open from Order Details. | [optional]
 
 ### Return type
 
@@ -791,7 +954,7 @@ Name | Type | Description  | Notes
 
 
 
-Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
+Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport. Reading received messages also marks that Buyer's corresponding MESSAGES notifications through the same message cutoff as read; later arrivals remain unread and queued delivery skips already-read message notices.
 
 ### Example
 ```dart
@@ -841,12 +1004,59 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **requestSiteInspection**
+> SiteInspectionCreatedResponse requestSiteInspection(messagingPortal, idempotencyKey, siteInspectionCreate)
+
+
+
+Free Site Inspection / Estimate for ready-mixed concrete (owner decision 2026-10-16). Instead of stating a volume, the Buyer asks the store to inspect a saved location. The request is posted in the Buyer's Item-Based store conversation, whose delivery destination becomes the inspected site, so the store's later quotation for the measured volume uses it. Creates no order, hold, reservation or charge. One open request per conversation (SITE_INSPECTION_ALREADY_OPEN); a non-ready-mixed or unavailable listing returns SITE_INSPECTION_UNAVAILABLE. The preferred date is today to 60 days ahead in Asia/Manila. Notes are stored encrypted and shown only to the Buyer and the store's sales roles.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getMessagingApi();
+final String messagingPortal = messagingPortal_example; // String |
+final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String | Also the inspection identifier; a retry returns the same request.
+final SiteInspectionCreate siteInspectionCreate = ; // SiteInspectionCreate |
+
+try {
+    final response = api.requestSiteInspection(messagingPortal, idempotencyKey, siteInspectionCreate);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling MessagingApi->requestSiteInspection: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **messagingPortal** | **String**|  |
+ **idempotencyKey** | **String**| Also the inspection identifier; a retry returns the same request. |
+ **siteInspectionCreate** | [**SiteInspectionCreate**](SiteInspectionCreate.md)|  |
+
+### Return type
+
+[**SiteInspectionCreatedResponse**](SiteInspectionCreatedResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **restoreChatConversation**
 > ChatEmptyResponse restoreChatConversation(messagingPortal, conversationId)
 
 
 
-Returns an archived conversation to the Buyer's inbox. Idempotent.
+Returns the archived Buyer and Store sales group to the Buyer's inbox. Idempotent. Accepts any authorized sales inquiry in the group.
 
 ### Example
 ```dart
@@ -946,7 +1156,7 @@ Name | Type | Description  | Notes
 
 
 
-Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
+Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport. A new non-system Vendor message atomically records one MESSAGES notification for the conversation's Buyer and queues private realtime/push delivery. Replaying client_message_id does not duplicate the message or notification. Notice copy includes the public sender and store identity and a bounded message preview; private contacts and attachment details are excluded.
 
 ### Example
 ```dart
@@ -1223,7 +1433,7 @@ Name | Type | Description  | Notes
 
 
 
-Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
+Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport. A newly committed Vendor attachment message records one MESSAGES notification for the authorized Buyer without exposing attachment contents or names.
 
 ### Example
 ```dart

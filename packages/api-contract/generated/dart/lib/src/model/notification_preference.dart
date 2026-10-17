@@ -8,7 +8,7 @@ import 'package:built_value/serializer.dart';
 
 part 'notification_preference.g.dart';
 
-/// NotificationPreference
+/// MESSAGES is optional; its in_app and push channels default to enabled and email defaults to disabled. Mandatory security, payment, refund, dispute and legal notices remain enabled.
 ///
 /// Properties:
 /// * [category]

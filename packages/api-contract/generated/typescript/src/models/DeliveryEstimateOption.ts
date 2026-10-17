@@ -13,12 +13,24 @@
  */
 
 import { mapValues } from '../runtime';
+import type { MixerVolumePlan } from './MixerVolumePlan';
+import {
+    MixerVolumePlanFromJSON,
+    MixerVolumePlanFromJSONTyped,
+    MixerVolumePlanToJSON,
+    MixerVolumePlanToJSONTyped,
+} from './MixerVolumePlan';
+
 /**
  *
  * @export
  * @interface DeliveryEstimateOption
  */
 export interface DeliveryEstimateOption {
+    /**
+     * Recommended registered vehicle; absent in historical estimates.
+     */
+    vehicleId?: string;
     /**
      *
      */
@@ -40,14 +52,41 @@ export interface DeliveryEstimateOption {
      */
     trips: number;
     /**
-     *
+     * Trip fees plus any mixer mobilization.
      */
     feeCentavos: number;
     /**
      *
      */
     feePerTripCentavos: number;
+    /**
+     * The Vendor's chosen mixer mobilization basis.
+     */
+    mobilizationBasis?: DeliveryEstimateOptionMobilizationBasisEnum | null;
+    /**
+     *
+     */
+    mobilizationFeeCentavos?: number;
+    /**
+     *
+     */
+    mobilizationTotalCentavos?: number;
+    /**
+     *
+     */
+    volumePlan?: MixerVolumePlan | null;
 }
+
+
+/**
+ * @export
+ */
+export const DeliveryEstimateOptionMobilizationBasisEnum = {
+    PerTruck: 'PER_TRUCK',
+    PerTrip: 'PER_TRIP',
+} as const;
+export type DeliveryEstimateOptionMobilizationBasisEnum = typeof DeliveryEstimateOptionMobilizationBasisEnum[keyof typeof DeliveryEstimateOptionMobilizationBasisEnum];
+
 
 /**
  * Check if a given object implements the DeliveryEstimateOption interface.
@@ -73,6 +112,7 @@ export function DeliveryEstimateOptionFromJSONTyped(json: any, ignoreDiscriminat
     }
     return {
 
+        'vehicleId': json['vehicle_id'] == null ? undefined : json['vehicle_id'],
         'loadKey': json['load_key'],
         'vehicleName': json['vehicle_name'],
         'vehicleType': json['vehicle_type'],
@@ -80,6 +120,10 @@ export function DeliveryEstimateOptionFromJSONTyped(json: any, ignoreDiscriminat
         'trips': json['trips'],
         'feeCentavos': json['fee_centavos'],
         'feePerTripCentavos': json['fee_per_trip_centavos'],
+        'mobilizationBasis': json['mobilization_basis'] === undefined ? undefined : json['mobilization_basis'] === null ? null : json['mobilization_basis'],
+        'mobilizationFeeCentavos': json['mobilization_fee_centavos'] == null ? undefined : json['mobilization_fee_centavos'],
+        'mobilizationTotalCentavos': json['mobilization_total_centavos'] == null ? undefined : json['mobilization_total_centavos'],
+        'volumePlan': json['volume_plan'] === undefined ? undefined : json['volume_plan'] === null ? null : MixerVolumePlanFromJSON(json['volume_plan']),
     };
 }
 
@@ -94,6 +138,7 @@ export function DeliveryEstimateOptionToJSONTyped(value?: DeliveryEstimateOption
 
     return {
 
+        'vehicle_id': value['vehicleId'],
         'load_key': value['loadKey'],
         'vehicle_name': value['vehicleName'],
         'vehicle_type': value['vehicleType'],
@@ -101,6 +146,10 @@ export function DeliveryEstimateOptionToJSONTyped(value?: DeliveryEstimateOption
         'trips': value['trips'],
         'fee_centavos': value['feeCentavos'],
         'fee_per_trip_centavos': value['feePerTripCentavos'],
+        'mobilization_basis': value['mobilizationBasis'],
+        'mobilization_fee_centavos': value['mobilizationFeeCentavos'],
+        'mobilization_total_centavos': value['mobilizationTotalCentavos'],
+        'volume_plan': MixerVolumePlanToJSON(value['volumePlan']),
     };
 }
 

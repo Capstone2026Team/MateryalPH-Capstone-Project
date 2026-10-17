@@ -17,5 +17,21 @@ void main() {
       // TODO
     });
 
+    // int vehicleIndex
+    test('to test the property `vehicleIndex`', () async {
+      // TODO
+    });
+
+    // int lockVersion
+    test('to test the property `lockVersion`', () async {
+      // TODO
+    });
+
+    // Atomically assign and record Out for Delivery; requires vehicle_index and lock_version.
+    // bool dispatch (default value: false)
+    test('to test the property `dispatch`', () async {
+      // TODO
+    });
+
   });
 }

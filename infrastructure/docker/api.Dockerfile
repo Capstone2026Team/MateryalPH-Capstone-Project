@@ -16,6 +16,8 @@ RUN apk upgrade --no-cache \
         linux-headers \
         make \
         postgresql-dev \
+        tesseract-ocr \
+        tesseract-ocr-data-eng \
     && docker-php-ext-configure gd --with-jpeg --with-webp \
     && docker-php-ext-install bcmath gd intl opcache pcntl pdo_pgsql zip \
     && pecl install redis \

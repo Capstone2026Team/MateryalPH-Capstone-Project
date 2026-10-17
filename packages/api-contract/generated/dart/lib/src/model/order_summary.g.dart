@@ -146,6 +146,51 @@ final BuiltSet<OrderSummaryNextActionEnum> _$orderSummaryNextActionEnumValues =
   _$orderSummaryNextActionEnum_CONFIRM_RECEIPT,
 ]);
 
+const OrderSummaryCardActionsEnum
+    _$orderSummaryCardActionsEnum_CONFIRM_RECEIPT =
+    const OrderSummaryCardActionsEnum._('CONFIRM_RECEIPT');
+const OrderSummaryCardActionsEnum _$orderSummaryCardActionsEnum_REPORT_PROBLEM =
+    const OrderSummaryCardActionsEnum._('REPORT_PROBLEM');
+const OrderSummaryCardActionsEnum _$orderSummaryCardActionsEnum_FILE_DISPUTE =
+    const OrderSummaryCardActionsEnum._('FILE_DISPUTE');
+const OrderSummaryCardActionsEnum _$orderSummaryCardActionsEnum_VIEW_DISPUTE =
+    const OrderSummaryCardActionsEnum._('VIEW_DISPUTE');
+const OrderSummaryCardActionsEnum _$orderSummaryCardActionsEnum_BUY_AGAIN =
+    const OrderSummaryCardActionsEnum._('BUY_AGAIN');
+const OrderSummaryCardActionsEnum
+    _$orderSummaryCardActionsEnum_VIEW_CANCELLATION =
+    const OrderSummaryCardActionsEnum._('VIEW_CANCELLATION');
+
+OrderSummaryCardActionsEnum _$orderSummaryCardActionsEnumValueOf(String name) {
+  switch (name) {
+    case 'CONFIRM_RECEIPT':
+      return _$orderSummaryCardActionsEnum_CONFIRM_RECEIPT;
+    case 'REPORT_PROBLEM':
+      return _$orderSummaryCardActionsEnum_REPORT_PROBLEM;
+    case 'FILE_DISPUTE':
+      return _$orderSummaryCardActionsEnum_FILE_DISPUTE;
+    case 'VIEW_DISPUTE':
+      return _$orderSummaryCardActionsEnum_VIEW_DISPUTE;
+    case 'BUY_AGAIN':
+      return _$orderSummaryCardActionsEnum_BUY_AGAIN;
+    case 'VIEW_CANCELLATION':
+      return _$orderSummaryCardActionsEnum_VIEW_CANCELLATION;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<OrderSummaryCardActionsEnum>
+    _$orderSummaryCardActionsEnumValues =
+    BuiltSet<OrderSummaryCardActionsEnum>(const <OrderSummaryCardActionsEnum>[
+  _$orderSummaryCardActionsEnum_CONFIRM_RECEIPT,
+  _$orderSummaryCardActionsEnum_REPORT_PROBLEM,
+  _$orderSummaryCardActionsEnum_FILE_DISPUTE,
+  _$orderSummaryCardActionsEnum_VIEW_DISPUTE,
+  _$orderSummaryCardActionsEnum_BUY_AGAIN,
+  _$orderSummaryCardActionsEnum_VIEW_CANCELLATION,
+]);
+
 Serializer<OrderSummaryProcurementTypeEnum>
     _$orderSummaryProcurementTypeEnumSerializer =
     _$OrderSummaryProcurementTypeEnumSerializer();
@@ -160,6 +205,9 @@ Serializer<OrderSummaryPaymentMethodEnum>
     _$OrderSummaryPaymentMethodEnumSerializer();
 Serializer<OrderSummaryNextActionEnum> _$orderSummaryNextActionEnumSerializer =
     _$OrderSummaryNextActionEnumSerializer();
+Serializer<OrderSummaryCardActionsEnum>
+    _$orderSummaryCardActionsEnumSerializer =
+    _$OrderSummaryCardActionsEnumSerializer();
 
 class _$OrderSummaryProcurementTypeEnumSerializer
     implements PrimitiveSerializer<OrderSummaryProcurementTypeEnum> {
@@ -316,6 +364,43 @@ class _$OrderSummaryNextActionEnumSerializer
           _fromWire[serialized] ?? (serialized is String ? serialized : ''));
 }
 
+class _$OrderSummaryCardActionsEnumSerializer
+    implements PrimitiveSerializer<OrderSummaryCardActionsEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'CONFIRM_RECEIPT': 'CONFIRM_RECEIPT',
+    'REPORT_PROBLEM': 'REPORT_PROBLEM',
+    'FILE_DISPUTE': 'FILE_DISPUTE',
+    'VIEW_DISPUTE': 'VIEW_DISPUTE',
+    'BUY_AGAIN': 'BUY_AGAIN',
+    'VIEW_CANCELLATION': 'VIEW_CANCELLATION',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'CONFIRM_RECEIPT': 'CONFIRM_RECEIPT',
+    'REPORT_PROBLEM': 'REPORT_PROBLEM',
+    'FILE_DISPUTE': 'FILE_DISPUTE',
+    'VIEW_DISPUTE': 'VIEW_DISPUTE',
+    'BUY_AGAIN': 'BUY_AGAIN',
+    'VIEW_CANCELLATION': 'VIEW_CANCELLATION',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[OrderSummaryCardActionsEnum];
+  @override
+  final String wireName = 'OrderSummaryCardActionsEnum';
+
+  @override
+  Object serialize(Serializers serializers, OrderSummaryCardActionsEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  OrderSummaryCardActionsEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      OrderSummaryCardActionsEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$OrderSummary extends OrderSummary {
   @override
   final String id;
@@ -356,6 +441,18 @@ class _$OrderSummary extends OrderSummary {
   @override
   final bool? paymentRetryable;
   @override
+  final OrderConversationRef? fulfillmentConversation;
+  @override
+  final BuiltList<OrderSummaryCardActionsEnum>? cardActions;
+  @override
+  final DateTime? returnRefundDueAt;
+  @override
+  final String? disputeCaseId;
+  @override
+  final String? paymentChannelName;
+  @override
+  final OrderClosureReason? closureReason;
+  @override
   final OrderBuyerRef? buyer;
   @override
   final VendorOrderPrimaryAction? primaryAction;
@@ -385,6 +482,12 @@ class _$OrderSummary extends OrderSummary {
       this.expectedFulfillmentDate,
       this.nextAction,
       this.paymentRetryable,
+      this.fulfillmentConversation,
+      this.cardActions,
+      this.returnRefundDueAt,
+      this.disputeCaseId,
+      this.paymentChannelName,
+      this.closureReason,
       this.buyer,
       this.primaryAction,
       this.nrpcIndicator})
@@ -419,6 +522,12 @@ class _$OrderSummary extends OrderSummary {
         expectedFulfillmentDate == other.expectedFulfillmentDate &&
         nextAction == other.nextAction &&
         paymentRetryable == other.paymentRetryable &&
+        fulfillmentConversation == other.fulfillmentConversation &&
+        cardActions == other.cardActions &&
+        returnRefundDueAt == other.returnRefundDueAt &&
+        disputeCaseId == other.disputeCaseId &&
+        paymentChannelName == other.paymentChannelName &&
+        closureReason == other.closureReason &&
         buyer == other.buyer &&
         primaryAction == other.primaryAction &&
         nrpcIndicator == other.nrpcIndicator;
@@ -446,6 +555,12 @@ class _$OrderSummary extends OrderSummary {
     _$hash = $jc(_$hash, expectedFulfillmentDate.hashCode);
     _$hash = $jc(_$hash, nextAction.hashCode);
     _$hash = $jc(_$hash, paymentRetryable.hashCode);
+    _$hash = $jc(_$hash, fulfillmentConversation.hashCode);
+    _$hash = $jc(_$hash, cardActions.hashCode);
+    _$hash = $jc(_$hash, returnRefundDueAt.hashCode);
+    _$hash = $jc(_$hash, disputeCaseId.hashCode);
+    _$hash = $jc(_$hash, paymentChannelName.hashCode);
+    _$hash = $jc(_$hash, closureReason.hashCode);
     _$hash = $jc(_$hash, buyer.hashCode);
     _$hash = $jc(_$hash, primaryAction.hashCode);
     _$hash = $jc(_$hash, nrpcIndicator.hashCode);
@@ -475,6 +590,12 @@ class _$OrderSummary extends OrderSummary {
           ..add('expectedFulfillmentDate', expectedFulfillmentDate)
           ..add('nextAction', nextAction)
           ..add('paymentRetryable', paymentRetryable)
+          ..add('fulfillmentConversation', fulfillmentConversation)
+          ..add('cardActions', cardActions)
+          ..add('returnRefundDueAt', returnRefundDueAt)
+          ..add('disputeCaseId', disputeCaseId)
+          ..add('paymentChannelName', paymentChannelName)
+          ..add('closureReason', closureReason)
           ..add('buyer', buyer)
           ..add('primaryAction', primaryAction)
           ..add('nrpcIndicator', nrpcIndicator))
@@ -582,6 +703,40 @@ class OrderSummaryBuilder
   set paymentRetryable(bool? paymentRetryable) =>
       _$this._paymentRetryable = paymentRetryable;
 
+  OrderConversationRefBuilder? _fulfillmentConversation;
+  OrderConversationRefBuilder get fulfillmentConversation =>
+      _$this._fulfillmentConversation ??= OrderConversationRefBuilder();
+  set fulfillmentConversation(
+          OrderConversationRefBuilder? fulfillmentConversation) =>
+      _$this._fulfillmentConversation = fulfillmentConversation;
+
+  ListBuilder<OrderSummaryCardActionsEnum>? _cardActions;
+  ListBuilder<OrderSummaryCardActionsEnum> get cardActions =>
+      _$this._cardActions ??= ListBuilder<OrderSummaryCardActionsEnum>();
+  set cardActions(ListBuilder<OrderSummaryCardActionsEnum>? cardActions) =>
+      _$this._cardActions = cardActions;
+
+  DateTime? _returnRefundDueAt;
+  DateTime? get returnRefundDueAt => _$this._returnRefundDueAt;
+  set returnRefundDueAt(DateTime? returnRefundDueAt) =>
+      _$this._returnRefundDueAt = returnRefundDueAt;
+
+  String? _disputeCaseId;
+  String? get disputeCaseId => _$this._disputeCaseId;
+  set disputeCaseId(String? disputeCaseId) =>
+      _$this._disputeCaseId = disputeCaseId;
+
+  String? _paymentChannelName;
+  String? get paymentChannelName => _$this._paymentChannelName;
+  set paymentChannelName(String? paymentChannelName) =>
+      _$this._paymentChannelName = paymentChannelName;
+
+  OrderClosureReasonBuilder? _closureReason;
+  OrderClosureReasonBuilder get closureReason =>
+      _$this._closureReason ??= OrderClosureReasonBuilder();
+  set closureReason(OrderClosureReasonBuilder? closureReason) =>
+      _$this._closureReason = closureReason;
+
   OrderBuyerRefBuilder? _buyer;
   OrderBuyerRefBuilder get buyer => _$this._buyer ??= OrderBuyerRefBuilder();
   set buyer(OrderBuyerRefBuilder? buyer) => _$this._buyer = buyer;
@@ -622,6 +777,12 @@ class OrderSummaryBuilder
       _expectedFulfillmentDate = $v.expectedFulfillmentDate;
       _nextAction = $v.nextAction;
       _paymentRetryable = $v.paymentRetryable;
+      _fulfillmentConversation = $v.fulfillmentConversation?.toBuilder();
+      _cardActions = $v.cardActions?.toBuilder();
+      _returnRefundDueAt = $v.returnRefundDueAt;
+      _disputeCaseId = $v.disputeCaseId;
+      _paymentChannelName = $v.paymentChannelName;
+      _closureReason = $v.closureReason?.toBuilder();
       _buyer = $v.buyer?.toBuilder();
       _primaryAction = $v.primaryAction;
       _nrpcIndicator = $v.nrpcIndicator;
@@ -678,6 +839,12 @@ class OrderSummaryBuilder
             expectedFulfillmentDate: expectedFulfillmentDate,
             nextAction: nextAction,
             paymentRetryable: paymentRetryable,
+            fulfillmentConversation: _fulfillmentConversation?.build(),
+            cardActions: _cardActions?.build(),
+            returnRefundDueAt: returnRefundDueAt,
+            disputeCaseId: disputeCaseId,
+            paymentChannelName: paymentChannelName,
+            closureReason: _closureReason?.build(),
             buyer: _buyer?.build(),
             primaryAction: primaryAction,
             nrpcIndicator: nrpcIndicator,
@@ -697,6 +864,13 @@ class OrderSummaryBuilder
         _$failedField = 'deadline';
         _deadline?.build();
 
+        _$failedField = 'fulfillmentConversation';
+        _fulfillmentConversation?.build();
+        _$failedField = 'cardActions';
+        _cardActions?.build();
+
+        _$failedField = 'closureReason';
+        _closureReason?.build();
         _$failedField = 'buyer';
         _buyer?.build();
       } catch (e) {

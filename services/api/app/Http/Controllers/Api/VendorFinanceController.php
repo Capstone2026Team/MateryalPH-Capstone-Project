@@ -15,6 +15,7 @@ use App\Domain\Payments\PhysicalPaymentService;
 use App\Domain\Settings\PlatformSettings;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Support\PortalDateRange;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -36,6 +37,12 @@ final class VendorFinanceController extends Controller
         return ApiResponse::success($this->finance->overview($request));
     }
 
+    /** Owner-only audited reveal of the store's own full TIN; never cached. */
+    public function revealTin(Request $request): JsonResponse
+    {
+        return ApiResponse::success($this->finance->revealTin($request))->header('Cache-Control', 'private, no-store')->header('Referrer-Policy', 'no-referrer');
+    }
+
     /** Owner-only FIN-10 review status for this store: statements, tax adjustments, evidence and open reviews. */
     public function reviews(Request $request, VendorFinanceReviewService $reviews): JsonResponse
     {
@@ -52,7 +59,7 @@ final class VendorFinanceController extends Controller
 
     public function transactions(Request $request): JsonResponse
     {
-        $filters = $request->validate(['tab' => ['sometimes', Rule::in(VendorFinanceService::TABS)], 'page' => ['sometimes', 'integer', 'between:1,1000']]);
+        $filters = $request->validate(['tab' => ['sometimes', Rule::in(VendorFinanceService::TABS)], 'page' => ['sometimes', 'integer', 'between:1,1000'], 'status' => ['sometimes', Rule::in(VendorFinanceService::PAYMENT_STATUSES)]] + PortalDateRange::rules($request));
         $result = $this->finance->transactions($request, $filters);
 
         return ApiResponse::success($result['items'], $result['meta']);
@@ -60,14 +67,16 @@ final class VendorFinanceController extends Controller
 
     public function export(Request $request): StreamedResponse
     {
-        $input = $request->validate(['tab' => ['required', Rule::in(VendorFinanceService::TABS)]]);
+        $input = $request->validate(['tab' => ['required', Rule::in(VendorFinanceService::TABS)], 'status' => ['sometimes', Rule::in(VendorFinanceService::PAYMENT_STATUSES)]] + PortalDateRange::rules($request));
 
-        return $this->finance->export($request, (string) $input['tab']);
+        return $this->finance->export($request, (string) $input['tab'], $input);
     }
 
     public function earnings(Request $request): JsonResponse
     {
-        return ApiResponse::success($this->finance->earnings($request));
+        $filters = $request->validate(PortalDateRange::rules($request));
+
+        return ApiResponse::success($this->finance->earnings($request, $filters));
     }
 
     public function statement(Request $request, string $statementId): JsonResponse

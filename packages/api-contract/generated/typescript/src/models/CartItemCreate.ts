@@ -55,6 +55,10 @@ export interface CartItemCreate {
      *
      */
     radiusKm?: number;
+    /**
+     * Work Package line this purchase covers; same material and unit only (422 MISSING_LINE_TAG_INVALID).
+     */
+    workPackageLineId?: string | null;
 }
 
 
@@ -107,6 +111,7 @@ export function CartItemCreateFromJSONTyped(json: any, ignoreDiscriminator: bool
         'longitude': json['longitude'] == null ? undefined : json['longitude'],
         'originSource': json['origin_source'] == null ? undefined : json['origin_source'],
         'radiusKm': json['radius_km'] == null ? undefined : json['radius_km'],
+        'workPackageLineId': json['work_package_line_id'] === undefined ? undefined : json['work_package_line_id'] === null ? null : json['work_package_line_id'],
     };
 }
 
@@ -130,6 +135,7 @@ export function CartItemCreateToJSONTyped(value?: CartItemCreate | null, ignoreD
         'longitude': value['longitude'],
         'origin_source': value['originSource'],
         'radius_km': value['radiusKm'],
+        'work_package_line_id': value['workPackageLineId'],
     };
 }
 

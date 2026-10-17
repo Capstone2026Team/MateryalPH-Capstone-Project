@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../design_system/components/buyer_overlays.dart'
+    show showBuyerBottomSheet;
+import '../design_system/components/discovery_controls.dart' show ScoreBadge;
 import '../design_system/components/procurement_components.dart';
 import '../design_system/theme.dart';
 import '../features/item_procurement/procurement_models.dart';
 import '../features/item_procurement/procurement_repository.dart';
 import '../features/item_procurement/search_results_screen.dart'
     show ListingCard;
+import '../features/map_discovery/discovery_models.dart' show ScoreKind;
+import '../features/trust/trust_models.dart';
 
 class BuyerStoreRepository {
   BuyerStoreRepository({MateryalphApiClient? client})
@@ -91,20 +97,22 @@ class _BuyerStoreBrowseScreenState extends State<BuyerStoreBrowseScreen> {
     child: _loading && _stores.isEmpty
         ? const Center(child: CircularProgressIndicator())
         : _error != null && _stores.isEmpty
-        ? Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(_error!),
-                TextButton(onPressed: _load, child: const Text('Retry')),
-              ],
+        ? StatePage(
+            child: StateMessage(
+              kind: StateKind.error,
+              title: _error!,
+              message: 'Check your connection and retry.',
+              actionLabel: 'Retry',
+              onAction: _load,
             ),
           )
         : _stores.isEmpty
-        ? const Center(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Text('No public stores are available yet.'),
+        ? StatePage(
+            onRefresh: _load,
+            child: const StateMessage(
+              kind: StateKind.empty,
+              title: 'No stores yet',
+              message: 'No public stores are available yet.',
             ),
           )
         : ListView.separated(
@@ -167,7 +175,21 @@ class BuyerPublicStoreProfileScreen extends StatefulWidget {
     this.onMessage,
     this.loadProducts,
     this.onOpenListing,
+    this.loadRating,
+    this.distanceMeters,
+    this.onShowOnMap,
+    this.openExternal,
   });
+
+  /// Straight-line distance from the Buyer's current Map location, when the Map already has it.
+  /// Otherwise the distance of this store's loaded listings is shown, or none at all.
+  final int? distanceMeters;
+
+  /// Opens the Map with this store selected; null where the Map is not available.
+  final void Function(BuildContext context)? onShowOnMap;
+
+  /// Hands a tel: or sms: link to the device; injectable for tests.
+  final Future<bool> Function(Uri uri)? openExternal;
 
   /// Loads one page of this store's eligible listings; null result means no location is chosen yet.
   final Future<ListingSearchPage?> Function(ListingSort sort, String? cursor)?
@@ -175,6 +197,9 @@ class BuyerPublicStoreProfileScreen extends StatefulWidget {
 
   /// Opens Product Details for a listing.
   final void Function(BuildContext context, String listingId)? onOpenListing;
+
+  /// Loads the store's public rating summary and published scores; null where it is not offered.
+  final Future<StoreRatingView> Function()? loadRating;
 
   final String storeId;
   final BuyerStoreRepository repository;
@@ -195,13 +220,20 @@ class _BuyerPublicStoreProfileScreenState
   late Future<PublicStoreProfile> _profile = widget.repository.profile(
     widget.storeId,
   );
-  late final _StoreProducts? _products = widget.loadProducts == null
-      ? null
-      : _StoreProducts(widget.loadProducts!);
+  late Future<StoreRatingView>? _rating = widget.loadRating?.call();
+
+  // Each list is held here so switching tabs never reloads it.
+  late final _StoreProducts? _products = _listings(ListingSort.bestDeal);
+  late final _StoreProducts? _topSelling = _listings(ListingSort.topSelling);
+  late final _StoreProducts? _featured = _listings(ListingSort.rating);
   late final TabController _tabs = TabController(length: 3, vsync: this)
     ..addListener(() {
       if (!_tabs.indexIsChanging && mounted) setState(() {});
     });
+
+  _StoreProducts? _listings(ListingSort sort) => widget.loadProducts == null
+      ? null
+      : _StoreProducts(widget.loadProducts!, sort: sort);
 
   @override
   void initState() {
@@ -213,7 +245,9 @@ class _BuyerPublicStoreProfileScreenState
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _tabs.dispose();
-    _products?.dispose();
+    for (final listings in [_products, _topSelling, _featured]) {
+      listings?.dispose();
+    }
     super.dispose();
   }
 
@@ -223,8 +257,34 @@ class _BuyerPublicStoreProfileScreenState
     if (state == AppLifecycleState.resumed) _reload();
   }
 
-  void _reload() =>
-      setState(() => _profile = widget.repository.profile(widget.storeId));
+  void _reload() => setState(() {
+    _profile = widget.repository.profile(widget.storeId);
+    _rating = widget.loadRating?.call();
+  });
+
+  Future<void> _refresh() async {
+    _reload();
+    await Future.wait([
+      for (final listings in [_products, _topSelling, _featured])
+        if (listings != null && listings.started) listings.reload(),
+    ]);
+  }
+
+  /// "See all" opens the Products tab already sorted the same way.
+  void _seeAll(ListingSort sort) {
+    _products?.reload(sort: sort);
+    _tabs.animateTo(1);
+  }
+
+  /// Every listing card carries the same store distance, so a loaded list can stand in for it.
+  int? get _distance {
+    if (widget.distanceMeters != null) return widget.distanceMeters;
+    for (final listings in [_topSelling, _featured, _products]) {
+      final items = listings?.items ?? const <ListingCardView>[];
+      if (items.isNotEmpty) return items.first.distanceMeters;
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -238,10 +298,10 @@ class _BuyerPublicStoreProfileScreenState
           return SafeArea(
             child: Column(
               children: [
-                Align(
+                const Align(
                   alignment: Alignment.centerLeft,
                   child: Padding(
-                    padding: const EdgeInsets.all(12),
+                    padding: EdgeInsets.all(8),
                     child: _BackButton(),
                   ),
                 ),
@@ -260,26 +320,58 @@ class _BuyerPublicStoreProfileScreenState
         }
         final profile = snapshot.data!;
         final hours = storeHoursFromProfile(profile);
+        // Large text scrolls the tabs instead of clipping "Store Profile".
+        final scaled = MediaQuery.textScalerOf(context).scale(1) > 1.15;
         return RefreshIndicator(
-          onRefresh: () async => _reload(),
+          onRefresh: _refresh,
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               SliverToBoxAdapter(
-                child: _StoreHeader(profile: profile, hours: hours),
+                child: ListenableBuilder(
+                  listenable: Listenable.merge([
+                    _topSelling,
+                    _featured,
+                    _products,
+                  ]),
+                  builder: (context, _) => _StoreHeader(
+                    profile: profile,
+                    hours: hours,
+                    distanceMeters: _distance,
+                    onShowOnMap: widget.onShowOnMap,
+                    onMessage: widget.onMessage,
+                    onSearch: widget.onBrowseProducts == null
+                        ? null
+                        : () => widget.onBrowseProducts!(
+                            context,
+                            profile.id,
+                            profile.publicStoreName,
+                          ),
+                  ),
+                ),
               ),
               SliverPersistentHeader(
                 pinned: true,
                 delegate: _TabBarDelegate(
                   TabBar(
                     controller: _tabs,
+                    isScrollable: scaled,
+                    tabAlignment: scaled
+                        ? TabAlignment.start
+                        : TabAlignment.fill,
+                    labelPadding: const EdgeInsets.symmetric(horizontal: 8),
                     labelColor: BuyerTheme.action,
                     unselectedLabelColor: BuyerTheme.ink,
                     indicatorColor: BuyerTheme.action,
                     indicatorWeight: 3,
+                    dividerColor: Colors.transparent,
                     labelStyle: const TextStyle(
                       fontWeight: FontWeight.w700,
-                      fontSize: 15,
+                      fontSize: 14,
+                    ),
+                    unselectedLabelStyle: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
                     ),
                     tabs: const [
                       Tab(text: 'Shop Front'),
@@ -287,17 +379,18 @@ class _BuyerPublicStoreProfileScreenState
                       Tab(text: 'Store Profile'),
                     ],
                   ),
+                  topInset: MediaQuery.paddingOf(context).top,
                 ),
               ),
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                 sliver: SliverToBoxAdapter(
                   child: switch (_tabs.index) {
                     0 => _ShopFrontTab(
-                      profile: profile,
-                      onMessage: widget.onMessage,
-                      onBrowseProducts: widget.onBrowseProducts,
-                      onProfile: () => _tabs.animateTo(2),
+                      topSelling: _topSelling,
+                      featured: _featured,
+                      onOpen: widget.onOpenListing,
+                      onSeeAll: _seeAll,
                     ),
                     1 => _ProductsTab(
                       profile: profile,
@@ -308,7 +401,9 @@ class _BuyerPublicStoreProfileScreenState
                     _ => _StoreDetailsTab(
                       profile: profile,
                       hours: hours,
+                      rating: _rating,
                       onRetry: _reload,
+                      openExternal: widget.openExternal ?? _launchExternal,
                     ),
                   },
                 ),
@@ -321,37 +416,36 @@ class _BuyerPublicStoreProfileScreenState
   );
 }
 
+Future<bool> _launchExternal(Uri uri) =>
+    launchUrl(uri, mode: LaunchMode.externalApplication);
+
 class _BackButton extends StatelessWidget {
+  const _BackButton();
+
   @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    label: 'Back',
-    child: Material(
-      color: BuyerTheme.action,
-      shape: const CircleBorder(),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: () => Navigator.of(context).maybePop(),
-        child: const SizedBox(
-          width: 44,
-          height: 44,
-          child: Icon(LucideIcons.arrowLeft, color: Colors.white, size: 22),
-        ),
-      ),
-    ),
+  Widget build(BuildContext context) => RoundIconButton(
+    icon: LucideIcons.arrowLeft,
+    tooltip: 'Back',
+    filled: true,
+    onPressed: () => Navigator.of(context).maybePop(),
   );
 }
 
+/// The pinned tabs. [topInset] keeps them below the status bar once pinned; before that it is the
+/// gap between the store identity and the tabs.
 class _TabBarDelegate extends SliverPersistentHeaderDelegate {
-  _TabBarDelegate(this.tabBar);
+  _TabBarDelegate(this.tabBar, {required this.topInset});
 
   final TabBar tabBar;
+  final double topInset;
+
+  double get _extent => topInset + tabBar.preferredSize.height + 1;
 
   @override
-  double get minExtent => tabBar.preferredSize.height;
+  double get minExtent => _extent;
 
   @override
-  double get maxExtent => tabBar.preferredSize.height;
+  double get maxExtent => _extent;
 
   @override
   Widget build(
@@ -363,6 +457,7 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
     elevation: overlapsContent ? 1 : 0,
     child: Column(
       children: [
+        SizedBox(height: topInset),
         Expanded(child: tabBar),
         const Divider(height: 1, color: BuyerTheme.border),
       ],
@@ -371,28 +466,40 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(_TabBarDelegate oldDelegate) =>
-      oldDelegate.tabBar != tabBar;
+      oldDelegate.tabBar != tabBar || oldDelegate.topInset != topInset;
 }
 
-/// Banner with the back control, the overlapping logo and the store identity: name, VPS / New
-/// Vendor label, supplier type, location and an informational open-now label.
+/// Banner with Back and the store actions (show on Map, Message, search the store's products), the
+/// overlapping logo and the store identity: name, VPS / New Vendor label, then one compact line of
+/// open-now status, distance, supplier type and location.
 class _StoreHeader extends StatelessWidget {
-  const _StoreHeader({required this.profile, required this.hours});
+  const _StoreHeader({
+    required this.profile,
+    required this.hours,
+    required this.distanceMeters,
+    required this.onShowOnMap,
+    required this.onMessage,
+    required this.onSearch,
+  });
 
   final PublicStoreProfile profile;
   final StoreHoursView hours;
+  final int? distanceMeters;
+  final void Function(BuildContext context)? onShowOnMap;
+  final VoidCallback? onMessage;
+  final VoidCallback? onSearch;
 
-  static const _logo = 68.0;
+  static const _logo = 72.0;
 
   @override
   Widget build(BuildContext context) {
+    final top = MediaQuery.paddingOf(context).top;
     final city = [
       profile.address.cityMunicipality,
       profile.address.province,
     ].whereType<String>().where((part) => part.isNotEmpty).join(', ');
-    final openNow = hours.available
-        ? (hours.openNowStatus == 'OPEN' ? 'Open now' : 'Closed now')
-        : null;
+    final open = hours.available ? hours.openNowStatus == 'OPEN' : null;
+    final kind = profile.scoreLabel.kind;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -400,25 +507,43 @@ class _StoreHeader extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             SizedBox(
-              height: 168,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(20),
-                ),
-                child: _Media(
-                  url: profile.bannerUrl,
-                  fallbackIcon: LucideIcons.store,
-                  fit: BoxFit.cover,
-                ),
+              height: 132 + top,
+              child: _Media(
+                url: profile.bannerUrl,
+                fallbackIcon: LucideIcons.store,
+                fit: BoxFit.cover,
+              ),
+            ),
+            Positioned(top: top + 4, left: 8, child: const _BackButton()),
+            Positioned(
+              top: top + 4,
+              right: 8,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (onShowOnMap != null)
+                    RoundIconButton(
+                      icon: LucideIcons.mapPin,
+                      tooltip: 'Show ${profile.publicStoreName} on the Map',
+                      onPressed: () => onShowOnMap!(context),
+                    ),
+                  if (onMessage != null)
+                    RoundIconButton(
+                      icon: LucideIcons.messageSquare,
+                      tooltip: 'Message ${profile.publicStoreName}',
+                      onPressed: onMessage,
+                    ),
+                  if (onSearch != null)
+                    RoundIconButton(
+                      icon: LucideIcons.search,
+                      tooltip: 'Search ${profile.publicStoreName} products',
+                      onPressed: onSearch,
+                    ),
+                ],
               ),
             ),
             Positioned(
-              top: MediaQuery.paddingOf(context).top + 8,
               left: 16,
-              child: _BackButton(),
-            ),
-            Positioned(
-              left: 20,
               bottom: -_logo / 2,
               child: Container(
                 width: _logo,
@@ -444,52 +569,71 @@ class _StoreHeader extends StatelessWidget {
           ],
         ),
         Padding(
-          padding: EdgeInsets.fromLTRB(20 + _logo + 12, 10, 20, 0),
-          child: Semantics(
-            header: true,
-            child: Text(
-              profile.publicStoreName,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-                height: 1.2,
+          padding: const EdgeInsets.fromLTRB(16 + _logo + 12, 8, 16, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Semantics(
+                header: true,
+                child: Text(
+                  profile.publicStoreName,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    height: 1.2,
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(height: 6),
+              ScoreBadge(
+                kind: kind == ScoreLabelKindEnum.VPS
+                    ? ScoreKind.vps
+                    : kind == ScoreLabelKindEnum.DIRECTORY
+                    ? ScoreKind.directory
+                    : ScoreKind.newVendor,
+                text: profile.scoreLabel.text,
+              ),
+            ],
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
           child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 16,
+            runSpacing: 6,
             children: [
-              _Pill(
-                icon: LucideIcons.badgeCheck,
-                label: profile.scoreLabel.text,
-                emphasis: true,
-              ),
+              if (open != null)
+                _MetaItem(
+                  icon: open ? LucideIcons.circleCheck : LucideIcons.clock,
+                  label: open ? 'Open now' : 'Closed now',
+                  color: open ? BuyerTheme.successStrong : BuyerTheme.muted,
+                  strong: true,
+                ),
+              if (distanceMeters != null)
+                Semantics(
+                  label:
+                      '${formatDistance(distanceMeters!)} straight-line distance from your location',
+                  excludeSemantics: true,
+                  child: _MetaItem(
+                    icon: LucideIcons.navigation,
+                    label: '${formatDistance(distanceMeters!)} away',
+                  ),
+                ),
               if (profile.supplierType != null &&
                   profile.supplierType!.isNotEmpty)
-                _Pill(
+                _MetaItem(
                   icon: LucideIcons.building2,
                   label: _humanize(profile.supplierType!),
                 ),
-              if (openNow != null)
-                _Pill(
-                  icon: hours.openNowStatus == 'OPEN'
-                      ? LucideIcons.circleCheck
-                      : LucideIcons.clock,
-                  label: openNow,
-                ),
-              if (city.isNotEmpty) _Pill(icon: LucideIcons.mapPin, label: city),
+              if (city.isNotEmpty)
+                _MetaItem(icon: LucideIcons.mapPin, label: city),
             ],
           ),
         ),
         if (profile.vacationMode)
           const Padding(
-            padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
+            padding: EdgeInsets.fromLTRB(16, 14, 16, 0),
             child: StatusBand(
               tone: BandTone.warning,
               title: 'Vacation Mode',
@@ -497,10 +641,44 @@ class _StoreHeader extends StatelessWidget {
                   'This store has paused new procurement. Existing orders and messaging remain available.',
             ),
           ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
       ],
     );
   }
+}
+
+/// One icon-and-text fact in the header's compact line; no border, so facts never stack as pills.
+class _MetaItem extends StatelessWidget {
+  const _MetaItem({
+    required this.icon,
+    required this.label,
+    this.color = BuyerTheme.muted,
+    this.strong = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final bool strong;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(icon, size: 16, color: color),
+      const SizedBox(width: 6),
+      Flexible(
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: strong ? FontWeight.w700 : FontWeight.w500,
+            color: strong ? color : BuyerTheme.ink,
+          ),
+        ),
+      ),
+    ],
+  );
 }
 
 String _humanize(String code) {
@@ -547,30 +725,23 @@ class _Media extends StatelessWidget {
 }
 
 class _Pill extends StatelessWidget {
-  const _Pill({required this.icon, required this.label, this.emphasis = false});
+  const _Pill({required this.icon, required this.label});
 
   final IconData icon;
   final String label;
-  final bool emphasis;
 
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
     decoration: BoxDecoration(
-      color: emphasis ? BuyerTheme.brandSoft : Colors.white,
+      color: BuyerTheme.canvas,
       borderRadius: BorderRadius.circular(999),
-      border: Border.all(
-        color: emphasis ? BuyerTheme.action : BuyerTheme.border,
-      ),
+      border: Border.all(color: BuyerTheme.border),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          icon,
-          size: 14,
-          color: emphasis ? BuyerTheme.action : BuyerTheme.ink,
-        ),
+        Icon(icon, size: 14, color: BuyerTheme.action),
         const SizedBox(width: 6),
         Flexible(
           child: Text(
@@ -583,26 +754,6 @@ class _Pill extends StatelessWidget {
   );
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 10),
-    child: Semantics(
-      header: true,
-      child: Text(
-        text,
-        style: Theme.of(
-          context,
-        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-      ),
-    ),
-  );
-}
-
 List<String> _services(String? method) => switch (method) {
   'SELF_PICKUP' => const ['Self-Pickup'],
   'VENDOR_DELIVERY' => const ['Site Delivery'],
@@ -611,81 +762,386 @@ List<String> _services(String? method) => switch (method) {
 };
 
 class _Chips extends StatelessWidget {
-  const _Chips(this.labels, {this.icon});
+  const _Chips(this.labels);
 
   final List<String> labels;
-  final IconData? icon;
 
   @override
   Widget build(BuildContext context) => Wrap(
     spacing: 8,
     runSpacing: 8,
     children: [
-      for (final label in labels)
-        _Pill(icon: icon ?? LucideIcons.tag, label: label),
+      for (final label in labels) _Pill(icon: LucideIcons.tag, label: label),
     ],
   );
 }
 
-class _ShopFrontTab extends StatelessWidget {
+/// A white Store Profile section with an optional heading.
+class _ProfileCard extends StatelessWidget {
+  const _ProfileCard({this.title, required this.child});
+
+  final String? title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(bottom: 12),
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: BuyerTheme.border),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (title != null) ...[
+          Semantics(
+            header: true,
+            child: Text(
+              title!,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        child,
+      ],
+    ),
+  );
+}
+
+/// A short muted line in place of an empty or failed highlight, so one section never blanks the page.
+class _InlineNote extends StatelessWidget {
+  const _InlineNote(this.text, {this.onRetry});
+
+  final String text;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    decoration: BoxDecoration(
+      color: BuyerTheme.canvas,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: BuyerTheme.border),
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              fontSize: 13,
+              height: 1.4,
+              color: BuyerTheme.muted,
+            ),
+          ),
+        ),
+        if (onRetry != null)
+          TextButton(onPressed: onRetry, child: const Text('Retry')),
+      ],
+    ),
+  );
+}
+
+class _SeeAll extends StatelessWidget {
+  const _SeeAll({required this.label, required this.onPressed});
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: 'See all $label',
+    excludeSemantics: true,
+    child: TextButton(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('See all'),
+          Icon(LucideIcons.chevronRight, size: 18),
+        ],
+      ),
+    ),
+  );
+}
+
+/// Shop Front: this store's Top Selling products and a Top Rated / Cheapest switch. Every list
+/// comes from the server's own sort over the store's eligible listings.
+class _ShopFrontTab extends StatefulWidget {
   const _ShopFrontTab({
-    required this.profile,
-    required this.onMessage,
-    required this.onBrowseProducts,
-    required this.onProfile,
+    required this.topSelling,
+    required this.featured,
+    required this.onOpen,
+    required this.onSeeAll,
   });
 
-  final PublicStoreProfile profile;
-  final VoidCallback? onMessage;
-  final void Function(BuildContext context, String storeId, String storeName)?
-  onBrowseProducts;
-  final VoidCallback onProfile;
+  final _StoreProducts? topSelling;
+  final _StoreProducts? featured;
+  final void Function(BuildContext context, String listingId)? onOpen;
+  final ValueChanged<ListingSort> onSeeAll;
+
+  @override
+  State<_ShopFrontTab> createState() => _ShopFrontTabState();
+}
+
+class _ShopFrontTabState extends State<_ShopFrontTab> {
+  static const _highlightCount = 10;
+  static const _gridCount = 6;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      widget.topSelling?.ensureLoaded();
+      widget.featured?.ensureLoaded();
+    });
+  }
+
+  void _open(BuildContext context, ListingCardView card) =>
+      widget.onOpen?.call(context, card.listingId);
 
   @override
   Widget build(BuildContext context) {
-    final services = _services(profile.fulfillmentMethod);
+    final topSelling = widget.topSelling;
+    final featured = widget.featured;
+    if (topSelling == null || featured == null) {
+      return const _InlineNote(
+        'Product highlights are not available from here. Store details are on Store Profile.',
+      );
+    }
+    return ListenableBuilder(
+      listenable: Listenable.merge([topSelling, featured]),
+      builder: (context, _) => _highlights(context, topSelling, featured),
+    );
+  }
+
+  Widget _highlights(
+    BuildContext context,
+    _StoreProducts topSelling,
+    _StoreProducts featured,
+  ) {
+    if (topSelling.phase == LoadPhase.needsOrigin ||
+        featured.phase == LoadPhase.needsOrigin) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 16),
+        child: StateMessage(
+          kind: StateKind.needsLocation,
+          title: 'Choose a location first',
+          message:
+              'Select a location on the Map to see this store’s products with distance and delivery.',
+        ),
+      );
+    }
+    if (topSelling.phase == LoadPhase.ready &&
+        featured.phase == LoadPhase.ready &&
+        topSelling.items.isEmpty &&
+        featured.items.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 16),
+        child: StateMessage(
+          kind: StateKind.empty,
+          title: 'No products to show',
+          message: 'This store has no products with confirmed stock right now.',
+        ),
+      );
+    }
+    final rated = featured.sort == ListingSort.rating;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (onBrowseProducts != null)
-          FilledButton.icon(
-            onPressed: () =>
-                onBrowseProducts!(context, profile.id, profile.publicStoreName),
-            icon: const Icon(LucideIcons.packageSearch),
-            label: const Text('Browse this store’s products'),
-          ),
-        if (onMessage != null) ...[
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: onMessage,
-            icon: const Icon(LucideIcons.messageSquare),
-            label: const Text('Message store'),
-          ),
-        ],
-        if (profile.description != null && profile.description!.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          const _SectionTitle('About this store'),
-          Text(profile.description!, style: const TextStyle(height: 1.45)),
-        ],
-        if (profile.niches.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          const _SectionTitle('What this store supplies'),
-          _Chips(profile.niches.toList()),
-        ],
-        if (services.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          const _SectionTitle('Services'),
-          _Chips(services, icon: LucideIcons.truck),
-        ],
-        const SizedBox(height: 16),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton.icon(
-            onPressed: onProfile,
-            icon: const Icon(LucideIcons.clock),
-            label: const Text('See address and store hours'),
+        SectionHeading(
+          'Top Selling',
+          trailing: _SeeAll(
+            label: 'top selling products',
+            onPressed: () => widget.onSeeAll(ListingSort.topSelling),
           ),
         ),
+        const SizedBox(height: 4),
+        _topSelling(context, topSelling),
+        const SizedBox(height: 24),
+        SortTabBar(
+          items: [
+            SortTabItem(
+              label: 'Top Rated',
+              selected: rated,
+              onTap: () {
+                if (!rated) featured.reload(sort: ListingSort.rating);
+              },
+            ),
+            SortTabItem(
+              label: 'Cheapest',
+              selected: !rated,
+              onTap: () {
+                if (rated) featured.reload(sort: ListingSort.price);
+              },
+            ),
+          ],
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                rated
+                    ? 'Highest product rating from verified purchases'
+                    : 'Lowest listed unit price first',
+                style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
+              ),
+            ),
+            _SeeAll(
+              label: rated ? 'top rated products' : 'cheapest products',
+              onPressed: () => widget.onSeeAll(featured.sort),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        _featured(context, featured),
+      ],
+    );
+  }
+
+  Widget _topSelling(BuildContext context, _StoreProducts topSelling) {
+    final width = MediaQuery.textScalerOf(context).scale(1) > 1.3
+        ? 240.0
+        : 176.0;
+    switch (topSelling.phase) {
+      case LoadPhase.loading:
+      case LoadPhase.needsOrigin:
+        return Row(
+          children: [
+            Expanded(child: SkeletonBox(height: 260)),
+            const SizedBox(width: 10),
+            Expanded(child: SkeletonBox(height: 260)),
+          ],
+        );
+      case LoadPhase.failed:
+        return _InlineNote(
+          'Top selling products could not load.',
+          onRetry: topSelling.reload,
+        );
+      case LoadPhase.ready:
+        final sold = topSelling.items
+            .where((card) => formatQuantity(card.unitsSold) != '0')
+            .take(_highlightCount)
+            .toList(growable: false);
+        if (sold.isEmpty) {
+          return const _InlineNote(
+            'No completed sales yet. Products appear here after verified orders are completed.',
+          );
+        }
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          clipBehavior: Clip.none,
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final (index, card) in sold.indexed) ...[
+                  if (index > 0) const SizedBox(width: 10),
+                  SizedBox(
+                    width: width,
+                    child: ListingCard(
+                      card: card,
+                      showFavorite: false,
+                      onOpen: () => _open(context, card),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+    }
+  }
+
+  Widget _featured(BuildContext context, _StoreProducts featured) {
+    switch (featured.phase) {
+      case LoadPhase.loading:
+      case LoadPhase.needsOrigin:
+        return const Row(
+          children: [
+            Expanded(child: SkeletonBox(height: 250)),
+            SizedBox(width: 10),
+            Expanded(child: SkeletonBox(height: 250)),
+          ],
+        );
+      case LoadPhase.failed:
+        return _InlineNote(
+          featured.sort == ListingSort.rating
+              ? 'Top rated products could not load.'
+              : 'Cheapest products could not load.',
+          onRetry: featured.reload,
+        );
+      case LoadPhase.ready:
+        // Unrated listings sort last under Top Rated; they are not "top rated", so they are left out.
+        final items = featured.items
+            .where(
+              (card) =>
+                  featured.sort != ListingSort.rating ||
+                  card.ratingAverage != null,
+            )
+            .take(_gridCount)
+            .toList(growable: false);
+        if (items.isEmpty) {
+          return _InlineNote(
+            featured.sort == ListingSort.rating
+                ? 'No rated products yet. Ratings appear after completed, verified purchases.'
+                : 'No products with confirmed stock right now.',
+          );
+        }
+        return _ListingGrid(
+          items: items,
+          onOpen: (card) => _open(context, card),
+        );
+    }
+  }
+}
+
+/// Two columns of equal-height listing cards; one column under large text.
+class _ListingGrid extends StatelessWidget {
+  const _ListingGrid({required this.items, required this.onOpen});
+
+  final List<ListingCardView> items;
+  final ValueChanged<ListingCardView> onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final columns = MediaQuery.textScalerOf(context).scale(1) > 1.3 ? 1 : 2;
+    final rows = (items.length / columns).ceil();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var row = 0; row < rows; row++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var column = 0; column < columns; column++) ...[
+                    if (column > 0) const SizedBox(width: 10),
+                    Expanded(
+                      child: row * columns + column < items.length
+                          ? ListingCard(
+                              card: items[row * columns + column],
+                              showFavorite: false,
+                              onOpen: () =>
+                                  onOpen(items[row * columns + column]),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -695,69 +1151,392 @@ class _StoreDetailsTab extends StatelessWidget {
   const _StoreDetailsTab({
     required this.profile,
     required this.hours,
+    required this.rating,
     required this.onRetry,
+    required this.openExternal,
   });
 
   final PublicStoreProfile profile;
   final StoreHoursView hours;
+  final Future<StoreRatingView>? rating;
   final VoidCallback onRetry;
+  final Future<bool> Function(Uri uri) openExternal;
+
+  /// The approved public number as a dialable string: digits with an optional leading +.
+  static String _dialable(String phone) {
+    final digits = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+    return digits.startsWith('+')
+        ? '+${digits.substring(1).replaceAll('+', '')}'
+        : digits.replaceAll('+', '');
+  }
+
+  Future<void> _contact(BuildContext context, String phone) async {
+    final number = _dialable(phone);
+    final choice = await showBuyerBottomSheet<String>(
+      context: context,
+      builder: (sheet) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text(
+                phone,
+                style: Theme.of(
+                  sheet,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+              ),
+            ),
+            ListTile(
+              minTileHeight: 52,
+              leading: const Icon(LucideIcons.phone, color: BuyerTheme.action),
+              title: const Text('Call'),
+              onTap: () => Navigator.pop(sheet, 'tel'),
+            ),
+            ListTile(
+              minTileHeight: 52,
+              leading: const Icon(
+                LucideIcons.messageSquareText,
+                color: BuyerTheme.action,
+              ),
+              title: const Text('Send SMS'),
+              onTap: () => Navigator.pop(sheet, 'sms'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (choice == null || !context.mounted) return;
+    var opened = false;
+    try {
+      opened = await openExternal(Uri(scheme: choice, path: number));
+    } catch (_) {
+      opened = false;
+    }
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            choice == 'tel'
+                ? 'This device cannot place calls. The number is $phone.'
+                : 'This device cannot send SMS. The number is $phone.',
+          ),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final services = _services(profile.fulfillmentMethod);
-    final rows = <(IconData, String, String)>[
+    final phone = profile.publicPhone;
+    final rows = <(IconData, String, String, VoidCallback?)>[
       if (profile.address.formattedAddress != null)
-        (LucideIcons.mapPin, 'Address', profile.address.formattedAddress!),
-      if (profile.publicPhone != null && profile.publicPhone!.isNotEmpty)
-        (LucideIcons.phone, 'Phone', profile.publicPhone!),
+        (
+          LucideIcons.mapPin,
+          'Address',
+          profile.address.formattedAddress!,
+          null,
+        ),
+      if (phone != null && _dialable(phone).replaceAll('+', '').isNotEmpty)
+        (LucideIcons.phone, 'Phone', phone, () => _contact(context, phone)),
       if (profile.publicEmail != null && profile.publicEmail!.isNotEmpty)
-        (LucideIcons.mail, 'Email', profile.publicEmail!),
+        (LucideIcons.mail, 'Email', profile.publicEmail!, null),
       if (services.isNotEmpty)
-        (LucideIcons.truck, 'Services', services.join(' | ')),
+        (LucideIcons.truck, 'Services', services.join(' · '), null),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (profile.niches.isNotEmpty) ...[
-          _Chips(profile.niches.toList()),
-          const SizedBox(height: 16),
-        ],
+        if (rating != null)
+          _ProfileCard(
+            title: 'Store rating',
+            child: _StoreRatingSection(rating: rating!, onRetry: onRetry),
+          ),
         if (profile.description != null && profile.description!.isNotEmpty)
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: BuyerTheme.ink, width: 1.2),
-            ),
+          _ProfileCard(
+            title: 'About this store',
             child: Text(
               profile.description!,
-              style: const TextStyle(height: 1.45),
+              style: const TextStyle(height: 1.5),
             ),
           ),
-        const SizedBox(height: 8),
-        for (final (icon, label, value) in rows)
+        if (profile.niches.isNotEmpty)
+          _ProfileCard(
+            title: 'What this store supplies',
+            child: _Chips(profile.niches.toList()),
+          ),
+        if (rows.isNotEmpty)
+          _ProfileCard(
+            title: 'Contact and services',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final (index, (icon, label, value, onTap))
+                    in rows.indexed)
+                  Semantics(
+                    container: true,
+                    button: onTap != null,
+                    label: onTap == null
+                        ? '$label: $value'
+                        : '$label: $value. Call or send SMS',
+                    excludeSemantics: true,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: onTap,
+                        child: Container(
+                          constraints: const BoxConstraints(minHeight: 44),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            border: index == rows.length - 1
+                                ? null
+                                : const Border(
+                                    bottom: BorderSide(
+                                      color: BuyerTheme.border,
+                                    ),
+                                  ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(icon, size: 20, color: BuyerTheme.action),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      label,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: BuyerTheme.muted,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      value,
+                                      style: TextStyle(
+                                        height: 1.4,
+                                        fontWeight: onTap == null
+                                            ? FontWeight.w400
+                                            : FontWeight.w700,
+                                        color: onTap == null
+                                            ? BuyerTheme.ink
+                                            : BuyerTheme.actionPressed,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (onTap != null) ...[
+                                const SizedBox(width: 8),
+                                const Icon(
+                                  LucideIcons.phoneOutgoing,
+                                  size: 18,
+                                  color: BuyerTheme.action,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        _ProfileCard(
+          child: StoreHoursSection(hours: hours, onRetry: onRetry),
+        ),
+      ],
+    );
+  }
+}
+
+/// The store's rating summary. The headline is the published Vendor Community Score; below its
+/// sample gate the store reads "New Vendor — Building Track Record" and no combined number is shown.
+/// Service Quality and Speed are averages of the visible verified store ratings.
+class _StoreRatingSection extends StatelessWidget {
+  const _StoreRatingSection({required this.rating, required this.onRetry});
+
+  final Future<StoreRatingView> rating;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<StoreRatingView>(
+    future: rating,
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        return _InlineNote('Store rating could not load.', onRetry: onRetry);
+      }
+      final view = snapshot.data;
+      if (view == null) {
+        return Semantics(
+          label: 'Loading store rating',
+          child: const LinearProgressIndicator(),
+        );
+      }
+      final count = view.ratingCount;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
           Semantics(
             container: true,
-            label: '$label: $value',
+            label: view.vcs == null
+                ? '${view.newVendor ? 'New Vendor — Building Track Record' : 'Vendor Community Score not yet published'}, $count verified store rating${count == 1 ? '' : 's'}'
+                : 'Vendor Community Score ${view.vcs} of 5, $count verified store rating${count == 1 ? '' : 's'}',
             excludeSemantics: true,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: BuyerTheme.border)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(icon, size: 20, color: BuyerTheme.action),
-                  const SizedBox(width: 14),
-                  Expanded(child: Text(value)),
+            child: Row(
+              children: [
+                Text(
+                  view.vcs ?? 'New',
+                  style: const TextStyle(
+                    fontSize: 32,
+                    height: 1.1,
+                    fontWeight: FontWeight.w800,
+                    color: BuyerTheme.action,
+                  ),
+                ),
+                if (view.vcs != null) ...[
+                  const SizedBox(width: 4),
+                  const Icon(
+                    LucideIcons.star,
+                    size: 22,
+                    color: BuyerTheme.action,
+                    fill: 1,
+                  ),
                 ],
-              ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        view.vcs != null
+                            ? 'Vendor Community Score'
+                            : view.newVendor
+                            ? 'New Vendor — Building Track Record'
+                            : 'Vendor Community Score not yet published',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        '$count verified store rating${count == 1 ? '' : 's'}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: BuyerTheme.muted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-        const SizedBox(height: 24),
-        StoreHoursSection(hours: hours, onRetry: onRetry),
-      ],
+          if (count > 0) ...[
+            const SizedBox(height: 14),
+            _ScoreBar(label: 'Service Quality', value: view.serviceQuality),
+            _ScoreBar(label: 'Delivery / Processing Speed', value: view.speed),
+          ],
+          if (view.mqs != null)
+            _ScoreBar(label: 'Material Quality Score', value: view.mqs),
+          if (view.vps != null)
+            _ScoreBar(label: 'Vendor Performance Score', value: view.vps),
+          if (view.badges.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            for (final badge in view.badges)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      LucideIcons.badgeCheck,
+                      size: 18,
+                      color: BuyerTheme.action,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            badge.scopeLabel == null
+                                ? badge.name
+                                : '${badge.name} · ${badge.scopeLabel}',
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          Text(
+                            badge.description,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              height: 1.4,
+                              color: BuyerTheme.muted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+          const SizedBox(height: 10),
+          const Text(
+            'From verified purchases only. Published scores use a rolling 90-day window and appear once enough eligible ratings exist.',
+            style: TextStyle(fontSize: 12, height: 1.5, color: BuyerTheme.muted),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+/// One 1–5 value as text and a bar; the text carries the meaning, the bar is decoration.
+class _ScoreBar extends StatelessWidget {
+  const _ScoreBar({required this.label, required this.value});
+
+  final String label;
+  final String? value;
+
+  @override
+  Widget build(BuildContext context) {
+    final number = value == null ? null : double.tryParse(value!);
+    return Semantics(
+      container: true,
+      label: number == null ? '$label: not available' : '$label: $value of 5',
+      excludeSemantics: true,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(label, style: const TextStyle(fontSize: 13)),
+                ),
+                Text(
+                  value ?? '—',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            LinearProgressIndicator(
+              value: number == null ? 0 : (number / 5).clamp(0, 1),
+              minHeight: 6,
+              borderRadius: BorderRadius.circular(4),
+              backgroundColor: BuyerTheme.brandSoft,
+              color: BuyerTheme.action,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -814,7 +1593,9 @@ class StoreHoursSection extends StatelessWidget {
         header: true,
         child: Text(
           'Store Hours',
-          style: Theme.of(context).textTheme.titleLarge,
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
         ),
       ),
       const SizedBox(height: 8),
@@ -876,21 +1657,21 @@ class StoreHoursSection extends StatelessWidget {
       const SizedBox(height: 8),
       Text(
         '${hours.notice} Philippine time (Asia/Manila) · as of ${formatManilaTimestamp(hours.asOf)}.',
-        style: const TextStyle(fontSize: 12),
+        style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
       ),
     ],
   );
 }
 
-/// One store's listings for the Products tab: server-sorted, cursor-paged, and held by the profile
-/// screen so switching tabs does not reload them.
+/// One store's listings under one server sort, cursor-paged, and held by the profile screen so
+/// switching tabs does not reload them.
 class _StoreProducts extends ChangeNotifier {
-  _StoreProducts(this._load);
+  _StoreProducts(this._load, {this.sort = ListingSort.bestDeal});
 
   final Future<ListingSearchPage?> Function(ListingSort sort, String? cursor)
   _load;
 
-  ListingSort sort = ListingSort.bestDeal;
+  ListingSort sort;
   LoadPhase phase = LoadPhase.loading;
   List<ListingCardView> items = const [];
   ListingSearchPage? page;
@@ -898,6 +1679,8 @@ class _StoreProducts extends ChangeNotifier {
   bool _started = false;
   bool _disposed = false;
   int _sequence = 0;
+
+  bool get started => _started;
 
   Future<void> ensureLoaded() => _started ? Future.value() : reload();
 
@@ -991,7 +1774,6 @@ class _ProductsTabState extends State<_ProductsTab> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _SectionTitle('Products'),
           const Text(
             'Browsing this store’s products is not available from here.',
             style: TextStyle(height: 1.45),
@@ -1027,34 +1809,30 @@ class _ProductsTabState extends State<_ProductsTab> {
   Widget _sortRow(_StoreProducts products) {
     final sort = products.sort;
     final price = sort.family == ListingSort.price;
-    return SizedBox(
-      height: 52,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          for (final option in const [ListingSort.bestDeal, ListingSort.rating])
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: FilterPill(
-                label: option == ListingSort.rating
-                    ? 'Top Rated'
-                    : option.label,
-                selected: sort == option,
-                onTap: () => products.reload(sort: option),
-              ),
-            ),
+    // Wraps instead of scrolling, so the sort a "See all" opened is always in view.
+    return Wrap(
+      spacing: 8,
+      children: [
+        for (final option in const [
+          ListingSort.bestDeal,
+          ListingSort.topSelling,
+          ListingSort.rating,
+        ])
           FilterPill(
-            label: 'Price',
-            selected: price,
-            trailingIcon: !price || !sort.descending
-                ? LucideIcons.arrowUpNarrowWide
-                : LucideIcons.arrowDownWideNarrow,
-            onTap: () => products.reload(
-              sort: price ? sort.reversed : ListingSort.price,
-            ),
+            label: option == ListingSort.rating ? 'Top Rated' : option.label,
+            selected: sort == option,
+            onTap: () => products.reload(sort: option),
           ),
-        ],
-      ),
+        FilterPill(
+          label: 'Price',
+          selected: price,
+          trailingIcon: !price || !sort.descending
+              ? LucideIcons.arrowUpNarrowWide
+              : LucideIcons.arrowDownWideNarrow,
+          onTap: () =>
+              products.reload(sort: price ? sort.reversed : ListingSort.price),
+        ),
+      ],
     );
   }
 
@@ -1100,37 +1878,11 @@ class _ProductsTabState extends State<_ProductsTab> {
             ),
           ];
         }
-        final columns = MediaQuery.textScalerOf(context).scale(1) > 1.3 ? 1 : 2;
-        final rows = (products.items.length / columns).ceil();
         return [
-          for (var row = 0; row < rows; row++)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (var column = 0; column < columns; column++) ...[
-                      if (column > 0) const SizedBox(width: 10),
-                      Expanded(
-                        child: row * columns + column < products.items.length
-                            ? ListingCard(
-                                card: products.items[row * columns + column],
-                                showFavorite: false,
-                                onOpen: () => widget.onOpen?.call(
-                                  context,
-                                  products
-                                      .items[row * columns + column]
-                                      .listingId,
-                                ),
-                              )
-                            : const SizedBox.shrink(),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
+          _ListingGrid(
+            items: products.items,
+            onOpen: (card) => widget.onOpen?.call(context, card.listingId),
+          ),
           if (products.loadingMore)
             const Center(child: CircularProgressIndicator())
           else if (products.page?.hasMore == true)

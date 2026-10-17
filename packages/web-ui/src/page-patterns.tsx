@@ -1,12 +1,13 @@
 import { createContext, useId, useState, type FormEventHandler, type ReactNode } from 'react'
-import { Info, Search, SearchX, X, MoreHorizontal } from 'lucide-react'
+import { Info, SearchX, X, MoreHorizontal } from 'lucide-react'
 import type { FilterChip, SummaryTile } from './catalog-patterns'
+import { SearchInput } from './filter-controls'
 
 export const PortalPagePatterns = createContext(false)
 
 export function PageHeader({ eyebrow, title, description, actions, status }: { eyebrow: string; title: string; description?: string; actions?: ReactNode; status?: ReactNode }) {
   return <header className="flex min-w-0 flex-col gap-4 border-b border-border-default pb-6 lg:flex-row lg:items-end lg:justify-between">
-    <div className="min-w-0"><p className="text-[13px] font-semibold uppercase tracking-widest text-action-primary">{eyebrow}</p><div className="mt-2 flex flex-wrap items-center gap-2"><h1 className="break-words text-[28px] font-semibold leading-tight tracking-tight text-text-strong">{title}</h1>{status}</div>{description && <p className="mt-2 text-sm leading-6 text-text-secondary">{description}</p>}</div>
+    <div className="min-w-0 max-w-3xl"><p className="text-label uppercase tracking-widest text-action-primary">{eyebrow}</p><div className="mt-2 flex flex-wrap items-center gap-2"><h1 className="break-words text-h1 tracking-tight text-text-strong">{title}</h1>{status}</div>{description && <p className="mt-2 text-sm leading-6 text-text-secondary">{description}</p>}</div>
     {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
   </header>
 }
@@ -42,11 +43,11 @@ export function FilterTabs({ label, chips, value, onChange, disabled = false, ap
   </div>
 }
 
-export function Toolbar({ filters, search, viewToggle, searchFirst = false }: { searchFirst?: boolean; filters?: ReactNode; search?: { label: string; placeholder: string; value: string; onChange: (value: string) => void; onSubmit: FormEventHandler<HTMLFormElement>; maxLength?: number; disabled?: boolean }; viewToggle?: ReactNode }) {
-  const searchField = search && <form role="search" aria-label={search.label} onSubmit={search.onSubmit} className="relative min-w-0 flex-1 xl:min-w-48 xl:max-w-sm"><Search size={18} aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary" /><input type="search" aria-label={search.label} placeholder={search.placeholder} value={search.value} onChange={event => search.onChange(event.target.value)} maxLength={search.maxLength} disabled={search.disabled} className="min-h-12 w-full min-w-0 rounded-control border border-border-default bg-surface-primary py-2 pl-12 pr-4 text-sm text-text-strong placeholder:text-text-secondary" /></form>
-  return <div className="flex min-w-0 flex-col gap-4 rounded-xl border border-border-default bg-surface-primary p-4 xl:flex-row xl:items-center">
+export function Toolbar({ filters, search, viewToggle, searchFirst = false, alignEnd = false }: { searchFirst?: boolean; alignEnd?: boolean; filters?: ReactNode; search?: { label: string; placeholder: string; value: string; onChange: (value: string) => void; onSubmit: FormEventHandler<HTMLFormElement>; maxLength?: number; disabled?: boolean }; viewToggle?: ReactNode }) {
+  const searchField = search && <form role="search" aria-label={search.label} onSubmit={search.onSubmit} className="min-w-0 flex-1 xl:min-w-48 xl:max-w-sm"><SearchInput label={search.label} placeholder={search.placeholder} value={search.value} onChange={search.onChange} maxLength={search.maxLength} disabled={search.disabled} /></form>
+  return <div className={`flex min-w-0 flex-col gap-4 rounded-xl border border-border-default bg-surface-primary p-4 xl:flex-row ${alignEnd ? 'xl:items-end' : 'xl:items-center'}`}>
     {searchFirst && searchField}
-    {filters && <div className="flex min-w-0 flex-wrap items-center gap-2 [&>select]:w-auto [&>select]:max-w-full">{filters}</div>}
+    {filters && <div className="flex min-w-0 flex-wrap items-center gap-2 [&>select]:w-auto [&>select]:max-w-full [&>select]:min-h-12 sm:[&>select]:min-h-11">{filters}</div>}
     {!searchFirst && <div className="flex min-w-0 flex-1 xl:justify-end">{searchField}</div>}
     {viewToggle && <div className="flex shrink-0 items-center gap-2 xl:ml-auto">{viewToggle}</div>}
   </div>

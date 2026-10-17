@@ -6,6 +6,7 @@ namespace App\Domain\Notifications;
 
 use App\Domain\Authorization\AccountAccess;
 use App\Domain\Identity\AuditRecorder;
+use App\Support\PortalDateRange;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -13,10 +14,13 @@ final class ReadNotifications
 {
     public function __construct(private readonly NotificationPolicy $policy, private readonly NotificationBroadcast $broadcast, private readonly AuditRecorder $audit, private readonly AccountAccess $access) {}
 
-    /** @return array{read: bool, read_count: int, read_at: string} */
-    public function filtered(Request $request, string $throughId, ?string $title, ?string $category = null): array
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return array{read: bool, read_count: int, read_at: string}
+     */
+    public function filtered(Request $request, string $throughId, ?string $title, ?string $category = null, array $filters = []): array
     {
-        return DB::transaction(function () use ($request, $throughId, $title, $category): array {
+        return DB::transaction(function () use ($request, $throughId, $title, $category, $filters): array {
             $user = $request->user()->refresh();
             $request->attributes->set('account_scope', $this->access->resolve($user));
             $at = now();
@@ -28,6 +32,7 @@ final class ReadNotifications
             if ($category !== null) {
                 $query->where('category', $category);
             }
+            PortalDateRange::apply($query, 'created_at', $filters);
             // Bounded batches in one transaction; new arrivals beyond the captured view stay unread.
             $query->lockForUpdate()->chunkById(200, function ($rows) use ($user, $at, &$count): void {
                 $ids = [];

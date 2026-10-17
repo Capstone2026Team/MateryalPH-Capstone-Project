@@ -15,9 +15,11 @@ foreach (['buyers' => ['auth.transport:MOBILE', 'auth:api', 'account.access:BUYE
         }
         if ($prefix === 'buyers') {
             Route::post('/conversations', [C::class, 'create']);
+            Route::post('/site-inspections', [C::class, 'requestSiteInspection']);
         }
         Route::prefix('conversations/{conversationId}')->whereUuid('conversationId')->group(function () use ($prefix): void {
             Route::get('/', [C::class, 'show']);
+            Route::get('/project-inquiries', [C::class, 'projectInquiries']);
             Route::post('/messages', [C::class, 'send']);
             Route::get('/products', [C::class, 'products']);
             Route::post('/typing', [C::class, 'typing']);
@@ -39,6 +41,11 @@ foreach (['buyers' => ['auth.transport:MOBILE', 'auth:api', 'account.access:BUYE
                 Route::post('/quotation/start', [C::class, 'startQuotation']);
             }
             Route::post('/quotation/{action}', [C::class, 'decision'])->whereIn('action', $prefix === 'buyers' ? ['view', 'accept', 'reject', 'counter'] : ['withdraw']);
+            if ($prefix === 'buyers') {
+                Route::post('/site-inspections/{inspectionId}/cancel', [C::class, 'cancelSiteInspection'])->whereUuid('inspectionId');
+            } else {
+                Route::post('/site-inspections/{inspectionId}/{action}', [C::class, 'decideSiteInspection'])->whereUuid('inspectionId')->whereIn('action', ['schedule', 'decline', 'complete']);
+            }
         });
     });
 }

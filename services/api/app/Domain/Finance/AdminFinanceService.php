@@ -9,6 +9,8 @@ use App\Domain\Identity\AuthenticationException;
 use App\Domain\Payments\PaymentChannelCatalog;
 use App\Domain\Payments\PaymentPresenter;
 use App\Domain\Payments\PaymentReconciliationService;
+use App\Domain\Payments\RefundService;
+use App\Support\PortalDateRange;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
@@ -45,16 +47,22 @@ final class AdminFinanceService
         $this->access->admin($request, 'finance.view');
         $query = DB::table('payments as p')->leftJoin('orders as o', 'o.id', '=', 'p.order_id')->leftJoin('fee_statements as s', 's.id', '=', 'p.fee_statement_id')
             ->leftJoin('vendor_organizations as v', 'v.id', '=', 'p.vendor_organization_id')
+            ->leftJoinSub(RefundService::paymentTotals(), 'refund_totals', 'refund_totals.source_payment_id', '=', 'p.id')
             ->when($filters['state'] ?? null, fn (Builder $q, string $state) => $q->where('p.state', $state))
             ->when($filters['purpose'] ?? null, fn (Builder $q, string $purpose) => $q->where('p.purpose', $purpose))
             ->when($filters['evidence_origin'] ?? null, fn (Builder $q, string $origin) => $q->where('p.evidence_origin', $origin))
             ->when($filters['reconciliation_state'] ?? null, fn (Builder $q, string $state) => $q->where('p.reconciliation_state', $state))
-            ->orderByDesc('p.created_at')->select(['p.*', 'o.reference as order_reference', 's.statement_reference', 'v.store_name']);
+            ->orderByDesc('p.created_at')->select(['p.*', 'o.reference as order_reference', 's.statement_reference', 'v.store_name', 'refund_totals.refunded_centavos', 'refund_totals.pending_count', 'refund_totals.failed_count']);
+
+        PortalDateRange::apply($query, 'p.created_at', $filters);
 
         return $this->page($query, (int) ($filters['page'] ?? 1), fn (object $row): array => $this->presenter->attempt($row, false) + [
             'reference' => (string) ($row->order_reference ?? $row->statement_reference ?? ''), 'vendor_name' => (string) ($row->store_name ?? ''),
             'reconciliation_state' => (string) $row->reconciliation_state, 'gateway_mode' => (string) $row->gateway_mode, 'late_capture' => (bool) $row->late_capture,
             'account_scope' => (string) $row->account_scope, 'provider_session_reference' => $row->provider_session_id === null ? null : '…'.substr((string) $row->provider_session_id, -6),
+            'refunded_centavos' => min((int) $row->total_centavos, (int) ($row->refunded_centavos ?? 0)),
+            'net_collected_centavos' => $row->state === 'PAID' ? max(0, (int) $row->total_centavos - (int) ($row->refunded_centavos ?? 0)) : 0,
+            'refund_pending_count' => (int) ($row->pending_count ?? 0), 'refund_failed_count' => (int) ($row->failed_count ?? 0),
         ]);
     }
 
@@ -68,6 +76,8 @@ final class AdminFinanceService
         $query = DB::table('finance_review_items as i')->leftJoin('vendor_organizations as v', 'v.id', '=', 'i.vendor_organization_id')
             ->where('i.state', $filters['state'] ?? 'OPEN')->when($filters['kind'] ?? null, fn (Builder $q, string $kind) => $q->where('i.kind', $kind))
             ->orderByDesc('i.created_at')->select(['i.*', 'v.store_name']);
+
+        PortalDateRange::apply($query, 'i.created_at', $filters);
 
         return $this->page($query, (int) ($filters['page'] ?? 1), static fn (object $row): array => [
             'id' => (string) $row->id, 'kind' => (string) $row->kind, 'state' => (string) $row->state, 'reason_code' => (string) $row->reason_code, 'summary' => (string) $row->summary,
@@ -162,7 +172,9 @@ final class AdminFinanceService
         $query = DB::table('fee_statements as s')->join('vendor_organizations as v', 'v.id', '=', 's.vendor_organization_id')
             ->when($filters['state'] ?? null, fn (Builder $q, string $state) => $q->where('s.state', $state))
             // Overdue debt: issued balances past their due date (a receivable task, never a Buyer cancellation).
-            ->when(! empty($filters['overdue']), fn (Builder $q) => $q->where('s.outstanding_centavos', '>', 0)->where('s.due_on', '<', CarbonImmutable::now('Asia/Manila')->toDateString()))->orderByDesc('s.period_start')->orderByDesc('s.created_at')->select(['s.*', 'v.store_name']);
+            ->when(! empty($filters['overdue']), fn (Builder $q) => $q->whereIn('s.state', ['ISSUED', 'PARTIALLY_PAID'])->where('s.outstanding_centavos', '>', 0)->where('s.due_on', '<', CarbonImmutable::now('Asia/Manila')->toDateString()))->orderByDesc('s.period_start')->orderByDesc('s.created_at')->select(['s.*', 'v.store_name']);
+
+        PortalDateRange::apply($query, 's.issued_on', $filters, true);
 
         return $this->page($query, (int) ($filters['page'] ?? 1), static fn (object $row): array => VendorFinanceService::statementView($row) + ['vendor_name' => (string) $row->store_name,
             'line_count' => DB::table('fee_statement_lines')->where('fee_statement_id', $row->id)->count(), 'approved_at' => self::iso($row->approved_at)]);

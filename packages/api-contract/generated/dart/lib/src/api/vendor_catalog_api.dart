@@ -23,10 +23,13 @@ import 'package:materyalph_api_client/src/model/catalog_material_match_list_enve
 import 'package:materyalph_api_client/src/model/catalog_taxonomy_envelope.dart';
 import 'package:materyalph_api_client/src/model/catalog_variants_save.dart';
 import 'package:materyalph_api_client/src/model/compliance_evidence_envelope.dart';
+import 'package:materyalph_api_client/src/model/compliance_lookup_envelope.dart';
+import 'package:materyalph_api_client/src/model/compliance_lookup_request.dart';
 import 'package:materyalph_api_client/src/model/compliance_path.dart';
 import 'package:materyalph_api_client/src/model/compliance_submission.dart';
 import 'package:materyalph_api_client/src/model/listing_compliance_status.dart';
 import 'package:materyalph_api_client/src/model/listing_status.dart';
+import 'package:materyalph_api_client/src/model/marking_type.dart';
 import 'package:materyalph_api_client/src/model/vendor_file_envelope.dart';
 
 class VendorCatalogApi {
@@ -1117,6 +1120,115 @@ class VendorCatalogApi {
     );
   }
 
+  /// lookupListingCompliance
+  /// Looks up a PS License No. or ICC sticker serial in the active DTI-BPS register snapshot for this listing&#39;s regulated product (rule compliance.register-number.v2) and returns the register record used to prefill the declaration. Read-only — nothing is submitted and nothing reaches Admin review. MATCHED means automatic verification is possible; UNCERTAIN means the number is listed for another product or an expired record; UNMATCHED means it is not listed or is not in the printed format; UNAVAILABLE means no snapshot is active.
+  ///
+  /// Parameters:
+  /// * [listingId]
+  /// * [complianceLookupRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [ComplianceLookupEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<ComplianceLookupEnvelope>> lookupListingCompliance({
+    required String listingId,
+    required ComplianceLookupRequest complianceLookupRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendor/catalog/listings/{listingId}/compliance/lookup'.replaceAll('{' r'listingId' '}', encodeQueryParameter(_serializers, listingId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(ComplianceLookupRequest);
+      _bodyData = _serializers.serialize(complianceLookupRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    ComplianceLookupEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(ComplianceLookupEnvelope),
+      ) as ComplianceLookupEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<ComplianceLookupEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
   /// publishVendorCatalogListing
   /// Requests publication. The backend evaluates every blocker; a regulated listing moves to PENDING_COMPLIANCE or PENDING_ADMIN_REVIEW until its PS/ICC evidence is VERIFIED and only then becomes ACTIVE.
   ///
@@ -1515,7 +1627,7 @@ class VendorCatalogApi {
   }
 
   /// submitListingCompliance
-  /// Review and Confirm for all three paths. An exact match with the active DTI-BPS register snapshot (rule compliance.register-exact.v1) is VERIFIED as an audited system decision; uncertain, unavailable or unmatched results become PENDING_ADMIN_REVIEW, never a counterfeit finding.
+  /// Review and Confirm for all three paths. The Vendor supplies the PS License No. or ICC sticker serial and marking evidence. With review_mode AUTOMATIC (default) a MATCHED register lookup (rule compliance.register-number.v2) is VERIFIED as an audited system decision and the register record supplies the manufacturer or importer; any other result returns 422 COMPLIANCE_REGISTER_NOT_MATCHED with details.lookup and records nothing. With review_mode MANUAL_REVIEW, which the Vendor chooses explicitly, an unmatched declaration becomes PENDING_ADMIN_REVIEW, never a counterfeit finding.
   ///
   /// Parameters:
   /// * [listingId]
@@ -1844,13 +1956,14 @@ class VendorCatalogApi {
   }
 
   /// uploadListingComplianceEvidence
-  /// Stores a private PS Mark/ICC marking photo or QR image and returns editable extraction assistance. OCR and QR values are suggestions only; UNAVAILABLE means the Vendor enters the values on Review and Confirm.
+  /// Stores a private PS Mark/ICC marking photo or QR image and returns editable extraction assistance. OCR and QR values are suggestions only; PHOTO_OCR uses local Tesseract after malware scanning and returns only labelled marking fields, never raw OCR text. UNAVAILABLE (engine missing) or FAILED (unreadable image, timeout or engine failure) retains the private evidence for manual Review and Confirm. Current authorization and listing eligibility are checked again after extraction. OCR never changes compliance or publication status. With marking_type, OCR and QR read the PS License No. or ICC sticker serial by its printed shape; look-alike readings are checked against the active DTI-BPS register and the listed one is suggested (register_listed). A QR payload sent with a PHOTO_OCR photo is used instead of OCR when it holds the number.
   ///
   /// Parameters:
   /// * [listingId]
   /// * [path]
   /// * [file]
-  /// * [qrPayload] - Text decoded by the browser from the QR image; untrusted.
+  /// * [qrPayload] - Text decoded by the browser from the QR image or from a QR code visible in a marking photo; untrusted.
+  /// * [markingType] - The marking the Vendor selected
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -1865,6 +1978,7 @@ class VendorCatalogApi {
     required CompliancePath path,
     required MultipartFile file,
     String? qrPayload,
+    MarkingType? markingType,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -1905,6 +2019,7 @@ class VendorCatalogApi {
         r'path': encodeFormParameter(_serializers, path, const FullType(CompliancePath)),
         r'file': file,
         r'qr_payload': encodeFormParameter(_serializers, qrPayload, const FullType(String)),
+        r'marking_type': encodeFormParameter(_serializers, markingType, const FullType(MarkingType)),
       });
 
     } catch(error, stackTrace) {

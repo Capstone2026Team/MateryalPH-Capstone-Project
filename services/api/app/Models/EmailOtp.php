@@ -9,10 +9,14 @@ use Carbon\CarbonImmutable;
 /**
  * @property string $user_id
  * @property string $code_hash
+ * @property string $normalized_email
+ * @property string $purpose
  * @property int $attempts
  * @property int $max_attempts
  * @property CarbonImmutable $expires_at
  * @property CarbonImmutable $created_at
+ * @property CarbonImmutable|null $consumed_at
+ * @property CarbonImmutable|null $invalidated_at
  */
 final class EmailOtp extends UuidModel
 {

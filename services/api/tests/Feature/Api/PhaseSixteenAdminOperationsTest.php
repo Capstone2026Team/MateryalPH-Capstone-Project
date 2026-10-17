@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
+use App\Domain\Compliance\ComplianceTextExtractor;
 use App\Domain\Disputes\DisputeRules;
 use App\Domain\Enforcement\EnforcementService;
 use App\Domain\Finance\RemittanceAssessmentService;
@@ -27,6 +28,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
@@ -72,6 +74,27 @@ final class PhaseSixteenAdminOperationsTest extends TestCase
         Carbon::setTestNow();
         CarbonImmutable::setTestNow();
         parent::tearDown();
+    }
+
+    public function test_admin_dated_queues_validate_the_range_and_query_their_timestamp_fields(): void
+    {
+        $this->signInAdmin($this->admin('ADMIN_SUPERADMIN'));
+        $paths = ['/api/v1/admin/enforcement', '/api/v1/admin/privacy-requests', '/api/v1/admin/integrations/failures',
+            '/api/v1/admin/integrations/failures?kind=JOBS', '/api/v1/admin/budget-overrides', '/api/v1/admin/finance/kpis',
+            '/api/v1/admin/finance/remittances', '/api/v1/admin/finance/evidence', '/api/v1/admin/finance/tax-adjustments',
+            '/api/v1/admin/finance/payments', '/api/v1/admin/finance/review-items', '/api/v1/admin/finance/statements',
+            '/api/v1/admin/order-operations/refunds', '/api/v1/admin/order-operations/reimbursements',
+            '/api/v1/admin/order-operations/cancellation-requests', '/api/v1/admin/disputes', '/api/v1/admin/reviews',
+            '/api/v1/admin/product-compliance', '/api/v1/admin/audit-log', '/api/v1/admin/notifications/failures',
+            '/api/v1/admin/reports', '/api/v1/admin/reports/tax'];
+        foreach (['REQUESTS', 'RECORDS', 'MISMATCHES'] as $view) {
+            $paths[] = '/api/v1/admin/invoices?view='.$view;
+        }
+        foreach ($paths as $path) {
+            $separator = str_contains($path, '?') ? '&' : '?';
+            $this->getJson($path.$separator.'from=2000-01-01&to=2000-01-01')->assertOk();
+            $this->getJson($path.$separator.'from=2000-01-02&to=2000-01-01')->assertUnprocessable();
+        }
     }
 
     public function test_platform_settings_are_versioned_validated_wired_to_new_records_and_super_admin_only(): void
@@ -300,13 +323,29 @@ final class PhaseSixteenAdminOperationsTest extends TestCase
         }
     }
 
+    public function test_ocr_health_reflects_local_engine_readiness_without_exposing_configuration(): void
+    {
+        $this->signInAdmin($this->admin('ADMIN_SUPERADMIN'));
+        config()->set('materyalph.compliance_ocr.binary', '/private/ocr-engine-path');
+        foreach ([['NONE', false, 'NOT_CONFIGURED'], ['TESSERACT', false, 'DEGRADED'], ['TESSERACT', true, 'HEALTHY']] as [$provider, $available, $status]) {
+            $this->mock(ComplianceTextExtractor::class, function ($mock) use ($provider, $available): void {
+                $mock->shouldReceive('provider')->andReturn($provider);
+                $mock->shouldReceive('available')->andReturn($available);
+            });
+            $response = $this->getJson('/api/v1/admin/integrations')->assertOk();
+            $ocr = collect($response->json('data.integrations'))->firstWhere('key', 'ocr');
+            self::assertSame($status, $ocr['status']);
+            self::assertStringNotContainsString('/private/ocr-engine-path', $response->getContent());
+        }
+    }
+
     public function test_job_health_shows_safe_status_and_retries_only_allowlisted_idempotent_work_with_a_reason(): void
     {
         config()->set('services.xendit.secret_key', 'xnd_development_SECRET_SHOULD_NEVER_APPEAR_123');
         $retryable = $this->deadLetter('NOTIFICATION_READY');
         $owned = $this->deadLetter('PAYMENT_REFUND_REQUESTED');
         DB::table('failed_jobs')->insert(['uuid' => (string) Str::uuid(), 'connection' => 'database', 'queue' => 'default', 'failed_at' => now(),
-            'payload' => json_encode(['displayName' => ProcessOutboxEvent::class, 'data' => ['token' => 'payload-token-should-not-leak']]),
+            'payload' => json_encode(['displayName' => ProcessOutboxEvent::class, 'data' => ['command' => serialize(new ProcessOutboxEvent($retryable)), 'token' => 'payload-token-should-not-leak']]),
             'exception' => "RuntimeException: delivery failed for buyer@example.com with token abc123\n#0 stack"]);
 
         $this->signInAdmin($this->admin('ADMIN_USER_MANAGEMENT'));
@@ -335,6 +374,45 @@ final class PhaseSixteenAdminOperationsTest extends TestCase
         self::assertSame('PUBLISHED', (string) DB::table('analytics_geo_runs')->where('trigger', 'ADMIN_RETRY')->value('state'));
     }
 
+    public function test_failed_job_retry_resets_exhaustion_and_checks_the_underlying_event_allowlist(): void
+    {
+        Queue::fake();
+        $admin = $this->admin('ADMIN_SUPERADMIN');
+        $this->signInAdmin($admin);
+        $safe = $this->deadLetter('NOTIFICATIONS_CHANGED');
+        DB::table('outbox_events')->where('id', $safe)->update(['payload' => json_encode(['sealed_payload' => Crypt::encryptString(json_encode(['user_id' => (int) $admin->getKey()]))])]);
+        $safeJob = $this->failedOutboxJob($safe);
+        $malformedJob = $this->failedOutboxJob($safe);
+        DB::table('failed_jobs')->where('uuid', $malformedJob)->update(['payload' => json_encode(['displayName' => ProcessOutboxEvent::class, 'data' => ['command' => serialize((object) ['eventId' => $safe])]])]);
+        $this->keyedPost('/api/v1/admin/integrations/retries', ['target_type' => 'FAILED_JOB', 'reference' => $malformedJob, 'reason' => 'Malformed jobs must never be replayed'])
+            ->assertStatus(409)->assertJsonPath('errors.0.code', 'RETRY_NOT_ALLOWED');
+        foreach (['PAYMENT_REFUND_REQUESTED', 'AUTH_EMAIL_OTP_REQUESTED', 'VENDOR_INVITATION_REQUESTED'] as $type) {
+            $protected = $this->deadLetter($type);
+            $uuid = $this->failedOutboxJob($protected);
+            $rows = collect($this->getJson('/api/v1/admin/integrations/failures?kind=JOBS')->assertOk()->json('data'))->keyBy('reference');
+            self::assertFalse($rows[$uuid]['retryable']);
+            $this->keyedPost('/api/v1/admin/integrations/retries', ['target_type' => 'FAILED_JOB', 'reference' => $uuid, 'reason' => 'Attempt a protected event retry'])
+                ->assertStatus(409)->assertJsonPath('errors.0.code', 'RETRY_NOT_ALLOWED');
+            self::assertSame(OutboxProcessor::MAX_ATTEMPTS, (int) DB::table('outbox_events')->where('id', $protected)->value('attempts'));
+        }
+        $this->keyedPost('/api/v1/admin/integrations/retries', ['target_type' => 'FAILED_JOB', 'reference' => $safeJob, 'reason' => 'Worker updated after notification handler fix'])
+            ->assertAccepted()->assertJsonPath('data.outcome', 'QUEUED');
+        self::assertSame(0, (int) DB::table('outbox_events')->where('id', $safe)->value('attempts'));
+        app(OutboxProcessor::class)->process($safe);
+        self::assertNotNull(DB::table('outbox_events')->where('id', $safe)->value('processed_at'));
+        self::assertTrue(DB::table('operation_retries')->where('target_reference', $safeJob)->exists());
+    }
+
+    private function failedOutboxJob(string $event): string
+    {
+        $uuid = (string) Str::uuid();
+        DB::table('failed_jobs')->insert(['uuid' => $uuid, 'connection' => 'database', 'queue' => 'default', 'failed_at' => now(),
+            'payload' => json_encode(['displayName' => ProcessOutboxEvent::class, 'data' => ['command' => serialize(new ProcessOutboxEvent($event))]]),
+            'exception' => 'RuntimeException: Synthetic delivery failure']);
+
+        return $uuid;
+    }
+
     public function test_phase_3e_queue_shows_separate_workstreams_and_source_revision_blockers_without_a_provider_override(): void
     {
         [$store, $owner] = $this->activeStore('Workstream Store', false);
@@ -358,6 +436,11 @@ final class PhaseSixteenAdminOperationsTest extends TestCase
 
         // Queue filters run on the same case list; there is no second approval engine and no provider override.
         $this->getJson('/api/v1/admin/vendor-verification?status=APPROVED&activation=NOT_ACTIVE&blocker=PROVIDER')->assertOk()->assertJsonPath('data.0.id', $store->id)->assertJsonPath('data.0.provider_status', 'NOT_STARTED');
+        // Tab counts follow the other filters but never the selected status, so a tab shows what it would list.
+        $counts = $this->getJson('/api/v1/admin/vendor-verification?status=REJECTED&activation=NOT_ACTIVE&blocker=PROVIDER')->assertOk()->assertJsonCount(0, 'data')->json('meta.status_counts');
+        self::assertSame(['PENDING_VERIFICATION', 'CHANGES_REQUIRED', 'REJECTED', 'APPROVED', 'EXPIRED'], array_keys($counts));
+        self::assertSame(1, $counts['APPROVED']);
+        $this->getJson('/api/v1/admin/vendor-verification?status=APPROVED&setup_status=NOT_STARTED&activation=ACTIVE')->assertOk()->assertJsonPath('meta.status_counts.APPROVED', 0);
         $this->getJson('/api/v1/admin/vendor-verification?blocker=TEAM')->assertStatus(422);
         $this->postJson('/api/v1/admin/vendor-verification/'.$store->id.'/payment-connection', ['connection_status' => 'CONNECTED_TEST'])->assertNotFound();
         $this->postJson('/api/v1/admin/vendor-verification/'.$store->id.'/restore', ['reason' => 'Trying to restore without a provider connection.'], $this->key())->assertStatus(409)

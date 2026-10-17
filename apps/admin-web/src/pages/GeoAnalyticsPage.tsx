@@ -1,9 +1,10 @@
-import type { GeoCell, GeoChild, GeoRate } from '@materyalph/api-client-ts'
+import { DocumentExportButton } from '@materyalph/web-ui'
+import type { GeoActiveUsers, GeoCell, GeoChild, GeoRate } from '@materyalph/api-client-ts'
 import {
-  Button, ChoroplethLegend, DemandHeatmap, DemoLabel, FilterTabs, GeoBreadcrumbs, GeoChoroplethMap, InfoNote, SidePanel, SortableDataTable, StatusBadge, TrendLineChart,
-  choroplethThresholds, formatPesoCentavos, type GeoAreaValue, type GeoFeature, type SortableColumn,
+  Button, ChoroplethLegend, DateFilter, DemandHeatmap, DemoLabel, FilterTabs, GeoBreadcrumbs, GeoChoroplethMap, InfoNote, KpiCard, SidePanel, SortableDataTable, StatusBadge, TrendLineChart,
+  analyticsDay, choroplethThresholds, formatPesoCentavos, manilaToday, type GeoAreaValue, type GeoFeature, type SortableColumn,
 } from '@materyalph/web-ui'
-import { Download, EyeOff, RefreshCw } from 'lucide-react'
+import { Clock3, Download, EyeOff, RefreshCw, ShoppingCart, Store, Users, Wallet } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { control, label as humanize, labelClass, manilaDateTime, useLoad } from '../lib/operations-hooks'
@@ -14,7 +15,7 @@ import { MaterialsAnalyticsSection } from './TrustPages'
 
 const browserKey = import.meta.env.VITE_GOOGLE_MAPS_BROWSER_KEY?.trim() || undefined
 const iso = (date: Date) => date.toISOString().slice(0, 10)
-const daysAgo = (days: number) => iso(new Date(Date.now() - days * 86_400_000))
+const daysAgo = (days: number) => { const date = new Date(`${manilaToday()}T00:00:00Z`); date.setUTCDate(date.getUTCDate() - days); return iso(date) }
 const count = (value: number) => value.toLocaleString('en-PH')
 const percent = (value: number) => `${value.toFixed(2)}%`
 function duration(seconds: number | null | undefined): string {
@@ -61,22 +62,29 @@ function useGeoFilters(): [GeoFilters, (next: Partial<GeoFilters>) => void] {
 
 /** One value cell: suppressed cells say so in text, with the rule as a tooltip and accessible description. */
 function CellValue({ cell, format, reason }: { cell: { value?: number | null | undefined; suppressed: boolean }; format: (value: number) => string; reason?: string | null | undefined }) {
-  if (cell.suppressed) return <span className="inline-flex items-center gap-1 text-text-secondary" title={reason ?? 'Suppressed small cell'}><EyeOff size={14} aria-hidden="true" />Suppressed</span>
+  if (cell.suppressed) return <span className="inline-flex items-center gap-1.5 text-text-secondary" title={reason ?? 'Suppressed small cell'} aria-label={`Suppressed: ${reason ?? 'Small cell'}`}><EyeOff size={16} aria-hidden="true" className="shrink-0" />Suppressed</span>
   return <>{cell.value === null || cell.value === undefined ? '—' : format(cell.value)}</>
 }
 
-function Kpi({ label, children, hint }: { label: string; children: ReactNode; hint?: ReactNode }) {
-  return <div className="min-w-0 rounded-xl border border-border-default bg-surface-primary p-4"><dt className="text-[13px] font-medium text-text-secondary">{label}</dt><dd className="mt-2 break-words text-2xl font-semibold leading-tight tabular-nums text-text-strong">{children}</dd>{hint && <p className="mt-1 text-[13px] text-text-secondary">{hint}</p>}</div>
-}
-
 function RateKpi({ label, rate }: { label: string; rate: GeoRate }) {
-  return <Kpi label={label} hint={rate.suppressed ? rate.reason : rate.denominator ? `${count(rate.numerator ?? 0)} of ${count(rate.denominator)}` : 'No eligible orders'}>
-    {rate.suppressed ? <span className="inline-flex items-center gap-2 text-lg text-text-secondary"><EyeOff size={18} aria-hidden="true" />Suppressed</span> : rate.percent ? `${rate.percent}%` : '—'}
-  </Kpi>
+  return <KpiCard label={label} hint={rate.suppressed ? undefined : rate.denominator ? `${count(rate.numerator ?? 0)} of ${count(rate.denominator)}` : 'No eligible orders'}
+    value={rate.suppressed ? <span className="text-lg"><CellValue cell={{ suppressed: true }} format={percent} reason={rate.reason} /></span> : rate.percent === null || rate.percent === undefined ? '—' : `${rate.percent}%`} />
 }
 
-function CellKpi({ label, cell, format, hint }: { label: string; cell: GeoCell; format: (value: number) => string; hint?: string }) {
-  return <Kpi label={label} hint={cell.suppressed ? cell.reason : hint}>{cell.suppressed ? <span className="inline-flex items-center gap-2 text-lg text-text-secondary"><EyeOff size={18} aria-hidden="true" />Suppressed</span> : cell.value === null || cell.value === undefined ? '—' : format(cell.value)}</Kpi>
+function CellKpi({ label, cell, format, hint, icon, accent = false }: { label: string; cell: GeoCell; format: (value: number) => string; hint?: string; icon?: ReactNode; accent?: boolean }) {
+  return <KpiCard label={label} value={<span className={cell.suppressed ? 'text-lg' : 'tabular-nums'}><CellValue cell={cell} format={format} reason={cell.reason} /></span>}
+    hint={cell.suppressed ? undefined : hint} icon={icon} accent={accent} />
+}
+
+function ActiveUsersKpi({ label, activity }: { label: string; activity: GeoActiveUsers }) {
+  return <KpiCard label={label} icon={<Users size={16} aria-hidden="true" />}
+    value={<><span className={activity.mau.suppressed ? 'text-lg' : 'tabular-nums'}><CellValue cell={activity.mau} format={count} reason={activity.mau.reason} /></span> <span className="text-sm font-normal text-text-secondary" title="Monthly active users">MAU</span></>}
+    hint={<span className="mt-3 grid gap-2 border-t border-border-default pt-3">
+      {(['dau', 'wau'] as const).map(window => <span key={window} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <span>{window === 'dau' ? 'Daily (DAU)' : 'Weekly (WAU)'}</span>
+        <span className="font-semibold tabular-nums text-text-strong"><CellValue cell={activity[window]} format={count} reason={activity[window].reason} /></span>
+      </span>)}
+    </span>} />
 }
 
 export function AdminGeoAnalyticsPage() {
@@ -98,9 +106,7 @@ export function AdminGeoAnalyticsPage() {
     {dashboard.error ? <ErrorState message={dashboard.error} onRetry={dashboard.retry} /> : !data ? <LoadingState /> : !data.dataset.available
       ? <p className="rounded-surface border border-dashed border-border-default bg-surface-primary px-6 py-10 text-center text-sm text-text-secondary">{filters.dataset === 'DEMO' ? 'No DEMO dataset has been generated. Run materyalph:geo-analytics-demo in a DEMO environment.' : 'The first daily aggregation has not run yet. It runs at 01:00 Asia/Manila, or can be re-run from Integration & Job Health.'}</p>
       : <>
-        <div className="grid gap-2"><GeoBreadcrumbs items={data.scope.breadcrumbs.map(item => ({ code: item.code ?? null, name: item.name }))} onSelect={code => setFilters({ area: code })} />
-          <p className="text-sm text-text-secondary">{data.scope.label} · {data.scope.levelLabel}. The selected area filters every panel on this page, including Materials Analytics.</p></div>
-        <KpiGrid dashboard={data} />
+        <KpiGrid dashboard={data} onSelectArea={code => setFilters({ area: code })} />
         <AreaExplorer dashboard={data} features={(boundaries.data?.features ?? []) as unknown as GeoFeature[]} missingCodes={boundaries.data?.missingCodes ?? []} onDrill={code => setFilters({ area: code })} />
         <UnresolvedNotice unresolved={data.unresolved} />
         <FilterTabs appearance="tabs" label="Analytics section" value={view} onChange={setView} chips={[{ value: 'trends', label: 'Trends & activity' }, { value: 'demand', label: 'Category & material demand' }, { value: 'materials', label: 'Materials Analytics' }]} />
@@ -132,9 +138,8 @@ function GeoFilterBar({ filters, onApply, dashboard }: { filters: GeoFilters; on
   const submit = (event: FormEvent) => { event.preventDefault(); onApply(draft) }
   const set = (key: keyof GeoFilters) => (event: { target: { value: string } }) => setDraft(current => ({ ...current, [key]: event.target.value, ...(key === 'categoryId' ? { materialId: '' } : {}) }))
   return <form onSubmit={submit} aria-label="Dashboard filters" className="grid gap-4 rounded-surface border border-border-default bg-surface-primary p-4">
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
-      <label className={labelClass}>From<input type="date" className={control} value={draft.from} max={draft.to} onChange={set('from')} /></label>
-      <label className={labelClass}>To<input type="date" className={control} value={draft.to} min={draft.from} onChange={set('to')} /></label>
+    <div className="flex flex-wrap items-center gap-3"><DateFilter title="Marketplace activity dates" value={{ label: 'Custom range', from: filters.from, to: filters.to }} allowAllDates={false} allowOpenEnded={false} maxRangeDays={366} onChange={range => { const next = { ...draft, from: range.from, to: range.to }; setDraft(next); onApply(next) }} /><p className="text-xs text-text-secondary">Inclusive Asia/Manila dates · up to one year</p></div>
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <label className={labelClass}>Trend interval<select className={control} value={draft.granularity} onChange={set('granularity')}><option value="DAY">Daily</option><option value="WEEK">Weekly</option><option value="MONTH">Monthly</option></select></label>
       <label className={labelClass}>Category<select className={control} value={draft.categoryId} onChange={set('categoryId')}><option value="">All categories</option>{(demand.data?.columns ?? []).map(column => <option key={column.id} value={column.id}>{column.name}</option>)}</select></label>
       <label className={labelClass}>Material<select className={control} value={draft.materialId} disabled={!draft.categoryId} onChange={set('materialId')}><option value="">{draft.categoryId ? 'All materials' : 'Choose a category first'}</option>{(materials.data?.columns ?? []).map(column => <option key={column.id} value={column.id}>{column.name}</option>)}</select></label>
@@ -147,25 +152,56 @@ function GeoFilterBar({ filters, onApply, dashboard }: { filters: GeoFilters; on
   </form>
 }
 
-function KpiGrid({ dashboard }: { dashboard: GeoDashboard }) {
+function KpiGrid({ dashboard, onSelectArea }: { dashboard: GeoDashboard; onSelectArea: (code: string | null) => void }) {
   const kpis = dashboard.kpis
   const response = kpis.responseTime
-  const active = (role: 'buyer' | 'vendor') => kpis.activeUsers[role]
-  const activeText = (role: 'buyer' | 'vendor') => (['dau', 'wau', 'mau'] as const).map(window => { const cell = active(role)[window]; return `${window.toUpperCase()} ${cell.suppressed ? 'suppressed' : cell.value === null || cell.value === undefined ? '—' : count(cell.value)}` }).join(' · ')
-  return <dl aria-label={`Key metrics for ${dashboard.scope.name}`} className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-    <CellKpi label="Vendors (public storefronts)" cell={kpis.vendorCount} format={count} hint="Activated Tier 2 stores; not suppressed." />
-    <CellKpi label="Registered Buyers" cell={kpis.registeredBuyers} format={count} />
-    <CellKpi label="Gross GMV" cell={kpis.grossGmvCentavos} format={formatPesoCentavos} hint="Before discounts, refunds and cancellations." />
-    <CellKpi label="Net GMV" cell={kpis.netGmvCentavos} format={formatPesoCentavos} hint="After discounts, cancellations and refunds." />
-    <CellKpi label="Orders" cell={kpis.orderVolume} format={count} />
-    <RateKpi label="Fulfillment rate" rate={kpis.fulfillmentRate} />
-    <RateKpi label="Cancellation rate" rate={kpis.cancellationRate} />
-    <RateKpi label="Dispute rate" rate={kpis.disputeRate} />
-    <Kpi label="Vendor response time" hint={response.suppressed ? response.reason : `Mean ${duration(response.meanSeconds)} · p90 ${duration(response.p90Seconds)} · ${count(response.answered ?? 0)} answered, ${count(response.unanswered ?? 0)} unanswered`}>
-      {response.suppressed ? <span className="inline-flex items-center gap-2 text-lg text-text-secondary"><EyeOff size={18} aria-hidden="true" />Suppressed</span> : <>Median {duration(response.medianSeconds)}</>}</Kpi>
-    <Kpi label="Active Buyers" hint={activeText('buyer')}>{active('buyer').mau.suppressed ? 'Suppressed' : count(active('buyer').mau.value ?? 0)} <span className="text-sm font-normal text-text-secondary">MAU</span></Kpi>
-    <Kpi label="Active Vendor users" hint={activeText('vendor')}>{active('vendor').mau.suppressed ? 'Suppressed' : count(active('vendor').mau.value ?? 0)} <span className="text-sm font-normal text-text-secondary">MAU</span></Kpi>
-  </dl>
+  const hasSuppression = [kpis.registeredBuyers, kpis.grossGmvCentavos, kpis.netGmvCentavos, kpis.orderVolume,
+    kpis.fulfillmentRate, kpis.cancellationRate, kpis.disputeRate, response,
+    ...Object.values(kpis.activeUsers.buyer), ...Object.values(kpis.activeUsers.vendor)].some(cell => cell.suppressed)
+  return <section aria-label={`Key metrics for ${dashboard.scope.name}`} className="grid min-w-0 gap-5">
+    <header className="grid gap-3 border-b border-border-default pb-4">
+      {dashboard.scope.breadcrumbs.length > 1 && <GeoBreadcrumbs items={dashboard.scope.breadcrumbs.map(item => ({ code: item.code ?? null, name: item.name }))} onSelect={onSelectArea} />}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0"><h2 className="text-xl font-semibold text-text-strong">{dashboard.scope.name} overview</h2>
+          <p className="mt-1 text-sm text-text-secondary">The selected area applies to every panel, including Materials Analytics.</p>
+        </div>
+        {hasSuppression && <aside aria-label="Metric privacy" title={dashboard.disclosure.description} className="flex min-w-0 items-start gap-2 text-xs leading-5 text-text-secondary lg:max-w-sm">
+          <EyeOff size={16} aria-hidden="true" className="mt-0.5 shrink-0" />
+          <div className="min-w-0"><p className="font-semibold text-text-strong">Privacy-protected metrics</p>
+            <p>Metrics from fewer than {dashboard.disclosure.minimumPersons} people are suppressed. Public storefront counts remain visible.</p>
+          </div>
+        </aside>}
+      </div>
+    </header>
+    <section aria-labelledby="geo-commerce" className="grid gap-3">
+      <h3 id="geo-commerce" className="text-sm font-semibold text-text-strong">Commerce</h3>
+      <dl className="grid gap-4 md:grid-cols-3">
+        <CellKpi label="Gross GMV" cell={kpis.grossGmvCentavos} format={formatPesoCentavos} hint="Before discounts, refunds and cancellations." icon={<Wallet size={16} aria-hidden="true" />} accent />
+        <CellKpi label="Net GMV" cell={kpis.netGmvCentavos} format={formatPesoCentavos} hint="After discounts, cancellations and refunds." />
+        <CellKpi label="Orders" cell={kpis.orderVolume} format={count} icon={<ShoppingCart size={16} aria-hidden="true" />} />
+      </dl>
+    </section>
+    <section aria-labelledby="geo-community" className="grid gap-3">
+      <h3 id="geo-community" className="text-sm font-semibold text-text-strong">Community & activity</h3>
+      <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <CellKpi label="Vendors (public storefronts)" cell={kpis.vendorCount} format={count} hint="Activated Tier 2 stores." icon={<Store size={16} aria-hidden="true" />} />
+        <CellKpi label="Registered Buyers" cell={kpis.registeredBuyers} format={count} icon={<Users size={16} aria-hidden="true" />} />
+        <ActiveUsersKpi label="Active Buyers" activity={kpis.activeUsers.buyer} />
+        <ActiveUsersKpi label="Active Vendor users" activity={kpis.activeUsers.vendor} />
+      </dl>
+    </section>
+    <section aria-labelledby="geo-performance" className="grid gap-3">
+      <h3 id="geo-performance" className="text-sm font-semibold text-text-strong">Order performance</h3>
+      <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <RateKpi label="Fulfillment rate" rate={kpis.fulfillmentRate} />
+        <RateKpi label="Cancellation rate" rate={kpis.cancellationRate} />
+        <RateKpi label="Dispute rate" rate={kpis.disputeRate} />
+        <KpiCard label="Vendor response time" icon={<Clock3 size={16} aria-hidden="true" />}
+          hint={response.suppressed ? undefined : `Mean ${duration(response.meanSeconds)} · p90 ${duration(response.p90Seconds)} · ${count(response.answered ?? 0)} answered, ${count(response.unanswered ?? 0)} unanswered`}
+          value={response.suppressed ? <span className="text-lg"><CellValue cell={{ suppressed: true }} format={count} reason={response.reason} /></span> : <><span className="text-sm font-normal text-text-secondary">Median</span> {duration(response.medianSeconds)}</>} />
+      </dl>
+    </section>
+  </section>
 }
 
 function AreaExplorer({ dashboard, features, missingCodes, onDrill }: { dashboard: GeoDashboard; features: GeoFeature[]; missingCodes: string[]; onDrill: (code: string) => void }) {
@@ -182,8 +218,8 @@ function AreaExplorer({ dashboard, features, missingCodes, onDrill }: { dashboar
     { key: 'name', header: dashboard.scope.childrenLabel, cell: child => child.name, sortValue: child => child.name },
     ...METRICS.map(item => ({ key: item.key, header: item.label, numeric: true, sortValue: (child: GeoChild) => item.suppressed(child) ? null : item.value(child),
       cell: (child: GeoChild) => <CellValue cell={{ value: item.value(child), suppressed: item.suppressed(child) }} format={item.format} reason={child.suppressionNote} /> })),
-    { key: 'response', header: 'Median response', numeric: true, sortValue: child => child.responseSuppressed ? null : child.medianResponseSeconds ?? null, cell: child => child.responseSuppressed ? <CellValue cell={{ suppressed: true }} format={count} /> : duration(child.medianResponseSeconds) },
-    { key: 'disclosure', header: 'Disclosure', cell: child => child.suppressed ? <span className="text-[13px]">{child.suppressionReason === 'COMPLEMENTARY' ? 'Complementary suppression' : 'Small cell'}{child.suppressionNote ? `: ${child.suppressionNote}` : ''}</span> : <span className="text-[13px] text-text-secondary">Shown</span> },
+    { key: 'response', header: 'Median response', numeric: true, sortValue: child => child.responseSuppressed ? null : child.medianResponseSeconds ?? null, cell: child => child.responseSuppressed ? <CellValue cell={{ suppressed: true }} format={count} reason={child.suppressionNote} /> : duration(child.medianResponseSeconds) },
+    { key: 'disclosure', header: 'Disclosure', minWidth: 288, cell: child => child.suppressed ? <span className="text-[13px]">{child.suppressionReason === 'COMPLEMENTARY' ? 'Complementary suppression' : 'Small cell'}{child.suppressionNote ? `: ${child.suppressionNote}` : ''}</span> : <span className="text-[13px] text-text-secondary">Shown</span> },
   ]
   if (children.length === 0) return <p className="rounded-surface border border-dashed border-border-default bg-surface-primary px-6 py-10 text-center text-sm text-text-secondary">{dashboard.scope.drillable ? 'No sub-areas have recorded activity in this period.' : `${dashboard.scope.name} is the most detailed level shown. Barangay-level figures are not published.`}</p>
   return <section aria-labelledby="area-explorer" className="grid gap-4">
@@ -191,13 +227,16 @@ function AreaExplorer({ dashboard, features, missingCodes, onDrill }: { dashboar
       <div><h2 id="area-explorer" className="text-xl font-semibold">{dashboard.scope.childrenLabel} in {dashboard.scope.name}</h2><p className="mt-1 text-sm text-text-secondary">Select an area on the map or in the table to drill down. Both views stay in sync.</p></div>
       <label className={`${labelClass} w-full sm:w-64`}>Map metric<select className={control} value={metricKey} onChange={event => setMetricKey(event.target.value)}>{METRICS.map(item => <option key={item.key} value={item.key}>{item.label}</option>)}</select></label>
     </div>
-    <div className="grid min-w-0 items-start gap-5 xl:grid-cols-2">
-      <div className="grid min-w-0 gap-3 rounded-surface border border-border-default bg-surface-primary p-4">
+    <div className="grid min-w-0 gap-5">
+      <div className="grid min-w-0 gap-4 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5">
         <GeoChoroplethMap browserKey={browserKey} features={features} areas={areas} thresholds={thresholds} metricLabel={metric.label} formatValue={metric.format} focusedCode={focused} selectedCode={selected} onFocus={setFocused} onSelect={area => choose(area.code)} missingCodes={missingCodes} />
-        <ChoroplethLegend title={`${metric.label} by ${dashboard.scope.childrenLabel.toLowerCase()}`} thresholds={thresholds} formatValue={metric.format} />
+        <div className="border-t border-border-default pt-4"><ChoroplethLegend title={`${metric.label} by ${dashboard.scope.childrenLabel.toLowerCase()}`} thresholds={thresholds} formatValue={metric.format} /></div>
       </div>
-      <SortableDataTable caption={`${dashboard.scope.childrenLabel} in ${dashboard.scope.name}`} columns={columns} rows={children} rowKey={child => child.code} focusedKey={focused} selectedKey={selected}
-        onFocusRow={setFocused} onSelectRow={child => choose(child.code)} rowLabel={child => child.drillable ? `Drill into ${child.name}` : `Select ${child.name}`} initialSort={{ key: 'gross', direction: 'descending' }} />
+      <div className="grid min-w-0 gap-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-2"><h3 className="text-base font-semibold text-text-strong">Area comparison</h3><p className="text-[13px] text-text-secondary">{count(children.length)} areas · Sort by a column or scroll to compare all metrics.</p></div>
+        <SortableDataTable caption={`${dashboard.scope.childrenLabel} in ${dashboard.scope.name}`} columns={columns} rows={children} rowKey={child => child.code} focusedKey={focused} selectedKey={selected}
+          onFocusRow={setFocused} onSelectRow={child => choose(child.code)} rowLabel={child => child.drillable ? `Drill into ${child.name}` : `Select ${child.name}`} initialSort={{ key: 'gross', direction: 'descending' }} />
+      </div>
     </div>
   </section>
 }
@@ -209,11 +248,11 @@ function UnresolvedNotice({ unresolved }: { unresolved: GeoDashboard['unresolved
 }
 
 function TrendsSection({ dashboard }: { dashboard: GeoDashboard }) {
-  const labels = dashboard.trends.map(point => point.bucket.toISOString().slice(0, 10))
+  const labels = dashboard.trends.map(point => analyticsDay(point.bucket) ?? '')
   const gross = dashboard.trends.map(point => point.suppressed ? null : point.grossGmvCentavos ?? null)
   const net = dashboard.trends.map(point => point.suppressed ? null : point.netGmvCentavos ?? null)
   const orders = dashboard.trends.map(point => point.suppressed ? null : point.orderVolume ?? null)
-  const activityLabels = dashboard.activityTrend.map(point => point.date.toISOString().slice(0, 10))
+  const activityLabels = dashboard.activityTrend.map(point => analyticsDay(point.date) ?? '')
   const [table, setTable] = useState(false)
   return <div className="grid gap-5">
     <div className="grid min-w-0 gap-5 xl:grid-cols-2">
@@ -228,13 +267,13 @@ function TrendsSection({ dashboard }: { dashboard: GeoDashboard }) {
     <div><Button variant="secondary" aria-expanded={table} onClick={() => setTable(value => !value)}>{table ? 'Hide trend tables' : 'Show trend tables'}</Button></div>
     {table && <div className="grid gap-5 xl:grid-cols-2">
       <SortableDataTable caption="Order trend by period" rows={dashboard.trends} rowKey={point => point.bucket.toISOString()} columns={[
-        { key: 'bucket', header: 'Period starting', cell: point => point.bucket.toISOString().slice(0, 10), sortValue: point => point.bucket.toISOString() },
+        { key: 'bucket', header: 'Period starting', cell: point => analyticsDay(point.bucket) ?? 'Not recorded', sortValue: point => analyticsDay(point.bucket) ?? '' },
         { key: 'gross', header: 'Gross GMV', numeric: true, cell: point => <CellValue cell={{ value: point.grossGmvCentavos, suppressed: point.suppressed }} format={formatPesoCentavos} reason={point.reason} />, sortValue: point => point.suppressed ? null : point.grossGmvCentavos ?? null },
         { key: 'net', header: 'Net GMV', numeric: true, cell: point => <CellValue cell={{ value: point.netGmvCentavos, suppressed: point.suppressed }} format={formatPesoCentavos} reason={point.reason} />, sortValue: point => point.suppressed ? null : point.netGmvCentavos ?? null },
         { key: 'orders', header: 'Orders', numeric: true, cell: point => <CellValue cell={{ value: point.orderVolume, suppressed: point.suppressed }} format={count} reason={point.reason} />, sortValue: point => point.suppressed ? null : point.orderVolume ?? null },
       ]} />
       <SortableDataTable caption="Active users by day" rows={dashboard.activityTrend} rowKey={point => point.date.toISOString()} columns={[
-        { key: 'date', header: 'Date', cell: point => point.date.toISOString().slice(0, 10), sortValue: point => point.date.toISOString() },
+        { key: 'date', header: 'Date', cell: point => analyticsDay(point.date) ?? 'Not recorded', sortValue: point => analyticsDay(point.date) ?? '' },
         ...(['buyerDau', 'buyerWau', 'buyerMau', 'vendorDau', 'vendorWau', 'vendorMau'] as const).map(key => ({ key, header: `${key.startsWith('buyer') ? 'Buyer' : 'Vendor'} ${key.slice(-3).toUpperCase()}`, numeric: true,
           cell: (point: GeoDashboard['activityTrend'][number]) => point[key] === null || point[key] === undefined ? <CellValue cell={{ suppressed: true }} format={count} /> : count(point[key] ?? 0), sortValue: (point: GeoDashboard['activityTrend'][number]) => point[key] ?? null })),
       ]} />
@@ -278,9 +317,10 @@ function GeoExportButton({ filters }: { filters: GeoFilters }) {
     catch (cause) { setMessage({ tone: 'error', text: problemText(await apiProblem(cause)) }) } finally { setBusy(false) }
   }
   return <>
+    <DocumentExportButton basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} audience="admin" types={['GEO_ANALYTICS']} filters={exportFilters(filters)} />
     <Button variant="secondary" onClick={() => setOpen(true)}><Download size={16} aria-hidden="true" />Export CSV</Button>
     {open && <SidePanel open title="Export geographic analytics" description="Requires the aggregate export permission. The export uses the current area, period and filters, with suppressed cells left blank." onClose={() => setOpen(false)}>
-      <form onSubmit={event => void submit(event)} className="grid gap-4">
+      <form onSubmit={event => void submit(event)} className="grid gap-5">
         <label className={labelClass}>Purpose (recorded)<textarea className={`${control} min-h-20 py-2`} maxLength={500} value={purpose} onChange={event => setPurpose(event.target.value)} /></label>
         {message && <p role={message.tone === 'error' ? 'alert' : 'status'} className={`rounded-control border px-4 py-3 text-sm ${message.tone === 'error' ? 'border-status-error/30 bg-red-50 text-red-900' : 'border-status-success/30 bg-green-50 text-green-900'}`}>{message.text}</p>}
         <div className="flex justify-end"><Button type="submit" disabled={busy}>{busy ? 'Generating…' : 'Generate export'}</Button></div>

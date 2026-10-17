@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\Api\AdminFinanceOperationsController as F;
 use App\Http\Controllers\Api\AdminOperationsController as O;
+use App\Http\Controllers\Api\DashboardInsightsController;
 use App\Http\Controllers\Api\GeoAnalyticsController as G;
 use App\Http\Controllers\Api\VendorFinanceController;
+use App\Http\Controllers\Api\VendorProductAnalyticsController;
 use App\Http\Middleware\VerifyAccountCsrf;
 use Illuminate\Support\Facades\Route;
 
@@ -42,6 +44,8 @@ Route::prefix('admin')->middleware($web('ADMIN'))->group(function (): void {
 
     Route::get('/budget-overrides', [O::class, 'budgetOverrides']);
 
+    Route::get('/dashboard/insights', [DashboardInsightsController::class, 'admin']);
+
     Route::get('/geo-analytics', [G::class, 'dashboard']);
     Route::get('/geo-analytics/demand', [G::class, 'demand']);
     Route::get('/geo-analytics/boundaries', [G::class, 'boundaries']);
@@ -56,3 +60,9 @@ Route::prefix('admin')->middleware($web('ADMIN'))->group(function (): void {
 });
 
 Route::get('/vendor/finance/reviews', [VendorFinanceController::class, 'reviews'])->middleware($web('VENDOR'));
+Route::get('/vendor/dashboard/insights', [DashboardInsightsController::class, 'vendor'])->middleware($web('VENDOR'));
+Route::prefix('vendor/product-analytics')->middleware($web('VENDOR'))->group(function (): void {
+    Route::get('/', [VendorProductAnalyticsController::class, 'overview']);
+    Route::get('/summaries', [VendorProductAnalyticsController::class, 'summaries']);
+    Route::get('/listings/{listingId}', [VendorProductAnalyticsController::class, 'product'])->whereUuid('listingId');
+});

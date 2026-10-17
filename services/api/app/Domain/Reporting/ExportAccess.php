@@ -22,6 +22,9 @@ final class ExportAccess
         if ($organizationId !== null && $user->account_type === 'VENDOR' && $scope['organization_id'] !== $organizationId) {
             return false;
         }
+        if (in_array($type, ['TRANSACTION_HISTORY', 'EARNINGS'], true)) {
+            return $user->account_type === 'VENDOR' && $scope['role'] === 'OWNER';
+        }
         if ($type === 'MATERIALS_ANALYTICS') {
             return ($user->account_type === 'VENDOR' && in_array('materials_analytics.view_competitors', $scope['permissions'], true))
                 || ($user->account_type === 'ADMIN' && in_array('analytics.view_aggregates', $scope['permissions'], true) && in_array('analytics.export', $scope['permissions'], true));

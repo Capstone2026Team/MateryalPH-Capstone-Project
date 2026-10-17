@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:materyalph_api_client/src/model/finance_kpis_period.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/commission_trend_point.dart';
 import 'package:materyalph_api_client/src/model/finance_kpi.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -20,6 +21,8 @@ part 'finance_kpis.g.dart';
 /// * [commerce]
 /// * [finance]
 /// * [counts]
+/// * [trend]
+/// * [trendGranularity] - DAY when the recorded range spans at most 92 days (empty days are zero-filled); otherwise MONTH, recorded months only.
 @BuiltValue()
 abstract class FinanceKpis implements Built<FinanceKpis, FinanceKpisBuilder> {
   @BuiltValueField(wireName: r'label')
@@ -39,6 +42,14 @@ abstract class FinanceKpis implements Built<FinanceKpis, FinanceKpisBuilder> {
 
   @BuiltValueField(wireName: r'counts')
   BuiltMap<String, int> get counts;
+
+  @BuiltValueField(wireName: r'trend')
+  BuiltList<CommissionTrendPoint>? get trend;
+
+  /// DAY when the recorded range spans at most 92 days (empty days are zero-filled); otherwise MONTH, recorded months only.
+  @BuiltValueField(wireName: r'trend_granularity')
+  FinanceKpisTrendGranularityEnum? get trendGranularity;
+  // enum trendGranularityEnum {  DAY,  MONTH,  };
 
   FinanceKpis._();
 
@@ -93,6 +104,20 @@ class _$FinanceKpisSerializer implements PrimitiveSerializer<FinanceKpis> {
       object.counts,
       specifiedType: const FullType(BuiltMap, [FullType(String), FullType(int)]),
     );
+    if (object.trend != null) {
+      yield r'trend';
+      yield serializers.serialize(
+        object.trend,
+        specifiedType: const FullType(BuiltList, [FullType(CommissionTrendPoint)]),
+      );
+    }
+    if (object.trendGranularity != null) {
+      yield r'trend_granularity';
+      yield serializers.serialize(
+        object.trendGranularity,
+        specifiedType: const FullType(FinanceKpisTrendGranularityEnum),
+      );
+    }
   }
 
   @override
@@ -158,6 +183,22 @@ class _$FinanceKpisSerializer implements PrimitiveSerializer<FinanceKpis> {
           ) as BuiltMap<String, int>;
           result.counts.replace(valueDes);
           break;
+        case r'trend':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(CommissionTrendPoint)]),
+          ) as BuiltList<CommissionTrendPoint>?;
+          if (valueDes == null) continue;
+          result.trend.replace(valueDes);
+          break;
+        case r'trend_granularity':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(FinanceKpisTrendGranularityEnum),
+          ) as FinanceKpisTrendGranularityEnum?;
+          if (valueDes == null) continue;
+          result.trendGranularity = valueDes;
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -187,4 +228,20 @@ class _$FinanceKpisSerializer implements PrimitiveSerializer<FinanceKpis> {
   }
 }
 
+
+/// DAY when the recorded range spans at most 92 days (empty days are zero-filled); otherwise MONTH, recorded months only.
+class FinanceKpisTrendGranularityEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'DAY')
+  static const FinanceKpisTrendGranularityEnum DAY = _$financeKpisTrendGranularityEnum_DAY;
+  @BuiltValueEnumConst(wireName: r'MONTH')
+  static const FinanceKpisTrendGranularityEnum MONTH = _$financeKpisTrendGranularityEnum_MONTH;
+
+  static Serializer<FinanceKpisTrendGranularityEnum> get serializer => _$financeKpisTrendGranularityEnumSerializer;
+
+  const FinanceKpisTrendGranularityEnum._(String name): super(name);
+
+  static BuiltSet<FinanceKpisTrendGranularityEnum> get values => _$financeKpisTrendGranularityEnumValues;
+  static FinanceKpisTrendGranularityEnum valueOf(String name) => _$financeKpisTrendGranularityEnumValueOf(name);
+}
 

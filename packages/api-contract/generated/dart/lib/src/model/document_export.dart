@@ -15,6 +15,7 @@ part 'document_export.g.dart';
 ///
 /// Properties:
 /// * [id]
+/// * [resourceId] - Source record for contextual export history; null for aggregate reports.
 /// * [type]
 /// * [format]
 /// * [state]
@@ -31,6 +32,10 @@ part 'document_export.g.dart';
 abstract class DocumentExport implements Built<DocumentExport, DocumentExportBuilder> {
   @BuiltValueField(wireName: r'id')
   String get id;
+
+  /// Source record for contextual export history; null for aggregate reports.
+  @BuiltValueField(wireName: r'resource_id')
+  String? get resourceId;
 
   @BuiltValueField(wireName: r'type')
   String get type;
@@ -96,6 +101,13 @@ class _$DocumentExportSerializer implements PrimitiveSerializer<DocumentExport> 
       object.id,
       specifiedType: const FullType(String),
     );
+    if (object.resourceId != null) {
+      yield r'resource_id';
+      yield serializers.serialize(
+        object.resourceId,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
     yield r'type';
     yield serializers.serialize(
       object.type,
@@ -185,6 +197,14 @@ class _$DocumentExportSerializer implements PrimitiveSerializer<DocumentExport> 
             specifiedType: const FullType(String),
           ) as String;
           result.id = valueDes;
+          break;
+        case r'resource_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.resourceId = valueDes;
           break;
         case r'type':
           final valueDes = serializers.deserialize(

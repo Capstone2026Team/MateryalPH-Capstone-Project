@@ -19,6 +19,7 @@ Name | Type | Description | Notes
 **materialCategoryId** | **String** |  | [optional]
 **otherLabel** | **String** | Listing-only text; never a shared taxonomy entry. | [optional]
 **tagIds** | **BuiltList&lt;String&gt;** |  |
+**customTags** | **BuiltList&lt;String&gt;** | Search tags the Vendor typed for this listing only |
 **technicalAttributes** | **BuiltMap&lt;String, String&gt;** |  |
 **brand** | **String** |  | [optional]
 **model** | **String** |  | [optional]

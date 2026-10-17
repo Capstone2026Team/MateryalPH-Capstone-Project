@@ -1,6 +1,5 @@
 import {
   AdminAuditLogApi,
-  AdminBudgetOverridesApi,
   AdminEnforcementApi,
   AdminIntegrationHealthApi,
   AdminPlatformSettingsApi,
@@ -9,7 +8,6 @@ import {
   ResponseError,
   type AuditEvent,
   type AuditEventDetail,
-  type BudgetOverrideRecord,
   type DocumentExportInputTypeEnum,
   type EnforcementApplyRequest,
   type EnforcementDetail,
@@ -35,9 +33,10 @@ import {
   type TransitionPrivacyRequestCommandEnum,
 } from '@materyalph/api-client-ts'
 import { createWebApiConfiguration, rateLimitMessage } from '@materyalph/web-ui'
+import { dateQuery, type CalendarRange } from './admin-format'
 
 export type {
-  AuditEvent, AuditEventDetail, BudgetOverrideRecord, EnforcementDetail, EnforcementSubjectMatch, EnforcementSummary, FixedSetting, IntegrationOverview, OperationFailure,
+  AuditEvent, AuditEventDetail, EnforcementDetail, EnforcementSubjectMatch, EnforcementSummary, FixedSetting, IntegrationOverview, OperationFailure,
   OperationRetryRecord, PlatformSetting, PlatformSettingVersion, PrivacyRequestDetail, PrivacyRequestSummary, SubjectReview,
 }
 export type Page<T> = { items: T[]; total: number; lastPage: number }
@@ -152,8 +151,8 @@ export async function auditActions(): Promise<string[]> {
 export async function integrationOverview(): Promise<IntegrationOverview> {
   return (await new AdminIntegrationHealthApi(config()).getIntegrationHealth()).data
 }
-export async function operationFailures(kind: 'OUTBOX' | 'JOBS', page = 1): Promise<Page<OperationFailure>> {
-  const response = await new AdminIntegrationHealthApi(config()).listOperationFailures({ kind, page })
+export async function operationFailures(kind: 'OUTBOX' | 'JOBS', page = 1, range?: CalendarRange): Promise<Page<OperationFailure>> {
+  const response = await new AdminIntegrationHealthApi(config()).listOperationFailures({ kind, page, ...dateQuery(range) })
   return pageOf(response.data, response.meta)
 }
 export async function operationRetries(): Promise<OperationRetryRecord[]> {
@@ -161,12 +160,6 @@ export async function operationRetries(): Promise<OperationRetryRecord[]> {
 }
 export async function retryOperation(input: OperationRetryRequest, idempotencyKey: string): Promise<OperationRetryResult> {
   return (await new AdminIntegrationHealthApi(config()).retryOperation({ idempotencyKey, operationRetryRequest: input })).data
-}
-
-// Budget override log
-export async function listBudgetOverrides(page = 1): Promise<Page<BudgetOverrideRecord>> {
-  const response = await new AdminBudgetOverridesApi(config()).listBudgetOverrides({ page })
-  return pageOf(response.data, response.meta)
 }
 
 /**

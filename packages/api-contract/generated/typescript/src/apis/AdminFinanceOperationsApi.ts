@@ -82,6 +82,14 @@ export interface ListRemittanceQueueRequest {
      *
      */
     page?: number;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Assessment created_at.
+     */
+    from?: Date;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Assessment created_at.
+     */
+    to?: Date;
 }
 
 export interface ListTaxAdjustmentsRequest {
@@ -93,6 +101,14 @@ export interface ListTaxAdjustmentsRequest {
      *
      */
     page?: number;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Adjustment created_at.
+     */
+    from?: Date;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Adjustment created_at.
+     */
+    to?: Date;
 }
 
 export interface ListTaxEvidenceQueueRequest {
@@ -104,6 +120,14 @@ export interface ListTaxEvidenceQueueRequest {
      *
      */
     page?: number;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Evidence created_at.
+     */
+    from?: Date;
+    /**
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Evidence created_at.
+     */
+    to?: Date;
 }
 
 export interface PostTaxAdjustmentRequest {
@@ -172,7 +196,7 @@ export class AdminFinanceOperationsApi extends runtime.BaseAPI {
     }
 
     /**
-     * finance.view. Gross and net GMV beside assessed CWT, commission, platform revenue, collected cash and receivables (DEMO).
+     * finance.view. Recorded commission earnings, approved credits, verified allocated collections, confirmed fee refunds, pending and overdue commissions, and net platform earnings after fee VAT and platform processing costs. Earnings/credits, collections and refunds use their event dates; current debt uses statement issue dates. GMV and CWT stay separate. Monthly activity is bounded to the most recent 120 recorded periods. TEST origins are retained; this endpoint does not enable live payments.
      */
     async getFinanceKpisRaw(requestParameters: GetFinanceKpisRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<FinanceKpiEnvelope>> {
         const requestOptions = await this.getFinanceKpisRequestOpts(requestParameters);
@@ -182,7 +206,7 @@ export class AdminFinanceOperationsApi extends runtime.BaseAPI {
     }
 
     /**
-     * finance.view. Gross and net GMV beside assessed CWT, commission, platform revenue, collected cash and receivables (DEMO).
+     * finance.view. Recorded commission earnings, approved credits, verified allocated collections, confirmed fee refunds, pending and overdue commissions, and net platform earnings after fee VAT and platform processing costs. Earnings/credits, collections and refunds use their event dates; current debt uses statement issue dates. GMV and CWT stay separate. Monthly activity is bounded to the most recent 120 recorded periods. TEST origins are retained; this endpoint does not enable live payments.
      */
     async getFinanceKpis(requestParameters: GetFinanceKpisRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<FinanceKpiEnvelope> {
         const response = await this.getFinanceKpisRaw(requestParameters, initOverrides);
@@ -209,6 +233,14 @@ export class AdminFinanceOperationsApi extends runtime.BaseAPI {
 
         if (requestParameters['page'] != null) {
             queryParameters['page'] = requestParameters['page'];
+        }
+
+        if (requestParameters['from'] != null) {
+            queryParameters['from'] = runtime.serializeDate(requestParameters['from'] as any);
+        }
+
+        if (requestParameters['to'] != null) {
+            queryParameters['to'] = runtime.serializeDate(requestParameters['to'] as any);
         }
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -260,6 +292,14 @@ export class AdminFinanceOperationsApi extends runtime.BaseAPI {
             queryParameters['page'] = requestParameters['page'];
         }
 
+        if (requestParameters['from'] != null) {
+            queryParameters['from'] = runtime.serializeDate(requestParameters['from'] as any);
+        }
+
+        if (requestParameters['to'] != null) {
+            queryParameters['to'] = runtime.serializeDate(requestParameters['to'] as any);
+        }
+
         const headerParameters: runtime.HTTPHeaders = {};
 
         if (this.configuration && this.configuration.apiKey) {
@@ -307,6 +347,14 @@ export class AdminFinanceOperationsApi extends runtime.BaseAPI {
 
         if (requestParameters['page'] != null) {
             queryParameters['page'] = requestParameters['page'];
+        }
+
+        if (requestParameters['from'] != null) {
+            queryParameters['from'] = runtime.serializeDate(requestParameters['from'] as any);
+        }
+
+        if (requestParameters['to'] != null) {
+            queryParameters['to'] = runtime.serializeDate(requestParameters['to'] as any);
         }
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -551,5 +599,6 @@ export const ListTaxAdjustmentsStateEnum = {
     Approved: 'APPROVED',
     Posted: 'POSTED',
     Rejected: 'REJECTED',
+    NotRequired: 'NOT_REQUIRED',
 } as const;
 export type ListTaxAdjustmentsStateEnum = typeof ListTaxAdjustmentsStateEnum[keyof typeof ListTaxAdjustmentsStateEnum];
