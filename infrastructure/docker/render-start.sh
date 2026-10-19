@@ -61,6 +61,7 @@ case "$role" in
         case "${PORT:-10000}" in
             ''|*[!0-9]*) echo 'PORT must be a numeric TCP port.' >&2; exit 1 ;;
         esac
+        mkdir -p /tmp/nginx
         php /app/infrastructure/prepare-nginx.php
         sed -i "s/listen 10000;/listen ${PORT:-10000};/" /app/infrastructure/nginx.conf
         exec supervisord -c /app/infrastructure/supervisord.conf
