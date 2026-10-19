@@ -192,4 +192,6 @@ This is a debug preview, not a signed store release. Verify maps, Firebase, devi
 
 ## Checks and outstanding gates
 
+See the [deployment readiness record](staging-readiness.md) for the actual check results and blockers from this setup.
+
 The implementation report records which checks actually ran. Do not infer a passing remote CI run, authenticated Render validation, successful Blueprint sync or live deployment from this document. Provider secrets, repository protections and the upload limitation remain explicit gates.

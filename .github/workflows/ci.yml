@@ -390,7 +390,11 @@ jobs:
           sha256sum --check --ignore-missing gitleaks_8.30.1_checksums.txt
           tar -xzf gitleaks_8.30.1_linux_x64.tar.gz gitleaks
       - name: Scan the repository history with redacted findings
-        run: '"$RUNNER_TEMP/gitleaks" git --redact --no-banner'
+        run: |
+          if ! "$RUNNER_TEMP/gitleaks" git --log-opts='--no-textconv --no-ext-diff' --redact --no-banner --report-format json --report-path "$RUNNER_TEMP/gitleaks.json"; then
+            node -e 'for (const item of JSON.parse(require("node:fs").readFileSync(`${process.env.RUNNER_TEMP}/gitleaks.json`, "utf8"))) console.error(JSON.stringify({rule:item.RuleID,file:item.File,line:item.StartLine,fingerprint:item.Fingerprint}))'
+            exit 1
+          fi
 
   dependency-audit:
     name: PHP and JavaScript dependency audits
@@ -429,12 +433,18 @@ jobs:
       - run: python -m pip install -r tools/deployment/requirements.txt
       - run: python tools/deployment/validate_configuration.py
       - run: node --check scripts/deployment/deploy-render-staging.mjs && node --check scripts/ci/changed-paths.mjs
-      - run: docker compose -f compose.test.yaml config --quiet
+      - name: Validate the isolated Compose file with ephemeral CI settings
+        shell: bash
+        run: |
+          test ! -e services/api/.env.testing
+          trap 'rm -f services/api/.env.testing' EXIT
+          node -e 'require("node:fs").writeFileSync("services/api/.env.testing", `TEST_DB_PASSWORD=${require("node:crypto").randomBytes(32).toString("hex")}\n`)'
+          docker compose --env-file services/api/.env.testing -f compose.test.yaml config --quiet
       - run: docker build --pull -f infrastructure/docker/api.render.Dockerfile -t materyalph-api:${{ github.sha }} .
       - name: Check the non-root runtime and server configuration
         run: |
           test "$(docker image inspect materyalph-api:${{ github.sha }} --format '{{.Config.User}}')" = app
-          docker run --rm --env FRONTEND_VENDOR_HOST=vendor.example.test --env FRONTEND_ADMIN_HOST=admin.example.test --entrypoint /bin/sh materyalph-api:${{ github.sha }} -c 'php /app/infrastructure/prepare-nginx.php && php-fpm -t && nginx -t -c /app/infrastructure/nginx.conf'
+          docker run --rm --env FRONTEND_VENDOR_HOST=vendor.example.test --env FRONTEND_ADMIN_HOST=admin.example.test --entrypoint /bin/sh materyalph-api:${{ github.sha }} -c 'php /app/infrastructure/prepare-nginx.php && php-fpm -t && nginx -e /dev/null -t -c /app/infrastructure/nginx.conf'
       - uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: materyalph-api:${{ github.sha }}
