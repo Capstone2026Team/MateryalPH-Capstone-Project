@@ -1,11 +1,15 @@
 
 # VendorAddressSelection
 
+Supply address names or all three legacy PSGC codes. Missing or ambiguous geographic references do not block named address entry.
 
 ## Properties
 
 Name | Type
 ------------ | -------------
+`province` | string
+`cityMunicipality` | string
+`barangay` | string
 `pinToken` | string
 `provinceCode` | string
 `cityCode` | string
@@ -21,6 +25,9 @@ import type { VendorAddressSelection } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "province": null,
+  "cityMunicipality": null,
+  "barangay": null,
   "pinToken": null,
   "provinceCode": null,
   "cityCode": null,

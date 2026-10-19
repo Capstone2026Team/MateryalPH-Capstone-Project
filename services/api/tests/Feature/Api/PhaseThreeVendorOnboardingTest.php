@@ -42,6 +42,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Laravel\Passport\AccessToken;
 use Tests\TestCase;
 
@@ -232,6 +233,35 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         $input['organization_lock_version'] = $organization->fresh()->lock_version;
         $input['agreement_version_id'] = (string) Str::uuid7();
         $this->withHeader('Idempotency-Key', (string) Str::uuid7())->postJson('/api/v1/vendors/onboarding/verification/commission', $input)->assertConflict()->assertJsonPath('errors.0.code', 'AGREEMENT_VERSION_CONFLICT');
+    }
+
+    public function test_commission_acceptance_uses_saved_draft_business_type_before_verification_submission(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $saved = $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version,
+            'form_state' => json_encode(['business_type' => ['SOLE_PROPRIETORSHIP'], 'representative_relationship' => ['PROPRIETOR']], JSON_THROW_ON_ERROR)])->assertOk()->json('data');
+        self::assertNull($organization->refresh()->business_type);
+        self::assertTrue($saved['verification']['commission_terms']['can_accept']);
+        $this->postJson('/api/v1/vendors/onboarding/verification/commission', ['organization_lock_version' => $saved['organization']['lock_version'],
+            'agreement_version_id' => $saved['verification']['commission_terms']['agreement']['id'], 'accepted' => true], ['Idempotency-Key' => (string) Str::uuid7()])
+            ->assertOk()->assertJsonPath('data.verification.commission_terms.accepted', true);
+        self::assertSame('SOLE_PROPRIETORSHIP', $organization->refresh()->business_type);
+        self::assertNotSame('PENDING_VERIFICATION', $organization->store_verification_status);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'VENDOR_COMMISSION_TERMS_ACCEPTED', 'actor_user_id' => $owner->id]);
+    }
+
+    public function test_draft_company_type_cannot_bypass_commission_authority_approval(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $saved = $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version,
+            'form_state' => json_encode(['business_type' => ['CORPORATION']], JSON_THROW_ON_ERROR)])->assertOk()->json('data');
+        self::assertFalse($saved['verification']['commission_terms']['can_accept']);
+        $this->postJson('/api/v1/vendors/onboarding/verification/commission', ['organization_lock_version' => $saved['organization']['lock_version'],
+            'agreement_version_id' => $saved['verification']['commission_terms']['agreement']['id'], 'accepted' => true], ['Idempotency-Key' => (string) Str::uuid7()])
+            ->assertUnprocessable()->assertJsonPath('errors.0.code', 'AUTHORITY_REQUIRED');
+        self::assertNull($organization->refresh()->business_type);
     }
 
     public function test_commission_acceptance_rejects_missing_consent_and_unapproved_authority_or_staff(): void
@@ -1903,6 +1933,37 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         $this->signInVendor($staff);
         $this->getJson('/api/v1/vendors/onboarding/address/areas?level=PROVINCE')->assertForbidden();
         $this->postJson('/api/v1/vendors/onboarding/address/pin', ['latitude' => 14.6, 'longitude' => 121])->assertForbidden();
+        $this->postJson('/api/v1/vendors/onboarding/address/resolve', ['province' => 'Metro Manila', 'city_municipality' => 'Quezon City', 'barangay' => 'Alicia'])->assertForbidden();
+    }
+
+    public function test_named_address_pin_completion_and_save_do_not_require_psgc_inputs(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $this->stubAddressProviders();
+        $found = $this->postJson('/api/v1/vendors/onboarding/address/pin', ['latitude' => 14.65, 'longitude' => 121.02])->assertOk()->json('data');
+        $input = array_intersect_key($found['address'], array_flip(['street', 'unit', 'barangay', 'city_municipality', 'province', 'postal_code']));
+        $resolved = $this->postJson('/api/v1/vendors/onboarding/address/resolve', $input + ['pin_token' => $found['pin_token']])->assertOk()->json('data');
+        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'address' => $input + ['source' => 'MAP', 'resolution_token' => $resolved['resolution_token']]])->assertOk();
+        $this->assertDatabaseHas('vendor_address_versions', ['street' => '100 Test Street', 'latitude' => 14.65, 'psgc_code' => '1381300001']);
+        foreach ([[], ['province' => 'Metro Manila'], ['street' => 'Incomplete address'], ['city_municipality' => 'Quezon City']] as $invalid) {
+            $this->postJson('/api/v1/vendors/onboarding/address/resolve', $invalid)->assertUnprocessable();
+        }
+    }
+
+    public function test_named_manual_address_saves_during_directory_failure_without_coordinates(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $this->mock(AddressGeocoder::class)->shouldNotReceive('forward', 'reverse');
+        $this->mock(PsgcProvider::class)->shouldReceive('list')->andThrow(ValidationException::withMessages(['address' => 'Directory unavailable']));
+        $address = ['source' => 'MANUAL', 'street' => '12 Manual Street', 'postal_code' => '1100', 'province' => 'Metro Manila', 'city_municipality' => 'Quezon City', 'barangay' => 'Alicia'];
+        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'address' => $address])->assertOk();
+        $this->assertDatabaseHas('addresses', ['owner_id' => $organization->id, 'street' => '12 Manual Street', 'psgc_code' => null, 'latitude' => null, 'longitude' => null, 'location' => null, 'is_current' => true]);
+        $this->assertDatabaseHas('vendor_address_versions', ['street' => '12 Manual Street', 'source' => 'MANUAL', 'psgc_code' => null, 'location' => null]);
+        foreach ([['province' => ''], ['barangay' => ''], ['postal_code' => 'abcd'], ['latitude' => 14.6]] as $invalid) {
+            $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'address' => array_replace($address, $invalid)])->assertUnprocessable();
+        }
     }
 
     public function test_authorized_tax_attestation_completes_without_resubmitting_documents(): void
@@ -2015,6 +2076,37 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         $this->assertDatabaseCount('vendor_pending_documents', 1);
     }
 
+    public function test_saved_form_completion_is_reported_without_submitting_or_approving_verification(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER', null, false, ['store_email' => 'draft@example.test', 'store_email_verified_at' => now()]);
+        $this->signInVendor($owner);
+        $state = ['business_type' => ['SOLE_PROPRIETORSHIP'], 'store_name' => ['Draft Store'], 'date_established' => ['2020-01-01'], 'store_email' => ['draft@example.test'], 'store_phone' => ['09171234567'],
+            'address_payload' => [json_encode(['source' => 'MANUAL', 'street' => 'Main Street', 'barangay' => 'Sample', 'city_municipality' => 'Quezon City', 'province' => 'Metro Manila', 'postal_code' => '1100'], JSON_THROW_ON_ERROR)]];
+        $saved = $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'form_state' => json_encode($state, JSON_THROW_ON_ERROR)])->assertOk()->json('data');
+        foreach (['business_information', 'registered_business_address'] as $key) {
+            self::assertSame('COMPLETED', collect($saved['sections']['STORE_VERIFICATION']['steps'])->firstWhere('key', $key)['progress_status']);
+            self::assertSame('NOT_STARTED', collect($saved['requirements'])->firstWhere('key', $key)['status']);
+        }
+        self::assertSame('IN_PROGRESS', $saved['verification']['status']);
+        self::assertFalse($saved['activation']['readiness']['ready']);
+        $this->assertDatabaseCount('vendor_documents', 0);
+        $this->assertDatabaseMissing('audit_logs', ['action' => 'VENDOR_VERIFICATION_SUBMITTED', 'resource_id' => $organization->id]);
+        $resumed = $this->getJson('/api/v1/vendors/onboarding')->assertOk()->json('data');
+        self::assertSame($saved['sections']['STORE_VERIFICATION']['progress'], $resumed['sections']['STORE_VERIFICATION']['progress']);
+        $state['address_payload'] = ['{"source":"MANUAL","street":""}'];
+        $invalid = $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'form_state' => json_encode($state, JSON_THROW_ON_ERROR)])->assertOk()->json('data');
+        self::assertNotSame('COMPLETED', collect($invalid['sections']['STORE_VERIFICATION']['steps'])->firstWhere('key', 'registered_business_address')['progress_status']);
+    }
+
+    public function test_incomplete_schedule_draft_does_not_reuse_previous_completed_schedule_for_setup(): void
+    {
+        [$organization] = $this->activationReadyFixture();
+        DB::table('vendor_organizations')->where('id', $organization->id)->update(['store_activation_status' => 'NOT_READY']);
+        $saved = $this->patchJson('/api/v1/vendors/onboarding/setup', ['organization_lock_version' => $organization->refresh()->lock_version, 'form_state' => json_encode(['operatingScheduleDraft' => [['dayOfWeek' => 1, 'status' => 'OPEN', 'opensAt' => '', 'closesAt' => '']]], JSON_THROW_ON_ERROR)])->assertOk()->json('data');
+        self::assertSame('IN_PROGRESS', collect($saved['sections']['STORE_SETUP']['steps'])->firstWhere('key', 'store_operation')['status']);
+        $this->postJson('/api/v1/vendors/onboarding/setup/complete', ['organization_lock_version' => $organization->refresh()->lock_version], ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable()->assertJsonPath('errors.0.code', 'STORE_OPERATION_REQUIRED');
+    }
+
     public function test_automatic_partial_progress_is_private_and_sole_proprietor_name_is_not_required(): void
     {
         [$organization, $owner] = $this->vendorFixture('OWNER');
@@ -2022,6 +2114,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         $state = ['business_type' => ['SOLE_PROPRIETORSHIP'], 'individual_first_name' => ['Partial'], 'tin' => ['123']];
         $response = $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'form_state' => json_encode($state)])->assertOk();
         $response->assertJsonPath('data.verification.form_state.individual_first_name.0', 'Partial')->assertJsonMissingPath('data.verification.form_state.tin');
+        self::assertStringContainsString('9-digit TIN', collect($response->json('data.sections.STORE_VERIFICATION.steps'))->firstWhere('key', 'tax_profile')['reason']);
         $this->assertDatabaseCount('vendor_document_versions', 0);
         $this->getJson('/api/v1/vendors/onboarding')->assertOk()->assertJsonPath('data.verification.form_state.individual_first_name.0', 'Partial');
         $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'business_type' => 'SOLE_PROPRIETORSHIP', 'legal_business_name' => ''])->assertOk();
@@ -2037,7 +2130,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         $this->signInVendor($owner);
         $this->saveVerificationDraft($organization, false);
         $this->mock(AddressGeocoder::class)->shouldNotReceive('forward', 'reverse');
-        $address = ['source' => 'MANUAL', 'street' => '12 Manual Street', 'postal_code' => '1100', 'province_code' => '1300000000', 'city_code' => '1381300000', 'psgc_code' => '1381300001', 'province' => 'NCR', 'city_municipality' => 'Quezon City', 'barangay' => 'Alicia'];
+        $address = ['source' => 'MANUAL', 'street' => '12 Manual Street', 'postal_code' => '1100', 'province' => 'Metro Manila', 'city_municipality' => 'Quezon City', 'barangay' => 'Alicia'];
         $this->postJson('/api/v1/vendors/onboarding/verification/submit', ['lock_version' => $organization->refresh()->lock_version, 'privacy_acknowledged' => true, 'draft' => ['address' => $address]], ['Idempotency-Key' => (string) Str::uuid7()])->assertStatus(202)->assertJsonPath('data.verification.status', 'PENDING_VERIFICATION');
         $this->assertDatabaseHas('addresses', ['owner_id' => $organization->id, 'source' => 'MANUAL', 'street' => '12 Manual Street', 'latitude' => null, 'longitude' => null, 'location' => null, 'is_current' => true]);
         $this->assertDatabaseHas('vendor_address_versions', ['street' => '12 Manual Street', 'source' => 'MANUAL', 'latitude' => null, 'location' => null]);

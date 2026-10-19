@@ -21,7 +21,7 @@ part 'chat_quotation_content.g.dart';
 /// * [lines]
 /// * [commercial]
 /// * [fulfillmentMethod]
-/// * [paymentMethod]
+/// * [paymentMethod] - Historical Vendor preference only. New quotations omit it; the Buyer chooses at acceptance.
 /// * [fulfillmentDate]
 /// * [delivery]
 /// * [nrpc]
@@ -43,8 +43,10 @@ abstract class ChatQuotationContent implements Built<ChatQuotationContent, ChatQ
   @BuiltValueField(wireName: r'fulfillment_method')
   String get fulfillmentMethod;
 
+  /// Historical Vendor preference only. New quotations omit it; the Buyer chooses at acceptance.
+  @Deprecated('paymentMethod has been deprecated')
   @BuiltValueField(wireName: r'payment_method')
-  String get paymentMethod;
+  String? get paymentMethod;
 
   @BuiltValueField(wireName: r'fulfillment_date')
   String get fulfillmentDate;
@@ -113,11 +115,13 @@ class _$ChatQuotationContentSerializer implements PrimitiveSerializer<ChatQuotat
       object.fulfillmentMethod,
       specifiedType: const FullType(String),
     );
-    yield r'payment_method';
-    yield serializers.serialize(
-      object.paymentMethod,
-      specifiedType: const FullType(String),
-    );
+    if (object.paymentMethod != null) {
+      yield r'payment_method';
+      yield serializers.serialize(
+        object.paymentMethod,
+        specifiedType: const FullType(String),
+      );
+    }
     yield r'fulfillment_date';
     yield serializers.serialize(
       object.fulfillmentDate,
@@ -212,8 +216,9 @@ class _$ChatQuotationContentSerializer implements PrimitiveSerializer<ChatQuotat
         case r'payment_method':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(String),
-          ) as String;
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
           result.paymentMethod = valueDes;
           break;
         case r'fulfillment_date':

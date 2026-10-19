@@ -4,6 +4,9 @@
 
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/project_payment_method.dart';
+import 'package:materyalph_api_client/src/model/project_draft_vendor_group.dart';
+import 'package:materyalph_api_client/src/model/project_fulfillment.dart';
 import 'package:built_value/json_object.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -39,7 +42,8 @@ part 'project_candidate.g.dart';
 /// * [distanceMeters]
 /// * [distanceBasis]
 /// * [etaSeconds]
-/// * [fulfillmentMethod]
+/// * [fulfillmentMethod] - The concrete method this view is priced for: DELIVERY or PICKUP. For a Both package it is the Vendor's preferred method until the Buyer picks one. A supplier quotation containing ready-mixed concrete uses DELIVERY only, even when the Work Package requests pickup.
+/// * [fulfillmentOptions] - Methods this Vendor offers for the package. More than one means the Buyer must send `fulfillment_method` when inquiring or selecting; selection-preview re-prices for the chosen method. Ready-mixed concrete restricts its supplier quotation to DELIVERY.
 /// * [paymentMethod]
 /// * [delivery]
 /// * [destination]
@@ -48,6 +52,15 @@ part 'project_candidate.g.dart';
 /// * [label]
 /// * [currentQuotationState]
 /// * [isFavorite] - The Buyer saved this store as a preferred seller.
+/// * [fulfillment]
+/// * [paymentMethods]
+/// * [draftGroups] - Draft supplementary items by supplying Vendor, including automatic exact-match defaults. Defaults are saved during selection preview; explicit removals and replacements are preserved. Independent of the regular cart.
+/// * [primaryOrderId]
+/// * [procurementMaterialsCentavos] - Primary and supplementary materials, including existing linked purchases.
+/// * [separateDeliveryCentavos] - Delivery for supplementary suppliers and linked orders, counted once per order or draft supplier. Null while any fee needs review.
+/// * [procurementDeliveryCentavos] - Delivery for the primary Vendor and all separate suppliers. Null while any fee needs review.
+/// * [procurementBudgetLabel] - Work Package budget status for the complete procurement total.
+/// * [procurementTotalCentavos] - Materials and each supplying Vendor delivery counted once. Null while any delivery remains unconfirmed or unavailable. Processing fees are excluded until payment.
 @BuiltValue()
 abstract class ProjectCandidate implements Built<ProjectCandidate, ProjectCandidateBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -131,8 +144,14 @@ abstract class ProjectCandidate implements Built<ProjectCandidate, ProjectCandid
   @BuiltValueField(wireName: r'eta_seconds')
   int? get etaSeconds;
 
+  /// The concrete method this view is priced for: DELIVERY or PICKUP. For a Both package it is the Vendor's preferred method until the Buyer picks one. A supplier quotation containing ready-mixed concrete uses DELIVERY only, even when the Work Package requests pickup.
   @BuiltValueField(wireName: r'fulfillment_method')
   String get fulfillmentMethod;
+
+  /// Methods this Vendor offers for the package. More than one means the Buyer must send `fulfillment_method` when inquiring or selecting; selection-preview re-prices for the chosen method. Ready-mixed concrete restricts its supplier quotation to DELIVERY.
+  @BuiltValueField(wireName: r'fulfillment_options')
+  BuiltList<ProjectCandidateFulfillmentOptionsEnum>? get fulfillmentOptions;
+  // enum fulfillmentOptionsEnum {  DELIVERY,  PICKUP,  };
 
   @BuiltValueField(wireName: r'payment_method')
   String get paymentMethod;
@@ -158,6 +177,40 @@ abstract class ProjectCandidate implements Built<ProjectCandidate, ProjectCandid
   /// The Buyer saved this store as a preferred seller.
   @BuiltValueField(wireName: r'is_favorite')
   bool? get isFavorite;
+
+  @BuiltValueField(wireName: r'fulfillment')
+  ProjectFulfillment get fulfillment;
+
+  @BuiltValueField(wireName: r'payment_methods')
+  BuiltList<ProjectPaymentMethod>? get paymentMethods;
+
+  /// Draft supplementary items by supplying Vendor, including automatic exact-match defaults. Defaults are saved during selection preview; explicit removals and replacements are preserved. Independent of the regular cart.
+  @BuiltValueField(wireName: r'draft_groups')
+  BuiltList<ProjectDraftVendorGroup>? get draftGroups;
+
+  @BuiltValueField(wireName: r'primary_order_id')
+  String? get primaryOrderId;
+
+  /// Primary and supplementary materials, including existing linked purchases.
+  @BuiltValueField(wireName: r'procurement_materials_centavos')
+  int? get procurementMaterialsCentavos;
+
+  /// Delivery for supplementary suppliers and linked orders, counted once per order or draft supplier. Null while any fee needs review.
+  @BuiltValueField(wireName: r'separate_delivery_centavos')
+  int? get separateDeliveryCentavos;
+
+  /// Delivery for the primary Vendor and all separate suppliers. Null while any fee needs review.
+  @BuiltValueField(wireName: r'procurement_delivery_centavos')
+  int? get procurementDeliveryCentavos;
+
+  /// Work Package budget status for the complete procurement total.
+  @BuiltValueField(wireName: r'procurement_budget_label')
+  ProjectCandidateProcurementBudgetLabelEnum? get procurementBudgetLabel;
+  // enum procurementBudgetLabelEnum {  UNDER_BUDGET,  WITHIN_BUDGET,  OVER_BUDGET,  COST_REVIEW_REQUIRED,  };
+
+  /// Materials and each supplying Vendor delivery counted once. Null while any delivery remains unconfirmed or unavailable. Processing fees are excluded until payment.
+  @BuiltValueField(wireName: r'procurement_total_centavos')
+  int? get procurementTotalCentavos;
 
   ProjectCandidate._();
 
@@ -331,6 +384,13 @@ class _$ProjectCandidateSerializer implements PrimitiveSerializer<ProjectCandida
       object.fulfillmentMethod,
       specifiedType: const FullType(String),
     );
+    if (object.fulfillmentOptions != null) {
+      yield r'fulfillment_options';
+      yield serializers.serialize(
+        object.fulfillmentOptions,
+        specifiedType: const FullType(BuiltList, [FullType(ProjectCandidateFulfillmentOptionsEnum)]),
+      );
+    }
     yield r'payment_method';
     yield serializers.serialize(
       object.paymentMethod,
@@ -371,6 +431,67 @@ class _$ProjectCandidateSerializer implements PrimitiveSerializer<ProjectCandida
       yield serializers.serialize(
         object.isFavorite,
         specifiedType: const FullType(bool),
+      );
+    }
+    yield r'fulfillment';
+    yield serializers.serialize(
+      object.fulfillment,
+      specifiedType: const FullType(ProjectFulfillment),
+    );
+    if (object.paymentMethods != null) {
+      yield r'payment_methods';
+      yield serializers.serialize(
+        object.paymentMethods,
+        specifiedType: const FullType(BuiltList, [FullType(ProjectPaymentMethod)]),
+      );
+    }
+    if (object.draftGroups != null) {
+      yield r'draft_groups';
+      yield serializers.serialize(
+        object.draftGroups,
+        specifiedType: const FullType(BuiltList, [FullType(ProjectDraftVendorGroup)]),
+      );
+    }
+    if (object.primaryOrderId != null) {
+      yield r'primary_order_id';
+      yield serializers.serialize(
+        object.primaryOrderId,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.procurementMaterialsCentavos != null) {
+      yield r'procurement_materials_centavos';
+      yield serializers.serialize(
+        object.procurementMaterialsCentavos,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.separateDeliveryCentavos != null) {
+      yield r'separate_delivery_centavos';
+      yield serializers.serialize(
+        object.separateDeliveryCentavos,
+        specifiedType: const FullType.nullable(int),
+      );
+    }
+    if (object.procurementDeliveryCentavos != null) {
+      yield r'procurement_delivery_centavos';
+      yield serializers.serialize(
+        object.procurementDeliveryCentavos,
+        specifiedType: const FullType.nullable(int),
+      );
+    }
+    if (object.procurementBudgetLabel != null) {
+      yield r'procurement_budget_label';
+      yield serializers.serialize(
+        object.procurementBudgetLabel,
+        specifiedType: const FullType(ProjectCandidateProcurementBudgetLabelEnum),
+      );
+    }
+    if (object.procurementTotalCentavos != null) {
+      yield r'procurement_total_centavos';
+      yield serializers.serialize(
+        object.procurementTotalCentavos,
+        specifiedType: const FullType(int),
       );
     }
   }
@@ -592,6 +713,14 @@ class _$ProjectCandidateSerializer implements PrimitiveSerializer<ProjectCandida
           ) as String;
           result.fulfillmentMethod = valueDes;
           break;
+        case r'fulfillment_options':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(ProjectCandidateFulfillmentOptionsEnum)]),
+          ) as BuiltList<ProjectCandidateFulfillmentOptionsEnum>?;
+          if (valueDes == null) continue;
+          result.fulfillmentOptions.replace(valueDes);
+          break;
         case r'payment_method':
           final valueDes = serializers.deserialize(
             value,
@@ -649,6 +778,77 @@ class _$ProjectCandidateSerializer implements PrimitiveSerializer<ProjectCandida
           if (valueDes == null) continue;
           result.isFavorite = valueDes;
           break;
+        case r'fulfillment':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(ProjectFulfillment),
+          ) as ProjectFulfillment;
+          result.fulfillment.replace(valueDes);
+          break;
+        case r'payment_methods':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(ProjectPaymentMethod)]),
+          ) as BuiltList<ProjectPaymentMethod>?;
+          if (valueDes == null) continue;
+          result.paymentMethods.replace(valueDes);
+          break;
+        case r'draft_groups':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(ProjectDraftVendorGroup)]),
+          ) as BuiltList<ProjectDraftVendorGroup>?;
+          if (valueDes == null) continue;
+          result.draftGroups.replace(valueDes);
+          break;
+        case r'primary_order_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.primaryOrderId = valueDes;
+          break;
+        case r'procurement_materials_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.procurementMaterialsCentavos = valueDes;
+          break;
+        case r'separate_delivery_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.separateDeliveryCentavos = valueDes;
+          break;
+        case r'procurement_delivery_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.procurementDeliveryCentavos = valueDes;
+          break;
+        case r'procurement_budget_label':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ProjectCandidateProcurementBudgetLabelEnum),
+          ) as ProjectCandidateProcurementBudgetLabelEnum?;
+          if (valueDes == null) continue;
+          result.procurementBudgetLabel = valueDes;
+          break;
+        case r'procurement_total_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.procurementTotalCentavos = valueDes;
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -678,4 +878,39 @@ class _$ProjectCandidateSerializer implements PrimitiveSerializer<ProjectCandida
   }
 }
 
+
+class ProjectCandidateFulfillmentOptionsEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'DELIVERY')
+  static const ProjectCandidateFulfillmentOptionsEnum DELIVERY = _$projectCandidateFulfillmentOptionsEnum_DELIVERY;
+  @BuiltValueEnumConst(wireName: r'PICKUP')
+  static const ProjectCandidateFulfillmentOptionsEnum PICKUP = _$projectCandidateFulfillmentOptionsEnum_PICKUP;
+
+  static Serializer<ProjectCandidateFulfillmentOptionsEnum> get serializer => _$projectCandidateFulfillmentOptionsEnumSerializer;
+
+  const ProjectCandidateFulfillmentOptionsEnum._(String name): super(name);
+
+  static BuiltSet<ProjectCandidateFulfillmentOptionsEnum> get values => _$projectCandidateFulfillmentOptionsEnumValues;
+  static ProjectCandidateFulfillmentOptionsEnum valueOf(String name) => _$projectCandidateFulfillmentOptionsEnumValueOf(name);
+}
+
+/// Work Package budget status for the complete procurement total.
+class ProjectCandidateProcurementBudgetLabelEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'UNDER_BUDGET')
+  static const ProjectCandidateProcurementBudgetLabelEnum UNDER_BUDGET = _$projectCandidateProcurementBudgetLabelEnum_UNDER_BUDGET;
+  @BuiltValueEnumConst(wireName: r'WITHIN_BUDGET')
+  static const ProjectCandidateProcurementBudgetLabelEnum WITHIN_BUDGET = _$projectCandidateProcurementBudgetLabelEnum_WITHIN_BUDGET;
+  @BuiltValueEnumConst(wireName: r'OVER_BUDGET')
+  static const ProjectCandidateProcurementBudgetLabelEnum OVER_BUDGET = _$projectCandidateProcurementBudgetLabelEnum_OVER_BUDGET;
+  @BuiltValueEnumConst(wireName: r'COST_REVIEW_REQUIRED')
+  static const ProjectCandidateProcurementBudgetLabelEnum COST_REVIEW_REQUIRED = _$projectCandidateProcurementBudgetLabelEnum_COST_REVIEW_REQUIRED;
+
+  static Serializer<ProjectCandidateProcurementBudgetLabelEnum> get serializer => _$projectCandidateProcurementBudgetLabelEnumSerializer;
+
+  const ProjectCandidateProcurementBudgetLabelEnum._(String name): super(name);
+
+  static BuiltSet<ProjectCandidateProcurementBudgetLabelEnum> get values => _$projectCandidateProcurementBudgetLabelEnumValues;
+  static ProjectCandidateProcurementBudgetLabelEnum valueOf(String name) => _$projectCandidateProcurementBudgetLabelEnumValueOf(name);
+}
 

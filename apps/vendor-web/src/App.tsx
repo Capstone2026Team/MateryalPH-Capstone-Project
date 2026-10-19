@@ -1,3 +1,4 @@
+import { VendorContactPage, VendorSupportRequestsPage, VendorSupportTicketPage, GuestSupportAccessPage, GuestSupportTicketPage } from './pages/SupportPages'
 import { VendorNotificationsPage } from './pages/NotificationPages'
 import { VendorPlaceholderPage } from './pages/PhaseThreeVendorPages'
 import { AcceptStaffInvitation } from './pages/AcceptStaffInvitation'
@@ -35,7 +36,7 @@ import { VendorFulfillmentPage } from './pages/FulfillmentPages'
 import { VendorDisputeDetailPage, VendorDisputesPage, VendorFileDisputePage } from './pages/DisputePages'
 import { VendorInvoicesPage } from './pages/InvoicePages'
 import { VendorMaterialPriceDetailsPage, VendorMaterialsAnalyticsPage, VendorProductAnalyticsPage, VendorReviewDetailPage, VendorReviewsPage, VendorStorePerformancePage } from './pages/TrustPages'
-import { VendorEarningsPage, VendorFinancePage, VendorStatementPage, VendorTransactionHistoryPage } from './pages/FinancePages'
+import { VendorCommissionPage, VendorEarningsPage, VendorFinancePage, VendorStatementPage, VendorTransactionHistoryPage } from './pages/FinancePages'
 import { VendorAccountPage, VendorStoreProfilePage, VendorDashboardPage, VendorSetupPage, VendorTeamPage, VendorVerificationPage, VendorWelcomePage } from './pages/PhaseThreeVendorPages'
 
 function App() {
@@ -83,6 +84,7 @@ function App() {
           <Route path="/analytics/materials" element={<VendorMaterialsAnalyticsPage />} />
           <Route path="/analytics/materials/:groupId" element={<VendorMaterialPriceDetailsPage />} />
           <Route path="/finance" element={<VendorFinancePage />} />
+          <Route path="/finance/commissions" element={<VendorCommissionPage />} />
           <Route path="/finance/transactions" element={<VendorTransactionHistoryPage />} />
           <Route path="/finance/statements/:statementId" element={<VendorStatementPage />} />
           <Route path="/finance/earnings" element={<VendorEarningsPage />} />
@@ -92,7 +94,12 @@ function App() {
         <Route path="/fees" element={<InfoPage title="Payments and fees"><FeesContent /></InfoPage>} />
         <Route path="/verification" element={<InfoPage title="Vendor verification"><VerificationContent /></InfoPage>} />
         <Route path="/opportunities" element={<InfoPage title="Marketplace opportunities"><OpportunitiesContent /></InfoPage>} />
-        <Route path="/support" element={<InfoPage title="Vendor support"><SupportContent /></InfoPage>} />
+        <Route path="/support" element={<VendorContactPage />} />
+        <Route path="/contact" element={<VendorContactPage />} />
+        <Route path="/support/requests" element={<VendorSupportRequestsPage />} />
+        <Route path="/support/:ticketId" element={<VendorSupportTicketPage />} />
+        <Route path="/contact/access" element={<GuestSupportAccessPage />} />
+        <Route path="/contact/tickets/:ticketId" element={<GuestSupportTicketPage />} />
         <Route path="/legal/:document" element={<VendorLegalPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
@@ -330,7 +337,7 @@ function InfoPage({ title, children }: { title: string; children: ReactNode }) {
 }
 
 function FeesContent() {
-  return <div className="info-copy"><p><strong>2% Vendor-paid monthly platform commission:</strong> assessed only on the approved completed-materials basis after Vendor discounts and excluding included materials VAT.</p><p>Buyer processing fees, Vendor commission liability, monthly settlement, withholding scenarios, refunds, and dispute adjustments remain separate records. Commission and processing fees are explained separately so you can understand each charge.</p></div>
+  return <div className="info-copy"><p><strong>Vendor-paid monthly platform commission:</strong> the initial default is 2.00%. The effective versioned rate is shown in Vendor Finance and the Commission Terms. It applies only to completed materials after Vendor discounts and excluding included materials VAT.</p><p>Buyer processing fees, Vendor commission liability, monthly settlement, withholding scenarios, refunds, and dispute adjustments remain separate records. Commission and processing fees are explained separately so you can understand each charge.</p></div>
 }
 
 function VerificationContent() {
@@ -339,10 +346,6 @@ function VerificationContent() {
 
 function OpportunitiesContent() {
   return <div className="info-copy"><p>Eligible Vendors can receive Item-Based orders from published listings and direct inquiries from Buyers for Project Work Packages.</p><p>MateryalPH does not provide a public Vendor RFQ bidding queue. A Work Package may have many inquiries but only one selected Vendor outcome.</p></div>
-}
-
-function SupportContent() {
-  return <div className="info-copy"><p>Account recovery uses a short-lived, single-use email code. Never send passwords, OTPs, access tokens, payment details, or private documents through support messages.</p><p>If login is unavailable, use the recovery action on the sign-in page. Operational support routes will be added with their authorized workflow.</p></div>
 }
 
 function NotFound() {

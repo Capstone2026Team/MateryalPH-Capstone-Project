@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { ArrowRight, Check } from 'lucide-react'
 import { Button } from './button'
-import { checklistProgress, type ChecklistRequirement } from './verification-checklist'
+import { checklistProgress, checklistCompletionStatus, type ChecklistRequirement } from './verification-checklist'
 
 type OnboardingStep = { label: string; requirements: string[]; description?: string }
 
@@ -32,7 +32,7 @@ export function OnboardingFlow({ steps, current, onStep, section, children, acti
   const rail = layout === 'rail'
   const stepState = (step: OnboardingStep) => {
     const requirements = section.steps.filter(item => step.requirements.includes(item.key))
-    return requirements.length > 0 && requirements.every(item => DONE.includes(item.status))
+    return requirements.length > 0 && requirements.every(item => DONE.includes(checklistCompletionStatus(item)))
   }
   const next = steps[current + 1]
   const content = <section className={`min-w-0 rounded-surface border border-border-default bg-surface-primary p-5 sm:p-7 ${rail ? 'lg:col-start-2 lg:row-span-2 lg:row-start-1' : ''}`} aria-labelledby="onboarding-section-title">

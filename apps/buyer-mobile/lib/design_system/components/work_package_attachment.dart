@@ -20,11 +20,13 @@ class WorkPackageAttachment extends StatelessWidget {
     this.version,
     this.locked = true,
     this.title,
+    this.showPaymentMethod = true,
   });
   final ProjectData original;
   final ProjectData? proposed;
   final Object? version;
   final bool locked;
+  final bool showPaymentMethod;
 
   /// Replaces the default "Locked Buyer original" heading, e.g. on the package screen where there is only one copy.
   final String? title;
@@ -82,7 +84,8 @@ class WorkPackageAttachment extends StatelessWidget {
                 _Chip('Budget ${projectMoney(value['budget_centavos'])}'),
               if (fulfillment.isNotEmpty)
                 _Chip(_fulfillment[fulfillment] ?? fulfillment),
-              if (payment.isNotEmpty) _Chip(_payment[payment] ?? payment),
+              if (showPaymentMethod && payment.isNotEmpty)
+                _Chip(_payment[payment] ?? payment),
             ],
           ),
           if (lines.isNotEmpty) ...[

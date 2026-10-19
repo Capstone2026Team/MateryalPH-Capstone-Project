@@ -152,8 +152,8 @@ class _BooleanConstSerializer<T> implements PrimitiveSerializer<T> {
         }
       }
       // PHP requires bracketed multipart array keys. Limit this normalization to review media.
-      if (relativePath === "lib/src/api/buyer_reviews_api.dart") {
-        contents = contents.replace("r'files': files.toList(),", "r'files[]': files.toList(),");
+      if (["lib/src/api/buyer_reviews_api.dart", "lib/src/api/support_api.dart"].includes(relativePath)) {
+        contents = contents.replaceAll("r'files': files.toList(),", "r'files[]': files.toList(),");
       }
       if (relativePath === "lib/src/api/vendor_fulfillment_api.dart") {
         contents = contents.replace("r'additional_photos': additionalPhotos.toList(),", "r'additional_photos[]': additionalPhotos.toList(),");
@@ -161,6 +161,10 @@ class _BooleanConstSerializer<T> implements PrimitiveSerializer<T> {
       // Nullable inline objects use nested built_value builders. dart-dio
       // currently assigns the deserialized value to the builder field directly.
       const nestedFields = {
+        "lib/src/model/support_ticket_list_response.dart": ["meta"],
+        "lib/src/model/support_entry_list_response.dart": ["meta"],
+        "lib/src/model/support_handler_list_response.dart": ["meta"],
+        "lib/src/model/support_entry.dart": ["details"],
         "lib/src/model/vendor_setup_draft.dart": ["delivery"],
         "lib/src/model/vendor_onboarding_snapshot.dart": ["setup"],
         "lib/src/model/vendor_verification_submit.dart": ["draft"],
@@ -171,6 +175,10 @@ class _BooleanConstSerializer<T> implements PrimitiveSerializer<T> {
         "lib/src/model/fleet_vehicle_list_envelope.dart": ["meta"],
         "lib/src/model/order_list_envelope.dart": ["meta"],
         "lib/src/model/delivery_workspace_page.dart": ["meta"],
+        "lib/src/model/directory_buyer_list_envelope.dart": ["meta"],
+        "lib/src/model/directory_vendor_list_envelope.dart": ["meta"],
+        "lib/src/model/directory_review_list_envelope.dart": ["meta"],
+        "lib/src/model/directory_listing_list_envelope.dart": ["meta"],
       }[relativePath] ?? [];
       for (const field of nestedFields) {
         contents = contents.replace(`result.${field} = valueDes;`, `result.${field} = valueDes.toBuilder();`);
@@ -195,8 +203,8 @@ class _BooleanConstSerializer<T> implements PrimitiveSerializer<T> {
         return line;
       });
     }
-    if (relativePath === "src/apis/BuyerReviewsApi.ts") {
-      contents = contents.replace("formParams.append('files', element as any);", "formParams.append('files[]', element as any);");
+    if (["src/apis/BuyerReviewsApi.ts", "src/apis/SupportApi.ts"].includes(relativePath)) {
+      contents = contents.replaceAll("formParams.append('files', element as any);", "formParams.append('files[]', element as any);");
     }
     if (relativePath === "src/apis/VendorFulfillmentApi.ts") {
       contents = contents.replace("formParams.append('additional_photos', element as any);", "formParams.append('additional_photos[]', element as any);");

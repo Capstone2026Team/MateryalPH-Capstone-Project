@@ -22,6 +22,12 @@ void main() {
       // TODO
     });
 
+    // Saved form or evidence completion for the Vendor checklist. COMPLETED means ready to submit or already supplied, never Admin approval or activation eligibility. The status field retains the review decision.
+    // String progressStatus
+    test('to test the property `progressStatus`', () async {
+      // TODO
+    });
+
     // String level
     test('to test the property `level`', () async {
       // TODO

@@ -16,6 +16,12 @@ class _$ChatQuotationLine extends ChatQuotationLine {
   @override
   final String description;
   @override
+  final String? brand;
+  @override
+  final String? variantLabel;
+  @override
+  final BuiltMap<String, String>? specifications;
+  @override
   final String unitCode;
   @override
   final String taxCategory;
@@ -33,6 +39,9 @@ class _$ChatQuotationLine extends ChatQuotationLine {
       required this.quantity,
       required this.unitPriceCentavos,
       required this.description,
+      this.brand,
+      this.variantLabel,
+      this.specifications,
       required this.unitCode,
       required this.taxCategory,
       required this.sourcePriceVersionId,
@@ -54,6 +63,9 @@ class _$ChatQuotationLine extends ChatQuotationLine {
         quantity == other.quantity &&
         unitPriceCentavos == other.unitPriceCentavos &&
         description == other.description &&
+        brand == other.brand &&
+        variantLabel == other.variantLabel &&
+        specifications == other.specifications &&
         unitCode == other.unitCode &&
         taxCategory == other.taxCategory &&
         sourcePriceVersionId == other.sourcePriceVersionId &&
@@ -67,6 +79,9 @@ class _$ChatQuotationLine extends ChatQuotationLine {
     _$hash = $jc(_$hash, quantity.hashCode);
     _$hash = $jc(_$hash, unitPriceCentavos.hashCode);
     _$hash = $jc(_$hash, description.hashCode);
+    _$hash = $jc(_$hash, brand.hashCode);
+    _$hash = $jc(_$hash, variantLabel.hashCode);
+    _$hash = $jc(_$hash, specifications.hashCode);
     _$hash = $jc(_$hash, unitCode.hashCode);
     _$hash = $jc(_$hash, taxCategory.hashCode);
     _$hash = $jc(_$hash, sourcePriceVersionId.hashCode);
@@ -82,6 +97,9 @@ class _$ChatQuotationLine extends ChatQuotationLine {
           ..add('quantity', quantity)
           ..add('unitPriceCentavos', unitPriceCentavos)
           ..add('description', description)
+          ..add('brand', brand)
+          ..add('variantLabel', variantLabel)
+          ..add('specifications', specifications)
           ..add('unitCode', unitCode)
           ..add('taxCategory', taxCategory)
           ..add('sourcePriceVersionId', sourcePriceVersionId)
@@ -110,6 +128,20 @@ class ChatQuotationLineBuilder
   String? _description;
   String? get description => _$this._description;
   set description(String? description) => _$this._description = description;
+
+  String? _brand;
+  String? get brand => _$this._brand;
+  set brand(String? brand) => _$this._brand = brand;
+
+  String? _variantLabel;
+  String? get variantLabel => _$this._variantLabel;
+  set variantLabel(String? variantLabel) => _$this._variantLabel = variantLabel;
+
+  MapBuilder<String, String>? _specifications;
+  MapBuilder<String, String> get specifications =>
+      _$this._specifications ??= MapBuilder<String, String>();
+  set specifications(MapBuilder<String, String>? specifications) =>
+      _$this._specifications = specifications;
 
   String? _unitCode;
   String? get unitCode => _$this._unitCode;
@@ -140,6 +172,9 @@ class ChatQuotationLineBuilder
       _quantity = $v.quantity;
       _unitPriceCentavos = $v.unitPriceCentavos;
       _description = $v.description;
+      _brand = $v.brand;
+      _variantLabel = $v.variantLabel;
+      _specifications = $v.specifications?.toBuilder();
       _unitCode = $v.unitCode;
       _taxCategory = $v.taxCategory;
       _sourcePriceVersionId = $v.sourcePriceVersionId;
@@ -163,27 +198,43 @@ class ChatQuotationLineBuilder
   ChatQuotationLine build() => _build();
 
   _$ChatQuotationLine _build() {
-    final _$result = _$v ??
-        _$ChatQuotationLine._(
-          variantId: BuiltValueNullFieldError.checkNotNull(
-              variantId, r'ChatQuotationLine', 'variantId'),
-          quantity: BuiltValueNullFieldError.checkNotNull(
-              quantity, r'ChatQuotationLine', 'quantity'),
-          unitPriceCentavos: BuiltValueNullFieldError.checkNotNull(
-              unitPriceCentavos, r'ChatQuotationLine', 'unitPriceCentavos'),
-          description: BuiltValueNullFieldError.checkNotNull(
-              description, r'ChatQuotationLine', 'description'),
-          unitCode: BuiltValueNullFieldError.checkNotNull(
-              unitCode, r'ChatQuotationLine', 'unitCode'),
-          taxCategory: BuiltValueNullFieldError.checkNotNull(
-              taxCategory, r'ChatQuotationLine', 'taxCategory'),
-          sourcePriceVersionId: BuiltValueNullFieldError.checkNotNull(
-              sourcePriceVersionId,
-              r'ChatQuotationLine',
-              'sourcePriceVersionId'),
-          sourceTaxVersionId: BuiltValueNullFieldError.checkNotNull(
-              sourceTaxVersionId, r'ChatQuotationLine', 'sourceTaxVersionId'),
-        );
+    _$ChatQuotationLine _$result;
+    try {
+      _$result = _$v ??
+          _$ChatQuotationLine._(
+            variantId: BuiltValueNullFieldError.checkNotNull(
+                variantId, r'ChatQuotationLine', 'variantId'),
+            quantity: BuiltValueNullFieldError.checkNotNull(
+                quantity, r'ChatQuotationLine', 'quantity'),
+            unitPriceCentavos: BuiltValueNullFieldError.checkNotNull(
+                unitPriceCentavos, r'ChatQuotationLine', 'unitPriceCentavos'),
+            description: BuiltValueNullFieldError.checkNotNull(
+                description, r'ChatQuotationLine', 'description'),
+            brand: brand,
+            variantLabel: variantLabel,
+            specifications: _specifications?.build(),
+            unitCode: BuiltValueNullFieldError.checkNotNull(
+                unitCode, r'ChatQuotationLine', 'unitCode'),
+            taxCategory: BuiltValueNullFieldError.checkNotNull(
+                taxCategory, r'ChatQuotationLine', 'taxCategory'),
+            sourcePriceVersionId: BuiltValueNullFieldError.checkNotNull(
+                sourcePriceVersionId,
+                r'ChatQuotationLine',
+                'sourcePriceVersionId'),
+            sourceTaxVersionId: BuiltValueNullFieldError.checkNotNull(
+                sourceTaxVersionId, r'ChatQuotationLine', 'sourceTaxVersionId'),
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'specifications';
+        _specifications?.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'ChatQuotationLine', _$failedField, e.toString());
+      }
+      rethrow;
+    }
     replace(_$result);
     return _$result;
   }

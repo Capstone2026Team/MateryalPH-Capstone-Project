@@ -9,6 +9,7 @@ use App\Domain\Disputes\DisputeAccess;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Messaging\ConversationAccess;
 use App\Domain\Orders\OrderAccess;
+use App\Domain\Support\SupportAccess;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -16,7 +17,7 @@ final class NotificationPolicy
 {
     public const OPTIONAL = ['INVENTORY', 'MARKETING', 'PROJECTS', 'MESSAGES'];
 
-    public const CATEGORIES = ['SECURITY', 'LEGAL', 'SUSPENSION', 'PAYMENT', 'REFUND', 'DISPUTES', 'FINANCE_MANDATORY', 'ORDERS', 'INVOICES', 'VENDOR_VERIFICATION', 'INVENTORY', 'MARKETING', 'PROJECTS', 'MESSAGES'];
+    public const CATEGORIES = ['SUPPORT', 'SECURITY', 'LEGAL', 'SUSPENSION', 'PAYMENT', 'REFUND', 'DISPUTES', 'FINANCE_MANDATORY', 'ORDERS', 'INVOICES', 'VENDOR_VERIFICATION', 'INVENTORY', 'MARKETING', 'PROJECTS', 'MESSAGES'];
 
     public static function defaultEnabled(string $category, string $channel): bool
     {
@@ -51,6 +52,9 @@ final class NotificationPolicy
         }
         $type = $notice->resource_type;
         $id = $notice->resource_id;
+        if ($type === 'SUPPORT_TICKET') {
+            return is_string($id) && app(SupportAccess::class)->allows($user, $id);
+        }
         if ($type === 'CONVERSATION') {
             $conversation = DB::table('conversations')->where('id', $id)->first();
 
@@ -130,6 +134,7 @@ final class NotificationPolicy
         }
 
         return match ($notice->resource_type) {
+            'SUPPORT_TICKET' => '/support/'.$notice->resource_id,
             'CONVERSATION' => '/messages/'.$notice->resource_id,
             'VENDOR_LISTING', 'LISTING_VARIANT' => '/products/inventory',
             'ORDER' => $user->account_type === 'ADMIN' ? '/order-operations' : '/orders/'.$notice->resource_id,

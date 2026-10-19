@@ -140,8 +140,15 @@ void main() {
       // TODO
     });
 
+    // The concrete method this view is priced for: DELIVERY or PICKUP. For a Both package it is the Vendor's preferred method until the Buyer picks one. A supplier quotation containing ready-mixed concrete uses DELIVERY only, even when the Work Package requests pickup.
     // String fulfillmentMethod
     test('to test the property `fulfillmentMethod`', () async {
+      // TODO
+    });
+
+    // Methods this Vendor offers for the package. More than one means the Buyer must send `fulfillment_method` when inquiring or selecting; selection-preview re-prices for the chosen method. Ready-mixed concrete restricts its supplier quotation to DELIVERY.
+    // BuiltList<String> fulfillmentOptions
+    test('to test the property `fulfillmentOptions`', () async {
       // TODO
     });
 
@@ -183,6 +190,57 @@ void main() {
     // The Buyer saved this store as a preferred seller.
     // bool isFavorite
     test('to test the property `isFavorite`', () async {
+      // TODO
+    });
+
+    // ProjectFulfillment fulfillment
+    test('to test the property `fulfillment`', () async {
+      // TODO
+    });
+
+    // BuiltList<ProjectPaymentMethod> paymentMethods
+    test('to test the property `paymentMethods`', () async {
+      // TODO
+    });
+
+    // Draft supplementary items by supplying Vendor, including automatic exact-match defaults. Defaults are saved during selection preview; explicit removals and replacements are preserved. Independent of the regular cart.
+    // BuiltList<ProjectDraftVendorGroup> draftGroups
+    test('to test the property `draftGroups`', () async {
+      // TODO
+    });
+
+    // String primaryOrderId
+    test('to test the property `primaryOrderId`', () async {
+      // TODO
+    });
+
+    // Primary and supplementary materials, including existing linked purchases.
+    // int procurementMaterialsCentavos
+    test('to test the property `procurementMaterialsCentavos`', () async {
+      // TODO
+    });
+
+    // Delivery for supplementary suppliers and linked orders, counted once per order or draft supplier. Null while any fee needs review.
+    // int separateDeliveryCentavos
+    test('to test the property `separateDeliveryCentavos`', () async {
+      // TODO
+    });
+
+    // Delivery for the primary Vendor and all separate suppliers. Null while any fee needs review.
+    // int procurementDeliveryCentavos
+    test('to test the property `procurementDeliveryCentavos`', () async {
+      // TODO
+    });
+
+    // Work Package budget status for the complete procurement total.
+    // String procurementBudgetLabel
+    test('to test the property `procurementBudgetLabel`', () async {
+      // TODO
+    });
+
+    // Materials and each supplying Vendor delivery counted once. Null while any delivery remains unconfirmed or unavailable. Processing fees are excluded until payment.
+    // int procurementTotalCentavos
+    test('to test the property `procurementTotalCentavos`', () async {
       // TODO
     });
 

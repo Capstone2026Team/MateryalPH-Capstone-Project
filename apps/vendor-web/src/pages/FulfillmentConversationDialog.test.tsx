@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
-import type { ChatMessage, ConversationDetail, FulfillmentConversationSummary } from '@materyalph/api-client-ts'
+import type { ChatMessage, ChatQuotationVersion, ConversationDetail, FulfillmentConversationSummary } from '@materyalph/api-client-ts'
 import { chatApi, watchConversation } from '../lib/messaging-api'
 import { FulfillmentConversationDialog } from './FulfillmentConversationDialog'
 import { MessagingWorkspace } from './MessagingPage'
@@ -24,6 +24,10 @@ function detail(id = 'fulfillment-1', readOnly = false): ConversationDetail {
 }
 const row: FulfillmentConversationSummary = { conversationId: 'fulfillment-1', orderId: 'order-1', orderReference: 'ORD-ONE', orderState: 'READY_FOR_PICKUP', fulfillmentMethod: 'PICKUP', unreadCount: 1, updatedAt: new Date('2026-10-07T08:00:00Z'), readOnly: false }
 const stop = vi.fn()
+function quotation(version = 1): ChatQuotationVersion {
+  return { id: `quote-${version}`, version, latest: true, state: 'PUBLISHED', publishedAt: '2026-10-07T07:00:00Z', expiresAt: '2099-10-08T07:00:00Z', contentHash: 'hash', viewed: false, actions: ['withdraw'],
+    content: { lines: [{ variantId: 'cement', description: 'Portland Cement', quantity: '4', unitPriceCentavos: 1700, unitCode: 'bag', taxCategory: 'VAT_12', sourcePriceVersionId: 'price', sourceTaxVersionId: 'tax' }], fulfillmentMethod: 'PICKUP', fulfillmentDate: '2099-10-09', priceSource: 'PRIVATE_TRANSACTION', processingFeeStatus: 'PENDING_PAYMENT_CHANNEL', changes: [], originalChanges: [], commercial: { materialsPayableCentavos: 6800, materialsVatCentavos: 729, vendorDiscountCentavos: 0, deliveryCentavos: 0, nrpcCentavos: 0, commercialTotalCentavos: 6800 } } }
+}
 beforeEach(() => {
   vi.resetAllMocks()
   vi.mocked(watchConversation).mockResolvedValue(stop)
@@ -35,6 +39,78 @@ beforeEach(() => {
 })
 afterEach(cleanup)
 function Location() { return <output aria-label="Location">{useLocation().search}</output> }
+
+test('Vendor timeline opens published terms and shows an incoming Buyer change request without losing the draft', async () => {
+  const sales = detail('sales-1')
+  sales.conversation.unreadCount = 0
+  sales.quotations = { quotation: { id: 'quotation', state: 'PUBLISHED', lockVersion: 3, canDraft: true, canPublish: true }, versions: [quotation()], hasMore: false }
+  vi.mocked(chatApi.get).mockResolvedValue(sales)
+  render(<MemoryRouter initialEntries={['/messages?conversation=sales-1']}><MessagingWorkspace role="PUBLISHER" /></MemoryRouter>)
+  const composer = await screen.findByRole('textbox', { name: 'Message' })
+  fireEvent.change(composer, { target: { value: 'Unsent reply' } })
+  fireEvent.click(screen.getByRole('button', { name: 'View quotation v1' }))
+  const dialog = await screen.findByRole('dialog', { name: 'Quotation v1' })
+  expect(within(dialog).getByText('Portland Cement')).toBeInTheDocument()
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Close quotation v1' }))
+  expect(composer).toHaveValue('Unsent reply')
+  const request = { ...quotation(), state: 'COUNTERED', actions: [], requestedChanges: 'Please change to 3 bags.', changeRequestedAt: '2026-10-07T08:00:00Z', vendorResponseDueAt: '2099-10-08T08:00:00Z' }
+  vi.mocked(chatApi.get).mockResolvedValue({ ...sales, quotations: { ...sales.quotations, quotation: { ...sales.quotations.quotation!, state: 'COUNTERED' }, versions: [request] } })
+  await act(async () => { vi.mocked(watchConversation).mock.calls.at(-1)![1]() })
+  const changes = await screen.findByLabelText('Buyer change request for quotation v1')
+  expect(changes).toHaveTextContent('Please change to 3 bags.')
+  expect(changes).toHaveTextContent('Vendor response due')
+  expect(composer).toHaveValue('Unsent reply')
+  expect(screen.getAllByRole('button', { name: 'Revise quotation' })).toHaveLength(2)
+})
+
+test('loaded quotation pages and an open historical quotation survive realtime refresh', async () => {
+  const sales = detail('sales-1')
+  sales.conversation.unreadCount = 0
+  const newer = { ...quotation(2), publishedAt: '2026-10-07T07:30:00Z' }
+  const older = { ...quotation(), latest: false, state: 'ACCEPTED', actions: [], acceptedOrderId: 'accepted-order' }
+  vi.mocked(chatApi.get).mockImplementation(async (_id, _before, page) => ({ ...sales, quotations: { versions: page === 2 ? [older] : [newer], page: page ?? 1, hasMore: page !== 2 } }))
+  render(<MemoryRouter initialEntries={['/messages?conversation=sales-1']}><MessagingWorkspace role="PUBLISHER" /></MemoryRouter>)
+  fireEvent.click(await screen.findByRole('button', { name: 'Earlier quotations' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'View quotation v1' }))
+  const dialog = await screen.findByRole('dialog', { name: 'Quotation v1' })
+  expect(within(dialog).getByRole('link', { name: 'Open accepted order' })).toHaveAttribute('href', '/orders/accepted-order')
+  const count = vi.mocked(chatApi.get).mock.calls.length
+  await act(async () => { vi.mocked(watchConversation).mock.calls.at(-1)![1]() })
+  await waitFor(() => expect(vi.mocked(chatApi.get).mock.calls.length).toBeGreaterThan(count + 1))
+  expect(within(dialog).getByText('Portland Cement')).toBeInTheDocument()
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Close quotation v1' }))
+  expect(screen.getByRole('button', { name: 'View quotation v1' })).toBeInTheDocument()
+})
+
+test('quotation revision follows the current server capability', async () => {
+  const sales = detail('sales-1')
+  sales.quotations = { quotation: { id: 'quotation', state: 'COUNTERED', lockVersion: 3, canDraft: false, canPublish: false }, versions: [{ ...quotation(), state: 'COUNTERED', actions: [], requestedChanges: 'Please reduce quantity.' }], hasMore: false }
+  vi.mocked(chatApi.get).mockResolvedValue(sales)
+  render(<MemoryRouter initialEntries={['/messages?conversation=sales-1']}><MessagingWorkspace role="PUBLISHER" /></MemoryRouter>)
+  await screen.findByLabelText('Buyer change request for quotation v1')
+  expect(screen.queryByRole('button', { name: 'Revise quotation' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Prepare quotation' })).not.toBeInTheDocument()
+})
+
+test('quotation history opens in a modal without moving the thread or clearing its draft', async () => {
+  render(<MemoryRouter initialEntries={['/messages?conversation=sales-1']}><MessagingWorkspace role="PUBLISHER" /></MemoryRouter>)
+  const composer = await screen.findByRole('textbox', { name: 'Message' })
+  fireEvent.change(composer, { target: { value: 'Keep this draft' } })
+  const body = screen.getByText('Inquiry text').closest('.chat-thread-body')!
+  body.scrollTop = 35
+  const trigger = screen.getByRole('button', { name: 'Quotation history' })
+  trigger.focus(); fireEvent.click(trigger)
+  const dialog = await screen.findByRole('dialog', { name: 'Quotation history' })
+  expect(within(dialog).getByText('Published quotations and their changes appear here.')).toBeInTheDocument()
+  expect(body.contains(dialog)).toBe(false)
+  expect(composer).toHaveValue('Keep this draft')
+  expect(body.scrollTop).toBe(35)
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Close quotation history' }))
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(trigger).toHaveFocus()
+  expect(body.scrollTop).toBe(35)
+  expect(composer).toHaveValue('Keep this draft')
+})
 
 test('buyer inquiry retains draft, selection and scroll while its fulfillment popup opens and closes', async () => {
   render(<MemoryRouter initialEntries={['/messages?conversation=sales-1']}><Location /><MessagingWorkspace role="PUBLISHER" /></MemoryRouter>)
@@ -268,6 +344,10 @@ test('project inquiry opens inside the main item thread and preserves its draft 
   fireEvent.click(await within(dialog).findByRole('button', { name: /Foundation/ }))
   await within(dialog).findByText('Foundation inquiry text')
   expect(within(dialog).getByRole('button', { name: 'Quotation history' })).toBeInTheDocument()
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Quotation history' }))
+  const history = await screen.findByRole('dialog', { name: 'Quotation history' })
+  fireEvent.click(within(history).getByRole('button', { name: 'Close quotation history' }))
+  expect(within(dialog).getByText('Foundation inquiry text')).toBeInTheDocument()
   expect(screen.getByLabelText('Location')).toHaveTextContent('?conversation=sales-1')
   expect(composer).toHaveValue('Keep my item draft')
   fireEvent.click(within(dialog).getByRole('button', { name: 'Back to project inquiries' }))

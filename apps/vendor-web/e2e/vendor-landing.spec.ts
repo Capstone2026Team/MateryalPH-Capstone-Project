@@ -43,7 +43,7 @@ test('Vendor landing remains usable, truthful, and responsive', async ({ page })
 
   const fees = page.locator('#payments-fees')
   await expect(fees.getByRole('heading', { name: 'Plain-language payments and fees, before you commit' })).toBeVisible()
-  await expect(fees.getByText(/approved Vendor-paid platform commission is/)).toContainText('2%')
+  await expect(fees.getByText(/initial default Vendor-paid platform commission is/)).toContainText('2%')
   await expect(fees.getByText(/Third-party processing fees are distinct/)).toContainText('vary by payment method')
   await expect(page.getByText(/TEST\/DEMO|capstone environment|escrow|payment-account onboarding/i)).toHaveCount(0)
 
@@ -55,10 +55,11 @@ test('Vendor landing remains usable, truthful, and responsive', async ({ page })
   await page.getByRole('button', { name: /Orders Keep the next action/ }).click()
   await expect(page.locator('#landing-feature-preview')).toContainText('Record delivery or pickup')
 
-  const faq = page.locator('details').filter({ hasText: 'When is the 2% commission charged?' })
-  await faq.getByText('When is the 2% commission charged?', { exact: true }).click()
+  await page.getByRole('tab', { name: 'Payments and account security' }).click()
+  const faq = page.locator('details').filter({ hasText: 'When is commission charged?' })
+  await faq.getByText('When is commission charged?', { exact: true }).click()
   await expect(faq).toHaveAttribute('open', '')
-  await expect(faq.getByText(/included in monthly Vendor billing/)).toBeVisible()
+  await expect(faq.getByText(/earned on completed materials and billed monthly/)).toBeVisible()
 
   const overflow = await page.evaluate(() => Math.max(
     document.documentElement.scrollWidth - document.documentElement.clientWidth,

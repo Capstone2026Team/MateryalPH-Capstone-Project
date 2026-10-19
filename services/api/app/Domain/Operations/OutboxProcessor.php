@@ -28,6 +28,7 @@ use App\Domain\Payments\PaymentReconciliationService;
 use App\Domain\Payments\RefundService;
 use App\Domain\Payments\XenditWebhookProcessor;
 use App\Domain\Reporting\DocumentExportService;
+use App\Domain\Support\SupportGuestAccess;
 use App\Domain\Vendors\FleetBroadcast;
 use App\Mail\AccountSecurityMail;
 use App\Mail\AdminInvitationMail;
@@ -163,6 +164,11 @@ final class OutboxProcessor
     /** @param array<string, mixed> $payload */
     private function deliver(string $eventType, #[SensitiveParameter] array $payload, string $requestedAt): void
     {
+        if ($eventType === 'SUPPORT_GUEST_EMAIL') {
+            app(SupportGuestAccess::class)->deliver($this->requiredString($payload, 'credential_id'), $this->requiredString($payload, 'token'), $requestedAt);
+
+            return;
+        }
         if (in_array($eventType, ['CART_CHANGED', 'NAVIGATION_CHANGED'], true)) {
             return;
         }

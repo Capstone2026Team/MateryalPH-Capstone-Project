@@ -33,7 +33,15 @@ for (const route of routes.filter(route => /buyers\/(projects|work-packages|proj
   for (const method of route.method.split('|').filter(method => method !== 'HEAD')) assert.ok(expected.has(`${method} ${route.uri.replace(/\{[^}]+\}/g, '{}')}`), `Undocumented Project route ${route.uri}`)
 }
 const schemas = spec.components.schemas
-assert.deepEqual(schemas.WorkPackageInput.properties.radius_km.enum, [5, 10, 20, 30, 40, 50])
+assert.match(schemas.ProjectPreferenceSave.properties.weights.description, /persisted unchanged/)
+assert.match(spec.paths['/buyers/project-ranking-preferences'].put.description, /WEIGHTS_ALL_ZERO/)
+// Owner request 2026-10-17: 50 km is the only Project-Based radius, optional on every request that used to choose one.
+assert.deepEqual(schemas.WorkPackageInput.properties.radius_km.enum, [50])
+assert.ok(!schemas.WorkPackageInput.required.includes('radius_km') && !schemas.ProjectCompile.required.includes('radius_km') && !schemas.WorkPackageBudgetEstimateRequest.required.includes('radius_km'))
+assert.deepEqual(schemas.ProjectCompile.properties.radius_km.enum, [50])
+assert.deepEqual(schemas.WorkPackageBudgetEstimateRequest.properties.radius_km.enum, [50])
+assert.equal(schemas.ProjectEstimatePage.properties.suggested_radius_km, undefined, 'the Project-Based radius is never widened')
+assert.deepEqual(schemas.WorkPackageAlternativePage.properties.radius_km.enum, [50])
 assert.deepEqual(schemas.WorkPackageInput.properties.heavy_vehicle_restriction.enum, ['YES', 'NO'])
 assert.equal(schemas.ProjectCandidate.properties.delivery_centavos.nullable, true)
 assert.equal(schemas.ProjectCandidate.properties.projected_total_centavos.nullable, true)
@@ -54,17 +62,7 @@ assert.ok(schemas.ProjectCandidate.properties.is_favorite)
 assert.equal(schemas.WorkPackageAlternative.properties.stock_label.type, 'string')
 assert.equal(schemas.WorkPackageAlternative.properties.available, undefined, 'exact inventory is never exposed')
 assert.ok(schemas.CartItemCreate.properties.work_package_line_id && schemas.CartLine.properties.work_package_line_id)
-assert.equal(schemas.WorkPackageInput.properties.source_version_id.format, 'uuid')
-assert.equal(schemas.WorkPackageView.properties.can_delete_draft.type, 'boolean')
-for (const [path, method] of [
-  ['/buyers/work-packages/{packageId}/versions/{versionId}/reactivate', 'post'],
-  ['/buyers/work-packages/{packageId}/versions/{versionId}', 'delete'],
-]) {
-  const operation = spec.paths[path][method]
-  assert.ok(operation.parameters.some(p => p.name === 'Idempotency-Key' && p.required))
-  assert.ok(operation.parameters.some(p => p.name === 'versionId' && p.required && p.schema.format === 'uuid'))
-  assert.equal(operation.requestBody.content['application/json'].schema.$ref, '#/components/schemas/ProjectVersionRequest')
-}
+// Owner decision 2026-10-16 removed Work Package versioning for the Buyer: no version routes or version fields remain.
 // Owner request 2026-10-16: open details become a Buyer specification choice that select/inquiry carry.
 assert.equal(schemas.ProjectCandidateRequest.properties.selections.items.$ref, '#/components/schemas/ProjectSpecificationSelection')
 assert.deepEqual(schemas.ProjectSpecificationSelection.required, ['line_id', 'option_id'])
@@ -75,4 +73,16 @@ assert.equal(schemas.ProjectCandidate.properties.selection_required.type, 'boole
 assert.equal(schemas.WorkPackageAlternative.properties.specifications.items.$ref, '#/components/schemas/ProjectSpecificationDetail')
 assert.equal(schemas.ProjectMaterialAttribute.properties.offered_values.items.type, 'string')
 assert.equal(schemas.ListingDetails.properties.attribute_labels.items.$ref, '#/components/schemas/ListingAttributeLabel')
+// Owner request 2026-10-17: one server-side fulfillment feeds the card, quotation and missing items; alternatives rank on the quantity still needed.
+assert.equal(schemas.ProjectCandidate.properties.fulfillment.$ref, '#/components/schemas/ProjectFulfillment')
+assert.ok(schemas.ProjectCandidate.required.includes('fulfillment'))
+assert.deepEqual(schemas.ProjectFulfillment.properties.status.enum, ['COMPLETE', 'PARTIAL', 'NONE'])
+assert.deepEqual(schemas.ProjectFulfillmentLine.properties.status.enum, ['FULFILLED', 'PARTIAL', 'UNFULFILLED'])
+assert.deepEqual(schemas.WorkPackageAlternativePage.properties.status.enum, ['CATALOG', 'NO_SUITABLE_ALTERNATIVE', 'COVERED', 'UNLISTED'])
+assert.ok(schemas.WorkPackageAlternativePage.required.includes('needed_quantity') && schemas.WorkPackageAlternativePage.required.includes('excluded'))
+assert.deepEqual(schemas.WorkPackageAlternative.properties.availability.enum, ['FULL', 'PARTIAL'])
+// The server sends the first photo as {url, alt_text}; a string schema made the generated client reject the whole page ("Something went wrong").
+assert.ok(JSON.stringify(schemas.WorkPackageAlternative.properties.image).includes('#/components/schemas/ListingImage'), 'a photographed offer must deserialize')
+assert.ok(spec.paths['/buyers/work-packages/{packageId}/lines/{lineId}/alternatives'].get.parameters.some(p => p.name === 'candidate_id'))
+assert.equal(schemas.CartItemCreate.properties.allow_partial_stock.type, 'boolean')
 console.log(`Project contract passed: ${expected.size} operations, protected routes and shared quotation/budget fields`)

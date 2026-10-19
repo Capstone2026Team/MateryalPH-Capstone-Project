@@ -17,4 +17,9 @@ abstract final class MateryalColorTokens {
   static const int statusError = 0xFFDC2626;
   static const int statusInfo = 0xFF2563EB;
   static const int focusRing = 0xFF2563EB;
+  static const int rankingDistance = 0xFF2563EB;
+  static const int rankingPriceBudget = 0xFFC2410C;
+  static const int rankingVendorPerformance = 0xFF7C3AED;
+  static const int rankingStockMatch = 0xFF0D9488;
+  static const int rankingProductRating = 0xFFDB2777;
 }

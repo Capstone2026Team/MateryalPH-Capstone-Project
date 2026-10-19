@@ -25,7 +25,7 @@ class ProjectRankingPreferencesScreen extends StatelessWidget {
   Widget build(BuildContext context) => RankingPreferencesEditor(
     title: 'Project ranking',
     description:
-        'Set how Vendors rank for your Work Packages. Adjusting a weight keeps the total at 100%. Changes apply to new estimates; Item-Based preferences stay separate.',
+        'Set the Fulfillment Match Score for Work Packages. Reopen Find vendors to apply saved changes.',
     resetMessage:
         'Project Vendor ranking will use the current platform weights again. Item-Based preferences stay unchanged.',
     factors: const [

@@ -18,9 +18,12 @@ final class VendorAddressResolveRequest extends FormRequest
     {
         return [
             'pin_token' => ['nullable', 'string', 'max:8192'],
-            'province_code' => ['required', 'string', 'max:16'],
-            'city_code' => ['required', 'string', 'max:16'],
-            'psgc_code' => ['required', 'string', 'max:16'],
+            'province_code' => ['sometimes', 'required_with:city_code,psgc_code', 'string', 'max:16'],
+            'city_code' => ['sometimes', 'required_with:province_code,psgc_code', 'string', 'max:16'],
+            'psgc_code' => ['sometimes', 'required_with:province_code,city_code', 'string', 'max:16'],
+            'province' => ['required_without:province_code', 'string', 'max:120'],
+            'city_municipality' => ['required_without:city_code', 'string', 'max:120'],
+            'barangay' => ['required_without:psgc_code', 'string', 'max:120'],
             'street' => ['nullable', 'string', 'max:200'],
             'unit' => ['nullable', 'string', 'max:120'],
             'postal_code' => ['nullable', 'string', 'max:16'],

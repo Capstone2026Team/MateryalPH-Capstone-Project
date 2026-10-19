@@ -27,6 +27,7 @@ void main() {
       // TODO
     });
 
+    // Historical Vendor preference only. New quotations omit it; the Buyer chooses at acceptance.
     // String paymentMethod
     test('to test the property `paymentMethod`', () async {
       // TODO

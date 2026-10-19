@@ -12,6 +12,7 @@ void main() {
       // TODO
     });
 
+    // Optional. The scan always uses the fixed 50 km Project-Based radius around the locked Project site.
     // int radiusKm
     test('to test the property `radiusKm`', () async {
       // TODO

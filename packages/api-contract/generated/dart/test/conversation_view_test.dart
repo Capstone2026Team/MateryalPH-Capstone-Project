@@ -79,13 +79,13 @@ void main() {
       // TODO
     });
 
-    // Number of currently authorized project inquiries for this Buyer and Store.
+    // Number of currently authorized open project quotation inquiries for this Buyer and Store, using the project-inquiries list filter.
     // int projectInquiryCount
     test('to test the property `projectInquiryCount`', () async {
       // TODO
     });
 
-    // Received unread messages across all currently authorized project inquiries, including every page. Opening the main thread does not mark these messages read.
+    // Received unread messages across all currently authorized open project quotation inquiries, including every page. Opening the main thread does not mark these messages read.
     // int projectUnreadCount
     test('to test the property `projectUnreadCount`', () async {
       // TODO

@@ -224,9 +224,7 @@ class _BuyerPublicStoreProfileScreenState
 
   // Each list is held here so switching tabs never reloads it.
   late final _StoreProducts? _products = _listings(ListingSort.bestDeal);
-  late final _StoreProducts? _topSelling = _listings(ListingSort.topSelling);
-  late final _StoreProducts? _featured = _listings(ListingSort.rating);
-  late final TabController _tabs = TabController(length: 3, vsync: this)
+  late final TabController _tabs = TabController(length: 2, vsync: this)
     ..addListener(() {
       if (!_tabs.indexIsChanging && mounted) setState(() {});
     });
@@ -245,9 +243,7 @@ class _BuyerPublicStoreProfileScreenState
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _tabs.dispose();
-    for (final listings in [_products, _topSelling, _featured]) {
-      listings?.dispose();
-    }
+    _products?.dispose();
     super.dispose();
   }
 
@@ -264,26 +260,15 @@ class _BuyerPublicStoreProfileScreenState
 
   Future<void> _refresh() async {
     _reload();
-    await Future.wait([
-      for (final listings in [_products, _topSelling, _featured])
-        if (listings != null && listings.started) listings.reload(),
-    ]);
-  }
-
-  /// "See all" opens the Products tab already sorted the same way.
-  void _seeAll(ListingSort sort) {
-    _products?.reload(sort: sort);
-    _tabs.animateTo(1);
+    final products = _products;
+    if (products != null && products.started) await products.reload();
   }
 
   /// Every listing card carries the same store distance, so a loaded list can stand in for it.
   int? get _distance {
     if (widget.distanceMeters != null) return widget.distanceMeters;
-    for (final listings in [_topSelling, _featured, _products]) {
-      final items = listings?.items ?? const <ListingCardView>[];
-      if (items.isNotEmpty) return items.first.distanceMeters;
-    }
-    return null;
+    final items = _products?.items ?? const <ListingCardView>[];
+    return items.isEmpty ? null : items.first.distanceMeters;
   }
 
   @override
@@ -329,11 +314,7 @@ class _BuyerPublicStoreProfileScreenState
             slivers: [
               SliverToBoxAdapter(
                 child: ListenableBuilder(
-                  listenable: Listenable.merge([
-                    _topSelling,
-                    _featured,
-                    _products,
-                  ]),
+                  listenable: Listenable.merge([_products]),
                   builder: (context, _) => _StoreHeader(
                     profile: profile,
                     hours: hours,
@@ -374,7 +355,6 @@ class _BuyerPublicStoreProfileScreenState
                       fontSize: 14,
                     ),
                     tabs: const [
-                      Tab(text: 'Shop Front'),
                       Tab(text: 'Products'),
                       Tab(text: 'Store Profile'),
                     ],
@@ -386,13 +366,7 @@ class _BuyerPublicStoreProfileScreenState
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                 sliver: SliverToBoxAdapter(
                   child: switch (_tabs.index) {
-                    0 => _ShopFrontTab(
-                      topSelling: _topSelling,
-                      featured: _featured,
-                      onOpen: widget.onOpenListing,
-                      onSeeAll: _seeAll,
-                    ),
-                    1 => _ProductsTab(
+                    0 => _ProductsTab(
                       profile: profile,
                       products: _products,
                       onOpen: widget.onOpenListing,
@@ -845,263 +819,6 @@ class _InlineNote extends StatelessWidget {
       ],
     ),
   );
-}
-
-class _SeeAll extends StatelessWidget {
-  const _SeeAll({required this.label, required this.onPressed});
-
-  final String label;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    label: 'See all $label',
-    excludeSemantics: true,
-    child: TextButton(
-      onPressed: onPressed,
-      style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text('See all'),
-          Icon(LucideIcons.chevronRight, size: 18),
-        ],
-      ),
-    ),
-  );
-}
-
-/// Shop Front: this store's Top Selling products and a Top Rated / Cheapest switch. Every list
-/// comes from the server's own sort over the store's eligible listings.
-class _ShopFrontTab extends StatefulWidget {
-  const _ShopFrontTab({
-    required this.topSelling,
-    required this.featured,
-    required this.onOpen,
-    required this.onSeeAll,
-  });
-
-  final _StoreProducts? topSelling;
-  final _StoreProducts? featured;
-  final void Function(BuildContext context, String listingId)? onOpen;
-  final ValueChanged<ListingSort> onSeeAll;
-
-  @override
-  State<_ShopFrontTab> createState() => _ShopFrontTabState();
-}
-
-class _ShopFrontTabState extends State<_ShopFrontTab> {
-  static const _highlightCount = 10;
-  static const _gridCount = 6;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      widget.topSelling?.ensureLoaded();
-      widget.featured?.ensureLoaded();
-    });
-  }
-
-  void _open(BuildContext context, ListingCardView card) =>
-      widget.onOpen?.call(context, card.listingId);
-
-  @override
-  Widget build(BuildContext context) {
-    final topSelling = widget.topSelling;
-    final featured = widget.featured;
-    if (topSelling == null || featured == null) {
-      return const _InlineNote(
-        'Product highlights are not available from here. Store details are on Store Profile.',
-      );
-    }
-    return ListenableBuilder(
-      listenable: Listenable.merge([topSelling, featured]),
-      builder: (context, _) => _highlights(context, topSelling, featured),
-    );
-  }
-
-  Widget _highlights(
-    BuildContext context,
-    _StoreProducts topSelling,
-    _StoreProducts featured,
-  ) {
-    if (topSelling.phase == LoadPhase.needsOrigin ||
-        featured.phase == LoadPhase.needsOrigin) {
-      return const Padding(
-        padding: EdgeInsets.only(top: 16),
-        child: StateMessage(
-          kind: StateKind.needsLocation,
-          title: 'Choose a location first',
-          message:
-              'Select a location on the Map to see this store’s products with distance and delivery.',
-        ),
-      );
-    }
-    if (topSelling.phase == LoadPhase.ready &&
-        featured.phase == LoadPhase.ready &&
-        topSelling.items.isEmpty &&
-        featured.items.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.only(top: 16),
-        child: StateMessage(
-          kind: StateKind.empty,
-          title: 'No products to show',
-          message: 'This store has no products with confirmed stock right now.',
-        ),
-      );
-    }
-    final rated = featured.sort == ListingSort.rating;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SectionHeading(
-          'Top Selling',
-          trailing: _SeeAll(
-            label: 'top selling products',
-            onPressed: () => widget.onSeeAll(ListingSort.topSelling),
-          ),
-        ),
-        const SizedBox(height: 4),
-        _topSelling(context, topSelling),
-        const SizedBox(height: 24),
-        SortTabBar(
-          items: [
-            SortTabItem(
-              label: 'Top Rated',
-              selected: rated,
-              onTap: () {
-                if (!rated) featured.reload(sort: ListingSort.rating);
-              },
-            ),
-            SortTabItem(
-              label: 'Cheapest',
-              selected: !rated,
-              onTap: () {
-                if (rated) featured.reload(sort: ListingSort.price);
-              },
-            ),
-          ],
-        ),
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                rated
-                    ? 'Highest product rating from verified purchases'
-                    : 'Lowest listed unit price first',
-                style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
-              ),
-            ),
-            _SeeAll(
-              label: rated ? 'top rated products' : 'cheapest products',
-              onPressed: () => widget.onSeeAll(featured.sort),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        _featured(context, featured),
-      ],
-    );
-  }
-
-  Widget _topSelling(BuildContext context, _StoreProducts topSelling) {
-    final width = MediaQuery.textScalerOf(context).scale(1) > 1.3
-        ? 240.0
-        : 176.0;
-    switch (topSelling.phase) {
-      case LoadPhase.loading:
-      case LoadPhase.needsOrigin:
-        return Row(
-          children: [
-            Expanded(child: SkeletonBox(height: 260)),
-            const SizedBox(width: 10),
-            Expanded(child: SkeletonBox(height: 260)),
-          ],
-        );
-      case LoadPhase.failed:
-        return _InlineNote(
-          'Top selling products could not load.',
-          onRetry: topSelling.reload,
-        );
-      case LoadPhase.ready:
-        final sold = topSelling.items
-            .where((card) => formatQuantity(card.unitsSold) != '0')
-            .take(_highlightCount)
-            .toList(growable: false);
-        if (sold.isEmpty) {
-          return const _InlineNote(
-            'No completed sales yet. Products appear here after verified orders are completed.',
-          );
-        }
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          clipBehavior: Clip.none,
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (final (index, card) in sold.indexed) ...[
-                  if (index > 0) const SizedBox(width: 10),
-                  SizedBox(
-                    width: width,
-                    child: ListingCard(
-                      card: card,
-                      showFavorite: false,
-                      onOpen: () => _open(context, card),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
-    }
-  }
-
-  Widget _featured(BuildContext context, _StoreProducts featured) {
-    switch (featured.phase) {
-      case LoadPhase.loading:
-      case LoadPhase.needsOrigin:
-        return const Row(
-          children: [
-            Expanded(child: SkeletonBox(height: 250)),
-            SizedBox(width: 10),
-            Expanded(child: SkeletonBox(height: 250)),
-          ],
-        );
-      case LoadPhase.failed:
-        return _InlineNote(
-          featured.sort == ListingSort.rating
-              ? 'Top rated products could not load.'
-              : 'Cheapest products could not load.',
-          onRetry: featured.reload,
-        );
-      case LoadPhase.ready:
-        // Unrated listings sort last under Top Rated; they are not "top rated", so they are left out.
-        final items = featured.items
-            .where(
-              (card) =>
-                  featured.sort != ListingSort.rating ||
-                  card.ratingAverage != null,
-            )
-            .take(_gridCount)
-            .toList(growable: false);
-        if (items.isEmpty) {
-          return _InlineNote(
-            featured.sort == ListingSort.rating
-                ? 'No rated products yet. Ratings appear after completed, verified purchases.'
-                : 'No products with confirmed stock right now.',
-          );
-        }
-        return _ListingGrid(
-          items: items,
-          onOpen: (card) => _open(context, card),
-        );
-    }
-  }
 }
 
 /// Two columns of equal-height listing cards; one column under large text.

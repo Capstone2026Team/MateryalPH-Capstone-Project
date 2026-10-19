@@ -21,7 +21,7 @@ final class VendorAddressResolver
         $query = implode(', ', array_filter([$address['unit'], $address['street'], $address['barangay'], $address['city_municipality'], $address['province'], $address['postal_code'], 'Philippines']));
         try {
             $pin = isset($input['pin_token']) ? $this->readToken($organizationId, (string) $input['pin_token'], 'pin') : null;
-            if ($pin !== null && (($pin['city_code'] ?? null) !== $address['city_code'] || (isset($pin['psgc_code']) && $pin['psgc_code'] !== $address['psgc_code']))) {
+            if ($pin !== null && ! $this->matchesPin($pin, $address)) {
                 throw ValidationException::withMessages(['address' => 'The selected locations do not match this pin. Select the pin again or resolve the updated address.']);
             }
             $location = $pin === null ? $this->geocoder->forward($query) : array_intersect_key($pin, array_flip(['latitude', 'longitude', 'formatted_address', 'place_id']));
@@ -49,12 +49,12 @@ final class VendorAddressResolver
         if ($result === null) {
             throw ValidationException::withMessages(['address' => 'This pin could not be resolved to a Philippine address. Move it or retry.']);
         }
-        $matched = $this->directory->match($result);
+        $matched = $this->match($result);
         $address = array_merge($result, $matched, ['latitude' => $latitude, 'longitude' => $longitude]);
-        $location = ['latitude' => $latitude, 'longitude' => $longitude, 'formatted_address' => $result['formatted_address'], 'place_id' => $result['place_id']] + array_intersect_key($matched, array_flip(['city_code', 'psgc_code']));
+        $location = ['latitude' => $latitude, 'longitude' => $longitude, 'formatted_address' => $result['formatted_address'], 'place_id' => $result['place_id']] + array_intersect_key($address, array_flip(['province', 'city_municipality', 'barangay', 'city_code', 'psgc_code']));
 
-        return ['address' => $address, 'pin_token' => isset($matched['city_code']) ? $this->token($organizationId, 'pin', $location) : null,
-            'message' => isset($matched['psgc_code']) ? 'Pin located. Review the matched address before saving.' : 'Pin located. Select any unmatched PSGC locations and complete the detailed address before saving.'];
+        return ['address' => $address, 'pin_token' => $this->token($organizationId, 'pin', $location),
+            'message' => 'Review the address from Google Maps and fill in any missing details.'];
     }
 
     /** @param array<string, mixed> $data */
@@ -83,14 +83,16 @@ final class VendorAddressResolver
      */
     public function validated(string $organizationId, array $input): array
     {
-        $canonical = $this->canonical($input);
         if (($input['source'] ?? null) === 'MANUAL') {
+            $canonical = $this->canonical($input);
+
             return $canonical + [
                 'source' => 'MANUAL', 'provider' => null, 'provider_place_id' => null,
                 'latitude' => null, 'longitude' => null,
                 'formatted_address' => implode(', ', array_filter([$canonical['unit'], $canonical['street'], $canonical['barangay'], $canonical['city_municipality'], $canonical['province'], $canonical['postal_code'], 'Philippines'])),
             ];
         }
+        $canonical = $this->hasCodes($input) ? $this->canonical($input) : $this->fields($input);
         try {
             $resolution = json_decode(Crypt::decryptString((string) ($input['resolution_token'] ?? '')), true, 32, JSON_THROW_ON_ERROR);
         } catch (DecryptException|\JsonException) {
@@ -109,10 +111,58 @@ final class VendorAddressResolver
      */
     private function canonical(array $input): array
     {
-        return $this->directory->validateAddress($input) + [
-            'street' => trim((string) ($input['street'] ?? '')),
-            'unit' => trim((string) ($input['unit'] ?? '')),
-            'postal_code' => trim((string) ($input['postal_code'] ?? '')),
-        ];
+        if ($this->hasCodes($input)) {
+            return $this->directory->validateAddress($input) + array_intersect_key($this->fields($input), array_flip(['street', 'unit', 'postal_code']));
+        }
+        $fields = $this->fields($input);
+
+        return $fields + array_intersect_key($this->match($fields), array_flip(['province_code', 'city_code', 'psgc_code', 'psgc_source']));
+    }
+
+    /** @param array<string, mixed> $input */
+    private function hasCodes(array $input): bool
+    {
+        return isset($input['province_code']) || isset($input['city_code']) || isset($input['psgc_code']);
+    }
+
+    /** @param array<string, mixed> $input
+     * @return array<string, string>
+     */
+    private function fields(array $input): array
+    {
+        $fields = [];
+        foreach (['province', 'city_municipality', 'barangay', 'street', 'unit', 'postal_code'] as $field) {
+            $fields[$field] = trim((string) ($input[$field] ?? ''));
+        }
+
+        return $fields;
+    }
+
+    /** @param array<string, mixed> $address
+     * @return array<string, mixed>
+     */
+    private function match(array $address): array
+    {
+        try {
+            $matched = $this->directory->match($address);
+        } catch (ValidationException) {
+            return [];
+        }
+
+        return $matched + (isset($matched['city_code']) ? ['psgc_source' => 'PSGC_CLOUD_V2'] : []);
+    }
+
+    /** @param array<string, mixed> $pin
+     * @param  array<string, mixed>  $address
+     */
+    private function matchesPin(array $pin, array $address): bool
+    {
+        foreach (['city_code', 'psgc_code', 'province', 'city_municipality', 'barangay'] as $field) {
+            if (! empty($pin[$field]) && ! empty($address[$field]) && mb_strtolower((string) $pin[$field]) !== mb_strtolower((string) $address[$field])) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

@@ -37,9 +37,16 @@ void main() {
       await tester.scrollUntilVisible(find.text('Ranking Preferences'), 180);
       await tester.tap(find.text('Ranking Preferences'));
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Item-Based ranking'));
+      await tester.pumpAndSettle();
       expect(find.byType(RankingPreferencesScreen), findsOneWidget);
+      expect(find.text('Ranking Influence'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Using the platform default weights'),
+        160,
+      );
       expect(find.text('Using the platform default weights'), findsOneWidget);
-      expect(find.text('Total 100%'), findsOneWidget);
+      expect(find.text('Preferences are up to date'), findsOneWidget);
       expect(find.text('This feature is not available yet.'), findsNothing);
     },
   );
@@ -84,53 +91,27 @@ void main() {
       cart.dispose();
     },
   );
-  test(
-    'every one-percent adjustment stays exactly 100 including single-factor allocations',
-    () {
-      const defaults = RankingWeights.approvedDefault;
-      const keys = ['distance', 'price', 'vps', 'stock', 'product_rating'];
-      for (final start in [
-        defaults,
-        defaults.rebalance('distance', 100, defaults: defaults),
-      ]) {
-        for (final key in keys) {
-          for (var value = 0; value <= 100; value++) {
-            final weights = start.rebalance(key, value, defaults: defaults);
-            expect(weights.total, 100);
-            expect(weights.valueOf(key), value);
-            expect(
-              keys.every(
-                (item) =>
-                    weights.valueOf(item) >= 0 && weights.valueOf(item) <= 100,
-              ),
-              isTrue,
-            );
-            expect(weights, start.rebalance(key, value, defaults: defaults));
-          }
-        }
+  test('each importance adjustment changes only that criterion', () {
+    const defaults = RankingWeights.approvedDefault;
+    for (final key in defaults.toMap().keys) {
+      for (var value = 0; value <= 100; value++) {
+        final weights = defaults.withValue(key, value);
+        expect(weights.toMap(), {...defaults.toMap(), key: value});
+        expect(
+          defaults.toMap()[key],
+          RankingWeights.approvedDefault.toMap()[key],
+        );
       }
-      expect(
-        defaults.rebalance('distance', 40, defaults: defaults),
-        const RankingWeights(
-          distance: 40,
-          price: 21,
-          vps: 17,
-          stock: 13,
-          productRating: 9,
-        ),
-      );
-      expect(
-        defaults.rebalance('distance', 20, defaults: defaults),
-        const RankingWeights(
-          distance: 20,
-          price: 29,
-          vps: 23,
-          stock: 17,
-          productRating: 11,
-        ),
-      );
-    },
-  );
+    }
+    expect(defaults.withValue('distance', 100).total, 170);
+    expect(defaults.withValue('distance', 100).valid, isTrue);
+    expect(
+      RankingWeights.fromMap({
+        for (final key in defaults.toMap().keys) key: 0,
+      }).valid,
+      isFalse,
+    );
+  });
 
   test('sort wire values round trip and explicit direction is independent', () {
     for (final sort in ListingSort.values) {

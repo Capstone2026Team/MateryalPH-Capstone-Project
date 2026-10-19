@@ -24,9 +24,9 @@ export interface ProjectCompile {
      */
     lockVersion: number;
     /**
-     *
+     * Optional. The scan always uses the fixed 50 km Project-Based radius around the locked Project site.
      */
-    radiusKm: ProjectCompileRadiusKmEnum;
+    radiusKm?: ProjectCompileRadiusKmEnum;
 }
 
 
@@ -34,11 +34,6 @@ export interface ProjectCompile {
  * @export
  */
 export const ProjectCompileRadiusKmEnum = {
-    NUMBER_5: 5,
-    NUMBER_10: 10,
-    NUMBER_20: 20,
-    NUMBER_30: 30,
-    NUMBER_40: 40,
     NUMBER_50: 50,
 } as const;
 export type ProjectCompileRadiusKmEnum = typeof ProjectCompileRadiusKmEnum[keyof typeof ProjectCompileRadiusKmEnum];
@@ -49,7 +44,6 @@ export type ProjectCompileRadiusKmEnum = typeof ProjectCompileRadiusKmEnum[keyof
  */
 export function instanceOfProjectCompile(value: object): value is ProjectCompile {
     if ((!('lockVersion' in (value as Record<string, any>)) && !('lock_version' in (value as Record<string, any>))) || ((value as Record<string, any>)['lockVersion'] === undefined && (value as Record<string, any>)['lock_version'] === undefined)) return false;
-    if ((!('radiusKm' in (value as Record<string, any>)) && !('radius_km' in (value as Record<string, any>))) || ((value as Record<string, any>)['radiusKm'] === undefined && (value as Record<string, any>)['radius_km'] === undefined)) return false;
     return true;
 }
 
@@ -64,7 +58,7 @@ export function ProjectCompileFromJSONTyped(json: any, ignoreDiscriminator: bool
     return {
 
         'lockVersion': json['lock_version'],
-        'radiusKm': json['radius_km'],
+        'radiusKm': json['radius_km'] == null ? undefined : json['radius_km'],
     };
 }
 

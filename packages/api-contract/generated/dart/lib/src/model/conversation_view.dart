@@ -29,8 +29,8 @@ part 'conversation_view.g.dart';
 /// * [canTransfer]
 /// * [canListFulfillmentConversations] - Current vendor Owner or Store Manager may list this sales inquiry buyer's fulfillment conversations. False for other roles and fulfillment threads.
 /// * [mainConversationId] - Currently authorized Item-Based main conversation for this Buyer and Store. Null if the viewer cannot access it or this is a fulfillment thread.
-/// * [projectInquiryCount] - Number of currently authorized project inquiries for this Buyer and Store.
-/// * [projectUnreadCount] - Received unread messages across all currently authorized project inquiries, including every page. Opening the main thread does not mark these messages read.
+/// * [projectInquiryCount] - Number of currently authorized open project quotation inquiries for this Buyer and Store, using the project-inquiries list filter.
+/// * [projectUnreadCount] - Received unread messages across all currently authorized open project quotation inquiries, including every page. Opening the main thread does not mark these messages read.
 /// * [inquiryLabel] - Work Package name for a project inquiry, or Item inquiry for the main thread.
 /// * [fulfillmentUnreadCount] - Unread received messages across every fulfillment conversation for this inquiry buyer and store, including history and all pages. Zero unless can_list_fulfillment_conversations is true. Does not include sales messages or mark messages read.
 /// * [fulfillmentEntryEnabled]
@@ -92,11 +92,11 @@ abstract class ConversationView implements Built<ConversationView, ConversationV
   @BuiltValueField(wireName: r'main_conversation_id')
   String? get mainConversationId;
 
-  /// Number of currently authorized project inquiries for this Buyer and Store.
+  /// Number of currently authorized open project quotation inquiries for this Buyer and Store, using the project-inquiries list filter.
   @BuiltValueField(wireName: r'project_inquiry_count')
   int? get projectInquiryCount;
 
-  /// Received unread messages across all currently authorized project inquiries, including every page. Opening the main thread does not mark these messages read.
+  /// Received unread messages across all currently authorized open project quotation inquiries, including every page. Opening the main thread does not mark these messages read.
   @BuiltValueField(wireName: r'project_unread_count')
   int? get projectUnreadCount;
 

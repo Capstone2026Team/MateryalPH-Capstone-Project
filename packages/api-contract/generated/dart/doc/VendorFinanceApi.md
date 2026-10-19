@@ -11,6 +11,7 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**approveVendorOnlineBalance**](VendorFinanceApi.md#approvevendoronlinebalance) | **POST** /vendor/orders/{orderId}/online-balance/approve |
 [**exportVendorTransactions**](VendorFinanceApi.md#exportvendortransactions) | **GET** /vendor/finance/transactions/export |
+[**getVendorCommissionMonitoring**](VendorFinanceApi.md#getvendorcommissionmonitoring) | **GET** /vendor/finance/commissions |
 [**getVendorEarnings**](VendorFinanceApi.md#getvendorearnings) | **GET** /vendor/finance/earnings |
 [**getVendorFeePayment**](VendorFinanceApi.md#getvendorfeepayment) | **GET** /vendor/finance/payments/{paymentId} |
 [**getVendorFeeStatement**](VendorFinanceApi.md#getvendorfeestatement) | **GET** /vendor/finance/statements/{statementId} |
@@ -130,6 +131,57 @@ Name | Type | Description  | Notes
 
  - **Content-Type**: Not defined
  - **Accept**: text/csv, application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getVendorCommissionMonitoring**
+> VendorCommissionMonitoringEnvelope getVendorCommissionMonitoring(page)
+
+
+
+Owner-only all-time commission monitoring with current and next policy, estimated and earned fees, approved credits, unbilled fees, draft bills, issued outstanding and overdue debt, verified allocations and successful fee refunds. Assessments are paginated and retain their original basis and percentage. Cash and earnings are separate; no wallet balance is represented.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getVendorFinanceApi();
+final int page = 56; // int |
+
+try {
+    final response = api.getVendorCommissionMonitoring(page);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling VendorFinanceApi->getVendorCommissionMonitoring: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **page** | **int**|  | [optional] [default to 1]
+
+### Return type
+
+[**VendorCommissionMonitoringEnvelope**](VendorCommissionMonitoringEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 

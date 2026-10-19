@@ -19,7 +19,7 @@ part 'ranking_preferences.g.dart';
 /// * [defaultsVersion]
 /// * [personalized] - True while a Buyer override is stored.
 /// * [version] - 0 when following the platform defaults.
-/// * [totalPercent]
+/// * [totalPercent] - Legacy field name for the sum of raw importance values; need not be 100.
 /// * [algorithmVersion]
 @BuiltValue()
 abstract class RankingPreferences implements Built<RankingPreferences, RankingPreferencesBuilder> {
@@ -44,9 +44,9 @@ abstract class RankingPreferences implements Built<RankingPreferences, RankingPr
   @BuiltValueField(wireName: r'version')
   int get version;
 
+  /// Legacy field name for the sum of raw importance values; need not be 100.
   @BuiltValueField(wireName: r'total_percent')
-  RankingPreferencesTotalPercentEnum get totalPercent;
-  // enum totalPercentEnum {  100,  };
+  int get totalPercent;
 
   @BuiltValueField(wireName: r'algorithm_version')
   String get algorithmVersion;
@@ -107,7 +107,7 @@ class _$RankingPreferencesSerializer implements PrimitiveSerializer<RankingPrefe
     yield r'total_percent';
     yield serializers.serialize(
       object.totalPercent,
-      specifiedType: const FullType(RankingPreferencesTotalPercentEnum),
+      specifiedType: const FullType(int),
     );
     yield r'algorithm_version';
     yield serializers.serialize(
@@ -182,8 +182,8 @@ class _$RankingPreferencesSerializer implements PrimitiveSerializer<RankingPrefe
         case r'total_percent':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(RankingPreferencesTotalPercentEnum),
-          ) as RankingPreferencesTotalPercentEnum;
+            specifiedType: const FullType(int),
+          ) as int;
           result.totalPercent = valueDes;
           break;
         case r'algorithm_version':
@@ -234,18 +234,5 @@ class RankingPreferencesProcurementTypeEnum extends EnumClass {
 
   static BuiltSet<RankingPreferencesProcurementTypeEnum> get values => _$rankingPreferencesProcurementTypeEnumValues;
   static RankingPreferencesProcurementTypeEnum valueOf(String name) => _$rankingPreferencesProcurementTypeEnumValueOf(name);
-}
-
-class RankingPreferencesTotalPercentEnum extends EnumClass {
-
-  @BuiltValueEnumConst(wireNumber: 100)
-  static const RankingPreferencesTotalPercentEnum number100 = _$rankingPreferencesTotalPercentEnum_number100;
-
-  static Serializer<RankingPreferencesTotalPercentEnum> get serializer => _$rankingPreferencesTotalPercentEnumSerializer;
-
-  const RankingPreferencesTotalPercentEnum._(String name): super(name);
-
-  static BuiltSet<RankingPreferencesTotalPercentEnum> get values => _$rankingPreferencesTotalPercentEnumValues;
-  static RankingPreferencesTotalPercentEnum valueOf(String name) => _$rankingPreferencesTotalPercentEnumValueOf(name);
 }
 

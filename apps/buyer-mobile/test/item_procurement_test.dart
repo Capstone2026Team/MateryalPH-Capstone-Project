@@ -383,43 +383,71 @@ void main() {
   });
 
   group('Ranking preferences', () {
-    testWidgets(
-      'automatically balance to 100%, save personalization and reset',
-      (tester) async {
-        final repository = FakeProcurementRepository();
-        await _pump(tester, RankingPreferencesScreen(repository: repository));
-        await tester.pumpAndSettle();
-        expect(find.text('Using the platform default weights'), findsOneWidget);
-        expect(find.text('Total 100%'), findsOneWidget);
-        FilledButton save() => tester.widget<FilledButton>(
-          find.widgetWithText(FilledButton, 'Save preferences'),
-        );
-        expect(save().onPressed, isNull, reason: 'Nothing changed yet.');
+    testWidgets('independent sliders save raw values, restore and reset', (
+      tester,
+    ) async {
+      final repository = FakeProcurementRepository();
+      await _pump(tester, RankingPreferencesScreen(repository: repository));
+      await tester.pumpAndSettle();
+      expect(find.text('Using the platform default weights'), findsOneWidget);
+      expect(find.text('Preferences are up to date'), findsOneWidget);
+      FilledButton save() => tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Save preferences'),
+      );
+      expect(save().onPressed, isNull, reason: 'Nothing changed yet.');
 
-        await tester.tap(find.byTooltip('Increase Distance'));
-        await tester.pump();
-        expect(find.text('Total 100%'), findsOneWidget);
-        expect(save().onPressed, isNotNull);
-        await tester.tap(find.byTooltip('Decrease Distance'));
-        await tester.pump();
-        expect(find.text('Total 100%'), findsOneWidget);
-        final slider = tester.widget<Slider>(find.byType(Slider).first);
-        slider.onChanged!(40);
-        await tester.pump();
-        await tester.tap(find.widgetWithText(FilledButton, 'Save preferences'));
-        await tester.pumpAndSettle();
-        expect(repository.savedWeights.single.total, 100);
-        expect(repository.savedWeights.single.distance, 40);
-        expect(find.text('Personalized ranking is active'), findsOneWidget);
+      await tester.tap(find.byTooltip('Increase Distance'));
+      await tester.pump();
+      expect(find.text('Save to apply your changes'), findsOneWidget);
+      expect(save().onPressed, isNotNull);
+      await tester.tap(find.byTooltip('Decrease Distance'));
+      await tester.pump();
+      expect(find.text('Preferences are up to date'), findsOneWidget);
+      final slider = tester.widget<Slider>(find.byType(Slider).first);
+      slider.onChanged!(40);
+      await tester.pump();
+      expect(repository.savedWeights, isEmpty);
+      expect(
+        tester
+            .widget<Slider>(find.byKey(const ValueKey('ranking-weight-price')))
+            .value,
+        25,
+      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Save preferences'));
+      await tester.pumpAndSettle();
+      expect(repository.savedWeights.single.toMap(), {
+        ...RankingWeights.approvedDefault.toMap(),
+        'distance': 40,
+      });
+      expect(repository.savedWeights.single.distance, 40);
+      expect(find.text('Personalized ranking is active'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+      await _pump(tester, RankingPreferencesScreen(repository: repository));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<Slider>(
+              find.byKey(const ValueKey('ranking-weight-distance')),
+            )
+            .value,
+        40,
+      );
 
-        await tester.tap(find.text('Reset to Default'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.widgetWithText(FilledButton, 'Reset to Default'));
-        await tester.pumpAndSettle();
-        expect(find.text('Using the platform default weights'), findsOneWidget);
-        expect(find.text('30%'), findsOneWidget);
-      },
-    );
+      await tester.ensureVisible(find.byTooltip('Reset to Default'));
+      await tester.tap(find.byTooltip('Reset to Default'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Reset to Default'));
+      await tester.pumpAndSettle();
+      expect(find.text('Using the platform default weights'), findsOneWidget);
+      expect(
+        tester
+            .widget<Slider>(
+              find.byKey(const ValueKey('ranking-weight-distance')),
+            )
+            .value,
+        30,
+      );
+    });
   });
 
   group('Cart and checkout preview', () {

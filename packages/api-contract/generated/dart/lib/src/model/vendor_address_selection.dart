@@ -8,9 +8,12 @@ import 'package:built_value/serializer.dart';
 
 part 'vendor_address_selection.g.dart';
 
-/// VendorAddressSelection
+/// Supply address names or all three legacy PSGC codes. Missing or ambiguous geographic references do not block named address entry.
 ///
 /// Properties:
+/// * [province]
+/// * [cityMunicipality]
+/// * [barangay]
 /// * [pinToken] - Optional server-issued map pin token; never raw coordinates.
 /// * [provinceCode] - Province code or region code for a city without a province parent.
 /// * [cityCode]
@@ -20,20 +23,29 @@ part 'vendor_address_selection.g.dart';
 /// * [postalCode]
 @BuiltValue()
 abstract class VendorAddressSelection implements Built<VendorAddressSelection, VendorAddressSelectionBuilder> {
+  @BuiltValueField(wireName: r'province')
+  String? get province;
+
+  @BuiltValueField(wireName: r'city_municipality')
+  String? get cityMunicipality;
+
+  @BuiltValueField(wireName: r'barangay')
+  String? get barangay;
+
   /// Optional server-issued map pin token; never raw coordinates.
   @BuiltValueField(wireName: r'pin_token')
   String? get pinToken;
 
   /// Province code or region code for a city without a province parent.
   @BuiltValueField(wireName: r'province_code')
-  String get provinceCode;
+  String? get provinceCode;
 
   @BuiltValueField(wireName: r'city_code')
-  String get cityCode;
+  String? get cityCode;
 
   /// Official barangay code.
   @BuiltValueField(wireName: r'psgc_code')
-  String get psgcCode;
+  String? get psgcCode;
 
   @BuiltValueField(wireName: r'street')
   String? get street;
@@ -67,6 +79,27 @@ class _$VendorAddressSelectionSerializer implements PrimitiveSerializer<VendorAd
     VendorAddressSelection object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.province != null) {
+      yield r'province';
+      yield serializers.serialize(
+        object.province,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.cityMunicipality != null) {
+      yield r'city_municipality';
+      yield serializers.serialize(
+        object.cityMunicipality,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.barangay != null) {
+      yield r'barangay';
+      yield serializers.serialize(
+        object.barangay,
+        specifiedType: const FullType(String),
+      );
+    }
     if (object.pinToken != null) {
       yield r'pin_token';
       yield serializers.serialize(
@@ -74,21 +107,27 @@ class _$VendorAddressSelectionSerializer implements PrimitiveSerializer<VendorAd
         specifiedType: const FullType.nullable(String),
       );
     }
-    yield r'province_code';
-    yield serializers.serialize(
-      object.provinceCode,
-      specifiedType: const FullType(String),
-    );
-    yield r'city_code';
-    yield serializers.serialize(
-      object.cityCode,
-      specifiedType: const FullType(String),
-    );
-    yield r'psgc_code';
-    yield serializers.serialize(
-      object.psgcCode,
-      specifiedType: const FullType(String),
-    );
+    if (object.provinceCode != null) {
+      yield r'province_code';
+      yield serializers.serialize(
+        object.provinceCode,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.cityCode != null) {
+      yield r'city_code';
+      yield serializers.serialize(
+        object.cityCode,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.psgcCode != null) {
+      yield r'psgc_code';
+      yield serializers.serialize(
+        object.psgcCode,
+        specifiedType: const FullType(String),
+      );
+    }
     if (object.street != null) {
       yield r'street';
       yield serializers.serialize(
@@ -133,6 +172,30 @@ class _$VendorAddressSelectionSerializer implements PrimitiveSerializer<VendorAd
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'province':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.province = valueDes;
+          break;
+        case r'city_municipality':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.cityMunicipality = valueDes;
+          break;
+        case r'barangay':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.barangay = valueDes;
+          break;
         case r'pin_token':
           final valueDes = serializers.deserialize(
             value,
@@ -144,22 +207,25 @@ class _$VendorAddressSelectionSerializer implements PrimitiveSerializer<VendorAd
         case r'province_code':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(String),
-          ) as String;
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
           result.provinceCode = valueDes;
           break;
         case r'city_code':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(String),
-          ) as String;
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
           result.cityCode = valueDes;
           break;
         case r'psgc_code':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(String),
-          ) as String;
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
           result.psgcCode = valueDes;
           break;
         case r'street':

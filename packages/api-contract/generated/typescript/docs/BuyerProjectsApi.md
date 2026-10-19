@@ -8,27 +8,36 @@ All URIs are relative to */api/v1*
 | [**closeWorkPackage**](BuyerProjectsApi.md#closeworkpackage) | **POST** /buyers/work-packages/{packageId}/close |  |
 | [**compileProjectEstimates**](BuyerProjectsApi.md#compileprojectestimates) | **POST** /buyers/work-packages/{packageId}/estimates |  |
 | [**createProject**](BuyerProjectsApi.md#createproject) | **POST** /buyers/projects |  |
+| [**createProjectArrangement**](BuyerProjectsApi.md#createprojectarrangement) | **POST** /buyers/work-packages/{packageId}/arrangements |  |
 | [**createWorkPackage**](BuyerProjectsApi.md#createworkpackage) | **POST** /buyers/projects/{projectId}/work-packages |  |
 | [**deleteProject**](BuyerProjectsApi.md#deleteproject) | **DELETE** /buyers/projects/{projectId} |  |
 | [**deleteWorkPackage**](BuyerProjectsApi.md#deleteworkpackage) | **DELETE** /buyers/work-packages/{packageId} |  |
+| [**editProjectArrangement**](BuyerProjectsApi.md#editprojectarrangement) | **PATCH** /buyers/work-packages/{packageId}/arrangements/{arrangementId} |  |
 | [**editWorkPackage**](BuyerProjectsApi.md#editworkpackage) | **PUT** /buyers/work-packages/{packageId} |  |
 | [**estimateWorkPackageBudget**](BuyerProjectsApi.md#estimateworkpackagebudget) | **POST** /buyers/projects/{projectId}/work-package-estimate |  |
 | [**getProject**](BuyerProjectsApi.md#getproject) | **GET** /buyers/projects/{projectId} |  |
+| [**getProjectArrangement**](BuyerProjectsApi.md#getprojectarrangement) | **GET** /buyers/work-packages/{packageId}/arrangements/{arrangementId} |  |
 | [**getProjectCandidateRoute**](BuyerProjectsApi.md#getprojectcandidateroute) | **POST** /buyers/work-packages/{packageId}/candidates/{candidateId}/route |  |
 | [**getProjectEstimates**](BuyerProjectsApi.md#getprojectestimates) | **GET** /buyers/work-packages/{packageId}/estimates |  |
 | [**getProjectRankingPreferences**](BuyerProjectsApi.md#getprojectrankingpreferences) | **GET** /buyers/project-ranking-preferences |  |
 | [**getWorkPackage**](BuyerProjectsApi.md#getworkpackage) | **GET** /buyers/work-packages/{packageId} |  |
+| [**inquireProjectArrangementVendor**](BuyerProjectsApi.md#inquireprojectarrangementvendor) | **POST** /buyers/work-packages/{packageId}/arrangements/{arrangementId}/vendors/{vendorId}/inquiry |  |
 | [**inquireProjectVendor**](BuyerProjectsApi.md#inquireprojectvendor) | **POST** /buyers/work-packages/{packageId}/inquiries |  |
+| [**listProjectArrangementOptions**](BuyerProjectsApi.md#listprojectarrangementoptions) | **GET** /buyers/work-packages/{packageId}/arrangement-options |  |
 | [**listProjects**](BuyerProjectsApi.md#listprojects) | **GET** /buyers/projects |  |
 | [**listWorkPackageLineAlternatives**](BuyerProjectsApi.md#listworkpackagelinealternatives) | **GET** /buyers/work-packages/{packageId}/lines/{lineId}/alternatives |  |
 | [**previewProjectSpecificationSelection**](BuyerProjectsApi.md#previewprojectspecificationselection) | **POST** /buyers/work-packages/{packageId}/candidates/{candidateId}/selection-preview |  |
 | [**previewWorkPackageCsv**](BuyerProjectsApi.md#previewworkpackagecsv) | **POST** /buyers/work-packages/import-preview |  |
 | [**reactivateWorkPackage**](BuyerProjectsApi.md#reactivateworkpackage) | **POST** /buyers/work-packages/{packageId}/reactivate |  |
+| [**removeProjectDraftItem**](BuyerProjectsApi.md#removeprojectdraftitem) | **DELETE** /buyers/work-packages/{packageId}/candidates/{candidateId}/draft-items/{lineId}/{variantId} |  |
+| [**requestProjectDraftSupplier**](BuyerProjectsApi.md#requestprojectdraftsupplier) | **POST** /buyers/work-packages/{packageId}/candidates/{candidateId}/suppliers/{vendorId}/request |  |
 | [**resetProjectRankingPreferences**](BuyerProjectsApi.md#resetprojectrankingpreferences) | **POST** /buyers/project-ranking-preferences/reset |  |
 | [**resolveProjectMissingLine**](BuyerProjectsApi.md#resolveprojectmissingline) | **PUT** /buyers/work-packages/{packageId}/missing-lines/{lineId} |  |
+| [**saveProjectDraftItem**](BuyerProjectsApi.md#saveprojectdraftitem) | **PUT** /buyers/work-packages/{packageId}/candidates/{candidateId}/draft-items/{lineId}/{variantId} |  |
 | [**saveProjectRankingPreferences**](BuyerProjectsApi.md#saveprojectrankingpreferences) | **PUT** /buyers/project-ranking-preferences |  |
 | [**searchProjectMaterials**](BuyerProjectsApi.md#searchprojectmaterials) | **GET** /buyers/project-materials |  |
 | [**selectProjectVendor**](BuyerProjectsApi.md#selectprojectvendor) | **POST** /buyers/work-packages/{packageId}/selection |  |
+| [**submitProjectArrangement**](BuyerProjectsApi.md#submitprojectarrangement) | **POST** /buyers/work-packages/{packageId}/arrangements/{arrangementId}/submit |  |
 | [**updateProject**](BuyerProjectsApi.md#updateproject) | **PATCH** /buyers/projects/{projectId} |  |
 
 
@@ -202,7 +211,7 @@ example().catch(console.error);
 
 
 
-Scan eligible Bulk Yes Tier 2 offers within the confirmed radius from the Project site. FMS uses exact normalized weights. Unknown delivery cost remains pending; schedules never change validity or score.
+Scan eligible Bulk Yes Tier 2 offers within the fixed 50 km Project-Based radius from the Project site. FMS uses exact normalized weights. Unknown delivery cost remains pending; schedules never change validity or score.
 
 ### Example
 
@@ -352,6 +361,86 @@ example().catch(console.error);
 | **409** | Stale version, expired estimate, source change or already selected Vendor; no mutation. |  -  |
 | **422** | Validation, fulfillment review or written budget override required. |  -  |
 | **503** | Provider unavailable; retry without fabricated values. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## createProjectArrangement
+
+> ProjectArrangementResponse createProjectArrangement(packageId, idempotencyKey, projectArrangementCreate)
+
+
+
+### Example
+
+```ts
+import {
+  Configuration,
+  BuyerProjectsApi,
+} from '@materyalph/api-client-ts';
+import type { CreateProjectArrangementRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new BuyerProjectsApi(config);
+
+  const body = {
+    // string
+    packageId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // ProjectArrangementCreate
+    projectArrangementCreate: ...,
+  } satisfies CreateProjectArrangementRequest;
+
+  try {
+    const data = await api.createProjectArrangement(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **packageId** | `string` |  | [Defaults to `undefined`] |
+| **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
+| **projectArrangementCreate** | [ProjectArrangementCreate](ProjectArrangementCreate.md) |  | |
+
+### Return type
+
+[**ProjectArrangementResponse**](ProjectArrangementResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **201** | Saved successfully. |  -  |
+| **401** | Authentication required. |  -  |
+| **403** | Current Buyer authorization required. |  -  |
+| **404** | Owned Work Package or current arrangement not found. |  -  |
+| **409** | Arrangement, inventory, price or version changed; refresh. |  -  |
+| **422** | Review specifications, fulfillment, payment or budget. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -599,6 +688,86 @@ example().catch(console.error);
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## editProjectArrangement
+
+> ProjectArrangementResponse editProjectArrangement(packageId, arrangementId, projectArrangementEdit)
+
+
+
+### Example
+
+```ts
+import {
+  Configuration,
+  BuyerProjectsApi,
+} from '@materyalph/api-client-ts';
+import type { EditProjectArrangementRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new BuyerProjectsApi(config);
+
+  const body = {
+    // string
+    packageId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    arrangementId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // ProjectArrangementEdit
+    projectArrangementEdit: ...,
+  } satisfies EditProjectArrangementRequest;
+
+  try {
+    const data = await api.editProjectArrangement(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **packageId** | `string` |  | [Defaults to `undefined`] |
+| **arrangementId** | `string` |  | [Defaults to `undefined`] |
+| **projectArrangementEdit** | [ProjectArrangementEdit](ProjectArrangementEdit.md) |  | |
+
+### Return type
+
+[**ProjectArrangementResponse**](ProjectArrangementResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Server-authoritative procurement arrangement. |  -  |
+| **401** | Authentication required. |  -  |
+| **403** | Current Buyer authorization required. |  -  |
+| **404** | Owned Work Package or current arrangement not found. |  -  |
+| **409** | Arrangement, inventory, price or version changed; refresh. |  -  |
+| **422** | Review specifications, fulfillment, payment or budget. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## editWorkPackage
 
 > WorkPackageViewResponse editWorkPackage(packageId, idempotencyKey, workPackageInput)
@@ -688,7 +857,7 @@ example().catch(console.error);
 
 
 
-Advisory materials-only budget estimate for a Work Package being drafted. Each catalog line is priced at the half-up average of one price per eligible Vendor (that Vendor\&#39;s lowest exact match) within the radius of the site. Unlisted and unmatched lines carry no price. Excludes delivery fees and labor. Nothing is stored.
+Advisory budget estimate for a Work Package being drafted. Each catalog line is priced at the half-up average of one price per eligible Vendor (that Vendor\&#39;s lowest exact match) within the radius of the site. Unlisted and unmatched lines carry no price. Excludes labor and processing fees. Site Delivery and Both include actual route/vehicle estimates for a representative exact-match supplier plan, consolidated per supplier. Unknown delivery remains null. Nothing is stored.
 
 ### Example
 
@@ -841,6 +1010,83 @@ example().catch(console.error);
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## getProjectArrangement
+
+> ProjectArrangementResponse getProjectArrangement(packageId, arrangementId)
+
+
+
+### Example
+
+```ts
+import {
+  Configuration,
+  BuyerProjectsApi,
+} from '@materyalph/api-client-ts';
+import type { GetProjectArrangementRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new BuyerProjectsApi(config);
+
+  const body = {
+    // string
+    packageId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    arrangementId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+  } satisfies GetProjectArrangementRequest;
+
+  try {
+    const data = await api.getProjectArrangement(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **packageId** | `string` |  | [Defaults to `undefined`] |
+| **arrangementId** | `string` |  | [Defaults to `undefined`] |
+
+### Return type
+
+[**ProjectArrangementResponse**](ProjectArrangementResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Server-authoritative procurement arrangement. |  -  |
+| **401** | Authentication required. |  -  |
+| **403** | Current Buyer authorization required. |  -  |
+| **404** | Owned Work Package or current arrangement not found. |  -  |
+| **409** | Arrangement, inventory, price or version changed; refresh. |  -  |
+| **422** | Review specifications, fulfillment, payment or budget. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## getProjectCandidateRoute
 
 > ProjectRouteResponse getProjectCandidateRoute(packageId, candidateId)
@@ -923,7 +1169,7 @@ example().catch(console.error);
 
 ## getProjectEstimates
 
-> ProjectEstimatePageResponse getProjectEstimates(packageId, page, sort, favoritesOnly, completeOnly, withinBudget)
+> ProjectEstimatePageResponse getProjectEstimates(packageId, page, sort, direction, favoritesOnly, completeOnly, withinBudget)
 
 
 
@@ -953,6 +1199,8 @@ async function example() {
     page: 56,
     // 'BEST_MATCH' | 'BUDGET_FIT' | 'RATING' | 'PRICE' (optional)
     sort: sort_example,
+    // 'ASC' | 'DESC' | ASC is low to high and DESC high to low. Omitted, each ordering opens on its default: BUDGET_FIT and RATING DESC (best first), PRICE ASC (cheapest first). Ignored for BEST_MATCH, a fixed ranking. A Vendor without a value (no rating, cost under review) is always last, and ties go to the nearest store. (optional)
+    direction: direction_example,
     // boolean (optional)
     favoritesOnly: true,
     // boolean (optional)
@@ -981,6 +1229,7 @@ example().catch(console.error);
 | **packageId** | `string` |  | [Defaults to `undefined`] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
 | **sort** | `BEST_MATCH`, `BUDGET_FIT`, `RATING`, `PRICE` |  | [Optional] [Defaults to `undefined`] [Enum: BEST_MATCH, BUDGET_FIT, RATING, PRICE] |
+| **direction** | `ASC`, `DESC` | ASC is low to high and DESC high to low. Omitted, each ordering opens on its default: BUDGET_FIT and RATING DESC (best first), PRICE ASC (cheapest first). Ignored for BEST_MATCH, a fixed ranking. A Vendor without a value (no rating, cost under review) is always last, and ties go to the nearest store. | [Optional] [Defaults to `undefined`] [Enum: ASC, DESC] |
 | **favoritesOnly** | `boolean` |  | [Optional] [Defaults to `undefined`] |
 | **completeOnly** | `boolean` |  | [Optional] [Defaults to `undefined`] |
 | **withinBudget** | `boolean` |  | [Optional] [Defaults to `undefined`] |
@@ -1162,6 +1411,89 @@ example().catch(console.error);
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## inquireProjectArrangementVendor
+
+> ProjectArrangementResponse inquireProjectArrangementVendor(packageId, arrangementId, vendorId, projectArrangementInquiry)
+
+
+
+### Example
+
+```ts
+import {
+  Configuration,
+  BuyerProjectsApi,
+} from '@materyalph/api-client-ts';
+import type { InquireProjectArrangementVendorRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new BuyerProjectsApi(config);
+
+  const body = {
+    // string
+    packageId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    arrangementId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    vendorId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // ProjectArrangementInquiry
+    projectArrangementInquiry: ...,
+  } satisfies InquireProjectArrangementVendorRequest;
+
+  try {
+    const data = await api.inquireProjectArrangementVendor(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **packageId** | `string` |  | [Defaults to `undefined`] |
+| **arrangementId** | `string` |  | [Defaults to `undefined`] |
+| **vendorId** | `string` |  | [Defaults to `undefined`] |
+| **projectArrangementInquiry** | [ProjectArrangementInquiry](ProjectArrangementInquiry.md) |  | |
+
+### Return type
+
+[**ProjectArrangementResponse**](ProjectArrangementResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Server-authoritative procurement arrangement. |  -  |
+| **401** | Authentication required. |  -  |
+| **403** | Current Buyer authorization required. |  -  |
+| **404** | Owned Work Package or current arrangement not found. |  -  |
+| **409** | Arrangement, inventory, price or version changed; refresh. |  -  |
+| **422** | Review specifications, fulfillment, payment or budget. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## inquireProjectVendor
 
 > ChatIdResponse inquireProjectVendor(packageId, idempotencyKey, projectCandidateRequest)
@@ -1245,6 +1577,98 @@ example().catch(console.error);
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## listProjectArrangementOptions
+
+> ProjectArrangementPageResponse listProjectArrangementOptions(packageId, page, sort, direction, favoritesOnly, completeOnly, withinBudget)
+
+
+
+### Example
+
+```ts
+import {
+  Configuration,
+  BuyerProjectsApi,
+} from '@materyalph/api-client-ts';
+import type { ListProjectArrangementOptionsRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new BuyerProjectsApi(config);
+
+  const body = {
+    // string
+    packageId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // number (optional)
+    page: 56,
+    // 'BEST_MATCH' | 'PRICE' (optional)
+    sort: sort_example,
+    // 'ASC' | 'DESC' (optional)
+    direction: direction_example,
+    // boolean (optional)
+    favoritesOnly: true,
+    // boolean (optional)
+    completeOnly: true,
+    // boolean (optional)
+    withinBudget: true,
+  } satisfies ListProjectArrangementOptionsRequest;
+
+  try {
+    const data = await api.listProjectArrangementOptions(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **packageId** | `string` |  | [Defaults to `undefined`] |
+| **page** | `number` |  | [Optional] [Defaults to `undefined`] |
+| **sort** | `BEST_MATCH`, `PRICE` |  | [Optional] [Defaults to `undefined`] [Enum: BEST_MATCH, PRICE] |
+| **direction** | `ASC`, `DESC` |  | [Optional] [Defaults to `undefined`] [Enum: ASC, DESC] |
+| **favoritesOnly** | `boolean` |  | [Optional] [Defaults to `undefined`] |
+| **completeOnly** | `boolean` |  | [Optional] [Defaults to `undefined`] |
+| **withinBudget** | `boolean` |  | [Optional] [Defaults to `undefined`] |
+
+### Return type
+
+[**ProjectArrangementPageResponse**](ProjectArrangementPageResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Server-authoritative procurement arrangement. |  -  |
+| **401** | Authentication required. |  -  |
+| **403** | Current Buyer authorization required. |  -  |
+| **404** | Owned Work Package or current arrangement not found. |  -  |
+| **409** | Arrangement, inventory, price or version changed; refresh. |  -  |
+| **422** | Review specifications, fulfillment, payment or budget. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## listProjects
 
 > ProjectPageResponse listProjects(page)
@@ -1324,11 +1748,11 @@ example().catch(console.error);
 
 ## listWorkPackageLineAlternatives
 
-> WorkPackageAlternativePageResponse listWorkPackageLineAlternatives(packageId, lineId, page, excludeVendorId)
+> WorkPackageAlternativePageResponse listWorkPackageLineAlternatives(packageId, lineId, arrangementId, replace, page, excludeVendorId, candidateId, specificationChoices, fulfillmentMethod)
 
 
 
-Eligible Item-Based offers for the same canonical material and unit within the package radius of its site, for buying a missing line separately. Exact matches first, then price. Unlisted lines return status UNLISTED with no items.
+Eligible Item-Based offers for the same canonical material and unit within the fixed 50 km Project-Based radius of the package site, for buying a missing line separately. Ranked by specification match, whether the store covers the quantity, whether it can serve the package\&#39;s fulfillment method, total price, then distance. Unlisted lines return status UNLISTED with no items; a line already covered returns COVERED; no suitable store returns NO_SUITABLE_ALTERNATIVE with the reasons in &#x60;excluded&#x60;.
 
 ### Example
 
@@ -1352,10 +1776,20 @@ async function example() {
     packageId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
     // string
     lineId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string (optional)
+    arrangementId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // boolean (optional)
+    replace: true,
     // number (optional)
     page: 56,
     // string (optional)
     excludeVendorId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string | The compared Vendor candidate. The quantity to source becomes that Vendor\'s gap less the separate purchases that satisfy the line, and the Vendor itself is left out. (optional)
+    candidateId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string | JSON array of {line_id, option_id} choices. Sizes the recommendation from the same selected specifications as quotation review. (optional)
+    specificationChoices: specificationChoices_example,
+    // 'DELIVERY' | 'PICKUP' | Concrete method chosen on quotation review; suggestions must support it. (optional)
+    fulfillmentMethod: fulfillmentMethod_example,
   } satisfies ListWorkPackageLineAlternativesRequest;
 
   try {
@@ -1377,8 +1811,13 @@ example().catch(console.error);
 |------------- | ------------- | ------------- | -------------|
 | **packageId** | `string` |  | [Defaults to `undefined`] |
 | **lineId** | `string` |  | [Defaults to `undefined`] |
+| **arrangementId** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **replace** | `boolean` |  | [Optional] [Defaults to `undefined`] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
 | **excludeVendorId** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **candidateId** | `string` | The compared Vendor candidate. The quantity to source becomes that Vendor\&#39;s gap less the separate purchases that satisfy the line, and the Vendor itself is left out. | [Optional] [Defaults to `undefined`] |
+| **specificationChoices** | `string` | JSON array of {line_id, option_id} choices. Sizes the recommendation from the same selected specifications as quotation review. | [Optional] [Defaults to `undefined`] |
+| **fulfillmentMethod** | `DELIVERY`, `PICKUP` | Concrete method chosen on quotation review; suggestions must support it. | [Optional] [Defaults to `undefined`] [Enum: DELIVERY, PICKUP] |
 
 ### Return type
 
@@ -1397,7 +1836,7 @@ example().catch(console.error);
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200** | Similar Item-Based offers. |  -  |
+| **200** | Item-Based offers within the fixed 50 km Project-Based radius, ranked by specification match, availability, fulfillment capability, total price and distance. |  -  |
 | **401** | Authentication required. |  -  |
 | **403** | Current Buyer authorization required. |  -  |
 | **404** | No owned resource or current candidate. |  -  |
@@ -1413,7 +1852,7 @@ example().catch(console.error);
 
 
 
-Re-price a fresh candidate with the Buyer\&#39;s specification choices (lines, totals, delivery estimate, score and budget label). Nothing is stored; send the same selections when selecting or inquiring. An unknown option is SPECIFICATION_OPTION_INVALID.
+Re-price a fresh candidate with the Buyer\&#39;s specification choices (lines, totals, delivery estimate, score and budget label). Exact-match defaults for missing materials are saved to the draft arrangement; explicit removals and manual replacements are preserved. No regular cart, order or payment is created. Send the same selections when selecting or inquiring. An unknown option is SPECIFICATION_OPTION_INVALID.
 
 ### Example
 
@@ -1573,7 +2012,7 @@ example().catch(console.error);
 
 
 
-Return a cancelled Work Package to Active in place; no copy is made. The Project budget is checked again because cancelling released it. A package with an order, selected Vendor or tagged purchase cannot be reactivated.
+Reactivate the same owned Cancelled Work Package after current version, open-order and Project budget checks. Cancelled, declined and expired orders do not keep the old Vendor selection locked. A cancelled order original is retained internally and the reactivated package uses fresh requirement identities, estimates and inquiries; no order is reopened or duplicated.
 
 ### Example
 
@@ -1645,6 +2084,184 @@ example().catch(console.error);
 | **404** | No owned package. |  -  |
 | **409** | PROJECT_VERSION_CONFLICT, WORK_PACKAGE_NOT_CANCELLED, WORK_PACKAGE_HAS_ORDER, PROJECT_CLOSED or IDEMPOTENCY_CONFLICT; no mutation. |  -  |
 | **422** | WORK_PACKAGE_BUDGET_EXCEEDS_PROJECT; no mutation. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## removeProjectDraftItem
+
+> ChatIdResponse removeProjectDraftItem(packageId, candidateId, lineId, variantId, projectVersionRequest)
+
+
+
+Remove an unsubmitted supplementary selection, preserving the requirement and restoring remaining fulfillment on the next preview. Submitted orders retain existing cancellation rules.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  BuyerProjectsApi,
+} from '@materyalph/api-client-ts';
+import type { RemoveProjectDraftItemRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new BuyerProjectsApi(config);
+
+  const body = {
+    // string
+    packageId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    candidateId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    lineId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    variantId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // ProjectVersionRequest
+    projectVersionRequest: ...,
+  } satisfies RemoveProjectDraftItemRequest;
+
+  try {
+    const data = await api.removeProjectDraftItem(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **packageId** | `string` |  | [Defaults to `undefined`] |
+| **candidateId** | `string` |  | [Defaults to `undefined`] |
+| **lineId** | `string` |  | [Defaults to `undefined`] |
+| **variantId** | `string` |  | [Defaults to `undefined`] |
+| **projectVersionRequest** | [ProjectVersionRequest](ProjectVersionRequest.md) |  | |
+
+### Return type
+
+[**ChatIdResponse**](ChatIdResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Applied successfully. |  -  |
+| **401** | Authentication required. |  -  |
+| **403** | Current Buyer authorization required. |  -  |
+| **404** | No owned resource or matching candidate. |  -  |
+| **409** | Work Package, draft, price, stock or estimate changed; review again. |  -  |
+| **422** | Validation, payment, budget or fulfillment choice needs attention. |  -  |
+| **503** | Delivery provider unavailable; retry. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## requestProjectDraftSupplier
+
+> ChatIdResponse requestProjectDraftSupplier(packageId, candidateId, vendorId, idempotencyKey, projectDraftSupplierRequest)
+
+
+
+Explicit request to ONE supplementary supplier after the primary Project-Based request exists. Revalidate the reviewed fingerprint, prices, eligibility, fulfillment, payment, ownership and budgets. Create a separate linked Item-Based order awaiting manual Vendor confirmation; never touch the regular cart, auto-accept an order, request other suppliers or start payment.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  BuyerProjectsApi,
+} from '@materyalph/api-client-ts';
+import type { RequestProjectDraftSupplierRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new BuyerProjectsApi(config);
+
+  const body = {
+    // string
+    packageId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    candidateId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    vendorId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // ProjectDraftSupplierRequest
+    projectDraftSupplierRequest: ...,
+  } satisfies RequestProjectDraftSupplierRequest;
+
+  try {
+    const data = await api.requestProjectDraftSupplier(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **packageId** | `string` |  | [Defaults to `undefined`] |
+| **candidateId** | `string` |  | [Defaults to `undefined`] |
+| **vendorId** | `string` |  | [Defaults to `undefined`] |
+| **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
+| **projectDraftSupplierRequest** | [ProjectDraftSupplierRequest](ProjectDraftSupplierRequest.md) |  | |
+
+### Return type
+
+[**ChatIdResponse**](ChatIdResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **201** | Applied successfully. |  -  |
+| **401** | Authentication required. |  -  |
+| **403** | Current Buyer authorization required. |  -  |
+| **404** | No owned resource or matching candidate. |  -  |
+| **409** | Work Package, draft, price, stock or estimate changed; review again. |  -  |
+| **422** | Validation, payment, budget or fulfillment choice needs attention. |  -  |
+| **503** | Delivery provider unavailable; retry. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1802,9 +2419,98 @@ example().catch(console.error);
 | **401** | Authentication required. |  -  |
 | **403** | Current Buyer authorization required. |  -  |
 | **404** | No owned resource or current candidate. |  -  |
-| **409** | Stale version, expired estimate, source change or already selected Vendor; no mutation. |  -  |
+| **409** | Stale package, changed resolution, or no active primary Vendor request (MISSING_LINE_INACTIVE). Cancelled procurement history cannot be resolved as current work. |  -  |
 | **422** | Validation, fulfillment review or written budget override required. |  -  |
 | **503** | Provider unavailable; retry without fabricated values. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## saveProjectDraftItem
+
+> ChatIdResponse saveProjectDraftItem(packageId, candidateId, lineId, variantId, projectDraftItemInput)
+
+
+
+Add one recommendation to the Work Package draft. Server caps quantity by the remaining requirement and available stock. Idempotent PUT never stacks duplicates. No cart, order, stock reservation or payment is created.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  BuyerProjectsApi,
+} from '@materyalph/api-client-ts';
+import type { SaveProjectDraftItemRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new BuyerProjectsApi(config);
+
+  const body = {
+    // string
+    packageId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    candidateId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    lineId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    variantId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // ProjectDraftItemInput
+    projectDraftItemInput: ...,
+  } satisfies SaveProjectDraftItemRequest;
+
+  try {
+    const data = await api.saveProjectDraftItem(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **packageId** | `string` |  | [Defaults to `undefined`] |
+| **candidateId** | `string` |  | [Defaults to `undefined`] |
+| **lineId** | `string` |  | [Defaults to `undefined`] |
+| **variantId** | `string` |  | [Defaults to `undefined`] |
+| **projectDraftItemInput** | [ProjectDraftItemInput](ProjectDraftItemInput.md) |  | |
+
+### Return type
+
+[**ChatIdResponse**](ChatIdResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Applied successfully. |  -  |
+| **401** | Authentication required. |  -  |
+| **403** | Current Buyer authorization required. |  -  |
+| **404** | No owned resource or matching candidate. |  -  |
+| **409** | Work Package, draft, price, stock or estimate changed; review again. |  -  |
+| **422** | Validation, payment, budget or fulfillment choice needs attention. |  -  |
+| **503** | Delivery provider unavailable; retry. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1815,7 +2521,7 @@ example().catch(console.error);
 
 
 
-Exactly four integer weights in [0,100] totaling 100. Defaults: material_match 40, budget_fit 25, distance 20, vps 15.
+Exactly four independent integer weights in [0,100], at least one above zero (422 WEIGHTS_ALL_ZERO). Original values are stored and restored; scoring divides each by the sum of weights. Defaults: material_match 40, budget_fit 25, distance 20, vps 15.
 
 ### Example
 
@@ -1965,7 +2671,7 @@ example().catch(console.error);
 
 ## selectProjectVendor
 
-> ChatIdResponse selectProjectVendor(packageId, idempotencyKey, projectCandidateRequest)
+> ChatIdResponse selectProjectVendor(packageId, idempotencyKey, projectVendorSelectionRequest)
 
 
 
@@ -1993,8 +2699,8 @@ async function example() {
     packageId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
     // string
     idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
-    // ProjectCandidateRequest
-    projectCandidateRequest: ...,
+    // ProjectVendorSelectionRequest
+    projectVendorSelectionRequest: ...,
   } satisfies SelectProjectVendorRequest;
 
   try {
@@ -2016,7 +2722,7 @@ example().catch(console.error);
 |------------- | ------------- | ------------- | -------------|
 | **packageId** | `string` |  | [Defaults to `undefined`] |
 | **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
-| **projectCandidateRequest** | [ProjectCandidateRequest](ProjectCandidateRequest.md) |  | |
+| **projectVendorSelectionRequest** | [ProjectVendorSelectionRequest](ProjectVendorSelectionRequest.md) |  | |
 
 ### Return type
 
@@ -2042,6 +2748,89 @@ example().catch(console.error);
 | **409** | Stale version, expired estimate, source change or already selected Vendor; no mutation. |  -  |
 | **422** | Validation, fulfillment review or written budget override required. |  -  |
 | **503** | Provider unavailable; retry without fabricated values. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## submitProjectArrangement
+
+> ProjectArrangementResponse submitProjectArrangement(packageId, arrangementId, idempotencyKey, projectArrangementSubmit)
+
+
+
+### Example
+
+```ts
+import {
+  Configuration,
+  BuyerProjectsApi,
+} from '@materyalph/api-client-ts';
+import type { SubmitProjectArrangementRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new BuyerProjectsApi(config);
+
+  const body = {
+    // string
+    packageId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    arrangementId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // ProjectArrangementSubmit
+    projectArrangementSubmit: ...,
+  } satisfies SubmitProjectArrangementRequest;
+
+  try {
+    const data = await api.submitProjectArrangement(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **packageId** | `string` |  | [Defaults to `undefined`] |
+| **arrangementId** | `string` |  | [Defaults to `undefined`] |
+| **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
+| **projectArrangementSubmit** | [ProjectArrangementSubmit](ProjectArrangementSubmit.md) |  | |
+
+### Return type
+
+[**ProjectArrangementResponse**](ProjectArrangementResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **201** | Saved successfully. |  -  |
+| **401** | Authentication required. |  -  |
+| **403** | Current Buyer authorization required. |  -  |
+| **404** | Owned Work Package or current arrangement not found. |  -  |
+| **409** | Arrangement, inventory, price or version changed; refresh. |  -  |
+| **422** | Review specifications, fulfillment, payment or budget. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 

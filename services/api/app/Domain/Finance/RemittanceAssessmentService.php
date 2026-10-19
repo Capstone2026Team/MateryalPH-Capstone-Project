@@ -21,7 +21,7 @@ use Illuminate\Support\Str;
  *   P   = evidenced platform/DFSP consideration removed from it (the quoted provider charge in DEMO)
  *   G   = C − R − D_r − V_r − P;  W = money(G × 0.005) unless FIN-04A relief applies;  cash = C − R − P − W
  *
- * commission_deducted_in_remittance is always 0: the 2% commission is billed monthly and never netted here.
+ * commission_deducted_in_remittance is always 0: commission is billed monthly and never netted here.
  * The assessment, counter update, ledger postings and outbox events commit in one transaction with the taxpayer
  * year row locked; uniqueness on (environment, taxpayer_key, remittance_group_id, obligation_type) makes a retry
  * return the stored result without touching the counter.

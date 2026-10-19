@@ -238,7 +238,7 @@ function OrderDetailWorkspace({ orderId, panel = false, canMessage = false, canV
           <h2 id="status-heading" className="text-base font-semibold">Status</h2>
           <OrderStateRows states={order.states} />
         </section>
-        <div className="rounded-surface border border-border-default bg-surface-primary p-4"><MoneyBreakdown money={order.money} title="Buyer payment breakdown" /><p className="mt-3 border-t border-border-default pt-3 text-xs text-text-secondary">The Buyer total never includes your 2% monthly commission or merchant withholding; those are settled separately.</p></div>
+        <div className="rounded-surface border border-border-default bg-surface-primary p-4"><MoneyBreakdown money={order.money} title="Buyer payment breakdown" /><p className="mt-3 border-t border-border-default pt-3 text-xs text-text-secondary">The Buyer total never includes your monthly commission or merchant withholding; those are settled separately.</p></div>
         <OrderPaymentPanel order={order} onChanged={load} />
         <CasePanel order={order} />
         <CancellationPanel order={order} onChanged={changed} />

@@ -13,6 +13,11 @@ part 'work_package_budget_estimate.g.dart';
 /// WorkPackageBudgetEstimate
 ///
 /// Properties:
+/// * [deliveryCentavos] - Actual route/vehicle estimate for a representative exact-match supplier plan, consolidated per supplier. Zero for pickup-only supplies; ready-mixed concrete includes mixer delivery even under PICKUP. Null when delivery or supplier availability needs review.
+/// * [estimatedTotalCentavos] - Average eligible material prices plus applicable supplier delivery. Null until every material and delivery fee can be estimated.
+/// * [deliveryStatus]
+/// * [deliveryIssues]
+/// * [fulfillmentMethod] - Both is budgeted using the Site Delivery scenario.
 /// * [lines]
 /// * [materialsTotalCentavos]
 /// * [pricedLineCount]
@@ -23,6 +28,26 @@ part 'work_package_budget_estimate.g.dart';
 /// * [computedAt]
 @BuiltValue()
 abstract class WorkPackageBudgetEstimate implements Built<WorkPackageBudgetEstimate, WorkPackageBudgetEstimateBuilder> {
+  /// Actual route/vehicle estimate for a representative exact-match supplier plan, consolidated per supplier. Zero for pickup-only supplies; ready-mixed concrete includes mixer delivery even under PICKUP. Null when delivery or supplier availability needs review.
+  @BuiltValueField(wireName: r'delivery_centavos')
+  int? get deliveryCentavos;
+
+  /// Average eligible material prices plus applicable supplier delivery. Null until every material and delivery fee can be estimated.
+  @BuiltValueField(wireName: r'estimated_total_centavos')
+  int? get estimatedTotalCentavos;
+
+  @BuiltValueField(wireName: r'delivery_status')
+  WorkPackageBudgetEstimateDeliveryStatusEnum? get deliveryStatus;
+  // enum deliveryStatusEnum {  NOT_APPLICABLE,  ESTIMATED,  REVIEW_REQUIRED,  };
+
+  @BuiltValueField(wireName: r'delivery_issues')
+  BuiltList<String>? get deliveryIssues;
+
+  /// Both is budgeted using the Site Delivery scenario.
+  @BuiltValueField(wireName: r'fulfillment_method')
+  WorkPackageBudgetEstimateFulfillmentMethodEnum? get fulfillmentMethod;
+  // enum fulfillmentMethodEnum {  DELIVERY,  PICKUP,  };
+
   @BuiltValueField(wireName: r'lines')
   BuiltList<WorkPackageBudgetEstimateLine> get lines;
 
@@ -71,6 +96,41 @@ class _$WorkPackageBudgetEstimateSerializer implements PrimitiveSerializer<WorkP
     WorkPackageBudgetEstimate object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.deliveryCentavos != null) {
+      yield r'delivery_centavos';
+      yield serializers.serialize(
+        object.deliveryCentavos,
+        specifiedType: const FullType.nullable(int),
+      );
+    }
+    if (object.estimatedTotalCentavos != null) {
+      yield r'estimated_total_centavos';
+      yield serializers.serialize(
+        object.estimatedTotalCentavos,
+        specifiedType: const FullType.nullable(int),
+      );
+    }
+    if (object.deliveryStatus != null) {
+      yield r'delivery_status';
+      yield serializers.serialize(
+        object.deliveryStatus,
+        specifiedType: const FullType(WorkPackageBudgetEstimateDeliveryStatusEnum),
+      );
+    }
+    if (object.deliveryIssues != null) {
+      yield r'delivery_issues';
+      yield serializers.serialize(
+        object.deliveryIssues,
+        specifiedType: const FullType(BuiltList, [FullType(String)]),
+      );
+    }
+    if (object.fulfillmentMethod != null) {
+      yield r'fulfillment_method';
+      yield serializers.serialize(
+        object.fulfillmentMethod,
+        specifiedType: const FullType(WorkPackageBudgetEstimateFulfillmentMethodEnum),
+      );
+    }
     yield r'lines';
     yield serializers.serialize(
       object.lines,
@@ -134,6 +194,46 @@ class _$WorkPackageBudgetEstimateSerializer implements PrimitiveSerializer<WorkP
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'delivery_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.deliveryCentavos = valueDes;
+          break;
+        case r'estimated_total_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.estimatedTotalCentavos = valueDes;
+          break;
+        case r'delivery_status':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(WorkPackageBudgetEstimateDeliveryStatusEnum),
+          ) as WorkPackageBudgetEstimateDeliveryStatusEnum?;
+          if (valueDes == null) continue;
+          result.deliveryStatus = valueDes;
+          break;
+        case r'delivery_issues':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(String)]),
+          ) as BuiltList<String>?;
+          if (valueDes == null) continue;
+          result.deliveryIssues.replace(valueDes);
+          break;
+        case r'fulfillment_method':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(WorkPackageBudgetEstimateFulfillmentMethodEnum),
+          ) as WorkPackageBudgetEstimateFulfillmentMethodEnum?;
+          if (valueDes == null) continue;
+          result.fulfillmentMethod = valueDes;
+          break;
         case r'lines':
           final valueDes = serializers.deserialize(
             value,
@@ -219,6 +319,39 @@ class _$WorkPackageBudgetEstimateSerializer implements PrimitiveSerializer<WorkP
   }
 }
 
+
+class WorkPackageBudgetEstimateDeliveryStatusEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'NOT_APPLICABLE')
+  static const WorkPackageBudgetEstimateDeliveryStatusEnum NOT_APPLICABLE = _$workPackageBudgetEstimateDeliveryStatusEnum_NOT_APPLICABLE;
+  @BuiltValueEnumConst(wireName: r'ESTIMATED')
+  static const WorkPackageBudgetEstimateDeliveryStatusEnum ESTIMATED = _$workPackageBudgetEstimateDeliveryStatusEnum_ESTIMATED;
+  @BuiltValueEnumConst(wireName: r'REVIEW_REQUIRED')
+  static const WorkPackageBudgetEstimateDeliveryStatusEnum REVIEW_REQUIRED = _$workPackageBudgetEstimateDeliveryStatusEnum_REVIEW_REQUIRED;
+
+  static Serializer<WorkPackageBudgetEstimateDeliveryStatusEnum> get serializer => _$workPackageBudgetEstimateDeliveryStatusEnumSerializer;
+
+  const WorkPackageBudgetEstimateDeliveryStatusEnum._(String name): super(name);
+
+  static BuiltSet<WorkPackageBudgetEstimateDeliveryStatusEnum> get values => _$workPackageBudgetEstimateDeliveryStatusEnumValues;
+  static WorkPackageBudgetEstimateDeliveryStatusEnum valueOf(String name) => _$workPackageBudgetEstimateDeliveryStatusEnumValueOf(name);
+}
+
+/// Both is budgeted using the Site Delivery scenario.
+class WorkPackageBudgetEstimateFulfillmentMethodEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'DELIVERY')
+  static const WorkPackageBudgetEstimateFulfillmentMethodEnum DELIVERY = _$workPackageBudgetEstimateFulfillmentMethodEnum_DELIVERY;
+  @BuiltValueEnumConst(wireName: r'PICKUP')
+  static const WorkPackageBudgetEstimateFulfillmentMethodEnum PICKUP = _$workPackageBudgetEstimateFulfillmentMethodEnum_PICKUP;
+
+  static Serializer<WorkPackageBudgetEstimateFulfillmentMethodEnum> get serializer => _$workPackageBudgetEstimateFulfillmentMethodEnumSerializer;
+
+  const WorkPackageBudgetEstimateFulfillmentMethodEnum._(String name): super(name);
+
+  static BuiltSet<WorkPackageBudgetEstimateFulfillmentMethodEnum> get values => _$workPackageBudgetEstimateFulfillmentMethodEnumValues;
+  static WorkPackageBudgetEstimateFulfillmentMethodEnum valueOf(String name) => _$workPackageBudgetEstimateFulfillmentMethodEnumValueOf(name);
+}
 
 class WorkPackageBudgetEstimateBasisEnum extends EnumClass {
 

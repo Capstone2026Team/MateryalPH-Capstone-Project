@@ -13,22 +13,34 @@ part 'work_package_budget_estimate_request.g.dart';
 /// WorkPackageBudgetEstimateRequest
 ///
 /// Properties:
+/// * [heavyVehicleRestriction] - Current site access answer for the delivery estimate.
+/// * [alternateDropOffLocationId] - Buyer-owned alternative vehicle drop-off when access is restricted.
 /// * [siteId]
-/// * [radiusKm]
+/// * [radiusKm] - Optional. 50 km is the only Project-Based radius.
 /// * [fulfillmentMethod]
 /// * [lines]
 @BuiltValue()
 abstract class WorkPackageBudgetEstimateRequest implements Built<WorkPackageBudgetEstimateRequest, WorkPackageBudgetEstimateRequestBuilder> {
+  /// Current site access answer for the delivery estimate.
+  @BuiltValueField(wireName: r'heavy_vehicle_restriction')
+  WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum? get heavyVehicleRestriction;
+  // enum heavyVehicleRestrictionEnum {  NO,  YES,  UNANSWERED,  };
+
+  /// Buyer-owned alternative vehicle drop-off when access is restricted.
+  @BuiltValueField(wireName: r'alternate_drop_off_location_id')
+  String? get alternateDropOffLocationId;
+
   @BuiltValueField(wireName: r'site_id')
   String get siteId;
 
+  /// Optional. 50 km is the only Project-Based radius.
   @BuiltValueField(wireName: r'radius_km')
-  WorkPackageBudgetEstimateRequestRadiusKmEnum get radiusKm;
-  // enum radiusKmEnum {  5,  10,  20,  30,  40,  50,  };
+  WorkPackageBudgetEstimateRequestRadiusKmEnum? get radiusKm;
+  // enum radiusKmEnum {  50,  };
 
   @BuiltValueField(wireName: r'fulfillment_method')
   WorkPackageBudgetEstimateRequestFulfillmentMethodEnum get fulfillmentMethod;
-  // enum fulfillmentMethodEnum {  PICKUP,  DELIVERY,  };
+  // enum fulfillmentMethodEnum {  PICKUP,  DELIVERY,  BOTH,  };
 
   @BuiltValueField(wireName: r'lines')
   BuiltList<WorkPackageBudgetEstimateLineInput> get lines;
@@ -56,16 +68,32 @@ class _$WorkPackageBudgetEstimateRequestSerializer implements PrimitiveSerialize
     WorkPackageBudgetEstimateRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.heavyVehicleRestriction != null) {
+      yield r'heavy_vehicle_restriction';
+      yield serializers.serialize(
+        object.heavyVehicleRestriction,
+        specifiedType: const FullType(WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum),
+      );
+    }
+    if (object.alternateDropOffLocationId != null) {
+      yield r'alternate_drop_off_location_id';
+      yield serializers.serialize(
+        object.alternateDropOffLocationId,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
     yield r'site_id';
     yield serializers.serialize(
       object.siteId,
       specifiedType: const FullType(String),
     );
-    yield r'radius_km';
-    yield serializers.serialize(
-      object.radiusKm,
-      specifiedType: const FullType(WorkPackageBudgetEstimateRequestRadiusKmEnum),
-    );
+    if (object.radiusKm != null) {
+      yield r'radius_km';
+      yield serializers.serialize(
+        object.radiusKm,
+        specifiedType: const FullType(WorkPackageBudgetEstimateRequestRadiusKmEnum),
+      );
+    }
     yield r'fulfillment_method';
     yield serializers.serialize(
       object.fulfillmentMethod,
@@ -99,6 +127,22 @@ class _$WorkPackageBudgetEstimateRequestSerializer implements PrimitiveSerialize
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'heavy_vehicle_restriction':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum),
+          ) as WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum?;
+          if (valueDes == null) continue;
+          result.heavyVehicleRestriction = valueDes;
+          break;
+        case r'alternate_drop_off_location_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.alternateDropOffLocationId = valueDes;
+          break;
         case r'site_id':
           final valueDes = serializers.deserialize(
             value,
@@ -109,8 +153,9 @@ class _$WorkPackageBudgetEstimateRequestSerializer implements PrimitiveSerialize
         case r'radius_km':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(WorkPackageBudgetEstimateRequestRadiusKmEnum),
-          ) as WorkPackageBudgetEstimateRequestRadiusKmEnum;
+            specifiedType: const FullType.nullable(WorkPackageBudgetEstimateRequestRadiusKmEnum),
+          ) as WorkPackageBudgetEstimateRequestRadiusKmEnum?;
+          if (valueDes == null) continue;
           result.radiusKm = valueDes;
           break;
         case r'fulfillment_method':
@@ -157,18 +202,27 @@ class _$WorkPackageBudgetEstimateRequestSerializer implements PrimitiveSerialize
 }
 
 
+/// Current site access answer for the delivery estimate.
+class WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'NO')
+  static const WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum NO = _$workPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum_NO;
+  @BuiltValueEnumConst(wireName: r'YES')
+  static const WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum YES = _$workPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum_YES;
+  @BuiltValueEnumConst(wireName: r'UNANSWERED')
+  static const WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum UNANSWERED = _$workPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum_UNANSWERED;
+
+  static Serializer<WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum> get serializer => _$workPackageBudgetEstimateRequestHeavyVehicleRestrictionEnumSerializer;
+
+  const WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum._(String name): super(name);
+
+  static BuiltSet<WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum> get values => _$workPackageBudgetEstimateRequestHeavyVehicleRestrictionEnumValues;
+  static WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum valueOf(String name) => _$workPackageBudgetEstimateRequestHeavyVehicleRestrictionEnumValueOf(name);
+}
+
+/// Optional. 50 km is the only Project-Based radius.
 class WorkPackageBudgetEstimateRequestRadiusKmEnum extends EnumClass {
 
-  @BuiltValueEnumConst(wireNumber: 5)
-  static const WorkPackageBudgetEstimateRequestRadiusKmEnum number5 = _$workPackageBudgetEstimateRequestRadiusKmEnum_number5;
-  @BuiltValueEnumConst(wireNumber: 10)
-  static const WorkPackageBudgetEstimateRequestRadiusKmEnum number10 = _$workPackageBudgetEstimateRequestRadiusKmEnum_number10;
-  @BuiltValueEnumConst(wireNumber: 20)
-  static const WorkPackageBudgetEstimateRequestRadiusKmEnum number20 = _$workPackageBudgetEstimateRequestRadiusKmEnum_number20;
-  @BuiltValueEnumConst(wireNumber: 30)
-  static const WorkPackageBudgetEstimateRequestRadiusKmEnum number30 = _$workPackageBudgetEstimateRequestRadiusKmEnum_number30;
-  @BuiltValueEnumConst(wireNumber: 40)
-  static const WorkPackageBudgetEstimateRequestRadiusKmEnum number40 = _$workPackageBudgetEstimateRequestRadiusKmEnum_number40;
   @BuiltValueEnumConst(wireNumber: 50)
   static const WorkPackageBudgetEstimateRequestRadiusKmEnum number50 = _$workPackageBudgetEstimateRequestRadiusKmEnum_number50;
 
@@ -186,6 +240,8 @@ class WorkPackageBudgetEstimateRequestFulfillmentMethodEnum extends EnumClass {
   static const WorkPackageBudgetEstimateRequestFulfillmentMethodEnum PICKUP = _$workPackageBudgetEstimateRequestFulfillmentMethodEnum_PICKUP;
   @BuiltValueEnumConst(wireName: r'DELIVERY')
   static const WorkPackageBudgetEstimateRequestFulfillmentMethodEnum DELIVERY = _$workPackageBudgetEstimateRequestFulfillmentMethodEnum_DELIVERY;
+  @BuiltValueEnumConst(wireName: r'BOTH')
+  static const WorkPackageBudgetEstimateRequestFulfillmentMethodEnum BOTH = _$workPackageBudgetEstimateRequestFulfillmentMethodEnum_BOTH;
 
   static Serializer<WorkPackageBudgetEstimateRequestFulfillmentMethodEnum> get serializer => _$workPackageBudgetEstimateRequestFulfillmentMethodEnumSerializer;
 

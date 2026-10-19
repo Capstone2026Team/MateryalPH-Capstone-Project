@@ -23,7 +23,7 @@ final readonly class DisclosureControl
 
     public static function current(): self
     {
-        return new self(max(3, PlatformSettings::current()->int('analytics.disclosure_min_persons')));
+        return new self(max(1, PlatformSettings::current()->int('analytics.disclosure_min_persons')));
     }
 
     public function suppressed(int $persons): bool

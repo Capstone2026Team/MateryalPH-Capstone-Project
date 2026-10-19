@@ -7,6 +7,11 @@ import { quotationDiscountPreview } from '../../../../packages/web-ui/src/quotat
 
 const base: ChatDraftContent = { lines: [{ variantId: 'variant-1', quantity: '1', unitPriceCentavos: 28550 }], fulfillmentMethod: 'PICKUP', paymentMethod: 'ONLINE', fulfillmentDate: '2026-10-20' }
 
+test('a Vendor draft never submits a payment preference for the Buyer', () => {
+  expect(quotationDraftForSave({ ...base, paymentMethod: 'IN_STORE' })).not.toHaveProperty('paymentMethod')
+  expect(JSON.stringify(ChatDraftContentToJSON(quotationDraftForSave(base)))).not.toContain('"payment_method"')
+})
+
 test('cleared optional details are omitted at save without changing unfinished editor input', () => {
   const draft = { ...base, lines: [{ ...base.lines[0]!, description: ' ', specifications: { thickness_mm: '', grade: '  Grade 40  ', note: 'plain text = accepted' } }] }
   const saved = quotationDraftForSave(draft)

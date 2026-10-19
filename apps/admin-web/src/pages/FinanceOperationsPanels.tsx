@@ -1,5 +1,5 @@
 import {
-  ALL_DATES, BarList, Button, ChartDataTable, DashboardPanel, DateFilter, FilterChips, KpiCard, MethodNote, ShareBar, StatusBadge, StatusMessage, Toolbar, TrendLineChart,
+  ALL_DATES, Button, ChartDataTable, DashboardPanel, DateFilter, FilterChips, KpiCard, MethodNote, StatusBadge, StatusMessage, Toolbar, TrendLineChart,
   analyticsDay, formatChartDay, formatChartMonth, formatCompactCentavos, formatPesoCentavos,
 } from '@materyalph/web-ui'
 import { useState, type FormEvent } from 'react'
@@ -40,44 +40,44 @@ function PlatformEarnings({ data }: { data: FinanceKpis }) {
   const earnedNet = figure('net_commission')
   const receivables = figure('receivables')
   const overdue = figure('overdue')
-  const hasNegativeEarnings = points.some(point => point.netEarningsCentavos < 0)
   const chartValue = (value: number) => formatCompactCentavos(Math.round(value))
   const column = (header: string, values: number[]) => ({ key: header, header, values: values.map(value => formatPesoCentavos(value)) })
   return <>
     <p className="-mt-2 text-xs text-text-secondary">{points.length === 0 ? 'No commission activity is recorded for these dates.'
       : `Charted by ${unit} · ${formatLabel(dates[0] ?? '')}${points.length > 1 ? ` – ${formatLabel(dates.at(-1) ?? '')}` : ''} (Asia/Manila)`}</p>
-    <dl aria-label="Platform earnings summary" className="grid gap-4 md:grid-cols-2">
+    <Readiness counts={data.counts} />
+    <dl aria-label="Platform earnings summary" className="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
       <KpiCard label="Net platform earnings" value={formatPesoCentavos(figure('net_platform_earnings'))} icon={<Landmark size={16} aria-hidden="true" />} accent
         sparkline={points.map(point => Math.max(0, point.netEarningsCentavos))} hint="Commission revenue after credits and fee VAT, less processing costs."
-        breakdown={{ caption: 'Net platform earnings calculation', rows: [
+        collapsibleBreakdown breakdown={{ caption: 'Net platform earnings calculation', rows: [
           { key: 'revenue', label: 'Commission revenue, excluding VAT', amount: formatPesoCentavos(figure('platform_revenue')) },
           { key: 'processing', label: 'Platform processing costs', amount: minus(figure('processing_expense')) },
           { key: 'total', label: 'Net platform earnings', amount: formatPesoCentavos(figure('net_platform_earnings')), total: true },
         ] }} />
       <KpiCard label="Net commission earned" value={formatPesoCentavos(earnedNet)} icon={<Percent size={16} aria-hidden="true" />}
-        sparkline={netCommission.map(value => Math.max(0, value))} hint="2% of completed materials, excluding VAT, after approved credits."
-        breakdown={{ caption: 'Net commission earned calculation', rows: [
+        sparkline={netCommission.map(value => Math.max(0, value))} hint="Saved order rates on completed materials, excluding VAT, after approved credits."
+        collapsibleBreakdown breakdown={{ caption: 'Net commission earned calculation', rows: [
           { key: 'earned', label: 'Total commission earned', amount: formatPesoCentavos(figure('earned_commission')) },
           { key: 'credits', label: 'Approved commission credits', amount: minus(figure('fee_credits')) },
           { key: 'total', label: 'Net commission earned', amount: formatPesoCentavos(earnedNet), total: true },
         ] }} />
       <KpiCard label="Net collected commissions" value={formatPesoCentavos(figure('net_collected'))} icon={<Banknote size={16} aria-hidden="true" />}
         sparkline={netCollected.map(value => Math.max(0, value))} hint="Cash received for commission bills, by collection date."
-        breakdown={{ caption: 'Net collected commissions calculation', rows: [
+        collapsibleBreakdown breakdown={{ caption: 'Net collected commissions calculation', rows: [
           { key: 'collected', label: 'Collected commissions', amount: formatPesoCentavos(figure('collected')) },
           { key: 'refunded', label: 'Refunded commissions', amount: minus(figure('refunded_commissions')) },
           { key: 'total', label: 'Net collected commissions', amount: formatPesoCentavos(figure('net_collected')), total: true },
         ] }} />
       <KpiCard label="Outstanding receivables" value={formatPesoCentavos(receivables)} icon={<ReceiptText size={16} aria-hidden="true" />}
         hint={`Pending commissions of ${formatPesoCentavos(figure('pending_commissions'))} also include unbilled earnings and draft bills.`}
-        breakdown={{ caption: 'Outstanding receivables calculation', rows: [
+        collapsibleBreakdown breakdown={{ caption: 'Outstanding receivables calculation', rows: [
           { key: 'current', label: 'Issued, not yet due', amount: formatPesoCentavos(Math.max(0, receivables - overdue)) },
           { key: 'overdue', label: 'Overdue', amount: formatPesoCentavos(overdue) },
           { key: 'total', label: 'Outstanding receivables', amount: formatPesoCentavos(receivables), total: true },
         ] }} />
     </dl>
 
-    <div className="grid items-start gap-5 xl:grid-cols-2">
+    <div className="grid gap-5">
       <DashboardPanel title="Commission earned and collected" description={`Commission earned each ${unit}, with the cash collected, approved credits and confirmed refunds.`}>
         <div className="grid gap-4">
           <TrendLineChart title={`Commission earned, collected, credited and refunded per ${unit}`} labels={dates} formatLabel={formatLabel} formatValue={chartValue} emptyReason="No commission activity in this period." series={[
@@ -91,30 +91,6 @@ function PlatformEarnings({ data }: { data: FinanceKpis }) {
             column('Collected', points.map(point => point.collectedCentavos)), column('Refunded', points.map(point => point.refundedCentavos)), column('Net platform earnings', points.map(point => point.netEarningsCentavos))]} />
         </div>
       </DashboardPanel>
-      <DashboardPanel title="Net platform earnings" description={`Posted commission revenue less processing costs, per ${unit}.`}>
-        <div className="grid gap-4">
-          <TrendLineChart title={`Net platform earnings per ${unit}`} labels={dates} formatLabel={formatLabel} formatValue={chartValue} emptyReason="No platform earnings in this period." series={[
-            { key: 'net', label: 'Net platform earnings', colorVar: '--mp-viz-series-1', values: points.map(point => Math.max(0, point.netEarningsCentavos)), kind: 'bar' },
-            { key: 'net-commission', label: 'Net commission earned', colorVar: '--mp-viz-series-2', values: netCommission.map(value => Math.max(0, value)) },
-          ]} />
-          {hasNegativeEarnings && <p className="text-xs text-text-secondary">A {unit} below zero (refunds exceeded revenue) is drawn at ₱0.00; its exact amount is in the table of the first chart.</p>}
-        </div>
-      </DashboardPanel>
-    </div>
-
-    <div className="grid items-start gap-5 xl:grid-cols-2">
-      <DashboardPanel title="Collections and debt" description="How the commission billed to Vendors splits between cash received and what is still owed.">
-        <ShareBar label="Collections and debt" empty="No commission has been collected or billed in this period." formatValue={formatPesoCentavos} segments={[
-          { key: 'collected', label: 'Net collected', value: Math.max(0, figure('net_collected')), colorVar: '--mp-viz-series-3' },
-          { key: 'current', label: 'Issued, not yet due', value: Math.max(0, receivables - overdue), colorVar: '--mp-viz-series-1' },
-          { key: 'overdue', label: 'Overdue', value: overdue, colorVar: '--mp-viz-series-2' }]} />
-      </DashboardPanel>
-      <DashboardPanel title="Commission position" description="The main commission figures side by side for the selected dates.">
-        <BarList label="Commission position" empty="No commission figures in this period." items={[
-          ['Total commission earned', figure('earned_commission')], ['Net commission earned', earnedNet], ['Net collected commissions', figure('net_collected')],
-          ['Pending commissions', figure('pending_commissions')], ['Outstanding receivables', receivables], ['Overdue receivables', overdue],
-        ].map(([label, value]) => ({ key: String(label), label: String(label), value: Math.max(0, Number(value)), display: formatPesoCentavos(Number(value)) }))} />
-      </DashboardPanel>
     </div>
 
     <DashboardPanel title="Other recorded figures" description="Billing, VAT and tax records kept apart from platform earnings.">
@@ -123,8 +99,6 @@ function PlatformEarnings({ data }: { data: FinanceKpis }) {
           <div key={key} className="min-w-0 rounded-control bg-surface-canvas px-4 py-3"><dt className="text-xs font-semibold text-text-secondary">{label}</dt><dd className="mt-1 break-words text-lg font-semibold tabular-nums text-text-strong">{formatPesoCentavos(figure(String(key)))}</dd></div>)}
       </dl>
     </DashboardPanel>
-
-    <Readiness counts={data.counts} />
 
     <MethodNote label="What every figure means">
       <dl className="grid gap-3 md:grid-cols-2">{data.finance.map(item => <div key={item.key}><dt className="font-semibold text-text-strong">{item.label}</dt><dd>{item.definition}</dd></div>)}</dl>

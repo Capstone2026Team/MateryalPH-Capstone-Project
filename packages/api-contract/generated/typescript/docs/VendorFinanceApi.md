@@ -6,6 +6,7 @@ All URIs are relative to */api/v1*
 |------------- | ------------- | -------------|
 | [**approveVendorOnlineBalance**](VendorFinanceApi.md#approvevendoronlinebalance) | **POST** /vendor/orders/{orderId}/online-balance/approve |  |
 | [**exportVendorTransactions**](VendorFinanceApi.md#exportvendortransactions) | **GET** /vendor/finance/transactions/export |  |
+| [**getVendorCommissionMonitoring**](VendorFinanceApi.md#getvendorcommissionmonitoring) | **GET** /vendor/finance/commissions |  |
 | [**getVendorEarnings**](VendorFinanceApi.md#getvendorearnings) | **GET** /vendor/finance/earnings |  |
 | [**getVendorFeePayment**](VendorFinanceApi.md#getvendorfeepayment) | **GET** /vendor/finance/payments/{paymentId} |  |
 | [**getVendorFeeStatement**](VendorFinanceApi.md#getvendorfeestatement) | **GET** /vendor/finance/statements/{statementId} |  |
@@ -177,6 +178,82 @@ example().catch(console.error);
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 | **200** | CSV export. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## getVendorCommissionMonitoring
+
+> VendorCommissionMonitoringEnvelope getVendorCommissionMonitoring(page)
+
+
+
+Owner-only all-time commission monitoring with current and next policy, estimated and earned fees, approved credits, unbilled fees, draft bills, issued outstanding and overdue debt, verified allocations and successful fee refunds. Assessments are paginated and retain their original basis and percentage. Cash and earnings are separate; no wallet balance is represented.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  VendorFinanceApi,
+} from '@materyalph/api-client-ts';
+import type { GetVendorCommissionMonitoringRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new VendorFinanceApi(config);
+
+  const body = {
+    // number (optional)
+    page: 56,
+  } satisfies GetVendorCommissionMonitoringRequest;
+
+  try {
+    const data = await api.getVendorCommissionMonitoring(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **page** | `number` |  | [Optional] [Defaults to `1`] |
+
+### Return type
+
+[**VendorCommissionMonitoringEnvelope**](VendorCommissionMonitoringEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Store-scoped monitoring and paginated assessment records. |  -  |
 | **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |

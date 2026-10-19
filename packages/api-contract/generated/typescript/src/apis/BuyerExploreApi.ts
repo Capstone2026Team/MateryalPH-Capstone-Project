@@ -355,7 +355,7 @@ export class BuyerExploreApi extends runtime.BaseAPI {
     }
 
     /**
-     * Saves a separate Item-Based override. Whole percentages 0–100 for exactly the five components, totalling 100 (422 WEIGHTS_TOTAL_INVALID); all-zero is 422 WEIGHTS_ALL_ZERO. version 0 creates; a stale version is 409 PREFERENCE_VERSION_CONFLICT. Audited.
+     * Saves a separate Item-Based override. Independent whole weights 0–100 for exactly the five components, with no required total; original values are stored and restored. Scores use each weight divided by the sum of all weights; all-zero is 422 WEIGHTS_ALL_ZERO. version 0 creates; a stale version is 409 PREFERENCE_VERSION_CONFLICT. Audited.
      */
     async saveBuyerItemRankingPreferencesRaw(requestParameters: SaveBuyerItemRankingPreferencesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RankingPreferencesEnvelope>> {
         const requestOptions = await this.saveBuyerItemRankingPreferencesRequestOpts(requestParameters);
@@ -365,7 +365,7 @@ export class BuyerExploreApi extends runtime.BaseAPI {
     }
 
     /**
-     * Saves a separate Item-Based override. Whole percentages 0–100 for exactly the five components, totalling 100 (422 WEIGHTS_TOTAL_INVALID); all-zero is 422 WEIGHTS_ALL_ZERO. version 0 creates; a stale version is 409 PREFERENCE_VERSION_CONFLICT. Audited.
+     * Saves a separate Item-Based override. Independent whole weights 0–100 for exactly the five components, with no required total; original values are stored and restored. Scores use each weight divided by the sum of all weights; all-zero is 422 WEIGHTS_ALL_ZERO. version 0 creates; a stale version is 409 PREFERENCE_VERSION_CONFLICT. Audited.
      */
     async saveBuyerItemRankingPreferences(requestParameters: SaveBuyerItemRankingPreferencesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RankingPreferencesEnvelope> {
         const response = await this.saveBuyerItemRankingPreferencesRaw(requestParameters, initOverrides);

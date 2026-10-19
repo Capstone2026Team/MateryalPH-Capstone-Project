@@ -85,7 +85,7 @@ class _ProjectInquiryListState extends State<ProjectInquiryList> {
             return const Padding(
               padding: EdgeInsets.only(bottom: 16),
               child: Text(
-                'Each Work Package keeps its own conversation and quotation history.',
+                'Open quotation inquiries for current Work Packages. Each inquiry keeps its own conversation and quotation history.',
               ),
             );
           }
@@ -96,7 +96,7 @@ class _ProjectInquiryListState extends State<ProjectInquiryList> {
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 24),
                     child: Text(
-                      'No project inquiries yet. Start one from a Work Package’s Vendor comparison.',
+                      'No open project quotation inquiries. Start one from a Work Package’s Vendor comparison.',
                     ),
                   ),
                 if (widget.loadingMore)

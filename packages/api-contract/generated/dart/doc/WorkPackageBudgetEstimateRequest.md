@@ -8,8 +8,10 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**heavyVehicleRestriction** | **String** | Current site access answer for the delivery estimate. | [optional]
+**alternateDropOffLocationId** | **String** | Buyer-owned alternative vehicle drop-off when access is restricted. | [optional]
 **siteId** | **String** |  |
-**radiusKm** | **int** |  |
+**radiusKm** | **int** | Optional. 50 km is the only Project-Based radius. | [optional]
 **fulfillmentMethod** | **String** |  |
 **lines** | [**BuiltList&lt;WorkPackageBudgetEstimateLineInput&gt;**](WorkPackageBudgetEstimateLineInput.md) |  |
 

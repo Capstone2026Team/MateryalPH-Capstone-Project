@@ -14,8 +14,8 @@ use Illuminate\Support\Str;
 /**
  * FIN-03 commission arithmetic and credits beyond the ESTIMATED → EARNED lifecycle in FeeAssessmentService.
  *
- *   earned fee        = money(E_completed × 0.02), E = completed, non-refunded materials value excluding VAT
- *   partial return    target = money((E − returned E) × 0.02); credit = original target − new target
+ *   earned fee        = money(E_completed × saved rate), E = completed, non-refunded materials value excluding VAT
+ *   partial return    target = money((E − returned E) × saved rate); credit = original target − new target
  *   full reversal     consumes every remaining fee centavo
  *   DEMO_VAT_12       fee VAT = money(fee × 12 / 112); revenue = fee − VAT (DEMO_NONVAT: no fee VAT)
  *
@@ -26,6 +26,19 @@ use Illuminate\Support\Str;
 final class CommissionService
 {
     public function __construct(private readonly FinancialLedgerService $ledger, private readonly OutboxPublisher $outbox) {}
+
+    public static function collections(?string $organizationId = null): Builder
+    {
+        return DB::table('fee_payment_allocations as a')->join('payments as p', 'p.id', '=', 'a.payment_id')
+            ->where('p.state', 'PAID')->where('p.purpose', 'PLATFORM_FEE_PAYMENT')->where('p.environment', FinancialSnapshotService::ENVIRONMENT)->where('p.late_capture', false)
+            ->when($organizationId, fn (Builder $q, string $id) => $q->where('p.vendor_organization_id', $id));
+    }
+
+    public static function feeRefunds(?string $organizationId = null): Builder
+    {
+        return DB::table('refunds as r')->where('r.target_type', 'PLATFORM_FEE')->where('r.state', 'REFUNDED')->where('r.environment', FinancialSnapshotService::ENVIRONMENT)
+            ->when($organizationId, fn (Builder $q, string $id) => $q->whereIn('r.source_payment_id', DB::table('payments')->where('vendor_organization_id', $id)->select('id')));
+    }
 
     /** One signed movement per earning or approved credit, shared by both portals; collections never earn it again. */
     public static function movements(?string $organizationId = null): Builder
@@ -41,13 +54,13 @@ final class CommissionService
     }
 
     /** @return array{target_centavos: int, credit_centavos: int} */
-    public static function creditTarget(int $originalExclusiveCentavos, int $originalTargetCentavos, int $alreadyCreditedCentavos, int $returnedExclusiveCentavos): array
+    public static function creditTarget(int $originalExclusiveCentavos, int $originalTargetCentavos, int $alreadyCreditedCentavos, int $returnedExclusiveCentavos, int $basisPoints = 200): array
     {
         if ($returnedExclusiveCentavos < 0 || $returnedExclusiveCentavos > $originalExclusiveCentavos) {
             throw new \InvalidArgumentException('Returned value must be within the original exclusive materials value.');
         }
         $remaining = $originalExclusiveCentavos - $returnedExclusiveCentavos;
-        $target = $remaining === 0 ? 0 : Money::commission($remaining);
+        $target = $remaining === 0 ? 0 : Money::commission($remaining, $basisPoints);
         $credit = max(0, $originalTargetCentavos - $alreadyCreditedCentavos - $target);
 
         return ['target_centavos' => $target, 'credit_centavos' => $credit];
@@ -112,6 +125,9 @@ final class CommissionService
     /** Posts the PLATFORM_FEE earning batch once per earned assessment, inside the earning transaction. */
     public function postEarning(object $assessment, int $earnedCentavos, string $correlationId): void
     {
+        if ($earnedCentavos === 0) {
+            return;
+        }
         $split = self::feeVat($earnedCentavos);
         $source = ['FEE_ASSESSMENT', (string) $assessment->id];
         $this->ledger->post(FinancialLedgerService::PLATFORM_FEE, 'FEE_EARNED', 'PLATFORM_FEE:EARNED:'.$assessment->id, [
@@ -132,7 +148,7 @@ final class CommissionService
             if ($assessment === null || $assessment->state !== 'EARNED') {
                 throw new AuthenticationException('FEE_CREDIT_NOT_AVAILABLE', 'Only an earned commission can be credited.', 409);
             }
-            $computed = self::creditTarget((int) $assessment->commission_basis_centavos, (int) $assessment->earned_target_centavos, (int) $assessment->credited_centavos, $returnedExclusiveCentavos);
+            $computed = self::creditTarget((int) $assessment->commission_basis_centavos, (int) $assessment->earned_target_centavos, (int) $assessment->credited_centavos, $returnedExclusiveCentavos, (int) $assessment->commission_basis_points);
             if ($computed['credit_centavos'] <= 0) {
                 throw new AuthenticationException('FEE_CREDIT_NOT_AVAILABLE', 'This return does not reduce the earned commission.', 422);
             }
@@ -160,7 +176,7 @@ final class CommissionService
                 throw new AuthenticationException('PREPARER_REVIEWER_SAME', 'A different finance user must approve this credit.', 403);
             }
             $assessment = DB::table('fee_assessments')->where('id', $proposal->source_id)->lockForUpdate()->first();
-            $computed = self::creditTarget((int) $assessment->commission_basis_centavos, (int) $assessment->earned_target_centavos, (int) $assessment->credited_centavos, (int) $values['returned_exclusive_centavos']);
+            $computed = self::creditTarget((int) $assessment->commission_basis_centavos, (int) $assessment->earned_target_centavos, (int) $assessment->credited_centavos, (int) $values['returned_exclusive_centavos'], (int) $assessment->commission_basis_points);
             if ($computed['credit_centavos'] <= 0) {
                 throw new AuthenticationException('FEE_CREDIT_NOT_AVAILABLE', 'This commission was already credited.', 409);
             }

@@ -6,60 +6,6 @@ part of 'fee_assessment.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
-const FeeAssessmentCommissionBasisPointsEnum
-    _$feeAssessmentCommissionBasisPointsEnum_number200 =
-    const FeeAssessmentCommissionBasisPointsEnum._('number200');
-
-FeeAssessmentCommissionBasisPointsEnum
-    _$feeAssessmentCommissionBasisPointsEnumValueOf(String name) {
-  switch (name) {
-    case 'number200':
-      return _$feeAssessmentCommissionBasisPointsEnum_number200;
-    default:
-      throw ArgumentError(name);
-  }
-}
-
-final BuiltSet<FeeAssessmentCommissionBasisPointsEnum>
-    _$feeAssessmentCommissionBasisPointsEnumValues = BuiltSet<
-        FeeAssessmentCommissionBasisPointsEnum>(const <FeeAssessmentCommissionBasisPointsEnum>[
-  _$feeAssessmentCommissionBasisPointsEnum_number200,
-]);
-
-Serializer<FeeAssessmentCommissionBasisPointsEnum>
-    _$feeAssessmentCommissionBasisPointsEnumSerializer =
-    _$FeeAssessmentCommissionBasisPointsEnumSerializer();
-
-class _$FeeAssessmentCommissionBasisPointsEnumSerializer
-    implements PrimitiveSerializer<FeeAssessmentCommissionBasisPointsEnum> {
-  static const Map<String, Object> _toWire = const <String, Object>{
-    'number200': 200,
-  };
-  static const Map<Object, String> _fromWire = const <Object, String>{
-    200: 'number200',
-  };
-
-  @override
-  final Iterable<Type> types = const <Type>[
-    FeeAssessmentCommissionBasisPointsEnum
-  ];
-  @override
-  final String wireName = 'FeeAssessmentCommissionBasisPointsEnum';
-
-  @override
-  Object serialize(Serializers serializers,
-          FeeAssessmentCommissionBasisPointsEnum object,
-          {FullType specifiedType = FullType.unspecified}) =>
-      _toWire[object.name] ?? object.name;
-
-  @override
-  FeeAssessmentCommissionBasisPointsEnum deserialize(
-          Serializers serializers, Object serialized,
-          {FullType specifiedType = FullType.unspecified}) =>
-      FeeAssessmentCommissionBasisPointsEnum.valueOf(
-          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
-}
-
 class _$FeeAssessment extends FeeAssessment {
   @override
   final String id;
@@ -68,7 +14,7 @@ class _$FeeAssessment extends FeeAssessment {
   @override
   final int commissionBasisCentavos;
   @override
-  final FeeAssessmentCommissionBasisPointsEnum commissionBasisPoints;
+  final int commissionBasisPoints;
   @override
   final int earnedCentavos;
   @override
@@ -147,11 +93,9 @@ class FeeAssessmentBuilder
   set commissionBasisCentavos(int? commissionBasisCentavos) =>
       _$this._commissionBasisCentavos = commissionBasisCentavos;
 
-  FeeAssessmentCommissionBasisPointsEnum? _commissionBasisPoints;
-  FeeAssessmentCommissionBasisPointsEnum? get commissionBasisPoints =>
-      _$this._commissionBasisPoints;
-  set commissionBasisPoints(
-          FeeAssessmentCommissionBasisPointsEnum? commissionBasisPoints) =>
+  int? _commissionBasisPoints;
+  int? get commissionBasisPoints => _$this._commissionBasisPoints;
+  set commissionBasisPoints(int? commissionBasisPoints) =>
       _$this._commissionBasisPoints = commissionBasisPoints;
 
   int? _earnedCentavos;

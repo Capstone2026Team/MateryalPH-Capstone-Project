@@ -9,7 +9,10 @@ import 'package:materyalph/design_system/components/messaging_components.dart';
 import 'package:materyalph/design_system/components/procurement_components.dart';
 import 'package:materyalph/design_system/theme.dart';
 import 'package:materyalph/features/messaging/messaging_repository.dart';
+import 'package:materyalph/features/messaging/conversation_timeline.dart';
+import 'package:materyalph/features/messaging/conversation_quotations_screen.dart';
 import 'package:materyalph/features/messaging/messaging_screen.dart';
+import 'package:materyalph/features/orders/orders_repository.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 
 // Synthetic UI fixtures. These do not represent live stores or provider data.
@@ -59,7 +62,58 @@ api.ChatMessage message(String id, String body, {bool mine = false}) =>
         ..readByRecipient = mine,
     );
 
+api.ChatQuotationVersion layoutQuotation({
+  int version = 1,
+  bool latest = true,
+}) => api.ChatQuotationVersion(
+  (b) => b
+    ..id = 'version-$version'
+    ..version = version
+    ..latest = latest
+    ..state = latest ? 'PUBLISHED' : 'SUPERSEDED'
+    ..publishedAt = '2026-09-30T00:00:00Z'
+    ..expiresAt = '2099-09-30T00:00:00Z'
+    ..contentHash = 'hash-$version'
+    ..viewed = true
+    ..availablePaymentMethods.addAll(['ONLINE', 'IN_STORE'])
+    ..actions.addAll(latest ? ['view', 'accept', 'reject', 'counter'] : [])
+    ..content.update(
+      (c) => c
+        ..fulfillmentMethod = 'PICKUP'
+        ..paymentMethod = 'ONLINE'
+        ..fulfillmentDate = '2099-10-01'
+        ..priceSource =
+            api.ChatQuotationContentPriceSourceEnum.PRIVATE_TRANSACTION
+        ..processingFeeStatus = 'PENDING_PAYMENT_CHANNEL'
+        ..lines.add(
+          api.ChatQuotationLine(
+            (l) => l
+              ..variantId = 'variant'
+              ..quantity = '1.0000'
+              ..unitPriceCentavos = 28550
+              ..description = 'Rerolled steel bar'
+              ..unitCode = 'PC'
+              ..taxCategory = 'VAT_12'
+              ..sourcePriceVersionId = 'price'
+              ..sourceTaxVersionId = 'tax',
+          ),
+        )
+        ..commercial.update(
+          (m) => m
+            ..materialsPayableCentavos = 28550
+            ..materialsVatCentavos = 3059
+            ..vendorDiscountCentavos = 0
+            ..deliveryCentavos = 0
+            ..nrpcCentavos = 0
+            ..commercialTotalCentavos = 28550,
+        ),
+    ),
+);
+
 class LayoutMessagingRepository implements MessagingRepository {
+  final quotationVersions = <api.ChatQuotationVersion>[];
+  final quotationPages = <int>[];
+  bool paginateQuotations = false;
   final projectRows = <api.ConversationView>[];
   final projectPages = <int>[];
   @override
@@ -187,6 +241,7 @@ class LayoutMessagingRepository implements MessagingRepository {
     int legacyPage = 1,
   }) async {
     requestedCursors.add(before);
+    quotationPages.add(page);
     final eligible = messages
         .where((m) => before == null || m.id.compareTo(before) < 0)
         .toList();
@@ -206,7 +261,17 @@ class LayoutMessagingRepository implements MessagingRepository {
                 ? pageItems.first.id
                 : null,
         )
-        ..quotations.update((q) => q..hasMore = false),
+        ..quotations.update(
+          (q) => q
+            ..versions.addAll(
+              paginateQuotations
+                  ? quotationVersions.skip((page - 1) * 10).take(10)
+                  : quotationVersions,
+            )
+            ..page = page
+            ..hasMore =
+                paginateQuotations && quotationVersions.length > page * 10,
+        ),
     );
   }
 
@@ -262,6 +327,23 @@ class LayoutMessagingRepository implements MessagingRepository {
 
   final attachmentCalls = <String>[];
 
+  final decisions = <({String action, String? paymentMethod})>[];
+  @override
+  Future<String?> decide(
+    String id,
+    String action,
+    api.ChatQuotationVersion version,
+    String key, {
+    String? reason,
+    bool nrpcAcknowledged = false,
+    String? termsId,
+    String? budgetOverrideReason,
+    String? paymentMethod,
+  }) async {
+    decisions.add((action: action, paymentMethod: paymentMethod));
+    return action == 'accept' ? 'accepted-order' : null;
+  }
+
   @override
   Future<Uint8List> attachment(String id, String attachmentId) async {
     attachmentCalls.add(attachmentId);
@@ -276,6 +358,11 @@ class LayoutMessagingRepository implements MessagingRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+class UnusedOrdersRepository implements OrdersRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 Future<void> mount(
   WidgetTester tester,
   LayoutMessagingRepository repository, {
@@ -283,6 +370,7 @@ Future<void> mount(
   String? initialProductId,
   double width = 390,
   double scale = 1,
+  OrdersRepository? orders,
 }) async {
   await tester.binding.setSurfaceSize(Size(width, 844));
   tester.platformDispatcher.textScaleFactorTestValue = scale;
@@ -296,6 +384,7 @@ Future<void> mount(
       theme: BuyerTheme.light,
       home: MessagingScreen(
         repository: repository,
+        orders: orders,
         initialProductId: initialProductId,
         conversationId: thread ? 'one' : null,
         onOpenCart: () {},
@@ -308,6 +397,43 @@ Future<void> mount(
 
 void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
+  testWidgets(
+    'accepted orders are reached through their quotation without repeated thread actions',
+    (tester) async {
+      final repository = LayoutMessagingRepository();
+      repository.quotationVersions.addAll([
+        for (final number in [2, 1])
+          layoutQuotation(version: number, latest: false).rebuild(
+            (b) => b
+              ..state = 'ACCEPTED'
+              ..acceptedOrderId = 'order-$number'
+              ..actions.clear(),
+          ),
+      ]);
+      await mount(
+        tester,
+        repository,
+        thread: true,
+        orders: UnusedOrdersRepository(),
+      );
+      expect(find.text('Open Order Details'), findsNothing);
+      await tester.ensureVisible(find.text('Requested quotation v2'));
+      await tester.tap(find.text('Requested quotation v2'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Open Order Details'),
+        300,
+        scrollable: find
+            .descendant(
+              of: find.byType(ConversationQuotationDetailScreen),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      expect(find.text('Open Order Details'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
   testWidgets(
     'reconnect fills a gap larger than one page without duplicate messages',
     (tester) async {
@@ -523,6 +649,295 @@ void main() {
       expect(repository.conversationChanged, isNull);
     },
   );
+  test('quotations stay between messages at their publication time', () {
+    final earlier = message(
+      'before',
+      'Before',
+    ).rebuild((b) => b..sentAt = '2026-09-30T00:00:00Z');
+    final later = message(
+      'after',
+      'After',
+    ).rebuild((b) => b..sentAt = '2026-09-30T02:00:00Z');
+    final quote = layoutQuotation().rebuild(
+      (b) => b..publishedAt = '2026-09-30T01:00:00Z',
+    );
+    final entries = conversationTimeline([later, earlier], [quote]);
+    expect(entries.map((e) => e.id), [
+      'message-before',
+      'quotation-version-1',
+      'message-after',
+    ]);
+    final accepted = quote.rebuild(
+      (b) => b
+        ..state = 'ACCEPTED'
+        ..actions.clear(),
+    );
+    expect(
+      conversationTimeline([later, earlier], [accepted]).map((e) => e.id),
+      entries.map((e) => e.id),
+    );
+  });
+  for (final method in ['IN_STORE', 'ONLINE', 'CASH_ON_DELIVERY']) {
+    testWidgets(
+      'quotation acceptance requires the Buyer to choose $method explicitly',
+      (tester) async {
+        final delivery = method == 'CASH_ON_DELIVERY';
+        final quote = layoutQuotation().rebuild(
+          (b) => b
+            ..availablePaymentMethods.replace([
+              'ONLINE',
+              delivery ? 'CASH_ON_DELIVERY' : 'IN_STORE',
+            ])
+            ..content.fulfillmentMethod = delivery ? 'DELIVERY' : 'PICKUP',
+        );
+        final repository = LayoutMessagingRepository()
+          ..messages.clear()
+          ..quotationVersions.add(quote);
+        await mount(tester, repository, thread: true);
+        await tester.tap(find.text('Requested quotation v1'));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('Review & accept'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Review & accept'));
+        await tester.pumpAndSettle();
+        final accept = find.widgetWithText(FilledButton, 'Accept version 1');
+        expect(tester.widget<FilledButton>(accept).onPressed, isNull);
+        expect(find.text('Choose payment method'), findsOneWidget);
+        expect(
+          find.text(delivery ? 'In-Store Payment' : 'Cash on Delivery (COD)'),
+          findsNothing,
+        );
+        final label = method == 'ONLINE'
+            ? 'Online payment'
+            : method == 'IN_STORE'
+            ? 'In-Store Payment'
+            : 'Cash on Delivery (COD)';
+        await tester.ensureVisible(find.text(label));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(label));
+        await tester.pumpAndSettle();
+        expect(tester.widget<FilledButton>(accept).onPressed, isNotNull);
+        await tester.ensureVisible(accept);
+        await tester.pumpAndSettle();
+        await tester.tap(accept);
+        await tester.pumpAndSettle();
+        expect(
+          repository.decisions
+              .where((d) => d.action == 'accept')
+              .single
+              .paymentMethod,
+          method,
+        );
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
+  testWidgets(
+    'quotation history modal keeps list and details above the thread and preserves the draft',
+    (tester) async {
+      final repository = LayoutMessagingRepository()
+        ..messages.clear()
+        ..quotationVersions.addAll([
+          layoutQuotation(version: 2),
+          layoutQuotation(version: 1, latest: false),
+        ]);
+      await mount(tester, repository, thread: true);
+      await tester.enterText(
+        find.byType(TextField).last,
+        'Keep my quotation draft',
+      );
+      expect(find.byTooltip('Cart'), findsNothing);
+      expect(find.text('Rerolled steel bar'), findsNothing);
+      await tester.tap(find.text('Requested quotation v2'));
+      await tester.pumpAndSettle();
+      expect(find.byType(Dialog), findsOneWidget);
+      expect(find.text('Quotation history'), findsOneWidget);
+      expect(find.text('Quotation details'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(Dialog),
+          matching: find.byTooltip('Back'),
+        ),
+        findsNothing,
+      );
+      expect(find.text('Quotation v2'), findsOneWidget);
+      expect(find.text('Review & accept'), findsOneWidget);
+      await tester.ensureVisible(find.text('Counter-offer'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Counter-offer'));
+      await tester.pumpAndSettle();
+      expect(find.text('Request changes'), findsOneWidget);
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.widgetWithText(FilledButton, 'Send request'),
+            )
+            .onPressed,
+        isNull,
+      );
+      final requestedChanges = find.widgetWithText(
+        TextField,
+        'Requested changes',
+      );
+      await tester.enterText(requestedChanges, 'Please adjust the quantity.');
+      tester.view.viewInsets = FakeViewPadding(
+        bottom: 300 * tester.view.devicePixelRatio,
+      );
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+      expect(
+        find.widgetWithText(FilledButton, 'Send request').hitTestable(),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.widgetWithText(FilledButton, 'Send request'),
+            )
+            .onPressed,
+        isNotNull,
+      );
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await tester.pumpAndSettle();
+      tester.view.resetViewInsets();
+      await tester.pumpAndSettle();
+      expect(find.text('Quotation details'), findsOneWidget);
+      await tester.tap(find.byTooltip('Close quotation history'));
+      await tester.pumpAndSettle();
+      expect(find.text('Keep my quotation draft'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Quotations, 1 awaiting your response'));
+      await tester.pumpAndSettle();
+      final dialog = find.byType(Dialog);
+      Finder inDialog(String label) =>
+          find.descendant(of: dialog, matching: find.text(label));
+      expect(inDialog('Requested quotation v2'), findsOneWidget);
+      expect(inDialog('Requested quotation v1'), findsOneWidget);
+      expect(find.text('Rerolled steel bar'), findsNothing);
+      await tester.tap(inDialog('Requested quotation v1'));
+      await tester.pumpAndSettle();
+      expect(find.text('Quotation v1'), findsOneWidget);
+      expect(find.text('Review & accept'), findsNothing);
+      tester
+          .state<NavigatorState>(
+            find.descendant(of: dialog, matching: find.byType(Navigator)),
+          )
+          .pop();
+      await tester.pumpAndSettle();
+      expect(inDialog('Requested quotation v2'), findsOneWidget);
+      await tester.tap(find.byTooltip('Close quotation history'));
+      await tester.pumpAndSettle();
+      expect(find.text('Keep my quotation draft'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+  testWidgets('quotation list retries older pages and clears revoked details', (
+    tester,
+  ) async {
+    final current = layoutQuotation(version: 2);
+    final older = layoutQuotation(version: 1, latest: false);
+    final pages = ValueNotifier<api.ChatQuotationPage?>(
+      api.ChatQuotationPage(
+        (b) => b
+          ..versions.add(current)
+          ..hasMore = true
+          ..page = 1,
+      ),
+    );
+    var attempts = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: BuyerTheme.light,
+        home: ConversationQuotationsScreen(
+          quotations: pages,
+          onDecide: (_, _) async => null,
+          onLoadOlder: () async {
+            attempts++;
+            if (attempts == 1) throw StateError('fixture offline');
+            pages.value = api.ChatQuotationPage(
+              (b) => b
+                ..versions.addAll([current, older])
+                ..hasMore = false
+                ..page = 2,
+            );
+          },
+        ),
+      ),
+    );
+    await tester.tap(find.text('Older quotations'));
+    await tester.pumpAndSettle();
+    expect(find.text('Requested quotation v2'), findsOneWidget);
+    expect(find.text('Retry older quotations'), findsOneWidget);
+    await tester.tap(find.text('Retry older quotations'));
+    await tester.pumpAndSettle();
+    expect(attempts, 2);
+    expect(find.text('Requested quotation v1'), findsOneWidget);
+    await tester.tap(find.text('Requested quotation v1'));
+    await tester.pumpAndSettle();
+    expect(find.text('Quotation v1'), findsOneWidget);
+    expect(find.text('Review & accept'), findsNothing);
+    pages.value = null;
+    await tester.pumpAndSettle();
+    expect(find.text('Quotation unavailable'), findsOneWidget);
+    expect(find.text('Rerolled steel bar'), findsNothing);
+    expect(find.text('Quotation v2'), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    pages.dispose();
+  });
+  testWidgets('refresh keeps an open quotation from an older history page', (
+    tester,
+  ) async {
+    final repository = LayoutMessagingRepository()
+      ..paginateQuotations = true
+      ..messages.clear()
+      ..quotationVersions.addAll([
+        for (var i = 11; i >= 1; i--)
+          layoutQuotation(version: i, latest: i == 11),
+      ]);
+    await mount(tester, repository, thread: true);
+    await tester.tap(find.byTooltip('Quotations, 1 awaiting your response'));
+    await tester.pumpAndSettle();
+    final dialog = find.byType(Dialog);
+    Finder inDialog(String label) =>
+        find.descendant(of: dialog, matching: find.text(label));
+    final historyScroll = find
+        .descendant(of: dialog, matching: find.byType(Scrollable))
+        .first;
+    await tester.scrollUntilVisible(
+      inDialog('Older quotations'),
+      500,
+      scrollable: historyScroll,
+    );
+    await tester.tap(inDialog('Older quotations'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      inDialog('Requested quotation v1'),
+      500,
+      scrollable: historyScroll,
+    );
+    await tester.tap(inDialog('Requested quotation v1'));
+    await tester.pumpAndSettle();
+    expect(find.text('Quotation v1'), findsOneWidget);
+    final calls = repository.quotationPages.length;
+    repository.conversationChanged!();
+    await tester.pumpAndSettle();
+    expect(repository.quotationPages.skip(calls), [1, 2]);
+    expect(find.text('Quotation v1'), findsOneWidget);
+    expect(find.text('Quotation unavailable'), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+  });
+  testWidgets('a thread without quotations still offers the quotations page', (
+    tester,
+  ) async {
+    final repository = LayoutMessagingRepository();
+    await mount(tester, repository, thread: true);
+    expect(find.byTooltip('Cart'), findsNothing);
+    await tester.tap(find.byTooltip('Quotations'));
+    await tester.pumpAndSettle();
+    expect(find.text('No quotation yet'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
   testWidgets(
     'composer actions hide behind a toggle and history links are gone',
     (tester) async {

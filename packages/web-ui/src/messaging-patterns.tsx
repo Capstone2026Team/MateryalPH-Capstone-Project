@@ -4,9 +4,11 @@ import { BadgeCheck, Check, CheckCheck, Download, FileText, ImageOff, MessageSqu
 import { Button } from './button'
 import { CountBadge } from './count-badge'
 import { DeadlineCountdown, formatPesoCentavos } from './order-patterns'
+import { quotationChangeNotes, type QuotationChangeNote } from './quotation-changes'
+import { QuotationMaterialLines, QuotationPaymentBreakdown } from './quotation-details'
 import './messaging-patterns.css'
 
-export const conversationLabel = (conversation: ConversationView) => conversation.purpose === 'FULFILLMENT' ? 'Order coordination' : conversation.contextType === 'PROJECT_BASED' ? conversation.inquiryLabel ?? 'Project inquiry' : 'Item inquiry'
+export const conversationLabel = (conversation: ConversationView) => conversation.purpose === 'FULFILLMENT' ? 'Order coordination' : conversation.contextType === 'PROJECT_BASED' ? conversation.inquiryLabel ?? 'Project inquiry' : 'Inquiry'
 
 export function ConversationInbox({ rows, selected, onSelect, disabled = false, loadAvatar }: { rows: ConversationView[]; selected: string | null; onSelect: (id: string) => void; disabled?: boolean; loadAvatar?: (path: string) => Promise<Blob> }) {
   const [query, setQuery] = useState('')
@@ -84,19 +86,61 @@ export function ConversationHeader({ store, buyer, handler, purpose, loadAvatar 
   </header>
 }
 
+const quotationStatus = (version: ChatQuotationVersion) => ({ PUBLISHED: 'Awaiting Buyer response', VIEWED: 'Viewed by Buyer', COUNTERED: 'Buyer requested changes', ACCEPTED: 'Accepted', REJECTED: 'Rejected', WITHDRAWN: 'Withdrawn', EXPIRED: 'Expired', SUPERSEDED: 'Superseded', STOCK_REVALIDATION_REQUIRED: 'Stock revalidation required' }[version.state] ?? version.state.replaceAll('_', ' ').toLowerCase())
+
+function QuotationChangeRequest({ version }: { version: ChatQuotationVersion }) {
+  if (!version.requestedChanges) return null
+  return <section className="mt-3 border-t border-border-default pt-3" aria-label={`Buyer change request for quotation v${version.version}`}>
+    <h4 className="text-sm font-semibold">Buyer requested changes</h4>
+    <p className="mt-1 whitespace-pre-wrap break-words text-sm">{version.requestedChanges}</p>
+    {version.changeRequestedAt && <p className="mt-1 text-xs text-text-secondary">Requested <time dateTime={version.changeRequestedAt}>{new Date(version.changeRequestedAt).toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' })} Manila</time></p>}
+    {version.latest && version.state === 'COUNTERED' && version.vendorResponseDueAt && <div className="mt-2"><DeadlineCountdown at={version.vendorResponseDueAt} label="Vendor response due" endedLabel="Vendor response deadline passed" /></div>}
+  </section>
+}
+
+/** Compact in-thread entry; full materials, changes and payment details open on demand. */
+export function QuotationThreadCard({ version, busy = false, onOpen, onRevise }: { version: ChatQuotationVersion; busy?: boolean; onOpen: () => void; onRevise?: () => void }) {
+  return <article className="w-full min-w-0 max-w-xl rounded-surface border border-border-default bg-surface-primary p-4" aria-label={`Quotation v${version.version}`}>
+    <div className="flex items-start gap-3"><FileText size={20} aria-hidden="true" className="mt-1 shrink-0" /><div className="min-w-0 flex-1">
+      <h3 className="font-semibold">Quotation v{version.version}</h3>
+      <p className="mt-1 text-sm">{quotationStatus(version)} · {formatPesoCentavos(version.content.commercial.commercialTotalCentavos)}</p>
+      <p className="mt-1 text-xs text-text-secondary">Published <time dateTime={version.publishedAt}>{new Date(version.publishedAt).toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' })} Manila</time></p>
+    </div></div>
+    <QuotationChangeRequest version={version} />
+    <div className="mt-3 flex flex-wrap gap-2"><Button variant="secondary" onClick={onOpen} aria-haspopup="dialog">View quotation v{version.version}</Button>{version.latest && version.state === 'COUNTERED' && onRevise && <Button disabled={busy} onClick={onRevise}>Revise quotation</Button>}</div>
+  </article>
+}
+
 export function QuotationVersionCard({ version, busy = false, onAction }: { version: ChatQuotationVersion; busy?: boolean; onAction?: (action: string, version: ChatQuotationVersion) => void }) {
   const content = version.content
   return <article className="min-w-0 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5" aria-label={`Quotation version ${version.version}`}>
-    <div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Order from chat</p><h3 className="mt-1 text-lg font-semibold">Quotation v{version.version}</h3></div><span className="rounded-control bg-surface-canvas px-2 py-1 text-sm font-semibold">{version.state === 'ACCEPTED' ? 'Accepted' : version.latest ? 'Latest version' : 'Superseded'}</span></div>
-    <p className="mt-2 text-sm text-text-secondary">{version.state.replaceAll('_', ' ')} · {version.viewed ? 'Viewed by Buyer' : 'Not yet viewed'}</p>
-    <dl className="my-4 divide-y divide-border-default">{content.lines.map(line => <div className="flex flex-wrap justify-between gap-2 py-3" key={line.variantId}><dt className="min-w-0"><span className="block break-words font-medium">{line.description}</span><span className="text-sm text-text-secondary">{line.quantity} {line.unitCode} × {formatPesoCentavos(line.unitPriceCentavos)} · {line.taxCategory.replaceAll('_', ' ')}</span></dt></div>)}</dl>
-    {content.discount && <p className="mb-3 flex flex-wrap justify-between gap-2 text-sm"><span>Vendor discount {content.discount.percent}% · {content.discount.scope === 'MATERIALS' ? 'materials' : 'delivery fee'}</span><strong className="tabular-nums">− {formatPesoCentavos(content.discount.deductionCentavos)}</strong></p>}
-    <div className="space-y-2 border-t border-border-default pt-3 text-sm"><div className="flex justify-between gap-2"><span>Materials after discounts</span><strong>{formatPesoCentavos(content.commercial.materialsPayableCentavos)}</strong></div><div className="flex justify-between gap-2"><span>Included VAT</span><span>{formatPesoCentavos(content.commercial.materialsVatCentavos)}</span></div><div className="flex justify-between gap-2"><span>Delivery</span><span>{formatPesoCentavos(content.commercial.deliveryCentavos)}</span></div><div className="flex justify-between gap-2 text-base"><span>Total before processing fee</span><strong>{formatPesoCentavos(content.commercial.commercialTotalCentavos)}</strong></div><p className="text-text-secondary">Processing fee pending payment channel selection.</p><p>{content.fulfillmentMethod === 'PICKUP' ? 'Self-Pickup' : 'Site Delivery'} · {content.fulfillmentDate} · {content.paymentMethod}</p>{content.commercial.nrpcCentavos > 0 && <p className="font-semibold">NRPC {formatPesoCentavos(content.commercial.nrpcCentavos)} is included in the total.</p>}</div>
-    <details className="mt-4 border-t border-border-default pt-3"><summary className="min-h-11 cursor-pointer font-medium">What changed · {content.changes.length} fields</summary><ul className="space-y-2 text-sm text-text-secondary">{content.changes.map(change => <li key={change.path}>{change.label}</li>)}</ul></details>
-    {version.state !== 'ACCEPTED' && <div className="mt-3"><DeadlineCountdown at={version.expiresAt} label="Buyer deadline" endedLabel="Quotation deadline passed" /></div>}
-    {!version.latest && version.state !== 'ACCEPTED' && <p className="mt-3 text-sm text-text-secondary">A newer quotation replaces these terms. Open the latest version to respond.</p>}
+    <div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Order from chat</p><h3 className="mt-1 text-lg font-semibold">Quotation v{version.version}</h3></div><span className="rounded-control bg-surface-canvas px-2 py-1 text-sm font-semibold">{version.latest && ['PUBLISHED', 'VIEWED'].includes(version.state) ? 'Latest version' : quotationStatus(version)}</span></div>
+    <p className="mt-2 text-sm text-text-secondary">{version.state === 'VIEWED' && version.viewed ? 'Viewed by Buyer' : `${version.state.replaceAll('_', ' ').toLowerCase().replace(/^./, letter => letter.toUpperCase())} · ${version.viewed ? 'Viewed by Buyer' : 'Not yet viewed'}`}</p>
+    <QuotationMaterialLines lines={content.lines} />
+    <QuotationPaymentBreakdown content={content} selectedPaymentMethod={version.selectedPaymentMethod ?? null} accepted={version.state === 'ACCEPTED'} />
+    <QuotationChangeList key={version.id} notes={quotationChangeNotes(content)} />
+    <QuotationChangeRequest version={version} />
+    {version.latest && ['PUBLISHED', 'VIEWED'].includes(version.state) && <div className="mt-3"><DeadlineCountdown at={version.expiresAt} label="Buyer deadline" endedLabel="Quotation deadline passed" /></div>}
+    {version.state === 'SUPERSEDED' && <p className="mt-3 text-sm text-text-secondary">A newer quotation replaces these terms. Open the latest version to respond.</p>}
     {version.latest && version.actions.length > 0 && onAction && <div className="mt-4 flex flex-wrap gap-2">{version.actions.filter(action => action !== 'view').map(action => <Button key={action} variant={action === 'accept' ? 'primary' : 'secondary'} disabled={busy || Date.parse(version.expiresAt) <= Date.now()} onClick={() => onAction(action, version)}>{({ accept: 'Review & accept', reject: 'Reject', counter: 'Counter-offer', withdraw: 'Withdraw quotation' } as Record<string, string>)[action] ?? action}</Button>)}</div>}
   </article>
+}
+
+function QuotationChangeList({ notes }: { notes: QuotationChangeNote[] }) {
+  const [all, setAll] = useState(false)
+  const shown = all ? notes : notes.slice(0, 5)
+  return <details className="mt-4 border-t border-border-default pt-3">
+    <summary className="min-h-11 cursor-pointer font-medium">What changed{notes.length > 0 ? ` · ${notes.length} ${notes.length === 1 ? 'change' : 'changes'}` : ''}</summary>
+    {notes.length === 0 ? <p className="pb-3 text-sm text-text-secondary">Quotation terms are shown above.</p> : <>
+      <ul className="grid gap-3 pb-2">{shown.map(note => <li key={JSON.stringify(note)} className="min-w-0 break-words text-sm">
+        <p className="font-medium">{note.title}</p>
+        {(note.before !== undefined || note.after !== undefined) && <p className="mt-1 text-text-secondary">
+          {note.before !== undefined && note.after !== undefined ? <><span className="sr-only">Changed from </span><span>{note.before}</span><span aria-hidden="true"> → </span><span className="sr-only"> to </span><span className="font-medium text-text-strong">{note.after}</span></> : note.after ?? `Previously ${note.before}`}
+        </p>}
+      </li>)}</ul>
+      {notes.length > 5 && <Button variant="quiet" onClick={() => setAll(value => !value)} aria-expanded={all}>{all ? 'Show fewer changes' : `Show all ${notes.length} changes`}</Button>}
+    </>}
+  </details>
 }
 
 /** A clean chat photo previewed from its private bytes as a short-lived object URL, never a stored or public link. */

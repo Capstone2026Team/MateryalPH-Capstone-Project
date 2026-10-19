@@ -141,7 +141,7 @@ class _$ChatDraftContent extends ChatDraftContent {
   @override
   final ChatDraftContentFulfillmentMethodEnum fulfillmentMethod;
   @override
-  final ChatDraftContentPaymentMethodEnum paymentMethod;
+  final ChatDraftContentPaymentMethodEnum? paymentMethod;
   @override
   final String fulfillmentDate;
   @override
@@ -162,7 +162,7 @@ class _$ChatDraftContent extends ChatDraftContent {
   _$ChatDraftContent._(
       {required this.lines,
       required this.fulfillmentMethod,
-      required this.paymentMethod,
+      this.paymentMethod,
       required this.fulfillmentDate,
       this.deadlineHours,
       this.vendorDiscountCentavos,
@@ -320,8 +320,7 @@ class ChatDraftContentBuilder
             lines: lines.build(),
             fulfillmentMethod: BuiltValueNullFieldError.checkNotNull(
                 fulfillmentMethod, r'ChatDraftContent', 'fulfillmentMethod'),
-            paymentMethod: BuiltValueNullFieldError.checkNotNull(
-                paymentMethod, r'ChatDraftContent', 'paymentMethod'),
+            paymentMethod: paymentMethod,
             fulfillmentDate: BuiltValueNullFieldError.checkNotNull(
                 fulfillmentDate, r'ChatDraftContent', 'fulfillmentDate'),
             deadlineHours: deadlineHours,

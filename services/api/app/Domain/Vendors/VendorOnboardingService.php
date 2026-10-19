@@ -68,7 +68,7 @@ final class VendorOnboardingService
             'bir_cor' => ['label' => 'BIR COR evidence', 'level' => 'REQUIRED'],
             'tax_profile' => ['label' => 'Tax profile', 'level' => 'REQUIRED'],
             'tax_relief_evidence' => ['label' => 'Tax relief evidence', 'level' => 'CONDITIONALLY_REQUIRED'],
-            'commission_terms' => ['label' => '2% commission terms', 'level' => 'REQUIRED'],
+            'commission_terms' => ['label' => 'Commission terms', 'level' => 'REQUIRED'],
             'privacy_acknowledgement' => ['label' => 'Privacy acknowledgement', 'level' => 'REQUIRED'],
         ],
         'STORE_SETUP' => [
@@ -156,6 +156,16 @@ final class VendorOnboardingService
         $delivery = DB::table('delivery_service_areas')->where('vendor_organization_id', $organizationId)->first(['area_type', 'maximum_distance_km', 'coverage_notes', 'active', 'version', 'lock_version']);
         $vehicles = $this->vehicles($organizationId);
         $privacyAcknowledged = $this->privacyNoticeAccepted($request, $organizationId);
+        $privacyNotice = collect($this->agreements->current($request))->firstWhere('code', 'PRIVACY_NOTICE');
+        $verificationState = $this->verificationFormState($organizationId);
+        $verificationProgress = app(VerificationDraftProgress::class)->statuses($organizationId, $verificationState);
+        $progressReasons = [];
+        $draftTin = $verificationState['tin'][0] ?? '';
+        if ($draftTin !== '' && validator(['lock_version' => 1, 'tax_profile' => ['tin' => $draftTin]], (new VendorVerificationDraftRequest)->rules())->errors()->has('tax_profile.tin')) {
+            $progressReasons['tax_profile'] = 'Enter your 9-digit TIN followed by a 3- to 5-digit branch code (for example, 123-456-789-000).';
+        }
+        $verificationProgress['privacy_acknowledgement'] = $privacyAcknowledged || (($verificationState['privacy_acknowledged'][0] ?? '') === 'on'
+            && ($verificationState['privacy_notice_version'][0] ?? '') !== '' && ($verificationState['privacy_notice_version'][0] ?? '') === (string) ($privacyNotice['version'] ?? '')) ? 'COMPLETED' : 'NOT_STARTED';
 
         return [
             'lock_version' => (int) $organization->lock_version,
@@ -184,7 +194,7 @@ final class VendorOnboardingService
                 'lock_version' => (int) $organization->lock_version,
             ],
             'sections' => [
-                'STORE_VERIFICATION' => $this->section('STORE_VERIFICATION', 'Store Verification', $verificationSteps, $organization->business_type),
+                'STORE_VERIFICATION' => $this->section('STORE_VERIFICATION', 'Store Verification', $verificationSteps, $organization->business_type, $verificationProgress, $progressReasons),
                 'STORE_SETUP' => $this->section('STORE_SETUP', 'Store Setup', $setupSteps),
             ],
             'verification' => [
@@ -199,7 +209,7 @@ final class VendorOnboardingService
                 'form_state' => $this->verificationFormState($organizationId, true),
                 'pending_documents' => DB::table('vendor_pending_documents as p')->join('files as f', 'f.id', '=', 'p.file_id')->where('p.vendor_organization_id', $organizationId)->get(['p.requirement_key', 'p.file_id', 'f.original_name', 'f.byte_size', 'f.content_type'])->map(fn (object $row): array => (array) $row + ['status' => 'PENDING_SUBMISSION'])->all(),
                 'commission_terms' => $this->commissionTerms($request, $organizationId),
-                'privacy_notice' => collect($this->agreements->current($request))->firstWhere('code', 'PRIVACY_NOTICE'),
+                'privacy_notice' => $privacyNotice,
                 'legal_identity' => $this->legalIdentity($organization),
                 'representative' => $this->authority->snapshot($organizationId),
                 'authority_review' => DB::table('vendor_authority_reviews')->where('representative_version_id', $this->authority->current($organizationId)?->id)->orderByDesc('reviewed_at')->first(['decision', 'scope', 'reason', 'reviewed_at']),
@@ -279,6 +289,10 @@ final class VendorOnboardingService
                     }
                 }
                 $this->drafts->save($organizationId, 'STORE_VERIFICATION', ['form_state' => json_encode($state, JSON_THROW_ON_ERROR)], (int) $request->user()->getKey(), $input['draft_lock_version'] ?? null);
+                if ($state !== []) {
+                    DB::table('vendor_organizations')->where('id', $organizationId)->whereNotIn('store_verification_status', ['PENDING_VERIFICATION', 'APPROVED'])
+                        ->update(['store_verification_status' => 'IN_PROGRESS']);
+                }
                 DB::table('vendor_organizations')->where('id', $organizationId)->update(['lock_version' => DB::raw('lock_version + 1'), 'updated_at' => now()]);
             });
 
@@ -556,7 +570,7 @@ final class VendorOnboardingService
                     throw new AuthenticationException('STORE_PROFILE_MEDIA_REQUIRED', 'Upload a valid Store Logo and Store Banner before finishing Store Setup.', 422);
                 }
             }
-            if (! app(StoreOperatingSchedule::class)->valid(app(StoreOperatingSchedule::class)->weekly((string) $profile->id))) {
+            if (! empty($this->setupFormState($organizationId)['operatingScheduleDraft']) || ! app(StoreOperatingSchedule::class)->valid(app(StoreOperatingSchedule::class)->weekly((string) $profile->id))) {
                 throw new AuthenticationException('STORE_OPERATION_REQUIRED', 'Set a valid Open or Closed state for every day before finishing Store Setup.', 422);
             }
             if (in_array($profile->fulfillment_method, ['VENDOR_DELIVERY', 'BOTH'], true)) {
@@ -1422,18 +1436,22 @@ final class VendorOnboardingService
 
     /**
      * @param  Collection<int, stdClass>  $steps
+     * @param  array<string, string>  $progress
+     * @param  array<string, string>  $progressReasons
      * @return array<string, mixed>
      */
-    private function section(string $key, string $label, Collection $steps, ?string $businessType = null): array
+    private function section(string $key, string $label, Collection $steps, ?string $businessType = null, array $progress = [], array $progressReasons = []): array
     {
-        $rows = $steps->map(function (object $step) use ($businessType): array {
+        $rows = $steps->map(function (object $step) use ($businessType, $progress, $progressReasons): array {
             $definition = self::STEP_CATALOG[$step->section][$step->requirement_key] ?? self::IDENTITY_STEP_CATALOG[$step->requirement_key] ?? null;
             $stepLabel = is_array($definition) ? $definition['label'] : (self::DOCUMENTS[$step->requirement_key] ?? $step->requirement_key);
             if ($step->requirement_key === 'business_registration') {
                 $stepLabel = $this->registrationEvidenceLabel($businessType);
             }
 
-            return ['key' => $step->requirement_key, 'label' => $stepLabel, 'level' => $step->level, 'status' => $step->status, 'applicability_reason' => $step->applicability_reason, 'reason' => $step->last_reason, 'version' => (int) $step->version, 'lock_version' => (int) $step->lock_version];
+            return ['id' => $step->id, 'key' => $step->requirement_key, 'label' => $stepLabel, 'level' => $step->level, 'status' => $step->status,
+                'progress_status' => $progress[$step->requirement_key] ?? (in_array($step->status, ['APPROVED', 'COMPLETED', 'SUBMITTED', 'PENDING_VERIFICATION'], true) ? 'COMPLETED' : (in_array($step->status, ['NOT_STARTED', 'NOT_APPLICABLE'], true) ? $step->status : 'IN_PROGRESS')),
+                'applicability_reason' => $step->applicability_reason, 'reason' => $progressReasons[$step->requirement_key] ?? $step->last_reason, 'version' => (int) $step->version, 'lock_version' => (int) $step->lock_version];
         })->all();
         if ($key === 'STORE_SETUP') {
             $byKey = collect($rows)->keyBy('key');
@@ -1448,15 +1466,16 @@ final class VendorOnboardingService
                     $row = $byKey->get($requirementKey);
                     if ($row !== null && $requirementKey === 'fulfillment_method') {
                         $row['status'] = $fulfillmentStatus;
+                        $row['progress_status'] = $fulfillmentStatus;
                     }
 
                     return $row;
                 })->filter()->values()->all();
         }
-        $applicable = array_values(array_filter($rows, fn (array $row): bool => $row['level'] !== 'OPTIONAL' && $row['status'] !== 'NOT_APPLICABLE'));
-        $done = count(array_filter($applicable, fn (array $row): bool => in_array($row['status'], ['APPROVED', 'COMPLETED'], true)));
+        $applicable = array_values(array_filter($rows, fn (array $row): bool => $row['level'] !== 'OPTIONAL' && $row['progress_status'] !== 'NOT_APPLICABLE'));
+        $done = count(array_filter($applicable, fn (array $row): bool => $row['progress_status'] === 'COMPLETED'));
 
-        $status = $rows === [] || ($done === 0 && collect($rows)->every(fn (array $row): bool => in_array($row['status'], ['NOT_STARTED', 'NOT_APPLICABLE'], true)))
+        $status = $rows === [] || ($done === 0 && collect($rows)->every(fn (array $row): bool => in_array($row['progress_status'], ['NOT_STARTED', 'NOT_APPLICABLE'], true)))
             ? 'NOT_STARTED' : (count($applicable) > 0 && $done >= count($applicable) ? 'COMPLETE' : 'IN_PROGRESS');
 
         return ['key' => $key, 'label' => $label, 'status' => $status, 'complete' => min($done, count($applicable)), 'total' => count($applicable), 'progress' => ['complete' => min($done, count($applicable)), 'total' => count($applicable)], 'steps' => $rows];
@@ -1848,8 +1867,13 @@ final class VendorOnboardingService
     private function commissionTerms(Request $request, string $organizationId): array
     {
         $agreement = collect($this->agreements->current($request))->firstWhere('code', 'VENDOR_COMMISSION_TEST');
-        $eligible = $this->vendorScope($request)['role'] === 'OWNER' && DB::table('vendor_organizations')->where('id', $organizationId)->whereNotNull('business_type')->exists()
-            && (! $this->authority->required($organizationId) || $this->authority->hasCurrentApproval($organizationId, 'COMMISSION_AGREEMENT', (int) $request->user()->getKey()));
+        $draft = $this->verificationFormState($organizationId);
+        $type = $draft['business_type'][0] ?? DB::table('vendor_organizations')->where('id', $organizationId)->value('business_type');
+        $authorityRequired = $this->authority->required($organizationId)
+            || in_array($type, ['PARTNERSHIP', 'CORPORATION', 'ONE_PERSON_CORPORATION', 'COOPERATIVE'], true)
+            || ($draft['representative_relationship'][0] ?? 'PROPRIETOR') !== 'PROPRIETOR';
+        $eligible = $this->vendorScope($request)['role'] === 'OWNER' && in_array($type, self::BUSINESS_TYPES, true)
+            && (! $authorityRequired || $this->authority->hasCurrentApproval($organizationId, 'COMMISSION_AGREEMENT', (int) $request->user()->getKey()));
 
         return ['agreement' => $agreement, 'can_accept' => $eligible, 'accepted' => $eligible && ($agreement['accepted_at'] ?? null) !== null];
     }
@@ -1871,8 +1895,14 @@ final class VendorOnboardingService
                 return;
             }
             $this->assertVersion($organization, $input['organization_lock_version']);
-            if ($organization->business_type === null) {
+            $draft = $this->verificationFormState($organizationId);
+            $businessType = $draft['business_type'][0] ?? $organization->business_type;
+            if (! in_array($businessType, self::BUSINESS_TYPES, true)) {
                 throw new AuthenticationException('BUSINESS_TYPE_REQUIRED', 'Complete Business Information before accepting commission terms.', 422);
+            }
+            if ($businessType !== $organization->business_type) {
+                // Apply the Owner's saved selection through the existing versioned domain change path.
+                $this->saveVerificationProgress($request, ['lock_version' => (int) $organization->lock_version, 'business_type' => $businessType]);
             }
             $state = $this->commissionTerms($request, $organizationId);
             if (($state['agreement']['id'] ?? null) !== $input['agreement_version_id']) {
@@ -1880,6 +1910,9 @@ final class VendorOnboardingService
             }
             if (! ($state['agreement']['content_available'] ?? false)) {
                 throw new AuthenticationException('AGREEMENT_CONTENT_UNAVAILABLE', 'The current commission terms are unavailable. Try again later.', 503);
+            }
+            if (! $state['can_accept']) {
+                throw new AuthenticationException('AUTHORITY_REQUIRED', 'An Admin must approve the current Owner-linked representative and commission authority before acceptance.', 422);
             }
             $this->acceptCommissionTerms($request, $organizationId, (string) $input['agreement_version_id']);
             $this->setStep($organizationId, 'STORE_VERIFICATION', 'commission_terms', 'COMPLETED');

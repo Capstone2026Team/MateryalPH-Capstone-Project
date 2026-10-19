@@ -65,9 +65,10 @@ export interface ChatQuotationContent {
      */
     fulfillmentMethod: string;
     /**
-     *
+     * Historical Vendor preference only. New quotations omit it; the Buyer chooses at acceptance.
+     * @deprecated
      */
-    paymentMethod: string;
+    paymentMethod?: string;
     /**
      *
      */
@@ -115,7 +116,6 @@ export function instanceOfChatQuotationContent(value: object): value is ChatQuot
     if (!('lines' in value) || value['lines'] === undefined) return false;
     if (!('commercial' in value) || value['commercial'] === undefined) return false;
     if ((!('fulfillmentMethod' in (value as Record<string, any>)) && !('fulfillment_method' in (value as Record<string, any>))) || ((value as Record<string, any>)['fulfillmentMethod'] === undefined && (value as Record<string, any>)['fulfillment_method'] === undefined)) return false;
-    if ((!('paymentMethod' in (value as Record<string, any>)) && !('payment_method' in (value as Record<string, any>))) || ((value as Record<string, any>)['paymentMethod'] === undefined && (value as Record<string, any>)['payment_method'] === undefined)) return false;
     if ((!('fulfillmentDate' in (value as Record<string, any>)) && !('fulfillment_date' in (value as Record<string, any>))) || ((value as Record<string, any>)['fulfillmentDate'] === undefined && (value as Record<string, any>)['fulfillment_date'] === undefined)) return false;
     if (!('changes' in value) || value['changes'] === undefined) return false;
     if ((!('originalChanges' in (value as Record<string, any>)) && !('original_changes' in (value as Record<string, any>))) || ((value as Record<string, any>)['originalChanges'] === undefined && (value as Record<string, any>)['original_changes'] === undefined)) return false;
@@ -140,7 +140,7 @@ export function ChatQuotationContentFromJSONTyped(json: any, ignoreDiscriminator
         'lines': ((json['lines'] as Array<any>).map(ChatQuotationLineFromJSON)),
         'commercial': ChatQuotationMoneyFromJSON(json['commercial']),
         'fulfillmentMethod': json['fulfillment_method'],
-        'paymentMethod': json['payment_method'],
+        'paymentMethod': json['payment_method'] == null ? undefined : json['payment_method'],
         'fulfillmentDate': json['fulfillment_date'],
         'delivery': json['delivery'] == null ? undefined : json['delivery'],
         'nrpc': json['nrpc'] == null ? undefined : json['nrpc'],

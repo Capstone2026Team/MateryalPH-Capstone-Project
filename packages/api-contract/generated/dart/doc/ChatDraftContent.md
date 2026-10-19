@@ -10,7 +10,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **lines** | [**BuiltList&lt;ChatDraftLine&gt;**](ChatDraftLine.md) |  |
 **fulfillmentMethod** | **String** |  |
-**paymentMethod** | **String** |  |
+**paymentMethod** | **String** | Legacy editor preference, ignored. The Buyer selects payment before accepting the quotation. | [optional]
 **fulfillmentDate** | **String** |  |
 **deadlineHours** | **int** |  | [optional] [default to 24]
 **vendorDiscountCentavos** | **int** | Legacy fixed materials discount. Omit when discount is supplied. | [optional]

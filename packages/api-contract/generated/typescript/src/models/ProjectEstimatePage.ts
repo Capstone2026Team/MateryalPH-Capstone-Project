@@ -55,10 +55,6 @@ export interface ProjectEstimatePage {
      */
     total: number;
     /**
-     *
-     */
-    suggestedRadiusKm?: number;
-    /**
      * Candidates in this estimate before filters.
      */
     unfilteredTotal?: number;
@@ -66,6 +62,10 @@ export interface ProjectEstimatePage {
      *
      */
     sort?: string;
+    /**
+     * The direction applied, ASC or DESC; null for BEST_MATCH.
+     */
+    direction?: string;
 }
 
 /**
@@ -94,9 +94,9 @@ export function ProjectEstimatePageFromJSONTyped(json: any, ignoreDiscriminator:
         'page': json['page'],
         'hasMore': json['has_more'],
         'total': json['total'],
-        'suggestedRadiusKm': json['suggested_radius_km'] == null ? undefined : json['suggested_radius_km'],
         'unfilteredTotal': json['unfiltered_total'] == null ? undefined : json['unfiltered_total'],
         'sort': json['sort'] == null ? undefined : json['sort'],
+        'direction': json['direction'] == null ? undefined : json['direction'],
     };
 }
 
@@ -116,9 +116,9 @@ export function ProjectEstimatePageToJSONTyped(value?: ProjectEstimatePage | nul
         'page': value['page'],
         'has_more': value['hasMore'],
         'total': value['total'],
-        'suggested_radius_km': value['suggestedRadiusKm'],
         'unfiltered_total': value['unfilteredTotal'],
         'sort': value['sort'],
+        'direction': value['direction'],
     };
 }
 

@@ -2041,7 +2041,7 @@ class VendorOnboardingApi {
   /// Returns a [Future] containing a [Response] with a [GenericDataEnvelope] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<GenericDataEnvelope>> resolveVendorAddress({
-    required VendorAddressSelection vendorAddressSelection,
+    VendorAddressSelection? vendorAddressSelection,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,

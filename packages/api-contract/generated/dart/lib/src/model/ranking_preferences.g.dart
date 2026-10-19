@@ -26,32 +26,9 @@ final BuiltSet<RankingPreferencesProcurementTypeEnum>
   _$rankingPreferencesProcurementTypeEnum_ITEM_BASED,
 ]);
 
-const RankingPreferencesTotalPercentEnum
-    _$rankingPreferencesTotalPercentEnum_number100 =
-    const RankingPreferencesTotalPercentEnum._('number100');
-
-RankingPreferencesTotalPercentEnum _$rankingPreferencesTotalPercentEnumValueOf(
-    String name) {
-  switch (name) {
-    case 'number100':
-      return _$rankingPreferencesTotalPercentEnum_number100;
-    default:
-      throw ArgumentError(name);
-  }
-}
-
-final BuiltSet<RankingPreferencesTotalPercentEnum>
-    _$rankingPreferencesTotalPercentEnumValues = BuiltSet<
-        RankingPreferencesTotalPercentEnum>(const <RankingPreferencesTotalPercentEnum>[
-  _$rankingPreferencesTotalPercentEnum_number100,
-]);
-
 Serializer<RankingPreferencesProcurementTypeEnum>
     _$rankingPreferencesProcurementTypeEnumSerializer =
     _$RankingPreferencesProcurementTypeEnumSerializer();
-Serializer<RankingPreferencesTotalPercentEnum>
-    _$rankingPreferencesTotalPercentEnumSerializer =
-    _$RankingPreferencesTotalPercentEnumSerializer();
 
 class _$RankingPreferencesProcurementTypeEnumSerializer
     implements PrimitiveSerializer<RankingPreferencesProcurementTypeEnum> {
@@ -83,34 +60,6 @@ class _$RankingPreferencesProcurementTypeEnumSerializer
           _fromWire[serialized] ?? (serialized is String ? serialized : ''));
 }
 
-class _$RankingPreferencesTotalPercentEnumSerializer
-    implements PrimitiveSerializer<RankingPreferencesTotalPercentEnum> {
-  static const Map<String, Object> _toWire = const <String, Object>{
-    'number100': 100,
-  };
-  static const Map<Object, String> _fromWire = const <Object, String>{
-    100: 'number100',
-  };
-
-  @override
-  final Iterable<Type> types = const <Type>[RankingPreferencesTotalPercentEnum];
-  @override
-  final String wireName = 'RankingPreferencesTotalPercentEnum';
-
-  @override
-  Object serialize(
-          Serializers serializers, RankingPreferencesTotalPercentEnum object,
-          {FullType specifiedType = FullType.unspecified}) =>
-      _toWire[object.name] ?? object.name;
-
-  @override
-  RankingPreferencesTotalPercentEnum deserialize(
-          Serializers serializers, Object serialized,
-          {FullType specifiedType = FullType.unspecified}) =>
-      RankingPreferencesTotalPercentEnum.valueOf(
-          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
-}
-
 class _$RankingPreferences extends RankingPreferences {
   @override
   final RankingPreferencesProcurementTypeEnum procurementType;
@@ -125,7 +74,7 @@ class _$RankingPreferences extends RankingPreferences {
   @override
   final int version;
   @override
-  final RankingPreferencesTotalPercentEnum totalPercent;
+  final int totalPercent;
   @override
   final String algorithmVersion;
 
@@ -230,10 +179,9 @@ class RankingPreferencesBuilder
   int? get version => _$this._version;
   set version(int? version) => _$this._version = version;
 
-  RankingPreferencesTotalPercentEnum? _totalPercent;
-  RankingPreferencesTotalPercentEnum? get totalPercent => _$this._totalPercent;
-  set totalPercent(RankingPreferencesTotalPercentEnum? totalPercent) =>
-      _$this._totalPercent = totalPercent;
+  int? _totalPercent;
+  int? get totalPercent => _$this._totalPercent;
+  set totalPercent(int? totalPercent) => _$this._totalPercent = totalPercent;
 
   String? _algorithmVersion;
   String? get algorithmVersion => _$this._algorithmVersion;

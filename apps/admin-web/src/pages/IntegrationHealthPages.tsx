@@ -54,7 +54,7 @@ export function AdminIntegrationHealthPage() {
         <Panel title="Queues and outbox" actions={<Status status={text(queues.status, 'UNKNOWN')} />}>
           <FactList facts={[{ label: 'Queue connection', value: text(queues.connection) }, { label: 'Outbox backlog (over 5 min)', value: text(queues.outbox_backlog, '0') }, { label: 'Dead-lettered deliveries', value: text(queues.dead_letters, '0') }, { label: 'Failed jobs', value: text(queues.failed_jobs, '0') }]} />
         </Panel>
-        <Panel title="Daily analytics" description="TEST facts are rebuilt nightly; DEMO data is labelled and never mixed with TEST.">
+        <Panel title="Daily analytics" description="Marketplace facts are rebuilt nightly from the recorded records.">
           <div className="grid gap-4">
             <div className="grid gap-2"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">Geographic aggregation</h3><Status status={text(geo.status, 'UNKNOWN')} /></div>
               <FactList facts={[{ label: 'Through date', value: text(geo.through_date) }, { label: 'Published', value: geo.last_published_at ? manilaDateTime(String(geo.last_published_at)) : '—' }, { label: 'Revision', value: text(geo.revision) }, ...(geo.error_code ? [{ label: 'Last error code', value: String(geo.error_code) }] : [])]} />

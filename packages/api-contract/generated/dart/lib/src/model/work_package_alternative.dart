@@ -4,6 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/listing_image.dart';
 import 'package:materyalph_api_client/src/model/project_specification_detail.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -21,7 +22,7 @@ part 'work_package_alternative.g.dart';
 /// * [brand]
 /// * [vendorId]
 /// * [storeName]
-/// * [image]
+/// * [image] - First public photo of the listing. The server returns an object ({url, alt_text}); declaring it as a string made the generated client reject any page containing a photographed offer, which surfaced as a generic 'Something went wrong' instead of the recommendations.
 /// * [unitPriceCentavos]
 /// * [unitCode]
 /// * [unitPrecision]
@@ -29,6 +30,10 @@ part 'work_package_alternative.g.dart';
 /// * [stockLabel] - Availability label only; exact inventory is never returned.
 /// * [specifications] - Listing and variant details as the category names them.
 /// * [exactMatch] - Brand (when set) and every stated specification match the Work Package line.
+/// * [availability] - Whether the store can confirm the whole quantity still needed. PARTIAL stores can be added with `allow_partial_stock` for what they can confirm.
+/// * [estimatedTotalCentavos] - Unit price times the quantity still needed.
+/// * [fulfillmentMethods] - Methods the store can serve for this product. Ready-mixed concrete uses DELIVERY only even when the primary quotation or package uses PICKUP.
+/// * [alreadyAdded] - This product is already in the cart or an open order for the line; adding it again never stacks the quantity.
 @BuiltValue()
 abstract class WorkPackageAlternative implements Built<WorkPackageAlternative, WorkPackageAlternativeBuilder> {
   @BuiltValueField(wireName: r'listing_id')
@@ -55,8 +60,9 @@ abstract class WorkPackageAlternative implements Built<WorkPackageAlternative, W
   @BuiltValueField(wireName: r'store_name')
   String? get storeName;
 
+  /// First public photo of the listing. The server returns an object ({url, alt_text}); declaring it as a string made the generated client reject any page containing a photographed offer, which surfaced as a generic 'Something went wrong' instead of the recommendations.
   @BuiltValueField(wireName: r'image')
-  String? get image;
+  ListingImage? get image;
 
   @BuiltValueField(wireName: r'unit_price_centavos')
   int get unitPriceCentavos;
@@ -81,6 +87,24 @@ abstract class WorkPackageAlternative implements Built<WorkPackageAlternative, W
   /// Brand (when set) and every stated specification match the Work Package line.
   @BuiltValueField(wireName: r'exact_match')
   bool get exactMatch;
+
+  /// Whether the store can confirm the whole quantity still needed. PARTIAL stores can be added with `allow_partial_stock` for what they can confirm.
+  @BuiltValueField(wireName: r'availability')
+  WorkPackageAlternativeAvailabilityEnum get availability;
+  // enum availabilityEnum {  FULL,  PARTIAL,  };
+
+  /// Unit price times the quantity still needed.
+  @BuiltValueField(wireName: r'estimated_total_centavos')
+  int get estimatedTotalCentavos;
+
+  /// Methods the store can serve for this product. Ready-mixed concrete uses DELIVERY only even when the primary quotation or package uses PICKUP.
+  @BuiltValueField(wireName: r'fulfillment_methods')
+  BuiltList<WorkPackageAlternativeFulfillmentMethodsEnum> get fulfillmentMethods;
+  // enum fulfillmentMethodsEnum {  DELIVERY,  PICKUP,  };
+
+  /// This product is already in the cart or an open order for the line; adding it again never stacks the quantity.
+  @BuiltValueField(wireName: r'already_added')
+  bool get alreadyAdded;
 
   WorkPackageAlternative._();
 
@@ -155,7 +179,7 @@ class _$WorkPackageAlternativeSerializer implements PrimitiveSerializer<WorkPack
       yield r'image';
       yield serializers.serialize(
         object.image,
-        specifiedType: const FullType(String),
+        specifiedType: const FullType.nullable(ListingImage),
       );
     }
     yield r'unit_price_centavos';
@@ -193,6 +217,26 @@ class _$WorkPackageAlternativeSerializer implements PrimitiveSerializer<WorkPack
     yield r'exact_match';
     yield serializers.serialize(
       object.exactMatch,
+      specifiedType: const FullType(bool),
+    );
+    yield r'availability';
+    yield serializers.serialize(
+      object.availability,
+      specifiedType: const FullType(WorkPackageAlternativeAvailabilityEnum),
+    );
+    yield r'estimated_total_centavos';
+    yield serializers.serialize(
+      object.estimatedTotalCentavos,
+      specifiedType: const FullType(int),
+    );
+    yield r'fulfillment_methods';
+    yield serializers.serialize(
+      object.fulfillmentMethods,
+      specifiedType: const FullType(BuiltList, [FullType(WorkPackageAlternativeFulfillmentMethodsEnum)]),
+    );
+    yield r'already_added';
+    yield serializers.serialize(
+      object.alreadyAdded,
       specifiedType: const FullType(bool),
     );
   }
@@ -280,10 +324,10 @@ class _$WorkPackageAlternativeSerializer implements PrimitiveSerializer<WorkPack
         case r'image':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType.nullable(String),
-          ) as String?;
+            specifiedType: const FullType.nullable(ListingImage),
+          ) as ListingImage?;
           if (valueDes == null) continue;
-          result.image = valueDes;
+          result.image.replace(valueDes);
           break;
         case r'unit_price_centavos':
           final valueDes = serializers.deserialize(
@@ -335,6 +379,34 @@ class _$WorkPackageAlternativeSerializer implements PrimitiveSerializer<WorkPack
           ) as bool;
           result.exactMatch = valueDes;
           break;
+        case r'availability':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(WorkPackageAlternativeAvailabilityEnum),
+          ) as WorkPackageAlternativeAvailabilityEnum;
+          result.availability = valueDes;
+          break;
+        case r'estimated_total_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.estimatedTotalCentavos = valueDes;
+          break;
+        case r'fulfillment_methods':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(WorkPackageAlternativeFulfillmentMethodsEnum)]),
+          ) as BuiltList<WorkPackageAlternativeFulfillmentMethodsEnum>;
+          result.fulfillmentMethods.replace(valueDes);
+          break;
+        case r'already_added':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(bool),
+          ) as bool;
+          result.alreadyAdded = valueDes;
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -364,4 +436,35 @@ class _$WorkPackageAlternativeSerializer implements PrimitiveSerializer<WorkPack
   }
 }
 
+
+/// Whether the store can confirm the whole quantity still needed. PARTIAL stores can be added with `allow_partial_stock` for what they can confirm.
+class WorkPackageAlternativeAvailabilityEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'FULL')
+  static const WorkPackageAlternativeAvailabilityEnum FULL = _$workPackageAlternativeAvailabilityEnum_FULL;
+  @BuiltValueEnumConst(wireName: r'PARTIAL')
+  static const WorkPackageAlternativeAvailabilityEnum PARTIAL = _$workPackageAlternativeAvailabilityEnum_PARTIAL;
+
+  static Serializer<WorkPackageAlternativeAvailabilityEnum> get serializer => _$workPackageAlternativeAvailabilityEnumSerializer;
+
+  const WorkPackageAlternativeAvailabilityEnum._(String name): super(name);
+
+  static BuiltSet<WorkPackageAlternativeAvailabilityEnum> get values => _$workPackageAlternativeAvailabilityEnumValues;
+  static WorkPackageAlternativeAvailabilityEnum valueOf(String name) => _$workPackageAlternativeAvailabilityEnumValueOf(name);
+}
+
+class WorkPackageAlternativeFulfillmentMethodsEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'DELIVERY')
+  static const WorkPackageAlternativeFulfillmentMethodsEnum DELIVERY = _$workPackageAlternativeFulfillmentMethodsEnum_DELIVERY;
+  @BuiltValueEnumConst(wireName: r'PICKUP')
+  static const WorkPackageAlternativeFulfillmentMethodsEnum PICKUP = _$workPackageAlternativeFulfillmentMethodsEnum_PICKUP;
+
+  static Serializer<WorkPackageAlternativeFulfillmentMethodsEnum> get serializer => _$workPackageAlternativeFulfillmentMethodsEnumSerializer;
+
+  const WorkPackageAlternativeFulfillmentMethodsEnum._(String name): super(name);
+
+  static BuiltSet<WorkPackageAlternativeFulfillmentMethodsEnum> get values => _$workPackageAlternativeFulfillmentMethodsEnumValues;
+  static WorkPackageAlternativeFulfillmentMethodsEnum valueOf(String name) => _$workPackageAlternativeFulfillmentMethodsEnumValueOf(name);
+}
 

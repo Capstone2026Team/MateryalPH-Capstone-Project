@@ -28,6 +28,26 @@ import {
  */
 export interface WorkPackageBudgetEstimate {
     /**
+     * Actual route/vehicle estimate for a representative exact-match supplier plan, consolidated per supplier. Zero for pickup-only supplies; ready-mixed concrete includes mixer delivery even under PICKUP. Null when delivery or supplier availability needs review.
+     */
+    deliveryCentavos?: number | null;
+    /**
+     * Average eligible material prices plus applicable supplier delivery. Null until every material and delivery fee can be estimated.
+     */
+    estimatedTotalCentavos?: number | null;
+    /**
+     *
+     */
+    deliveryStatus?: WorkPackageBudgetEstimateDeliveryStatusEnum;
+    /**
+     *
+     */
+    deliveryIssues?: Array<string>;
+    /**
+     * Both is budgeted using the Site Delivery scenario.
+     */
+    fulfillmentMethod?: WorkPackageBudgetEstimateFulfillmentMethodEnum;
+    /**
      *
      */
     lines: Array<WorkPackageBudgetEstimateLine>;
@@ -65,6 +85,25 @@ export interface WorkPackageBudgetEstimate {
 /**
  * @export
  */
+export const WorkPackageBudgetEstimateDeliveryStatusEnum = {
+    NotApplicable: 'NOT_APPLICABLE',
+    Estimated: 'ESTIMATED',
+    ReviewRequired: 'REVIEW_REQUIRED',
+} as const;
+export type WorkPackageBudgetEstimateDeliveryStatusEnum = typeof WorkPackageBudgetEstimateDeliveryStatusEnum[keyof typeof WorkPackageBudgetEstimateDeliveryStatusEnum];
+
+/**
+ * @export
+ */
+export const WorkPackageBudgetEstimateFulfillmentMethodEnum = {
+    Delivery: 'DELIVERY',
+    Pickup: 'PICKUP',
+} as const;
+export type WorkPackageBudgetEstimateFulfillmentMethodEnum = typeof WorkPackageBudgetEstimateFulfillmentMethodEnum[keyof typeof WorkPackageBudgetEstimateFulfillmentMethodEnum];
+
+/**
+ * @export
+ */
 export const WorkPackageBudgetEstimateBasisEnum = {
     AverageOfVendorLowestEligiblePrice: 'AVERAGE_OF_VENDOR_LOWEST_ELIGIBLE_PRICE',
 } as const;
@@ -98,6 +137,11 @@ export function WorkPackageBudgetEstimateFromJSONTyped(json: any, ignoreDiscrimi
     }
     return {
 
+        'deliveryCentavos': json['delivery_centavos'] === undefined ? undefined : json['delivery_centavos'] === null ? null : json['delivery_centavos'],
+        'estimatedTotalCentavos': json['estimated_total_centavos'] === undefined ? undefined : json['estimated_total_centavos'] === null ? null : json['estimated_total_centavos'],
+        'deliveryStatus': json['delivery_status'] == null ? undefined : json['delivery_status'],
+        'deliveryIssues': json['delivery_issues'] == null ? undefined : json['delivery_issues'],
+        'fulfillmentMethod': json['fulfillment_method'] == null ? undefined : json['fulfillment_method'],
         'lines': ((json['lines'] as Array<any>).map(WorkPackageBudgetEstimateLineFromJSON)),
         'materialsTotalCentavos': json['materials_total_centavos'],
         'pricedLineCount': json['priced_line_count'],
@@ -120,6 +164,11 @@ export function WorkPackageBudgetEstimateToJSONTyped(value?: WorkPackageBudgetEs
 
     return {
 
+        'delivery_centavos': value['deliveryCentavos'],
+        'estimated_total_centavos': value['estimatedTotalCentavos'],
+        'delivery_status': value['deliveryStatus'],
+        'delivery_issues': value['deliveryIssues'],
+        'fulfillment_method': value['fulfillmentMethod'],
         'lines': ((value['lines'] as Array<any>).map(WorkPackageBudgetEstimateLineToJSON)),
         'materials_total_centavos': value['materialsTotalCentavos'],
         'priced_line_count': value['pricedLineCount'],

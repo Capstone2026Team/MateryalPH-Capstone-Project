@@ -104,7 +104,7 @@ final class PhaseFourteenAnalyticsTest extends TestCase
         self::assertSame('110.00', $row['end_point']['average_php']);
         self::assertSame(3, $row['end_point']['vendor_count']);
         self::assertSame(3, $row['current']['vendor_count']);
-        self::assertSame('TEST — Recorded Test Marketplace Prices', $list['dataset']['label']);
+        self::assertSame('Recorded Marketplace Prices', $list['dataset']['label']);
         self::assertSame('PUBLIC_LISTING', $list['source_kind']);
         self::assertNull($row['trend']['change_percent'], 'The start date has no snapshot: never use a nearest date.');
         self::assertSame('MISSING_ENDPOINT_SNAPSHOT', $row['trend']['reason']);
@@ -335,6 +335,34 @@ final class PhaseFourteenAnalyticsTest extends TestCase
         self::assertNotNull($staleOwner);
         self::assertSame(0, DB::table('price_observations')->where('comparable_group_id', $group150)->count());
         self::assertNotNull($inside);
+    }
+
+    public function test_listings_with_a_full_exact_key_become_comparable_without_an_admin_group_and_never_override_one(): void
+    {
+        [, , $firstListing] = $this->pickupStore('Derived One', [['price' => 10000, 'qty' => '50', 'tax' => 'NON_VAT']], 1000);
+        [, , $secondListing] = $this->pickupStore('Derived Two', [['price' => 12000, 'qty' => '50', 'tax' => 'NON_VAT']], 2000);
+        $first = $this->variantIds($firstListing)[0];
+        $second = $this->variantIds($secondListing)[0];
+        self::assertSame(0, DB::table('material_comparable_groups')->count());
+
+        $result = app(ComparableMappingService::class)->deriveForUnmapped();
+        self::assertSame(2, $result['mapped']);
+        $groups = DB::table('material_comparable_groups')->get();
+        self::assertCount(1, $groups, 'The same exact key shares one group.');
+        self::assertStringStartsWith('AUTO_CONCRETE_HOLLOW_BLOCK_', (string) $groups[0]->code);
+        self::assertStringContainsString('Concrete hollow block', (string) $groups[0]->display_name);
+        $versions = DB::table('listing_comparable_assignments')->whereIn('listing_variant_id', [$first, $second])->where('mapping_state', 'APPROVED')->pluck('material_comparable_group_version_id')->unique();
+        self::assertCount(1, $versions);
+        self::assertSame(['examined' => 0, 'mapped' => 0], app(ComparableMappingService::class)->deriveForUnmapped(), 'Idempotent once mapped.');
+
+        // A different controlled specification is a different group; an Admin-authored group is matched before any derived one.
+        DB::table('listing_comparable_assignments')->update(['mapping_state' => 'RETIRED', 'effective_until' => DB::raw("effective_from + interval '1 second'")]);
+        DB::table('material_comparable_groups')->update(['status' => 'RETIRED']);
+        $adminGroup = $this->comparableGroup();
+        $result = app(ComparableMappingService::class)->deriveForUnmapped();
+        self::assertSame(0, $result['examined'], 'The Admin group already mapped every variant when it was created.');
+        self::assertSame(1, DB::table('material_comparable_groups')->where('status', 'ACTIVE')->count());
+        self::assertSame($adminGroup, (string) DB::table('material_comparable_groups')->where('status', 'ACTIVE')->value('id'));
     }
 
     public function test_capture_retry_midnight_failure_immutability_and_reviewed_correction(): void

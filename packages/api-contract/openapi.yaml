@@ -16,6 +16,7 @@ info:
 servers:
   - url: /api/v1
 tags:
+  - name: Support
   - name: Vendor Product Analytics
   - name: Vendor Dashboard
   - name: Admin Dashboard
@@ -27,6 +28,7 @@ tags:
   - name: Admin Audit Log
   - name: Admin Privacy Requests
   - name: Admin Enforcement
+  - name: Admin User Directory
   - name: Admin Platform Settings
   - name: Admin Materials Analytics
   - name: Vendor Materials Analytics
@@ -67,15 +69,306 @@ tags:
   - name: Buyer Orders
   - name: Vendor Orders
 paths:
+  /buyers/work-packages/{packageId}/arrangement-options:
+    get:
+      tags:
+        - Buyer Projects
+      operationId: listProjectArrangementOptions
+      security:
+        - passportBearer: []
+      parameters:
+        - name: packageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - BEST_MATCH
+              - PRICE
+        - name: direction
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - ASC
+              - DESC
+        - name: favorites_only
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: complete_only
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: within_budget
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Server-authoritative procurement arrangement.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectArrangementPageResponse"
+        "401":
+          description: Authentication required.
+        "403":
+          description: Current Buyer authorization required.
+        "404":
+          description: Owned Work Package or current arrangement not found.
+        "409":
+          description: Arrangement, inventory, price or version changed; refresh.
+        "422":
+          description: Review specifications, fulfillment, payment or budget.
+  /buyers/work-packages/{packageId}/arrangements:
+    post:
+      tags:
+        - Buyer Projects
+      operationId: createProjectArrangement
+      security:
+        - passportBearer: []
+      parameters:
+        - name: packageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "201":
+          description: Saved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectArrangementResponse"
+        "401":
+          description: Authentication required.
+        "403":
+          description: Current Buyer authorization required.
+        "404":
+          description: Owned Work Package or current arrangement not found.
+        "409":
+          description: Arrangement, inventory, price or version changed; refresh.
+        "422":
+          description: Review specifications, fulfillment, payment or budget.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectArrangementCreate"
+  /buyers/work-packages/{packageId}/arrangements/{arrangementId}:
+    get:
+      tags:
+        - Buyer Projects
+      operationId: getProjectArrangement
+      security:
+        - passportBearer: []
+      parameters:
+        - name: packageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: arrangementId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Server-authoritative procurement arrangement.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectArrangementResponse"
+        "401":
+          description: Authentication required.
+        "403":
+          description: Current Buyer authorization required.
+        "404":
+          description: Owned Work Package or current arrangement not found.
+        "409":
+          description: Arrangement, inventory, price or version changed; refresh.
+        "422":
+          description: Review specifications, fulfillment, payment or budget.
+    patch:
+      tags:
+        - Buyer Projects
+      operationId: editProjectArrangement
+      security:
+        - passportBearer: []
+      parameters:
+        - name: packageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: arrangementId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Server-authoritative procurement arrangement.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectArrangementResponse"
+        "401":
+          description: Authentication required.
+        "403":
+          description: Current Buyer authorization required.
+        "404":
+          description: Owned Work Package or current arrangement not found.
+        "409":
+          description: Arrangement, inventory, price or version changed; refresh.
+        "422":
+          description: Review specifications, fulfillment, payment or budget.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectArrangementEdit"
+  /buyers/work-packages/{packageId}/arrangements/{arrangementId}/submit:
+    post:
+      tags:
+        - Buyer Projects
+      operationId: submitProjectArrangement
+      security:
+        - passportBearer: []
+      parameters:
+        - name: packageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: arrangementId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "201":
+          description: Saved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectArrangementResponse"
+        "401":
+          description: Authentication required.
+        "403":
+          description: Current Buyer authorization required.
+        "404":
+          description: Owned Work Package or current arrangement not found.
+        "409":
+          description: Arrangement, inventory, price or version changed; refresh.
+        "422":
+          description: Review specifications, fulfillment, payment or budget.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectArrangementSubmit"
+  /buyers/work-packages/{packageId}/arrangements/{arrangementId}/vendors/{vendorId}/inquiry:
+    post:
+      tags:
+        - Buyer Projects
+      operationId: inquireProjectArrangementVendor
+      security:
+        - passportBearer: []
+      parameters:
+        - name: packageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: arrangementId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: vendorId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Server-authoritative procurement arrangement.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectArrangementResponse"
+        "401":
+          description: Authentication required.
+        "403":
+          description: Current Buyer authorization required.
+        "404":
+          description: Owned Work Package or current arrangement not found.
+        "409":
+          description: Arrangement, inventory, price or version changed; refresh.
+        "422":
+          description: Review specifications, fulfillment, payment or budget.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectArrangementInquiry"
   /{messagingPortal}/conversations/{conversationId}/project-inquiries:
     get:
       tags: [ Messaging ]
       operationId: listChatProjectInquiries
-      description: Lists existing Project-Based conversations for this authorized
+      description: Lists open Project-Based quotation inquiries for this authorized
         sales conversation's Buyer and Store. Includes only currently authorized
-        assignments, newest activity first. Preserves each Work Package and
-        quotation history. Never creates an inquiry. Fulfillment threads cannot
-        use this endpoint.
+        assignments for the current version of an undeleted, unassigned Active
+        or Quotation Inquiry Work Package in an Active Project. Quotations must
+        be Draft, Published, Viewed, Countered or Stock Revalidation Required;
+        Published, Viewed and Countered deadlines must still be in the future.
+        Filters before pagination, newest activity first. Closed and older
+        inquiries retain directly authorized conversation and quotation history.
+        Never creates an inquiry. Fulfillment threads cannot use this endpoint.
       security: [ { passportBearer: [] }, { accessCookie: [] } ]
       parameters:
         - {
@@ -4910,8 +5203,8 @@ paths:
       responses:
         "200":
           {
-            description: Canonical address with server-generated coordinates and an
-              organization-bound resolution token valid for 30 minutes.,
+            description: Address fields return server-generated coordinates and an
+              organization-bound resolution_token valid for 30 minutes.,
             content:
               {
                 application/json: { schema: { $ref: "#/components/schemas/GenericDataEnvelope" } }
@@ -6322,12 +6615,12 @@ paths:
         missing) or FAILED (unreadable image, timeout or engine failure) retains
         the private evidence for manual Review and Confirm. Current
         authorization and listing eligibility are checked again after
-        extraction. OCR never changes compliance or publication status.
-        With marking_type, OCR and QR read the PS License No. or ICC sticker
-        serial by its printed shape; look-alike readings are checked against
-        the active DTI-BPS register and the listed one is suggested
-        (register_listed). A QR payload sent with a PHOTO_OCR photo is used
-        instead of OCR when it holds the number.
+        extraction. OCR never changes compliance or publication status. With
+        marking_type, OCR and QR read the PS License No. or ICC sticker serial
+        by its printed shape; look-alike readings are checked against the active
+        DTI-BPS register and the listed one is suggested (register_listed). A QR
+        payload sent with a PHOTO_OCR photo is used instead of OCR when it holds
+        the number.
       tags: [ Vendor Catalog ]
       security: [ { accessCookie: [], webCsrf: [] } ]
       parameters:
@@ -6364,10 +6657,10 @@ paths:
         DTI-BPS register snapshot for this listing's regulated product (rule
         compliance.register-number.v2) and returns the register record used to
         prefill the declaration. Read-only — nothing is submitted and nothing
-        reaches Admin review. MATCHED means automatic verification is
-        possible; UNCERTAIN means the number is listed for another product or
-        an expired record; UNMATCHED means it is not listed or is not in the
-        printed format; UNAVAILABLE means no snapshot is active.
+        reaches Admin review. MATCHED means automatic verification is possible;
+        UNCERTAIN means the number is listed for another product or an expired
+        record; UNMATCHED means it is not listed or is not in the printed
+        format; UNAVAILABLE means no snapshot is active.
       tags: [ Vendor Catalog ]
       security: [ { accessCookie: [], webCsrf: [] } ]
       parameters:
@@ -6399,15 +6692,15 @@ paths:
   /vendor/catalog/listings/{listingId}/compliance:
     post:
       operationId: submitListingCompliance
-      description: Review and Confirm for all three paths. The Vendor supplies the
-        PS License No. or ICC sticker serial and marking evidence. With
-        review_mode AUTOMATIC (default) a MATCHED register lookup (rule
-        compliance.register-number.v2) is VERIFIED as an audited system
-        decision and the register record supplies the manufacturer or
-        importer; any other result returns 422 COMPLIANCE_REGISTER_NOT_MATCHED
-        with details.lookup and records nothing. With review_mode
-        MANUAL_REVIEW, which the Vendor chooses explicitly, an unmatched
-        declaration becomes PENDING_ADMIN_REVIEW, never a counterfeit finding.
+      description: Review and Confirm for all three paths. The Vendor supplies the PS
+        License No. or ICC sticker serial and marking evidence. With review_mode
+        AUTOMATIC (default) a MATCHED register lookup (rule
+        compliance.register-number.v2) is VERIFIED as an audited system decision
+        and the register record supplies the manufacturer or importer; any other
+        result returns 422 COMPLIANCE_REGISTER_NOT_MATCHED with details.lookup
+        and records nothing. With review_mode MANUAL_REVIEW, which the Vendor
+        chooses explicitly, an unmatched declaration becomes
+        PENDING_ADMIN_REVIEW, never a counterfeit finding.
       tags: [ Vendor Catalog ]
       security: [ { accessCookie: [], webCsrf: [] } ]
       parameters:
@@ -6677,12 +6970,12 @@ paths:
         "403": { $ref: "#/components/responses/ErrorResponse" }
     post:
       operationId: importComplianceRegister
-      description: Imports an XLSX or CSV snapshot of the DTI-BPS List of PS
-        Licensees or List of ICC Certificate Holders, in the official layout
-        (title rows above the header are skipped; the ICC sticker serial
-        from/to columns become serial ranges), as an immutable DRAFT. It is
-        used for matching only after activation. An ICC file without sticker
-        serial ranges is rejected with REGISTER_SERIALS_NOT_FOUND.
+      description: Imports an XLSX or CSV snapshot of the DTI-BPS List of PS Licensees
+        or List of ICC Certificate Holders, in the official layout (title rows
+        above the header are skipped; the ICC sticker serial from/to columns
+        become serial ranges), as an immutable DRAFT. It is used for matching
+        only after activation. An ICC file without sticker serial ranges is
+        rejected with REGISTER_SERIALS_NOT_FOUND.
       tags: [ Admin Product Compliance ]
       security: [ { accessCookie: [], webCsrf: [] } ]
       requestBody:
@@ -8058,10 +8351,11 @@ paths:
         "403": { $ref: "#/components/responses/ErrorResponse" }
     put:
       operationId: saveBuyerItemRankingPreferences
-      description: Saves a separate Item-Based override. Whole percentages 0–100 for
-        exactly the five components, totalling 100 (422 WEIGHTS_TOTAL_INVALID);
-        all-zero is 422 WEIGHTS_ALL_ZERO. version 0 creates; a stale version is
-        409 PREFERENCE_VERSION_CONFLICT. Audited.
+      description: Saves a separate Item-Based override. Independent whole weights
+        0–100 for exactly the five components, with no required total; original
+        values are stored and restored. Scores use each weight divided by the
+        sum of all weights; all-zero is 422 WEIGHTS_ALL_ZERO. version 0 creates;
+        a stale version is 409 PREFERENCE_VERSION_CONFLICT. Audited.
       tags: [ Buyer Explore ]
       security: [ { passportBearer: [] } ]
       requestBody:
@@ -9796,6 +10090,305 @@ paths:
           "$ref": "#/components/responses/ErrorResponse"
         "422":
           "$ref": "#/components/responses/ErrorResponse"
+  /admin/buyers:
+    get:
+      operationId: listDirectoryBuyers
+      tags: [ Admin User Directory ]
+      description: user_directory.view (Super Admin, User Management, Support). Buyer
+        Management → Users. Search matches name, email and company; the date
+        range filters the join date.
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: q, in: query, schema: { type: string, minLength: 2, maxLength: 120 } }
+        - {
+            name: status,
+            in: query,
+            schema:
+              {
+                type: string,
+                enum: [ ACTIVE, PENDING_VERIFICATION, SUSPENDED, DEACTIVATED, DELETED ]
+              }
+          }
+        - {
+            name: buyer_type,
+            in: query,
+            schema: { type: string, enum: [ INDIVIDUAL, BUSINESS ] }
+          }
+        - {
+            name: sort,
+            in: query,
+            schema: { type: string, enum: [ joined_desc, joined_asc, name_asc, name_desc ] }
+          }
+        - {
+            name: page,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 1000 }
+          }
+        - {
+            name: from,
+            in: query,
+            description: Inclusive Asia/Manila calendar date; omit to leave this boundary
+              unrestricted. User created_at.,
+            schema: { type: string, format: date }
+          }
+        - {
+            name: to,
+            in: query,
+            description: Inclusive Asia/Manila calendar date; omit to leave this boundary
+              unrestricted. User created_at.,
+            schema: { type: string, format: date }
+          }
+      responses:
+        "200":
+          {
+            description: Authorized result.,
+            content:
+              {
+                application/json: { schema: { $ref: "#/components/schemas/DirectoryBuyerListEnvelope" } }
+              }
+          }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  "/admin/buyers/{buyerId}":
+    get:
+      operationId: getDirectoryBuyer
+      tags: [ Admin User Directory ]
+      description: user_directory.view. Buyer profile with contact details, ratings,
+        activity and recent orders. Opening a profile is audited; a self-deleted
+        Buyer's email is masked and mobile omitted.
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - {
+            name: buyerId,
+            in: path,
+            required: true,
+            schema: { type: string, format: uuid }
+          }
+      responses:
+        "200":
+          {
+            description: Authorized result.,
+            content:
+              {
+                application/json: { schema: { $ref: "#/components/schemas/DirectoryBuyerEnvelope" } }
+              }
+          }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+  "/admin/buyers/{buyerId}/reviews":
+    get:
+      operationId: listDirectoryBuyerReviews
+      tags: [ Admin User Directory ]
+      description: user_directory.view. Ratings the Buyer received from Vendors
+        (RECEIVED) or reviews the Buyer wrote (WRITTEN). Hidden or removed text
+        is shown only to roles with reviews.moderate.
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - {
+            name: buyerId,
+            in: path,
+            required: true,
+            schema: { type: string, format: uuid }
+          }
+        - {
+            name: direction,
+            in: query,
+            schema: { type: string, enum: [ RECEIVED, WRITTEN ] }
+          }
+        - {
+            name: page,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 1000 }
+          }
+      responses:
+        "200":
+          {
+            description: Authorized result.,
+            content:
+              {
+                application/json: { schema: { $ref: "#/components/schemas/DirectoryReviewListEnvelope" } }
+              }
+          }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  /admin/vendors:
+    get:
+      operationId: listDirectoryVendors
+      tags: [ Admin User Directory ]
+      description: user_directory.view (Super Admin, User Management, Support). Vendor
+        Management → Users. Search matches store, legal name and Owner name or
+        email; status is the Store Activation status.
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: q, in: query, schema: { type: string, minLength: 2, maxLength: 120 } }
+        - {
+            name: status,
+            in: query,
+            schema: { type: string, enum: [ NOT_READY, READY, ACTIVE, RESTRICTED, SUSPENDED ] }
+          }
+        - {
+            name: verification,
+            in: query,
+            schema:
+              {
+                type: string,
+                enum:
+                  [
+                    NOT_STARTED,
+                    IN_PROGRESS,
+                    SUBMITTED,
+                    PENDING_VERIFICATION,
+                    APPROVED,
+                    CHANGES_REQUIRED,
+                    REJECTED,
+                    EXPIRED
+                  ]
+              }
+          }
+        - {
+            name: discoverability,
+            in: query,
+            schema: { type: string, enum: [ DISCOVERABLE, NOT_DISCOVERABLE ] }
+          }
+        - {
+            name: sort,
+            in: query,
+            schema: { type: string, enum: [ joined_desc, joined_asc, name_asc, name_desc ] }
+          }
+        - {
+            name: page,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 1000 }
+          }
+        - {
+            name: from,
+            in: query,
+            description: Inclusive Asia/Manila calendar date; omit to leave this boundary
+              unrestricted. Store created_at.,
+            schema: { type: string, format: date }
+          }
+        - {
+            name: to,
+            in: query,
+            description: Inclusive Asia/Manila calendar date; omit to leave this boundary
+              unrestricted. Store created_at.,
+            schema: { type: string, format: date }
+          }
+      responses:
+        "200":
+          {
+            description: Authorized result.,
+            content:
+              {
+                application/json: { schema: { $ref: "#/components/schemas/DirectoryVendorListEnvelope" } }
+              }
+          }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  "/admin/vendors/{vendorId}":
+    get:
+      operationId: getDirectoryVendor
+      tags: [ Admin User Directory ]
+      description: user_directory.view. Store profile, Owner contact, ratings and
+        activity. Opening a profile is audited. Exact inventory is never
+        returned.
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - {
+            name: vendorId,
+            in: path,
+            required: true,
+            schema: { type: string, format: uuid }
+          }
+      responses:
+        "200":
+          {
+            description: Authorized result.,
+            content:
+              {
+                application/json: { schema: { $ref: "#/components/schemas/DirectoryVendorEnvelope" } }
+              }
+          }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+  "/admin/vendors/{vendorId}/reviews":
+    get:
+      operationId: listDirectoryVendorReviews
+      tags: [ Admin User Directory ]
+      description: user_directory.view. Store reviews (VENDOR) or Product Reviews
+        (PRODUCT) the Vendor received. Hidden or removed text is shown only to
+        roles with reviews.moderate.
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - {
+            name: vendorId,
+            in: path,
+            required: true,
+            schema: { type: string, format: uuid }
+          }
+        - { name: type, in: query, schema: { type: string, enum: [ VENDOR, PRODUCT ] } }
+        - {
+            name: page,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 1000 }
+          }
+      responses:
+        "200":
+          {
+            description: Authorized result.,
+            content:
+              {
+                application/json: { schema: { $ref: "#/components/schemas/DirectoryReviewListEnvelope" } }
+              }
+          }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+  "/admin/vendors/{vendorId}/listings":
+    get:
+      operationId: listDirectoryVendorListings
+      tags: [ Admin User Directory ]
+      description: user_directory.view. Basic listing facts only (image, name, price
+        range, public stock label and status); never exact inventory.
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - {
+            name: vendorId,
+            in: path,
+            required: true,
+            schema: { type: string, format: uuid }
+          }
+        - { name: q, in: query, schema: { type: string, minLength: 2, maxLength: 120 } }
+        - {
+            name: status,
+            in: query,
+            schema: { type: string, pattern: "^[A-Z_]{3,64}$" }
+          }
+        - {
+            name: page,
+            in: query,
+            schema: { type: integer, minimum: 1, maximum: 1000 }
+          }
+      responses:
+        "200":
+          {
+            description: Authorized result.,
+            content:
+              {
+                application/json: { schema: { $ref: "#/components/schemas/DirectoryListingListEnvelope" } }
+              }
+          }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
   "/admin/privacy-requests":
     "get":
       "operationId": "listPrivacyRequests"
@@ -11340,7 +11933,8 @@ paths:
               - "BUYER"
         - "name": "listing_id"
           "in": "query"
-          "description": "Current store's listing UUID. Accepted only with type PRODUCT; foreign or unavailable listings return 404."
+          "description": "Current store's listing UUID. Accepted only with type PRODUCT;
+            foreign or unavailable listings return 404."
           "schema":
             "type": "string"
             "format": "uuid"
@@ -11386,7 +11980,12 @@ paths:
       "operationId": "getVendorReview"
       "tags":
         - "Vendor Reviews"
-      "description": "reviews.view. Read one review belonging to the current store with its privacy-safe author, immutable purchased-product snapshot, rating, comment and authorized media links. Received reviews must still satisfy blind reveal, dispute withholding, moderation and score-exclusion visibility. The store may also read its own Buyer ratings. Foreign and unavailable reviews return 404."
+      "description": "reviews.view. Read one review belonging to the current store
+        with its privacy-safe author, immutable purchased-product snapshot,
+        rating, comment and authorized media links. Received reviews must still
+        satisfy blind reveal, dispute withholding, moderation and
+        score-exclusion visibility. The store may also read its own Buyer
+        ratings. Foreign and unavailable reviews return 404."
       "security":
         - "accessCookie": []
           "webCsrf": []
@@ -17445,6 +18044,63 @@ paths:
           "$ref": "#/components/responses/ErrorResponse"
         "409":
           "$ref": "#/components/responses/ErrorResponse"
+  /admin/finance/commission-policies:
+    get:
+      operationId: listCommissionPolicies
+      tags: [Admin Finance]
+      description: finance.view. Current and next commercial commission policies and paginated append-only history. can_manage additionally requires platform_settings.manage.
+      security: [{ accessCookie: [], webCsrf: [] }]
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1, maximum: 1000, default: 1 } }
+      responses:
+        '200':
+          description: Versioned commercial rates. All effective timestamps are UTC instants displayed in Asia/Manila.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommissionPoliciesEnvelope' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ErrorResponse' }
+    post:
+      operationId: publishCommissionPolicy
+      tags: [Admin Finance]
+      description: Requires finance.view, platform_settings.manage, recent authentication, CSRF, Idempotency-Key and expected_version. Publishes a new commercial rate with immutable, hash-verified Vendor terms and Owner notices. Existing quotations, orders, assessments and credits keep their saved rate. Statutory rates and provider mode are unchanged. No backdating or insertion before the latest scheduled policy.
+      security: [{ accessCookie: [], webCsrf: [] }]
+      parameters:
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CommissionPolicyPublishRequest' }
+      responses:
+        '200':
+          description: Published policy, or the same result for an identical retry.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommissionPolicyEnvelope' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ErrorResponse' }
+        '503': { $ref: '#/components/responses/ErrorResponse' }
+  /vendor/finance/commissions:
+    get:
+      operationId: getVendorCommissionMonitoring
+      tags: [Vendor Finance]
+      description: Owner-only all-time commission monitoring with current and next policy, estimated and earned fees, approved credits, unbilled fees, draft bills, issued outstanding and overdue debt, verified allocations and successful fee refunds. Assessments are paginated and retain their original basis and percentage. Cash and earnings are separate; no wallet balance is represented.
+      security: [{ accessCookie: [], webCsrf: [] }]
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1, maximum: 1000, default: 1 } }
+      responses:
+        '200':
+          description: Store-scoped monitoring and paginated assessment records.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VendorCommissionMonitoringEnvelope' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ErrorResponse' }
   "/admin/finance/payments":
     "get":
       "operationId": "listAdminPayments"
@@ -18239,11 +18895,13 @@ paths:
       "tags":
         - "Buyer Projects"
       "operationId": "estimateWorkPackageBudget"
-      "description": "Advisory materials-only budget estimate for a Work Package being
+      "description": "Advisory budget estimate for a Work Package being
         drafted. Each catalog line is priced at the half-up average of one price
         per eligible Vendor (that Vendor's lowest exact match) within the radius
         of the site. Unlisted and unmatched lines carry no price. Excludes
-        delivery fees and labor. Nothing is stored."
+        labor and processing fees. Site Delivery and Both include actual route/vehicle
+        estimates for a representative exact-match supplier plan, consolidated per
+        supplier. Unknown delivery remains null. Nothing is stored."
       "security":
         - "passportBearer": []
       "parameters":
@@ -18282,8 +18940,8 @@ paths:
       "tags":
         - "Buyer Projects"
       "operationId": "getWorkPackage"
-      "description": "The package's current materials, missing-item resolution,
-        budget metrics and delete/edit availability. PDF generation remains Phase 15."
+      "description": "The package's current materials, missing-item resolution, budget
+        metrics and delete/edit availability. PDF generation remains Phase 15."
       "security":
         - "passportBearer": []
       "parameters":
@@ -18325,8 +18983,9 @@ paths:
       "operationId": "editWorkPackage"
       "description": "Edit the Work Package directly, with no new list entry. Allowed
         until an order, tagged purchase or selected Vendor exists (otherwise
-        WORK_PACKAGE_HAS_ORDER). Estimates and open quotation requests built on the
-        old materials are invalidated; a compared or quoted package returns to Active."
+        WORK_PACKAGE_HAS_ORDER). Estimates and open quotation requests built on
+        the old materials are invalidated; a compared or quoted package returns
+        to Active."
       "security":
         - "passportBearer": []
       "parameters":
@@ -18373,9 +19032,10 @@ paths:
         - "Buyer Projects"
       "operationId": "deleteWorkPackage"
       "description": "Delete a Work Package that has no order, tagged purchase or
-        selected Vendor. A Draft with no locked history is removed; any other package
-        is cancelled and hidden from the Buyer while its saved originals, estimates and
-        quotations are retained. A package with an order returns WORK_PACKAGE_HAS_ORDER."
+        selected Vendor. A Draft with no locked history is removed; any other
+        package is cancelled and hidden from the Buyer while its saved
+        originals, estimates and quotations are retained. A package with an
+        order returns WORK_PACKAGE_HAS_ORDER."
       "security":
         - "passportBearer": []
       "parameters":
@@ -18506,12 +19166,27 @@ paths:
         - "Buyer Projects"
       "operationId": "listWorkPackageLineAlternatives"
       "description": "Eligible Item-Based offers for the same canonical material and
-        unit within the package radius of its site, for buying a missing line
-        separately. Exact matches first, then price. Unlisted lines return
-        status UNLISTED with no items."
+        unit within the fixed 50 km Project-Based radius of the package site,
+        for buying a missing line separately. Ranked by specification match,
+        whether the store covers the quantity, whether it can serve the
+        package's fulfillment method, total price, then distance. Unlisted lines
+        return status UNLISTED with no items; a line already covered returns
+        COVERED; no suitable store returns NO_SUITABLE_ALTERNATIVE with the
+        reasons in `excluded`."
       "security":
         - "passportBearer": []
       "parameters":
+        - name: arrangement_id
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: replace
+          in: query
+          required: false
+          schema:
+            type: boolean
         - "name": "packageId"
           "in": "path"
           "required": true
@@ -18535,9 +19210,38 @@ paths:
           "schema":
             "type": "string"
             "format": "uuid"
+        - "name": "candidate_id"
+          "in": "query"
+          "description": "The compared Vendor candidate. The quantity to source becomes
+            that Vendor's gap less the separate purchases that satisfy the line,
+            and the Vendor itself is left out."
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - name: specification_choices
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 15000
+          description: JSON array of {line_id, option_id} choices. Sizes the
+            recommendation from the same selected specifications as quotation
+            review.
+        - name: fulfillment_method
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - DELIVERY
+              - PICKUP
+          description: Concrete method chosen on quotation review; suggestions must
+            support it.
       "responses":
         "200":
-          "description": "Similar Item-Based offers."
+          "description": "Item-Based offers within the fixed 50 km Project-Based radius,
+            ranked by specification match, availability, fulfillment capability,
+            total price and distance."
           "content":
             "application/json":
               "schema":
@@ -18586,6 +19290,18 @@ paths:
               - "BUDGET_FIT"
               - "RATING"
               - "PRICE"
+        - "name": "direction"
+          "in": "query"
+          "description": "ASC is low to high and DESC high to low. Omitted, each ordering
+            opens on its default: BUDGET_FIT and RATING DESC (best first), PRICE
+            ASC (cheapest first). Ignored for BEST_MATCH, a fixed ranking. A
+            Vendor without a value (no rating, cost under review) is always
+            last, and ties go to the nearest store."
+          "schema":
+            "type": "string"
+            "enum":
+              - "ASC"
+              - "DESC"
         - "name": "favorites_only"
           "in": "query"
           "schema":
@@ -18622,10 +19338,10 @@ paths:
       "tags":
         - "Buyer Projects"
       "operationId": "compileProjectEstimates"
-      "description": "Scan eligible Bulk Yes Tier 2 offers within the confirmed radius
-        from the Project site. FMS uses exact normalized weights. Unknown
-        delivery cost remains pending; schedules never change validity or
-        score."
+      "description": "Scan eligible Bulk Yes Tier 2 offers within the fixed 50 km
+        Project-Based radius from the Project site. FMS uses exact normalized
+        weights. Unknown delivery cost remains pending; schedules never change
+        validity or score."
       "security":
         - "passportBearer": []
       "parameters":
@@ -18737,7 +19453,7 @@ paths:
         "content":
           "application/json":
             "schema":
-              "$ref": "#/components/schemas/ProjectCandidateRequest"
+              $ref: "#/components/schemas/ProjectVendorSelectionRequest"
       "responses":
         "201":
           "description": "Authorized Project procurement result."
@@ -18807,8 +19523,10 @@ paths:
       "operationId": "previewProjectSpecificationSelection"
       "description": "Re-price a fresh candidate with the Buyer's specification
         choices (lines, totals, delivery estimate, score and budget label).
-        Nothing is stored; send the same selections when selecting or
-        inquiring. An unknown option is SPECIFICATION_OPTION_INVALID."
+        Exact-match defaults for missing materials are saved to the draft arrangement;
+        explicit removals and manual replacements are preserved. No regular cart,
+        order or payment is created. Send the same selections when selecting or inquiring.
+        An unknown option is SPECIFICATION_OPTION_INVALID."
       "security":
         - "passportBearer": []
       "parameters":
@@ -18891,8 +19609,9 @@ paths:
         "404":
           "description": "No owned resource or current candidate."
         "409":
-          "description": "Stale version, expired estimate, source change or already
-            selected Vendor; no mutation."
+          "description": "Stale package, changed resolution, or no active primary Vendor
+            request (MISSING_LINE_INACTIVE). Cancelled procurement history
+            cannot be resolved as current work."
         "422":
           "description": "Validation, fulfillment review or written budget override required."
         "503":
@@ -18967,7 +19686,9 @@ paths:
       "tags":
         - "Buyer Projects"
       "operationId": "saveProjectRankingPreferences"
-      "description": "Exactly four integer weights in [0,100] totaling 100. Defaults:
+      "description": "Exactly four independent integer weights in [0,100], at least
+        one above zero (422 WEIGHTS_ALL_ZERO). Original values are stored and
+        restored; scoring divides each by the sum of weights. Defaults:
         material_match 40, budget_fit 25, distance 20, vps 15."
       "security":
         - "passportBearer": []
@@ -21117,10 +21838,12 @@ paths:
       tags:
         - Buyer Projects
       operationId: reactivateWorkPackage
-      description: Return a cancelled Work Package to Active in place; no copy is
-        made. The Project budget is checked again because cancelling released
-        it. A package with an order, selected Vendor or tagged purchase cannot be
-        reactivated.
+      description: Reactivate the same owned Cancelled Work Package after current
+        version, open-order and Project budget checks. Cancelled, declined and
+        expired orders do not keep the old Vendor selection locked. A cancelled
+        order original is retained internally and the reactivated package uses
+        fresh requirement identities, estimates and inquiries; no order is
+        reopened or duplicated.
       security:
         - passportBearer: []
       parameters:
@@ -21161,8 +21884,764 @@ paths:
             mutation.
         "422":
           description: WORK_PACKAGE_BUDGET_EXCEEDS_PROJECT; no mutation.
+  /buyers/work-packages/{packageId}/candidates/{candidateId}/draft-items/{lineId}/{variantId}:
+    put:
+      tags:
+        - Buyer Projects
+      operationId: saveProjectDraftItem
+      description: Add one recommendation to the Work Package draft. Server caps
+        quantity by the remaining requirement and available stock. Idempotent
+        PUT never stacks duplicates. No cart, order, stock reservation or
+        payment is created.
+      security:
+        - passportBearer: []
+      parameters:
+        - name: packageId
+          in: path
+          required: true
+          schema: &a4
+            type: string
+            format: uuid
+        - name: candidateId
+          in: path
+          required: true
+          schema: *a4
+        - name: lineId
+          in: path
+          required: true
+          schema: *a4
+        - name: variantId
+          in: path
+          required: true
+          schema: *a4
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectDraftItemInput"
+      responses:
+        "200":
+          description: Applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatIdResponse"
+        "401":
+          description: Authentication required.
+        "403":
+          description: Current Buyer authorization required.
+        "404":
+          description: No owned resource or matching candidate.
+        "409":
+          description: Work Package, draft, price, stock or estimate changed; review again.
+        "422":
+          description: Validation, payment, budget or fulfillment choice needs attention.
+        "503":
+          description: Delivery provider unavailable; retry.
+    delete:
+      tags:
+        - Buyer Projects
+      operationId: removeProjectDraftItem
+      description: Remove an unsubmitted supplementary selection, preserving the
+        requirement and restoring remaining fulfillment on the next preview.
+        Submitted orders retain existing cancellation rules.
+      security:
+        - passportBearer: []
+      parameters:
+        - name: packageId
+          in: path
+          required: true
+          schema: *a4
+        - name: candidateId
+          in: path
+          required: true
+          schema: *a4
+        - name: lineId
+          in: path
+          required: true
+          schema: *a4
+        - name: variantId
+          in: path
+          required: true
+          schema: *a4
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectVersionRequest"
+      responses:
+        "200":
+          description: Applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatIdResponse"
+        "401":
+          description: Authentication required.
+        "403":
+          description: Current Buyer authorization required.
+        "404":
+          description: No owned resource or matching candidate.
+        "409":
+          description: Work Package, draft, price, stock or estimate changed; review again.
+        "422":
+          description: Validation, payment, budget or fulfillment choice needs attention.
+        "503":
+          description: Delivery provider unavailable; retry.
+  /buyers/work-packages/{packageId}/candidates/{candidateId}/suppliers/{vendorId}/request:
+    post:
+      tags:
+        - Buyer Projects
+      operationId: requestProjectDraftSupplier
+      description: Explicit request to ONE supplementary supplier after the primary
+        Project-Based request exists. Revalidate the reviewed fingerprint,
+        prices, eligibility, fulfillment, payment, ownership and budgets. Create
+        a separate linked Item-Based order awaiting manual Vendor confirmation;
+        never touch the regular cart, auto-accept an order, request other
+        suppliers or start payment.
+      security:
+        - passportBearer: []
+      parameters:
+        - name: packageId
+          in: path
+          required: true
+          schema: &a5
+            type: string
+            format: uuid
+        - name: candidateId
+          in: path
+          required: true
+          schema: *a5
+        - name: vendorId
+          in: path
+          required: true
+          schema: *a5
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: *a5
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectDraftSupplierRequest"
+      responses:
+        "201":
+          description: Applied successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatIdResponse"
+        "401":
+          description: Authentication required.
+        "403":
+          description: Current Buyer authorization required.
+        "404":
+          description: No owned resource or matching candidate.
+        "409":
+          description: Work Package, draft, price, stock or estimate changed; review again.
+        "422":
+          description: Validation, payment, budget or fulfillment choice needs attention.
+        "503":
+          description: Delivery provider unavailable; retry.
+  /support/{supportPortal}/tickets:
+    get:
+      tags:
+        - Support
+      operationId: listSupportTickets
+      security:
+        - passportBearer: []
+        - accessCookie: []
+          webCsrf: []
+        - webCsrf: []
+          supportGuestCookie: []
+      parameters:
+        - name: supportPortal
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/SupportPortal"
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 160
+        - name: category
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/SupportCategory"
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/SupportStatus"
+        - name: user_type
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/SupportUserType"
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Support operation completed. Private responses use Cache-Control no-store.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportTicketListResponse"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+        "409":
+          $ref: "#/components/responses/ErrorResponse"
+        "419":
+          $ref: "#/components/responses/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/ErrorResponse"
+        "503":
+          $ref: "#/components/responses/ErrorResponse"
+      description: Paginated newest-first own tickets for buyers/vendors, or all tickets for
+        administrators with support.view. No guest list. Dates use inclusive Asia/Manila calendar
+        days.
+    post:
+      tags:
+        - Support
+      operationId: createSupportTicket
+      security:
+        - passportBearer: []
+        - accessCookie: []
+          webCsrf: []
+        - webCsrf: []
+      parameters:
+        - name: supportPortal
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/SupportPortal"
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "201":
+          description: Support operation completed. Private responses use Cache-Control no-store.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportReceiptResponse"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+        "409":
+          $ref: "#/components/responses/ErrorResponse"
+        "419":
+          $ref: "#/components/responses/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/ErrorResponse"
+        "503":
+          $ref: "#/components/responses/ErrorResponse"
+      description: Buyers use mobile bearer authentication; Vendors use existing browser cookies and CSRF.
+        Guests use CSRF without account authentication. Admin creation is unavailable. Guest
+        name/email are required; authenticated identity and user type always come from the server. A
+        receipt contains no conversation or access secret. IP/email throttles and a blank website
+        honeypot protect intake. Same key and body replay the receipt; changed bodies conflict.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - user_type
+                - category
+                - subject
+                - message
+                - privacy_acknowledged
+              properties:
+                full_name:
+                  type: string
+                  maxLength: 160
+                email:
+                  type: string
+                  format: email
+                  maxLength: 254
+                user_type:
+                  $ref: "#/components/schemas/SupportUserType"
+                category:
+                  $ref: "#/components/schemas/SupportCategory"
+                subject:
+                  type: string
+                  minLength: 3
+                  maxLength: 160
+                message:
+                  type: string
+                  minLength: 3
+                  maxLength: 10000
+                reference_type:
+                  $ref: "#/components/schemas/SupportReferenceType"
+                reference:
+                  type: string
+                  maxLength: 120
+                  description: User-supplied investigation reference; does not grant access to the referenced record.
+                privacy_acknowledged:
+                  type: boolean
+                website:
+                  type: string
+                  maxLength: 0
+                files:
+                  type: array
+                  maxItems: 3
+                  items:
+                    type: string
+                    format: binary
+                  description: Optional private JPG, PNG or PDF files, at most 3 MB each and 3 per message. Server
+                    validates content and fails closed on scanning errors.
+  /support/{supportPortal}/tickets/{ticketId}:
+    get:
+      tags:
+        - Support
+      operationId: getSupportTicket
+      security:
+        - passportBearer: []
+        - accessCookie: []
+          webCsrf: []
+        - webCsrf: []
+          supportGuestCookie: []
+      parameters:
+        - name: supportPortal
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/SupportPortal"
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Support operation completed. Private responses use Cache-Control no-store.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportTicketResponse"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+        "409":
+          $ref: "#/components/responses/ErrorResponse"
+        "419":
+          $ref: "#/components/responses/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/ErrorResponse"
+        "503":
+          $ref: "#/components/responses/ErrorResponse"
+    patch:
+      tags:
+        - Support
+      operationId: updateSupportTicket
+      security:
+        - passportBearer: []
+        - accessCookie: []
+          webCsrf: []
+        - webCsrf: []
+          supportGuestCookie: []
+      parameters:
+        - name: supportPortal
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/SupportPortal"
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Support operation completed. Private responses use Cache-Control no-store.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCommandResponse"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+        "409":
+          $ref: "#/components/responses/ErrorResponse"
+        "419":
+          $ref: "#/components/responses/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/ErrorResponse"
+        "503":
+          $ref: "#/components/responses/ErrorResponse"
+      description: Admin only; support.view and support.manage required. Version-checked status/assignment
+        changes record attributable append-only history and a reason. All five statuses can be
+        selected, including reopening a closed request. Assignees must still hold support authority.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportUpdate"
+  /support/{supportPortal}/tickets/{ticketId}/entries:
+    get:
+      tags:
+        - Support
+      operationId: listSupportEntries
+      security:
+        - passportBearer: []
+        - accessCookie: []
+          webCsrf: []
+        - webCsrf: []
+          supportGuestCookie: []
+      parameters:
+        - name: supportPortal
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/SupportPortal"
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Support operation completed. Private responses use Cache-Control no-store.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportEntryListResponse"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+        "409":
+          $ref: "#/components/responses/ErrorResponse"
+        "419":
+          $ref: "#/components/responses/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/ErrorResponse"
+        "503":
+          $ref: "#/components/responses/ErrorResponse"
+      description: Chronological, paginated immutable messages, status and assignment history. The newest
+        50 entries are returned chronologically; next_cursor retrieves earlier entries.
+    post:
+      tags:
+        - Support
+      operationId: replyToSupportTicket
+      security:
+        - passportBearer: []
+        - accessCookie: []
+          webCsrf: []
+        - webCsrf: []
+          supportGuestCookie: []
+      parameters:
+        - name: supportPortal
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/SupportPortal"
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "201":
+          description: Support operation completed. Private responses use Cache-Control no-store.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportReplyResponse"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+        "409":
+          $ref: "#/components/responses/ErrorResponse"
+        "419":
+          $ref: "#/components/responses/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/ErrorResponse"
+        "503":
+          $ref: "#/components/responses/ErrorResponse"
+      description: Append a reply and optional attachments. Admins require support.manage. Closed tickets
+        require Admin reopening. A user follow-up reopens Waiting for User or Resolved requests. No
+        real-time chat transport.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+                  minLength: 3
+                  maxLength: 10000
+                files:
+                  type: array
+                  maxItems: 3
+                  items:
+                    type: string
+                    format: binary
+                  description: Optional private JPG, PNG or PDF files, at most 3 MB each and 3 per message. Server
+                    validates content and fails closed on scanning errors.
+  /support/{supportPortal}/tickets/{ticketId}/attachments/{fileId}:
+    get:
+      tags:
+        - Support
+      operationId: downloadSupportAttachment
+      security:
+        - passportBearer: []
+        - accessCookie: []
+          webCsrf: []
+        - webCsrf: []
+          supportGuestCookie: []
+      parameters:
+        - name: supportPortal
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/SupportPortal"
+        - name: ticketId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Authorized clean private attachment. Authorization is rechecked for every download.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+        "409":
+          $ref: "#/components/responses/ErrorResponse"
+        "419":
+          $ref: "#/components/responses/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/ErrorResponse"
+        "503":
+          $ref: "#/components/responses/ErrorResponse"
+  /support/admin/handlers:
+    get:
+      tags:
+        - Support
+      operationId: listSupportHandlers
+      security:
+        - passportBearer: []
+        - accessCookie: []
+          webCsrf: []
+        - webCsrf: []
+          supportGuestCookie: []
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Support operation completed. Private responses use Cache-Control no-store.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportHandlerListResponse"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+        "409":
+          $ref: "#/components/responses/ErrorResponse"
+        "419":
+          $ref: "#/components/responses/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/ErrorResponse"
+        "503":
+          $ref: "#/components/responses/ErrorResponse"
+      description: Active eligible support administrators; support.view required.
+  /support/guest/access-email:
+    post:
+      tags:
+        - Support
+      operationId: requestSupportAccessEmail
+      security:
+        - webCsrf: []
+      parameters: []
+      responses:
+        "200":
+          description: Support operation completed. Private responses use Cache-Control no-store.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportEmailResponse"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+        "409":
+          $ref: "#/components/responses/ErrorResponse"
+        "419":
+          $ref: "#/components/responses/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/ErrorResponse"
+        "503":
+          $ref: "#/components/responses/ErrorResponse"
+      description: Always returns the same response. If guest email and ticket number match, queues a
+        secure single-use link. Rate-limited by IP and hashed identity. Never discloses whether a
+        ticket exists.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportAccessEmail"
+  /support/guest/access:
+    post:
+      tags:
+        - Support
+      operationId: exchangeSupportAccess
+      security:
+        - webCsrf: []
+      parameters: []
+      responses:
+        "200":
+          description: Support operation completed. Private responses use Cache-Control no-store.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportAccessResponse"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+        "409":
+          $ref: "#/components/responses/ErrorResponse"
+        "419":
+          $ref: "#/components/responses/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/ErrorResponse"
+        "503":
+          $ref: "#/components/responses/ErrorResponse"
+      description: Atomically consumes a hashed 24-hour email link, sets a Secure HttpOnly SameSite=Strict
+        ticket-scoped 30-minute cookie, and returns only the ticket ID. The email frontend keeps the
+        link token in the URL fragment and removes it before making requests.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportAccessExchange"
 components:
   securitySchemes:
+    supportGuestCookie: { type: apiKey, in: cookie, name: mp_support }
     passportBearer: { type: http, scheme: bearer, bearerFormat: JWT }
     accessCookie: { type: apiKey, in: cookie, name: mp_access }
     mfaChallengeCookie: { type: apiKey, in: cookie, name: mp_mfa_challenge }
@@ -21173,8 +22652,8 @@ components:
       name: status
       in: query
       required: false
-      description: 'Payments tab only; ignored by every other tab. Each value matches the
-        status badge a Payments row shows. PAID has no refund activity;
+      description: 'Payments tab only; ignored by every other tab. Each value matches
+        the status badge a Payments row shows. PAID has no refund activity;
         LATE_CAPTURE covers every late-captured payment awaiting or after its
         refund; PENDING is any attempt not yet settled.'
       schema:
@@ -21224,6 +22703,257 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/BotStepUpErrorEnvelope" }
   schemas:
+    ProjectArrangement:
+      type: object
+      required:
+        - id
+        - source_candidate_id
+        - version
+        - work_package_version_id
+        - vendors
+        - vendor_count
+        - coverage
+        - materials_centavos
+        - delivery_centavos
+        - total_centavos
+        - budget_label
+        - fingerprint
+        - issues
+        - submitted
+        - stale
+        - previous_vendors
+        - fms
+      properties:
+        fms:
+          type: object
+          additionalProperties: true
+          description: Versioned arrangement FMS with score, normalized components, raw buyer weights, supplier material shares and calculation basis. Material coverage uses exact allocated quantities per requirement, budget fit uses all materials and delivery, and distance and normalized VPS use material-cost shares. Existing neutral treatment for New Vendors remains unchanged.
+        rank:
+          type: [integer, "null"]
+          minimum: 1
+          description: Position in the filtered Best Match result before pagination; null for Price sort, incomplete coverage or unresolved costs/data.
+        proposal_token:
+          type: string
+          description: Opaque Buyer and Work Package scoped server-issued proposal. Pass unchanged when creating this computed arrangement; never parse it in clients.
+        id:
+          type: string
+          format: uuid
+        source_candidate_id:
+          type: string
+          format: uuid
+        version:
+          type: integer
+        work_package_version_id:
+          type: string
+          format: uuid
+        vendors:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        vendor_count:
+          type: integer
+        coverage:
+          type: object
+          additionalProperties: true
+        materials_centavos:
+          type: integer
+        delivery_centavos:
+          type:
+            - integer
+            - "null"
+        total_centavos:
+          type:
+            - integer
+            - "null"
+        budget_label:
+          type: string
+        fingerprint:
+          type: string
+        issues:
+          type: array
+          items:
+            type: string
+        submitted:
+          type: boolean
+        stale:
+          type: boolean
+        previous_vendors:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+      description: A Work Package procurement arrangement with equal suppliers, independent vendor
+        quotations and orders. Version zero is a computed proposal; explicit preview saves a draft
+        without orders, reservations or payment. Vendor objects include assigned items, specification
+        choices, current fulfillment/payment options, delivery preview, public map facts and individual
+        quotation/order status.
+    ProjectArrangementResponse:
+      type: object
+      required:
+        - data
+        - meta
+        - errors
+      properties:
+        data:
+          $ref: "#/components/schemas/ProjectArrangement"
+        meta:
+          type: object
+          additionalProperties: true
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiError"
+    ProjectArrangementPage:
+      type: object
+      required:
+        - items
+        - page
+        - has_more
+        - total
+        - unfiltered_total
+      properties:
+        sort:
+          type: string
+          enum: [BEST_MATCH, PRICE]
+        estimate:
+          oneOf:
+            - $ref: "#/components/schemas/ProjectCompiledEstimate"
+            - type: "null"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectArrangement"
+        page:
+          type: integer
+        has_more:
+          type: boolean
+        total:
+          type: integer
+        unfiltered_total:
+          type: integer
+    ProjectArrangementPageResponse:
+      type: object
+      required:
+        - data
+        - meta
+        - errors
+      properties:
+        data:
+          $ref: "#/components/schemas/ProjectArrangementPage"
+        meta:
+          type: object
+          additionalProperties: true
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiError"
+    ProjectArrangementCreate:
+      type: object
+      required:
+        - source_candidate_id
+      properties:
+        proposal_token:
+          type: string
+          maxLength: 200000
+          description: The selected option's opaque proposal, preserving its exact supplier/product allocations. Server verifies ownership, Work Package version, current stock, specifications, prices and delivery before saving the draft. Omit only for the legacy candidate preview.
+        source_candidate_id:
+          type: string
+          format: uuid
+    ProjectArrangementEdit:
+      type: object
+      required:
+        - version
+      properties:
+        version:
+          type: integer
+          minimum: 1
+        vendor_id:
+          type: string
+          format: uuid
+        line_id:
+          type: string
+          format: uuid
+        item_id:
+          type: string
+          format: uuid
+        variant_id:
+          type: string
+          format: uuid
+        price_version_id:
+          type: string
+          format: uuid
+        option_id:
+          type: string
+        fulfillment_method:
+          type: string
+          enum:
+            - DELIVERY
+            - PICKUP
+        method:
+          type: string
+          enum:
+            - DELIVERY
+            - PICKUP
+        remove:
+          type: boolean
+        replace_item:
+          type: boolean
+    ProjectArrangementSubmit:
+      type: object
+      required:
+        - version
+        - fingerprint
+        - payments
+        - acknowledged
+      properties:
+        version:
+          type: integer
+          minimum: 1
+        fingerprint:
+          type: string
+          minLength: 64
+          maxLength: 64
+        acknowledged:
+          type: boolean
+        payments:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: object
+            required:
+              - vendor_id
+              - payment_method
+            properties:
+              vendor_id:
+                type: string
+                format: uuid
+              payment_method:
+                type: string
+                enum:
+                  - ONLINE
+                  - CASH_ON_DELIVERY
+                  - IN_STORE
+        note:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
+        budget_override_reason:
+          type:
+            - string
+            - "null"
+          minLength: 10
+          maxLength: 2000
+    ProjectArrangementInquiry:
+      type: object
+      required:
+        - version
+      properties:
+        version:
+          type: integer
+          minimum: 1
     ChatIdentity:
       type: object
       required:
@@ -21232,8 +22962,10 @@ components:
       properties:
         display_name:
           type: string
+          description: Current public profile name. Historical messages fall back to the stored public name when no current profile name exists. System messages retain their system identity.
         role:
           type: string
+          description: Public role. For historical messages, this is the role recorded when the message was sent, even after a handler transfer or role change.
         avatar_path:
           type: string
           nullable: true
@@ -21320,14 +23052,14 @@ components:
         project_inquiry_count:
           type: integer
           minimum: 0
-          description: Number of currently authorized project inquiries for this Buyer and
-            Store.
+          description: Number of currently authorized open project quotation inquiries for
+            this Buyer and Store, using the project-inquiries list filter.
         project_unread_count:
           type: integer
           minimum: 0
-          description: Received unread messages across all currently authorized project
-            inquiries, including every page. Opening the main thread does not
-            mark these messages read.
+          description: Received unread messages across all currently authorized open
+            project quotation inquiries, including every page. Opening the main
+            thread does not mark these messages read.
         inquiry_label:
           type: string
           description: Work Package name for a project inquiry, or Item inquiry for the
@@ -21477,6 +23209,21 @@ components:
           type: integer
         description:
           type: string
+        brand:
+          type: string
+          nullable: true
+          description: Brand captured in the immutable published quotation, not the
+            current listing.
+        variant_label:
+          type: string
+          nullable: true
+          description: Product variant label captured when the quotation was published.
+        specifications:
+          type: object
+          additionalProperties:
+            type: string
+          description: Technical details captured for this quotation line. Older versions
+            may omit these details.
         unit_code:
           type: string
         tax_category:
@@ -21511,6 +23258,10 @@ components:
         - nrpc_centavos
         - commercial_total_centavos
       properties:
+        materials_gross_centavos:
+          type: integer
+          description: Authoritative materials subtotal before the Vendor's materials
+            discount, when recorded.
         materials_payable_centavos:
           type: integer
         materials_vat_centavos:
@@ -21529,7 +23280,6 @@ components:
         - lines
         - commercial
         - fulfillment_method
-        - payment_method
         - fulfillment_date
         - changes
         - original_changes
@@ -21548,6 +23298,9 @@ components:
           type: string
         payment_method:
           type: string
+          deprecated: true
+          description: Historical Vendor preference only. New quotations omit it; the
+            Buyer chooses at acceptance.
         fulfillment_date:
           type: string
         delivery:
@@ -21586,6 +23339,34 @@ components:
         - viewed
         - actions
       properties:
+        requested_changes:
+          type: string
+          description: Buyer's exact recorded counter-offer for this version, retained
+            after revision. Omitted when no changes were requested. Only visible
+            to authorized conversation participants.
+        change_requested_at:
+          type: string
+          description: UTC ISO 8601 timestamp of the recorded counter-offer for this
+            version.
+        vendor_response_due_at:
+          type: string
+          description: Exact recorded UTC ISO 8601 deadline for the Vendor to revise and
+            republish. Historical requests retain their original deadline; it is
+            active only while the version is current and COUNTERED.
+        available_payment_methods:
+          type: array
+          maxItems: 2
+          uniqueItems: true
+          description: Currently available Buyer choices for this quotation's fulfillment,
+            subject to Vendor settings. Revalidated at acceptance.
+          items:
+            type: string
+            pattern: ^(ONLINE|CASH_ON_DELIVERY|IN_STORE)$
+        selected_payment_method:
+          type: string
+          nullable: true
+          description: The Buyer's recorded method from the accepted order, including
+            historical accepted quotations.
         id:
           type: string
           format: uuid
@@ -21694,11 +23475,28 @@ components:
       required: [ listing_id, location_id, preferred_date ]
       properties:
         listing_id: { type: string, format: uuid, description: A ready-mixed concrete listing. }
-        listing_variant_id: { type: [ string, 'null' ], format: uuid, description: The strength class (Required PSI) the Buyer has in mind. }
-        location_id: { type: string, format: uuid, description: A saved Buyer location; becomes the conversation's delivery destination. }
+        listing_variant_id:
+          {
+            type: [ string, 'null' ],
+            format: uuid,
+            description: The strength class (Required PSI) the Buyer has in mind.
+          }
+        location_id:
+          {
+            type: string,
+            format: uuid,
+            description: A saved Buyer location; becomes the conversation's delivery
+              destination.
+          }
         heavy_vehicle_restriction: { type: string, enum: [ 'NO', 'YES' ] }
         alternate_drop_off_location_id: { type: [ string, 'null' ], format: uuid, description: Required with YES. }
-        access_instructions: { type: [ string, 'null' ], minLength: 5, maxLength: 500, description: Required with YES. }
+        access_instructions:
+          {
+            type: [ string, 'null' ],
+            minLength: 5,
+            maxLength: 500,
+            description: Required with YES.
+          }
         preferred_date: { type: string, format: date }
         notes: { type: [ string, 'null' ], maxLength: 1000 }
     SiteInspectionVersion:
@@ -21713,10 +23511,31 @@ components:
       required: [ lock_version ]
       properties:
         lock_version: { type: integer, minimum: 1 }
-        scheduled_for: { type: string, format: date-time, description: Required for schedule; must be in the future. }
-        note: { type: [ string, 'null' ], maxLength: 1000, description: Optional note shown to the Buyer for schedule and complete. }
-        reason: { type: string, minLength: 10, maxLength: 1000, description: Required for decline. }
-        measured_volume_m3: { type: string, pattern: '^\d{1,6}(\.\d{1,3})?$', description: Required for complete; above zero. }
+        scheduled_for:
+          {
+            type: string,
+            format: date-time,
+            description: Required for schedule; must be in the future.
+          }
+        note:
+          {
+            type: [ string, 'null' ],
+            maxLength: 1000,
+            description: Optional note shown to the Buyer for schedule and complete.
+          }
+        reason:
+          {
+            type: string,
+            minLength: 10,
+            maxLength: 1000,
+            description: Required for decline.
+          }
+        measured_volume_m3:
+          {
+            type: string,
+            pattern: '^\d{1,6}(\.\d{1,3})?$',
+            description: Required for complete; above zero.
+          }
     SiteInspectionSite:
       type: object
       required: [ location_id, label, kind, formatted_address ]
@@ -21735,10 +23554,31 @@ components:
         complete: { type: boolean }
     SiteInspection:
       type: object
-      required: [ id, status, lock_version, listing, variant, site, preferred_date, buyer_notes, scheduled_for, vendor_note, measured_volume_m3, requested_at, closed_at, free, actions ]
+      required:
+        [
+          id,
+          status,
+          lock_version,
+          listing,
+          variant,
+          site,
+          preferred_date,
+          buyer_notes,
+          scheduled_for,
+          vendor_note,
+          measured_volume_m3,
+          requested_at,
+          closed_at,
+          free,
+          actions
+        ]
       properties:
         id: { type: string, format: uuid }
-        status: { type: string, enum: [ REQUESTED, SCHEDULED, COMPLETED, DECLINED, CANCELLED ] }
+        status:
+          {
+            type: string,
+            enum: [ REQUESTED, SCHEDULED, COMPLETED, DECLINED, CANCELLED ]
+          }
         lock_version: { type: integer }
         listing:
           type: object
@@ -21746,13 +23586,24 @@ components:
           properties:
             id: { type: string, format: uuid }
             display_name: { type: string }
-        variant: { oneOf: [ { $ref: "#/components/schemas/SiteInspectionVariant" }, { type: 'null' } ] }
+        variant:
+          {
+            oneOf: [ { $ref: "#/components/schemas/SiteInspectionVariant" }, { type: 'null' } ]
+          }
         site: { $ref: "#/components/schemas/SiteInspectionSite" }
         preferred_date: { type: string, format: date }
-        buyer_notes: { type: [ string, 'null' ], description: Shown only to the Buyer and the store's sales roles. }
+        buyer_notes:
+          {
+            type: [ string, 'null' ],
+            description: Shown only to the Buyer and the store's sales roles.
+          }
         scheduled_for: { type: [ string, 'null' ], format: date-time }
         vendor_note: { type: [ string, 'null' ] }
-        measured_volume_m3: { type: [ string, 'null' ], description: Three-decimal cubic meters once COMPLETED. }
+        measured_volume_m3:
+          {
+            type: [ string, 'null' ],
+            description: Three-decimal cubic meters once COMPLETED.
+          }
         requested_at: { type: string, format: date-time }
         closed_at: { type: [ string, 'null' ], format: date-time }
         free: { type: boolean, description: Always true; inspections are never charged. }
@@ -21783,7 +23634,12 @@ components:
           type: object
           required: [ site_inspections ]
           properties:
-            site_inspections: { type: array, maxItems: 10, items: { $ref: "#/components/schemas/SiteInspection" } }
+            site_inspections:
+              {
+                type: array,
+                maxItems: 10,
+                items: { $ref: "#/components/schemas/SiteInspection" }
+              }
         meta: { type: object, additionalProperties: true }
         errors: { type: array, items: { $ref: "#/components/schemas/ApiError" } }
     ConversationPage:
@@ -21933,7 +23789,6 @@ components:
       required:
         - lines
         - fulfillment_method
-        - payment_method
         - fulfillment_date
       properties:
         lines:
@@ -21949,6 +23804,9 @@ components:
             - DELIVERY
         payment_method:
           type: string
+          deprecated: true
+          description: Legacy editor preference, ignored. The Buyer selects payment before
+            accepting the quotation.
           enum:
             - ONLINE
             - CASH_ON_DELIVERY
@@ -21994,6 +23852,12 @@ components:
       required:
         - version_id
       properties:
+        payment_method:
+          type: string
+          enum: [ ONLINE, CASH_ON_DELIVERY, IN_STORE ]
+          description: Required for accept and prohibited for other actions. Explicit
+            Buyer choice; COD requires Site Delivery, In-Store requires
+            Self-Pickup, and the Vendor must offer the method.
         budget_override_reason: { type: string, minLength: 10, maxLength: 2000 }
         version_id:
           type: string
@@ -22503,7 +24367,14 @@ components:
       properties:
         key: { type: string, enum: [ distance, price, vps, stock, product_rating ] }
         label: { type: string }
-        weight_percent: { type: integer, minimum: 0, maximum: 100 }
+        weight_percent:
+          {
+            type: number,
+            minimum: 0,
+            maximum: 100,
+            description: Effective normalized percentage used for scoring; not the saved
+              slider value.
+          }
         score: { type: string, description: Normalized 0–100 component score, two decimals. }
         weighted: { type: string, description: score × weight / 100, two decimals. }
         basis:
@@ -22580,8 +24451,10 @@ components:
         fulfillment: { $ref: "#/components/schemas/ListingFulfillmentSummary" }
         ranking: { $ref: "#/components/schemas/RankingExplanation" }
     RankingWeightSet:
-      description: Whole percentages for the five Item-Based SRS components; they
-        total exactly 100.
+      description: Independent whole importance values for the five Item-Based SRS
+        components. At least one must be above zero; their sum need not be 100.
+        Persisted unchanged; scoring uses each value divided by their sum.
+        Platform defaults still total 100.
       type: object
       additionalProperties: false
       required: [ distance, price, vps, stock, product_rating ]
@@ -22791,8 +24664,20 @@ components:
       required: [ free, available, open_request ]
       properties:
         free: { type: boolean }
-        available: { type: boolean, description: False outside the radius, while the store is paused or while a request is already open. }
-        open_request: { oneOf: [ { $ref: "#/components/schemas/ReadyMixedConcreteOpenInspection" }, { type: 'null' } ] }
+        available:
+          {
+            type: boolean,
+            description: False outside the radius,
+            while the store is paused or while a request is already open.
+          }
+        open_request:
+          {
+            oneOf:
+              [
+                { $ref: "#/components/schemas/ReadyMixedConcreteOpenInspection" },
+                { type: 'null' }
+              ]
+          }
     ReadyMixedConcreteOpenInspection:
       type: object
       required: [ id, status, conversation_id ]
@@ -22802,10 +24687,19 @@ components:
         conversation_id: { type: string, format: uuid }
     ReadyMixedConcreteDetail:
       type: object
-      description: Ready-Mixed Concrete (owner decision 2026-10-16). Quantity is the order
-        volume in m³, each variant is one Required PSI class, and delivery is Site
-        Delivery by Concrete Mixer Truck / Transit Mixer only.
-      required: [ quantity_label, strength_attribute, strength_label, delivery_vehicle, site_delivery_only, site_inspection, notice ]
+      description: Ready-Mixed Concrete (owner decision 2026-10-16). Quantity is the
+        order volume in m³, each variant is one Required PSI class, and delivery
+        is Site Delivery by Concrete Mixer Truck / Transit Mixer only.
+      required:
+        [
+          quantity_label,
+          strength_attribute,
+          strength_label,
+          delivery_vehicle,
+          site_delivery_only,
+          site_inspection,
+          notice
+        ]
       properties:
         quantity_label: { type: string }
         strength_attribute: { type: string, description: Variant attribute code holding the PSI class. }
@@ -22867,14 +24761,17 @@ components:
         attribute_labels:
           {
             type: array,
-            description: "The category's names for listing and variant technical attributes, in category order; the same labels a Work Package quotation shows.",
+            description: "The category's names for listing and variant technical attributes,
+              in category order; the same labels a Work Package quotation
+              shows.",
             items: { $ref: "#/components/schemas/ListingAttributeLabel" }
           }
         images: { type: array, items: { $ref: "#/components/schemas/ListingImage" } }
         ready_mixed_concrete:
           {
             oneOf: [ { $ref: "#/components/schemas/ReadyMixedConcreteDetail" }, { type: 'null' } ],
-            description: Present only for ready-mixed concrete; Self-Pickup is then never available.
+            description: Present only for ready-mixed concrete; Self-Pickup is then never
+              available.
           }
         compliance: { $ref: "#/components/schemas/ListingCompliance" }
         product_rating: { $ref: "#/components/schemas/ProductRatingSummary" }
@@ -22925,7 +24822,14 @@ components:
             minimum: 0,
             description: 0 when following the platform defaults.
           }
-        total_percent: { type: integer, const: 100 }
+        total_percent:
+          {
+            type: integer,
+            minimum: 1,
+            maximum: 500,
+            description: Legacy field name for the sum of raw importance values; need not be
+              100.
+          }
         algorithm_version: { type: string }
     RankingPreferencesUpdate:
       type: object
@@ -23196,7 +25100,18 @@ components:
             type: [ string, 'null' ],
             format: uuid,
             description: 'Work Package line this purchase covers; same material and unit
-              only (422 MISSING_LINE_TAG_INVALID).'
+              only (422 MISSING_LINE_TAG_INVALID), at most the line quantity
+              (422 TAGGED_QUANTITY_EXCEEDS_REQUIREMENT). The server scopes it
+              from the package site at the fixed 50 km Project-Based radius,
+              ignoring any radius_km sent. It never stacks: adding the same
+              product again keeps the larger quantity.'
+          }
+        allow_partial_stock:
+          {
+            type: boolean,
+            description: 'With work_package_line_id: add what the store can confirm when it
+              holds less than quantity, instead of failing with
+              QUANTITY_UNAVAILABLE.'
           }
     CartItemUpdate:
       type: object
@@ -23288,16 +25203,30 @@ components:
         vehicle_type: { type: string }
         vehicles: { type: integer, minimum: 1 }
         trips: { type: integer, minimum: 1 }
-        fee_centavos: { type: integer, minimum: 0, description: Trip fees plus any mixer mobilization. }
+        fee_centavos:
+          {
+            type: integer,
+            minimum: 0,
+            description: Trip fees plus any mixer mobilization.
+          }
         fee_per_trip_centavos: { type: integer, minimum: 0 }
-        mobilization_basis: { type: [ string, 'null' ], enum: [ PER_TRUCK, PER_TRIP, null ], description: The Vendor's chosen mixer mobilization basis. }
+        mobilization_basis:
+          {
+            type: [ string, 'null' ],
+            enum: [ PER_TRUCK, PER_TRIP, null ],
+            description: The Vendor's chosen mixer mobilization basis.
+          }
         mobilization_fee_centavos: { type: integer, minimum: 0 }
         mobilization_total_centavos: { type: integer, minimum: 0 }
-        volume_plan: { oneOf: [ { $ref: "#/components/schemas/MixerVolumePlan" }, { type: 'null' } ] }
+        volume_plan:
+          {
+            oneOf: [ { $ref: "#/components/schemas/MixerVolumePlan" }, { type: 'null' } ]
+          }
     MixerVolumePlan:
       type: object
       description: Ready-mixed concrete trip plan. Each full load is limited by Mixer
-        Capacity and by payload at the concrete's density; the last trip carries the rest.
+        Capacity and by payload at the concrete's density; the last trip carries
+        the rest.
       required: [ total_m3, full_load_m3, full_trips, last_trip_m3 ]
       properties:
         total_m3: { type: number }
@@ -25571,6 +27500,10 @@ components:
         id: { type: string, format: uuid }
         key: { type: string }
         label: { type: string }
+        progress_status:
+          type: string
+          enum: [ NOT_STARTED, IN_PROGRESS, COMPLETED, NOT_APPLICABLE ]
+          description: Saved form or evidence completion for the Vendor checklist. COMPLETED means ready to submit or already supplied, never Admin approval or activation eligibility. The status field retains the review decision.
         level: { type: string, enum: [ REQUIRED, OPTIONAL, CONDITIONALLY_REQUIRED ] }
         status:
           {
@@ -26047,9 +27980,11 @@ components:
           {
             type: object,
             additionalProperties: true,
-            description: "New or changed addresses require province_code, city_code,
-              psgc_code, street (2–200 characters), four-digit postal_code and
-              canonical display names. source MANUAL is sufficient without
+            description: "New or changed addresses require province, city_municipality,
+              barangay, street (2–200 characters) and four-digit postal_code.
+              PSGC codes are optional legacy inputs, validated when supplied;
+              otherwise the server matches geographic references where possible.
+              source MANUAL is sufficient without
               geocoding or a token and stores null coordinates. Otherwise
               resolution_token from resolveVendorAddress is required. Client
               latitude and longitude are prohibited. Omit address to retain an
@@ -26277,7 +28212,13 @@ components:
               heavy_classification: { type: [ string, 'null' ], maxLength: 96 }
               base_fee_centavos: { type: integer, minimum: 0 }
               per_km_centavos: { type: integer, minimum: 0 }
-              mobilization_fee_centavos: { type: [ integer, 'null' ], minimum: 0, description: Concrete Mixer Truck / Transit Mixer only; a positive fee needs mobilization_basis. }
+              mobilization_fee_centavos:
+                {
+                  type: [ integer, 'null' ],
+                  minimum: 0,
+                  description: Concrete Mixer Truck / Transit Mixer only; a positive fee needs
+                    mobilization_basis.
+                }
               mobilization_basis: { type: [ string, 'null' ], enum: [ PER_TRUCK, PER_TRIP, null ] }
               maximum_distance_km:
                 {
@@ -26323,8 +28264,16 @@ components:
         errors: { type: array, items: { type: object, additionalProperties: true } }
     VendorAddressSelection:
       type: object
-      required: [ province_code, city_code, psgc_code ]
+      description: Supply address names or all three legacy
+        PSGC codes. Missing or ambiguous geographic references do not block
+        named address entry.
+      anyOf:
+        - required: [ province, city_municipality, barangay ]
+        - required: [ province_code, city_code, psgc_code ]
       properties:
+        province: { type: string, maxLength: 120 }
+        city_municipality: { type: string, maxLength: 120 }
+        barangay: { type: string, maxLength: 120 }
         pin_token:
           {
             type: [ string, 'null' ],
@@ -27053,6 +29002,96 @@ components:
         nrpc_centavos: { type: integer, format: int64, minimum: 0 }
         buyer_total_centavos: { type: integer, format: int64, minimum: 0 }
         calculation_hash: { type: string }
+    CommissionPolicy:
+      type: object
+      required: [id, version, commission_basis_points, rate_label, effective_from, status]
+      properties:
+        id: { type: string, format: uuid }
+        version: { type: integer, minimum: 1 }
+        commission_basis_points: { type: integer, minimum: 0, maximum: 10000, description: 'Integer basis points; 200 means 2.00%.' }
+        rate_label: { type: string }
+        effective_from: { type: string, format: date-time }
+        agreement_version_id: { type: [string, 'null'], format: uuid }
+        reason: { type: [string, 'null'] }
+        status: { type: string, enum: [CURRENT, SCHEDULED, PREVIOUS] }
+    CommissionPolicyPublishRequest:
+      type: object
+      additionalProperties: false
+      required: [commission_basis_points, expected_version, reason]
+      properties:
+        commission_basis_points: { type: integer, minimum: 0, maximum: 10000 }
+        expected_version: { type: integer, minimum: 0 }
+        effective_from: { type: [string, 'null'], format: date-time, description: 'Omit or null to apply now; otherwise a future instant.' }
+        reason: { type: string, minLength: 10, maxLength: 2000 }
+    CommissionPolicies:
+      type: object
+      required: [latest_version, can_manage, versions]
+      properties:
+        current: { oneOf: [ { $ref: '#/components/schemas/CommissionPolicy' }, { type: 'null' } ] }
+        next: { oneOf: [ { $ref: '#/components/schemas/CommissionPolicy' }, { type: 'null' } ] }
+        latest_version: { type: integer, minimum: 0 }
+        can_manage: { type: boolean }
+        versions: { type: array, items: { $ref: '#/components/schemas/CommissionPolicy' } }
+    CommissionPolicyEnvelope:
+      type: object
+      required: [data, meta, errors]
+      properties:
+        data: { $ref: '#/components/schemas/CommissionPolicy' }
+        meta: { $ref: '#/components/schemas/Meta' }
+        errors: { type: array, items: { $ref: '#/components/schemas/ApiError' } }
+    CommissionPoliciesEnvelope:
+      type: object
+      required: [data, meta, errors]
+      properties:
+        data: { $ref: '#/components/schemas/CommissionPolicies' }
+        meta: { $ref: '#/components/schemas/Meta' }
+        errors: { type: array, items: { $ref: '#/components/schemas/ApiError' } }
+    VendorCommissionSummary:
+      type: object
+      required: [estimated_centavos, earned_centavos, credited_centavos, net_earned_centavos, unbilled_centavos, draft_centavos, outstanding_centavos, overdue_centavos, collected_centavos, refunded_centavos, net_collected_centavos]
+      properties:
+        estimated_centavos: { type: integer, format: int64, minimum: 0 }
+        earned_centavos: { type: integer, format: int64, minimum: 0 }
+        credited_centavos: { type: integer, format: int64, minimum: 0 }
+        net_earned_centavos: { type: integer, format: int64 }
+        unbilled_centavos: { type: integer, format: int64, minimum: 0 }
+        draft_centavos: { type: integer, format: int64, minimum: 0 }
+        outstanding_centavos: { type: integer, format: int64, minimum: 0 }
+        overdue_centavos: { type: integer, format: int64, minimum: 0 }
+        collected_centavos: { type: integer, format: int64, minimum: 0 }
+        refunded_centavos: { type: integer, format: int64, minimum: 0 }
+        net_collected_centavos: { type: integer, format: int64 }
+    VendorCommissionAssessment:
+      type: object
+      required: [id, order_reference, state, commission_basis_centavos, commission_basis_points, estimated_centavos, earned_centavos, credited_centavos, net_centavos, dispute_hold]
+      properties:
+        id: { type: string, format: uuid }
+        order_reference: { type: string }
+        state: { type: string, enum: [ESTIMATED, EARNED, CANCELLED] }
+        commission_basis_centavos: { type: integer, format: int64, minimum: 0 }
+        commission_basis_points: { type: integer, minimum: 0, maximum: 10000 }
+        estimated_centavos: { type: integer, format: int64, minimum: 0 }
+        earned_centavos: { type: integer, format: int64, minimum: 0 }
+        credited_centavos: { type: integer, format: int64, minimum: 0 }
+        net_centavos: { type: integer, format: int64 }
+        dispute_hold: { type: boolean }
+        earned_at: { type: [string, 'null'], format: date-time }
+    VendorCommissionMonitoring:
+      type: object
+      required: [summary, assessments, terms_accepted]
+      properties:
+        terms_accepted: { type: boolean, description: Current Owner acceptance and applicable authority approval for the effective versioned terms. }
+        current_policy: { oneOf: [ { $ref: '#/components/schemas/CommissionPolicy' }, { type: 'null' } ] }
+        next_policy: { oneOf: [ { $ref: '#/components/schemas/CommissionPolicy' }, { type: 'null' } ] }
+        summary: { $ref: '#/components/schemas/VendorCommissionSummary' }
+        assessments: { type: array, items: { $ref: '#/components/schemas/VendorCommissionAssessment' } }
+    VendorCommissionMonitoringEnvelope:
+      type: object
+      required: [data, meta, errors]
+      properties:
+        data: { $ref: '#/components/schemas/VendorCommissionMonitoring' }
+        meta: { $ref: '#/components/schemas/Meta' }
+        errors: { type: array, items: { $ref: '#/components/schemas/ApiError' } }
     FeeAssessment:
       type: object
       description: Vendor commission liability, separate from buyer processing fees
@@ -27070,7 +29109,7 @@ components:
         id: { type: string, format: uuid }
         order_id: { type: string, format: uuid }
         commission_basis_centavos: { type: integer, format: int64, minimum: 0 }
-        commission_basis_points: { type: integer, const: 200 }
+        commission_basis_points: { type: integer, minimum: 0, maximum: 10000 }
         earned_centavos: { type: integer, format: int64, minimum: 0 }
         state: { type: string }
     MaterialPriceObservation:
@@ -27676,7 +29715,8 @@ components:
             type: array,
             maxItems: 50,
             items: { type: string, minLength: 2, maxLength: 40 },
-            description: Search tags the Vendor typed for this listing only, in the order added. A listing needs at least one approved or custom tag to publish.
+            description: Search tags the Vendor typed for this listing only,
+            in the order added. A listing needs at least one approved or custom tag to publish.
           }
         technical_attributes: { type: object, additionalProperties: { type: string } }
         brand: { type: [ string, 'null' ] }
@@ -27736,7 +29776,11 @@ components:
             type: array,
             maxItems: 50,
             items: { type: string, minLength: 2, maxLength: 40 },
-            description: Replaces the listing's own search tags. Letters, numbers, spaces, hyphens, ampersands and periods; repeats are ignored regardless of case.
+            description: Replaces the listing's own search tags. Letters,
+            numbers,
+            spaces,
+            hyphens,
+            ampersands and periods; repeats are ignored regardless of case.
           }
         brand: { type: [ string, 'null' ], maxLength: 180 }
         model: { type: [ string, 'null' ], maxLength: 180 }
@@ -27826,8 +29870,8 @@ components:
         marking_type:
           {
             oneOf: [ { $ref: "#/components/schemas/MarkingType" }, { type: 'null' } ],
-            description: The marking the Vendor selected, so OCR and QR read the matching
-              number (PS License No. or ICC sticker serial).
+            description: The marking the Vendor selected,
+            so OCR and QR read the matching number (PS License No. or ICC sticker serial).
           }
     ComplianceExtraction:
       type: object
@@ -27854,11 +29898,11 @@ components:
             type: object,
             additionalProperties: { type: string },
             description: "Editable marking_type, certificate_number (the PS License No. or
-              ICC sticker serial), icc_certificate_number, verification_reference,
-              manufacturer_name, manufacturer_address, importer_name,
-              importer_address, country_of_manufacture, brand and batch_number
-              where read unambiguously. PNS standard numbers are never marking
-              numbers."
+              ICC sticker serial), icc_certificate_number,
+              verification_reference, manufacturer_name, manufacturer_address,
+              importer_name, importer_address, country_of_manufacture, brand and
+              batch_number where read unambiguously. PNS standard numbers are
+              never marking numbers."
           }
         register_listed:
           {
@@ -27905,9 +29949,9 @@ components:
     ComplianceSubmission:
       type: object
       description: Vendor-confirmed declaration from Review and Confirm. Extraction
-        output is never submitted as truth. Only the marking number is
-        required; when the register matches, its record replaces the
-        manufacturer/importer fields.
+        output is never submitted as truth. Only the marking number is required;
+        when the register matches, its record replaces the manufacturer/importer
+        fields.
       required:
         [
           listing_lock_version,
@@ -27933,8 +29977,8 @@ components:
             type: string,
             minLength: 3,
             maxLength: 60,
-            description: The PS License No. (e.g. Q-1234) for a PS Mark, or the ICC
-              sticker serial (e.g. A500000001) for an ICC sticker.
+            description: The PS License No. (e.g. Q-1234) for a PS Mark,
+            or the ICC sticker serial (e.g. A500000001) for an ICC sticker.
           }
         review_mode:
           {
@@ -28940,7 +30984,13 @@ components:
         base_fee_centavos: { type: [ integer, 'null' ], format: int64 }
         per_km_centavos: { type: [ integer, 'null' ], format: int64 }
         maximum_distance_km: { type: [ integer, 'null' ] }
-        mobilization_fee_centavos: { type: [ integer, 'null' ], format: int64, description: Mixer mobilization fee on the current rate; zero for other vehicles. }
+        mobilization_fee_centavos:
+          {
+            type: [ integer, 'null' ],
+            format: int64,
+            description: Mixer mobilization fee on the current rate; zero for other
+              vehicles.
+          }
         mobilization_basis: { type: [ string, 'null' ], enum: [ PER_TRUCK, PER_TRIP, null ] }
         eligibility: { $ref: "#/components/schemas/FleetVehicleEligibility" }
         updated_at: { type: [ string, 'null' ] }
@@ -29093,14 +31143,15 @@ components:
             format: int64,
             minimum: 0,
             description: Concrete Mixer Truck / Transit Mixer only (owner decision
-              2026-10-16). A positive fee needs mobilization_basis. Any change appends a
-              rate version.
+              2026-10-16). A positive fee needs mobilization_basis. Any change
+              appends a rate version.
           }
         mobilization_basis:
           {
             type: [ string, 'null' ],
             enum: [ PER_TRUCK, PER_TRIP, null ],
-            description: PER_TRUCK charges once per truck dispatched; PER_TRIP once per trip.
+            description: PER_TRUCK charges once per truck dispatched; PER_TRIP once per
+              trip.
           }
     FleetVehiclesSave:
       type: object
@@ -29711,7 +31762,12 @@ components:
         trip_total_centavos: { type: integer, format: int64 }
         mobilization_basis: { type: [ string, 'null' ], enum: [ PER_TRUCK, PER_TRIP, null ] }
         mobilization_fee_centavos: { type: integer, format: int64 }
-        mobilization_total_centavos: { type: integer, format: int64, description: Zero for snapshots before mobilization existed. }
+        mobilization_total_centavos:
+          {
+            type: integer,
+            format: int64,
+            description: Zero for snapshots before mobilization existed.
+          }
     OrderConfirmedDelivery:
       type: object
       description: The frozen Owner/Manager-confirmed arrangement. Later vehicle,
@@ -30487,7 +32543,11 @@ components:
         mobilization_fee_centavos: { type: integer, format: int64 }
         mobilization_basis: { type: [ string, 'null' ], enum: [ PER_TRUCK, PER_TRIP, null ] }
         mobilization_total_centavos: { type: integer, format: int64, description: Candidates only. }
-        volume_plan: { oneOf: [ { $ref: "#/components/schemas/MixerVolumePlan" }, { type: 'null' } ], description: Candidates only. }
+        volume_plan:
+          {
+            oneOf: [ { $ref: "#/components/schemas/MixerVolumePlan" }, { type: 'null' } ],
+            description: Candidates only.
+          }
         within_range: { type: boolean }
         rate_version: { type: integer }
         configuration_version: { type: integer }
@@ -35046,6 +37106,504 @@ components:
           "type": "array"
           "items":
             "$ref": "#/components/schemas/ApiError"
+    DirectoryPageMeta:
+      type: object
+      additionalProperties: true
+      required: [ page, per_page, total, last_page ]
+      properties:
+        page: { type: integer }
+        per_page: { type: integer }
+        total: { type: integer }
+        last_page: { type: integer }
+        status_counts:
+          {
+            type: object,
+            additionalProperties: { type: integer },
+            description: Row counts per status under every other active filter.
+          }
+        can_moderate:
+          {
+            type: boolean,
+            description: True when the caller also holds reviews.moderate and may read
+              hidden review text.
+          }
+        direction: { type: string, enum: [ RECEIVED, WRITTEN ] }
+        type: { type: string, enum: [ VENDOR, PRODUCT ] }
+    DirectoryBuyerRow:
+      type: object
+      required:
+        [
+          id,
+          name,
+          email,
+          status,
+          buyer_type,
+          company_name,
+          joined_at,
+          last_active_at
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        email: { type: string, description: Masked for a self-deleted Buyer. }
+        status:
+          {
+            type: string,
+            enum: [ ACTIVE, PENDING_VERIFICATION, SUSPENDED, DEACTIVATED, DELETED ]
+          }
+        buyer_type: { type: string, enum: [ INDIVIDUAL, BUSINESS ] }
+        company_name: { type: [ string, "null" ] }
+        joined_at: { type: string, format: date-time }
+        last_active_at: { type: [ string, "null" ], format: date-time }
+    DirectoryBuyerListEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/DirectoryBuyerRow" } }
+        meta: { $ref: "#/components/schemas/DirectoryPageMeta" }
+        errors: { type: array, items: { $ref: "#/components/schemas/ApiError" } }
+    DirectorySanction:
+      type: object
+      required: [ id, action, action_label, state, reason, created_at, expires_at ]
+      properties:
+        id: { type: string, format: uuid }
+        action:
+          {
+            type: string,
+            enum: [ WARNING, TEMPORARY_RESTRICTION, SUSPENSION, PERMANENT_BAN ]
+          }
+        action_label: { type: string }
+        state: { type: string, enum: [ EFFECTIVE, REFERRED, APPLIED, LIFTED, DECLINED ] }
+        reason: { type: string }
+        created_at: { type: string, format: date-time }
+        expires_at: { type: [ string, "null" ], format: date-time }
+    DirectoryBuyerProfile:
+      type: object
+      required:
+        [
+          id,
+          subject_type,
+          name,
+          status,
+          profile,
+          ratings,
+          activity,
+          recent_orders,
+          sanctions,
+          can_view_enforcement
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        subject_type: { type: string, enum: [ BUYER ] }
+        name: { type: string }
+        status:
+          {
+            type: string,
+            enum: [ ACTIVE, PENDING_VERIFICATION, SUSPENDED, DEACTIVATED, DELETED ]
+          }
+        profile:
+          type: object
+          required:
+            [
+              email,
+              email_verified,
+              mobile,
+              buyer_type,
+              company_name,
+              position_title,
+              industry,
+              area,
+              onboarding_status,
+              joined_at,
+              deleted_at,
+              commerce_restricted_until
+            ]
+          properties:
+            email: { type: string }
+            email_verified: { type: boolean }
+            mobile: { type: [ string, "null" ] }
+            buyer_type: { type: string }
+            company_name: { type: [ string, "null" ] }
+            position_title: { type: [ string, "null" ] }
+            industry: { type: [ string, "null" ] }
+            area:
+              {
+                type: [ string, "null" ],
+                description: City and province of the primary saved location; never coordinates
+                  or site instructions.
+              }
+            onboarding_status: { type: string }
+            joined_at: { type: string, format: date-time }
+            deleted_at: { type: [ string, "null" ], format: date-time }
+            commerce_restricted_until: { type: [ string, "null" ], format: date-time }
+        ratings:
+          type: object
+          required: [ received, written ]
+          properties:
+            received:
+              type: object
+              required: [ count, inquiry_seriousness, communication_quality, payment_reliability ]
+              properties:
+                count: { type: integer }
+                inquiry_seriousness: { type: [ string, "null" ] }
+                communication_quality: { type: [ string, "null" ] }
+                payment_reliability: { type: [ string, "null" ] }
+            written:
+              type: object
+              required: [ count ]
+              properties:
+                count: { type: integer }
+        activity:
+          type: object
+          required:
+            [
+              orders_total,
+              orders_open,
+              orders_completed,
+              orders_cancelled,
+              quotations_total,
+              quotations_accepted,
+              projects_total,
+              work_packages_total,
+              conversations_total,
+              favorite_stores,
+              disputes_total,
+              disputes_open,
+              sign_ins_30_days,
+              last_active_at
+            ]
+          properties:
+            orders_total: { type: integer }
+            orders_open: { type: integer }
+            orders_completed: { type: integer }
+            orders_cancelled: { type: integer, description: "Cancelled, declined and expired orders." }
+            quotations_total: { type: integer }
+            quotations_accepted: { type: integer }
+            projects_total: { type: integer }
+            work_packages_total: { type: integer }
+            conversations_total: { type: integer }
+            favorite_stores: { type: integer }
+            disputes_total: { type: integer }
+            disputes_open: { type: integer }
+            sign_ins_30_days: { type: integer }
+            last_active_at: { type: [ string, "null" ], format: date-time }
+        recent_orders:
+          type: array
+          items:
+            type: object
+            required:
+              [
+                id,
+                reference,
+                order_state,
+                payment_state,
+                procurement_type,
+                store_name,
+                created_at
+              ]
+            properties:
+              id: { type: string, format: uuid }
+              reference: { type: string }
+              order_state: { type: string }
+              payment_state: { type: string }
+              procurement_type: { type: string }
+              store_name: { type: string }
+              created_at: { type: string, format: date-time }
+        sanctions:
+          {
+            type: array,
+            items: { $ref: "#/components/schemas/DirectorySanction" },
+            description: Empty unless the caller also holds enforcement.view.
+          }
+        can_view_enforcement: { type: boolean }
+    DirectoryBuyerEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/DirectoryBuyerProfile" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { $ref: "#/components/schemas/ApiError" } }
+    DirectoryVendorRow:
+      type: object
+      required:
+        [
+          id,
+          store_name,
+          owner_name,
+          owner_email,
+          status,
+          verification_status,
+          discoverability_status,
+          account_status,
+          location,
+          joined_at
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        store_name: { type: string }
+        owner_name: { type: [ string, "null" ] }
+        owner_email: { type: [ string, "null" ] }
+        status:
+          {
+            type: string,
+            enum: [ NOT_READY, READY, ACTIVE, RESTRICTED, SUSPENDED ],
+            description: Store Activation status.
+          }
+        verification_status:
+          {
+            type: string,
+            enum:
+              [
+                NOT_STARTED,
+                IN_PROGRESS,
+                SUBMITTED,
+                PENDING_VERIFICATION,
+                APPROVED,
+                CHANGES_REQUIRED,
+                REJECTED,
+                EXPIRED
+              ]
+          }
+        discoverability_status: { type: string }
+        account_status: { type: string }
+        location: { type: [ string, "null" ] }
+        joined_at: { type: string, format: date-time }
+    DirectoryVendorListEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/DirectoryVendorRow" } }
+        meta: { $ref: "#/components/schemas/DirectoryPageMeta" }
+        errors: { type: array, items: { $ref: "#/components/schemas/ApiError" } }
+    DirectoryVendorProfile:
+      type: object
+      required:
+        [
+          id,
+          subject_type,
+          store_name,
+          status,
+          store,
+          owner,
+          ratings,
+          activity,
+          sanctions,
+          can_view_enforcement,
+          can_view_verification
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        subject_type: { type: string, enum: [ VENDOR_ORGANIZATION ] }
+        store_name: { type: string }
+        status: { type: string }
+        store:
+          type: object
+          required:
+            [
+              legal_name,
+              registered_name,
+              business_type,
+              description,
+              logo_url,
+              contact_email,
+              contact_phone,
+              address,
+              location,
+              verification_status,
+              setup_status,
+              activation_status,
+              discoverability_status,
+              account_status,
+              activation_hold_code,
+              vacation_mode,
+              bulk_capability,
+              joined_at
+            ]
+          properties:
+            legal_name: { type: [ string, "null" ] }
+            registered_name: { type: [ string, "null" ] }
+            business_type: { type: [ string, "null" ] }
+            description: { type: [ string, "null" ] }
+            logo_url:
+              {
+                type: [ string, "null" ],
+                description: Short-lived link to the scanned store logo.
+              }
+            contact_email: { type: [ string, "null" ] }
+            contact_phone: { type: [ string, "null" ] }
+            address: { type: [ string, "null" ] }
+            location: { type: [ string, "null" ] }
+            verification_status: { type: string }
+            setup_status: { type: string }
+            activation_status: { type: string }
+            discoverability_status: { type: string }
+            account_status: { type: string }
+            activation_hold_code: { type: [ string, "null" ] }
+            vacation_mode: { type: boolean }
+            bulk_capability: { type: boolean }
+            joined_at: { type: string, format: date-time }
+        owner:
+          type: [ object, "null" ]
+          required: [ name, email, mobile ]
+          properties:
+            name: { type: string }
+            email: { type: string }
+            mobile: { type: [ string, "null" ] }
+        ratings:
+          type: object
+          required: [ store, product ]
+          properties:
+            store:
+              type: object
+              required: [ count, service_quality, speed ]
+              properties:
+                count: { type: integer }
+                service_quality: { type: [ string, "null" ] }
+                speed: { type: [ string, "null" ] }
+            product:
+              type: object
+              required: [ count, average ]
+              properties:
+                count: { type: integer }
+                average: { type: [ string, "null" ] }
+        activity:
+          type: object
+          required:
+            [
+              quotes_sent,
+              quotes_accepted,
+              orders_total,
+              orders_fulfilled,
+              orders_open,
+              orders_cancelled,
+              disputes_total,
+              disputes_open,
+              listings_total,
+              listings_active,
+              team_members,
+              last_login_at,
+              sign_ins_30_days
+            ]
+          properties:
+            quotes_sent: { type: integer, description: Published quotation versions. }
+            quotes_accepted: { type: integer }
+            orders_total: { type: integer }
+            orders_fulfilled: { type: integer, description: Orders in the COMPLETED state. }
+            orders_open: { type: integer }
+            orders_cancelled: { type: integer, description: "Cancelled, declined and expired orders." }
+            disputes_total: { type: integer }
+            disputes_open: { type: integer }
+            listings_total: { type: integer }
+            listings_active: { type: integer }
+            team_members: { type: integer }
+            last_login_at: { type: [ string, "null" ], format: date-time }
+            sign_ins_30_days: { type: integer }
+        sanctions:
+          {
+            type: array,
+            items: { $ref: "#/components/schemas/DirectorySanction" },
+            description: Empty unless the caller also holds enforcement.view.
+          }
+        can_view_enforcement: { type: boolean }
+        can_view_verification: { type: boolean }
+    DirectoryVendorEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: "#/components/schemas/DirectoryVendorProfile" }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { $ref: "#/components/schemas/ApiError" } }
+    DirectoryReview:
+      type: object
+      required:
+        [
+          id,
+          type,
+          ratings,
+          comment,
+          author_name,
+          order_reference,
+          store_name,
+          product_name,
+          moderation_state,
+          visibility,
+          submitted_at
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, enum: [ VENDOR, PRODUCT, BUYER ] }
+        ratings:
+          {
+            type: object,
+            additionalProperties: { type: [ integer, string, "null" ] },
+            description: Criterion scores by name; their keys depend on the review type.
+          }
+        comment:
+          {
+            type: [ string, "null" ],
+            description: Withheld for a hidden or removed review unless the caller holds
+              reviews.moderate.
+          }
+        author_name: { type: string }
+        order_reference: { type: string }
+        store_name: { type: string }
+        product_name: { type: [ string, "null" ] }
+        moderation_state: { type: string }
+        visibility: { type: string }
+        submitted_at: { type: string, format: date-time }
+    DirectoryReviewListEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/DirectoryReview" } }
+        meta: { $ref: "#/components/schemas/DirectoryPageMeta" }
+        errors: { type: array, items: { $ref: "#/components/schemas/ApiError" } }
+    DirectoryListing:
+      type: object
+      required:
+        [
+          id,
+          name,
+          sku,
+          status,
+          updated_at,
+          variant_count,
+          min_price_centavos,
+          max_price_centavos,
+          unit_code,
+          stock,
+          image_url,
+          image_alt
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        sku: { type: [ string, "null" ] }
+        status: { type: string }
+        updated_at: { type: string, format: date-time }
+        variant_count: { type: integer }
+        min_price_centavos: { type: [ integer, "null" ] }
+        max_price_centavos: { type: [ integer, "null" ] }
+        unit_code: { type: [ string, "null" ] }
+        stock:
+          {
+            type: string,
+            enum: [ IN_STOCK, LIMITED_STOCK, OUT_OF_STOCK ],
+            description: Public availability label; never an exact quantity.
+          }
+        image_url:
+          {
+            type: [ string, "null" ],
+            description: Short-lived link to the first scanned image.
+          }
+        image_alt: { type: [ string, "null" ] }
+    DirectoryListingListEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/DirectoryListing" } }
+        meta: { $ref: "#/components/schemas/DirectoryPageMeta" }
+        errors: { type: array, items: { $ref: "#/components/schemas/ApiError" } }
     "PrivacyRequestListEnvelope":
       "type": "object"
       "required":
@@ -36001,7 +38559,8 @@ components:
           "type": "string"
           "nullable": true
         "product":
-          "description": "Purchased-product identity from the immutable order line snapshot; null for Store and Buyer ratings."
+          "description": "Purchased-product identity from the immutable order line
+            snapshot; null for Store and Buyer ratings."
           "oneOf":
             - "$ref": "#/components/schemas/ReviewProduct"
             - "type": "null"
@@ -36057,7 +38616,9 @@ components:
           "minimum": 0
     "ReviewSummary":
       "type": "object"
-      "description": "Visible Product Reviews matching the requested product and submitted-date filters before pagination. Hidden, unrevealed, disputed, removed and excluded reviews never contribute."
+      "description": "Visible Product Reviews matching the requested product and
+        submitted-date filters before pagination. Hidden, unrevealed, disputed,
+        removed and excluded reviews never contribute."
       "required":
         - "count"
         - "average"
@@ -36072,12 +38633,14 @@ components:
               "minimum": 1
               "maximum": 5
             - "type": "null"
-          "description": "Arithmetic mean of visible product star ratings, rounded half-up to two decimals; null when count is zero."
+          "description": "Arithmetic mean of visible product star ratings, rounded half-up
+            to two decimals; null when count is zero."
         "distribution":
           "type": "array"
           "minItems": 5
           "maxItems": 5
-          "description": "All five rating buckets ordered from five stars to one star, including zero counts."
+          "description": "All five rating buckets ordered from five stars to one star,
+            including zero counts."
           "items":
             "$ref": "#/components/schemas/ReviewRatingBucket"
     "VendorReviewListMeta":
@@ -42622,9 +45185,8 @@ components:
         scope and dates as each card's own total: sales (materials before
         discounts less vendor discounts plus delivery equals commercial sales),
         online (verified principal less confirmed refunded principal equals
-        online collections) and physical (Cash on Delivery plus In-Store
-        Payment equals physical collections). Records only; no derived income
-        figure."
+        online collections) and physical (Cash on Delivery plus In-Store Payment
+        equals physical collections). Records only; no derived income figure."
       "required":
         - "sales"
         - "online"
@@ -43712,6 +46274,16 @@ components:
         - "budget_centavos"
         - "lock_version"
       "properties":
+        selected_arrangement_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        vendor_orders:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
         "id":
           "type": "string"
           "format": "uuid"
@@ -43743,10 +46315,19 @@ components:
           "type": "string"
           "format": "uuid"
           "nullable": true
+          description: Current active Vendor selection; null when the corresponding order
+            is cancelled, declined or expired. The order itself remains
+            available as history.
         "order_id":
           "type": "string"
           "format": "uuid"
           "nullable": true
+        procurement_candidate_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Candidate used by the open primary request; reopens the saved
+            supplementary procurement arrangement.
     "WorkPackagePage":
       "type": "object"
       "required":
@@ -43874,6 +46455,9 @@ components:
           "type": "string"
           "format": "uuid"
           "nullable": true
+          description: Current active Vendor selection; null when the corresponding order
+            is cancelled, declined or expired. The order itself remains
+            available as history.
         "order_id":
           "type": "string"
           "format": "uuid"
@@ -43893,12 +46477,16 @@ components:
           "additionalProperties": true
         has_order:
           type: boolean
-          description: True when an order, tagged purchase for a missing line or selected
-            Vendor is tied to the package.
+          description: True while a non-cancelled, non-declined, non-expired order or
+            tagged purchase is tied to this package, or a Vendor selection has
+            no matching closed order. A historical closed order and its old
+            selection do not block editing, reactivation or deletion. Completed
+            commercial work remains protected.
         can_delete:
           type: boolean
-          description: True while the package has no order and its Project is Active.
-            Clients hide the delete action otherwise; the server enforces the rule.
+          description: True when has_order is false and the Project is Active. Cancelled
+            order history is retained; deleting a package with locked history
+            hides it instead of deleting commercial records.
     "ProjectCreate":
       "type": "object"
       "required":
@@ -43992,13 +46580,11 @@ components:
     "WorkPackageInput":
       "type": "object"
       "required":
-        - "name"
-        - "budget_centavos"
-        - "site_id"
-        - "radius_km"
-        - "fulfillment_method"
-        - "payment_method"
-        - "lines"
+        - name
+        - budget_centavos
+        - site_id
+        - fulfillment_method
+        - lines
       "properties":
         "lock_version":
           "type": "integer"
@@ -44017,23 +46603,29 @@ components:
         "radius_km":
           "type": "integer"
           "enum":
-            - 5
-            - 10
-            - 20
-            - 30
-            - 40
             - 50
+          "description": "Optional. 50 km is the only Project-Based vendor-selection
+            radius; the server applies it whether or not it is sent."
         "fulfillment_method":
           "type": "string"
           "enum":
             - "PICKUP"
             - "DELIVERY"
+            - "BOTH"
+          "description": "BOTH means the Buyer is open to either. The scan lists every
+            Vendor offering Site Delivery, Self-Pickup or both; each candidate
+            then lists its `fulfillment_options` and the Buyer picks one when
+            inquiring or selecting. BOTH requires `payment_method` ONLINE and
+            the delivery details (`site_contact`, `access_instructions`,
+            `heavy_vehicle_restriction`)."
         "payment_method":
-          "type": "string"
-          "enum":
-            - "ONLINE"
-            - "CASH_ON_DELIVERY"
-            - "IN_STORE"
+          type: string
+          enum:
+            - ONLINE
+            - CASH_ON_DELIVERY
+            - IN_STORE
+          description: Optional legacy value. New authoring omits payment; it is
+            explicitly chosen in the selection checklist.
         "site_contact":
           "type": "string"
           "nullable": true
@@ -44067,19 +46659,15 @@ components:
       "type": "object"
       "required":
         - "lock_version"
-        - "radius_km"
       "properties":
         "lock_version":
           "type": "integer"
         "radius_km":
           "type": "integer"
           "enum":
-            - 5
-            - 10
-            - 20
-            - 30
-            - 40
             - 50
+          "description": "Optional. The scan always uses the fixed 50 km Project-Based
+            radius around the locked Project site."
     "ProjectCandidateRequest":
       "type": "object"
       "required":
@@ -44105,9 +46693,28 @@ components:
           "maxItems": 100
           "description": "The Buyer's specification choice for each line whose
             `selection_required` is true. Selection and inquiry are rejected
-            with SPECIFICATION_SELECTION_REQUIRED until every such line has one."
+            with SPECIFICATION_SELECTION_REQUIRED until every such line has
+            one."
           "items":
             "$ref": "#/components/schemas/ProjectSpecificationSelection"
+        "fulfillment_method":
+          "type": "string"
+          "enum":
+            - "PICKUP"
+            - "DELIVERY"
+          "description": "The Buyer's method for a Vendor whose candidate lists more than
+            one `fulfillment_options` entry (Both packages). Required then, or
+            the request is rejected with FULFILLMENT_CHOICE_REQUIRED; a method
+            the Vendor does not offer is rejected with FULFILLMENT_NOT_OFFERED."
+        payment_method:
+          type: string
+          enum:
+            - ONLINE
+            - CASH_ON_DELIVERY
+            - IN_STORE
+          description: Required for direct selection; explicitly chosen in the checklist
+            and revalidated against current Vendor and fulfillment rules.
+            Inquiry may omit it.
     "ProjectSpecificationSelection":
       "type": "object"
       "required":
@@ -44129,6 +46736,13 @@ components:
           "maxItems": 100
           "items":
             "$ref": "#/components/schemas/ProjectSpecificationSelection"
+        "fulfillment_method":
+          "type": "string"
+          "enum":
+            - "PICKUP"
+            - "DELIVERY"
+          "description": "Re-prices the candidate for this method. Omitted, a Vendor
+            offering both opens on its preferred method."
     "ProjectSpecificationDetail":
       "type": "object"
       "required":
@@ -44145,8 +46759,8 @@ components:
         "value":
           "type": "string"
         "unit_code":
-          "type": "string"
-          "nullable": true
+          "type": [ "string", "null" ]
+          "description": "Measurement unit, or null for unitless specifications such as steel grade."
     "ProjectCandidateResponse":
       "type": "object"
       "required":
@@ -44193,6 +46807,7 @@ components:
         - "stale"
         - "label"
         - "current_quotation_state"
+        - "fulfillment"
       "properties":
         "id":
           "type": "string"
@@ -44275,6 +46890,21 @@ components:
           "nullable": true
         "fulfillment_method":
           "type": "string"
+          "description": "The concrete method this view is priced for: DELIVERY or PICKUP.
+            For a Both package it is the Vendor's preferred method until the
+            Buyer picks one. A supplier quotation containing ready-mixed concrete
+            uses DELIVERY only, even when the Work Package requests pickup."
+        "fulfillment_options":
+          "type": "array"
+          "description": "Methods this Vendor offers for the package. More than one means
+            the Buyer must send `fulfillment_method` when inquiring or
+            selecting; selection-preview re-prices for the chosen method.
+            Ready-mixed concrete restricts its supplier quotation to DELIVERY."
+          "items":
+            "type": "string"
+            "enum":
+              - "DELIVERY"
+              - "PICKUP"
         "payment_method":
           "type": "string"
         "delivery":
@@ -44294,8 +46924,222 @@ components:
         "is_favorite":
           "type": "boolean"
           "description": "The Buyer saved this store as a preferred seller."
+        "fulfillment":
+          "$ref": "#/components/schemas/ProjectFulfillment"
+        payment_methods:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectPaymentMethod"
+        draft_groups:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectDraftVendorGroup"
+          description: Draft supplementary items by supplying Vendor, including automatic
+            exact-match defaults. Defaults are saved during selection preview; explicit
+            removals and replacements are preserved. Independent of the regular cart.
+        primary_order_id:
+          type: string
+          format: uuid
+          nullable: true
+        procurement_materials_centavos:
+          type: integer
+          description: Primary and supplementary materials, including existing linked
+            purchases.
+        separate_delivery_centavos:
+          type: [ integer, 'null' ]
+          description: Delivery for supplementary suppliers and linked orders, counted
+            once per order or draft supplier. Null while any fee needs review.
+        procurement_delivery_centavos:
+          type: [ integer, 'null' ]
+          description: Delivery for the primary Vendor and all separate suppliers.
+            Null while any fee needs review.
+        procurement_budget_label:
+          type: string
+          enum: [ UNDER_BUDGET, WITHIN_BUDGET, OVER_BUDGET, COST_REVIEW_REQUIRED ]
+          description: Work Package budget status for the complete procurement total.
+        procurement_total_centavos:
+          type: integer
+          nullable: true
+          description: Materials and each supplying Vendor delivery counted once. Null
+            while any delivery remains unconfirmed or unavailable. Processing
+            fees are excluded until payment.
+    "ProjectFulfillment":
+      "type": "object"
+      "description": "How much of the Work Package this quotation covers, derived on
+        every read from the Work Package lines, this Vendor's priced lines and
+        the Item-Based purchases tagged to the lines. The Vendor card,
+        quotation, order summary and missing-item list all read this one result.
+        A separate purchase closes a gap only when its product satisfies the
+        line's brand and specifications; `complete` on the candidate remains the
+        Vendor's own ability and drives ranking."
+      "required":
+        - "status"
+        - "lines_total"
+        - "lines_fulfilled"
+        - "lines_partial"
+        - "lines_unfulfilled"
+        - "vendor_lines_fulfilled"
+        - "lines"
+        - "separate_items"
+        - "separate_total_centavos"
+        - "combined_total_centavos"
+      "properties":
+        "status":
+          "type": "string"
+          "enum":
+            - "COMPLETE"
+            - "PARTIAL"
+            - "NONE"
+        "lines_total":
+          "type": "integer"
+        "lines_fulfilled":
+          "type": "integer"
+        "lines_partial":
+          "type": "integer"
+        "lines_unfulfilled":
+          "type": "integer"
+        "vendor_lines_fulfilled":
+          "type": "integer"
+          "description": "Lines this Vendor supplies in full by itself."
+        "lines":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ProjectFulfillmentLine"
+        "separate_items":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ProjectSeparatePurchase"
+        "separate_total_centavos":
+          "type": "integer"
+        "combined_total_centavos":
+          "type": "integer"
+          "description": "Projected total (materials when delivery is under review) plus
+            the separate purchases."
+    "ProjectFulfillmentLine":
+      "type": "object"
+      "required":
+        - "line_id"
+        - "name"
+        - "unit_code"
+        - "required_quantity"
+        - "vendor_quantity"
+        - "separate_quantity"
+        - "substitute_quantity"
+        - "remaining_quantity"
+        - "status"
+      "properties":
+        "line_id":
+          "type": "string"
+          "format": "uuid"
+        "name":
+          "type": "string"
+        "unit_code":
+          "type": "string"
+        "required_quantity":
+          "type": "string"
+        "vendor_quantity":
+          "type": "string"
+          "description": "Quantity this Vendor supplies."
+        "separate_quantity":
+          "type": "string"
+          "description": "Quantity covered by separate purchases that satisfy the
+            requirement."
+        "substitute_quantity":
+          "type": "string"
+          "description": "Quantity bought as a similar product; it does not close the
+            requirement."
+        "remaining_quantity":
+          "type": "string"
+          "description": "Quantity still to be sourced."
+        "status":
+          "type": "string"
+          "enum":
+            - "FULFILLED"
+            - "PARTIAL"
+            - "UNFULFILLED"
+        "missing_reason":
+          "type": "string"
+          "nullable": true
+    "ProjectSeparatePurchase":
+      "type": "object"
+      "required":
+        - "stage"
+        - "line_id"
+        - "variant_id"
+        - "listing_id"
+        - "display_name"
+        - "vendor_id"
+        - "quantity"
+        - "unit_code"
+        - "unit_price_centavos"
+        - "line_total_centavos"
+        - "satisfies_requirement"
+      "properties":
+        "stage":
+          "type": "string"
+          "enum":
+            - "IN_CART"
+            - "ORDERED"
+            - DRAFT
+        "line_id":
+          "type": "string"
+          "format": "uuid"
+        "variant_id":
+          "type": "string"
+          "format": "uuid"
+        "listing_id":
+          "type": "string"
+          "format": "uuid"
+        "display_name":
+          "type": "string"
+        "variant_label":
+          "type": "string"
+          "nullable": true
+        "vendor_id":
+          "type": "string"
+          "format": "uuid"
+        "store_name":
+          "type": "string"
+          "nullable": true
+        "quantity":
+          "type": "string"
+        "unit_code":
+          "type": "string"
+        "unit_price_centavos":
+          "type": "integer"
+        "line_total_centavos":
+          "type": "integer"
+        "satisfies_requirement":
+          "type": "boolean"
+        "order_id":
+          "type": "string"
+          "format": "uuid"
+          "nullable": true
+        "order_reference":
+          "type": "string"
+          "nullable": true
+        draft_item_id:
+          type: string
+          format: uuid
+          nullable: true
+        image:
+          oneOf:
+            - $ref: "#/components/schemas/ListingImage"
+            - type: "null"
+        specifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectSpecificationDetail"
+        coverage_quantity:
+          type: string
+          description: Currently available matching quantity used for fulfillment;
+            selected quantity stays unchanged.
     "ProjectCompiledEstimate":
       "type": "object"
+      "description": "Advisory comparison snapshot. An unassigned current comparison
+        reports INVALIDATED after saved Project ranking weights or the scoring
+        version change, so Find vendors refreshes it. Historical snapshots and
+        selected packages retain their original ranking."
       "required":
         - "id"
         - "version_id"
@@ -44340,14 +47184,15 @@ components:
           "type": "boolean"
         "total":
           "type": "integer"
-        "suggested_radius_km":
-          "type": "integer"
-          "nullable": true
         "unfiltered_total":
           "type": "integer"
           "description": "Candidates in this estimate before filters."
         "sort":
           "type": "string"
+        "direction":
+          "type": "string"
+          "nullable": true
+          "description": "The direction applied, ASC or DESC; null for BEST_MATCH."
     "WorkPackageAlternative":
       "type": "object"
       "required":
@@ -44362,6 +47207,10 @@ components:
         - "distance_meters"
         - "stock_label"
         - "exact_match"
+        - "availability"
+        - "estimated_total_centavos"
+        - "fulfillment_methods"
+        - "already_added"
       "properties":
         "listing_id":
           "type": "string"
@@ -44387,8 +47236,14 @@ components:
           "type": "string"
           "nullable": true
         "image":
-          "type": "string"
-          "nullable": true
+          "oneOf":
+            - "$ref": "#/components/schemas/ListingImage"
+            - "type": "null"
+          "description": "First public photo of the listing. The server returns an object
+            ({url, alt_text}); declaring it as a string made the generated
+            client reject any page containing a photographed offer, which
+            surfaced as a generic 'Something went wrong' instead of the
+            recommendations."
         "unit_price_centavos":
           "type": "integer"
         "unit_code":
@@ -44409,12 +47264,38 @@ components:
           "type": "boolean"
           "description": "Brand (when set) and every stated specification match the Work
             Package line."
+        "availability":
+          "type": "string"
+          "enum":
+            - "FULL"
+            - "PARTIAL"
+          "description": "Whether the store can confirm the whole quantity still needed.
+            PARTIAL stores can be added with `allow_partial_stock` for what they
+            can confirm."
+        "estimated_total_centavos":
+          "type": "integer"
+          "description": "Unit price times the quantity still needed."
+        "fulfillment_methods":
+          "type": "array"
+          "description": "Methods the store can serve for this product. Ready-mixed concrete
+            uses DELIVERY only even when the primary quotation or package uses PICKUP."
+          "items":
+            "type": "string"
+            "enum":
+              - "DELIVERY"
+              - "PICKUP"
+        "already_added":
+          "type": "boolean"
+          "description": "This product is already in the cart or an open order for the
+            line; adding it again never stacks the quantity."
     "WorkPackageAlternativePage":
       "type": "object"
       "required":
         - "line"
         - "status"
         - "radius_km"
+        - "needed_quantity"
+        - "excluded"
         - "items"
         - "page"
         - "has_more"
@@ -44427,15 +47308,41 @@ components:
           "type": "string"
           "enum":
             - "CATALOG"
+            - "NO_SUITABLE_ALTERNATIVE"
+            - "COVERED"
             - "UNLISTED"
+          "description": "NO_SUITABLE_ALTERNATIVE: no eligible store within the radius can
+            supply the quantity still needed (see `excluded`). COVERED: separate
+            purchases already satisfy the line. A failed request is an error
+            response, never one of these."
+        "needed_quantity":
+          "type": "string"
+          "description": "The quantity still to source: the compared Vendor's gap less the
+            separate purchases that satisfy the line (the full line quantity
+            when no `candidate_id` is sent)."
+        "excluded":
+          "type": "object"
+          "description": "Listings in range that were left out, so an empty result can say
+            why."
+          "required":
+            - "out_of_stock"
+            - "cannot_serve_fulfillment"
+          "properties":
+            "out_of_stock":
+              "type": "integer"
+            "cannot_serve_fulfillment":
+              "type": "integer"
         "location_id":
           "type": "string"
           "format": "uuid"
           "nullable": true
-          "description": "The Project site's saved location; pass it with radius_km when
-            adding to the cart."
+          "description": "The Project site's saved location, for display only. The server
+            scopes the purchase from the package's locked site point."
         "radius_km":
           "type": "integer"
+          "enum":
+            - 50
+          "description": "The fixed Project-Based radius."
         "items":
           "type": "array"
           "items":
@@ -44473,6 +47380,9 @@ components:
         - "algorithm_version"
       "properties":
         "weights":
+          "description": "Four independent integer importance values from 0 to 100:
+            material_match, budget_fit, distance and vps. At least one above
+            zero; persisted unchanged. Scores normalize by their sum."
           "type": "object"
           "additionalProperties": true
         "default_weights":
@@ -44495,6 +47405,9 @@ components:
         "version":
           "type": "integer"
         "weights":
+          "description": "Four independent integer importance values from 0 to 100:
+            material_match, budget_fit, distance and vps. At least one above
+            zero; persisted unchanged. Scores normalize by their sum."
           "type": "object"
           "additionalProperties": true
     "ProjectPreferenceReset":
@@ -44626,7 +47539,8 @@ components:
         "offered_values":
           "type": "array"
           "description": "Values currently eligible, in-stock products of this material
-            are listed with (public listing facts, at most 12, numbers ascending)."
+            are listed with (public listing facts, at most 12, numbers
+            ascending)."
           "items":
             "type": "string"
     "ProjectMaterial":
@@ -44721,27 +47635,31 @@ components:
       "type": "object"
       "required":
         - "site_id"
-        - "radius_km"
         - "fulfillment_method"
         - "lines"
       "properties":
+        heavy_vehicle_restriction:
+          type: string
+          enum: [ "NO", "YES", "UNANSWERED" ]
+          description: Current site access answer for the delivery estimate.
+        alternate_drop_off_location_id:
+          type: [ string, 'null' ]
+          format: uuid
+          description: Buyer-owned alternative vehicle drop-off when access is restricted.
         "site_id":
           "type": "string"
           "format": "uuid"
         "radius_km":
           "type": "integer"
           "enum":
-            - 5
-            - 10
-            - 20
-            - 30
-            - 40
             - 50
+          "description": "Optional. 50 km is the only Project-Based radius."
         "fulfillment_method":
           "type": "string"
           "enum":
             - "PICKUP"
             - "DELIVERY"
+            - "BOTH"
         "lines":
           "type": "array"
           "minItems": 1
@@ -44784,6 +47702,26 @@ components:
         - "excludes"
         - "computed_at"
       "properties":
+        delivery_centavos:
+          type: [ integer, 'null' ]
+          description: Actual route/vehicle estimate for a representative exact-match
+            supplier plan, consolidated per supplier. Zero for pickup-only supplies;
+            ready-mixed concrete includes mixer delivery even under PICKUP. Null when
+            delivery or supplier availability needs review.
+        estimated_total_centavos:
+          type: [ integer, 'null' ]
+          description: Average eligible material prices plus applicable supplier delivery.
+            Null until every material and delivery fee can be estimated.
+        delivery_status:
+          type: string
+          enum: [ NOT_APPLICABLE, ESTIMATED, REVIEW_REQUIRED ]
+        delivery_issues:
+          type: array
+          items: { type: string }
+        fulfillment_method:
+          type: string
+          enum: [ DELIVERY, PICKUP ]
+          description: Both is budgeted using the Site Delivery scenario.
         "lines":
           "type": "array"
           "items":
@@ -45623,3 +48561,563 @@ components:
           $ref: "#/components/schemas/DeliveryNavigationRoute"
       required:
         - data
+    ProjectPaymentMethod:
+      type: object
+      required:
+        - method
+        - available
+      properties:
+        method:
+          type: string
+          enum:
+            - ONLINE
+            - CASH_ON_DELIVERY
+            - IN_STORE
+        available:
+          type: boolean
+        reason:
+          type: string
+          nullable: true
+    ProjectDraftVendorGroup:
+      type: object
+      required:
+        - vendor_id
+        - store_name
+        - items
+        - materials_centavos
+        - fulfillment_method
+        - payment_methods
+        - issues
+        - draft_fingerprint
+      properties:
+        vendor_id:
+          type: string
+          format: uuid
+        store_name: &a3
+          type: string
+        items:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/ProjectSeparatePurchase"
+        materials_centavos:
+          type: integer
+        fulfillment_method:
+          type: string
+          enum:
+            - DELIVERY
+            - PICKUP
+          description: This supplier's method. Any group containing ready-mixed concrete
+            uses DELIVERY even when the primary supplier uses PICKUP. Its delivery fee
+            and payment options are calculated independently.
+        fulfillment_options:
+          type: array
+          items:
+            type: string
+            enum: [ DELIVERY, PICKUP ]
+          description: Current fulfillment methods supported for every selected
+            product from this supplier.
+        delivery:
+          type: object
+          additionalProperties: true
+          description: Existing delivery preview for this supplier's selected items,
+            including its route, vehicles, trips, estimated fees and review issues.
+        payment_methods:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectPaymentMethod"
+        issues:
+          type: array
+          items: *a3
+        draft_fingerprint:
+          type: string
+          minLength: 64
+          maxLength: 64
+        delivery_centavos:
+          type: integer
+          nullable: true
+        projected_total_centavos:
+          type: integer
+          nullable: true
+    ProjectDraftItemInput:
+      type: object
+      required:
+        - lock_version
+        - price_version_id
+      properties:
+        lock_version:
+          type: integer
+          minimum: 1
+        price_version_id:
+          type: string
+          format: uuid
+        selections:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/ProjectSpecificationSelection"
+        fulfillment_method:
+          type: string
+          enum:
+            - PICKUP
+            - DELIVERY
+          description: Re-prices the candidate for this method. Omitted, a Vendor offering
+            both opens on its preferred method.
+    ProjectDraftSupplierRequest:
+      type: object
+      required:
+        - lock_version
+        - payment_method
+        - draft_fingerprint
+      properties:
+        lock_version:
+          type: integer
+          minimum: 1
+        payment_method:
+          type: string
+          enum:
+            - ONLINE
+            - CASH_ON_DELIVERY
+            - IN_STORE
+        draft_fingerprint:
+          type: string
+          minLength: 64
+          maxLength: 64
+        budget_override_reason:
+          type: string
+          minLength: 10
+          maxLength: 2000
+          nullable: true
+    ProjectVendorSelectionRequest:
+      allOf:
+        - $ref: "#/components/schemas/ProjectCandidateRequest"
+        - type: object
+          required:
+            - payment_method
+          properties:
+            payment_method:
+              type: string
+              enum:
+                - ONLINE
+                - CASH_ON_DELIVERY
+                - IN_STORE
+
+    SupportPortal:
+      type: string
+      enum:
+        - buyers
+        - vendors
+        - admin
+        - guest
+    SupportStatus:
+      type: string
+      enum:
+        - OPEN
+        - IN_PROGRESS
+        - WAITING_FOR_USER
+        - RESOLVED
+        - CLOSED
+    SupportCategory:
+      type: string
+      enum:
+        - GENERAL_INQUIRY
+        - TECHNICAL_ISSUE
+        - ACCOUNT_CONCERN
+        - VERIFICATION_ISSUE
+        - PAYMENT_CONCERN
+        - ORDER_CONCERN
+        - COMPLAINT
+        - FEEDBACK_SUGGESTION
+        - OTHER
+    SupportUserType:
+      type: string
+      enum:
+        - BUYER
+        - VENDOR
+        - GUEST
+    SupportReferenceType:
+      type: string
+      enum:
+        - ORDER
+        - PROJECT
+        - WORK_PACKAGE
+        - TRANSACTION
+    SupportReceipt:
+      type: object
+      required:
+        - id
+        - ticket_number
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        ticket_number:
+          type: string
+        status:
+          $ref: "#/components/schemas/SupportStatus"
+    SupportCommandResult:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+    SupportTicket:
+      type: object
+      required:
+        - id
+        - ticket_number
+        - full_name
+        - email
+        - user_type
+        - category
+        - subject
+        - reference_type
+        - reference
+        - status
+        - assigned_admin_id
+        - assigned_admin_name
+        - lock_version
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        ticket_number:
+          type: string
+        full_name:
+          type: string
+        email:
+          type: string
+          format: email
+        user_type:
+          $ref: "#/components/schemas/SupportUserType"
+        category:
+          $ref: "#/components/schemas/SupportCategory"
+        subject:
+          type: string
+        reference_type:
+          type:
+            - string
+            - "null"
+        reference:
+          type:
+            - string
+            - "null"
+        status:
+          $ref: "#/components/schemas/SupportStatus"
+        assigned_admin_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        assigned_admin_name:
+          type:
+            - string
+            - "null"
+        lock_version:
+          type: integer
+          minimum: 1
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    SupportAttachment:
+      type: object
+      required:
+        - id
+        - original_name
+        - content_type
+        - byte_size
+      properties:
+        id:
+          type: string
+          format: uuid
+        original_name:
+          type: string
+        content_type:
+          type: string
+        byte_size:
+          type: integer
+    SupportEntry:
+      type: object
+      required:
+        - id
+        - kind
+        - actor_name
+        - actor_role
+        - body
+        - details
+        - created_at
+        - attachments
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum:
+            - MESSAGE
+            - STATUS_CHANGED
+            - ASSIGNED
+        actor_name:
+          type: string
+        actor_role:
+          type: string
+        body:
+          type: string
+        details:
+          type: object
+          required: []
+          properties:
+            from_status:
+              type: string
+            to_status:
+              type: string
+            previous_handler:
+              type: string
+            new_handler:
+              type: string
+        created_at:
+          type: string
+          format: date-time
+        attachments:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupportAttachment"
+    SupportPageMeta:
+      type: object
+      required:
+        - next_cursor
+      properties:
+        next_cursor:
+          type:
+            - string
+            - "null"
+          format: uuid
+        correlation_id:
+          type: string
+          format: uuid
+    SupportHandler:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+    SupportUpdate:
+      type: object
+      required:
+        - lock_version
+        - reason
+      properties:
+        lock_version:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+          minLength: 3
+          maxLength: 2000
+        status:
+          $ref: "#/components/schemas/SupportStatus"
+        assigned_admin_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+    SupportAccessEmail:
+      type: object
+      required:
+        - ticket_number
+        - email
+      properties:
+        ticket_number:
+          type: string
+          maxLength: 32
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        website:
+          type: string
+          maxLength: 0
+    SupportAccessExchange:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+          description: Single-use secret received by email. Never log or persist on the client.
+    SupportAccessResult:
+      type: object
+      required:
+        - ticket_id
+      properties:
+        ticket_id:
+          type: string
+          format: uuid
+    SupportEmailResult:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+    SupportTicketListResponse:
+      type: object
+      required:
+        - data
+        - meta
+        - errors
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupportTicket"
+        meta:
+          $ref: "#/components/schemas/SupportPageMeta"
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiError"
+    SupportReceiptResponse:
+      type: object
+      required:
+        - data
+        - meta
+        - errors
+      properties:
+        data:
+          $ref: "#/components/schemas/SupportReceipt"
+        meta:
+          type: object
+          additionalProperties: true
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiError"
+    SupportTicketResponse:
+      type: object
+      required:
+        - data
+        - meta
+        - errors
+      properties:
+        data:
+          $ref: "#/components/schemas/SupportTicket"
+        meta:
+          type: object
+          additionalProperties: true
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiError"
+    SupportCommandResponse:
+      type: object
+      required:
+        - data
+        - meta
+        - errors
+      properties:
+        data:
+          $ref: "#/components/schemas/SupportCommandResult"
+        meta:
+          type: object
+          additionalProperties: true
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiError"
+    SupportEntryListResponse:
+      type: object
+      required:
+        - data
+        - meta
+        - errors
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupportEntry"
+        meta:
+          $ref: "#/components/schemas/SupportPageMeta"
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiError"
+    SupportReplyResponse:
+      type: object
+      required:
+        - data
+        - meta
+        - errors
+      properties:
+        data:
+          $ref: "#/components/schemas/SupportCommandResult"
+        meta:
+          type: object
+          additionalProperties: true
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiError"
+    SupportHandlerListResponse:
+      type: object
+      required:
+        - data
+        - meta
+        - errors
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupportHandler"
+        meta:
+          $ref: "#/components/schemas/SupportPageMeta"
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiError"
+    SupportEmailResponse:
+      type: object
+      required:
+        - data
+        - meta
+        - errors
+      properties:
+        data:
+          $ref: "#/components/schemas/SupportEmailResult"
+        meta:
+          type: object
+          additionalProperties: true
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiError"
+    SupportAccessResponse:
+      type: object
+      required:
+        - data
+        - meta
+        - errors
+      properties:
+        data:
+          $ref: "#/components/schemas/SupportAccessResult"
+        meta:
+          type: object
+          additionalProperties: true
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiError"

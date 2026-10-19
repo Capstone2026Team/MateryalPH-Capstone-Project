@@ -12,22 +12,25 @@ final class FulfillmentMatchScore
 {
     public const DEFAULTS = ['material_match' => 40, 'budget_fit' => 25, 'distance' => 20, 'vps' => 15];
 
-    public const VERSION = 'fms.normalized-weighted-sum.v1';
+    public const VERSION = 'fms.normalized-weighted-sum.v2';
 
     /** @param array<string, mixed> $weights
      * @return array<string, int> */
     public static function validate(array $weights): array
     {
-        if (array_diff(array_keys($weights), array_keys(self::DEFAULTS)) !== [] || count($weights) !== 4 || array_sum($weights) !== 100) {
-            throw new AuthenticationException('WEIGHTS_TOTAL_INVALID', 'The four Project-Based weights must total exactly 100%.', 422);
+        if (array_diff(array_keys($weights), array_keys(self::DEFAULTS)) !== [] || count($weights) !== 4) {
+            throw new AuthenticationException('VALIDATION_FAILED', 'Provide exactly the four Project-Based ranking criteria.', 422);
         }
         foreach (self::DEFAULTS as $key => $default) {
             if (! isset($weights[$key]) || ! is_int($weights[$key]) || $weights[$key] < 0 || $weights[$key] > 100) {
-                throw new AuthenticationException('VALIDATION_FAILED', 'Use whole percentages between 0 and 100.', 422);
+                throw new AuthenticationException('VALIDATION_FAILED', 'Use whole weights between 0 and 100.', 422);
             }
         }
+        if (array_sum($weights) === 0) {
+            throw new AuthenticationException('WEIGHTS_ALL_ZERO', 'Enable at least one ranking criterion by setting its weight above zero.', 422);
+        }
 
-        return $weights;
+        return array_replace(self::DEFAULTS, $weights);
     }
 
     /** @return array<string, mixed> */
@@ -52,15 +55,26 @@ final class FulfillmentMatchScore
         $fit = $cost === null ? null : ($cost <= $budget ? '100' : ($budget === 0 ? '0' : bcsub('100', bcmul(bcdiv((string) ($cost - $budget), (string) $budget, 8), '500', 8), 8)));
         $components = ['material_match' => self::clamp($match), 'budget_fit' => $fit === null ? null : self::clamp($fit),
             'distance' => SearchRelevanceScore::distance($distance, $radius * 1000), 'vps' => SearchRelevanceScore::vps($vps)];
+
+        return self::fromComponents($components, $weights);
+    }
+
+    /** @param array<string, string|null> $components
+     * @param array<string, int> $weights
+     * @return array<string, mixed> */
+    public static function fromComponents(array $components, array $weights, string $version = self::VERSION): array
+    {
+        self::validate($weights);
         $total = '0';
+        $weightTotal = (string) array_sum($weights);
         foreach ($weights as $key => $weight) {
-            if ($components[$key] === null) {
-                return ['score' => null, 'components' => $components, 'weights' => $weights, 'algorithm_version' => self::VERSION, 'status' => 'COST_REVIEW_REQUIRED'];
+            if ($components[$key] === null && $weight > 0) {
+                return ['score' => null, 'components' => $components, 'weights' => $weights, 'algorithm_version' => $version, 'status' => $key === 'budget_fit' ? 'COST_REVIEW_REQUIRED' : 'DATA_REVIEW_REQUIRED'];
             }
-            $total = bcadd($total, bcdiv(bcmul($components[$key], (string) $weight, 8), '100', 8), 8);
+            $total = bcadd($total, bcmul($components[$key] ?? '0', (string) $weight, 8), 8);
         }
 
-        return ['score' => bcadd($total, '0.005', 2), 'components' => $components, 'weights' => $weights, 'algorithm_version' => self::VERSION, 'status' => 'CALCULATED'];
+        return ['score' => bcadd(bcdiv($total, $weightTotal, 8), '0.005', 2), 'components' => $components, 'weights' => $weights, 'algorithm_version' => $version, 'status' => 'CALCULATED'];
     }
 
     private static function clamp(string $value): string

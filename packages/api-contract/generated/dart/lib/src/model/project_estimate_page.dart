@@ -19,9 +19,9 @@ part 'project_estimate_page.g.dart';
 /// * [page]
 /// * [hasMore]
 /// * [total]
-/// * [suggestedRadiusKm]
 /// * [unfilteredTotal] - Candidates in this estimate before filters.
 /// * [sort]
+/// * [direction] - The direction applied, ASC or DESC; null for BEST_MATCH.
 @BuiltValue()
 abstract class ProjectEstimatePage implements Built<ProjectEstimatePage, ProjectEstimatePageBuilder> {
   @BuiltValueField(wireName: r'estimate')
@@ -39,15 +39,16 @@ abstract class ProjectEstimatePage implements Built<ProjectEstimatePage, Project
   @BuiltValueField(wireName: r'total')
   int get total;
 
-  @BuiltValueField(wireName: r'suggested_radius_km')
-  int? get suggestedRadiusKm;
-
   /// Candidates in this estimate before filters.
   @BuiltValueField(wireName: r'unfiltered_total')
   int? get unfilteredTotal;
 
   @BuiltValueField(wireName: r'sort')
   String? get sort;
+
+  /// The direction applied, ASC or DESC; null for BEST_MATCH.
+  @BuiltValueField(wireName: r'direction')
+  String? get direction;
 
   ProjectEstimatePage._();
 
@@ -99,13 +100,6 @@ class _$ProjectEstimatePageSerializer implements PrimitiveSerializer<ProjectEsti
       object.total,
       specifiedType: const FullType(int),
     );
-    if (object.suggestedRadiusKm != null) {
-      yield r'suggested_radius_km';
-      yield serializers.serialize(
-        object.suggestedRadiusKm,
-        specifiedType: const FullType(int),
-      );
-    }
     if (object.unfilteredTotal != null) {
       yield r'unfiltered_total';
       yield serializers.serialize(
@@ -117,6 +111,13 @@ class _$ProjectEstimatePageSerializer implements PrimitiveSerializer<ProjectEsti
       yield r'sort';
       yield serializers.serialize(
         object.sort,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.direction != null) {
+      yield r'direction';
+      yield serializers.serialize(
+        object.direction,
         specifiedType: const FullType(String),
       );
     }
@@ -179,14 +180,6 @@ class _$ProjectEstimatePageSerializer implements PrimitiveSerializer<ProjectEsti
           ) as int;
           result.total = valueDes;
           break;
-        case r'suggested_radius_km':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(int),
-          ) as int?;
-          if (valueDes == null) continue;
-          result.suggestedRadiusKm = valueDes;
-          break;
         case r'unfiltered_total':
           final valueDes = serializers.deserialize(
             value,
@@ -202,6 +195,14 @@ class _$ProjectEstimatePageSerializer implements PrimitiveSerializer<ProjectEsti
           ) as String?;
           if (valueDes == null) continue;
           result.sort = valueDes;
+          break;
+        case r'direction':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.direction = valueDes;
           break;
         default:
           unhandled.add(key);

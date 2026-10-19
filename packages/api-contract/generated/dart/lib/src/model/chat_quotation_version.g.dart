@@ -8,6 +8,16 @@ part of 'chat_quotation_version.dart';
 
 class _$ChatQuotationVersion extends ChatQuotationVersion {
   @override
+  final String? requestedChanges;
+  @override
+  final String? changeRequestedAt;
+  @override
+  final String? vendorResponseDueAt;
+  @override
+  final BuiltSet<String>? availablePaymentMethods;
+  @override
+  final String? selectedPaymentMethod;
+  @override
   final String id;
   @override
   final int version;
@@ -37,7 +47,12 @@ class _$ChatQuotationVersion extends ChatQuotationVersion {
       (ChatQuotationVersionBuilder()..update(updates))._build();
 
   _$ChatQuotationVersion._(
-      {required this.id,
+      {this.requestedChanges,
+      this.changeRequestedAt,
+      this.vendorResponseDueAt,
+      this.availablePaymentMethods,
+      this.selectedPaymentMethod,
+      required this.id,
       required this.version,
       required this.latest,
       required this.state,
@@ -63,6 +78,11 @@ class _$ChatQuotationVersion extends ChatQuotationVersion {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is ChatQuotationVersion &&
+        requestedChanges == other.requestedChanges &&
+        changeRequestedAt == other.changeRequestedAt &&
+        vendorResponseDueAt == other.vendorResponseDueAt &&
+        availablePaymentMethods == other.availablePaymentMethods &&
+        selectedPaymentMethod == other.selectedPaymentMethod &&
         id == other.id &&
         version == other.version &&
         latest == other.latest &&
@@ -80,6 +100,11 @@ class _$ChatQuotationVersion extends ChatQuotationVersion {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, requestedChanges.hashCode);
+    _$hash = $jc(_$hash, changeRequestedAt.hashCode);
+    _$hash = $jc(_$hash, vendorResponseDueAt.hashCode);
+    _$hash = $jc(_$hash, availablePaymentMethods.hashCode);
+    _$hash = $jc(_$hash, selectedPaymentMethod.hashCode);
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, version.hashCode);
     _$hash = $jc(_$hash, latest.hashCode);
@@ -99,6 +124,11 @@ class _$ChatQuotationVersion extends ChatQuotationVersion {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'ChatQuotationVersion')
+          ..add('requestedChanges', requestedChanges)
+          ..add('changeRequestedAt', changeRequestedAt)
+          ..add('vendorResponseDueAt', vendorResponseDueAt)
+          ..add('availablePaymentMethods', availablePaymentMethods)
+          ..add('selectedPaymentMethod', selectedPaymentMethod)
           ..add('id', id)
           ..add('version', version)
           ..add('latest', latest)
@@ -118,6 +148,32 @@ class _$ChatQuotationVersion extends ChatQuotationVersion {
 class ChatQuotationVersionBuilder
     implements Builder<ChatQuotationVersion, ChatQuotationVersionBuilder> {
   _$ChatQuotationVersion? _$v;
+
+  String? _requestedChanges;
+  String? get requestedChanges => _$this._requestedChanges;
+  set requestedChanges(String? requestedChanges) =>
+      _$this._requestedChanges = requestedChanges;
+
+  String? _changeRequestedAt;
+  String? get changeRequestedAt => _$this._changeRequestedAt;
+  set changeRequestedAt(String? changeRequestedAt) =>
+      _$this._changeRequestedAt = changeRequestedAt;
+
+  String? _vendorResponseDueAt;
+  String? get vendorResponseDueAt => _$this._vendorResponseDueAt;
+  set vendorResponseDueAt(String? vendorResponseDueAt) =>
+      _$this._vendorResponseDueAt = vendorResponseDueAt;
+
+  SetBuilder<String>? _availablePaymentMethods;
+  SetBuilder<String> get availablePaymentMethods =>
+      _$this._availablePaymentMethods ??= SetBuilder<String>();
+  set availablePaymentMethods(SetBuilder<String>? availablePaymentMethods) =>
+      _$this._availablePaymentMethods = availablePaymentMethods;
+
+  String? _selectedPaymentMethod;
+  String? get selectedPaymentMethod => _$this._selectedPaymentMethod;
+  set selectedPaymentMethod(String? selectedPaymentMethod) =>
+      _$this._selectedPaymentMethod = selectedPaymentMethod;
 
   String? _id;
   String? get id => _$this._id;
@@ -177,6 +233,11 @@ class ChatQuotationVersionBuilder
   ChatQuotationVersionBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _requestedChanges = $v.requestedChanges;
+      _changeRequestedAt = $v.changeRequestedAt;
+      _vendorResponseDueAt = $v.vendorResponseDueAt;
+      _availablePaymentMethods = $v.availablePaymentMethods?.toBuilder();
+      _selectedPaymentMethod = $v.selectedPaymentMethod;
       _id = $v.id;
       _version = $v.version;
       _latest = $v.latest;
@@ -212,6 +273,11 @@ class ChatQuotationVersionBuilder
     try {
       _$result = _$v ??
           _$ChatQuotationVersion._(
+            requestedChanges: requestedChanges,
+            changeRequestedAt: changeRequestedAt,
+            vendorResponseDueAt: vendorResponseDueAt,
+            availablePaymentMethods: _availablePaymentMethods?.build(),
+            selectedPaymentMethod: selectedPaymentMethod,
             id: BuiltValueNullFieldError.checkNotNull(
                 id, r'ChatQuotationVersion', 'id'),
             version: BuiltValueNullFieldError.checkNotNull(
@@ -236,6 +302,9 @@ class ChatQuotationVersionBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'availablePaymentMethods';
+        _availablePaymentMethods?.build();
+
         _$failedField = 'content';
         content.build();
 

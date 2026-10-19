@@ -28,6 +28,26 @@ import {
  */
 export interface ChatQuotationVersion {
     /**
+     * Buyer's exact recorded counter-offer for this version, retained after revision. Omitted when no changes were requested. Only visible to authorized conversation participants.
+     */
+    requestedChanges?: string;
+    /**
+     * UTC ISO 8601 timestamp of the recorded counter-offer for this version.
+     */
+    changeRequestedAt?: string;
+    /**
+     * Exact recorded UTC ISO 8601 deadline for the Vendor to revise and republish. Historical requests retain their original deadline; it is active only while the version is current and COUNTERED.
+     */
+    vendorResponseDueAt?: string;
+    /**
+     * Currently available Buyer choices for this quotation's fulfillment, subject to Vendor settings. Revalidated at acceptance.
+     */
+    availablePaymentMethods?: Set<string>;
+    /**
+     * The Buyer's recorded method from the accepted order, including historical accepted quotations.
+     */
+    selectedPaymentMethod?: string;
+    /**
      *
      */
     id: string;
@@ -104,6 +124,11 @@ export function ChatQuotationVersionFromJSONTyped(json: any, ignoreDiscriminator
     }
     return {
 
+        'requestedChanges': json['requested_changes'] == null ? undefined : json['requested_changes'],
+        'changeRequestedAt': json['change_requested_at'] == null ? undefined : json['change_requested_at'],
+        'vendorResponseDueAt': json['vendor_response_due_at'] == null ? undefined : json['vendor_response_due_at'],
+        'availablePaymentMethods': json['available_payment_methods'] == null ? undefined : new Set(json['available_payment_methods']),
+        'selectedPaymentMethod': json['selected_payment_method'] == null ? undefined : json['selected_payment_method'],
         'id': json['id'],
         'version': json['version'],
         'latest': json['latest'],
@@ -130,6 +155,11 @@ export function ChatQuotationVersionToJSONTyped(value?: ChatQuotationVersion | n
 
     return {
 
+        'requested_changes': value['requestedChanges'],
+        'change_requested_at': value['changeRequestedAt'],
+        'vendor_response_due_at': value['vendorResponseDueAt'],
+        'available_payment_methods': value['availablePaymentMethods'] == null ? undefined : Array.from(value['availablePaymentMethods'] as Set<any>),
+        'selected_payment_method': value['selectedPaymentMethod'],
         'id': value['id'],
         'version': value['version'],
         'latest': value['latest'],

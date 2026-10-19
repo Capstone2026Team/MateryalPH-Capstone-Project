@@ -53,9 +53,15 @@ void main() {
       // TODO
     });
 
-    // Work Package line this purchase covers; same material and unit only (422 MISSING_LINE_TAG_INVALID).
+    // Work Package line this purchase covers; same material and unit only (422 MISSING_LINE_TAG_INVALID), at most the line quantity (422 TAGGED_QUANTITY_EXCEEDS_REQUIREMENT). The server scopes it from the package site at the fixed 50 km Project-Based radius, ignoring any radius_km sent. It never stacks: adding the same product again keeps the larger quantity.
     // String workPackageLineId
     test('to test the property `workPackageLineId`', () async {
+      // TODO
+    });
+
+    // With work_package_line_id: add what the store can confirm when it holds less than quantity, instead of failing with QUANTITY_UNAVAILABLE.
+    // bool allowPartialStock
+    test('to test the property `allowPartialStock`', () async {
       // TODO
     });
 

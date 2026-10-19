@@ -69,7 +69,8 @@ final class CatalogAccess
         return $key;
     }
 
-    /** Returns true when this exact request was already applied; a changed body under the same key is a conflict. */
+    /** Returns true when this exact request was already applied; a changed body under the same key is a conflict.
+     * @phpstan-impure Concurrent transactions can commit an idempotency record between calls. */
     public function replayed(Request $request, string $endpoint, string $key, string $scopeId): bool
     {
         $record = DB::table('idempotency_records')->where('actor_user_id', $request->user()->getKey())->where('endpoint', $endpoint)->where('idempotency_key', $key)->first();

@@ -8,7 +8,7 @@ import { AdminAccumulatorPage, AdminFinancePage } from './FinancePages'
 
 vi.mock('../lib/finance-api', async original => ({ ...await original<typeof import('../lib/finance-api')>(), listReviewItems: vi.fn(), resolveReviewItem: vi.fn(), approveFeeCredit: vi.fn(),
   financeKpis: vi.fn(), listPayments: vi.fn(), getAccumulator: vi.fn(), resolveOverlap: vi.fn(), listAccumulators: vi.fn(), listStatements: vi.fn(), approveStatement: vi.fn(), draftStatements: vi.fn(), listChannelFees: vi.fn(), runReconciliation: vi.fn(),
-  listTaxAdjustments: vi.fn(), prepareTaxAdjustment: vi.fn(), reviewTaxAdjustment: vi.fn(), postTaxAdjustment: vi.fn() }))
+  listCommissionPolicies: vi.fn(), publishCommissionPolicy: vi.fn(), listTaxAdjustments: vi.fn(), prepareTaxAdjustment: vi.fn(), reviewTaxAdjustment: vi.fn(), postTaxAdjustment: vi.fn() }))
 vi.mock('./PhaseThreeAdminPages', async original => ({ ...await original<typeof import('./PhaseThreeAdminPages')>(), AdminShell: ({ children }: { children: React.ReactNode }) => <main>{children}</main> }))
 
 const item = (overrides: Partial<FinanceReviewItem> = {}): FinanceReviewItem => ({ id: 'item-1', kind: 'PAYMENT_MISMATCH', state: 'OPEN', reasonCode: 'AMOUNT_MISMATCH', summary: 'A provider webhook did not match the stored payment attempt; nothing was marked paid.',
@@ -19,6 +19,7 @@ const at = (path: string, element: React.ReactNode, pattern = path) => render(<M
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.mocked(finance.listCommissionPolicies).mockResolvedValue({ policies: { current: { id: 'policy-1', version: 1, commissionBasisPoints: 200, rateLabel: '2.00%', effectiveFrom: new Date('2026-10-01T00:00:00Z'), status: 'CURRENT' }, latestVersion: 1, canManage: true, versions: [] }, hasMore: false })
   vi.mocked(finance.financeKpis).mockResolvedValue({ label: 'Recorded transactions', scenario: 'Earnings and cash use event dates; debt uses issue dates.', period: { from: null, to: null }, commerce: [], finance: [
     { key: 'earned_commission', label: 'Total commission earned', valueCentavos: 20000, definition: 'Earned at completion.' },
     { key: 'refunded_commissions', label: 'Refunded commissions', valueCentavos: 4000, definition: 'Confirmed refunds.' },
@@ -29,6 +30,8 @@ beforeEach(() => {
 test('the default earnings view reports commissions with cards, charts and a table and removes retired controls', async () => {
   at('/finance', <AdminFinancePage />)
   expect(await screen.findByRole('heading', { name: 'Platform earnings analytics' })).toBeInTheDocument()
+  await waitFor(() => expect(screen.getAllByText('View breakdown')).toHaveLength(4))
+  screen.getAllByText('View breakdown').forEach(summary => fireEvent.click(summary))
   expect(await screen.findByRole('table', { name: 'Net platform earnings calculation' })).toBeInTheDocument()
   expect(screen.queryByText(/DEMO — SIMULATED FIGURES/i)).not.toBeInTheDocument()
   expect(screen.getByRole('table', { name: 'Monthly commission activity' })).toBeInTheDocument()
@@ -52,6 +55,9 @@ test('each platform earnings card prints the lines that add up to it and short r
     { period: new Date(2026, 9, 1), earnedCentavos: 20000, creditsCentavos: 3000, collectedCentavos: 0, refundedCentavos: 0, netEarningsCentavos: 14300 },
     { period: new Date(2026, 9, 2), earnedCentavos: 0, creditsCentavos: 0, collectedCentavos: 9000, refundedCentavos: 1000, netEarningsCentavos: 0 }] })
   at('/finance', <AdminFinancePage />)
+  await screen.findByRole('heading', { name: 'Platform earnings analytics' })
+  await waitFor(() => expect(screen.getAllByText('View breakdown')).toHaveLength(4))
+  screen.getAllByText('View breakdown').forEach(summary => fireEvent.click(summary))
   const earned = within(await screen.findByRole('table', { name: 'Net commission earned calculation' }))
   expect(earned.getByRole('row', { name: /^Total commission earned/ })).toHaveTextContent('₱200.00')
   expect(earned.getByRole('row', { name: /^Approved commission credits/ })).toHaveTextContent('-₱30.00')
@@ -80,6 +86,31 @@ test('channel fees offer a safe link to the Xendit dashboard in a new tab', asyn
   expect(link.getAttribute('rel')).toContain('noopener')
   expect(link.getAttribute('rel')).toContain('noreferrer')
   expect(screen.getByText(/never stores or shows its Xendit credentials/)).toBeInTheDocument()
+})
+
+test('publishing a commission percentage sends basis points, the reviewed version and one request key', async () => {
+  vi.mocked(finance.listStatements).mockResolvedValue(page([]))
+  vi.mocked(finance.listReviewItems).mockResolvedValue(page([]))
+  vi.mocked(finance.publishCommissionPolicy).mockResolvedValue({ id: 'policy-2', version: 2, commissionBasisPoints: 325, rateLabel: '3.25%', effectiveFrom: new Date(), status: 'CURRENT' })
+  at('/finance?view=statements', <AdminFinancePage />, '/finance')
+  fireEvent.click(await screen.findByRole('button', { name: 'Edit rate' }))
+  fireEvent.change(screen.getByLabelText('Commission percentage (%)'), { target: { value: '3.25' } })
+  expect(screen.getByText('₱325.00')).toBeInTheDocument()
+  fireEvent.change(screen.getByLabelText(/^Reason/), { target: { value: 'Approved commercial rate review' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Publish new rate' }))
+  await waitFor(() => expect(finance.publishCommissionPolicy).toHaveBeenCalledWith({ commissionBasisPoints: 325, expectedVersion: 1, effectiveFrom: null, reason: 'Approved commercial rate review' }, expect.stringMatching(/^[0-9a-f-]{36}$/)))
+  expect(await screen.findByText(/Commission policy published/)).toBeInTheDocument()
+})
+
+test('read-only commission access shows the rate without publishing controls', async () => {
+  const policies = await finance.listCommissionPolicies()
+  vi.mocked(finance.listCommissionPolicies).mockResolvedValue({ ...policies, policies: { ...policies.policies, canManage: false } })
+  vi.mocked(finance.listStatements).mockResolvedValue(page([]))
+  vi.mocked(finance.listReviewItems).mockResolvedValue(page([]))
+  at('/finance?view=statements', <AdminFinancePage />, '/finance')
+  expect(await screen.findByText('2.00%')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Edit rate' })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'View history' })).toBeInTheDocument()
 })
 
 test('overdue debt offers only collectible states and switching to management resets its query', async () => {

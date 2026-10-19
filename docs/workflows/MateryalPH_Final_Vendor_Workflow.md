@@ -1,5 +1,7 @@
 **Vendor Flow**
 
+**Owner decision — 2026-10-19: Finance and commission monitoring.** Rename the Vendor sidebar entry Transactions to Finance while preserving its existing permissions and routes. Finance includes an Owner-only Commission Monitoring view showing the current and next rate, effective dates, current-term acceptance, estimated fees on accepted orders, completed-order fees and approved credits, unbilled amounts, draft bills, unpaid/overdue issued bills, collected payments and confirmed fee refunds. Paginate the order assessment list and show each original percentage and materials basis. Link to existing statement payment. Review Commission Terms opens a popup in Finance, fetching the current agreement and reusing the version-bound, authority-checked Store Verification acceptance flow without navigating to onboarding. Initial Store Verification retains the same consent component. Under the updated System FIN-03 policy, 2.00% is the initial default and future commercial rates are versioned; existing quotations/orders/returns retain their saved rate and original consent history. No staff finance access, Buyer commission charge, wallet, provider-mode change or automatic deduction is introduced.
+
 ---
 
 **Vendor Portal (Web Application using React.js)**
@@ -261,6 +263,8 @@ Exactly one contact is designated **Primary Business Contact** at a time. Changi
 ### Registered Business Address
 
 The Vendor provides the registered or principal operating address through either **Manual Address Entry** or **Interactive Map Selection**. Structured fields include street, building, unit, or establishment; barangay; city or municipality; province or applicable independent-city classification; and postal code.
+
+**Owner decision — 2026-10-19: address entry.** The interface offers **Use Google Maps** and **Enter address manually**. A selected/dragged pin fills editable address details; missing details can be typed. Remove the cascading PSGC selectors and all requirements for the Vendor to choose geographic codes. The backend matches the best available geographic references without blocking entry when references are unresolved or the directory is unavailable. Manual entry stores no fabricated coordinates. Map coordinates remain server-resolved, organization-bound and validated before saving. Existing immutable address versions, authorization and review rules continue.
 
 The approved Google Maps integration may resolve a map pin into structured address information. The interface displays, where available, street/building, barangay, city or municipality, province or administrative area, and postal code. Latitude and longitude are hidden from the Vendor onboarding form, but are validated and stored separately by the backend. The Vendor confirms the map pin and resolved structured address rather than editing raw coordinate fields. The Vendor reviews the resolved address before saving and must complete missing fields when geocoding cannot confidently provide them.
 
@@ -1076,4 +1080,19 @@ Order confirmation uses the same percentage Vendor discount as Prepare quotation
 
 Messages shows one sales inbox entry per Buyer and Store, using the authorized Item-Based inquiry as its main conversation. Project inquiries opens the pair's authorized Work Package conversations inside the main conversation workspace, preserving the main draft. Each project keeps its own locked Work Package, quotation boundary, handler, messages and read receipts. New and historical project-only pairs receive an empty Item-Based main conversation without moving history.
 
+**Owner UI decision — 2026-10-18.** Quotation history opens in a modal above the conversation and preserves its draft and scroll position, including within a Project inquiry. Project inquiries and its counts show open quotation workflows only, using the same server filter as Buyer: the current version of an undeleted, unassigned Active/Quotation Inquiry Work Package in an Active Project, with a Draft, Published, Viewed, Countered or Stock Revalidation Required quotation. Published, Viewed and Countered deadlines must remain in the future. Accepted, expired, rejected, withdrawn and older inquiries retain their existing authorized history routes and current role/assignment restrictions.
+
 Only currently authorized conversations contribute previews, activity ordering, unread badges and the project list. An assigned sales staff member who cannot access the main Item-Based conversation sees their oldest authorized project as the group's inbox entry; grouping never grants access to another handler's conversation. Owner/Manager oversight and separate Fulfillment Staff access remain unchanged. Reading the main conversation does not read project messages. Buyer archive/restore applies to the whole personal sales group and new activity restores it. This changes inbox navigation only and supersedes earlier separate Item/Project inbox rows; Work Package quotation records remain separate.
+
+### Owner decision — 2026-10-18: Buyer payment choice for message quotations
+
+For Item-Based and Project-Based message quotations, the Vendor selects fulfillment and publishes the commercial terms without selecting a payment method. Before accepting the latest quotation, the Buyer must explicitly choose an available method: Cash on Delivery or Online Payment for Site Delivery; In-Store Payment or Online Payment for Self-Pickup. Existing Vendor-enabled physical-method settings and online-account readiness still determine availability, and the server rechecks them at acceptance. No method is preselected. The choice is recorded in the accepted order, commercial snapshot and acceptance event; it never rewrites a published quotation version. Older accepted orders retain their recorded method. Existing NRPC, processing-fee, reservation, idempotency and payment-verification rules continue to apply. This supersedes earlier wording requiring the Vendor to choose payment in the quotation builder.
+
+### Owner decision — 2026-10-18: Work Package arrangement membership
+
+A new Project-Based Work Package may select one complete Vendor or an arrangement of equal eligible Vendors. Each store sees its assigned materials alongside the locked Buyer Work Package and can propose terms only within its own material/unit/quantity allocation. Explicit substitutions remain visible for Buyer review and do not silently satisfy incompatible requirements. Each member retains separate quotation versions, manual confirmation, order, payment and fulfillment. Accepting one member's quotation expires competing arrangements, not fellow members' quotations. Existing inventory reservation, NRPC, delivery confirmation, authorization and payment rules remain unchanged; historical awards are preserved.
+
+
+### Owner enhancement - 2026-10-19: Contact Us
+
+The public Vendor site exposes Contact Us for guests and authenticated Vendors. Guests provide their name/email and declared Buyer/Vendor/Guest type; authenticated contact details come from the account. Concerns persist as private support tickets with optional validated files. Vendors have My Support Requests and a ticket conversation. Guests use secure expiring email access and can request a fresh link without registration. Support remains separate from procurement conversations.

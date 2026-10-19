@@ -15,6 +15,7 @@ part 'vendor_onboarding_step.g.dart';
 /// * [id]
 /// * [key]
 /// * [label]
+/// * [progressStatus] - Saved form or evidence completion for the Vendor checklist. COMPLETED means ready to submit or already supplied, never Admin approval or activation eligibility. The status field retains the review decision.
 /// * [level]
 /// * [status]
 /// * [reason]
@@ -31,6 +32,11 @@ abstract class VendorOnboardingStep implements Built<VendorOnboardingStep, Vendo
 
   @BuiltValueField(wireName: r'label')
   String get label;
+
+  /// Saved form or evidence completion for the Vendor checklist. COMPLETED means ready to submit or already supplied, never Admin approval or activation eligibility. The status field retains the review decision.
+  @BuiltValueField(wireName: r'progress_status')
+  VendorOnboardingStepProgressStatusEnum? get progressStatus;
+  // enum progressStatusEnum {  NOT_STARTED,  IN_PROGRESS,  COMPLETED,  NOT_APPLICABLE,  };
 
   @BuiltValueField(wireName: r'level')
   VendorOnboardingStepLevelEnum get level;
@@ -90,6 +96,13 @@ class _$VendorOnboardingStepSerializer implements PrimitiveSerializer<VendorOnbo
       object.label,
       specifiedType: const FullType(String),
     );
+    if (object.progressStatus != null) {
+      yield r'progress_status';
+      yield serializers.serialize(
+        object.progressStatus,
+        specifiedType: const FullType(VendorOnboardingStepProgressStatusEnum),
+      );
+    }
     yield r'level';
     yield serializers.serialize(
       object.level,
@@ -170,6 +183,14 @@ class _$VendorOnboardingStepSerializer implements PrimitiveSerializer<VendorOnbo
           ) as String;
           result.label = valueDes;
           break;
+        case r'progress_status':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(VendorOnboardingStepProgressStatusEnum),
+          ) as VendorOnboardingStepProgressStatusEnum?;
+          if (valueDes == null) continue;
+          result.progressStatus = valueDes;
+          break;
         case r'level':
           final valueDes = serializers.deserialize(
             value,
@@ -244,6 +265,26 @@ class _$VendorOnboardingStepSerializer implements PrimitiveSerializer<VendorOnbo
   }
 }
 
+
+/// Saved form or evidence completion for the Vendor checklist. COMPLETED means ready to submit or already supplied, never Admin approval or activation eligibility. The status field retains the review decision.
+class VendorOnboardingStepProgressStatusEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'NOT_STARTED')
+  static const VendorOnboardingStepProgressStatusEnum NOT_STARTED = _$vendorOnboardingStepProgressStatusEnum_NOT_STARTED;
+  @BuiltValueEnumConst(wireName: r'IN_PROGRESS')
+  static const VendorOnboardingStepProgressStatusEnum IN_PROGRESS = _$vendorOnboardingStepProgressStatusEnum_IN_PROGRESS;
+  @BuiltValueEnumConst(wireName: r'COMPLETED')
+  static const VendorOnboardingStepProgressStatusEnum COMPLETED = _$vendorOnboardingStepProgressStatusEnum_COMPLETED;
+  @BuiltValueEnumConst(wireName: r'NOT_APPLICABLE')
+  static const VendorOnboardingStepProgressStatusEnum NOT_APPLICABLE = _$vendorOnboardingStepProgressStatusEnum_NOT_APPLICABLE;
+
+  static Serializer<VendorOnboardingStepProgressStatusEnum> get serializer => _$vendorOnboardingStepProgressStatusEnumSerializer;
+
+  const VendorOnboardingStepProgressStatusEnum._(String name): super(name);
+
+  static BuiltSet<VendorOnboardingStepProgressStatusEnum> get values => _$vendorOnboardingStepProgressStatusEnumValues;
+  static VendorOnboardingStepProgressStatusEnum valueOf(String name) => _$vendorOnboardingStepProgressStatusEnumValueOf(name);
+}
 
 class VendorOnboardingStepLevelEnum extends EnumClass {
 

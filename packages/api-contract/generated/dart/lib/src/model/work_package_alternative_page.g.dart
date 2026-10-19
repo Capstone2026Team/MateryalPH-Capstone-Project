@@ -10,6 +10,12 @@ const WorkPackageAlternativePageStatusEnum
     _$workPackageAlternativePageStatusEnum_CATALOG =
     const WorkPackageAlternativePageStatusEnum._('CATALOG');
 const WorkPackageAlternativePageStatusEnum
+    _$workPackageAlternativePageStatusEnum_NO_SUITABLE_ALTERNATIVE =
+    const WorkPackageAlternativePageStatusEnum._('NO_SUITABLE_ALTERNATIVE');
+const WorkPackageAlternativePageStatusEnum
+    _$workPackageAlternativePageStatusEnum_COVERED =
+    const WorkPackageAlternativePageStatusEnum._('COVERED');
+const WorkPackageAlternativePageStatusEnum
     _$workPackageAlternativePageStatusEnum_UNLISTED =
     const WorkPackageAlternativePageStatusEnum._('UNLISTED');
 
@@ -18,6 +24,10 @@ WorkPackageAlternativePageStatusEnum
   switch (name) {
     case 'CATALOG':
       return _$workPackageAlternativePageStatusEnum_CATALOG;
+    case 'NO_SUITABLE_ALTERNATIVE':
+      return _$workPackageAlternativePageStatusEnum_NO_SUITABLE_ALTERNATIVE;
+    case 'COVERED':
+      return _$workPackageAlternativePageStatusEnum_COVERED;
     case 'UNLISTED':
       return _$workPackageAlternativePageStatusEnum_UNLISTED;
     default:
@@ -29,21 +39,50 @@ final BuiltSet<WorkPackageAlternativePageStatusEnum>
     _$workPackageAlternativePageStatusEnumValues = BuiltSet<
         WorkPackageAlternativePageStatusEnum>(const <WorkPackageAlternativePageStatusEnum>[
   _$workPackageAlternativePageStatusEnum_CATALOG,
+  _$workPackageAlternativePageStatusEnum_NO_SUITABLE_ALTERNATIVE,
+  _$workPackageAlternativePageStatusEnum_COVERED,
   _$workPackageAlternativePageStatusEnum_UNLISTED,
+]);
+
+const WorkPackageAlternativePageRadiusKmEnum
+    _$workPackageAlternativePageRadiusKmEnum_number50 =
+    const WorkPackageAlternativePageRadiusKmEnum._('number50');
+
+WorkPackageAlternativePageRadiusKmEnum
+    _$workPackageAlternativePageRadiusKmEnumValueOf(String name) {
+  switch (name) {
+    case 'number50':
+      return _$workPackageAlternativePageRadiusKmEnum_number50;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<WorkPackageAlternativePageRadiusKmEnum>
+    _$workPackageAlternativePageRadiusKmEnumValues = BuiltSet<
+        WorkPackageAlternativePageRadiusKmEnum>(const <WorkPackageAlternativePageRadiusKmEnum>[
+  _$workPackageAlternativePageRadiusKmEnum_number50,
 ]);
 
 Serializer<WorkPackageAlternativePageStatusEnum>
     _$workPackageAlternativePageStatusEnumSerializer =
     _$WorkPackageAlternativePageStatusEnumSerializer();
+Serializer<WorkPackageAlternativePageRadiusKmEnum>
+    _$workPackageAlternativePageRadiusKmEnumSerializer =
+    _$WorkPackageAlternativePageRadiusKmEnumSerializer();
 
 class _$WorkPackageAlternativePageStatusEnumSerializer
     implements PrimitiveSerializer<WorkPackageAlternativePageStatusEnum> {
   static const Map<String, Object> _toWire = const <String, Object>{
     'CATALOG': 'CATALOG',
+    'NO_SUITABLE_ALTERNATIVE': 'NO_SUITABLE_ALTERNATIVE',
+    'COVERED': 'COVERED',
     'UNLISTED': 'UNLISTED',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'CATALOG': 'CATALOG',
+    'NO_SUITABLE_ALTERNATIVE': 'NO_SUITABLE_ALTERNATIVE',
+    'COVERED': 'COVERED',
     'UNLISTED': 'UNLISTED',
   };
 
@@ -68,15 +107,49 @@ class _$WorkPackageAlternativePageStatusEnumSerializer
           _fromWire[serialized] ?? (serialized is String ? serialized : ''));
 }
 
+class _$WorkPackageAlternativePageRadiusKmEnumSerializer
+    implements PrimitiveSerializer<WorkPackageAlternativePageRadiusKmEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'number50': 50,
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    50: 'number50',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    WorkPackageAlternativePageRadiusKmEnum
+  ];
+  @override
+  final String wireName = 'WorkPackageAlternativePageRadiusKmEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          WorkPackageAlternativePageRadiusKmEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  WorkPackageAlternativePageRadiusKmEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      WorkPackageAlternativePageRadiusKmEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$WorkPackageAlternativePage extends WorkPackageAlternativePage {
   @override
   final BuiltMap<String, JsonObject?> line;
   @override
   final WorkPackageAlternativePageStatusEnum status;
   @override
+  final String neededQuantity;
+  @override
+  final WorkPackageAlternativePageExcluded excluded;
+  @override
   final String? locationId;
   @override
-  final int radiusKm;
+  final WorkPackageAlternativePageRadiusKmEnum radiusKm;
   @override
   final BuiltList<WorkPackageAlternative> items;
   @override
@@ -93,6 +166,8 @@ class _$WorkPackageAlternativePage extends WorkPackageAlternativePage {
   _$WorkPackageAlternativePage._(
       {required this.line,
       required this.status,
+      required this.neededQuantity,
+      required this.excluded,
       this.locationId,
       required this.radiusKm,
       required this.items,
@@ -115,6 +190,8 @@ class _$WorkPackageAlternativePage extends WorkPackageAlternativePage {
     return other is WorkPackageAlternativePage &&
         line == other.line &&
         status == other.status &&
+        neededQuantity == other.neededQuantity &&
+        excluded == other.excluded &&
         locationId == other.locationId &&
         radiusKm == other.radiusKm &&
         items == other.items &&
@@ -128,6 +205,8 @@ class _$WorkPackageAlternativePage extends WorkPackageAlternativePage {
     var _$hash = 0;
     _$hash = $jc(_$hash, line.hashCode);
     _$hash = $jc(_$hash, status.hashCode);
+    _$hash = $jc(_$hash, neededQuantity.hashCode);
+    _$hash = $jc(_$hash, excluded.hashCode);
     _$hash = $jc(_$hash, locationId.hashCode);
     _$hash = $jc(_$hash, radiusKm.hashCode);
     _$hash = $jc(_$hash, items.hashCode);
@@ -143,6 +222,8 @@ class _$WorkPackageAlternativePage extends WorkPackageAlternativePage {
     return (newBuiltValueToStringHelper(r'WorkPackageAlternativePage')
           ..add('line', line)
           ..add('status', status)
+          ..add('neededQuantity', neededQuantity)
+          ..add('excluded', excluded)
           ..add('locationId', locationId)
           ..add('radiusKm', radiusKm)
           ..add('items', items)
@@ -168,13 +249,25 @@ class WorkPackageAlternativePageBuilder
   set status(WorkPackageAlternativePageStatusEnum? status) =>
       _$this._status = status;
 
+  String? _neededQuantity;
+  String? get neededQuantity => _$this._neededQuantity;
+  set neededQuantity(String? neededQuantity) =>
+      _$this._neededQuantity = neededQuantity;
+
+  WorkPackageAlternativePageExcludedBuilder? _excluded;
+  WorkPackageAlternativePageExcludedBuilder get excluded =>
+      _$this._excluded ??= WorkPackageAlternativePageExcludedBuilder();
+  set excluded(WorkPackageAlternativePageExcludedBuilder? excluded) =>
+      _$this._excluded = excluded;
+
   String? _locationId;
   String? get locationId => _$this._locationId;
   set locationId(String? locationId) => _$this._locationId = locationId;
 
-  int? _radiusKm;
-  int? get radiusKm => _$this._radiusKm;
-  set radiusKm(int? radiusKm) => _$this._radiusKm = radiusKm;
+  WorkPackageAlternativePageRadiusKmEnum? _radiusKm;
+  WorkPackageAlternativePageRadiusKmEnum? get radiusKm => _$this._radiusKm;
+  set radiusKm(WorkPackageAlternativePageRadiusKmEnum? radiusKm) =>
+      _$this._radiusKm = radiusKm;
 
   ListBuilder<WorkPackageAlternative>? _items;
   ListBuilder<WorkPackageAlternative> get items =>
@@ -203,6 +296,8 @@ class WorkPackageAlternativePageBuilder
     if ($v != null) {
       _line = $v.line.toBuilder();
       _status = $v.status;
+      _neededQuantity = $v.neededQuantity;
+      _excluded = $v.excluded.toBuilder();
       _locationId = $v.locationId;
       _radiusKm = $v.radiusKm;
       _items = $v.items.toBuilder();
@@ -235,6 +330,11 @@ class WorkPackageAlternativePageBuilder
             line: line.build(),
             status: BuiltValueNullFieldError.checkNotNull(
                 status, r'WorkPackageAlternativePage', 'status'),
+            neededQuantity: BuiltValueNullFieldError.checkNotNull(
+                neededQuantity,
+                r'WorkPackageAlternativePage',
+                'neededQuantity'),
+            excluded: excluded.build(),
             locationId: locationId,
             radiusKm: BuiltValueNullFieldError.checkNotNull(
                 radiusKm, r'WorkPackageAlternativePage', 'radiusKm'),
@@ -251,6 +351,9 @@ class WorkPackageAlternativePageBuilder
       try {
         _$failedField = 'line';
         line.build();
+
+        _$failedField = 'excluded';
+        excluded.build();
 
         _$failedField = 'items';
         items.build();

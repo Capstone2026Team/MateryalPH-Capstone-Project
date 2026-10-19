@@ -6,6 +6,11 @@
 
 Name | Type
 ------------ | -------------
+`requestedChanges` | string
+`changeRequestedAt` | string
+`vendorResponseDueAt` | string
+`availablePaymentMethods` | Set&lt;string&gt;
+`selectedPaymentMethod` | string
 `id` | string
 `version` | number
 `latest` | boolean
@@ -26,6 +31,11 @@ import type { ChatQuotationVersion } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "requestedChanges": null,
+  "changeRequestedAt": null,
+  "vendorResponseDueAt": null,
+  "availablePaymentMethods": null,
+  "selectedPaymentMethod": null,
   "id": null,
   "version": null,
   "latest": null,

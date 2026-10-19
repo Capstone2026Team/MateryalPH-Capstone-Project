@@ -70,6 +70,7 @@ PreferredSizeWidget buyerTabAppBar(
 ///
 /// [titleWidget] replaces the text title for a page whose header carries more than a name (for
 /// example a conversation); [toolbarHeight] then overrides the text-scale-aware default.
+/// [showBackButton] lets embedded modal content keep its title without a second navigation control.
 PreferredSizeWidget buyerAppBar(
   BuildContext context,
   String title, {
@@ -79,8 +80,11 @@ PreferredSizeWidget buyerAppBar(
   Widget? titleWidget,
   double? toolbarHeight,
   bool centerTitle = true,
+  bool showBackButton = true,
 }) {
-  final showBack = onBack != null || (ModalRoute.of(context)?.canPop ?? false);
+  final showBack =
+      showBackButton &&
+      (onBack != null || (ModalRoute.of(context)?.canPop ?? false));
   return AppBar(
     automaticallyImplyLeading: false,
     // Grows with the system text size so an enlarged title is never clipped.

@@ -87,7 +87,7 @@ class _$RankingComponent extends RankingComponent {
   @override
   final String label;
   @override
-  final int weightPercent;
+  final num weightPercent;
   @override
   final String score;
   @override
@@ -165,9 +165,9 @@ class RankingComponentBuilder
   String? get label => _$this._label;
   set label(String? label) => _$this._label = label;
 
-  int? _weightPercent;
-  int? get weightPercent => _$this._weightPercent;
-  set weightPercent(int? weightPercent) =>
+  num? _weightPercent;
+  num? get weightPercent => _$this._weightPercent;
+  set weightPercent(num? weightPercent) =>
       _$this._weightPercent = weightPercent;
 
   String? _score;

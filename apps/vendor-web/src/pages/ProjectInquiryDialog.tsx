@@ -34,7 +34,7 @@ export function ProjectInquiryDialog({ inquiryId, role, onClose }: { inquiryId: 
     return () => { active = false; stop?.(); window.clearInterval(timer) }
   }, [inquiryId, page, selected, attempt])
 
-  return <FormDialog open title="Project inquiries" description="Each Work Package keeps its own conversation and quotation history." busy={busy} onClose={onClose} footer={null} bodyClassName="flex h-[min(44rem,75dvh)] min-h-0 flex-col overflow-hidden">
+  return <FormDialog open title="Project inquiries" description="Open quotation inquiries for current Work Packages. Each inquiry keeps its own conversation and quotation history." busy={busy} onClose={onClose} footer={null} bodyClassName="flex h-[min(44rem,75dvh)] min-h-0 flex-col overflow-hidden">
     {selected ? <>
       <div className="shrink-0 border-b border-border-default px-4"><Button variant="quiet" disabled={busy} onClick={() => setSelected(null)}>Back to project inquiries</Button></div>
       <ConversationThread key={selected} selected={selected} role={role} onBusyChange={setBusy} />

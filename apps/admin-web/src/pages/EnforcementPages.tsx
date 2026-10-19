@@ -146,9 +146,9 @@ function PlanFields({ plans, openOrders, plan, note, error, onChange }: { plans:
 export function AdminEnforcementDetailPage() {
   const { actionId = '' } = useParams()
   const detail = useLoad(() => getEnforcement(actionId), [actionId])
-  const backHref = detail.data?.subjectType === 'BUYER' ? '/buyer-management' : '/enforcement'
+  const backHref = '/enforcement'
   return <AdminShell activeHref={backHref}><div className="space-y-6">
-    <Link to={backHref} className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-action-primary"><ArrowLeft size={16} aria-hidden="true" />Back to {detail.data?.subjectType === 'BUYER' ? 'Buyer Management' : 'Enforcement'}</Link>
+    <Link to={backHref} className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-action-primary"><ArrowLeft size={16} aria-hidden="true" />Back to Enforcement</Link>
     {detail.error ? <ErrorState message={detail.error} onRetry={detail.retry} /> : !detail.data ? <LoadingState /> : <EnforcementCase detail={detail.data} onChanged={detail.set} onReload={detail.retry} />}
   </div></AdminShell>
 }

@@ -350,7 +350,7 @@ export interface ResolveVendorAddressRequest {
     /**
      *
      */
-    vendorAddressSelection: VendorAddressSelection;
+    vendorAddressSelection: VendorAddressSelection | null;
 }
 
 export interface ResolveVendorAddressPinRequest {
@@ -1501,10 +1501,10 @@ export class VendorOnboardingApi extends runtime.BaseAPI {
      * Creates request options for resolveVendorAddress without sending the request
      */
     async resolveVendorAddressRequestOpts(requestParameters: ResolveVendorAddressRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['vendorAddressSelection'] == null) {
+        if (requestParameters['vendorAddressSelection'] === undefined) {
             throw new runtime.RequiredError(
                 'vendorAddressSelection',
-                'Required parameter "vendorAddressSelection" was null or undefined when calling resolveVendorAddress().'
+                'Required parameter "vendorAddressSelection" was undefined when calling resolveVendorAddress().'
             );
         }
 

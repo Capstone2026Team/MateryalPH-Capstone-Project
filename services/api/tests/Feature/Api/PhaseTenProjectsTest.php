@@ -60,7 +60,7 @@ final class PhaseTenProjectsTest extends TestCase
     {
         $m = DB::table('materials')->where('code', 'CONCRETE_HOLLOW_BLOCK')->first();
 
-        return ['name' => 'Foundation', 'budget_centavos' => $budget, 'site_id' => $site, 'radius_km' => 5, 'fulfillment_method' => 'PICKUP', 'payment_method' => 'ONLINE',
+        return ['name' => 'Foundation', 'budget_centavos' => $budget, 'site_id' => $site, 'radius_km' => 50, 'fulfillment_method' => 'PICKUP', 'payment_method' => 'ONLINE',
             'lines' => [['material_id' => $m->id, 'unit_id' => $m->canonical_unit_id, 'quantity' => $quantity, 'name' => 'Hollow blocks', 'specifications' => ['thickness_mm' => '100'], 'preferred_brand' => 'BrandCo']]];
     }
 
@@ -76,7 +76,7 @@ final class PhaseTenProjectsTest extends TestCase
         return [$p, $w, $input, $site];
     }
 
-    private function scan(array $w, int $radius = 5): array
+    private function scan(array $w, int $radius = 50): array
     {
         return $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/estimates', ['lock_version' => $w['lock_version'], 'radius_km' => $radius])->assertOk()->json('data');
     }
@@ -119,7 +119,7 @@ final class PhaseTenProjectsTest extends TestCase
         $this->getJson('/api/v1/buyers/work-packages/'.$w['id'])->assertOk()->assertJsonPath('data.project_status', 'ARCHIVED')->assertJsonPath('data.version.content_hash', $w['version']['content_hash']);
         $this->getJson('/api/v1/buyers/conversations/'.$chat)->assertOk()->assertJsonPath('data.quotations.quotation.state', 'EXPIRED');
         self::assertSame('INVALIDATED', DB::table('compiled_estimates')->where('id', $e['estimate']['id'])->value('state'));
-        $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/estimates', ['lock_version' => $w['lock_version'], 'radius_km' => 5])->assertConflict();
+        $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/estimates', ['lock_version' => $w['lock_version'], 'radius_km' => 50])->assertConflict();
         $this->putJson('/api/v1/buyers/work-packages/'.$w['id'], $input + ['lock_version' => $w['lock_version']], $this->key())->assertConflict()->assertJsonPath('errors.0.code', 'PROJECT_CLOSED');
         $this->postJson('/api/v1/buyers/projects/'.$p['id'].'/work-packages', $input, $this->key())->assertConflict();
         $this->patchJson('/api/v1/buyers/projects/'.$p['id'], ['lock_version' => $p['lock_version'] + 1, 'status' => 'ACTIVE'], $this->key())->assertConflict();
@@ -152,9 +152,9 @@ final class PhaseTenProjectsTest extends TestCase
     {
         [$partial] = $this->pickupStore('Partial near', [['price' => 1000, 'qty' => '3']], 500);
         $this->bulk($partial->id);
-        [$complete] = $this->pickupStore('Complete boundary', [['price' => 2000, 'qty' => '20']], 5000);
+        [$complete] = $this->pickupStore('Complete boundary', [['price' => 2000, 'qty' => '20']], 50000);
         $this->bulk($complete->id);
-        [$outside] = $this->pickupStore('Outside', [['price' => 1000, 'qty' => '20']], 5001);
+        [$outside] = $this->pickupStore('Outside', [['price' => 1000, 'qty' => '20']], 50001);
         $this->bulk($outside->id);
         $this->buyer();
         [, $w] = $this->package();
@@ -164,9 +164,10 @@ final class PhaseTenProjectsTest extends TestCase
         self::assertTrue($e['items'][0]['complete']);
         self::assertSame('7.0000', $e['items'][1]['missing_lines'][0]['quantity']);
         self::assertSame('New Vendor', $e['items'][1]['score_label']);
-        self::assertSame(10, $e['suggested_radius_km']);
+        // The fixed 50 km radius is never widened, so no larger radius is offered.
+        self::assertArrayNotHasKey('suggested_radius_km', $e);
         $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/estimates', ['lock_version' => $w['lock_version'], 'radius_km' => 6])->assertUnprocessable();
-        self::assertCount(3, $this->scan($w, 10)['items']);
+        $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/estimates', ['lock_version' => $w['lock_version'], 'radius_km' => 10])->assertUnprocessable();
     }
 
     public function test_bulk_restriction_blocks_future_awards_but_keeps_estimate_and_locked_original(): void
@@ -293,6 +294,58 @@ final class PhaseTenProjectsTest extends TestCase
         $this->getJson('/api/v1/buyers/projects/'.$p['id'])->assertOk()->assertJsonPath('data.sites.0.point.location_id', $site);
     }
 
+    public function test_a_both_package_offers_each_vendor_method_and_the_buyer_picks_one_per_vendor(): void
+    {
+        [$deliverer, $owner] = $this->activeStore('Both deliverer', false, true);
+        $this->bulk($deliverer->id);
+        $this->signInStoreMember($owner);
+        $this->orderListing('BOTH-DELIVERER');
+        $this->addVehicle($deliverer->id);
+        DB::table('delivery_service_areas')->where('vendor_organization_id', $deliverer->id)->update(['maximum_distance_km' => 40]);
+        $this->placeStore($deliverer->id, 1000);
+        $this->connectOnlinePayments($deliverer->id);
+        [$pickup] = $this->pickupStore('Both pickup only');
+        $this->bulk($pickup->id);
+        $buyer = $this->buyer();
+        $site = $this->savedLocation($buyer, 'Both site', 0, 0, 'PROJECT_SITE');
+        $project = $this->postJson('/api/v1/buyers/projects', ['name' => 'Both house', 'budget_centavos' => 1000000, 'starts_on' => now()->toDateString(),
+            'ends_on' => now()->addMonth()->toDateString(), 'location_id' => $site], $this->key())->assertCreated()->json('data');
+        $input = array_replace($this->input($project['sites'][0]['id']), ['fulfillment_method' => 'BOTH', 'site_contact' => 'Site supervisor',
+            'access_instructions' => 'Unload at the accessible gate.', 'heavy_vehicle_restriction' => 'NO']);
+        $save = '/api/v1/buyers/projects/'.$project['id'].'/work-packages';
+
+        // Cash on Delivery and In-Store Payment need one method; delivery details are required because the Buyer may choose delivery.
+        $this->postJson($save, ['payment_method' => 'CASH_ON_DELIVERY'] + $input, $this->key())->assertUnprocessable();
+        $this->postJson($save, ['payment_method' => 'IN_STORE'] + $input, $this->key())->assertUnprocessable();
+        $this->postJson($save, ['site_contact' => null] + $input, $this->key())->assertUnprocessable();
+
+        $w = $this->postJson($save, $input, $this->key())->assertCreated()->json('data');
+        $w = $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/activate', ['lock_version' => $w['lock_version']], $this->key())->assertOk()->json('data');
+        $items = collect($this->scan($w)['items'])->keyBy('vendor_id');
+        self::assertSame(['DELIVERY', 'PICKUP'], $items[$deliverer->id]['fulfillment_options']);
+        self::assertSame(['PICKUP'], $items[$pickup->id]['fulfillment_options']);
+        self::assertSame('PICKUP', $items[$pickup->id]['fulfillment_method']);
+
+        $both = $items[$deliverer->id];
+        $url = '/api/v1/buyers/work-packages/'.$w['id'];
+        $choice = ['lock_version' => $w['lock_version'], 'candidate_id' => $both['id']];
+        // A Vendor offering both needs the Buyer's choice; a method the Vendor lacks is refused.
+        $this->postJson($url.'/selection', $choice, $this->key())->assertUnprocessable()->assertJsonPath('errors.0.code', 'FULFILLMENT_CHOICE_REQUIRED');
+        $this->postJson($url.'/selection', ['candidate_id' => $items[$pickup->id]['id'], 'fulfillment_method' => 'DELIVERY'] + $choice, $this->key())
+            ->assertUnprocessable()->assertJsonPath('errors.0.code', 'FULFILLMENT_NOT_OFFERED');
+
+        $delivery = $this->postJson($url.'/candidates/'.$both['id'].'/selection-preview', ['fulfillment_method' => 'DELIVERY'])->assertOk()
+            ->assertJsonPath('data.fulfillment_method', 'DELIVERY')->assertJsonPath('data.destination.type', 'DELIVERY')->json('data');
+        $pickupView = $this->postJson($url.'/candidates/'.$both['id'].'/selection-preview', ['fulfillment_method' => 'PICKUP'])->assertOk()
+            ->assertJsonPath('data.fulfillment_method', 'PICKUP')->assertJsonPath('data.destination.type', 'PICKUP')->assertJsonPath('data.delivery_centavos', 0)->json('data');
+        self::assertSame(60500, $delivery['delivery_centavos']);
+        self::assertSame($pickupView['materials_centavos'] + 60500, $delivery['projected_total_centavos']);
+
+        $order = $this->postJson($url.'/selection', ['fulfillment_method' => 'PICKUP'] + $choice, $this->key())->assertCreated()->json('data.id');
+        $row = DB::table('orders')->where('id', $order)->first(['fulfillment_method', 'payment_method', 'destination']);
+        self::assertSame(['PICKUP', 'ONLINE', 'PICKUP'], [$row->fulfillment_method, $row->payment_method, json_decode($row->destination, true)['type']]);
+    }
+
     public function test_direct_project_selection_keeps_the_delivery_estimate_in_buyer_and_vendor_order_summaries(): void
     {
         [$vendor, $owner] = $this->activeStore('Project estimate summary', false, true);
@@ -345,11 +398,31 @@ final class PhaseTenProjectsTest extends TestCase
         $itemId = (string) Str::uuid7();
         DB::table('buyer_ranking_preferences')->insert(['id' => $itemId, 'buyer_profile_id' => $profile, 'procurement_type' => 'ITEM_BASED', 'weights' => json_encode(['distance' => 25, 'price' => 25, 'vps' => 20, 'stock' => 20, 'product_rating' => 10]), 'version' => 1, 'created_at' => now(), 'updated_at' => now()]);
         $this->getJson('/api/v1/buyers/project-ranking-preferences')->assertOk()->assertJsonPath('data.personalized', false);
-        $this->putJson('/api/v1/buyers/project-ranking-preferences', ['version' => 0, 'weights' => ['material_match' => 50, 'budget_fit' => 25, 'distance' => 20, 'vps' => 4]])->assertUnprocessable();
-        $this->putJson('/api/v1/buyers/project-ranking-preferences', ['version' => 0, 'weights' => ['material_match' => 50, 'budget_fit' => 25, 'distance' => 20, 'vps' => 5]])->assertOk()->assertJsonPath('data.personalized', true)->assertJsonPath('data.version', 1);
+        $this->putJson('/api/v1/buyers/project-ranking-preferences', ['version' => 0, 'weights' => ['material_match' => 0, 'budget_fit' => 0, 'distance' => 0, 'vps' => 0]])->assertUnprocessable()->assertJsonPath('errors.0.code', 'WEIGHTS_ALL_ZERO');
+        $this->putJson('/api/v1/buyers/project-ranking-preferences', ['version' => 0, 'weights' => ['material_match' => 80, 'budget_fit' => 50, 'distance' => 40, 'vps' => 30]])->assertOk()->assertJsonPath('data.personalized', true)->assertJsonPath('data.version', 1);
+        $this->getJson('/api/v1/buyers/project-ranking-preferences')->assertOk()->assertJsonPath('data.weights', ['material_match' => 80, 'budget_fit' => 50, 'distance' => 40, 'vps' => 30]);
         $this->postJson('/api/v1/buyers/project-ranking-preferences/reset', ['version' => 1])->assertOk()->assertJsonPath('data.personalized', false)->assertJsonPath('data.weights.material_match', 40)->assertJsonPath('data.version', 2);
         $this->putJson('/api/v1/buyers/project-ranking-preferences', ['version' => 0, 'weights' => ['material_match' => 40, 'budget_fit' => 25, 'distance' => 20, 'vps' => 15]])->assertConflict();
         self::assertSame($itemId, DB::table('buyer_ranking_preferences')->where('buyer_profile_id', $profile)->where('procurement_type', 'ITEM_BASED')->value('id'));
+    }
+
+    public function test_new_estimates_apply_saved_raw_weights_without_rewriting_preferences_or_prior_snapshots(): void
+    {
+        [$vendor] = $this->pickupStore('Ranking supplier');
+        $this->bulk($vendor->id);
+        $this->buyer();
+        [, $package] = $this->package();
+        $before = $this->scan($package);
+        $oldSnapshot = DB::table('compiled_estimate_vendors')->where('compiled_estimate_id', $before['estimate']['id'])->value('snapshot');
+        $weights = ['material_match' => 1, 'budget_fit' => 0, 'distance' => 0, 'vps' => 0];
+        $this->putJson('/api/v1/buyers/project-ranking-preferences', ['version' => 0, 'weights' => $weights])->assertOk();
+        $this->getJson('/api/v1/buyers/work-packages/'.$package['id'].'/estimates')->assertOk()->assertJsonPath('data.estimate.state', 'INVALIDATED');
+        $current = $this->getJson('/api/v1/buyers/work-packages/'.$package['id'])->assertOk()->json('data');
+        $after = $this->scan($current);
+        self::assertSame('100.00', $after['items'][0]['fms']['score']);
+        self::assertEquals($weights, $after['items'][0]['fms']['weights']);
+        self::assertSame($oldSnapshot, DB::table('compiled_estimate_vendors')->where('compiled_estimate_id', $before['estimate']['id'])->value('snapshot'));
+        $this->getJson('/api/v1/buyers/project-ranking-preferences')->assertOk()->assertJsonPath('data.weights', $weights);
     }
 
     public function test_csv_preview_validates_normalized_units_and_does_not_create_versions(): void

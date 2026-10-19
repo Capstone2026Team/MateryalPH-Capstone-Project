@@ -14,7 +14,7 @@ Name | Type
 `brand` | string
 `vendorId` | string
 `storeName` | string
-`image` | string
+`image` | [ListingImage](ListingImage.md)
 `unitPriceCentavos` | number
 `unitCode` | string
 `unitPrecision` | number
@@ -22,6 +22,10 @@ Name | Type
 `stockLabel` | string
 `specifications` | [Array&lt;ProjectSpecificationDetail&gt;](ProjectSpecificationDetail.md)
 `exactMatch` | boolean
+`availability` | string
+`estimatedTotalCentavos` | number
+`fulfillmentMethods` | Array&lt;string&gt;
+`alreadyAdded` | boolean
 
 ## Example
 
@@ -46,6 +50,10 @@ const example = {
   "stockLabel": null,
   "specifications": null,
   "exactMatch": null,
+  "availability": null,
+  "estimatedTotalCentavos": null,
+  "fulfillmentMethods": null,
+  "alreadyAdded": null,
 } satisfies WorkPackageAlternative
 
 console.log(example)

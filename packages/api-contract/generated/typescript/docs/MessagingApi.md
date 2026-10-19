@@ -1080,7 +1080,7 @@ example().catch(console.error);
 
 
 
-Lists existing Project-Based conversations for this authorized sales conversation\&#39;s Buyer and Store. Includes only currently authorized assignments, newest activity first. Preserves each Work Package and quotation history. Never creates an inquiry. Fulfillment threads cannot use this endpoint.
+Lists open Project-Based quotation inquiries for this authorized sales conversation\&#39;s Buyer and Store. Includes only currently authorized assignments for the current version of an undeleted, unassigned Active or Quotation Inquiry Work Package in an Active Project. Quotations must be Draft, Published, Viewed, Countered or Stock Revalidation Required; Published, Viewed and Countered deadlines must still be in the future. Filters before pagination, newest activity first. Closed and older inquiries retain directly authorized conversation and quotation history. Never creates an inquiry. Fulfillment threads cannot use this endpoint.
 
 ### Example
 

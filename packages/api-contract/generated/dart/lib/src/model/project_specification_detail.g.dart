@@ -14,7 +14,7 @@ class _$ProjectSpecificationDetail extends ProjectSpecificationDetail {
   @override
   final String value;
   @override
-  final String unitCode;
+  final String? unitCode;
 
   factory _$ProjectSpecificationDetail(
           [void Function(ProjectSpecificationDetailBuilder)? updates]) =>
@@ -24,7 +24,7 @@ class _$ProjectSpecificationDetail extends ProjectSpecificationDetail {
       {required this.code,
       required this.label,
       required this.value,
-      required this.unitCode})
+      this.unitCode})
       : super._();
   @override
   ProjectSpecificationDetail rebuild(
@@ -126,8 +126,7 @@ class ProjectSpecificationDetailBuilder
               label, r'ProjectSpecificationDetail', 'label'),
           value: BuiltValueNullFieldError.checkNotNull(
               value, r'ProjectSpecificationDetail', 'value'),
-          unitCode: BuiltValueNullFieldError.checkNotNull(
-              unitCode, r'ProjectSpecificationDetail', 'unitCode'),
+          unitCode: unitCode,
         );
     replace(_$result);
     return _$result;

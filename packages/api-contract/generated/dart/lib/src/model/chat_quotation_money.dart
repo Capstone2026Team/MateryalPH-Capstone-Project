@@ -11,6 +11,7 @@ part 'chat_quotation_money.g.dart';
 /// ChatQuotationMoney
 ///
 /// Properties:
+/// * [materialsGrossCentavos] - Authoritative materials subtotal before the Vendor's materials discount, when recorded.
 /// * [materialsPayableCentavos]
 /// * [materialsVatCentavos]
 /// * [vendorDiscountCentavos]
@@ -19,6 +20,10 @@ part 'chat_quotation_money.g.dart';
 /// * [commercialTotalCentavos]
 @BuiltValue()
 abstract class ChatQuotationMoney implements Built<ChatQuotationMoney, ChatQuotationMoneyBuilder> {
+  /// Authoritative materials subtotal before the Vendor's materials discount, when recorded.
+  @BuiltValueField(wireName: r'materials_gross_centavos')
+  int? get materialsGrossCentavos;
+
   @BuiltValueField(wireName: r'materials_payable_centavos')
   int get materialsPayableCentavos;
 
@@ -60,6 +65,13 @@ class _$ChatQuotationMoneySerializer implements PrimitiveSerializer<ChatQuotatio
     ChatQuotationMoney object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.materialsGrossCentavos != null) {
+      yield r'materials_gross_centavos';
+      yield serializers.serialize(
+        object.materialsGrossCentavos,
+        specifiedType: const FullType(int),
+      );
+    }
     yield r'materials_payable_centavos';
     yield serializers.serialize(
       object.materialsPayableCentavos,
@@ -113,6 +125,14 @@ class _$ChatQuotationMoneySerializer implements PrimitiveSerializer<ChatQuotatio
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'materials_gross_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.materialsGrossCentavos = valueDes;
+          break;
         case r'materials_payable_centavos':
           final valueDes = serializers.deserialize(
             value,

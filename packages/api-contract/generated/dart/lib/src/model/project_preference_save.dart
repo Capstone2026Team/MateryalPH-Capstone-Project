@@ -14,12 +14,13 @@ part 'project_preference_save.g.dart';
 ///
 /// Properties:
 /// * [version]
-/// * [weights]
+/// * [weights] - Four independent integer importance values from 0 to 100: material_match, budget_fit, distance and vps. At least one above zero; persisted unchanged. Scores normalize by their sum.
 @BuiltValue()
 abstract class ProjectPreferenceSave implements Built<ProjectPreferenceSave, ProjectPreferenceSaveBuilder> {
   @BuiltValueField(wireName: r'version')
   int get version;
 
+  /// Four independent integer importance values from 0 to 100: material_match, budget_fit, distance and vps. At least one above zero; persisted unchanged. Scores normalize by their sum.
   @BuiltValueField(wireName: r'weights')
   BuiltMap<String, JsonObject?> get weights;
 

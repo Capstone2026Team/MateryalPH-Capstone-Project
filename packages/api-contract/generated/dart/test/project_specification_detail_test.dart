@@ -23,6 +23,7 @@ void main() {
       // TODO
     });
 
+    // Measurement unit, or null for unitless specifications such as steel grade.
     // String unitCode
     test('to test the property `unitCode`', () async {
       // TODO

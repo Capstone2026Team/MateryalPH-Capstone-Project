@@ -18,9 +18,9 @@ part 'work_package_input.g.dart';
 /// * [description]
 /// * [budgetCentavos]
 /// * [siteId]
-/// * [radiusKm]
-/// * [fulfillmentMethod]
-/// * [paymentMethod]
+/// * [radiusKm] - Optional. 50 km is the only Project-Based vendor-selection radius; the server applies it whether or not it is sent.
+/// * [fulfillmentMethod] - BOTH means the Buyer is open to either. The scan lists every Vendor offering Site Delivery, Self-Pickup or both; each candidate then lists its `fulfillment_options` and the Buyer picks one when inquiring or selecting. BOTH requires `payment_method` ONLINE and the delivery details (`site_contact`, `access_instructions`, `heavy_vehicle_restriction`).
+/// * [paymentMethod] - Optional legacy value. New authoring omits payment; it is explicitly chosen in the selection checklist.
 /// * [siteContact]
 /// * [heavyVehicleRestriction]
 /// * [alternateDropOffLocationId]
@@ -43,16 +43,19 @@ abstract class WorkPackageInput implements Built<WorkPackageInput, WorkPackageIn
   @BuiltValueField(wireName: r'site_id')
   String get siteId;
 
+  /// Optional. 50 km is the only Project-Based vendor-selection radius; the server applies it whether or not it is sent.
   @BuiltValueField(wireName: r'radius_km')
-  WorkPackageInputRadiusKmEnum get radiusKm;
-  // enum radiusKmEnum {  5,  10,  20,  30,  40,  50,  };
+  WorkPackageInputRadiusKmEnum? get radiusKm;
+  // enum radiusKmEnum {  50,  };
 
+  /// BOTH means the Buyer is open to either. The scan lists every Vendor offering Site Delivery, Self-Pickup or both; each candidate then lists its `fulfillment_options` and the Buyer picks one when inquiring or selecting. BOTH requires `payment_method` ONLINE and the delivery details (`site_contact`, `access_instructions`, `heavy_vehicle_restriction`).
   @BuiltValueField(wireName: r'fulfillment_method')
   WorkPackageInputFulfillmentMethodEnum get fulfillmentMethod;
-  // enum fulfillmentMethodEnum {  PICKUP,  DELIVERY,  };
+  // enum fulfillmentMethodEnum {  PICKUP,  DELIVERY,  BOTH,  };
 
+  /// Optional legacy value. New authoring omits payment; it is explicitly chosen in the selection checklist.
   @BuiltValueField(wireName: r'payment_method')
-  WorkPackageInputPaymentMethodEnum get paymentMethod;
+  WorkPackageInputPaymentMethodEnum? get paymentMethod;
   // enum paymentMethodEnum {  ONLINE,  CASH_ON_DELIVERY,  IN_STORE,  };
 
   @BuiltValueField(wireName: r'site_contact')
@@ -123,21 +126,25 @@ class _$WorkPackageInputSerializer implements PrimitiveSerializer<WorkPackageInp
       object.siteId,
       specifiedType: const FullType(String),
     );
-    yield r'radius_km';
-    yield serializers.serialize(
-      object.radiusKm,
-      specifiedType: const FullType(WorkPackageInputRadiusKmEnum),
-    );
+    if (object.radiusKm != null) {
+      yield r'radius_km';
+      yield serializers.serialize(
+        object.radiusKm,
+        specifiedType: const FullType(WorkPackageInputRadiusKmEnum),
+      );
+    }
     yield r'fulfillment_method';
     yield serializers.serialize(
       object.fulfillmentMethod,
       specifiedType: const FullType(WorkPackageInputFulfillmentMethodEnum),
     );
-    yield r'payment_method';
-    yield serializers.serialize(
-      object.paymentMethod,
-      specifiedType: const FullType(WorkPackageInputPaymentMethodEnum),
-    );
+    if (object.paymentMethod != null) {
+      yield r'payment_method';
+      yield serializers.serialize(
+        object.paymentMethod,
+        specifiedType: const FullType(WorkPackageInputPaymentMethodEnum),
+      );
+    }
     if (object.siteContact != null) {
       yield r'site_contact';
       yield serializers.serialize(
@@ -234,8 +241,9 @@ class _$WorkPackageInputSerializer implements PrimitiveSerializer<WorkPackageInp
         case r'radius_km':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(WorkPackageInputRadiusKmEnum),
-          ) as WorkPackageInputRadiusKmEnum;
+            specifiedType: const FullType.nullable(WorkPackageInputRadiusKmEnum),
+          ) as WorkPackageInputRadiusKmEnum?;
+          if (valueDes == null) continue;
           result.radiusKm = valueDes;
           break;
         case r'fulfillment_method':
@@ -248,8 +256,9 @@ class _$WorkPackageInputSerializer implements PrimitiveSerializer<WorkPackageInp
         case r'payment_method':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(WorkPackageInputPaymentMethodEnum),
-          ) as WorkPackageInputPaymentMethodEnum;
+            specifiedType: const FullType.nullable(WorkPackageInputPaymentMethodEnum),
+          ) as WorkPackageInputPaymentMethodEnum?;
+          if (valueDes == null) continue;
           result.paymentMethod = valueDes;
           break;
         case r'site_contact':
@@ -321,18 +330,9 @@ class _$WorkPackageInputSerializer implements PrimitiveSerializer<WorkPackageInp
 }
 
 
+/// Optional. 50 km is the only Project-Based vendor-selection radius; the server applies it whether or not it is sent.
 class WorkPackageInputRadiusKmEnum extends EnumClass {
 
-  @BuiltValueEnumConst(wireNumber: 5)
-  static const WorkPackageInputRadiusKmEnum number5 = _$workPackageInputRadiusKmEnum_number5;
-  @BuiltValueEnumConst(wireNumber: 10)
-  static const WorkPackageInputRadiusKmEnum number10 = _$workPackageInputRadiusKmEnum_number10;
-  @BuiltValueEnumConst(wireNumber: 20)
-  static const WorkPackageInputRadiusKmEnum number20 = _$workPackageInputRadiusKmEnum_number20;
-  @BuiltValueEnumConst(wireNumber: 30)
-  static const WorkPackageInputRadiusKmEnum number30 = _$workPackageInputRadiusKmEnum_number30;
-  @BuiltValueEnumConst(wireNumber: 40)
-  static const WorkPackageInputRadiusKmEnum number40 = _$workPackageInputRadiusKmEnum_number40;
   @BuiltValueEnumConst(wireNumber: 50)
   static const WorkPackageInputRadiusKmEnum number50 = _$workPackageInputRadiusKmEnum_number50;
 
@@ -344,12 +344,15 @@ class WorkPackageInputRadiusKmEnum extends EnumClass {
   static WorkPackageInputRadiusKmEnum valueOf(String name) => _$workPackageInputRadiusKmEnumValueOf(name);
 }
 
+/// BOTH means the Buyer is open to either. The scan lists every Vendor offering Site Delivery, Self-Pickup or both; each candidate then lists its `fulfillment_options` and the Buyer picks one when inquiring or selecting. BOTH requires `payment_method` ONLINE and the delivery details (`site_contact`, `access_instructions`, `heavy_vehicle_restriction`).
 class WorkPackageInputFulfillmentMethodEnum extends EnumClass {
 
   @BuiltValueEnumConst(wireName: r'PICKUP')
   static const WorkPackageInputFulfillmentMethodEnum PICKUP = _$workPackageInputFulfillmentMethodEnum_PICKUP;
   @BuiltValueEnumConst(wireName: r'DELIVERY')
   static const WorkPackageInputFulfillmentMethodEnum DELIVERY = _$workPackageInputFulfillmentMethodEnum_DELIVERY;
+  @BuiltValueEnumConst(wireName: r'BOTH')
+  static const WorkPackageInputFulfillmentMethodEnum BOTH = _$workPackageInputFulfillmentMethodEnum_BOTH;
 
   static Serializer<WorkPackageInputFulfillmentMethodEnum> get serializer => _$workPackageInputFulfillmentMethodEnumSerializer;
 
@@ -359,6 +362,7 @@ class WorkPackageInputFulfillmentMethodEnum extends EnumClass {
   static WorkPackageInputFulfillmentMethodEnum valueOf(String name) => _$workPackageInputFulfillmentMethodEnumValueOf(name);
 }
 
+/// Optional legacy value. New authoring omits payment; it is explicitly chosen in the selection checklist.
 class WorkPackageInputPaymentMethodEnum extends EnumClass {
 
   @BuiltValueEnumConst(wireName: r'ONLINE')

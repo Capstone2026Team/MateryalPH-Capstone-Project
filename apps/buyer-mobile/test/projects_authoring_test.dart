@@ -281,7 +281,9 @@ void main() {
             await expectLater(
               find.byType(MaterialApp),
               matchesGoldenFile(
-                '../../../docs/design/evidence/phase-10/buyer-project-${page.$1}-390.png',
+                page.$1 == 'ranking'
+                    ? '../../../docs/design/evidence/ranking-influence/buyer-project-ranking-390.png'
+                    : '../../../docs/design/evidence/phase-10/buyer-project-${page.$1}-390.png',
               ),
             );
           }
@@ -290,39 +292,18 @@ void main() {
       },
     );
   }
-  test(
-    'Project percentages remain whole and total 100 at every slider position',
-    () {
-      for (final key in defaults.keys) {
-        for (var value = 0; value <= 100; value++) {
-          final weights = rebalanceRankingWeights(
-            defaults,
-            key,
-            value,
-            defaults: defaults,
-          );
-          expect(weights[key], value);
-          expect(weights.values.reduce((a, b) => a + b), 100);
-          expect(weights.values.every((v) => v >= 0 && v <= 100), isTrue);
-        }
+  test('Project importance changes only the selected criterion', () {
+    for (final key in defaults.keys) {
+      for (var value = 0; value <= 100; value++) {
+        expect(updateRankingWeight(defaults, key, value), {
+          ...defaults,
+          key: value,
+        });
       }
-      final exclusive = rebalanceRankingWeights(
-        defaults,
-        'material_match',
-        100,
-        defaults: defaults,
-      );
-      expect(
-        rebalanceRankingWeights(
-          exclusive,
-          'material_match',
-          40,
-          defaults: defaults,
-        ),
-        defaults,
-      );
-    },
-  );
+    }
+    expect(updateRankingWeight(defaults, 'distance', 200)['distance'], 100);
+    expect(updateRankingWeight(defaults, 'distance', -1)['distance'], 0);
+  });
 
   testWidgets(
     'form dialog keeps a focused controller alive through its exit animation',
@@ -515,7 +496,7 @@ void main() {
   );
 
   testWidgets(
-    'Project ranking uses balanced sliders and versioned save/reset on Project endpoints',
+    'Project ranking uses independent sliders and versioned save/reset on Project endpoints',
     (tester) async {
       var weights = {...defaults};
       var version = 0;
@@ -534,7 +515,10 @@ void main() {
                   input['weights'],
                 ).map((key, value) => MapEntry(key, projectInt(value)))
               : {...defaults};
-          expect(weights.values.reduce((a, b) => a + b), 100);
+          expect(
+            weights,
+            personalized ? {...defaults, 'material_match': 41} : defaults,
+          );
         }
         respond(options, handler, {
           'weights': weights,
@@ -552,14 +536,24 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Total 100%'), findsOneWidget);
+      expect(find.text('Preferences are up to date'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.byTooltip('Increase Material match'),
+        160,
+      );
       await tester.tap(find.byTooltip('Increase Material match'));
       await tester.pump();
+      expect(writes, isEmpty);
       await tester.tap(find.text('Save preferences'));
       await tester.pumpAndSettle();
-      expect(weights['material_match'], 41);
+      expect(weights, {...defaults, 'material_match': 41});
+      await tester.scrollUntilVisible(
+        find.text('Personalized ranking is active'),
+        -160,
+      );
       expect(find.text('Personalized ranking is active'), findsOneWidget);
-      await tester.tap(find.text('Reset to Default'));
+      await tester.ensureVisible(find.byTooltip('Reset to Default'));
+      await tester.tap(find.byTooltip('Reset to Default'));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(FilledButton, 'Reset to Default'));
       await tester.pumpAndSettle();

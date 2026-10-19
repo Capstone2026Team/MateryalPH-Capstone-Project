@@ -7,7 +7,8 @@ import type { PortalIdentity } from './portal-identity'
 import './portal-shell.css'
 import './portal-patterns.css'
 
-export type PortalNavItem = { label: string; href: string; icon?: ReactNode; disabled?: boolean; updateCount?: number; updateCountLabel?: string }
+/** `child` indents an item under the preceding one when it belongs to that destination, such as a Users list under its management area. */
+export type PortalNavItem = { label: string; href: string; icon?: ReactNode; disabled?: boolean; child?: boolean; updateCount?: number; updateCountLabel?: string }
 export type PortalNavSection = { label: string; items: PortalNavItem[] }
 
 export function PortalShell({
@@ -119,9 +120,10 @@ export function PortalShell({
                   const label = count > 0 ? `${item.label}, ${count} ${item.updateCountLabel ?? 'unread update'}${count === 1 ? '' : 's'}` : item.label
                   const content = <><span className="portal-nav-icon" aria-hidden="true">{item.icon ?? <Circle />}</span><span className="portal-nav-text">{item.label}</span><CountBadge count={count} className="portal-nav-badge" /></>
                   const hints = { onMouseEnter: (event: MouseEvent<HTMLElement>) => showTooltip(event.currentTarget, label), onMouseLeave: () => setTooltip(null), onBlur: () => setTooltip(null) }
+                  const rowClass = item.child ? 'portal-nav-row is-child' : 'portal-nav-row'
                   return item.disabled
-                    ? <span key={item.href} role="link" tabIndex={0} aria-label={`${item.label}, unavailable`} aria-disabled="true" className="portal-nav-row" {...hints}>{content}</span>
-                    : <a key={item.href} className="portal-nav-row" href={item.href} aria-label={label} aria-current={item.href === activeHref ? 'page' : undefined} onClick={event => follow(event, item.href)} {...hints}>{content}</a>
+                    ? <span key={item.href} role="link" tabIndex={0} aria-label={`${item.label}, unavailable`} aria-disabled="true" className={rowClass} {...hints}>{content}</span>
+                    : <a key={item.href} className={rowClass} href={item.href} aria-label={label} aria-current={item.href === activeHref ? 'page' : undefined} onClick={event => follow(event, item.href)} {...hints}>{content}</a>
                 })}
               </div>
             </section>)}

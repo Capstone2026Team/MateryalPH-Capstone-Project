@@ -28,7 +28,7 @@ export interface RankingComponent {
      */
     label: string;
     /**
-     *
+     * Effective normalized percentage used for scoring; not the saved slider value.
      */
     weightPercent: number;
     /**

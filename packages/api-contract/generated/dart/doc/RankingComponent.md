@@ -10,7 +10,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **key** | **String** |  |
 **label** | **String** |  |
-**weightPercent** | **int** |  |
+**weightPercent** | **num** | Effective normalized percentage used for scoring; not the saved slider value. |
 **score** | **String** | Normalized 0–100 component score |
 **weighted** | **String** | score × weight / 100 |
 **basis** | **String** | Plain-language source of the score |

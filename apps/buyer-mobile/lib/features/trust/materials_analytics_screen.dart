@@ -399,11 +399,7 @@ class _DatasetBand extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  switch (envelope.datasetLabel) {
-                    'TEST — Recorded Test Marketplace Prices' =>
-                      'Recorded Marketplace Prices',
-                    final label => label,
-                  },
+                  envelope.datasetLabel,
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 13,

@@ -44,7 +44,7 @@ final class AnalyticsDataset
         return [
             'environment' => $environment,
             'dataset_id' => $environment === self::DEMO_ENVIRONMENT ? self::DEMO_DATASET : self::CAPTURE_DATASET,
-            'label' => $environment === self::DEMO_ENVIRONMENT ? 'DEMO — Simulated Marketplace Data' : 'TEST — Recorded Test Marketplace Prices',
+            'label' => $environment === self::DEMO_ENVIRONMENT ? 'DEMO — Simulated Marketplace Data' : 'Recorded Marketplace Prices',
             'kind' => $environment,
         ];
     }

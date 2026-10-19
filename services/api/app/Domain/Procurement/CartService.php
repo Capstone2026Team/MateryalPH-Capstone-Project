@@ -10,6 +10,7 @@ use App\Domain\Catalog\VolumePricing;
 use App\Domain\Finance\FinancialSnapshotService;
 use App\Domain\Geography\BuyerProfiles;
 use App\Domain\Geography\GeographyScopeResolver;
+use App\Domain\Geography\RadiusPolicy;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Inventory\StockAvailability;
 use App\Domain\Operations\OutboxPublisher;
@@ -103,7 +104,7 @@ final class CartService
             if ($this->idempotency->replayed($request, 'BUYER_CART_ADD', $key, $buyerId)) {
                 return (string) $cart->id;
             }
-            $scope = $this->scopes->forBuyer($buyerId, $input);
+            $scope = $this->scopes->forBuyer($buyerId, $this->missingLineOrigin($buyerId, $input));
             $variantId = (string) $input['listing_variant_id'];
             $offer = $this->offerQuery($this->offers->within($scope))->where('v.id', $variantId)->first();
             if ($offer === null) {
@@ -119,10 +120,19 @@ final class CartService
                     ['current_price_version_id' => (string) $offer->price_version_id, 'current_unit_price_centavos' => (int) $offer->amount_centavos]);
             }
             $tag = $input['work_package_line_id'] ?? null;
+            $quantity = $this->quantity($input['quantity'] ?? null, (int) $offer->unit_precision);
             if ($tag !== null) {
-                $this->assertMissingLineTag($buyerId, (string) $tag, $variantId);
+                $this->assertMissingLineTag($buyerId, (string) $tag, $variantId, $quantity);
+                // A store that holds only part of the missing quantity may be added for what it can confirm; the rest stays open on the Work Package.
+                if (filter_var($input['allow_partial_stock'] ?? false, FILTER_VALIDATE_BOOLEAN) && bccomp($quantity, StockAvailability::quantity($offer->available), 4) > 0) {
+                    $quantity = bcadd(StockAvailability::quantity($offer->available), '0', max(0, min(4, (int) $offer->unit_precision)));
+                    $this->assertAvailable($quantity, (string) $offer->available);
+                    if (bccomp($quantity, '0', 4) <= 0) {
+                        throw new AuthenticationException('QUANTITY_UNAVAILABLE', 'The store cannot currently confirm any of this quantity.', 422);
+                    }
+                }
             }
-            $this->putLine($cart, $offer, $this->quantity($input['quantity'] ?? null, (int) $offer->unit_precision), $input['fulfillment_method'] ?? null, $tag);
+            $this->putLine($cart, $offer, $quantity, $input['fulfillment_method'] ?? null, $tag);
             $this->touch($cart);
             $this->idempotency->claim($request, 'BUYER_CART_ADD', $key, $buyerId, 200);
 
@@ -182,19 +192,48 @@ final class CartService
     }
 
     /**
+     * A purchase for a missing Work Package line is scoped from that package's locked Project site point, the same
+     * origin the recommendations used, so a saved location archived or changed since activation cannot break it.
+     *
+     * @param  array<string, mixed>  $input
+     * @return array<string, mixed>
+     */
+    private function missingLineOrigin(string $buyerId, array $input): array
+    {
+        $lineId = $input['work_package_line_id'] ?? null;
+        if ($lineId === null) {
+            return $input;
+        }
+        $content = DB::table('work_package_lines as wl')->join('work_package_versions as wv', 'wv.id', '=', 'wl.work_package_version_id')
+            ->join('work_packages as w', 'w.id', '=', 'wv.work_package_id')->join('projects as pr', 'pr.id', '=', 'w.project_id')
+            ->where('wl.id', (string) $lineId)->where('pr.buyer_profile_id', $buyerId)->whereColumn('w.current_version_id', 'wv.id')->value('wv.content');
+        $point = $content === null ? null : (json_decode((string) $content, true)['site']['point'] ?? null);
+        if (! is_array($point) || ! isset($point['latitude'], $point['longitude'])) {
+            return $input;
+        }
+        unset($input['location_id']);
+
+        // The Project-Based radius is fixed server-side; a client-sent radius_km can neither narrow nor widen it.
+        return ['latitude' => (float) $point['latitude'], 'longitude' => (float) $point['longitude'], 'origin_source' => 'MAP_PIN', 'radius_km' => RadiusPolicy::PROJECT_BASED_KM] + $input;
+    }
+
+    /**
      * A cart line may name the Work Package line it is bought for (owner decision 2026-10-12). Only a catalog
      * line of the Buyer's own current package version qualifies, and only with the same material and unit;
      * unlisted lines are resolved by waiver.
      */
-    private function assertMissingLineTag(string $buyerId, string $lineId, string $variantId): void
+    private function assertMissingLineTag(string $buyerId, string $lineId, string $variantId, string $quantity): void
     {
         $line = DB::table('work_package_lines as wl')->join('work_package_versions as wv', 'wv.id', '=', 'wl.work_package_version_id')
             ->join('work_packages as w', 'w.id', '=', 'wv.work_package_id')->join('projects as pr', 'pr.id', '=', 'w.project_id')
-            ->where('wl.id', $lineId)->where('pr.buyer_profile_id', $buyerId)->whereColumn('w.current_version_id', 'wv.id')->first(['wl.material_id', 'wl.unit_id']);
+            ->where('wl.id', $lineId)->where('pr.buyer_profile_id', $buyerId)->whereColumn('w.current_version_id', 'wv.id')->first(['wl.material_id', 'wl.unit_id', 'wl.quantity']);
         $variant = DB::table('listing_variants as v')->join('vendor_listings as l', 'l.id', '=', 'v.vendor_listing_id')->join('products as p', 'p.id', '=', 'l.product_id')
             ->where('v.id', $variantId)->first(['p.material_id', 'v.unit_id']);
         if ($line === null || $line->material_id === null || $variant === null || $variant->material_id !== $line->material_id || $variant->unit_id !== $line->unit_id) {
             throw new AuthenticationException('MISSING_LINE_TAG_INVALID', 'This product does not match the Work Package material and unit it would cover.', 422);
+        }
+        if (bccomp($quantity, StockAvailability::quantity($line->quantity), 4) > 0) {
+            throw new AuthenticationException('TAGGED_QUANTITY_EXCEEDS_REQUIREMENT', 'This is more than the Work Package needs of this material.', 422);
         }
     }
 
@@ -203,7 +242,13 @@ final class CartService
     {
         $variantId = (string) $offer->variant_id;
         $existing = DB::table('cart_items')->where('cart_id', $cart->id)->where('listing_variant_id', $variantId)->lockForUpdate()->first();
-        $total = $existing === null || $existing->saved_for_later_at !== null ? $quantity : bcadd(StockAvailability::quantity($existing->quantity), $quantity, 4);
+        $kept = $existing !== null && $existing->saved_for_later_at === null;
+        if ($workPackageLineId !== null && $kept && $existing->work_package_line_id !== null && (string) $existing->work_package_line_id !== $workPackageLineId) {
+            throw new AuthenticationException('CART_LINE_TAGGED_FOR_ANOTHER_MATERIAL', 'This product is already in your cart for a different Work Package material.', 409);
+        }
+        $current = $kept ? StockAvailability::quantity($existing->quantity) : '0';
+        // A purchase for a missing line never stacks on itself: adding the same product again keeps the larger quantity instead of doubling it.
+        $total = $workPackageLineId !== null ? (bccomp($current, $quantity, 4) >= 0 ? $current : $quantity) : ($kept ? bcadd($current, $quantity, 4) : $quantity);
         $this->assertAvailable($total, (string) $offer->available);
         if ($existing === null && DB::table('cart_items')->where('cart_id', $cart->id)->count() >= self::MAX_LINES) {
             throw new AuthenticationException('CART_FULL', 'Your cart can hold up to '.self::MAX_LINES.' lines. Remove a line first.', 422);

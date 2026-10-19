@@ -1,7 +1,7 @@
 import { DocumentExportButton } from '@materyalph/web-ui'
 import type { GeoActiveUsers, GeoCell, GeoChild, GeoRate } from '@materyalph/api-client-ts'
 import {
-  Button, ChoroplethLegend, DateFilter, DemandHeatmap, DemoLabel, FilterTabs, GeoBreadcrumbs, GeoChoroplethMap, InfoNote, KpiCard, SidePanel, SortableDataTable, StatusBadge, TrendLineChart,
+  Button, ChoroplethLegend, DateFilter, DemandHeatmap, FilterTabs, GeoBreadcrumbs, GeoChoroplethMap, InfoNote, KpiCard, SidePanel, SortableDataTable, TrendLineChart,
   analyticsDay, choroplethThresholds, formatPesoCentavos, manilaToday, type GeoAreaValue, type GeoFeature, type SortableColumn,
 } from '@materyalph/web-ui'
 import { Clock3, Download, EyeOff, RefreshCw, ShoppingCart, Store, Users, Wallet } from 'lucide-react'
@@ -47,8 +47,8 @@ const TRANSACTION_OPTIONS: { key: keyof GeoFilters; label: string; options: stri
 function useGeoFilters(): [GeoFilters, (next: Partial<GeoFilters>) => void] {
   const [params, setParams] = useSearchParams()
   const filters: GeoFilters = {
-    dataset: params.get('dataset') === 'DEMO' ? 'DEMO' : 'TEST', area: /^\d{10}$/.test(params.get('area') ?? '') ? params.get('area') : null,
-    from: params.get('from') ?? daysAgo(89), to: params.get('to') ?? daysAgo(1), granularity: (['DAY', 'WEEK', 'MONTH'].includes(params.get('granularity') ?? '') ? params.get('granularity') : 'WEEK') as GeoFilters['granularity'],
+    dataset: 'TEST', area: /^\d{10}$/.test(params.get('area') ?? '') ? params.get('area') : null,
+    from: params.get('from') ?? daysAgo(89), to: params.get('to') ?? daysAgo(0), granularity: (['DAY', 'WEEK', 'MONTH'].includes(params.get('granularity') ?? '') ? params.get('granularity') : 'WEEK') as GeoFilters['granularity'],
     procurementType: params.get('procurementType') ?? '', categoryId: params.get('categoryId') ?? '', materialId: params.get('materialId') ?? '',
     fulfillmentMethod: params.get('fulfillmentMethod') ?? '', paymentMethod: params.get('paymentMethod') ?? '', orderState: params.get('orderState') ?? '',
   }
@@ -98,13 +98,10 @@ export function AdminGeoAnalyticsPage() {
   return <AdminShell activeHref="/analytics"><div className="space-y-6">
     <PageHeader eyebrow="Marketplace Analytics" title="Philippine geographic analytics" description="Daily aggregate facts by PSGC area: Philippines → Region → Province or independent/highly urbanized city → City or Municipality. Buyer coordinates are never stored or shown."
       actions={<><Button variant="secondary" disabled={dashboard.loading} onClick={dashboard.retry}><RefreshCw size={16} aria-hidden="true" />Refresh</Button><GeoExportButton filters={filters} /></>} />
-    <div className="flex flex-wrap items-center gap-3">
-      <FilterTabs label="Dataset" value={filters.dataset} onChange={value => setFilters({ dataset: value as GeoFilters['dataset'] })} chips={[{ value: 'TEST', label: 'TEST activity' }, { value: 'DEMO', label: 'DEMO dataset' }]} />
-      {data && <DatasetLine dashboard={data} />}
-    </div>
+    {data && <DatasetLine dashboard={data} />}
     <GeoFilterBar filters={filters} onApply={setFilters} dashboard={data} />
     {dashboard.error ? <ErrorState message={dashboard.error} onRetry={dashboard.retry} /> : !data ? <LoadingState /> : !data.dataset.available
-      ? <p className="rounded-surface border border-dashed border-border-default bg-surface-primary px-6 py-10 text-center text-sm text-text-secondary">{filters.dataset === 'DEMO' ? 'No DEMO dataset has been generated. Run materyalph:geo-analytics-demo in a DEMO environment.' : 'The first daily aggregation has not run yet. It runs at 01:00 Asia/Manila, or can be re-run from Integration & Job Health.'}</p>
+      ? <p className="rounded-surface border border-dashed border-border-default bg-surface-primary px-6 py-10 text-center text-sm text-text-secondary">The first daily aggregation has not run yet. It runs at 01:00 Asia/Manila, or can be re-run from Integration & Job Health.</p>
       : <>
         <KpiGrid dashboard={data} onSelectArea={code => setFilters({ area: code })} />
         <AreaExplorer dashboard={data} features={(boundaries.data?.features ?? []) as unknown as GeoFeature[]} missingCodes={boundaries.data?.missingCodes ?? []} onDrill={code => setFilters({ area: code })} />
@@ -115,7 +112,7 @@ export function AdminGeoAnalyticsPage() {
         {view === 'materials' && <MaterialsAnalyticsSection psgcCode={filters.area} areaLabel={scopeName} />}
         <details className="rounded-surface border border-border-default bg-surface-primary p-4"><summary className="min-h-11 cursor-pointer content-center font-semibold">Metric definitions and disclosure rule</summary>
           <dl className="mt-3 grid gap-3 md:grid-cols-2">{Object.entries(data.definitions).map(([key, value]) => <div key={key}><dt className="text-sm font-semibold">{humanize(key)}</dt><dd className="text-sm text-text-secondary">{value}</dd></div>)}
-            <div><dt className="text-sm font-semibold">Small-cell suppression</dt><dd className="text-sm text-text-secondary">{data.disclosure.description} Where only one sibling would be hidden, the smallest other sibling is hidden too (complementary suppression) so it cannot be recovered by subtraction.</dd></div></dl>
+            {data.disclosure.minimumPersons > 1 && <div><dt className="text-sm font-semibold">Small-cell suppression</dt><dd className="text-sm text-text-secondary">{data.disclosure.description} Where only one sibling would be hidden, the smallest other sibling is hidden too (complementary suppression) so it cannot be recovered by subtraction.</dd></div>}</dl>
         </details>
       </>}
   </div></AdminShell>
@@ -124,7 +121,6 @@ export function AdminGeoAnalyticsPage() {
 function DatasetLine({ dashboard }: { dashboard: GeoDashboard }) {
   const dataset = dashboard.dataset
   return <p className="flex flex-wrap items-center gap-2 text-sm text-text-secondary">
-    {dataset.demo ? <DemoLabel>{dataset.label}</DemoLabel> : <StatusBadge label={dataset.label} tone="info" />}
     <span>{dataset.throughDate ? `Facts through ${dataset.throughDate}` : 'No facts yet'}{dataset.lastAggregatedAt ? ` · aggregated ${manilaDateTime(dataset.lastAggregatedAt)}` : ''}{dataset.revision ? ` · revision ${dataset.revision}` : ''}</span>
   </p>
 }
@@ -244,7 +240,7 @@ function AreaExplorer({ dashboard, features, missingCodes, onDrill }: { dashboar
 function UnresolvedNotice({ unresolved }: { unresolved: GeoDashboard['unresolved'] }) {
   const total = unresolved.orders + unresolved.vendors + unresolved.registeredBuyers + unresolved.responses + unresolved.activity
   if (total === 0) return null
-  return <InfoNote><span className="font-semibold">Unresolved geography</span> (counted in the Philippines total, never assigned to an area): {count(unresolved.orders)} orders, {count(unresolved.vendors)} Vendors, {count(unresolved.registeredBuyers)} registered Buyers, {count(unresolved.responses)} responses and {count(unresolved.activity)} activity records lack a resolvable PSGC code.</InfoNote>
+  return <InfoNote><span className="font-semibold">Unresolved geography</span> (counted in the Philippines total, never assigned to an area): {count(unresolved.orders)} orders, {count(unresolved.vendors)} Vendors, {count(unresolved.registeredBuyers)} registered Buyers, {count(unresolved.responses)} responses and {count(unresolved.activity)} activity records lack a resolvable PSGC code, for example a Buyer with no saved primary location or a Vendor without a verified business address.</InfoNote>
 }
 
 function TrendsSection({ dashboard }: { dashboard: GeoDashboard }) {

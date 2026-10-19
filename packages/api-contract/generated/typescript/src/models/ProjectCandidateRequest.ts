@@ -47,7 +47,36 @@ export interface ProjectCandidateRequest {
      * The Buyer's specification choice for each line whose `selection_required` is true. Selection and inquiry are rejected with SPECIFICATION_SELECTION_REQUIRED until every such line has one.
      */
     selections?: Array<ProjectSpecificationSelection>;
+    /**
+     * The Buyer's method for a Vendor whose candidate lists more than one `fulfillment_options` entry (Both packages). Required then, or the request is rejected with FULFILLMENT_CHOICE_REQUIRED; a method the Vendor does not offer is rejected with FULFILLMENT_NOT_OFFERED.
+     */
+    fulfillmentMethod?: ProjectCandidateRequestFulfillmentMethodEnum;
+    /**
+     * Required for direct selection; explicitly chosen in the checklist and revalidated against current Vendor and fulfillment rules. Inquiry may omit it.
+     */
+    paymentMethod?: ProjectCandidateRequestPaymentMethodEnum;
 }
+
+
+/**
+ * @export
+ */
+export const ProjectCandidateRequestFulfillmentMethodEnum = {
+    Pickup: 'PICKUP',
+    Delivery: 'DELIVERY',
+} as const;
+export type ProjectCandidateRequestFulfillmentMethodEnum = typeof ProjectCandidateRequestFulfillmentMethodEnum[keyof typeof ProjectCandidateRequestFulfillmentMethodEnum];
+
+/**
+ * @export
+ */
+export const ProjectCandidateRequestPaymentMethodEnum = {
+    Online: 'ONLINE',
+    CashOnDelivery: 'CASH_ON_DELIVERY',
+    InStore: 'IN_STORE',
+} as const;
+export type ProjectCandidateRequestPaymentMethodEnum = typeof ProjectCandidateRequestPaymentMethodEnum[keyof typeof ProjectCandidateRequestPaymentMethodEnum];
+
 
 /**
  * Check if a given object implements the ProjectCandidateRequest interface.
@@ -73,6 +102,8 @@ export function ProjectCandidateRequestFromJSONTyped(json: any, ignoreDiscrimina
         'note': json['note'] == null ? undefined : json['note'],
         'budgetOverrideReason': json['budget_override_reason'] == null ? undefined : json['budget_override_reason'],
         'selections': json['selections'] == null ? undefined : ((json['selections'] as Array<any>).map(ProjectSpecificationSelectionFromJSON)),
+        'fulfillmentMethod': json['fulfillment_method'] == null ? undefined : json['fulfillment_method'],
+        'paymentMethod': json['payment_method'] == null ? undefined : json['payment_method'],
     };
 }
 
@@ -92,6 +123,8 @@ export function ProjectCandidateRequestToJSONTyped(value?: ProjectCandidateReque
         'note': value['note'],
         'budget_override_reason': value['budgetOverrideReason'],
         'selections': value['selections'] == null ? undefined : ((value['selections'] as Array<any>).map(ProjectSpecificationSelectionToJSON)),
+        'fulfillment_method': value['fulfillmentMethod'],
+        'payment_method': value['paymentMethod'],
     };
 }
 

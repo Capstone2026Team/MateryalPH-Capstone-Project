@@ -11,15 +11,13 @@ use Illuminate\Support\Str;
 
 /**
  * FIN-03 fee-assessment lifecycle for one order and fee-policy version. The accepted snapshot creates one
- * ESTIMATED assessment of money(E × 0.02); only a COMPLETED order earns it, exactly once, through the
+ * ESTIMATED assessment of money(E × the saved policy rate); only a COMPLETED order earns it, exactly once, through the
  * completion event contract; an order that closes without a completed sale cancels it. Payment, Vendor
  * confirmation and dispatch never earn a fee. Delivery, processing fees, VAT and NRPC deposits are never in
  * the basis because the basis is the frozen materials-exclusive value E.
  */
 final class FeeAssessmentService
 {
-    public const BASIS_POINTS = 200;
-
     public function __construct(private readonly OutboxPublisher $outbox) {}
 
     /** Records the ESTIMATED assessment for a newly frozen financial snapshot. Returns the assessment id. */
@@ -36,13 +34,18 @@ final class FeeAssessmentService
         if ($existing !== null) {
             return (string) $existing;
         }
-        $target = Money::commission($exclusiveCentavos, self::BASIS_POINTS);
+        $policy = CommissionPolicyService::policies()->where('id', $feePolicyVersionId)->first();
+        if ($policy === null) {
+            throw new AuthenticationException('COMMISSION_POLICY_UNAVAILABLE', 'The saved commission policy is unavailable.', 409);
+        }
+        $basisPoints = (int) $policy->commission_basis_points;
+        $target = Money::commission($exclusiveCentavos, $basisPoints);
         $id = (string) Str::uuid7();
         DB::table('fee_assessments')->insert([
             'id' => $id, 'order_id' => $order->id, 'vendor_organization_id' => $order->vendor_organization_id, 'financial_snapshot_id' => $financialSnapshotId,
-            'fee_policy_version_id' => $feePolicyVersionId, 'commission_basis_centavos' => $exclusiveCentavos, 'commission_basis_points' => self::BASIS_POINTS,
+            'fee_policy_version_id' => $feePolicyVersionId, 'commission_basis_centavos' => $exclusiveCentavos, 'commission_basis_points' => $basisPoints,
             'earned_centavos' => 0, 'earned_target_centavos' => $target, 'state' => 'ESTIMATED',
-            'calculation_hash' => hash('sha256', $order->id.'|'.$feePolicyVersionId.'|'.$financialSnapshotId.'|'.$exclusiveCentavos.'|'.self::BASIS_POINTS),
+            'calculation_hash' => hash('sha256', $order->id.'|'.$feePolicyVersionId.'|'.$financialSnapshotId.'|'.$exclusiveCentavos.'|'.$basisPoints),
             'created_at' => now(), 'updated_at' => now(),
         ]);
         $this->event($id, (string) $order->id, 'ESTIMATED', (string) $order->order_state, $target, $correlationId);

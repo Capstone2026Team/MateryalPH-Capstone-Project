@@ -49,6 +49,13 @@ void main() {
       // TODO
     });
 
+    // finance.view. Current and next commercial commission policies and paginated append-only history. can_manage additionally requires platform_settings.manage.
+    //
+    //Future<CommissionPoliciesEnvelope> listCommissionPolicies({ int page }) async
+    test('test listCommissionPolicies', () async {
+      // TODO
+    });
+
     // finance.view. Monthly commission statements shared with Vendor Finance. Inclusive Manila dates filter issued_on. overdue=true returns only issued/partially paid positive balances past the due date; drafts, settled and voided statements are excluded. Approved credits reduce debt on the original statement and any paid excess becomes a separate original-payment refund payable.
     //
     //Future<FeeStatementListEnvelope> listFeeStatements({ bool overdue, int page, String state, Date from, Date to }) async
@@ -74,6 +81,13 @@ void main() {
     //
     //Future<FinanceActionResultEnvelope> proposeFeeCredit(FeeCreditProposalRequest feeCreditProposalRequest) async
     test('test proposeFeeCredit', () async {
+      // TODO
+    });
+
+    // Requires finance.view, platform_settings.manage, recent authentication, CSRF, Idempotency-Key and expected_version. Publishes a new commercial rate with immutable, hash-verified Vendor terms and Owner notices. Existing quotations, orders, assessments and credits keep their saved rate. Statutory rates and provider mode are unchanged. No backdating or insertion before the latest scheduled policy.
+    //
+    //Future<CommissionPolicyEnvelope> publishCommissionPolicy(String idempotencyKey, CommissionPolicyPublishRequest commissionPolicyPublishRequest) async
+    test('test publishCommissionPolicy', () async {
       // TODO
     });
 

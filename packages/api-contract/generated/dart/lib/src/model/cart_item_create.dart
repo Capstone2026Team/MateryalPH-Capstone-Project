@@ -21,7 +21,8 @@ part 'cart_item_create.g.dart';
 /// * [longitude]
 /// * [originSource]
 /// * [radiusKm]
-/// * [workPackageLineId] - Work Package line this purchase covers; same material and unit only (422 MISSING_LINE_TAG_INVALID).
+/// * [workPackageLineId] - Work Package line this purchase covers; same material and unit only (422 MISSING_LINE_TAG_INVALID), at most the line quantity (422 TAGGED_QUANTITY_EXCEEDS_REQUIREMENT). The server scopes it from the package site at the fixed 50 km Project-Based radius, ignoring any radius_km sent. It never stacks: adding the same product again keeps the larger quantity.
+/// * [allowPartialStock] - With work_package_line_id: add what the store can confirm when it holds less than quantity, instead of failing with QUANTITY_UNAVAILABLE.
 @BuiltValue()
 abstract class CartItemCreate implements Built<CartItemCreate, CartItemCreateBuilder> {
   @BuiltValueField(wireName: r'listing_variant_id')
@@ -54,9 +55,13 @@ abstract class CartItemCreate implements Built<CartItemCreate, CartItemCreateBui
   @BuiltValueField(wireName: r'radius_km')
   int? get radiusKm;
 
-  /// Work Package line this purchase covers; same material and unit only (422 MISSING_LINE_TAG_INVALID).
+  /// Work Package line this purchase covers; same material and unit only (422 MISSING_LINE_TAG_INVALID), at most the line quantity (422 TAGGED_QUANTITY_EXCEEDS_REQUIREMENT). The server scopes it from the package site at the fixed 50 km Project-Based radius, ignoring any radius_km sent. It never stacks: adding the same product again keeps the larger quantity.
   @BuiltValueField(wireName: r'work_package_line_id')
   String? get workPackageLineId;
+
+  /// With work_package_line_id: add what the store can confirm when it holds less than quantity, instead of failing with QUANTITY_UNAVAILABLE.
+  @BuiltValueField(wireName: r'allow_partial_stock')
+  bool? get allowPartialStock;
 
   CartItemCreate._();
 
@@ -143,6 +148,13 @@ class _$CartItemCreateSerializer implements PrimitiveSerializer<CartItemCreate> 
       yield serializers.serialize(
         object.workPackageLineId,
         specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.allowPartialStock != null) {
+      yield r'allow_partial_stock';
+      yield serializers.serialize(
+        object.allowPartialStock,
+        specifiedType: const FullType(bool),
       );
     }
   }
@@ -244,6 +256,14 @@ class _$CartItemCreateSerializer implements PrimitiveSerializer<CartItemCreate> 
           ) as String?;
           if (valueDes == null) continue;
           result.workPackageLineId = valueDes;
+          break;
+        case r'allow_partial_stock':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.allowPartialStock = valueDes;
           break;
         default:
           unhandled.add(key);

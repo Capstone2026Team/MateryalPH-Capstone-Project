@@ -7,6 +7,7 @@
 Name | Type
 ------------ | -------------
 `selections` | [Array&lt;ProjectSpecificationSelection&gt;](ProjectSpecificationSelection.md)
+`fulfillmentMethod` | string
 
 ## Example
 
@@ -16,6 +17,7 @@ import type { ProjectSelectionPreview } from '@materyalph/api-client-ts'
 // TODO: Update the object below with actual values
 const example = {
   "selections": null,
+  "fulfillmentMethod": null,
 } satisfies ProjectSelectionPreview
 
 console.log(example)

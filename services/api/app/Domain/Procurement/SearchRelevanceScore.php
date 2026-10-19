@@ -9,7 +9,7 @@ use App\Domain\Inventory\StockAvailability;
 /**
  * Item-Based Search Relevance Score, a normalized weighted sum (never a product of scores):
  *
- *   SRS = Σ component × weight / 100, each component normalized and clamped to 0–100.
+ *   SRS = Σ component × weight / Σ weights, each component normalized and clamped to 0–100.
  *
  * Components (System Workflow, Ranking Algorithm):
  *   Distance       max(0, (1 − distance / selected radius) × 100), geodesic straight line
@@ -23,7 +23,7 @@ use App\Domain\Inventory\StockAvailability;
  */
 final class SearchRelevanceScore
 {
-    public const ALGORITHM_VERSION = 'srs.normalized-weighted-sum.v1';
+    public const ALGORITHM_VERSION = 'srs.normalized-weighted-sum.v2';
 
     public const NEUTRAL_PRICE = '50';
 
@@ -93,7 +93,7 @@ final class SearchRelevanceScore
             $sum = bcadd($sum, bcmul($components[$component], (string) $weights->weight($component), self::SCALE), self::SCALE);
         }
 
-        return self::round(bcdiv($sum, '100', self::SCALE), 4);
+        return self::round(bcdiv($sum, (string) array_sum($weights->values), self::SCALE), 4);
     }
 
     /**
@@ -101,16 +101,17 @@ final class SearchRelevanceScore
      *
      * @param  array<string, string>  $components
      * @param  array<string, string>  $basis
-     * @return list<array{key: string, label: string, weight_percent: int, score: string, weighted: string, basis: string}>
+     * @return list<array{key: string, label: string, weight_percent: float, score: string, weighted: string, basis: string}>
      */
     public static function explain(array $components, RankingWeights $weights, array $basis): array
     {
         $rows = [];
+        $total = (string) array_sum($weights->values);
         foreach (RankingWeights::COMPONENTS as $component) {
             $rows[] = [
-                'key' => $component, 'label' => self::LABELS[$component], 'weight_percent' => $weights->weight($component),
+                'key' => $component, 'label' => self::LABELS[$component], 'weight_percent' => (float) bcdiv((string) ($weights->weight($component) * 100), $total, 4),
                 'score' => self::round($components[$component], 2),
-                'weighted' => self::round(bcdiv(bcmul($components[$component], (string) $weights->weight($component), self::SCALE), '100', self::SCALE), 2),
+                'weighted' => self::round(bcdiv(bcmul($components[$component], (string) $weights->weight($component), self::SCALE), $total, self::SCALE), 2),
                 'basis' => $basis[$component] ?? '',
             ];
         }

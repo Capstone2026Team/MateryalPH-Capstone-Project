@@ -78,12 +78,12 @@ final class WorkPackageSpecificationTest extends TestCase
         $p = $this->postJson('/api/v1/buyers/projects', ['name' => 'House', 'budget_centavos' => 10000000, 'starts_on' => now()->toDateString(),
             'ends_on' => now()->addMonth()->toDateString(), 'location_id' => $site], $this->key())->assertCreated()->json('data');
         $m = DB::table('materials')->where('code', 'CONCRETE_HOLLOW_BLOCK')->first();
-        $w = $this->postJson('/api/v1/buyers/projects/'.$p['id'].'/work-packages', ['name' => 'Masonry', 'budget_centavos' => 1000000, 'site_id' => $p['sites'][0]['id'], 'radius_km' => 5,
+        $w = $this->postJson('/api/v1/buyers/projects/'.$p['id'].'/work-packages', ['name' => 'Masonry', 'budget_centavos' => 1000000, 'site_id' => $p['sites'][0]['id'], 'radius_km' => 50,
             'fulfillment_method' => 'PICKUP', 'payment_method' => 'ONLINE', 'lines' => [
                 ['material_id' => $m->id, 'unit_id' => $m->canonical_unit_id, 'quantity' => $quantity, 'name' => 'Hollow blocks', 'specifications' => $specifications],
             ]], $this->key())->assertCreated()->json('data');
         $w = $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/activate', ['lock_version' => $w['lock_version']], $this->key())->assertOk()->json('data');
-        $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/estimates', ['lock_version' => $w['lock_version'], 'radius_km' => 5])->assertOk();
+        $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/estimates', ['lock_version' => $w['lock_version'], 'radius_km' => 50])->assertOk();
 
         return $w;
     }
@@ -139,7 +139,7 @@ final class WorkPackageSpecificationTest extends TestCase
         $p = $this->getJson('/api/v1/buyers/projects/'.$p['id'])->assertOk()->json('data');
         $m = DB::table('materials')->where('code', 'CONCRETE_HOLLOW_BLOCK')->first();
         foreach ([['color_code' => 'red'], ['thickness_mm' => '150 mm'], ['thickness_mm' => '0']] as $specifications) {
-            $this->postJson('/api/v1/buyers/projects/'.$p['id'].'/work-packages', ['name' => 'Walls', 'budget_centavos' => 1000, 'site_id' => $p['sites'][0]['id'], 'radius_km' => 5,
+            $this->postJson('/api/v1/buyers/projects/'.$p['id'].'/work-packages', ['name' => 'Walls', 'budget_centavos' => 1000, 'site_id' => $p['sites'][0]['id'], 'radius_km' => 50,
                 'fulfillment_method' => 'PICKUP', 'payment_method' => 'ONLINE', 'lines' => [['material_id' => $m->id, 'unit_id' => $m->canonical_unit_id, 'quantity' => '5', 'name' => 'Blocks', 'specifications' => $specifications]]], $this->key())
                 ->assertUnprocessable()->assertJsonPath('errors.0.code', 'INVALID_SPECIFICATION');
         }

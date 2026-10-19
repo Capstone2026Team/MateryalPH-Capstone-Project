@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
+import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
 import { parse } from 'yaml'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const spec = parse(readFileSync(resolve(root, 'openapi.yaml'), 'utf8'))
+assert.deepEqual(spec.components.schemas.VendorOnboardingStep.properties.progress_status.enum, ['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'NOT_APPLICABLE'])
+assert.match(spec.components.schemas.VendorOnboardingStep.properties.progress_status.description, /never Admin approval/)
 let routes
 if (process.argv[2]) routes = JSON.parse(readFileSync(process.argv[2], 'utf8').replace(/^\uFEFF/, ''))
 else {
@@ -142,8 +145,14 @@ assert.deepEqual(spec.components.schemas.StoreActivationBlocker.required, ['key'
 
 assert.equal(spec.paths['/vendors/onboarding/address/areas'].get.operationId, 'searchVendorAddressAreas')
 assert.equal(spec.paths['/vendors/onboarding/address/pin'].post.operationId, 'resolveVendorAddressPin')
-assert.deepEqual(spec.components.schemas.VendorAddressSelection.required, ['province_code', 'city_code', 'psgc_code'])
+assert.deepEqual(spec.components.schemas.VendorAddressSelection.anyOf.map(option => option.required), [['province', 'city_municipality', 'barangay'], ['province_code', 'city_code', 'psgc_code']])
+assert.match(draft.address.description, /PSGC codes are optional/)
 assert.ok(spec.components.schemas.VendorAddressSelection.properties.pin_token)
+const { VendorAddressSelectionToJSON, VendorAddressSelectionFromJSON } = createRequire(import.meta.url)('../generated/typescript/dist/models/VendorAddressSelection.js')
+const namedAddress = { province: 'Metro Manila', cityMunicipality: 'Quezon City', barangay: 'Alicia', street: '1 Test Street', postalCode: '1100', pinToken: 'fixture-pin' }
+const namedWire = JSON.parse(JSON.stringify(VendorAddressSelectionToJSON(namedAddress)))
+assert.deepEqual(namedWire, { province: 'Metro Manila', city_municipality: 'Quezon City', barangay: 'Alicia', pin_token: 'fixture-pin', street: '1 Test Street', postal_code: '1100' })
+assert.equal(VendorAddressSelectionFromJSON(namedWire).cityMunicipality, namedAddress.cityMunicipality)
 
 assert.equal(draft.classification.properties.custom_labels.items.maxLength, 60)
 assert.equal(draft.classification.properties.custom_labels.type, 'array')

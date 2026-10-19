@@ -64,7 +64,7 @@ final class FinanceOperationsService
             'finance' => [
                 $item('assessed_cwt', 'Assessed CWT (simulated)', (int) $cwt->assessed, 'Posted FIN-05 withholding W. Never platform revenue and never subtracted from GMV.'),
                 $item('reported_deductions', 'Provider-reported deductions', (int) $cwt->reported, 'Imported simulated deductions reconciled against assessments; never a second deduction.'),
-                $item('earned_commission', 'Total commission earned', (int) $earned->earned, 'Original 2% commission earned at completion in this period, before approved credits. Materials after discounts, excluding materials VAT.'),
+                $item('earned_commission', 'Total commission earned', (int) $earned->earned, 'Commission at each order’s saved rate, earned at completion in this period before approved credits. Materials after discounts, excluding materials VAT.'),
                 $item('fee_credits', 'Approved commission credits', (int) $earned->credited, 'Commission reversals approved in this period. Reduce earnings once, whether unpaid or owed back to the Vendor.'),
                 $item('net_commission', 'Net commission earned', (int) $earned->earned - (int) $earned->credited, 'Earnings less approved credits, using the same signed commission movements as Vendor Earnings.'),
                 $item('platform_revenue', 'Commission revenue, excluding VAT', (int) $revenue, 'Posted fee revenue after approved credits. Payment collection and refund settlement never recognize revenue again.'),
@@ -89,13 +89,12 @@ final class FinanceOperationsService
 
     private function collections(): Builder
     {
-        return DB::table('fee_payment_allocations as a')->join('payments as p', 'p.id', '=', 'a.payment_id')
-            ->where('p.state', 'PAID')->where('p.purpose', 'PLATFORM_FEE_PAYMENT')->where('p.late_capture', false);
+        return CommissionService::collections();
     }
 
     private function feeRefunds(): Builder
     {
-        return DB::table('refunds')->where('target_type', 'PLATFORM_FEE')->where('state', 'REFUNDED');
+        return CommissionService::feeRefunds();
     }
 
     /** @param array<string, mixed> $filters */

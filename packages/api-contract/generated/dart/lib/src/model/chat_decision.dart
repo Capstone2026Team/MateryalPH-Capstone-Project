@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -11,6 +12,7 @@ part 'chat_decision.g.dart';
 /// ChatDecision
 ///
 /// Properties:
+/// * [paymentMethod] - Required for accept and prohibited for other actions. Explicit Buyer choice; COD requires Site Delivery, In-Store requires Self-Pickup, and the Vendor must offer the method.
 /// * [budgetOverrideReason]
 /// * [versionId]
 /// * [contentHash]
@@ -19,6 +21,11 @@ part 'chat_decision.g.dart';
 /// * [nrpcTermsVersionId]
 @BuiltValue()
 abstract class ChatDecision implements Built<ChatDecision, ChatDecisionBuilder> {
+  /// Required for accept and prohibited for other actions. Explicit Buyer choice; COD requires Site Delivery, In-Store requires Self-Pickup, and the Vendor must offer the method.
+  @BuiltValueField(wireName: r'payment_method')
+  ChatDecisionPaymentMethodEnum? get paymentMethod;
+  // enum paymentMethodEnum {  ONLINE,  CASH_ON_DELIVERY,  IN_STORE,  };
+
   @BuiltValueField(wireName: r'budget_override_reason')
   String? get budgetOverrideReason;
 
@@ -60,6 +67,13 @@ class _$ChatDecisionSerializer implements PrimitiveSerializer<ChatDecision> {
     ChatDecision object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.paymentMethod != null) {
+      yield r'payment_method';
+      yield serializers.serialize(
+        object.paymentMethod,
+        specifiedType: const FullType(ChatDecisionPaymentMethodEnum),
+      );
+    }
     if (object.budgetOverrideReason != null) {
       yield r'budget_override_reason';
       yield serializers.serialize(
@@ -123,6 +137,14 @@ class _$ChatDecisionSerializer implements PrimitiveSerializer<ChatDecision> {
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'payment_method':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ChatDecisionPaymentMethodEnum),
+          ) as ChatDecisionPaymentMethodEnum?;
+          if (valueDes == null) continue;
+          result.paymentMethod = valueDes;
+          break;
         case r'budget_override_reason':
           final valueDes = serializers.deserialize(
             value,
@@ -199,4 +221,22 @@ class _$ChatDecisionSerializer implements PrimitiveSerializer<ChatDecision> {
   }
 }
 
+
+/// Required for accept and prohibited for other actions. Explicit Buyer choice; COD requires Site Delivery, In-Store requires Self-Pickup, and the Vendor must offer the method.
+class ChatDecisionPaymentMethodEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'ONLINE')
+  static const ChatDecisionPaymentMethodEnum ONLINE = _$chatDecisionPaymentMethodEnum_ONLINE;
+  @BuiltValueEnumConst(wireName: r'CASH_ON_DELIVERY')
+  static const ChatDecisionPaymentMethodEnum CASH_ON_DELIVERY = _$chatDecisionPaymentMethodEnum_CASH_ON_DELIVERY;
+  @BuiltValueEnumConst(wireName: r'IN_STORE')
+  static const ChatDecisionPaymentMethodEnum IN_STORE = _$chatDecisionPaymentMethodEnum_IN_STORE;
+
+  static Serializer<ChatDecisionPaymentMethodEnum> get serializer => _$chatDecisionPaymentMethodEnumSerializer;
+
+  const ChatDecisionPaymentMethodEnum._(String name): super(name);
+
+  static BuiltSet<ChatDecisionPaymentMethodEnum> get values => _$chatDecisionPaymentMethodEnumValues;
+  static ChatDecisionPaymentMethodEnum valueOf(String name) => _$chatDecisionPaymentMethodEnumValueOf(name);
+}
 

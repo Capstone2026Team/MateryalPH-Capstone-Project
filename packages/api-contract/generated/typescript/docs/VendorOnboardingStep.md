@@ -9,6 +9,7 @@ Name | Type
 `id` | string
 `key` | string
 `label` | string
+`progressStatus` | string
 `level` | string
 `status` | string
 `reason` | string
@@ -26,6 +27,7 @@ const example = {
   "id": null,
   "key": null,
   "label": null,
+  "progressStatus": null,
   "level": null,
   "status": null,
   "reason": null,

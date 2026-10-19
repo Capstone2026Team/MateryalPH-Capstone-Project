@@ -43,9 +43,10 @@ export interface ChatDraftContent {
      */
     fulfillmentMethod: ChatDraftContentFulfillmentMethodEnum;
     /**
-     *
+     * Legacy editor preference, ignored. The Buyer selects payment before accepting the quotation.
+     * @deprecated
      */
-    paymentMethod: ChatDraftContentPaymentMethodEnum;
+    paymentMethod?: ChatDraftContentPaymentMethodEnum;
     /**
      *
      */
@@ -100,7 +101,6 @@ export type ChatDraftContentPaymentMethodEnum = typeof ChatDraftContentPaymentMe
 export function instanceOfChatDraftContent(value: object): value is ChatDraftContent {
     if (!('lines' in value) || value['lines'] === undefined) return false;
     if ((!('fulfillmentMethod' in (value as Record<string, any>)) && !('fulfillment_method' in (value as Record<string, any>))) || ((value as Record<string, any>)['fulfillmentMethod'] === undefined && (value as Record<string, any>)['fulfillment_method'] === undefined)) return false;
-    if ((!('paymentMethod' in (value as Record<string, any>)) && !('payment_method' in (value as Record<string, any>))) || ((value as Record<string, any>)['paymentMethod'] === undefined && (value as Record<string, any>)['payment_method'] === undefined)) return false;
     if ((!('fulfillmentDate' in (value as Record<string, any>)) && !('fulfillment_date' in (value as Record<string, any>))) || ((value as Record<string, any>)['fulfillmentDate'] === undefined && (value as Record<string, any>)['fulfillment_date'] === undefined)) return false;
     return true;
 }
@@ -117,7 +117,7 @@ export function ChatDraftContentFromJSONTyped(json: any, ignoreDiscriminator: bo
 
         'lines': ((json['lines'] as Array<any>).map(ChatDraftLineFromJSON)),
         'fulfillmentMethod': json['fulfillment_method'],
-        'paymentMethod': json['payment_method'],
+        'paymentMethod': json['payment_method'] == null ? undefined : json['payment_method'],
         'fulfillmentDate': json['fulfillment_date'],
         'deadlineHours': json['deadline_hours'] == null ? undefined : json['deadline_hours'],
         'vendorDiscountCentavos': json['vendor_discount_centavos'] == null ? undefined : json['vendor_discount_centavos'],

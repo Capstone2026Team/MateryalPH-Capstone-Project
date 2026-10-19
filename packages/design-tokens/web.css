@@ -17,6 +17,11 @@
   --mp-color-status-error: #DC2626;
   --mp-color-status-info: #2563EB;
   --mp-color-focus-ring: #2563EB;
+  --mp-color-ranking-distance: #2563EB;
+  --mp-color-ranking-price-budget: #C2410C;
+  --mp-color-ranking-vendor-performance: #7C3AED;
+  --mp-color-ranking-stock-match: #0D9488;
+  --mp-color-ranking-product-rating: #DB2777;
   --mp-color-overlay-scrim: rgba(15, 23, 42, 0.42);
   --mp-font-sans: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --mp-text-display: 2rem;
@@ -72,6 +77,11 @@
   --color-status-error: var(--mp-color-status-error);
   --color-status-info: var(--mp-color-status-info);
   --color-focus-ring: var(--mp-color-focus-ring);
+  --color-ranking-distance: var(--mp-color-ranking-distance);
+  --color-ranking-price-budget: var(--mp-color-ranking-price-budget);
+  --color-ranking-vendor-performance: var(--mp-color-ranking-vendor-performance);
+  --color-ranking-stock-match: var(--mp-color-ranking-stock-match);
+  --color-ranking-product-rating: var(--mp-color-ranking-product-rating);
   --color-overlay-scrim: var(--mp-color-overlay-scrim);
   --font-sans: var(--mp-font-sans);
   --text-display: var(--mp-text-display);

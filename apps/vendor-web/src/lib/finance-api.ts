@@ -1,6 +1,7 @@
 import {
   VendorFinanceApi,
   VendorFinanceReviewsApi,
+  type VendorCommissionMonitoring,
   type VendorFinanceReviews,
   type FeeStatementDetail,
   type ListVendorTransactionsStatusEnum,
@@ -28,6 +29,11 @@ export type FinanceRow = Record<string, unknown>
 
 export async function getFinanceOverview(): Promise<VendorFinanceOverview> {
   return (await financeApi().getVendorFinanceOverview()).data
+}
+
+export async function getCommissionMonitoring(page = 1): Promise<{ monitoring: VendorCommissionMonitoring; hasMore: boolean }> {
+  const response = await financeApi().getVendorCommissionMonitoring({ page })
+  return { monitoring: response.data, hasMore: Boolean((response.meta as { has_more?: boolean }).has_more) }
 }
 
 /** Owner-only, audited reveal of the full TIN; call it only on an explicit unmask action and never keep the result. */

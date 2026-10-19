@@ -12,17 +12,30 @@ void main() {
       // TODO
     });
 
+    // NO_SUITABLE_ALTERNATIVE: no eligible store within the radius can supply the quantity still needed (see `excluded`). COVERED: separate purchases already satisfy the line. A failed request is an error response, never one of these.
     // String status
     test('to test the property `status`', () async {
       // TODO
     });
 
-    // The Project site's saved location; pass it with radius_km when adding to the cart.
+    // The quantity still to source: the compared Vendor's gap less the separate purchases that satisfy the line (the full line quantity when no `candidate_id` is sent).
+    // String neededQuantity
+    test('to test the property `neededQuantity`', () async {
+      // TODO
+    });
+
+    // WorkPackageAlternativePageExcluded excluded
+    test('to test the property `excluded`', () async {
+      // TODO
+    });
+
+    // The Project site's saved location, for display only. The server scopes the purchase from the package's locked site point.
     // String locationId
     test('to test the property `locationId`', () async {
       // TODO
     });
 
+    // The fixed Project-Based radius.
     // int radiusKm
     test('to test the property `radiusKm`', () async {
       // TODO

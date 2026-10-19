@@ -5,6 +5,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'buyer_overlays.dart';
 import 'buyer_app_bar.dart';
 import 'procurement_components.dart';
+import 'ranking_influence_dashboard.dart';
+import 'ranking_priority_control.dart';
 import '../ranking_weights.dart';
 import '../theme.dart';
 import '../../features/map_discovery/discovery_models.dart';
@@ -48,7 +50,6 @@ class RankingPreferencesEditor extends StatefulWidget {
 class _RankingPreferencesEditorState extends State<RankingPreferencesEditor> {
   RankingPreferenceSnapshot? _saved;
   Map<String, int> _draft = {};
-  Map<String, int>? _dragBasis;
   bool _loading = true;
   bool _saving = false;
   DiscoveryFailure? _failure;
@@ -143,31 +144,47 @@ class _RankingPreferencesEditorState extends State<RankingPreferencesEditor> {
     );
   }
 
-  void _set(String key, int value) => setState(
-    () => _draft = rebalanceRankingWeights(
-      _dragBasis ?? _draft,
-      key,
-      value,
-      defaults: _saved!.defaults,
-    ),
-  );
+  void _set(String key, int value) =>
+      setState(() => _draft = updateRankingWeight(_draft, key, value));
 
   @override
   Widget build(BuildContext context) {
     final saved = _saved;
     final total = _draft.values.fold(0, (a, b) => a + b);
-    final remaining = 100 - total;
     final allZero = total == 0;
-    final valid = total == 100;
     final changed = saved != null && !mapEquals(_draft, saved.weights);
     return Scaffold(
       appBar: buyerAppBar(context, widget.title),
       bottomNavigationBar: saved == null
           ? null
-          : SafeArea(
-              top: false,
+          : _footer(saved, allZero, changed),
+      body: SafeArea(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: _body(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _footer(RankingPreferenceSnapshot saved, bool allZero, bool changed) {
+    return Material(
+      color: Theme.of(context).colorScheme.surface,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: BuyerTheme.border)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Align(
+            heightFactor: 1,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -177,26 +194,27 @@ class _RankingPreferencesEditorState extends State<RankingPreferencesEditor> {
                       child: Row(
                         children: [
                           Icon(
-                            valid
-                                ? LucideIcons.circleCheck
-                                : LucideIcons.triangleAlert,
-                            size: 18,
-                            color: valid
-                                ? BuyerTheme.success
-                                : BuyerTheme.actionPressed,
+                            allZero
+                                ? LucideIcons.triangleAlert
+                                : LucideIcons.circleCheck,
+                            size: 16,
+                            color: allZero
+                                ? BuyerTheme.actionPressed
+                                : BuyerTheme.successStrong,
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               allZero
-                                  ? 'Total 0%. At least one weight must be above zero.'
-                                  : valid
-                                  ? 'Total 100%'
-                                  : remaining > 0
-                                  ? 'Total $total% — add $remaining% to reach 100%'
-                                  : 'Total $total% — remove ${-remaining}% to reach 100%',
+                                  ? 'Enable at least one criterion by setting its weight above zero.'
+                                  : _saving
+                                  ? 'Saving preferences…'
+                                  : changed
+                                  ? 'Save to apply your changes'
+                                  : 'Preferences are up to date',
                               style: const TextStyle(
-                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
@@ -205,7 +223,7 @@ class _RankingPreferencesEditorState extends State<RankingPreferencesEditor> {
                     ),
                     const SizedBox(height: 8),
                     FilledButton(
-                      onPressed: valid && changed && !_saving
+                      onPressed: !allZero && changed && !_saving
                           ? () => _run(
                               () => widget.save(_draft, saved.version),
                               'Ranking preferences saved.',
@@ -213,17 +231,13 @@ class _RankingPreferencesEditorState extends State<RankingPreferencesEditor> {
                           : null,
                       child: const Text('Save preferences'),
                     ),
-                    TextButton(
-                      onPressed: (saved.personalized || changed) && !_saving
-                          ? _reset
-                          : null,
-                      child: const Text('Reset to Default'),
-                    ),
                   ],
                 ),
               ),
             ),
-      body: SafeArea(child: _body()),
+          ),
+        ),
+      ),
     );
   }
 
@@ -257,74 +271,68 @@ class _RankingPreferencesEditorState extends State<RankingPreferencesEditor> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
-        StatusBand(
-          tone: saved.personalized ? BandTone.warning : BandTone.info,
-          title: saved.personalized
+        if (_notice != null) ...[
+          StatusBand(tone: BandTone.danger, title: _notice!),
+          const SizedBox(height: 12),
+        ],
+        RankingInfluenceDashboard(weights: _draft, factors: widget.factors),
+        const SizedBox(height: 12),
+        Text(
+          saved.personalized
               ? 'Personalized ranking is active'
               : 'Using the platform default weights',
-          message: widget.description,
+          style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
         ),
-        if (_notice != null) ...[
-          const SizedBox(height: 8),
-          StatusBand(tone: BandTone.danger, title: _notice!),
-        ],
-        for (final (key, label, help) in widget.factors) ...[
-          SectionHeading(
-            label,
-            trailing: Text(
-              '${(_draft[key] ?? 0)}%',
-              style: const TextStyle(fontWeight: FontWeight.w800),
-            ),
-          ),
-          Text(help, style: const TextStyle(color: BuyerTheme.muted)),
-          Row(
-            children: [
-              IconButton(
-                tooltip: 'Decrease $label',
-                onPressed: !_saving && (_draft[key] ?? 0) > 0
-                    ? () => _set(key, (_draft[key] ?? 0) - 1)
-                    : null,
-                icon: const Icon(LucideIcons.minus),
-              ),
-              Expanded(
-                child: SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    thumbShape: const RoundSliderThumbShape(
-                      enabledThumbRadius: 14,
-                    ),
-                    overlayShape: const RoundSliderOverlayShape(
-                      overlayRadius: 26,
-                    ),
-                  ),
-                  child: Slider(
-                    value: (_draft[key] ?? 0).toDouble(),
-                    max: 100,
-                    divisions: 100,
-                    label: '${(_draft[key] ?? 0)}%',
-                    semanticFormatterCallback: (value) =>
-                        '$label ${value.round()} percent',
-                    onChangeStart: (_) => _dragBasis = _draft,
-                    onChangeEnd: (_) => _dragBasis = null,
-                    onChanged: _saving
-                        ? null
-                        : (value) => _set(key, value.round()),
-                  ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: Semantics(
+                header: true,
+                child: Text(
+                  'Adjust priorities',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
-              IconButton(
-                tooltip: 'Increase $label',
-                onPressed: !_saving && (_draft[key] ?? 0) < 100
-                    ? () => _set(key, (_draft[key] ?? 0) + 1)
+            ),
+            const SizedBox(width: 8),
+            Tooltip(
+              message: 'Reset to Default',
+              child: TextButton.icon(
+                onPressed:
+                    (saved.personalized || !mapEquals(_draft, saved.weights)) &&
+                        !_saving
+                    ? _reset
                     : null,
-                icon: const Icon(LucideIcons.plus),
+                icon: const Icon(LucideIcons.rotateCcw, size: 16),
+                label: const Text('Reset'),
+                style: TextButton.styleFrom(foregroundColor: BuyerTheme.muted),
               ),
-            ],
+            ),
+          ],
+        ),
+        const Text(
+          'Weights do not need to total 100%. Set a factor to 0 to turn it off.',
+          style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
+        ),
+        const SizedBox(height: 12),
+        for (final (key, label, help) in widget.factors) ...[
+          RankingPriorityControl(
+            key: ValueKey('ranking-priority-$key'),
+            factorKey: key,
+            label: label,
+            description: help,
+            value: _draft[key] ?? 0,
+            onChanged: _saving ? null : (value) => _set(key, value),
           ),
-          Text(
-            'Platform default ${saved.defaults[key]}%',
-            style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
-          ),
+          const SizedBox(height: 12),
         ],
+        Text(
+          widget.description,
+          style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
+        ),
       ],
     );
   }

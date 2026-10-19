@@ -3,7 +3,8 @@ import { parsePesoInput, pesoInputFromCentavos } from '../../../../packages/web-
 
 /** Keep unfinished input in the editor; omit empty optional strings only when saving. */
 export function quotationDraftForSave(draft: ChatDraftContent): ChatDraftContent {
-  const { vendorDiscountCentavos, ...rest } = draft
+  const { vendorDiscountCentavos, paymentMethod, ...rest } = draft
+  void paymentMethod
   const points = draft.discount ? parsePesoInput(draft.discount.percent.trim() || '0') : null
   return {
     ...rest,

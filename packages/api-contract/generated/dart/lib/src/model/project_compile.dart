@@ -13,15 +13,16 @@ part 'project_compile.g.dart';
 ///
 /// Properties:
 /// * [lockVersion]
-/// * [radiusKm]
+/// * [radiusKm] - Optional. The scan always uses the fixed 50 km Project-Based radius around the locked Project site.
 @BuiltValue()
 abstract class ProjectCompile implements Built<ProjectCompile, ProjectCompileBuilder> {
   @BuiltValueField(wireName: r'lock_version')
   int get lockVersion;
 
+  /// Optional. The scan always uses the fixed 50 km Project-Based radius around the locked Project site.
   @BuiltValueField(wireName: r'radius_km')
-  ProjectCompileRadiusKmEnum get radiusKm;
-  // enum radiusKmEnum {  5,  10,  20,  30,  40,  50,  };
+  ProjectCompileRadiusKmEnum? get radiusKm;
+  // enum radiusKmEnum {  50,  };
 
   ProjectCompile._();
 
@@ -51,11 +52,13 @@ class _$ProjectCompileSerializer implements PrimitiveSerializer<ProjectCompile> 
       object.lockVersion,
       specifiedType: const FullType(int),
     );
-    yield r'radius_km';
-    yield serializers.serialize(
-      object.radiusKm,
-      specifiedType: const FullType(ProjectCompileRadiusKmEnum),
-    );
+    if (object.radiusKm != null) {
+      yield r'radius_km';
+      yield serializers.serialize(
+        object.radiusKm,
+        specifiedType: const FullType(ProjectCompileRadiusKmEnum),
+      );
+    }
   }
 
   @override
@@ -89,8 +92,9 @@ class _$ProjectCompileSerializer implements PrimitiveSerializer<ProjectCompile> 
         case r'radius_km':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(ProjectCompileRadiusKmEnum),
-          ) as ProjectCompileRadiusKmEnum;
+            specifiedType: const FullType.nullable(ProjectCompileRadiusKmEnum),
+          ) as ProjectCompileRadiusKmEnum?;
+          if (valueDes == null) continue;
           result.radiusKm = valueDes;
           break;
         default:
@@ -123,18 +127,9 @@ class _$ProjectCompileSerializer implements PrimitiveSerializer<ProjectCompile> 
 }
 
 
+/// Optional. The scan always uses the fixed 50 km Project-Based radius around the locked Project site.
 class ProjectCompileRadiusKmEnum extends EnumClass {
 
-  @BuiltValueEnumConst(wireNumber: 5)
-  static const ProjectCompileRadiusKmEnum number5 = _$projectCompileRadiusKmEnum_number5;
-  @BuiltValueEnumConst(wireNumber: 10)
-  static const ProjectCompileRadiusKmEnum number10 = _$projectCompileRadiusKmEnum_number10;
-  @BuiltValueEnumConst(wireNumber: 20)
-  static const ProjectCompileRadiusKmEnum number20 = _$projectCompileRadiusKmEnum_number20;
-  @BuiltValueEnumConst(wireNumber: 30)
-  static const ProjectCompileRadiusKmEnum number30 = _$projectCompileRadiusKmEnum_number30;
-  @BuiltValueEnumConst(wireNumber: 40)
-  static const ProjectCompileRadiusKmEnum number40 = _$projectCompileRadiusKmEnum_number40;
   @BuiltValueEnumConst(wireNumber: 50)
   static const ProjectCompileRadiusKmEnum number50 = _$projectCompileRadiusKmEnum_number50;
 

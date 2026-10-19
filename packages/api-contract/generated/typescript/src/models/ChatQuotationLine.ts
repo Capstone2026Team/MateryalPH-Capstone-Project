@@ -36,6 +36,18 @@ export interface ChatQuotationLine {
      */
     description: string;
     /**
+     * Brand captured in the immutable published quotation, not the current listing.
+     */
+    brand?: string;
+    /**
+     * Product variant label captured when the quotation was published.
+     */
+    variantLabel?: string;
+    /**
+     * Technical details captured for this quotation line. Older versions may omit these details.
+     */
+    specifications?: { [key: string]: string; };
+    /**
      *
      */
     unitCode: string;
@@ -82,6 +94,9 @@ export function ChatQuotationLineFromJSONTyped(json: any, ignoreDiscriminator: b
         'quantity': json['quantity'],
         'unitPriceCentavos': json['unit_price_centavos'],
         'description': json['description'],
+        'brand': json['brand'] == null ? undefined : json['brand'],
+        'variantLabel': json['variant_label'] == null ? undefined : json['variant_label'],
+        'specifications': json['specifications'] == null ? undefined : json['specifications'],
         'unitCode': json['unit_code'],
         'taxCategory': json['tax_category'],
         'sourcePriceVersionId': json['source_price_version_id'],
@@ -104,6 +119,9 @@ export function ChatQuotationLineToJSONTyped(value?: ChatQuotationLine | null, i
         'quantity': value['quantity'],
         'unit_price_centavos': value['unitPriceCentavos'],
         'description': value['description'],
+        'brand': value['brand'],
+        'variant_label': value['variantLabel'],
+        'specifications': value['specifications'],
         'unit_code': value['unitCode'],
         'tax_category': value['taxCategory'],
         'source_price_version_id': value['sourcePriceVersionId'],

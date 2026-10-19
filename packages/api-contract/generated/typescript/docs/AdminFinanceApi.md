@@ -10,10 +10,12 @@ All URIs are relative to */api/v1*
 | [**getWithholdingAccumulator**](AdminFinanceApi.md#getwithholdingaccumulator) | **GET** /admin/finance/withholding-accumulators/{accumulatorId} |  |
 | [**listAdminPayments**](AdminFinanceApi.md#listadminpayments) | **GET** /admin/finance/payments |  |
 | [**listChannelFees**](AdminFinanceApi.md#listchannelfees) | **GET** /admin/finance/channel-fees |  |
+| [**listCommissionPolicies**](AdminFinanceApi.md#listcommissionpolicies) | **GET** /admin/finance/commission-policies |  |
 | [**listFeeStatements**](AdminFinanceApi.md#listfeestatements) | **GET** /admin/finance/statements |  |
 | [**listFinanceReviewItems**](AdminFinanceApi.md#listfinancereviewitems) | **GET** /admin/finance/review-items |  |
 | [**listWithholdingAccumulators**](AdminFinanceApi.md#listwithholdingaccumulators) | **GET** /admin/finance/withholding-accumulators |  |
 | [**proposeFeeCredit**](AdminFinanceApi.md#proposefeecredit) | **POST** /admin/finance/fee-credits |  |
+| [**publishCommissionPolicy**](AdminFinanceApi.md#publishcommissionpolicy) | **POST** /admin/finance/commission-policies |  |
 | [**resolveFinanceReviewItem**](AdminFinanceApi.md#resolvefinancereviewitem) | **POST** /admin/finance/review-items/{itemId}/resolve |  |
 | [**resolveWithholdingOverlap**](AdminFinanceApi.md#resolvewithholdingoverlap) | **POST** /admin/finance/withholding-accumulators/{accumulatorId}/overlap |  |
 | [**runPaymentReconciliation**](AdminFinanceApi.md#runpaymentreconciliation) | **POST** /admin/finance/reconciliation/run |  |
@@ -482,6 +484,82 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## listCommissionPolicies
+
+> CommissionPoliciesEnvelope listCommissionPolicies(page)
+
+
+
+finance.view. Current and next commercial commission policies and paginated append-only history. can_manage additionally requires platform_settings.manage.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  AdminFinanceApi,
+} from '@materyalph/api-client-ts';
+import type { ListCommissionPoliciesRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new AdminFinanceApi(config);
+
+  const body = {
+    // number (optional)
+    page: 56,
+  } satisfies ListCommissionPoliciesRequest;
+
+  try {
+    const data = await api.listCommissionPolicies(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **page** | `number` |  | [Optional] [Defaults to `1`] |
+
+### Return type
+
+[**CommissionPoliciesEnvelope**](CommissionPoliciesEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Versioned commercial rates. All effective timestamps are UTC instants displayed in Asia/Manila. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## listFeeStatements
 
 > FeeStatementListEnvelope listFeeStatements(overdue, page, state, from, to)
@@ -814,6 +892,87 @@ example().catch(console.error);
 | **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## publishCommissionPolicy
+
+> CommissionPolicyEnvelope publishCommissionPolicy(idempotencyKey, commissionPolicyPublishRequest)
+
+
+
+Requires finance.view, platform_settings.manage, recent authentication, CSRF, Idempotency-Key and expected_version. Publishes a new commercial rate with immutable, hash-verified Vendor terms and Owner notices. Existing quotations, orders, assessments and credits keep their saved rate. Statutory rates and provider mode are unchanged. No backdating or insertion before the latest scheduled policy.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  AdminFinanceApi,
+} from '@materyalph/api-client-ts';
+import type { PublishCommissionPolicyRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new AdminFinanceApi(config);
+
+  const body = {
+    // string
+    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // CommissionPolicyPublishRequest
+    commissionPolicyPublishRequest: ...,
+  } satisfies PublishCommissionPolicyRequest;
+
+  try {
+    const data = await api.publishCommissionPolicy(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
+| **commissionPolicyPublishRequest** | [CommissionPolicyPublishRequest](CommissionPolicyPublishRequest.md) |  | |
+
+### Return type
+
+[**CommissionPolicyEnvelope**](CommissionPolicyEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Published policy, or the same result for an identical retry. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **503** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 

@@ -11,6 +11,7 @@ use App\Domain\Enforcement\BuyerCommerceRestriction;
 use App\Domain\Finance\Money;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Orders\OrderEligibility;
+use App\Domain\Payments\PaymentMethodPolicy;
 use App\Domain\Settings\PlatformSettings;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -207,16 +208,25 @@ final class QuotationService
                 $this->state($q, 'ACCEPTED');
                 if ($q->work_package_id !== null) {
                     $package = DB::table('work_packages')->where('id', $q->work_package_id)->first();
-                    DB::table('work_packages')->where('id', $q->work_package_id)->update(['selected_vendor_organization_id' => $q->vendor_organization_id, 'status' => 'AWAITING_PAYMENT', 'lock_version' => $package->lock_version + 1, 'updated_at' => now()]);
-                    $this->expireForPackage($q->work_package_id, $q->id);
-                    foreach (DB::table('quotations')->where('work_package_id', $q->work_package_id)->where('id', '<>', $q->id)->whereIn('state', [...self::OPEN, 'COUNTERED'])->orderBy('id')->lockForUpdate()->get() as $other) {
-                        $this->release($other, 'WORK_PACKAGE_ASSIGNED');
-                        $this->state($other, 'EXPIRED');
-                        $this->systemEvent($other, 'WORK_PACKAGE_ASSIGNED');
+                    $orderState = DB::table('orders')->where('id', $order)->value('order_state');
+                    $reference = json_decode((string) $c->locked_reference, true);
+                    if (isset($reference['arrangement_id'])) {
+                        DB::table('work_packages')->where('id', $q->work_package_id)->update(['selected_arrangement_id' => $reference['arrangement_id'],
+                            'selected_vendor_organization_id' => null, 'status' => $orderState === 'AWAITING_PAYMENT' ? 'AWAITING_PAYMENT' : 'IN_PROGRESS',
+                            'lock_version' => $package->lock_version + 1, 'updated_at' => now()]);
+                        $this->expireForPackage($q->work_package_id, $q->id, $reference['arrangement_id']);
+                    } else {
+                        DB::table('work_packages')->where('id', $q->work_package_id)->update(['selected_vendor_organization_id' => $q->vendor_organization_id, 'status' => $orderState === 'AWAITING_PAYMENT' ? 'AWAITING_PAYMENT' : 'IN_PROGRESS', 'lock_version' => $package->lock_version + 1, 'updated_at' => now()]);
+                        $this->expireForPackage($q->work_package_id, $q->id);
+                        foreach (DB::table('quotations')->where('work_package_id', $q->work_package_id)->where('id', '<>', $q->id)->whereIn('state', [...self::OPEN, 'COUNTERED'])->orderBy('id')->lockForUpdate()->get() as $other) {
+                            $this->release($other, 'WORK_PACKAGE_ASSIGNED');
+                            $this->state($other, 'EXPIRED');
+                            $this->systemEvent($other, 'WORK_PACKAGE_ASSIGNED');
+                        }
                     }
                 }
                 $this->release($q, 'ACCEPTED');
-                $this->event($q, $request->user(), 'ACCEPTED', ['order_id' => $order]);
+                $this->event($q, $request->user(), 'ACCEPTED', ['order_id' => $order, 'payment_method' => $input['payment_method']]);
                 $this->messages->append($c, $request->user(), 'Quotation accepted. Continue in Order Details to review payment.');
                 $this->idempotency->claim($request, 'QUOTATION_'.$action, $key, $conversationId, 200);
 
@@ -264,23 +274,38 @@ final class QuotationService
             $this->expireLocked($q);
         });
         $page = DB::table('quotation_versions as v')->join('quotations as q', 'q.id', '=', 'v.quotation_id')
+            ->leftJoin('orders as accepted_order', 'accepted_order.id', '=', 'q.accepted_order_id')
             ->where('q.conversation_id', $conversationId)->orderByDesc('v.id')
-            ->paginate(10, ['v.*', 'q.state as quotation_state', 'q.current_version_id as quotation_current_version_id', 'q.accepted_order_id']);
+            ->paginate(10, ['v.*', 'q.state as quotation_state', 'q.current_version_id as quotation_current_version_id', 'q.accepted_order_id', 'accepted_order.payment_method as selected_payment_method']);
         $buyer = $request->user()->account_type === 'BUYER';
+        $requests = DB::table('quotation_counter_offers')->whereIn('quotation_version_id', $page->pluck('id'))
+            ->where('event_type', 'COUNTERED')->orderBy('id')->get()->keyBy('quotation_version_id');
         $publish = ! $buyer && $this->access->role($request->user()) !== 'CUSTOMER_SERVICE';
+        $methods = [];
+        $payments = app(PaymentMethodPolicy::class);
+        foreach (['PICKUP', 'DELIVERY'] as $fulfillment) {
+            $methods[$fulfillment] = array_column(array_filter($payments->options((string) $c->vendor_organization_id, $fulfillment), static fn (array $option): bool => $option['available']), 'method');
+        }
 
         return ['quotation' => ['id' => $q->id, 'state' => $q->state, 'lock_version' => (int) $q->lock_version, 'current_version_id' => $q->current_version_id,
             'accepted_order_id' => $q->accepted_order_id, 'response_due_at' => $q->response_due_at, 'draft' => $buyer ? null : json_decode((string) ($q->draft ?? 'null'), true),
             'can_draft' => ! $buyer && $q->state !== 'ACCEPTED', 'can_publish' => $publish && $q->state !== 'ACCEPTED'],
-            'versions' => array_map(function (object $v) use ($q, $buyer, $publish): array {
+            'versions' => array_map(function (object $v) use ($q, $buyer, $publish, $methods, $requests): array {
                 $latest = $q->current_version_id === $v->id;
+                $content = json_decode($v->content, true);
+                $counter = $requests->get($v->id);
+                $requested = $counter === null ? null : json_decode($counter->payload, true);
 
-                return ['id' => $v->id, 'quotation_id' => $v->quotation_id,
-                    'accepted_order_id' => $v->id === $v->quotation_current_version_id ? $v->accepted_order_id : null,
-                    'version' => (int) $v->version, 'latest' => $latest, 'state' => $v->id === $v->quotation_current_version_id ? $v->quotation_state : 'SUPERSEDED', 'published_at' => $v->published_at,
-                    'expires_at' => $v->expires_at, 'content_hash' => $v->content_hash, 'content' => json_decode($v->content, true),
-                    'viewed' => DB::table('quotation_events')->where('quotation_version_id', $v->id)->where('event_type', 'VIEWED')->exists(),
-                    'actions' => $latest && in_array($q->state, self::OPEN, true) ? ($buyer ? ['view', 'accept', 'reject', 'counter'] : ($publish ? ['withdraw'] : [])) : []];
+                return ($counter === null ? [] : ['requested_changes' => $requested['requested_changes'],
+                    'change_requested_at' => CarbonImmutable::parse($counter->created_at)->toIso8601String(),
+                    'vendor_response_due_at' => CarbonImmutable::parse($requested['vendor_due_at'])->toIso8601String()]) + ['id' => $v->id, 'quotation_id' => $v->quotation_id,
+                        'accepted_order_id' => $v->id === $v->quotation_current_version_id ? $v->accepted_order_id : null,
+                        'version' => (int) $v->version, 'latest' => $latest, 'state' => $v->id === $v->quotation_current_version_id ? $v->quotation_state : 'SUPERSEDED', 'published_at' => $v->published_at,
+                        'expires_at' => $v->expires_at, 'content_hash' => $v->content_hash, 'content' => $content,
+                        'available_payment_methods' => $methods[$content['fulfillment_method']] ?? [],
+                        'selected_payment_method' => $v->id === $v->quotation_current_version_id ? $v->selected_payment_method : null,
+                        'viewed' => DB::table('quotation_events')->where('quotation_version_id', $v->id)->where('event_type', 'VIEWED')->exists(),
+                        'actions' => $latest && in_array($q->state, self::OPEN, true) ? ($buyer ? ['view', 'accept', 'reject', 'counter'] : ($publish ? ['withdraw'] : [])) : []];
             }, $page->items()), 'has_more' => $page->hasMorePages(), 'page' => $page->currentPage()];
     }
 
@@ -400,18 +425,35 @@ final class QuotationService
         $package = DB::table('work_packages')->where('id', $c->context_id)->lockForUpdate()->first();
         DB::table('conversations')->where('context_type', 'PROJECT_BASED')->where('context_id', $c->context_id)->orderBy('id')->lockForUpdate()->get(['id']);
         $owned = $package !== null && DB::table('projects')->where('id', $package->project_id)->where('buyer_profile_id', $c->buyer_profile_id)->exists();
+        if (! $owned) {
+            throw new AuthenticationException('WORK_PACKAGE_NOT_FOUND', 'This Work Package is unavailable.', 404);
+        }
         $reference = json_decode((string) $c->locked_reference, true);
+        if (isset($reference['arrangement_id'])) {
+            $member = DB::table('project_arrangement_vendors as m')->join('project_procurement_arrangements as a', 'a.id', '=', 'm.arrangement_id')
+                ->where('m.id', $reference['arrangement_vendor_id'])->where('m.arrangement_id', $reference['arrangement_id'])
+                ->where('m.vendor_organization_id', $c->vendor_organization_id)->where('m.conversation_id', $c->id)->where('a.work_package_version_id', $package->current_version_id)->first(['m.*']);
+            if ($member === null || ($package->selected_arrangement_id === null && $package->selected_vendor_organization_id !== null)
+                || ($package->selected_arrangement_id !== null && $package->selected_arrangement_id !== $reference['arrangement_id'])
+                || ($requireUnassigned && $member->order_id !== null && ! DB::table('quotations')->where('conversation_id', $c->id)->where('accepted_order_id', $member->order_id)->exists())) {
+                throw new AuthenticationException('PROJECT_ALLOCATION_LOCKED', 'This supplier allocation belongs to another arrangement or already has an order.', 409);
+            }
+        }
         if (isset($reference['version_id']) && ($package->current_version_id !== $reference['version_id'] || in_array($package->status, ['DRAFT', 'CANCELLED'], true))) {
             throw new AuthenticationException('WORK_PACKAGE_VERSION_CONFLICT', 'This inquiry belongs to an older or closed Work Package version. Its history remains readable.', 409);
         }
-        if (! $owned || ($requireUnassigned && $package->selected_vendor_organization_id !== null && ! DB::table('quotations')->where('conversation_id', $c->id)->whereNotNull('accepted_order_id')->exists())) {
+        if ((! isset($reference['arrangement_id']) && $package->selected_arrangement_id !== null)
+            || (! isset($reference['arrangement_id']) && $requireUnassigned && $package->selected_vendor_organization_id !== null && ! DB::table('quotations')->where('conversation_id', $c->id)->whereNotNull('accepted_order_id')->exists())) {
             throw new AuthenticationException('WORK_PACKAGE_ALREADY_ASSIGNED', 'This Work Package is unavailable or already assigned. Its quotation history remains readable.', 409);
         }
     }
 
-    public function expireForPackage(string $packageId, ?string $except = null): void
+    public function expireForPackage(string $packageId, ?string $except = null, ?string $arrangementId = null): void
     {
         $query = DB::table('quotations')->where('work_package_id', $packageId)->whereIn('state', [...self::OPEN, 'COUNTERED', 'DRAFT']);
+        if ($arrangementId !== null) {
+            $query->whereNotExists(fn ($c) => $c->selectRaw('1')->from('conversations as c')->whereColumn('c.id', 'quotations.conversation_id')->whereRaw("c.locked_reference->>'arrangement_id' = ?", [$arrangementId]));
+        }
         if ($except !== null) {
             $query->where('id', '<>', $except);
         }

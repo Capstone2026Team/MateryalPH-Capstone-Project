@@ -11,9 +11,9 @@ Name | Type
 `page` | number
 `hasMore` | boolean
 `total` | number
-`suggestedRadiusKm` | number
 `unfilteredTotal` | number
 `sort` | string
+`direction` | string
 
 ## Example
 
@@ -27,9 +27,9 @@ const example = {
   "page": null,
   "hasMore": null,
   "total": null,
-  "suggestedRadiusKm": null,
   "unfilteredTotal": null,
   "sort": null,
+  "direction": null,
 } satisfies ProjectEstimatePage
 
 console.log(example)

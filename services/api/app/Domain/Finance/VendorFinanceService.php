@@ -11,6 +11,7 @@ use App\Domain\Payments\PaymentGateway;
 use App\Domain\Payments\PaymentMethodPolicy;
 use App\Domain\Payments\PaymentPresenter;
 use App\Domain\Payments\RefundService;
+use App\Domain\Vendors\StoreActivationGate;
 use App\Support\PortalDateRange;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
@@ -243,9 +244,9 @@ final class VendorFinanceService
         $acceptance = DB::table('agreement_acceptances as a')->join('agreement_versions as v', 'v.id', '=', 'a.agreement_version_id')->join('agreement_documents as d', 'd.id', '=', 'v.agreement_document_id')
             ->where('d.code', 'VENDOR_COMMISSION_TEST')->where('a.vendor_organization_id', $organizationId)->orderByDesc('a.accepted_at')->first(['v.version', 'a.accepted_at', 'd.title']);
 
-        return ['accepted' => $acceptance !== null, 'title' => $acceptance->title ?? 'Vendor Commission Terms — TEST/DEMO', 'version' => $acceptance === null ? null : (int) $acceptance->version,
-            'accepted_at' => self::iso($acceptance?->accepted_at), 'rate_label' => '2% of completed, non-refunded materials value excluding VAT, billed monthly',
-            'note' => 'Accepted once in Store Verification. MateryalPH never asks for this consent again here and never deducts commission from Buyer payments.'];
+        return ['accepted' => app(StoreActivationGate::class)->commissionAccepted($organizationId, $ownerId), 'title' => $acceptance->title ?? 'Vendor Commission Terms — TEST/DEMO', 'version' => $acceptance === null ? null : (int) $acceptance->version,
+            'accepted_at' => self::iso($acceptance?->accepted_at), 'rate_label' => CommissionPolicyService::percent((int) (CommissionPolicyService::current()->commission_basis_points ?? 200)).' of completed, non-refunded materials value excluding VAT, billed monthly',
+            'note' => 'Review versioned Commission Terms in Store Verification. Earlier transactions retain their saved rate. Commission is never deducted from Buyer payments.'];
     }
 
     /**
@@ -517,9 +518,10 @@ final class VendorFinanceService
 
         return self::statementView($statement) + [
             'lines' => DB::table('fee_statement_lines as l')->leftJoin('fee_assessments as f', 'f.id', '=', 'l.fee_assessment_id')->leftJoin('orders as o', 'o.id', '=', 'f.order_id')
-                ->where('l.fee_statement_id', $statementId)->orderBy('l.created_at')->get(['l.line_type', 'l.amount_centavos', 'l.description', 'o.reference', 'f.commission_basis_centavos'])
+                ->where('l.fee_statement_id', $statementId)->orderBy('l.created_at')->get(['l.line_type', 'l.amount_centavos', 'l.description', 'o.reference', 'f.commission_basis_centavos', 'f.commission_basis_points'])
                 ->map(static fn (object $line): array => ['type' => (string) $line->line_type, 'amount_centavos' => (int) $line->amount_centavos, 'description' => (string) $line->description,
-                    'order_reference' => $line->reference, 'basis_centavos' => $line->commission_basis_centavos === null ? null : (int) $line->commission_basis_centavos])->all(),
+                    'order_reference' => $line->reference, 'basis_centavos' => $line->commission_basis_centavos === null ? null : (int) $line->commission_basis_centavos,
+                    'commission_basis_points' => $line->commission_basis_points === null ? null : (int) $line->commission_basis_points])->all(),
             'payments' => DB::table('payments')->where('fee_statement_id', $statementId)->orderByDesc('created_at')->get()->map(fn (object $payment): array => $this->presenter->attempt($payment, true))->all(),
             'channels' => in_array($statement->state, ['ISSUED', 'PARTIALLY_PAID'], true) ? $this->channels->options(max(1, (int) $statement->outstanding_centavos), 'PLATFORM') : [],
         ];

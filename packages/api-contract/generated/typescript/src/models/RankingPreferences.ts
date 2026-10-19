@@ -52,9 +52,9 @@ export interface RankingPreferences {
      */
     version: number;
     /**
-     *
+     * Legacy field name for the sum of raw importance values; need not be 100.
      */
-    totalPercent: RankingPreferencesTotalPercentEnum;
+    totalPercent: number;
     /**
      *
      */
@@ -70,14 +70,6 @@ export const RankingPreferencesProcurementTypeEnum = {
 } as const;
 export type RankingPreferencesProcurementTypeEnum = typeof RankingPreferencesProcurementTypeEnum[keyof typeof RankingPreferencesProcurementTypeEnum];
 
-/**
- * @export
- */
-export const RankingPreferencesTotalPercentEnum = {
-    NUMBER_100: 100,
-} as const;
-export type RankingPreferencesTotalPercentEnum = typeof RankingPreferencesTotalPercentEnum[keyof typeof RankingPreferencesTotalPercentEnum];
-
 
 /**
  * Check if a given object implements the RankingPreferences interface.
@@ -92,8 +84,6 @@ export function instanceOfRankingPreferences(value: object): value is RankingPre
     if (!('personalized' in value) || value['personalized'] === undefined) return false;
     if (!('version' in value) || value['version'] === undefined) return false;
     if ((!('totalPercent' in (value as Record<string, any>)) && !('total_percent' in (value as Record<string, any>))) || ((value as Record<string, any>)['totalPercent'] === undefined && (value as Record<string, any>)['total_percent'] === undefined)) return false;
-
-    if ((value as Record<string, any>)['totalPercent'] !== 100 && (value as Record<string, any>)['total_percent'] !== 100) return false;
     if ((!('algorithmVersion' in (value as Record<string, any>)) && !('algorithm_version' in (value as Record<string, any>))) || ((value as Record<string, any>)['algorithmVersion'] === undefined && (value as Record<string, any>)['algorithm_version'] === undefined)) return false;
     return true;
 }

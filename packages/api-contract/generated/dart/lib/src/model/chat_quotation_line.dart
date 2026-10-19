@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -15,6 +16,9 @@ part 'chat_quotation_line.g.dart';
 /// * [quantity]
 /// * [unitPriceCentavos]
 /// * [description]
+/// * [brand] - Brand captured in the immutable published quotation, not the current listing.
+/// * [variantLabel] - Product variant label captured when the quotation was published.
+/// * [specifications] - Technical details captured for this quotation line. Older versions may omit these details.
 /// * [unitCode]
 /// * [taxCategory]
 /// * [sourcePriceVersionId]
@@ -32,6 +36,18 @@ abstract class ChatQuotationLine implements Built<ChatQuotationLine, ChatQuotati
 
   @BuiltValueField(wireName: r'description')
   String get description;
+
+  /// Brand captured in the immutable published quotation, not the current listing.
+  @BuiltValueField(wireName: r'brand')
+  String? get brand;
+
+  /// Product variant label captured when the quotation was published.
+  @BuiltValueField(wireName: r'variant_label')
+  String? get variantLabel;
+
+  /// Technical details captured for this quotation line. Older versions may omit these details.
+  @BuiltValueField(wireName: r'specifications')
+  BuiltMap<String, String>? get specifications;
 
   @BuiltValueField(wireName: r'unit_code')
   String get unitCode;
@@ -88,6 +104,27 @@ class _$ChatQuotationLineSerializer implements PrimitiveSerializer<ChatQuotation
       object.description,
       specifiedType: const FullType(String),
     );
+    if (object.brand != null) {
+      yield r'brand';
+      yield serializers.serialize(
+        object.brand,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.variantLabel != null) {
+      yield r'variant_label';
+      yield serializers.serialize(
+        object.variantLabel,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.specifications != null) {
+      yield r'specifications';
+      yield serializers.serialize(
+        object.specifications,
+        specifiedType: const FullType(BuiltMap, [FullType(String), FullType(String)]),
+      );
+    }
     yield r'unit_code';
     yield serializers.serialize(
       object.unitCode,
@@ -158,6 +195,30 @@ class _$ChatQuotationLineSerializer implements PrimitiveSerializer<ChatQuotation
             specifiedType: const FullType(String),
           ) as String;
           result.description = valueDes;
+          break;
+        case r'brand':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.brand = valueDes;
+          break;
+        case r'variant_label':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.variantLabel = valueDes;
+          break;
+        case r'specifications':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltMap, [FullType(String), FullType(String)]),
+          ) as BuiltMap<String, String>?;
+          if (valueDes == null) continue;
+          result.specifications.replace(valueDes);
           break;
         case r'unit_code':
           final valueDes = serializers.deserialize(

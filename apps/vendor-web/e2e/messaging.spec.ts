@@ -35,10 +35,10 @@ test('quotation history and public handler identity remain readable across scree
   const inbox = page.getByRole('complementary', { name: 'Conversation inbox' })
   if (testInfo.project.use.viewport!.width >= 768) {
     await expect(inbox).toBeVisible()
-    await expect(inbox.locator('[aria-current="true"]')).toContainText('Item inquiry')
+    await expect(inbox.locator('[aria-current="true"]')).toContainText('Inquiry')
     const search = inbox.getByRole('searchbox')
     await search.fill('Project')
-    await expect(inbox.getByRole('button', { name: /Item inquiry/ })).toHaveCount(0)
+    await expect(inbox.getByRole('button', { name: /Inquiry/ })).toHaveCount(0)
     await expect(inbox.getByRole('button', { name: /Project inquiry/ })).toBeVisible()
     await search.fill('no matching inquiry')
     await expect(inbox.getByRole('status')).toHaveText('No matching conversations on this page.')
@@ -47,7 +47,7 @@ test('quotation history and public handler identity remain readable across scree
     await expect(inbox).toBeHidden()
     await page.getByRole('button', { name: 'Back to inbox' }).click()
     await expect(inbox).toBeVisible()
-    await inbox.getByRole('button', { name: /Item inquiry/ }).click()
+    await inbox.getByRole('button', { name: /Inquiry/ }).click()
   }
   await expect(page.getByText('Hi! Do you have Portland cement available?')).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('messaging.png'), fullPage: true })

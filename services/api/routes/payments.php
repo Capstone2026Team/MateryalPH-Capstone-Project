@@ -25,6 +25,7 @@ Route::prefix('vendor')->middleware([
     'auth.transport:WEB', 'auth.cookie', VerifyAccountCsrf::class, 'auth:api', 'account.access:VENDOR',
 ])->group(function (): void {
     Route::get('/finance', [VendorFinanceController::class, 'overview']);
+    Route::get('/finance/commissions', [VendorFinanceController::class, 'commissions']);
     Route::post('/tax-profile/tin/reveal', [VendorFinanceController::class, 'revealTin']);
     Route::put('/finance/physical-payments', [VendorFinanceController::class, 'updatePhysicalPayments']);
     Route::get('/finance/transactions', [VendorFinanceController::class, 'transactions']);
@@ -41,6 +42,8 @@ Route::prefix('vendor')->middleware([
 Route::prefix('admin/finance')->middleware([
     'auth.transport:WEB', 'auth.cookie', VerifyAccountCsrf::class, 'auth:api', 'account.access:ADMIN',
 ])->group(function (): void {
+    Route::get('/commission-policies', [AdminFinanceController::class, 'commissionPolicies']);
+    Route::post('/commission-policies', [AdminFinanceController::class, 'publishCommissionPolicy']);
     Route::get('/payments', [AdminFinanceController::class, 'payments']);
     Route::get('/review-items', [AdminFinanceController::class, 'reviewItems']);
     Route::post('/review-items/{itemId}/resolve', [AdminFinanceController::class, 'resolveItem'])->whereUuid('itemId');

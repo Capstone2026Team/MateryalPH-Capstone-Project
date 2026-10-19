@@ -120,11 +120,10 @@ final class StatementService
         $local = $now->setTimezone('Asia/Manila');
         $periodStart = $local->startOfMonth()->subMonth()->startOfDay();
         $periodEnd = $periodStart->endOfMonth();
-        $policy = DB::table('fee_policy_versions')->where('environment', 'TEST')->where('code', FinancialSnapshotService::FEE_POLICY_CODE)->orderByDesc('version')->value('id');
         $vendors = DB::table('fee_assessments')->where('state', 'EARNED')->whereNull('billed_at')->where('earned_at', '<=', $periodEnd->utc())->distinct()->pluck('vendor_organization_id');
         $drafted = 0;
         foreach ($vendors as $vendorId) {
-            $drafted += DB::transaction(function () use ($vendorId, $periodStart, $periodEnd, $policy, $local): int {
+            $drafted += DB::transaction(function () use ($vendorId, $periodStart, $periodEnd, $local): int {
                 DB::table('vendor_organizations')->where('id', $vendorId)->lockForUpdate()->first();
                 if (DB::table('fee_statements')->where('vendor_organization_id', $vendorId)->where('period_start', $periodStart->toDateString())->where('period_end', $periodEnd->toDateString())->exists()) {
                     return 0;
@@ -145,11 +144,11 @@ final class StatementService
                 DB::table('fee_statements')->insert(['id' => $id, 'vendor_organization_id' => $vendorId, 'environment' => 'TEST', 'period_start' => $periodStart->toDateString(),
                     'period_end' => $periodEnd->toDateString(), 'issued_on' => $local->toDateString(), 'due_on' => $due->max($local)->toDateString(), 'charges_centavos' => $charges,
                     'credits_centavos' => 0, 'paid_centavos' => 0, 'balance_centavos' => $charges, 'outstanding_centavos' => $charges, 'state' => 'DRAFT', 'version' => 1,
-                    'statement_reference' => 'SAMPLE-STMT-'.$periodStart->format('Ym').'-'.Str::upper(Str::random(8)), 'fee_policy_version_id' => $policy, 'drafted_at' => now(),
+                    'statement_reference' => 'SAMPLE-STMT-'.$periodStart->format('Ym').'-'.Str::upper(Str::random(8)), 'fee_policy_version_id' => $billable->pluck('fee_policy_version_id')->unique()->count() === 1 ? $billable->first()->fee_policy_version_id : null, 'drafted_at' => now(),
                     'disputed_held_centavos' => $held, 'lock_version' => 1, 'created_at' => now(), 'updated_at' => now()]);
                 foreach ($billable as $row) {
                     DB::table('fee_statement_lines')->insert(['id' => (string) Str::uuid7(), 'fee_statement_id' => $id, 'fee_assessment_id' => $row->id, 'line_type' => 'EARNED_COMMISSION',
-                        'amount_centavos' => (int) $row->earned_centavos, 'description' => 'Earned 2% commission on completed order', 'created_at' => now(), 'updated_at' => now()]);
+                        'amount_centavos' => (int) $row->earned_centavos, 'description' => 'Earned '.CommissionPolicyService::percent((int) $row->commission_basis_points).' commission on completed order', 'created_at' => now(), 'updated_at' => now()]);
                     DB::table('fee_assessments')->where('id', $row->id)->update(['billed_at' => now(), 'updated_at' => now()]);
                 }
                 $creditTotal = 0;
@@ -194,7 +193,7 @@ final class StatementService
             DB::table('fee_statements')->where('id', $statementId)->update(['state' => $balance === 0 ? 'PAID' : 'ISSUED', 'approved_by_user_id' => $reviewerUserId, 'approved_at' => now(),
                 'issued_at' => now(), 'issued_on' => $issue->toDateString(), 'due_on' => $due->toDateString(), 'due_at' => $due->endOfDay()->utc(), 'lock_version' => $lockVersion + 1, 'updated_at' => now()]);
             $this->notifier->owner((string) $statement->vendor_organization_id, 'Commission statement '.$statement->statement_reference.' issued',
-                'Your monthly 2% commission statement for '.CarbonImmutable::parse((string) $statement->period_start)->format('F Y').' is issued: ₱'.WithholdingThresholdService::pesos($balance)
+                'Your monthly commission statement for '.CarbonImmutable::parse((string) $statement->period_start)->format('F Y').' is issued: ₱'.WithholdingThresholdService::pesos($balance)
                 .' due by '.$due->format('M j, Y').' (end of day, Philippine time). TEST/DEMO statement — pay it from Finance with a Xendit TEST payment. No automatic debit is made.',
                 true, 'FEE_STATEMENT', $statementId);
             $this->outbox->publish('FEE_STATEMENT_ISSUED', 'FEE_STATEMENT', $statementId, ['fee_statement_id' => $statementId]);

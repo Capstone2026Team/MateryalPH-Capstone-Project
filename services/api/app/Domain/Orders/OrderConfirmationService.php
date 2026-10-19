@@ -185,7 +185,8 @@ final class OrderConfirmationService
                 $supplied = array_map(static function (object $line) use ($quantities): array {
                     return ['quantity' => $quantities[(string) $line->id], 'unit_id' => $line->unit_id] + json_decode($line->snapshot, true);
                 }, $lines);
-                app(ProjectInquiryService::class)->acceptedMissing(DB::table('work_packages')->where('id', $order->work_package_id)->first(), $supplied);
+                app(ProjectInquiryService::class)->acceptedMissing(DB::table('work_packages')->where('id', $order->work_package_id)->first(), $supplied,
+                    ['order_id' => (string) $order->id, 'quantities' => $quantities]);
             }
             DB::table('vendor_confirmations')->insert(['id' => (string) Str::uuid7(), 'order_id' => $order->id, 'actor_user_id' => $actor->userId, 'actor_role' => $actor->role,
                 'state' => $changes === [] ? 'CONFIRMED' : 'REVISED', 'source' => 'MANUAL', 'order_snapshot_version' => (int) $snapshot->version,

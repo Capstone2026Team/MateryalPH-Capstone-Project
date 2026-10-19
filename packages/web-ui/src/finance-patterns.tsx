@@ -6,6 +6,22 @@ import { formatManilaDateTime, type DateLike } from './stock-ledger'
 
 type Tone = 'success' | 'warning' | 'error' | 'info' | 'neutral'
 
+/** One commission-policy summary for both accounting and Vendor monitoring. */
+export function CommissionRateSummary({ rateLabel, effectiveFrom, nextRateLabel, nextEffectiveFrom, actions }: {
+  rateLabel?: string | undefined; effectiveFrom?: DateLike | undefined; nextRateLabel?: string | undefined; nextEffectiveFrom?: DateLike | undefined; actions?: ReactNode
+}) {
+  return <section aria-label="Commission rate" className="flex min-w-0 flex-wrap items-center justify-between gap-4 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5">
+    <div className="flex min-w-0 items-start gap-3"><Percent size={20} className="mt-1 shrink-0 text-action-primary" aria-hidden="true" />
+      <div className="min-w-0"><p className="text-sm font-semibold text-text-strong">Current commission rate <span className="ml-2 text-xl tabular-nums">{rateLabel ?? 'Not configured'}</span></p>
+        <p className="mt-1 text-xs text-text-secondary">{effectiveFrom ? `Effective ${formatManilaDateTime(effectiveFrom)}` : 'An approved policy is required.'}</p>
+        <p className="mt-1 text-sm text-text-secondary">Completed materials after discounts, excluding materials VAT. Billed monthly.</p>
+        {nextRateLabel && <p className="mt-2 text-sm font-semibold text-text-strong">Scheduled: {nextRateLabel} · {formatManilaDateTime(nextEffectiveFrom)}</p>}
+      </div>
+    </div>
+    {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+  </section>
+}
+
 export type FinanceCalculationRow = { key: string; label: string; amountCentavos: number; deduction?: boolean }
 
 /** Display recorded calculation components; the authoritative total is supplied by the API. */

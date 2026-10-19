@@ -359,9 +359,30 @@ final class ConversationService
         if ($source->purpose !== 'SALES') {
             throw new AuthenticationException('PERMISSION_DENIED', 'Project inquiries are available from sales conversations only.', 403);
         }
-        $page = $this->salesFor($request, $source)->where('c.context_type', 'PROJECT_BASED')->orderByDesc('c.updated_at')->orderByDesc('c.id')->paginate(25);
+        $page = $this->activeProjectInquiries($request, $source)->orderByDesc('c.updated_at')->orderByDesc('c.id')->paginate(25);
 
         return ['items' => array_map(fn (object $c): array => $this->header($request, $c), $page->items()), 'page' => $page->currentPage(), 'has_more' => $page->hasMorePages()];
+    }
+
+    /** Navigation covers open quotation workflows only; history remains directly authorized and readable. */
+    private function activeProjectInquiries(Request $request, object $source): Builder
+    {
+        return $this->salesFor($request, $source)->where('c.context_type', 'PROJECT_BASED')
+            ->whereExists(fn (Builder $query) => $query->selectRaw('1')->from('work_packages as w')
+                ->join('projects as p', 'p.id', '=', 'w.project_id')
+                ->whereColumn('w.id', 'c.context_id')->whereColumn('p.buyer_profile_id', 'c.buyer_profile_id')
+                ->where('p.status', 'ACTIVE')->whereNull('w.deleted_at')
+                ->where(fn (Builder $scope) => $scope->where(fn (Builder $legacy) => $legacy->whereNull('w.selected_vendor_organization_id')->whereNull('w.selected_arrangement_id')->whereIn('w.status', ['ACTIVE', 'QUOTATION_INQUIRY']))
+                    ->orWhereExists(fn (Builder $member) => $member->selectRaw('1')->from('project_arrangement_vendors as m')->join('project_procurement_arrangements as a', 'a.id', '=', 'm.arrangement_id')
+                        ->whereColumn('m.conversation_id', 'c.id')->whereColumn('m.vendor_organization_id', 'c.vendor_organization_id')
+                        ->whereRaw("a.work_package_version_id::text = c.locked_reference->>'version_id'")
+                        ->where(fn (Builder $selected) => $selected->whereNull('w.selected_arrangement_id')->orWhereColumn('w.selected_arrangement_id', 'm.arrangement_id'))))
+                ->whereRaw("w.current_version_id::text = c.locked_reference->>'version_id'"))
+            ->whereExists(fn (Builder $query) => $query->selectRaw('1')->from('quotations as q')
+                ->whereColumn('q.conversation_id', 'c.id')->whereNull('q.accepted_order_id')
+                ->whereIn('q.state', ['DRAFT', ...QuotationService::OPEN, 'COUNTERED', 'STOCK_REVALIDATION_REQUIRED'])
+                ->where(fn (Builder $deadline) => $deadline->whereNotIn('q.state', [...QuotationService::OPEN, 'COUNTERED'])
+                    ->orWhere('q.response_due_at', '>', now())));
     }
 
     /**
@@ -381,7 +402,7 @@ final class ConversationService
         $buyerUser = User::find(DB::table('buyer_profiles')->where('id', $c->buyer_profile_id)->value('user_id'));
         $legacy = DB::table('conversations')->where('canonical_conversation_id', $c->id)->orderBy('id')->paginate(25, ['id'], 'legacy_page');
         $sales = $this->salesFor($request, $c);
-        $projects = (clone $sales)->where('c.context_type', 'PROJECT_BASED');
+        $projects = $this->activeProjectInquiries($request, $c);
         $reference = json_decode((string) $c->locked_reference, true);
 
         return ['id' => $c->id, 'purpose' => $c->purpose, 'context_type' => $c->context_type, 'order_id' => $c->order_id, 'lock_version' => (int) $c->lock_version,
@@ -399,7 +420,7 @@ final class ConversationService
             'main_conversation_id' => $c->purpose === 'SALES' ? (clone $sales)->where('c.context_type', 'ITEM_BASED')->value('c.id') : null,
             'project_inquiry_count' => $c->purpose === 'SALES' ? (clone $projects)->count() : 0,
             'project_unread_count' => $c->purpose === 'SALES' ? $this->unreadQueryCount($request, $projects) : 0,
-            'inquiry_label' => $c->context_type === 'PROJECT_BASED' ? ($reference['work_package']['name'] ?? 'Project inquiry') : 'Item inquiry',
+            'inquiry_label' => $c->context_type === 'PROJECT_BASED' ? ($reference['work_package']['name'] ?? 'Project inquiry') : 'Inquiry',
             'fulfillment_unread_count' => $canListFulfillment ? $this->fulfillmentUnreadCount($request, $c) : 0,
             'fulfillment_entry_enabled' => $c->purpose === 'FULFILLMENT',
             'order_reference' => $c->purpose === 'FULFILLMENT' ? DB::table('orders')->where('id', $c->order_id)->value('reference') : null] + $this->writableFields($c);
@@ -484,18 +505,26 @@ final class ConversationService
     public function messages(Request $request, string $id): array
     {
         $this->access->require($request->user(), $id);
-        $query = DB::table('messages')->where('conversation_id', $id);
+        $query = DB::table('messages as m')
+            ->leftJoin('user_profiles as sender_profile', 'sender_profile.user_id', '=', 'm.sender_user_id')
+            ->where('m.conversation_id', $id)
+            ->select(['m.*', 'sender_profile.full_name as current_sender_name']);
         if (is_string($request->query('before'))) {
-            $query->where('id', '<', $request->query('before'));
+            $query->where('m.id', '<', $request->query('before'));
         }
-        $rows = $query->orderByDesc('id')->limit(51)->get();
+        $rows = $query->orderByDesc('m.id')->limit(51)->get();
         $hasMore = $rows->count() > 50;
         $rows = $rows->take(50);
 
         return ['items' => $rows->reverse()->map(function (object $m) use ($request): array {
             $attachments = DB::table('message_attachments')->where('message_id', $m->id)->get(['id', 'display_name', 'media_type', 'size_bytes', 'scan_state']);
+            $sender = json_decode($m->public_sender, true);
+            // Resolve the original sender's current name without changing their recorded role or message history.
+            if ($m->kind !== 'SYSTEM' && is_string($m->current_sender_name) && trim($m->current_sender_name) !== '') {
+                $sender['display_name'] = $m->current_sender_name;
+            }
 
-            return ['id' => $m->id, 'client_message_id' => $m->client_message_id, 'body' => $m->body, 'kind' => $m->kind, 'sender' => json_decode($m->public_sender, true),
+            return ['id' => $m->id, 'client_message_id' => $m->client_message_id, 'body' => $m->body, 'kind' => $m->kind, 'sender' => $sender,
                 'product' => app(ConversationProducts::class)->stored($m),
                 'sent_at' => Carbon::parse($m->sent_at)->toIso8601String(), 'mine' => (int) $m->sender_user_id === (int) $request->user()->id, 'attachments' => $attachments->all(),
                 'read_by_recipient' => DB::table('message_read_receipts')->where('message_id', $m->id)->where('user_id', '<>', $m->sender_user_id)->exists()];

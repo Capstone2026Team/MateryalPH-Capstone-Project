@@ -20,6 +20,10 @@ import { mapValues } from '../runtime';
  */
 export interface ChatQuotationMoney {
     /**
+     * Authoritative materials subtotal before the Vendor's materials discount, when recorded.
+     */
+    materialsGrossCentavos?: number;
+    /**
      *
      */
     materialsPayableCentavos: number;
@@ -68,6 +72,7 @@ export function ChatQuotationMoneyFromJSONTyped(json: any, ignoreDiscriminator: 
     }
     return {
 
+        'materialsGrossCentavos': json['materials_gross_centavos'] == null ? undefined : json['materials_gross_centavos'],
         'materialsPayableCentavos': json['materials_payable_centavos'],
         'materialsVatCentavos': json['materials_vat_centavos'],
         'vendorDiscountCentavos': json['vendor_discount_centavos'],
@@ -88,6 +93,7 @@ export function ChatQuotationMoneyToJSONTyped(value?: ChatQuotationMoney | null,
 
     return {
 
+        'materials_gross_centavos': value['materialsGrossCentavos'],
         'materials_payable_centavos': value['materialsPayableCentavos'],
         'materials_vat_centavos': value['materialsVatCentavos'],
         'vendor_discount_centavos': value['vendorDiscountCentavos'],

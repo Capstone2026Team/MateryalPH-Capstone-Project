@@ -8,6 +8,7 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**materialsGrossCentavos** | **int** | Authoritative materials subtotal before the Vendor's materials discount, when recorded. | [optional]
 **materialsPayableCentavos** | **int** |  |
 **materialsVatCentavos** | **int** |  |
 **vendorDiscountCentavos** | **int** |  |

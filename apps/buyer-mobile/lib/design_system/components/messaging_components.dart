@@ -1,9 +1,11 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import '../theme.dart';
 import 'order_components.dart';
+import 'quotation_details.dart';
 import 'procurement_components.dart' show BuyerDeliveryRecommendation;
 
 class QuotationDeliveryTerms extends StatelessWidget {
@@ -66,6 +68,21 @@ String chatRole(String role) => switch (role) {
   _ => 'Store team',
 };
 String chatMoney(int cents) => '₱${(cents / 100).toStringAsFixed(2)}';
+
+/// Quantities arrive with the unit's full precision ("1.0000"); show them without trailing zeros.
+String chatQuantity(String value) {
+  if (!value.contains('.')) return value;
+  final trimmed = value
+      .replaceFirst(RegExp(r'0+$'), '')
+      .replaceFirst(RegExp(r'\.$'), '');
+  return trimmed.isEmpty ? '0' : trimmed;
+}
+
+/// "PARTIALLY_PAID" -> "Partially paid".
+String chatSentence(String value) {
+  final words = value.replaceAll('_', ' ').toLowerCase();
+  return words.isEmpty ? words : words[0].toUpperCase() + words.substring(1);
+}
 
 class ChatProductCard extends StatelessWidget {
   const ChatProductCard({super.key, required this.product, this.onOpen});
@@ -697,18 +714,10 @@ class QuotationVersionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'ORDER FROM CHAT',
-            style: TextStyle(
-              fontSize: 11,
-              letterSpacing: 1,
-              color: BuyerTheme.muted,
-            ),
-          ),
-          const SizedBox(height: 8),
           Wrap(
             spacing: 12,
             runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Text(
                 'Quotation v${version.version}',
@@ -729,71 +738,25 @@ class QuotationVersionCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '${version.state.replaceAll('_', ' ')} · ${version.viewed ? 'Viewed' : 'Not yet viewed'}',
+            version.state == 'VIEWED' && version.viewed
+                ? 'Viewed by Buyer'
+                : '${chatSentence(version.state)} · ${version.viewed ? 'Viewed by Buyer' : 'Not yet viewed'}',
             style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
           ),
           const Divider(height: 28),
-          for (final line in c.lines)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    line.description,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    '${line.quantity} ${line.unitCode} × ${chatMoney(line.unitPriceCentavos)}',
-                    style: const TextStyle(color: BuyerTheme.muted),
-                  ),
-                ],
-              ),
-            ),
-          const Divider(),
-          if (c.discount != null)
-            Text(
-              'Vendor discount ${c.discount!.percent}% on ${c.discount!.scope.name == 'DELIVERY' ? 'delivery fee' : 'materials'}: −${chatMoney(c.discount!.deductionCentavos)}',
-            ),
-          Text('Materials ${chatMoney(c.commercial.materialsPayableCentavos)}'),
-          Text('Included VAT ${chatMoney(c.commercial.materialsVatCentavos)}'),
-          Text('Delivery ${chatMoney(c.commercial.deliveryCentavos)}'),
+          QuotationMaterialLines(lines: c.lines),
+          QuotationPaymentBreakdown(
+            content: c,
+            selectedPaymentMethod: version.selectedPaymentMethod,
+            accepted: version.state == 'ACCEPTED',
+          ),
           QuotationDeliveryTerms(content: c),
-          const SizedBox(height: 8),
-          Text(
-            'Total before processing fee\n${chatMoney(c.commercial.commercialTotalCentavos)}',
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Processing fee pending payment channel selection.',
-            style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '${c.fulfillmentMethod == 'PICKUP' ? 'Self-Pickup' : 'Site Delivery'} · ${c.fulfillmentDate}',
-          ),
-          if (c.commercial.nrpcCentavos > 0)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                'NRPC ${chatMoney(c.commercial.nrpcCentavos)} is included in this total.',
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-          Material(
-            color: Colors.transparent,
-            child: ExpansionTile(
-              tilePadding: EdgeInsets.zero,
-              title: Text('What changed · ${c.changes.length} fields'),
-              children: [
-                for (final change in c.changes)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(change.label),
-                  ),
-              ],
-            ),
+          const Divider(height: 28),
+          QuotationChangeList(
+            notes: importantQuotationChanges(c, c.changes),
+            emptyLabel: version.version == 1
+                ? 'Matches the products, prices and schedule you requested.'
+                : 'No change to products, prices or schedule from the previous version.',
           ),
           if (version.state != 'ACCEPTED')
             DeadlineCountdown(
@@ -838,6 +801,412 @@ class QuotationVersionCard extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// A quotation the Buyer can still respond to: the latest version, not yet accepted or expired,
+/// with a decision available.
+bool quotationIsActive(api.ChatQuotationVersion version) =>
+    version.latest &&
+    version.state != 'ACCEPTED' &&
+    version.actions.any((action) => action != 'view') &&
+    DateTime.parse(version.expiresAt).isAfter(DateTime.now());
+
+String quotationStatusLabel(api.ChatQuotationVersion version) {
+  if (version.state == 'ACCEPTED') return 'Accepted';
+  if (!version.latest || version.state == 'SUPERSEDED') return 'Superseded';
+  if (quotationIsActive(version)) return 'Awaiting your response';
+  if (!DateTime.parse(version.expiresAt).isAfter(DateTime.now())) {
+    return 'Expired';
+  }
+  return chatSentence(version.state);
+}
+
+/// A shared quotation summary for the history list and conversation timeline.
+class QuotationSummaryTile extends StatelessWidget {
+  const QuotationSummaryTile({
+    super.key,
+    required this.version,
+    required this.onOpen,
+  });
+
+  final api.ChatQuotationVersion version;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = quotationIsActive(version);
+    final status = quotationStatusLabel(version);
+    final total = chatMoney(version.content.commercial.commercialTotalCentavos);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Material(
+        color: active ? BuyerTheme.brandSoft : BuyerTheme.canvas,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(
+            color: active ? BuyerTheme.action : BuyerTheme.border,
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 8,
+          ),
+          minVerticalPadding: 12,
+          leading: const Icon(LucideIcons.fileText, color: BuyerTheme.action),
+          title: Text(
+            'Requested quotation v${version.version}',
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 4),
+              Text(
+                '$status · $total',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                  color: active ? BuyerTheme.action : BuyerTheme.muted,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${chatDate(version.publishedAt)} · ${chatTime(version.publishedAt)} Manila',
+                style: const TextStyle(fontSize: 11, color: BuyerTheme.muted),
+              ),
+            ],
+          ),
+          trailing: const Icon(
+            LucideIcons.chevronRight,
+            size: 20,
+            color: BuyerTheme.muted,
+          ),
+          onTap: onOpen,
+        ),
+      ),
+    );
+  }
+}
+
+/// A quotation stays at its publication time and opens its full terms on tap.
+class QuotationThreadButton extends StatelessWidget {
+  const QuotationThreadButton({
+    super.key,
+    required this.version,
+    required this.onOpen,
+  });
+
+  final api.ChatQuotationVersion version;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) => Align(
+    alignment: Alignment.centerLeft,
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 360),
+      child: QuotationSummaryTile(version: version, onOpen: onOpen),
+    ),
+  );
+}
+
+/// One decision-relevant difference in a quotation: a product, price, schedule or fee the Vendor
+/// changed. Internal identifiers and derived figures never become notes.
+class QuotationChangeNote {
+  const QuotationChangeNote(this.title, {this.before, this.after});
+  final String title;
+  final String? before;
+  final String? after;
+}
+
+const _fulfillmentLabels = {
+  'PICKUP': 'Self-Pickup',
+  'DELIVERY': 'Site Delivery',
+  'BOTH': 'Self-Pickup or Site Delivery',
+};
+const _paymentLabels = {
+  'ONLINE': 'Online payment',
+  'CASH_ON_DELIVERY': 'Cash on Delivery',
+  'IN_STORE': 'Pay in store',
+};
+
+/// Reduces the server's field-level diff to what a Buyer decides on: products added or removed,
+/// quantity, brand, specification and unit price per product, fulfillment, date, payment method,
+/// delivery fee, discount and NRPC. Everything else (line, listing, price-version and tax-version
+/// identifiers, load dimensions, totals the card already shows) is dropped.
+List<QuotationChangeNote> importantQuotationChanges(
+  api.ChatQuotationContent content,
+  Iterable<api.ChatQuotationChange> changes,
+) {
+  final notes = <QuotationChangeNote>[];
+  final seen = <String>{};
+  final wholeLine = RegExp(r'^lines\.(\d+)$');
+  final lineField = RegExp(r'^lines\.(\d+)\.([^.]+)');
+
+  String? money(Object? value) {
+    if (value == null) return null;
+    final centavos = int.tryParse('$value');
+    return centavos == null ? '$value' : chatMoney(centavos);
+  }
+
+  void add(QuotationChangeNote note) {
+    if (seen.add('${note.title}|${note.before}|${note.after}')) notes.add(note);
+  }
+
+  for (final change in changes) {
+    final path = change.path;
+    final before = change.before?.value;
+    final after = change.after?.value;
+    final line = wholeLine.firstMatch(path);
+    if (line != null) {
+      final source = before ?? after;
+      final map = source is Map ? source : null;
+      final name =
+          '${map?['description'] ?? 'Product ${int.parse(line[1]!) + 1}'}';
+      final quantity = map == null
+          ? null
+          : '${chatQuantity('${map['quantity']}')} ${map['unit_code'] ?? ''}'
+                .trim();
+      add(
+        QuotationChangeNote(
+          before == null ? 'Added · $name' : 'Removed · $name',
+          after: quantity,
+        ),
+      );
+      continue;
+    }
+    final field = lineField.firstMatch(path);
+    if (field != null) {
+      final index = int.parse(field[1]!);
+      final known = index < content.lines.length ? content.lines[index] : null;
+      final name = known?.description ?? 'Product ${index + 1}';
+      final unit = known?.unitCode ?? '';
+      String quantity(Object? value) =>
+          '${chatQuantity('$value')} $unit'.trim();
+      switch (field[2]) {
+        case 'quantity':
+          add(
+            QuotationChangeNote(
+              '$name · Quantity',
+              before: before == null ? null : quantity(before),
+              after: after == null ? null : quantity(after),
+            ),
+          );
+        case 'unit_price_centavos':
+          add(
+            QuotationChangeNote(
+              '$name · Unit price',
+              before: money(before),
+              after: money(after),
+            ),
+          );
+        case 'description':
+          add(
+            QuotationChangeNote(
+              '$name · Item',
+              before: before == null ? null : '$before',
+              after: after == null ? null : '$after',
+            ),
+          );
+        case 'preferred_brand':
+          add(
+            QuotationChangeNote(
+              '$name · Brand',
+              before: before == null ? null : '$before',
+              after: after == null ? null : '$after',
+            ),
+          );
+        case 'specifications':
+          add(QuotationChangeNote('$name · Specifications updated'));
+      }
+      continue;
+    }
+    switch (path) {
+      case 'fulfillment_method':
+        add(
+          QuotationChangeNote(
+            'Fulfillment',
+            before: _fulfillmentLabels['$before'] ?? _optional(before),
+            after: _fulfillmentLabels['$after'] ?? _optional(after),
+          ),
+        );
+      case 'fulfillment_date':
+        add(
+          QuotationChangeNote(
+            'Fulfillment date',
+            before: _optional(before),
+            after: _optional(after),
+          ),
+        );
+      case 'payment_method':
+        add(
+          QuotationChangeNote(
+            'Payment method',
+            before: _paymentLabels['$before'] ?? _optional(before),
+            after: _paymentLabels['$after'] ?? _optional(after),
+          ),
+        );
+      case 'delivery':
+        add(
+          after == null
+              ? const QuotationChangeNote('Delivery removed')
+              : QuotationChangeNote(
+                  'Delivery fee',
+                  after: chatMoney(content.commercial.deliveryCentavos),
+                ),
+        );
+      case 'delivery.final_charge_centavos' || 'delivery.final_fee_centavos':
+        add(
+          QuotationChangeNote(
+            'Delivery fee',
+            before: money(before),
+            after: money(after),
+          ),
+        );
+      case 'discount':
+        add(
+          QuotationChangeNote(
+            'Vendor discount',
+            after: after is Map ? '${after['percent']}%' : null,
+          ),
+        );
+      case 'discount.percent':
+        add(
+          QuotationChangeNote(
+            'Vendor discount',
+            before: before == null ? null : '$before%',
+            after: after == null ? null : '$after%',
+          ),
+        );
+      case 'nrpc':
+        add(
+          QuotationChangeNote(
+            'NRPC',
+            after: after == null
+                ? null
+                : chatMoney(content.commercial.nrpcCentavos),
+          ),
+        );
+      case 'nrpc.amount_centavos':
+        add(
+          QuotationChangeNote(
+            'NRPC',
+            before: money(before),
+            after: money(after),
+          ),
+        );
+    }
+  }
+  return notes;
+}
+
+String? _optional(Object? value) => value == null ? null : '$value';
+
+/// The compact "What changed" list: only [QuotationChangeNote]s, long lists folded behind a toggle.
+class QuotationChangeList extends StatefulWidget {
+  const QuotationChangeList({
+    super.key,
+    required this.notes,
+    required this.emptyLabel,
+    this.collapsedCount = 5,
+  });
+  final List<QuotationChangeNote> notes;
+  final String emptyLabel;
+  final int collapsedCount;
+
+  @override
+  State<QuotationChangeList> createState() => _QuotationChangeListState();
+}
+
+class _QuotationChangeListState extends State<QuotationChangeList> {
+  bool _all = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final notes = widget.notes;
+    final folded = !_all && notes.length > widget.collapsedCount;
+    final shown = folded ? notes.take(widget.collapsedCount) : notes;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          notes.isEmpty ? 'What changed' : 'What changed · ${notes.length}',
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 8),
+        if (notes.isEmpty)
+          Text(
+            widget.emptyLabel,
+            style: const TextStyle(fontSize: 13, color: BuyerTheme.muted),
+          ),
+        for (final note in shown)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Semantics(
+              container: true,
+              label: [
+                note.title,
+                if (note.before != null && note.after != null)
+                  'changed from ${note.before} to ${note.after}'
+                else if (note.after != null)
+                  note.after!
+                else if (note.before != null)
+                  'was ${note.before}',
+              ].join(', '),
+              excludeSemantics: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    note.title,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (note.before != null || note.after != null)
+                    Text.rich(
+                      TextSpan(
+                        children: [
+                          if (note.before != null)
+                            TextSpan(
+                              text: note.before,
+                              style: const TextStyle(
+                                color: BuyerTheme.muted,
+                                decoration: TextDecoration.lineThrough,
+                              ),
+                            ),
+                          if (note.before != null && note.after != null)
+                            const TextSpan(
+                              text: '  →  ',
+                              style: TextStyle(color: BuyerTheme.muted),
+                            ),
+                          if (note.after != null)
+                            TextSpan(
+                              text: note.after,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                        ],
+                      ),
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        if (notes.length > widget.collapsedCount)
+          TextButton(
+            onPressed: () => setState(() => _all = !_all),
+            child: Text(
+              _all ? 'Show fewer' : 'Show all ${notes.length} changes',
+            ),
+          ),
+      ],
     );
   }
 }

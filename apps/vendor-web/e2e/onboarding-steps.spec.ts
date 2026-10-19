@@ -121,7 +121,7 @@ test('verification steps reflow and keep only the selected requirement area visi
   await page.getByRole('button', { name: 'Next', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Registered Business Address', exact: true })).toBeFocused()
   await expect(page.getByRole('textbox', { name: 'Company registered name' })).toHaveCount(0)
-  await expect(page.getByRole('textbox', { name: 'Detailed Address', exact: true })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Street address', exact: true })).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('verification-address.png'), fullPage: true })
   await page.getByRole('button', { name: 'Back', exact: true }).click()
   await expect(page.getByRole('textbox', { name: 'Company registered name' })).toHaveValue('Retained draft name')

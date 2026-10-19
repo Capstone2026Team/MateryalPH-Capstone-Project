@@ -6,6 +6,64 @@ part of 'work_package_budget_estimate.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
+const WorkPackageBudgetEstimateDeliveryStatusEnum
+    _$workPackageBudgetEstimateDeliveryStatusEnum_NOT_APPLICABLE =
+    const WorkPackageBudgetEstimateDeliveryStatusEnum._('NOT_APPLICABLE');
+const WorkPackageBudgetEstimateDeliveryStatusEnum
+    _$workPackageBudgetEstimateDeliveryStatusEnum_ESTIMATED =
+    const WorkPackageBudgetEstimateDeliveryStatusEnum._('ESTIMATED');
+const WorkPackageBudgetEstimateDeliveryStatusEnum
+    _$workPackageBudgetEstimateDeliveryStatusEnum_REVIEW_REQUIRED =
+    const WorkPackageBudgetEstimateDeliveryStatusEnum._('REVIEW_REQUIRED');
+
+WorkPackageBudgetEstimateDeliveryStatusEnum
+    _$workPackageBudgetEstimateDeliveryStatusEnumValueOf(String name) {
+  switch (name) {
+    case 'NOT_APPLICABLE':
+      return _$workPackageBudgetEstimateDeliveryStatusEnum_NOT_APPLICABLE;
+    case 'ESTIMATED':
+      return _$workPackageBudgetEstimateDeliveryStatusEnum_ESTIMATED;
+    case 'REVIEW_REQUIRED':
+      return _$workPackageBudgetEstimateDeliveryStatusEnum_REVIEW_REQUIRED;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<WorkPackageBudgetEstimateDeliveryStatusEnum>
+    _$workPackageBudgetEstimateDeliveryStatusEnumValues = BuiltSet<
+        WorkPackageBudgetEstimateDeliveryStatusEnum>(const <WorkPackageBudgetEstimateDeliveryStatusEnum>[
+  _$workPackageBudgetEstimateDeliveryStatusEnum_NOT_APPLICABLE,
+  _$workPackageBudgetEstimateDeliveryStatusEnum_ESTIMATED,
+  _$workPackageBudgetEstimateDeliveryStatusEnum_REVIEW_REQUIRED,
+]);
+
+const WorkPackageBudgetEstimateFulfillmentMethodEnum
+    _$workPackageBudgetEstimateFulfillmentMethodEnum_DELIVERY =
+    const WorkPackageBudgetEstimateFulfillmentMethodEnum._('DELIVERY');
+const WorkPackageBudgetEstimateFulfillmentMethodEnum
+    _$workPackageBudgetEstimateFulfillmentMethodEnum_PICKUP =
+    const WorkPackageBudgetEstimateFulfillmentMethodEnum._('PICKUP');
+
+WorkPackageBudgetEstimateFulfillmentMethodEnum
+    _$workPackageBudgetEstimateFulfillmentMethodEnumValueOf(String name) {
+  switch (name) {
+    case 'DELIVERY':
+      return _$workPackageBudgetEstimateFulfillmentMethodEnum_DELIVERY;
+    case 'PICKUP':
+      return _$workPackageBudgetEstimateFulfillmentMethodEnum_PICKUP;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<WorkPackageBudgetEstimateFulfillmentMethodEnum>
+    _$workPackageBudgetEstimateFulfillmentMethodEnumValues = BuiltSet<
+        WorkPackageBudgetEstimateFulfillmentMethodEnum>(const <WorkPackageBudgetEstimateFulfillmentMethodEnum>[
+  _$workPackageBudgetEstimateFulfillmentMethodEnum_DELIVERY,
+  _$workPackageBudgetEstimateFulfillmentMethodEnum_PICKUP,
+]);
+
 const WorkPackageBudgetEstimateBasisEnum
     _$workPackageBudgetEstimateBasisEnum_AVERAGE_OF_VENDOR_LOWEST_ELIGIBLE_PRICE =
     const WorkPackageBudgetEstimateBasisEnum._(
@@ -27,9 +85,83 @@ final BuiltSet<WorkPackageBudgetEstimateBasisEnum>
   _$workPackageBudgetEstimateBasisEnum_AVERAGE_OF_VENDOR_LOWEST_ELIGIBLE_PRICE,
 ]);
 
+Serializer<WorkPackageBudgetEstimateDeliveryStatusEnum>
+    _$workPackageBudgetEstimateDeliveryStatusEnumSerializer =
+    _$WorkPackageBudgetEstimateDeliveryStatusEnumSerializer();
+Serializer<WorkPackageBudgetEstimateFulfillmentMethodEnum>
+    _$workPackageBudgetEstimateFulfillmentMethodEnumSerializer =
+    _$WorkPackageBudgetEstimateFulfillmentMethodEnumSerializer();
 Serializer<WorkPackageBudgetEstimateBasisEnum>
     _$workPackageBudgetEstimateBasisEnumSerializer =
     _$WorkPackageBudgetEstimateBasisEnumSerializer();
+
+class _$WorkPackageBudgetEstimateDeliveryStatusEnumSerializer
+    implements
+        PrimitiveSerializer<WorkPackageBudgetEstimateDeliveryStatusEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'NOT_APPLICABLE': 'NOT_APPLICABLE',
+    'ESTIMATED': 'ESTIMATED',
+    'REVIEW_REQUIRED': 'REVIEW_REQUIRED',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'NOT_APPLICABLE': 'NOT_APPLICABLE',
+    'ESTIMATED': 'ESTIMATED',
+    'REVIEW_REQUIRED': 'REVIEW_REQUIRED',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    WorkPackageBudgetEstimateDeliveryStatusEnum
+  ];
+  @override
+  final String wireName = 'WorkPackageBudgetEstimateDeliveryStatusEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          WorkPackageBudgetEstimateDeliveryStatusEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  WorkPackageBudgetEstimateDeliveryStatusEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      WorkPackageBudgetEstimateDeliveryStatusEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
+class _$WorkPackageBudgetEstimateFulfillmentMethodEnumSerializer
+    implements
+        PrimitiveSerializer<WorkPackageBudgetEstimateFulfillmentMethodEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'DELIVERY': 'DELIVERY',
+    'PICKUP': 'PICKUP',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'DELIVERY': 'DELIVERY',
+    'PICKUP': 'PICKUP',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    WorkPackageBudgetEstimateFulfillmentMethodEnum
+  ];
+  @override
+  final String wireName = 'WorkPackageBudgetEstimateFulfillmentMethodEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          WorkPackageBudgetEstimateFulfillmentMethodEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  WorkPackageBudgetEstimateFulfillmentMethodEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      WorkPackageBudgetEstimateFulfillmentMethodEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
 
 class _$WorkPackageBudgetEstimateBasisEnumSerializer
     implements PrimitiveSerializer<WorkPackageBudgetEstimateBasisEnum> {
@@ -63,6 +195,16 @@ class _$WorkPackageBudgetEstimateBasisEnumSerializer
 
 class _$WorkPackageBudgetEstimate extends WorkPackageBudgetEstimate {
   @override
+  final int? deliveryCentavos;
+  @override
+  final int? estimatedTotalCentavos;
+  @override
+  final WorkPackageBudgetEstimateDeliveryStatusEnum? deliveryStatus;
+  @override
+  final BuiltList<String>? deliveryIssues;
+  @override
+  final WorkPackageBudgetEstimateFulfillmentMethodEnum? fulfillmentMethod;
+  @override
   final BuiltList<WorkPackageBudgetEstimateLine> lines;
   @override
   final int materialsTotalCentavos;
@@ -84,7 +226,12 @@ class _$WorkPackageBudgetEstimate extends WorkPackageBudgetEstimate {
       (WorkPackageBudgetEstimateBuilder()..update(updates))._build();
 
   _$WorkPackageBudgetEstimate._(
-      {required this.lines,
+      {this.deliveryCentavos,
+      this.estimatedTotalCentavos,
+      this.deliveryStatus,
+      this.deliveryIssues,
+      this.fulfillmentMethod,
+      required this.lines,
       required this.materialsTotalCentavos,
       required this.pricedLineCount,
       required this.unpricedLineCount,
@@ -106,6 +253,11 @@ class _$WorkPackageBudgetEstimate extends WorkPackageBudgetEstimate {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is WorkPackageBudgetEstimate &&
+        deliveryCentavos == other.deliveryCentavos &&
+        estimatedTotalCentavos == other.estimatedTotalCentavos &&
+        deliveryStatus == other.deliveryStatus &&
+        deliveryIssues == other.deliveryIssues &&
+        fulfillmentMethod == other.fulfillmentMethod &&
         lines == other.lines &&
         materialsTotalCentavos == other.materialsTotalCentavos &&
         pricedLineCount == other.pricedLineCount &&
@@ -119,6 +271,11 @@ class _$WorkPackageBudgetEstimate extends WorkPackageBudgetEstimate {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, deliveryCentavos.hashCode);
+    _$hash = $jc(_$hash, estimatedTotalCentavos.hashCode);
+    _$hash = $jc(_$hash, deliveryStatus.hashCode);
+    _$hash = $jc(_$hash, deliveryIssues.hashCode);
+    _$hash = $jc(_$hash, fulfillmentMethod.hashCode);
     _$hash = $jc(_$hash, lines.hashCode);
     _$hash = $jc(_$hash, materialsTotalCentavos.hashCode);
     _$hash = $jc(_$hash, pricedLineCount.hashCode);
@@ -134,6 +291,11 @@ class _$WorkPackageBudgetEstimate extends WorkPackageBudgetEstimate {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'WorkPackageBudgetEstimate')
+          ..add('deliveryCentavos', deliveryCentavos)
+          ..add('estimatedTotalCentavos', estimatedTotalCentavos)
+          ..add('deliveryStatus', deliveryStatus)
+          ..add('deliveryIssues', deliveryIssues)
+          ..add('fulfillmentMethod', fulfillmentMethod)
           ..add('lines', lines)
           ..add('materialsTotalCentavos', materialsTotalCentavos)
           ..add('pricedLineCount', pricedLineCount)
@@ -150,6 +312,36 @@ class WorkPackageBudgetEstimateBuilder
     implements
         Builder<WorkPackageBudgetEstimate, WorkPackageBudgetEstimateBuilder> {
   _$WorkPackageBudgetEstimate? _$v;
+
+  int? _deliveryCentavos;
+  int? get deliveryCentavos => _$this._deliveryCentavos;
+  set deliveryCentavos(int? deliveryCentavos) =>
+      _$this._deliveryCentavos = deliveryCentavos;
+
+  int? _estimatedTotalCentavos;
+  int? get estimatedTotalCentavos => _$this._estimatedTotalCentavos;
+  set estimatedTotalCentavos(int? estimatedTotalCentavos) =>
+      _$this._estimatedTotalCentavos = estimatedTotalCentavos;
+
+  WorkPackageBudgetEstimateDeliveryStatusEnum? _deliveryStatus;
+  WorkPackageBudgetEstimateDeliveryStatusEnum? get deliveryStatus =>
+      _$this._deliveryStatus;
+  set deliveryStatus(
+          WorkPackageBudgetEstimateDeliveryStatusEnum? deliveryStatus) =>
+      _$this._deliveryStatus = deliveryStatus;
+
+  ListBuilder<String>? _deliveryIssues;
+  ListBuilder<String> get deliveryIssues =>
+      _$this._deliveryIssues ??= ListBuilder<String>();
+  set deliveryIssues(ListBuilder<String>? deliveryIssues) =>
+      _$this._deliveryIssues = deliveryIssues;
+
+  WorkPackageBudgetEstimateFulfillmentMethodEnum? _fulfillmentMethod;
+  WorkPackageBudgetEstimateFulfillmentMethodEnum? get fulfillmentMethod =>
+      _$this._fulfillmentMethod;
+  set fulfillmentMethod(
+          WorkPackageBudgetEstimateFulfillmentMethodEnum? fulfillmentMethod) =>
+      _$this._fulfillmentMethod = fulfillmentMethod;
 
   ListBuilder<WorkPackageBudgetEstimateLine>? _lines;
   ListBuilder<WorkPackageBudgetEstimateLine> get lines =>
@@ -196,6 +388,11 @@ class WorkPackageBudgetEstimateBuilder
   WorkPackageBudgetEstimateBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _deliveryCentavos = $v.deliveryCentavos;
+      _estimatedTotalCentavos = $v.estimatedTotalCentavos;
+      _deliveryStatus = $v.deliveryStatus;
+      _deliveryIssues = $v.deliveryIssues?.toBuilder();
+      _fulfillmentMethod = $v.fulfillmentMethod;
       _lines = $v.lines.toBuilder();
       _materialsTotalCentavos = $v.materialsTotalCentavos;
       _pricedLineCount = $v.pricedLineCount;
@@ -227,6 +424,11 @@ class WorkPackageBudgetEstimateBuilder
     try {
       _$result = _$v ??
           _$WorkPackageBudgetEstimate._(
+            deliveryCentavos: deliveryCentavos,
+            estimatedTotalCentavos: estimatedTotalCentavos,
+            deliveryStatus: deliveryStatus,
+            deliveryIssues: _deliveryIssues?.build(),
+            fulfillmentMethod: fulfillmentMethod,
             lines: lines.build(),
             materialsTotalCentavos: BuiltValueNullFieldError.checkNotNull(
                 materialsTotalCentavos,
@@ -251,6 +453,9 @@ class WorkPackageBudgetEstimateBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'deliveryIssues';
+        _deliveryIssues?.build();
+
         _$failedField = 'lines';
         lines.build();
 

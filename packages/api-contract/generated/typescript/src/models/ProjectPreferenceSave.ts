@@ -24,7 +24,7 @@ export interface ProjectPreferenceSave {
      */
     version: number;
     /**
-     *
+     * Four independent integer importance values from 0 to 100: material_match, budget_fit, distance and vps. At least one above zero; persisted unchanged. Scores normalize by their sum.
      */
     weights: { [key: string]: any; };
 }

@@ -1,3 +1,4 @@
+import '../features/support/support_repository.dart';
 import '../features/notifications/notification_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -213,7 +214,17 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
   );
 
   void _openHelpCenter() => Navigator.of(context).push(
-    MaterialPageRoute<void>(builder: (_) => const BuyerHelpCenterScreen()),
+    MaterialPageRoute<void>(
+      builder: (_) => BuyerHelpCenterScreen(
+        supportRepository: BuyerSupportRepository(
+          widget.repository.apiClient,
+          () async {
+            await widget.repository.clearAccountSession();
+            widget.onSignedOut();
+          },
+        ),
+      ),
+    ),
   );
 
   @override

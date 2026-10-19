@@ -47,7 +47,8 @@ void main() {
       // TODO
     });
 
-    // String image
+    // First public photo of the listing. The server returns an object ({url, alt_text}); declaring it as a string made the generated client reject any page containing a photographed offer, which surfaced as a generic 'Something went wrong' instead of the recommendations.
+    // ListingImage image
     test('to test the property `image`', () async {
       // TODO
     });
@@ -87,6 +88,30 @@ void main() {
     // Brand (when set) and every stated specification match the Work Package line.
     // bool exactMatch
     test('to test the property `exactMatch`', () async {
+      // TODO
+    });
+
+    // Whether the store can confirm the whole quantity still needed. PARTIAL stores can be added with `allow_partial_stock` for what they can confirm.
+    // String availability
+    test('to test the property `availability`', () async {
+      // TODO
+    });
+
+    // Unit price times the quantity still needed.
+    // int estimatedTotalCentavos
+    test('to test the property `estimatedTotalCentavos`', () async {
+      // TODO
+    });
+
+    // Methods the store can serve for this product. Ready-mixed concrete uses DELIVERY only even when the primary quotation or package uses PICKUP.
+    // BuiltList<String> fulfillmentMethods
+    test('to test the property `fulfillmentMethods`', () async {
+      // TODO
+    });
+
+    // This product is already in the cart or an open order for the line; adding it again never stacks the quantity.
+    // bool alreadyAdded
+    test('to test the property `alreadyAdded`', () async {
       // TODO
     });
 

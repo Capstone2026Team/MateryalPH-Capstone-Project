@@ -37,7 +37,7 @@ class RankingPreferencesScreen extends StatelessWidget {
   Widget build(BuildContext context) => RankingPreferencesEditor(
     title: 'Ranking preferences',
     description:
-        'Customize how MateryalPH orders your product results. Adjusting one preference automatically balances the others so the total always remains 100%. Favorites First remains separate.',
+        'Set the Search Relevance Score for Best Deal results. Favorites First stays separate.',
     resetMessage:
         'Best Deal will use the current platform weights again. Your personal weights are removed.',
     factors: factors,

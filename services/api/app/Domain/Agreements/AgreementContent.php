@@ -8,6 +8,9 @@ final class AgreementContent
 {
     public function read(object $version): ?string
     {
+        if (isset($version->published_content)) {
+            return hash_equals((string) $version->content_hash, hash('sha256', (string) $version->published_content)) ? (string) $version->published_content : null;
+        }
         // Only maintained document codes and numeric versions can name local content.
         if (! preg_match('/^[A-Z_]+$/D', $version->code) || ! ctype_digit((string) $version->version)) {
             return null;

@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(ChatQuotationMoney, () {
+    // Authoritative materials subtotal before the Vendor's materials discount, when recorded.
+    // int materialsGrossCentavos
+    test('to test the property `materialsGrossCentavos`', () async {
+      // TODO
+    });
+
     // int materialsPayableCentavos
     test('to test the property `materialsPayableCentavos`', () async {
       // TODO

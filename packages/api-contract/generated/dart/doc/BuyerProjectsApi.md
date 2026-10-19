@@ -13,27 +13,36 @@ Method | HTTP request | Description
 [**closeWorkPackage**](BuyerProjectsApi.md#closeworkpackage) | **POST** /buyers/work-packages/{packageId}/close |
 [**compileProjectEstimates**](BuyerProjectsApi.md#compileprojectestimates) | **POST** /buyers/work-packages/{packageId}/estimates |
 [**createProject**](BuyerProjectsApi.md#createproject) | **POST** /buyers/projects |
+[**createProjectArrangement**](BuyerProjectsApi.md#createprojectarrangement) | **POST** /buyers/work-packages/{packageId}/arrangements |
 [**createWorkPackage**](BuyerProjectsApi.md#createworkpackage) | **POST** /buyers/projects/{projectId}/work-packages |
 [**deleteProject**](BuyerProjectsApi.md#deleteproject) | **DELETE** /buyers/projects/{projectId} |
 [**deleteWorkPackage**](BuyerProjectsApi.md#deleteworkpackage) | **DELETE** /buyers/work-packages/{packageId} |
+[**editProjectArrangement**](BuyerProjectsApi.md#editprojectarrangement) | **PATCH** /buyers/work-packages/{packageId}/arrangements/{arrangementId} |
 [**editWorkPackage**](BuyerProjectsApi.md#editworkpackage) | **PUT** /buyers/work-packages/{packageId} |
 [**estimateWorkPackageBudget**](BuyerProjectsApi.md#estimateworkpackagebudget) | **POST** /buyers/projects/{projectId}/work-package-estimate |
 [**getProject**](BuyerProjectsApi.md#getproject) | **GET** /buyers/projects/{projectId} |
+[**getProjectArrangement**](BuyerProjectsApi.md#getprojectarrangement) | **GET** /buyers/work-packages/{packageId}/arrangements/{arrangementId} |
 [**getProjectCandidateRoute**](BuyerProjectsApi.md#getprojectcandidateroute) | **POST** /buyers/work-packages/{packageId}/candidates/{candidateId}/route |
 [**getProjectEstimates**](BuyerProjectsApi.md#getprojectestimates) | **GET** /buyers/work-packages/{packageId}/estimates |
 [**getProjectRankingPreferences**](BuyerProjectsApi.md#getprojectrankingpreferences) | **GET** /buyers/project-ranking-preferences |
 [**getWorkPackage**](BuyerProjectsApi.md#getworkpackage) | **GET** /buyers/work-packages/{packageId} |
+[**inquireProjectArrangementVendor**](BuyerProjectsApi.md#inquireprojectarrangementvendor) | **POST** /buyers/work-packages/{packageId}/arrangements/{arrangementId}/vendors/{vendorId}/inquiry |
 [**inquireProjectVendor**](BuyerProjectsApi.md#inquireprojectvendor) | **POST** /buyers/work-packages/{packageId}/inquiries |
+[**listProjectArrangementOptions**](BuyerProjectsApi.md#listprojectarrangementoptions) | **GET** /buyers/work-packages/{packageId}/arrangement-options |
 [**listProjects**](BuyerProjectsApi.md#listprojects) | **GET** /buyers/projects |
 [**listWorkPackageLineAlternatives**](BuyerProjectsApi.md#listworkpackagelinealternatives) | **GET** /buyers/work-packages/{packageId}/lines/{lineId}/alternatives |
 [**previewProjectSpecificationSelection**](BuyerProjectsApi.md#previewprojectspecificationselection) | **POST** /buyers/work-packages/{packageId}/candidates/{candidateId}/selection-preview |
 [**previewWorkPackageCsv**](BuyerProjectsApi.md#previewworkpackagecsv) | **POST** /buyers/work-packages/import-preview |
 [**reactivateWorkPackage**](BuyerProjectsApi.md#reactivateworkpackage) | **POST** /buyers/work-packages/{packageId}/reactivate |
+[**removeProjectDraftItem**](BuyerProjectsApi.md#removeprojectdraftitem) | **DELETE** /buyers/work-packages/{packageId}/candidates/{candidateId}/draft-items/{lineId}/{variantId} |
+[**requestProjectDraftSupplier**](BuyerProjectsApi.md#requestprojectdraftsupplier) | **POST** /buyers/work-packages/{packageId}/candidates/{candidateId}/suppliers/{vendorId}/request |
 [**resetProjectRankingPreferences**](BuyerProjectsApi.md#resetprojectrankingpreferences) | **POST** /buyers/project-ranking-preferences/reset |
 [**resolveProjectMissingLine**](BuyerProjectsApi.md#resolveprojectmissingline) | **PUT** /buyers/work-packages/{packageId}/missing-lines/{lineId} |
+[**saveProjectDraftItem**](BuyerProjectsApi.md#saveprojectdraftitem) | **PUT** /buyers/work-packages/{packageId}/candidates/{candidateId}/draft-items/{lineId}/{variantId} |
 [**saveProjectRankingPreferences**](BuyerProjectsApi.md#saveprojectrankingpreferences) | **PUT** /buyers/project-ranking-preferences |
 [**searchProjectMaterials**](BuyerProjectsApi.md#searchprojectmaterials) | **GET** /buyers/project-materials |
 [**selectProjectVendor**](BuyerProjectsApi.md#selectprojectvendor) | **POST** /buyers/work-packages/{packageId}/selection |
+[**submitProjectArrangement**](BuyerProjectsApi.md#submitprojectarrangement) | **POST** /buyers/work-packages/{packageId}/arrangements/{arrangementId}/submit |
 [**updateProject**](BuyerProjectsApi.md#updateproject) | **PATCH** /buyers/projects/{projectId} |
 
 
@@ -134,7 +143,7 @@ Name | Type | Description  | Notes
 
 
 
-Scan eligible Bulk Yes Tier 2 offers within the confirmed radius from the Project site. FMS uses exact normalized weights. Unknown delivery cost remains pending; schedules never change validity or score.
+Scan eligible Bulk Yes Tier 2 offers within the fixed 50 km Project-Based radius from the Project site. FMS uses exact normalized weights. Unknown delivery cost remains pending; schedules never change validity or score.
 
 ### Example
 ```dart
@@ -207,6 +216,51 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**ProjectViewResponse**](ProjectViewResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **createProjectArrangement**
+> ProjectArrangementResponse createProjectArrangement(packageId, idempotencyKey, projectArrangementCreate)
+
+
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getBuyerProjectsApi();
+final String packageId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final ProjectArrangementCreate projectArrangementCreate = ; // ProjectArrangementCreate |
+
+try {
+    final response = api.createProjectArrangement(packageId, idempotencyKey, projectArrangementCreate);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling BuyerProjectsApi->createProjectArrangement: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **packageId** | **String**|  |
+ **idempotencyKey** | **String**|  |
+ **projectArrangementCreate** | [**ProjectArrangementCreate**](ProjectArrangementCreate.md)|  |
+
+### Return type
+
+[**ProjectArrangementResponse**](ProjectArrangementResponse.md)
 
 ### Authorization
 
@@ -356,6 +410,51 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **editProjectArrangement**
+> ProjectArrangementResponse editProjectArrangement(packageId, arrangementId, projectArrangementEdit)
+
+
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getBuyerProjectsApi();
+final String packageId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String arrangementId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final ProjectArrangementEdit projectArrangementEdit = ; // ProjectArrangementEdit |
+
+try {
+    final response = api.editProjectArrangement(packageId, arrangementId, projectArrangementEdit);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling BuyerProjectsApi->editProjectArrangement: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **packageId** | **String**|  |
+ **arrangementId** | **String**|  |
+ **projectArrangementEdit** | [**ProjectArrangementEdit**](ProjectArrangementEdit.md)|  |
+
+### Return type
+
+[**ProjectArrangementResponse**](ProjectArrangementResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **editWorkPackage**
 > WorkPackageViewResponse editWorkPackage(packageId, idempotencyKey, workPackageInput)
 
@@ -408,7 +507,7 @@ Name | Type | Description  | Notes
 
 
 
-Advisory materials-only budget estimate for a Work Package being drafted. Each catalog line is priced at the half-up average of one price per eligible Vendor (that Vendor's lowest exact match) within the radius of the site. Unlisted and unmatched lines carry no price. Excludes delivery fees and labor. Nothing is stored.
+Advisory budget estimate for a Work Package being drafted. Each catalog line is priced at the half-up average of one price per eligible Vendor (that Vendor's lowest exact match) within the radius of the site. Unlisted and unmatched lines carry no price. Excludes labor and processing fees. Site Delivery and Both include actual route/vehicle estimates for a representative exact-match supplier plan, consolidated per supplier. Unknown delivery remains null. Nothing is stored.
 
 ### Example
 ```dart
@@ -493,6 +592,49 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **getProjectArrangement**
+> ProjectArrangementResponse getProjectArrangement(packageId, arrangementId)
+
+
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getBuyerProjectsApi();
+final String packageId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String arrangementId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.getProjectArrangement(packageId, arrangementId);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling BuyerProjectsApi->getProjectArrangement: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **packageId** | **String**|  |
+ **arrangementId** | **String**|  |
+
+### Return type
+
+[**ProjectArrangementResponse**](ProjectArrangementResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **getProjectCandidateRoute**
 > ProjectRouteResponse getProjectCandidateRoute(packageId, candidateId)
 
@@ -539,7 +681,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **getProjectEstimates**
-> ProjectEstimatePageResponse getProjectEstimates(packageId, page, sort, favoritesOnly, completeOnly, withinBudget)
+> ProjectEstimatePageResponse getProjectEstimates(packageId, page, sort, direction, favoritesOnly, completeOnly, withinBudget)
 
 
 
@@ -553,12 +695,13 @@ final api = MateryalphApiClient().getBuyerProjectsApi();
 final String packageId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final int page = 56; // int |
 final String sort = sort_example; // String |
+final String direction = direction_example; // String | ASC is low to high and DESC high to low. Omitted, each ordering opens on its default: BUDGET_FIT and RATING DESC (best first), PRICE ASC (cheapest first). Ignored for BEST_MATCH, a fixed ranking. A Vendor without a value (no rating, cost under review) is always last, and ties go to the nearest store.
 final bool favoritesOnly = true; // bool |
 final bool completeOnly = true; // bool |
 final bool withinBudget = true; // bool |
 
 try {
-    final response = api.getProjectEstimates(packageId, page, sort, favoritesOnly, completeOnly, withinBudget);
+    final response = api.getProjectEstimates(packageId, page, sort, direction, favoritesOnly, completeOnly, withinBudget);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling BuyerProjectsApi->getProjectEstimates: $e\n');
@@ -572,6 +715,7 @@ Name | Type | Description  | Notes
  **packageId** | **String**|  |
  **page** | **int**|  | [optional]
  **sort** | **String**|  | [optional]
+ **direction** | **String**| ASC is low to high and DESC high to low. Omitted, each ordering opens on its default: BUDGET_FIT and RATING DESC (best first), PRICE ASC (cheapest first). Ignored for BEST_MATCH, a fixed ranking. A Vendor without a value (no rating, cost under review) is always last, and ties go to the nearest store. | [optional]
  **favoritesOnly** | **bool**|  | [optional]
  **completeOnly** | **bool**|  | [optional]
  **withinBudget** | **bool**|  | [optional]
@@ -675,6 +819,53 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **inquireProjectArrangementVendor**
+> ProjectArrangementResponse inquireProjectArrangementVendor(packageId, arrangementId, vendorId, projectArrangementInquiry)
+
+
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getBuyerProjectsApi();
+final String packageId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String arrangementId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String vendorId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final ProjectArrangementInquiry projectArrangementInquiry = ; // ProjectArrangementInquiry |
+
+try {
+    final response = api.inquireProjectArrangementVendor(packageId, arrangementId, vendorId, projectArrangementInquiry);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling BuyerProjectsApi->inquireProjectArrangementVendor: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **packageId** | **String**|  |
+ **arrangementId** | **String**|  |
+ **vendorId** | **String**|  |
+ **projectArrangementInquiry** | [**ProjectArrangementInquiry**](ProjectArrangementInquiry.md)|  |
+
+### Return type
+
+[**ProjectArrangementResponse**](ProjectArrangementResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **inquireProjectVendor**
 > ChatIdResponse inquireProjectVendor(packageId, idempotencyKey, projectCandidateRequest)
 
@@ -718,6 +909,59 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
  - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **listProjectArrangementOptions**
+> ProjectArrangementPageResponse listProjectArrangementOptions(packageId, page, sort, direction, favoritesOnly, completeOnly, withinBudget)
+
+
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getBuyerProjectsApi();
+final String packageId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final int page = 56; // int |
+final String sort = sort_example; // String |
+final String direction = direction_example; // String |
+final bool favoritesOnly = true; // bool |
+final bool completeOnly = true; // bool |
+final bool withinBudget = true; // bool |
+
+try {
+    final response = api.listProjectArrangementOptions(packageId, page, sort, direction, favoritesOnly, completeOnly, withinBudget);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling BuyerProjectsApi->listProjectArrangementOptions: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **packageId** | **String**|  |
+ **page** | **int**|  | [optional]
+ **sort** | **String**|  | [optional]
+ **direction** | **String**|  | [optional]
+ **favoritesOnly** | **bool**|  | [optional]
+ **completeOnly** | **bool**|  | [optional]
+ **withinBudget** | **bool**|  | [optional]
+
+### Return type
+
+[**ProjectArrangementPageResponse**](ProjectArrangementPageResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
@@ -766,11 +1010,11 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **listWorkPackageLineAlternatives**
-> WorkPackageAlternativePageResponse listWorkPackageLineAlternatives(packageId, lineId, page, excludeVendorId)
+> WorkPackageAlternativePageResponse listWorkPackageLineAlternatives(packageId, lineId, arrangementId, replace, page, excludeVendorId, candidateId, specificationChoices, fulfillmentMethod)
 
 
 
-Eligible Item-Based offers for the same canonical material and unit within the package radius of its site, for buying a missing line separately. Exact matches first, then price. Unlisted lines return status UNLISTED with no items.
+Eligible Item-Based offers for the same canonical material and unit within the fixed 50 km Project-Based radius of the package site, for buying a missing line separately. Ranked by specification match, whether the store covers the quantity, whether it can serve the package's fulfillment method, total price, then distance. Unlisted lines return status UNLISTED with no items; a line already covered returns COVERED; no suitable store returns NO_SUITABLE_ALTERNATIVE with the reasons in `excluded`.
 
 ### Example
 ```dart
@@ -779,11 +1023,16 @@ import 'package:materyalph_api_client/api.dart';
 final api = MateryalphApiClient().getBuyerProjectsApi();
 final String packageId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final String lineId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String arrangementId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final bool replace = true; // bool |
 final int page = 56; // int |
 final String excludeVendorId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String candidateId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String | The compared Vendor candidate. The quantity to source becomes that Vendor's gap less the separate purchases that satisfy the line, and the Vendor itself is left out.
+final String specificationChoices = specificationChoices_example; // String | JSON array of {line_id, option_id} choices. Sizes the recommendation from the same selected specifications as quotation review.
+final String fulfillmentMethod = fulfillmentMethod_example; // String | Concrete method chosen on quotation review; suggestions must support it.
 
 try {
-    final response = api.listWorkPackageLineAlternatives(packageId, lineId, page, excludeVendorId);
+    final response = api.listWorkPackageLineAlternatives(packageId, lineId, arrangementId, replace, page, excludeVendorId, candidateId, specificationChoices, fulfillmentMethod);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling BuyerProjectsApi->listWorkPackageLineAlternatives: $e\n');
@@ -796,8 +1045,13 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **packageId** | **String**|  |
  **lineId** | **String**|  |
+ **arrangementId** | **String**|  | [optional]
+ **replace** | **bool**|  | [optional]
  **page** | **int**|  | [optional]
  **excludeVendorId** | **String**|  | [optional]
+ **candidateId** | **String**| The compared Vendor candidate. The quantity to source becomes that Vendor's gap less the separate purchases that satisfy the line, and the Vendor itself is left out. | [optional]
+ **specificationChoices** | **String**| JSON array of {line_id, option_id} choices. Sizes the recommendation from the same selected specifications as quotation review. | [optional]
+ **fulfillmentMethod** | **String**| Concrete method chosen on quotation review; suggestions must support it. | [optional]
 
 ### Return type
 
@@ -819,7 +1073,7 @@ Name | Type | Description  | Notes
 
 
 
-Re-price a fresh candidate with the Buyer's specification choices (lines, totals, delivery estimate, score and budget label). Nothing is stored; send the same selections when selecting or inquiring. An unknown option is SPECIFICATION_OPTION_INVALID.
+Re-price a fresh candidate with the Buyer's specification choices (lines, totals, delivery estimate, score and budget label). Exact-match defaults for missing materials are saved to the draft arrangement; explicit removals and manual replacements are preserved. No regular cart, order or payment is created. Send the same selections when selecting or inquiring. An unknown option is SPECIFICATION_OPTION_INVALID.
 
 ### Example
 ```dart
@@ -909,7 +1163,7 @@ Name | Type | Description  | Notes
 
 
 
-Return a cancelled Work Package to Active in place; no copy is made. The Project budget is checked again because cancelling released it. A package with an order, selected Vendor or tagged purchase cannot be reactivated.
+Reactivate the same owned Cancelled Work Package after current version, open-order and Project budget checks. Cancelled, declined and expired orders do not keep the old Vendor selection locked. A cancelled order original is retained internally and the reactivated package uses fresh requirement identities, estimates and inquiries; no order is reopened or duplicated.
 
 ### Example
 ```dart
@@ -939,6 +1193,108 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**WorkPackageViewResponse**](WorkPackageViewResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **removeProjectDraftItem**
+> ChatIdResponse removeProjectDraftItem(packageId, candidateId, lineId, variantId, projectVersionRequest)
+
+
+
+Remove an unsubmitted supplementary selection, preserving the requirement and restoring remaining fulfillment on the next preview. Submitted orders retain existing cancellation rules.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getBuyerProjectsApi();
+final String packageId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String candidateId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String lineId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String variantId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final ProjectVersionRequest projectVersionRequest = ; // ProjectVersionRequest |
+
+try {
+    final response = api.removeProjectDraftItem(packageId, candidateId, lineId, variantId, projectVersionRequest);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling BuyerProjectsApi->removeProjectDraftItem: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **packageId** | **String**|  |
+ **candidateId** | **String**|  |
+ **lineId** | **String**|  |
+ **variantId** | **String**|  |
+ **projectVersionRequest** | [**ProjectVersionRequest**](ProjectVersionRequest.md)|  |
+
+### Return type
+
+[**ChatIdResponse**](ChatIdResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **requestProjectDraftSupplier**
+> ChatIdResponse requestProjectDraftSupplier(packageId, candidateId, vendorId, idempotencyKey, projectDraftSupplierRequest)
+
+
+
+Explicit request to ONE supplementary supplier after the primary Project-Based request exists. Revalidate the reviewed fingerprint, prices, eligibility, fulfillment, payment, ownership and budgets. Create a separate linked Item-Based order awaiting manual Vendor confirmation; never touch the regular cart, auto-accept an order, request other suppliers or start payment.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getBuyerProjectsApi();
+final String packageId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String candidateId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String vendorId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final ProjectDraftSupplierRequest projectDraftSupplierRequest = ; // ProjectDraftSupplierRequest |
+
+try {
+    final response = api.requestProjectDraftSupplier(packageId, candidateId, vendorId, idempotencyKey, projectDraftSupplierRequest);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling BuyerProjectsApi->requestProjectDraftSupplier: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **packageId** | **String**|  |
+ **candidateId** | **String**|  |
+ **vendorId** | **String**|  |
+ **idempotencyKey** | **String**|  |
+ **projectDraftSupplierRequest** | [**ProjectDraftSupplierRequest**](ProjectDraftSupplierRequest.md)|  |
+
+### Return type
+
+[**ChatIdResponse**](ChatIdResponse.md)
 
 ### Authorization
 
@@ -1041,12 +1397,63 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **saveProjectDraftItem**
+> ChatIdResponse saveProjectDraftItem(packageId, candidateId, lineId, variantId, projectDraftItemInput)
+
+
+
+Add one recommendation to the Work Package draft. Server caps quantity by the remaining requirement and available stock. Idempotent PUT never stacks duplicates. No cart, order, stock reservation or payment is created.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getBuyerProjectsApi();
+final String packageId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String candidateId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String lineId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String variantId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final ProjectDraftItemInput projectDraftItemInput = ; // ProjectDraftItemInput |
+
+try {
+    final response = api.saveProjectDraftItem(packageId, candidateId, lineId, variantId, projectDraftItemInput);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling BuyerProjectsApi->saveProjectDraftItem: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **packageId** | **String**|  |
+ **candidateId** | **String**|  |
+ **lineId** | **String**|  |
+ **variantId** | **String**|  |
+ **projectDraftItemInput** | [**ProjectDraftItemInput**](ProjectDraftItemInput.md)|  |
+
+### Return type
+
+[**ChatIdResponse**](ChatIdResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **saveProjectRankingPreferences**
 > ProjectPreferencesResponse saveProjectRankingPreferences(projectPreferenceSave)
 
 
 
-Exactly four integer weights in [0,100] totaling 100. Defaults: material_match 40, budget_fit 25, distance 20, vps 15.
+Exactly four independent integer weights in [0,100], at least one above zero (422 WEIGHTS_ALL_ZERO). Original values are stored and restored; scoring divides each by the sum of weights. Defaults: material_match 40, budget_fit 25, distance 20, vps 15.
 
 ### Example
 ```dart
@@ -1128,7 +1535,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **selectProjectVendor**
-> ChatIdResponse selectProjectVendor(packageId, idempotencyKey, projectCandidateRequest)
+> ChatIdResponse selectProjectVendor(packageId, idempotencyKey, projectVendorSelectionRequest)
 
 
 
@@ -1141,10 +1548,10 @@ import 'package:materyalph_api_client/api.dart';
 final api = MateryalphApiClient().getBuyerProjectsApi();
 final String packageId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
-final ProjectCandidateRequest projectCandidateRequest = ; // ProjectCandidateRequest |
+final ProjectVendorSelectionRequest projectVendorSelectionRequest = ; // ProjectVendorSelectionRequest |
 
 try {
-    final response = api.selectProjectVendor(packageId, idempotencyKey, projectCandidateRequest);
+    final response = api.selectProjectVendor(packageId, idempotencyKey, projectVendorSelectionRequest);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling BuyerProjectsApi->selectProjectVendor: $e\n');
@@ -1157,11 +1564,58 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **packageId** | **String**|  |
  **idempotencyKey** | **String**|  |
- **projectCandidateRequest** | [**ProjectCandidateRequest**](ProjectCandidateRequest.md)|  |
+ **projectVendorSelectionRequest** | [**ProjectVendorSelectionRequest**](ProjectVendorSelectionRequest.md)|  |
 
 ### Return type
 
 [**ChatIdResponse**](ChatIdResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **submitProjectArrangement**
+> ProjectArrangementResponse submitProjectArrangement(packageId, arrangementId, idempotencyKey, projectArrangementSubmit)
+
+
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getBuyerProjectsApi();
+final String packageId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String arrangementId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final ProjectArrangementSubmit projectArrangementSubmit = ; // ProjectArrangementSubmit |
+
+try {
+    final response = api.submitProjectArrangement(packageId, arrangementId, idempotencyKey, projectArrangementSubmit);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling BuyerProjectsApi->submitProjectArrangement: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **packageId** | **String**|  |
+ **arrangementId** | **String**|  |
+ **idempotencyKey** | **String**|  |
+ **projectArrangementSubmit** | [**ProjectArrangementSubmit**](ProjectArrangementSubmit.md)|  |
+
+### Return type
+
+[**ProjectArrangementResponse**](ProjectArrangementResponse.md)
 
 ### Authorization
 

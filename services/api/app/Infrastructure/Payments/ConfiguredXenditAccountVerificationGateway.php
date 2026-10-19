@@ -21,6 +21,7 @@ final class ConfiguredXenditAccountVerificationGateway implements XenditAccountV
         if ($baseUrl !== 'https://api.xendit.co') {
             throw new XenditProviderUnavailable('The Xendit API origin is not supported.', creationRejected: true);
         }
+        $businessName = self::providerBusinessName($businessName);
         try {
             // Never retry a create automatically: the API does not document a
             // create idempotency key and a lost response may hide a created account.
@@ -59,6 +60,18 @@ final class ConfiguredXenditAccountVerificationGateway implements XenditAccountV
         }
 
         return ['provider_account_id' => $payload['id'], 'status' => $payload['status'], 'provider_created_at' => $created];
+    }
+
+    /**
+     * Xendit rejects public_profile.business_name with API_VALIDATION_ERROR unless it holds only letters, digits and
+     * spaces, so "Cement, Steel & Ready-Mix" becomes "Cement Steel and Ready Mix". The Store Name itself is unchanged.
+     */
+    public static function providerBusinessName(string $storeName): string
+    {
+        $name = preg_replace(['/\s*&\s*/u', '/[\'’]/u'], [' and ', ''], $storeName) ?? $storeName;
+        $name = preg_replace('/[^\p{L}\p{N}\s]+/u', ' ', $name) ?? $name;
+
+        return trim(preg_replace('/\s+/u', ' ', $name) ?? $name);
     }
 
     public function reconcile(string $providerAccountId): array

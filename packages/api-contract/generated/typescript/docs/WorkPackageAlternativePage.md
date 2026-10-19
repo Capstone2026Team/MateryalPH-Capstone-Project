@@ -8,6 +8,8 @@ Name | Type
 ------------ | -------------
 `line` | { [key: string]: any; }
 `status` | string
+`neededQuantity` | string
+`excluded` | [WorkPackageAlternativePageExcluded](WorkPackageAlternativePageExcluded.md)
 `locationId` | string
 `radiusKm` | number
 `items` | [Array&lt;WorkPackageAlternative&gt;](WorkPackageAlternative.md)
@@ -24,6 +26,8 @@ import type { WorkPackageAlternativePage } from '@materyalph/api-client-ts'
 const example = {
   "line": null,
   "status": null,
+  "neededQuantity": null,
+  "excluded": null,
   "locationId": null,
   "radiusKm": null,
   "items": null,

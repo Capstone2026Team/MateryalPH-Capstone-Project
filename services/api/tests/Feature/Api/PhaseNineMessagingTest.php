@@ -72,11 +72,85 @@ final class PhaseNineMessagingTest extends TestCase
     {
         $source = DB::table('conversations')->where('id', $main)->first();
         $id = (string) Str::uuid7();
+        $project = (string) Str::uuid7();
+        $package = (string) Str::uuid7();
+        $version = (string) Str::uuid7();
+        DB::table('projects')->insert(['id' => $project, 'buyer_profile_id' => $source->buyer_profile_id,
+            'name' => $name, 'status' => 'ACTIVE', 'budget_centavos' => 100000, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('work_packages')->insert(['id' => $package, 'project_id' => $project, 'name' => $name,
+            'status' => 'QUOTATION_INQUIRY', 'budget_centavos' => 100000, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('work_package_versions')->insert(['id' => $version, 'work_package_id' => $package, 'version' => 1,
+            'content_hash' => hash('sha256', $name), 'locked_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('work_packages')->where('id', $package)->update(['current_version_id' => $version]);
         DB::table('conversations')->insert(['id' => $id, 'buyer_profile_id' => $source->buyer_profile_id, 'vendor_organization_id' => $source->vendor_organization_id,
-            'purpose' => 'SALES', 'context_type' => 'PROJECT_BASED', 'handler_user_id' => $source->handler_user_id,
-            'locked_reference' => json_encode(['work_package' => ['name' => $name]], JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now()]);
+            'purpose' => 'SALES', 'context_type' => 'PROJECT_BASED', 'context_id' => $package, 'handler_user_id' => $source->handler_user_id,
+            'locked_reference' => json_encode(['version_id' => $version, 'work_package' => ['name' => $name]], JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('quotations')->insert(['id' => (string) Str::uuid7(), 'conversation_id' => $id,
+            'buyer_profile_id' => $source->buyer_profile_id, 'vendor_organization_id' => $source->vendor_organization_id,
+            'procurement_type' => 'PROJECT_BASED', 'work_package_id' => $package, 'state' => 'DRAFT', 'created_at' => now(), 'updated_at' => now()]);
 
         return $id;
+    }
+
+    public function test_project_picker_and_badges_only_include_open_current_workflows_for_both_portals(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Open inquiry supplier');
+        $buyer = $this->buyer();
+        $main = $this->inquiry($store->id, $this->variantIds($listing)[0]);
+        $open = [];
+        $history = [];
+        $pastDeadline = null;
+        foreach (['DRAFT', 'PUBLISHED', 'VIEWED', 'COUNTERED', 'STOCK_REVALIDATION_REQUIRED', 'ACCEPTED', 'EXPIRED', 'REJECTED', 'WITHDRAWN'] as $state) {
+            $id = $this->projectInquiryThread($main, $state);
+            DB::table('quotations')->where('conversation_id', $id)->update(['state' => $state, 'response_due_at' => now()->addHour()]);
+            if (in_array($state, ['ACCEPTED', 'EXPIRED', 'REJECTED', 'WITHDRAWN'], true)) {
+                $history[] = $id;
+            } else {
+                $open[] = $id;
+            }
+        }
+        foreach (['past_deadline', 'old_version', 'selected', 'cancelled', 'draft_package', 'deleted', 'archived', 'completed'] as $reason) {
+            $id = $this->projectInquiryThread($main, $reason);
+            $package = DB::table('conversations')->where('id', $id)->value('context_id');
+            if ($reason === 'past_deadline') {
+                $pastDeadline = $id;
+                // The expiry worker has not run yet; navigation must still exclude it.
+                DB::table('quotations')->where('conversation_id', $id)->update(['state' => 'PUBLISHED', 'response_due_at' => now()]);
+            } elseif ($reason === 'old_version') {
+                DB::table('work_packages')->where('id', $package)->update(['current_version_id' => null]);
+            } elseif ($reason === 'selected') {
+                DB::table('work_packages')->where('id', $package)->update(['selected_vendor_organization_id' => $store->id]);
+            } elseif ($reason === 'deleted') {
+                DB::table('work_packages')->where('id', $package)->update(['status' => 'CANCELLED', 'deleted_at' => now()]);
+            } elseif (in_array($reason, ['cancelled', 'draft_package'], true)) {
+                DB::table('work_packages')->where('id', $package)->update(['status' => $reason === 'cancelled' ? 'CANCELLED' : 'DRAFT']);
+            } else {
+                DB::table('projects')->where('id', DB::table('work_packages')->where('id', $package)->value('project_id'))->update(['status' => strtoupper($reason)]);
+            }
+            $history[] = $id;
+        }
+        $this->signInStoreMember($owner);
+        foreach ([$open[0], $history[0]] as $id) {
+            $this->postJson('/api/v1/vendor/conversations/'.$id.'/messages', ['body' => 'Inquiry reply', 'client_message_id' => (string) Str::uuid7()])->assertCreated();
+        }
+        foreach (['vendor', 'buyers'] as $portal) {
+            if ($portal === 'buyers') {
+                $this->signInBuyer($buyer);
+            }
+            $rows = $this->getJson('/api/v1/'.$portal.'/conversations/'.$main.'/project-inquiries')->assertOk()
+                ->assertJsonCount(count($open), 'data.items')->assertJsonPath('data.has_more', false)->json('data.items');
+            self::assertEqualsCanonicalizing($open, array_column($rows, 'id'));
+            $this->getJson('/api/v1/'.$portal.'/conversations/'.$main)->assertOk()
+                ->assertJsonPath('data.conversation.project_inquiry_count', count($open))
+                ->assertJsonPath('data.conversation.project_unread_count', $portal === 'buyers' ? 1 : 0);
+            foreach ($history as $id) {
+                // This synthetic deadline-only row has no published version for lazy expiry.
+                if ($id === $pastDeadline) {
+                    continue;
+                }
+                $this->getJson('/api/v1/'.$portal.'/conversations/'.$id)->assertOk()->assertJsonPath('data.conversation.id', $id);
+            }
+        }
     }
 
     public function test_sales_inbox_groups_item_and_project_inquiries_with_paginated_history_and_separate_receipts(): void
@@ -328,7 +402,7 @@ final class PhaseNineMessagingTest extends TestCase
         $this->postJson($vendorPath.'/start', ['lock_version' => $first['quotation']['lock_version']], ['Idempotency-Key' => (string) Str::uuid7()])->assertConflict();
         $this->signInBuyer($buyer);
         $acceptKey = (string) Str::uuid7();
-        $decision = ['version_id' => $v['id'], 'content_hash' => $v['content_hash']];
+        $decision = ['version_id' => $v['id'], 'content_hash' => $v['content_hash'], 'payment_method' => 'ONLINE'];
         $order = $this->postJson($buyerPath.'/accept', $decision, ['Idempotency-Key' => $acceptKey])->assertOk()->json('data.order_id');
         $frozen = DB::table('quotation_versions')->where('id', $v['id'])->first();
         $accepted = DB::table('quotations')->where('id', $first['quotation']['id'])->first();
@@ -345,7 +419,7 @@ final class PhaseNineMessagingTest extends TestCase
         $this->signInBuyer($buyer);
         $this->postJson($buyerPath.'/accept', $decision, ['Idempotency-Key' => $acceptKey])->assertOk()->assertJsonPath('data.order_id', $order);
         $this->postJson($buyerPath.'/accept', $decision, ['Idempotency-Key' => (string) Str::uuid7()])->assertConflict();
-        $secondOrder = $this->postJson($buyerPath.'/accept', ['version_id' => $later['id'], 'content_hash' => $later['content_hash']], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk()->json('data.order_id');
+        $secondOrder = $this->postJson($buyerPath.'/accept', ['version_id' => $later['id'], 'content_hash' => $later['content_hash'], 'payment_method' => 'ONLINE'], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk()->json('data.order_id');
         self::assertNotSame($order, $secondOrder);
         self::assertEquals($frozen, DB::table('quotation_versions')->where('id', $v['id'])->first());
         self::assertEquals($accepted, DB::table('quotations')->where('id', $accepted->id)->first());
@@ -357,6 +431,84 @@ final class PhaseNineMessagingTest extends TestCase
         $this->signInStoreMember($owner);
         DB::table('conversations')->where('id', $id)->update(['context_type' => 'PROJECT_BASED']);
         $this->postJson($vendorPath.'/start', ['lock_version' => 1], ['Idempotency-Key' => (string) Str::uuid7()])->assertConflict();
+    }
+
+    public function test_order_accepted_from_a_chat_quotation_opens_without_the_quotation_diff_as_order_changes(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Quotation order details', [['price' => 1800, 'qty' => '50']]);
+        $variant = $this->variantIds($listing)[0];
+        $buyer = $this->buyer();
+        $id = $this->inquiry($store->id, $variant);
+        $this->signInStoreMember($owner);
+        $version = $this->publishQuote($id, $this->draftInput($variant))['versions'][0];
+        self::assertNotSame([], $version['content']['changes'], 'The quotation itself still shows the Buyer what changed.');
+        $this->signInBuyer($buyer);
+        $order = $this->postJson('/api/v1/buyers/conversations/'.$id.'/quotation/accept', ['version_id' => $version['id'], 'content_hash' => $version['content_hash'], 'payment_method' => 'ONLINE'], ['Idempotency-Key' => (string) Str::uuid7()])
+            ->assertOk()->json('data.order_id');
+
+        // The snapshot keeps the accepted quotation intact; order details only report order-shaped changes.
+        $detail = $this->getJson('/api/v1/buyers/orders/'.$order)->assertOk()->json('data');
+        self::assertSame([], $detail['changes']);
+        // The Buyer's chat location is not the destination of a Self-Pickup order.
+        self::assertSame('PICKUP', $detail['destination']['type']);
+        self::assertSame('PICKUP', json_decode((string) DB::table('orders')->where('id', $order)->value('destination'), true)['type']);
+        self::assertContains($detail['destination']['heavy_vehicle_restriction'] ?? null, [null, 'YES', 'NO']);
+        $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/vendor/orders/'.$order)->assertOk()->assertJsonPath('data.changes', []);
+    }
+
+    public function test_message_sender_names_follow_profile_edits_without_rewriting_history_or_handler_attribution(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Current sender names');
+        $staff = $this->teamMember($store, 'CUSTOMER_SERVICE');
+        $this->patchJson('/api/v1/vendors/account/profile', ['full_name' => 'Original Owner', 'lock_version' => $owner->fresh()->lock_version])->assertOk();
+        $buyer = $this->buyer();
+        $this->patchJson('/api/v1/buyers/account/profile', ['full_name' => 'Original Buyer', 'lock_version' => $buyer->fresh()->lock_version])->assertOk();
+        $id = $this->inquiry($store->id, $this->variantIds($listing)[0]);
+        $buyerPath = '/api/v1/buyers/conversations/'.$id;
+        $vendorPath = '/api/v1/vendor/conversations/'.$id;
+        $buyerMessage = $this->postJson($buyerPath.'/messages', ['body' => 'Buyer inquiry', 'client_message_id' => (string) Str::uuid7()])->assertCreated()->json('data.id');
+        $this->signInStoreMember($owner->fresh());
+        $ownerMessage = $this->postJson($vendorPath.'/messages', ['body' => 'Owner reply', 'client_message_id' => (string) Str::uuid7()])->assertCreated()->json('data.id');
+        $this->postJson($vendorPath.'/transfer', ['handler_user_id' => $staff->id, 'lock_version' => 1, 'reason' => 'Sales assistance'])->assertOk();
+        $history = DB::table('messages')->where('conversation_id', $id)->orderBy('id')->get()->all();
+        $this->getJson($vendorPath)->assertOk()->assertJsonPath('data.messages.items.1.sender.display_name', 'Original Owner');
+
+        $this->patchJson('/api/v1/vendors/account/profile', ['full_name' => 'Updated Owner', 'lock_version' => $owner->fresh()->lock_version])->assertOk();
+        $newMessage = $this->postJson($vendorPath.'/messages', ['body' => 'New owner reply', 'client_message_id' => (string) Str::uuid7()])->assertCreated()->json('data.id');
+        $this->signInBuyer($buyer->fresh());
+        $this->patchJson('/api/v1/buyers/account/profile', ['full_name' => 'Updated Buyer', 'lock_version' => $buyer->fresh()->lock_version])->assertOk();
+
+        foreach ([$buyerPath, $vendorPath] as $path) {
+            if ($path === $vendorPath) {
+                $this->signInStoreMember($owner->fresh());
+            }
+            foreach (['', '?before='.$newMessage] as $cursor) {
+                $response = $this->getJson($path.$cursor)->assertOk()
+                    ->assertJsonPath('data.messages.items.0.id', $buyerMessage)
+                    ->assertJsonPath('data.messages.items.0.sender.display_name', 'Updated Buyer')
+                    ->assertJsonPath('data.messages.items.0.sender.role', 'BUYER')
+                    ->assertJsonPath('data.messages.items.1.id', $ownerMessage)
+                    ->assertJsonPath('data.messages.items.1.sender.display_name', 'Updated Owner')
+                    ->assertJsonPath('data.messages.items.1.sender.role', 'OWNER')
+                    ->assertJsonPath('data.messages.items.2.kind', 'SYSTEM')
+                    ->assertJsonPath('data.messages.items.2.sender.display_name', 'MateryalPH')
+                    ->assertJsonPath('data.messages.items.2.sender.role', 'SYSTEM');
+                if ($cursor === '') {
+                    $response->assertJsonPath('data.messages.items.3.sender.display_name', 'Updated Owner');
+                }
+                foreach ($response->json('data.messages.items') as $message) {
+                    self::assertEqualsCanonicalizing(['avatar_path', 'display_name', 'role'], array_keys($message['sender']));
+                }
+            }
+        }
+        self::assertEquals($history, DB::table('messages')->whereIn('id', array_column($history, 'id'))->orderBy('id')->get()->all());
+        DB::table('user_profiles')->where('user_id', $owner->id)->delete();
+        $this->getJson($vendorPath)->assertOk()
+            ->assertJsonPath('data.messages.items.1.sender.display_name', 'Original Owner')
+            ->assertJsonPath('data.messages.items.3.sender.display_name', 'Updated Owner');
+        $this->buyer();
+        $this->getJson($buyerPath)->assertNotFound();
     }
 
     public function test_inboxes_with_real_profiles_use_user_photo_storage_and_allow_product_free_reuse(): void
@@ -486,7 +638,7 @@ final class PhaseNineMessagingTest extends TestCase
 
     private function draftInput(string $variant, string $qty = '4'): array
     {
-        return ['lines' => [['variant_id' => $variant, 'quantity' => $qty, 'unit_price_centavos' => 1700]], 'fulfillment_method' => 'PICKUP', 'payment_method' => 'ONLINE', 'fulfillment_date' => now()->addDays(3)->toDateString()];
+        return ['lines' => [['variant_id' => $variant, 'quantity' => $qty, 'unit_price_centavos' => 1700]], 'fulfillment_method' => 'PICKUP', 'fulfillment_date' => now()->addDays(3)->toDateString()];
     }
 
     public function test_duplicate_migration_preserves_message_and_quotation_history_and_enforces_unique_store_thread(): void
@@ -523,6 +675,101 @@ final class PhaseNineMessagingTest extends TestCase
         return $this->postJson('/api/v1/vendor/conversations/'.$id.'/quotation/publish', ['lock_version' => $lock + 1], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk()->json('data');
     }
 
+    public function test_buyer_must_choose_an_offered_payment_method_before_quotation_acceptance(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Buyer payment choice');
+        $variant = $this->variantIds($listing)[0];
+        $buyer = $this->buyer();
+        $id = $this->inquiry($store->id, $variant);
+        $this->signInStoreMember($owner);
+        $draft = $this->draftInput($variant) + ['payment_method' => 'CASH_ON_DELIVERY'];
+        $published = $this->publishQuote($id, $draft)['versions'][0];
+        self::assertArrayNotHasKey('payment_method', $published['content']);
+        self::assertSame(['ONLINE'], $published['available_payment_methods']);
+        self::assertNull($published['selected_payment_method']);
+        $this->signInBuyer($buyer);
+        $path = '/api/v1/buyers/conversations/'.$id.'/quotation/accept';
+        $decision = ['version_id' => $published['id'], 'content_hash' => $published['content_hash']];
+        $this->postJson($path, $decision, ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable()->assertJsonPath('errors.0.details.payment_method.0', 'The payment method field is required.');
+        foreach (['IN_STORE', 'CASH_ON_DELIVERY'] as $unavailable) {
+            $this->postJson($path, $decision + ['payment_method' => $unavailable], ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable()->assertJsonPath('errors.0.code', 'PAYMENT_METHOD_UNAVAILABLE');
+        }
+        self::assertSame(0, DB::table('orders')->count());
+        self::assertSame('0.0000', $this->reserved($variant));
+        $order = $this->postJson($path, $decision + ['payment_method' => 'ONLINE'], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk()->json('data.order_id');
+        self::assertSame('ONLINE', DB::table('orders')->where('id', $order)->value('payment_method'));
+        self::assertSame('AWAITING_PAYMENT', DB::table('orders')->where('id', $order)->value('order_state'));
+    }
+
+    public function test_buyer_in_store_choice_is_frozen_once_and_current_vendor_settings_are_rechecked(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('In store quotation');
+        $variant = $this->variantIds($listing)[0];
+        DB::table('vendor_payment_settings')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $store->id, 'in_store_enabled' => true, 'cod_enabled' => true, 'lock_version' => 1, 'created_at' => now(), 'updated_at' => now()]);
+        $buyer = $this->buyer();
+        $id = $this->inquiry($store->id, $variant);
+        $this->signInStoreMember($owner);
+        $published = $this->publishQuote($id, $this->draftInput($variant))['versions'][0];
+        self::assertSame(['ONLINE', 'IN_STORE'], $published['available_payment_methods']);
+        $frozen = DB::table('quotation_versions')->where('id', $published['id'])->first();
+        $this->signInBuyer($buyer);
+        $path = '/api/v1/buyers/conversations/'.$id.'/quotation/accept';
+        $decision = ['version_id' => $published['id'], 'content_hash' => $published['content_hash'], 'payment_method' => 'IN_STORE'];
+        DB::table('vendor_payment_settings')->where('vendor_organization_id', $store->id)->update(['in_store_enabled' => false]);
+        $this->postJson($path, $decision, ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable()->assertJsonPath('errors.0.code', 'PAYMENT_METHOD_UNAVAILABLE');
+        self::assertSame(0, DB::table('orders')->count());
+        DB::table('vendor_payment_settings')->where('vendor_organization_id', $store->id)->update(['in_store_enabled' => true]);
+        $key = (string) Str::uuid7();
+        $order = $this->postJson($path, $decision, ['Idempotency-Key' => $key])->assertOk()->json('data.order_id');
+        $this->postJson($path, $decision, ['Idempotency-Key' => $key])->assertOk()->assertJsonPath('data.order_id', $order);
+        $changed = array_replace($decision, ['payment_method' => 'ONLINE']);
+        $this->postJson($path, $changed, ['Idempotency-Key' => $key])->assertConflict()->assertJsonPath('errors.0.code', 'IDEMPOTENCY_CONFLICT');
+        self::assertSame('IN_STORE', DB::table('orders')->where('id', $order)->value('payment_method'));
+        self::assertSame('CONFIRMED', DB::table('orders')->where('id', $order)->value('order_state'));
+        self::assertSame(1, DB::table('physical_payment_records')->where('order_id', $order)->where('record_kind', 'OBLIGATION_OPENED')->count());
+        self::assertSame(1, DB::table('orders')->count());
+        self::assertEquals($frozen, DB::table('quotation_versions')->where('id', $published['id'])->first());
+        $snapshot = json_decode(DB::table('order_snapshots')->where('order_id', $order)->value('snapshot'), true);
+        self::assertSame('IN_STORE', $snapshot['payment_method']);
+        foreach (['buyers', 'vendor'] as $portal) {
+            if ($portal === 'vendor') {
+                $this->signInStoreMember($owner);
+            }
+            $this->getJson('/api/v1/'.$portal.'/conversations/'.$id)->assertOk()->assertJsonPath('data.quotations.versions.0.selected_payment_method', 'IN_STORE');
+        }
+    }
+
+    public function test_both_portals_keep_published_product_details_after_the_listing_changes(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Quoted specifications');
+        $variant = $this->variantIds($listing)[0];
+        $buyer = $this->buyer();
+        $id = $this->inquiry($store->id, $variant);
+        $this->signInStoreMember($owner);
+        $published = $this->publishQuote($id, $this->draftInput($variant))['versions'][0];
+        $line = $published['content']['lines'][0];
+        self::assertSame('BrandCo', $line['brand']);
+        self::assertSame('Variant 1', $line['variant_label']);
+        self::assertSame(['thickness_mm' => '100'], $line['specifications']);
+        self::assertSame(6800, $published['content']['commercial']['materials_gross_centavos']);
+
+        // A later catalog edit must never replace the terms being reviewed.
+        DB::table('vendor_listings')->where('id', $listing)->update(['technical_attributes' => json_encode(['thickness_mm' => '150'])]);
+        DB::table('listing_variants')->where('id', $variant)->update(['label' => 'Updated catalog variant']);
+        DB::table('products')->where('id', DB::table('vendor_listings')->where('id', $listing)->value('product_id'))->update(['brand' => 'New catalog brand']);
+        foreach (['vendor', 'buyers'] as $portal) {
+            if ($portal === 'buyers') {
+                $this->signInBuyer($buyer);
+            }
+            $this->getJson('/api/v1/'.$portal.'/conversations/'.$id)->assertOk()
+                ->assertJsonPath('data.quotations.versions.0.content.lines.0.brand', 'BrandCo')
+                ->assertJsonPath('data.quotations.versions.0.content.lines.0.variant_label', 'Variant 1')
+                ->assertJsonPath('data.quotations.versions.0.content.lines.0.specifications.thickness_mm', '100')
+                ->assertJsonPath('data.quotations.versions.0.content.commercial.materials_gross_centavos', 6800)
+                ->assertJsonPath('data.quotations.versions.0.content_hash', $published['content_hash']);
+        }
+    }
+
     public function test_versions_are_immutable_soft_holds_do_not_reserve_and_stale_acceptance_is_recoverable(): void
     {
         [$store, $owner, $listing] = $this->pickupStore('Quotation store');
@@ -539,10 +786,10 @@ final class PhaseNineMessagingTest extends TestCase
         self::assertSame('SUPERSEDED', $second['versions'][1]['state']);
         self::assertSame($old['content_hash'], DB::table('quotation_versions')->where('id', $old['id'])->value('content_hash'));
         $this->signInBuyer($buyer);
-        $this->postJson('/api/v1/buyers/conversations/'.$id.'/quotation/accept', ['version_id' => $old['id'], 'content_hash' => $old['content_hash']], ['Idempotency-Key' => (string) Str::uuid7()])->assertStatus(409)->assertJsonPath('errors.0.code', 'QUOTATION_VERSION_CONFLICT');
+        $this->postJson('/api/v1/buyers/conversations/'.$id.'/quotation/accept', ['version_id' => $old['id'], 'content_hash' => $old['content_hash'], 'payment_method' => 'ONLINE'], ['Idempotency-Key' => (string) Str::uuid7()])->assertStatus(409)->assertJsonPath('errors.0.code', 'QUOTATION_VERSION_CONFLICT');
         $latest = $second['versions'][0];
         $key = (string) Str::uuid7();
-        $payload = ['version_id' => $latest['id'], 'content_hash' => $latest['content_hash']];
+        $payload = ['version_id' => $latest['id'], 'content_hash' => $latest['content_hash'], 'payment_method' => 'ONLINE'];
         $order = $this->postJson('/api/v1/buyers/conversations/'.$id.'/quotation/accept', $payload, ['Idempotency-Key' => $key])->assertOk()->json('data.order_id');
         $this->postJson('/api/v1/buyers/conversations/'.$id.'/quotation/accept', $payload, ['Idempotency-Key' => $key])->assertOk()->assertJsonPath('data.order_id', $order);
         self::assertSame('3.0000', $this->reserved($variant));
@@ -566,7 +813,7 @@ final class PhaseNineMessagingTest extends TestCase
         $draft['lines'][] = ['variant_id' => $variants[1], 'quantity' => '2', 'unit_price_centavos' => 1800];
         $quote = $this->publishQuote($id, $draft)['versions'][0];
         $this->signInBuyer($buyer);
-        $this->postJson('/api/v1/buyers/conversations/'.$id.'/quotation/accept', ['version_id' => $quote['id'], 'content_hash' => $quote['content_hash']], ['Idempotency-Key' => (string) Str::uuid7()])->assertStatus(409)->assertJsonPath('errors.0.code', 'STOCK_REVALIDATION_REQUIRED');
+        $this->postJson('/api/v1/buyers/conversations/'.$id.'/quotation/accept', ['version_id' => $quote['id'], 'content_hash' => $quote['content_hash'], 'payment_method' => 'ONLINE'], ['Idempotency-Key' => (string) Str::uuid7()])->assertStatus(409)->assertJsonPath('errors.0.code', 'STOCK_REVALIDATION_REQUIRED');
         self::assertSame(0, DB::table('orders')->count());
         self::assertSame('0.0000', $this->reserved($variants[1]));
         self::assertSame('STOCK_REVALIDATION_REQUIRED', DB::table('quotations')->where('conversation_id', $id)->value('state'));
@@ -600,6 +847,47 @@ final class PhaseNineMessagingTest extends TestCase
         $this->buyer();
         $this->getJson('/api/v1/buyers/conversations/'.$id)->assertNotFound();
         self::assertSame(3, DB::table('conversation_assignments')->where('conversation_id', $id)->count());
+    }
+
+    public function test_both_participants_can_read_version_scoped_change_requests_after_revision_but_outsiders_cannot(): void
+    {
+        Carbon::setTestNow(CarbonImmutable::now()->startOfSecond());
+        CarbonImmutable::setTestNow(Carbon::now());
+        [$store, $owner, $listing] = $this->pickupStore('Requested changes');
+        $variant = $this->variantIds($listing)[0];
+        $buyer = $this->buyer();
+        $id = $this->inquiry($store->id, $variant);
+        $this->signInStoreMember($owner);
+        $published = $this->publishQuote($id, $this->draftInput($variant));
+        $quote = $published['versions'][0];
+        self::assertArrayNotHasKey('requested_changes', $quote);
+        $this->signInBuyer($buyer);
+        $key = (string) Str::uuid7();
+        $input = ['version_id' => $quote['id'], 'reason' => "Please reduce quantity to 3.\nKeep Self-Pickup."];
+        $this->postJson('/api/v1/buyers/conversations/'.$id.'/quotation/counter', $input, ['Idempotency-Key' => $key])->assertOk();
+        $this->postJson('/api/v1/buyers/conversations/'.$id.'/quotation/counter', $input, ['Idempotency-Key' => $key])->assertOk();
+        self::assertSame(1, DB::table('quotation_counter_offers')->where('quotation_version_id', $quote['id'])->count());
+        $expected = ['requested_changes' => $input['reason'], 'change_requested_at' => CarbonImmutable::now()->toIso8601String(),
+            'vendor_response_due_at' => CarbonImmutable::now()->addDay()->toIso8601String()];
+        foreach (['buyers' => $buyer, 'vendor' => $owner] as $portal => $actor) {
+            $portal === 'buyers' ? $this->signInBuyer($actor) : $this->signInStoreMember($actor);
+            $response = $this->getJson('/api/v1/'.$portal.'/conversations/'.$id)->assertOk();
+            foreach ($expected as $field => $value) {
+                $response->assertJsonPath('data.quotations.versions.0.'.$field, $value);
+            }
+        }
+        $this->signInStoreMember($owner);
+        $lock = DB::table('quotations')->where('conversation_id', $id)->value('lock_version');
+        $revised = $this->publishQuote($id, $this->draftInput($variant, '3'), $lock);
+        self::assertArrayNotHasKey('requested_changes', $revised['versions'][0]);
+        self::assertSame('SUPERSEDED', $revised['versions'][1]['state']);
+        self::assertSame($expected, array_intersect_key($revised['versions'][1], $expected));
+        self::assertSame($quote['content_hash'], $revised['versions'][1]['content_hash']);
+        $this->buyer();
+        $this->getJson('/api/v1/buyers/conversations/'.$id)->assertNotFound();
+        $fulfillment = $this->teamMember($store, 'FULFILLMENT');
+        $this->signInStoreMember($fulfillment);
+        $this->getJson('/api/v1/vendor/conversations/'.$id)->assertNotFound();
     }
 
     public function test_fake_clock_reminder_expiry_and_counter_deadline_release_holds(): void
@@ -760,7 +1048,7 @@ final class PhaseNineMessagingTest extends TestCase
         self::assertSame(1, DB::table('quotation_events')->where('event_type', 'REMINDER')->count());
         $this->travel(30)->minutes();
         $this->signInBuyer($buyer);
-        $this->postJson('/api/v1/buyers/conversations/'.$id.'/quotation/accept', ['version_id' => $v['id'], 'content_hash' => $v['content_hash']], ['Idempotency-Key' => (string) Str::uuid7()])->assertConflict()->assertJsonPath('errors.0.code', 'QUOTATION_EXPIRED');
+        $this->postJson('/api/v1/buyers/conversations/'.$id.'/quotation/accept', ['version_id' => $v['id'], 'content_hash' => $v['content_hash'], 'payment_method' => 'ONLINE'], ['Idempotency-Key' => (string) Str::uuid7()])->assertConflict()->assertJsonPath('errors.0.code', 'QUOTATION_EXPIRED');
         self::assertSame(0, DB::table('orders')->count());
         self::assertSame(0, DB::table('inventory_holds')->where('state', 'ACTIVE')->count());
     }
@@ -778,9 +1066,9 @@ final class PhaseNineMessagingTest extends TestCase
         $b = $this->publishQuote($second, $this->draftInput($variant))['versions'][0];
         self::assertSame('0.0000', $this->reserved($variant));
         $this->signInBuyer($buyer);
-        $this->postJson('/api/v1/buyers/conversations/'.$first.'/quotation/accept', ['version_id' => $a['id'], 'content_hash' => $a['content_hash']], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
+        $this->postJson('/api/v1/buyers/conversations/'.$first.'/quotation/accept', ['version_id' => $a['id'], 'content_hash' => $a['content_hash'], 'payment_method' => 'ONLINE'], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
         $this->signInBuyer($secondBuyer);
-        $this->postJson('/api/v1/buyers/conversations/'.$second.'/quotation/accept', ['version_id' => $b['id'], 'content_hash' => $b['content_hash']], ['Idempotency-Key' => (string) Str::uuid7()])->assertConflict()->assertJsonPath('errors.0.code', 'STOCK_REVALIDATION_REQUIRED');
+        $this->postJson('/api/v1/buyers/conversations/'.$second.'/quotation/accept', ['version_id' => $b['id'], 'content_hash' => $b['content_hash'], 'payment_method' => 'ONLINE'], ['Idempotency-Key' => (string) Str::uuid7()])->assertConflict()->assertJsonPath('errors.0.code', 'STOCK_REVALIDATION_REQUIRED');
         self::assertSame('4.0000', $this->reserved($variant));
         self::assertSame(1, DB::table('orders')->count());
     }
@@ -805,7 +1093,7 @@ final class PhaseNineMessagingTest extends TestCase
         $this->publishQuote($second, $this->draftInput($this->variantIds($otherListing)[0]));
         $this->signInBuyer($buyer);
         $key = (string) Str::uuid7();
-        $payload = ['version_id' => $a['id'], 'content_hash' => $a['content_hash']];
+        $payload = ['version_id' => $a['id'], 'content_hash' => $a['content_hash'], 'payment_method' => 'ONLINE'];
         $this->postJson('/api/v1/buyers/conversations/'.$first.'/quotation/accept', $payload, ['Idempotency-Key' => $key])->assertOk();
         $this->postJson('/api/v1/buyers/conversations/'.$first.'/quotation/accept', $payload, ['Idempotency-Key' => $key])->assertOk();
         self::assertSame($store->id, DB::table('work_packages')->where('id', $package)->value('selected_vendor_organization_id'));
@@ -908,6 +1196,7 @@ final class PhaseNineMessagingTest extends TestCase
     public function test_nrpc_quotation_acceptance_freezes_terms_and_allocations_once(): void
     {
         [$store, $owner, $listing] = $this->pickupStore('NRPC quote');
+        DB::table('vendor_payment_settings')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $store->id, 'in_store_enabled' => true, 'lock_version' => 1, 'created_at' => now(), 'updated_at' => now()]);
         $variant = $this->variantIds($listing)[0];
         $buyer = $this->buyer();
         $id = $this->inquiry($store->id, $variant);
@@ -916,18 +1205,22 @@ final class PhaseNineMessagingTest extends TestCase
         $draft['nrpc'] = ['amount_centavos' => 1000, 'reason' => 'Custom preparation for these materials', 'allocations' => [$variant => 1000]];
         $v = $this->publishQuote($id, $draft)['versions'][0];
         $this->signInBuyer($buyer);
-        $payload = ['version_id' => $v['id'], 'content_hash' => $v['content_hash']];
+        $payload = ['version_id' => $v['id'], 'content_hash' => $v['content_hash'], 'payment_method' => 'IN_STORE'];
         $this->postJson('/api/v1/buyers/conversations/'.$id.'/quotation/accept', $payload, ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable();
         $payload += ['nrpc_acknowledged' => true, 'nrpc_terms_version_id' => $v['content']['nrpc']['terms']['id']];
         $order = $this->postJson('/api/v1/buyers/conversations/'.$id.'/quotation/accept', $payload, ['Idempotency-Key' => (string) Str::uuid7()])->assertOk()->json('data.order_id');
         self::assertSame(6800, (int) DB::table('financial_snapshots')->where('order_id', $order)->value('buyer_total_centavos'));
         self::assertSame(1000, (int) DB::table('nrpc_line_allocations')->sum('principal_centavos'));
         self::assertSame(1, DB::table('nrpc_acceptances')->where('order_id', $order)->count());
+        self::assertSame('IN_STORE', DB::table('orders')->where('id', $order)->value('payment_method'));
+        self::assertSame('AWAITING_PAYMENT', DB::table('orders')->where('id', $order)->value('order_state'));
+        self::assertSame(0, DB::table('physical_payment_records')->where('order_id', $order)->count());
     }
 
     public function test_delivery_quote_preserves_buyer_access_and_confirmed_vehicle_calculation(): void
     {
         [$store, $owner] = $this->activeStore('Quoted delivery', false, true);
+        DB::table('vendor_payment_settings')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $store->id, 'cod_enabled' => true, 'lock_version' => 1, 'created_at' => now(), 'updated_at' => now()]);
         DB::table('delivery_service_areas')->where('vendor_organization_id', $store->id)->update(['maximum_distance_km' => 10]);
         $this->signInStoreMember($owner);
         $listing = $this->orderListing('QUOTE-DELIVERY');
@@ -948,8 +1241,13 @@ final class PhaseNineMessagingTest extends TestCase
         $v = $this->publishQuote($id, $draft)['versions'][0];
         self::assertSame(60500, $v['content']['delivery']['final_charge_centavos']);
         self::assertSame($gate, $v['content']['destination']['alternate_drop_off']['location_id']);
+        self::assertSame(['ONLINE', 'CASH_ON_DELIVERY'], $v['available_payment_methods']);
         $this->signInBuyer($buyer);
-        $order = $this->postJson('/api/v1/buyers/conversations/'.$id.'/quotation/accept', ['version_id' => $v['id'], 'content_hash' => $v['content_hash']], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk()->json('data.order_id');
+        $decision = ['version_id' => $v['id'], 'content_hash' => $v['content_hash']];
+        $this->postJson('/api/v1/buyers/conversations/'.$id.'/quotation/accept', $decision + ['payment_method' => 'IN_STORE'], ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable()->assertJsonPath('errors.0.code', 'PAYMENT_METHOD_UNAVAILABLE');
+        $order = $this->postJson('/api/v1/buyers/conversations/'.$id.'/quotation/accept', $decision + ['payment_method' => 'CASH_ON_DELIVERY'], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk()->json('data.order_id');
+        self::assertSame('CASH_ON_DELIVERY', DB::table('orders')->where('id', $order)->value('payment_method'));
+        self::assertSame('CONFIRMED', DB::table('orders')->where('id', $order)->value('order_state'));
         self::assertSame(60500, (int) DB::table('order_delivery_snapshots')->where('order_id', $order)->value('final_charge_centavos'));
         self::assertSame($site, json_decode(DB::table('orders')->where('id', $order)->value('destination'), true)['intended']['location_id']);
     }
@@ -967,7 +1265,7 @@ final class PhaseNineMessagingTest extends TestCase
         self::assertSame(['scope' => 'MATERIALS', 'percent' => '20.00', 'basis_centavos' => 6800, 'deduction_centavos' => 1360], $v['content']['discount']);
         self::assertSame(5440, $v['content']['commercial']['commercial_total_centavos']);
         $this->signInBuyer($buyer);
-        $order = $this->postJson('/api/v1/buyers/conversations/'.$id.'/quotation/accept', ['version_id' => $v['id'], 'content_hash' => $v['content_hash']], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk()->json('data.order_id');
+        $order = $this->postJson('/api/v1/buyers/conversations/'.$id.'/quotation/accept', ['version_id' => $v['id'], 'content_hash' => $v['content_hash'], 'payment_method' => 'ONLINE'], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk()->json('data.order_id');
         self::assertSame(5440, (int) DB::table('orders')->where('id', $order)->value('commercial_total_centavos'));
         self::assertSame(1360, (int) DB::table('financial_snapshots')->where('order_id', $order)->value('vendor_discount_centavos'));
         $this->signInStoreMember($owner);
@@ -1013,7 +1311,7 @@ final class PhaseNineMessagingTest extends TestCase
         self::assertSame($netFee, $v['content']['delivery']['final_charge_centavos']);
         self::assertSame([6800, 0, $netFee, 6800 + $netFee], [$v['content']['commercial']['materials_payable_centavos'], $v['content']['commercial']['vendor_discount_centavos'], $v['content']['commercial']['delivery_centavos'], $v['content']['commercial']['commercial_total_centavos']]);
         $this->signInBuyer($buyer);
-        $order = $this->postJson('/api/v1/buyers/conversations/'.$id.'/quotation/accept', ['version_id' => $v['id'], 'content_hash' => $v['content_hash']], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk()->json('data.order_id');
+        $order = $this->postJson('/api/v1/buyers/conversations/'.$id.'/quotation/accept', ['version_id' => $v['id'], 'content_hash' => $v['content_hash'], 'payment_method' => 'ONLINE'], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk()->json('data.order_id');
         self::assertSame($netFee, (int) DB::table('order_delivery_snapshots')->where('order_id', $order)->value('final_charge_centavos'));
         self::assertSame(6800 + $netFee, (int) DB::table('financial_snapshots')->where('order_id', $order)->value('buyer_total_centavos'));
     }

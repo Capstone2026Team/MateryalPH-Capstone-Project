@@ -38,6 +38,10 @@ final class OperationsQueueService
             $add('document_expiry', 'Documents expiring in 30 days', 'Vendor Management', DB::table('business_document_reviews')->where('decision', 'APPROVED')->where('expiration_kind', 'DATE')
                 ->whereBetween('verified_expiration_date', [now()->toDateString(), now()->addDays(30)->toDateString()])->count(), null, '/vendor-verification?expiry=30', 'Admin-verified expiration dates within 30 days.');
         }
+        if ($has('support.view')) {
+            $pending = DB::table('support_tickets')->whereIn('status', ['OPEN', 'IN_PROGRESS', 'WAITING_FOR_USER']);
+            $add('support', 'Support Requests', 'Platform', (clone $pending)->count(), (clone $pending)->min('created_at'), '/support', 'Private user concerns awaiting assistance.');
+        }
         if ($has('product_compliance.review')) {
             $add('product_compliance', 'Product compliance reviews', 'Compliance and quality', DB::table('compliance_submissions')->where('status', 'PENDING_ADMIN_REVIEW')->count(),
                 DB::table('compliance_submissions')->where('status', 'PENDING_ADMIN_REVIEW')->min('created_at'), '/product-compliance', 'PS/ICC submissions awaiting an Admin decision.');

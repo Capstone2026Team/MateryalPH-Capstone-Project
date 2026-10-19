@@ -27,6 +27,7 @@ import 'package:materyalph_api_client/src/api/admin_privacy_requests_api.dart';
 import 'package:materyalph_api_client/src/api/admin_product_compliance_api.dart';
 import 'package:materyalph_api_client/src/api/admin_review_moderation_api.dart';
 import 'package:materyalph_api_client/src/api/admin_score_monitoring_api.dart';
+import 'package:materyalph_api_client/src/api/admin_user_directory_api.dart';
 import 'package:materyalph_api_client/src/api/admin_vendor_verification_api.dart';
 import 'package:materyalph_api_client/src/api/agreements_api.dart';
 import 'package:materyalph_api_client/src/api/authentication_api.dart';
@@ -47,6 +48,7 @@ import 'package:materyalph_api_client/src/api/notifications_api.dart';
 import 'package:materyalph_api_client/src/api/payment_webhooks_api.dart';
 import 'package:materyalph_api_client/src/api/reporting_api.dart';
 import 'package:materyalph_api_client/src/api/stores_api.dart';
+import 'package:materyalph_api_client/src/api/support_api.dart';
 import 'package:materyalph_api_client/src/api/system_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_auto_accept_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_catalog_api.dart';
@@ -267,6 +269,12 @@ class MateryalphApiClient {
     return AdminScoreMonitoringApi(dio, serializers);
   }
 
+  /// Get AdminUserDirectoryApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  AdminUserDirectoryApi getAdminUserDirectoryApi() {
+    return AdminUserDirectoryApi(dio, serializers);
+  }
+
   /// Get AdminVendorVerificationApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   AdminVendorVerificationApi getAdminVendorVerificationApi() {
@@ -385,6 +393,12 @@ class MateryalphApiClient {
   /// by doing that all interceptors will not be executed
   StoresApi getStoresApi() {
     return StoresApi(dio, serializers);
+  }
+
+  /// Get SupportApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  SupportApi getSupportApi() {
+    return SupportApi(dio, serializers);
   }
 
   /// Get SystemApi instance, base route and serializer can be overridden by a given but be careful,

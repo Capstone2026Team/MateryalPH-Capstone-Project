@@ -7,7 +7,7 @@ export function ProjectInquiryList({ result, onSelect, onPage }: {
   result: ConversationPage; onSelect: (id: string) => void; onPage: (page: number) => void
 }) {
   return <>
-    {result.items.length === 0 && <p className="py-8 text-sm text-text-secondary">No project inquiries yet. Start one from a Work Package’s Vendor comparison.</p>}
+    {result.items.length === 0 && <p className="py-8 text-sm text-text-secondary">No open project quotation inquiries.</p>}
     <ul aria-label="Project inquiries" className="divide-y divide-border-default">
       {result.items.map(row => <li key={row.id}><button type="button" className="flex min-h-11 w-full items-center justify-between gap-3 rounded-control p-4 text-left hover:bg-surface-canvas" onClick={() => onSelect(row.id)}>
         <span className="grid min-w-0 gap-1"><strong className="text-sm text-text-strong">{row.inquiryLabel ?? 'Project inquiry'}</strong><span className="break-words text-sm text-text-secondary">{row.lastMessagePreview || 'Open project conversation'}</span></span>

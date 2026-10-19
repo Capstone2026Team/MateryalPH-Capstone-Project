@@ -46,6 +46,20 @@ Map<String, Object?> allocation(String variant, String mm, int price) => {
   'offered_specifications': [spec(mm)],
 };
 
+/// The server's fulfillment for a quotation whose one line is supplied in full.
+Map<String, Object?> fulfillmentFor(int total) => {
+  'status': 'COMPLETE',
+  'lines_total': 1,
+  'lines_fulfilled': 1,
+  'lines_partial': 0,
+  'lines_unfulfilled': 0,
+  'vendor_lines_fulfilled': 1,
+  'lines': <Object?>[],
+  'separate_items': <Object?>[],
+  'separate_total_centavos': 0,
+  'combined_total_centavos': total,
+};
+
 /// One line where two thicknesses fit; [chosen] applies the 150 mm choice.
 Map<String, Object?> candidate({bool chosen = false}) => {
   'id': candidateId,
@@ -98,6 +112,7 @@ Map<String, Object?> candidate({bool chosen = false}) => {
   'stale': false,
   'label': 'System-compiled estimate — advisory',
   'current_quotation_state': 'NO_INQUIRY',
+  'fulfillment': fulfillmentFor(chosen ? 66000 : 45000),
 };
 
 const estimate = {
@@ -106,7 +121,7 @@ const estimate = {
   'created_at': '2026-10-12T00:00:00Z',
   'expires_at': '2099-01-01T00:00:00Z',
   'state': 'ACTIVE',
-  'context': {'radius_km': 5},
+  'context': {'radius_km': 50},
 };
 
 Map<String, Object?> package() => {
@@ -208,7 +223,8 @@ void main() {
       await tester.pumpAndSettle();
 
       final preview = requests.lastWhere(
-        (r) => r.uri.path.endsWith('/candidates/$candidateId/selection-preview'),
+        (r) =>
+            r.uri.path.endsWith('/candidates/$candidateId/selection-preview'),
       );
       expect((preview.data as Map)['selections'], [
         {'line_id': lineId, 'option_id': 'bbbbbbbbbbbbbbbb'},
@@ -231,7 +247,9 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Select Vendor'));
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump(const Duration(milliseconds: 400));
-      final select = requests.lastWhere((r) => r.uri.path.endsWith('/selection'));
+      final select = requests.lastWhere(
+        (r) => r.uri.path.endsWith('/selection'),
+      );
       expect((select.data as Map)['selections'], [
         {'line_id': lineId, 'option_id': 'bbbbbbbbbbbbbbbb'},
       ]);

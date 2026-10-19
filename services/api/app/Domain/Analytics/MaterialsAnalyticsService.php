@@ -45,6 +45,9 @@ final class MaterialsAnalyticsService
     public function groups(AnalyticsRequest $request, ?string $cursor, int $perPage): array
     {
         $ids = Cache::remember($request->cacheKey('candidates').':'.EligibleOfferQuery::generation(), self::CURRENT_TTL_SECONDS, fn (): array => $this->candidateIds($request));
+        if ($request->audience === 'VENDOR' && $ids !== []) {
+            $ids = $this->vendorVisibleIds($request, $ids);
+        }
         if ($ids === []) {
             return ['groups' => [], 'next_cursor' => null, 'total' => 0];
         }
@@ -62,6 +65,33 @@ final class MaterialsAnalyticsService
         $groups = $query->orderBy('mc.sort_order')->orderBy('mc.name')->orderBy('m.name')->orderBy('cg.display_name')->orderBy('cg.id')->offset($offset)->limit($perPage)->get()->all();
 
         return ['groups' => $groups, 'next_cursor' => $offset + $perPage < $total ? base64_encode((string) ($offset + $perPage)) : null, 'total' => $total];
+    }
+
+    /**
+     * A Vendor sees groups it sells or whose competitor aggregate is displayable at a window endpoint (three competing
+     * Vendors); nothing else hints at a sub-threshold count. Applied before paging so no page is emptied by the filter.
+     *
+     * @param  list<string>  $ids
+     * @return list<string>
+     */
+    private function vendorVisibleIds(AnalyticsRequest $request, array $ids): array
+    {
+        $own = $this->ownOffers((string) $request->ownOrganizationId, $ids);
+        $endpoints = array_values(array_filter([$request->window->start, $request->window->end]));
+        $points = $this->points($request, $ids, $endpoints)['points'];
+
+        return array_values(array_filter($ids, static function (string $id) use ($own, $points, $endpoints): bool {
+            if (isset($own[$id])) {
+                return true;
+            }
+            foreach ($endpoints as $date) {
+                if (($points[$date][$id]['vendors'] ?? 0) >= 3) {
+                    return true;
+                }
+            }
+
+            return false;
+        }));
     }
 
     public function group(string $groupId): object

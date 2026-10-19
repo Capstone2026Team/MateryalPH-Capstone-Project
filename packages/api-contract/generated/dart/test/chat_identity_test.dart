@@ -7,11 +7,13 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(ChatIdentity, () {
+    // Current public profile name. Historical messages fall back to the stored public name when no current profile name exists. System messages retain their system identity.
     // String displayName
     test('to test the property `displayName`', () async {
       // TODO
     });
 
+    // Public role. For historical messages, this is the role recorded when the message was sent, even after a handler transfer or role change.
     // String role
     test('to test the property `role`', () async {
       // TODO

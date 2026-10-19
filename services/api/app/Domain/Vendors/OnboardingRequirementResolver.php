@@ -157,7 +157,7 @@ final class OnboardingRequirementResolver
             'fulfillment_method' => in_array($method, ['SELF_PICKUP', 'VENDOR_DELIVERY', 'BOTH'], true) ? 'COMPLETED' : 'NOT_STARTED',
             'delivery_configuration' => $method === 'SELF_PICKUP' ? 'NOT_APPLICABLE' : ($method === '' ? 'NOT_STARTED' : ($deliveryReady ? 'COMPLETED' : 'IN_PROGRESS')),
             'payment_connection' => $paymentReady ? 'COMPLETED' : ($payment === null ? 'NOT_STARTED' : 'IN_PROGRESS'),
-            'store_operation' => app(StoreOperatingSchedule::class)->valid($schedule) ? 'COMPLETED' : ($schedule === [] ? 'NOT_STARTED' : 'IN_PROGRESS'),
+            'store_operation' => ! $activated && ! empty($formState['operatingScheduleDraft']) ? 'IN_PROGRESS' : (app(StoreOperatingSchedule::class)->valid($schedule) ? 'COMPLETED' : ($schedule === [] ? 'NOT_STARTED' : 'IN_PROGRESS')),
         ];
         if ($profile !== null && $profile->status === 'COMPLETED' && $statuses['public_store_profile'] !== 'COMPLETED') {
             DB::table('store_profiles')->where('id', $profile->id)->update(['status' => 'DRAFT', 'updated_at' => now()]);

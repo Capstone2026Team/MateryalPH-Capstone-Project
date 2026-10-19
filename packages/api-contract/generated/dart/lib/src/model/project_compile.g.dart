@@ -6,31 +6,11 @@ part of 'project_compile.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
-const ProjectCompileRadiusKmEnum _$projectCompileRadiusKmEnum_number5 =
-    const ProjectCompileRadiusKmEnum._('number5');
-const ProjectCompileRadiusKmEnum _$projectCompileRadiusKmEnum_number10 =
-    const ProjectCompileRadiusKmEnum._('number10');
-const ProjectCompileRadiusKmEnum _$projectCompileRadiusKmEnum_number20 =
-    const ProjectCompileRadiusKmEnum._('number20');
-const ProjectCompileRadiusKmEnum _$projectCompileRadiusKmEnum_number30 =
-    const ProjectCompileRadiusKmEnum._('number30');
-const ProjectCompileRadiusKmEnum _$projectCompileRadiusKmEnum_number40 =
-    const ProjectCompileRadiusKmEnum._('number40');
 const ProjectCompileRadiusKmEnum _$projectCompileRadiusKmEnum_number50 =
     const ProjectCompileRadiusKmEnum._('number50');
 
 ProjectCompileRadiusKmEnum _$projectCompileRadiusKmEnumValueOf(String name) {
   switch (name) {
-    case 'number5':
-      return _$projectCompileRadiusKmEnum_number5;
-    case 'number10':
-      return _$projectCompileRadiusKmEnum_number10;
-    case 'number20':
-      return _$projectCompileRadiusKmEnum_number20;
-    case 'number30':
-      return _$projectCompileRadiusKmEnum_number30;
-    case 'number40':
-      return _$projectCompileRadiusKmEnum_number40;
     case 'number50':
       return _$projectCompileRadiusKmEnum_number50;
     default:
@@ -40,11 +20,6 @@ ProjectCompileRadiusKmEnum _$projectCompileRadiusKmEnumValueOf(String name) {
 
 final BuiltSet<ProjectCompileRadiusKmEnum> _$projectCompileRadiusKmEnumValues =
     BuiltSet<ProjectCompileRadiusKmEnum>(const <ProjectCompileRadiusKmEnum>[
-  _$projectCompileRadiusKmEnum_number5,
-  _$projectCompileRadiusKmEnum_number10,
-  _$projectCompileRadiusKmEnum_number20,
-  _$projectCompileRadiusKmEnum_number30,
-  _$projectCompileRadiusKmEnum_number40,
   _$projectCompileRadiusKmEnum_number50,
 ]);
 
@@ -54,19 +29,9 @@ Serializer<ProjectCompileRadiusKmEnum> _$projectCompileRadiusKmEnumSerializer =
 class _$ProjectCompileRadiusKmEnumSerializer
     implements PrimitiveSerializer<ProjectCompileRadiusKmEnum> {
   static const Map<String, Object> _toWire = const <String, Object>{
-    'number5': 5,
-    'number10': 10,
-    'number20': 20,
-    'number30': 30,
-    'number40': 40,
     'number50': 50,
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
-    5: 'number5',
-    10: 'number10',
-    20: 'number20',
-    30: 'number30',
-    40: 'number40',
     50: 'number50',
   };
 
@@ -92,13 +57,12 @@ class _$ProjectCompile extends ProjectCompile {
   @override
   final int lockVersion;
   @override
-  final ProjectCompileRadiusKmEnum radiusKm;
+  final ProjectCompileRadiusKmEnum? radiusKm;
 
   factory _$ProjectCompile([void Function(ProjectCompileBuilder)? updates]) =>
       (ProjectCompileBuilder()..update(updates))._build();
 
-  _$ProjectCompile._({required this.lockVersion, required this.radiusKm})
-      : super._();
+  _$ProjectCompile._({required this.lockVersion, this.radiusKm}) : super._();
   @override
   ProjectCompile rebuild(void Function(ProjectCompileBuilder) updates) =>
       (toBuilder()..update(updates)).build();
@@ -177,8 +141,7 @@ class ProjectCompileBuilder
         _$ProjectCompile._(
           lockVersion: BuiltValueNullFieldError.checkNotNull(
               lockVersion, r'ProjectCompile', 'lockVersion'),
-          radiusKm: BuiltValueNullFieldError.checkNotNull(
-              radiusKm, r'ProjectCompile', 'radiusKm'),
+          radiusKm: radiusKm,
         );
     replace(_$result);
     return _$result;

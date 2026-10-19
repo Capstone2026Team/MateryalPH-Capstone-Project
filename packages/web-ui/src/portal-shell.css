@@ -16,6 +16,7 @@
 .portal-nav section + section { margin-top: 14px; }
 .portal-nav-label { padding: 8px 10px 6px; font-size: 10px; line-height: 16px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; transition: opacity 140ms ease; color: var(--mp-color-text-secondary); }
 .portal-nav-row { display: flex; position: relative; align-items: center; gap: 10px; min-height: 44px; padding: 7px 10px; font-size: 13px; line-height: 20px; border-radius: 6px; color: var(--mp-color-text-secondary); text-decoration: none; transition: background-color 140ms ease, color 140ms ease, padding 180ms ease; }
+.portal-nav-row.is-child { margin-left: 14px; padding-left: 12px; border-left: 1px solid var(--mp-color-border-default); border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .portal-nav-icon { display: grid; flex: 0 0 20px; width: 20px; height: 20px; place-items: center; }
 .portal-nav-icon svg { width: 18px; height: 18px; stroke-width: 1.75; }
 .portal-nav-text { min-width: 0; transition: opacity 140ms ease; }
@@ -63,6 +64,7 @@
   .is-collapsed .portal-nav section + section { margin-top: 4px; padding-top: 5px; }
   .is-collapsed .portal-nav section + section::before { opacity: 1; }
   .is-collapsed .portal-nav-row { justify-content: center; padding-inline: 0; gap: 0; }
+  .is-collapsed .portal-nav-row.is-child { margin-left: 0; border-left: 0; border-radius: 6px; }
   .is-collapsed .portal-nav-text { width: 0; opacity: 0; }
   .is-collapsed .portal-nav-badge { position: absolute; top: 2px; right: 0; min-width: 16px; height: 16px; padding-inline: 3px; font-size: 9px; box-shadow: 0 0 0 2px var(--mp-color-surface-primary); }
   .is-collapsed .portal-sidebar-footer { padding-inline: 10px; }

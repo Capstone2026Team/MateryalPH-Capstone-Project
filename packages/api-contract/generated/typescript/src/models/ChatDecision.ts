@@ -20,6 +20,10 @@ import { mapValues } from '../runtime';
  */
 export interface ChatDecision {
     /**
+     * Required for accept and prohibited for other actions. Explicit Buyer choice; COD requires Site Delivery, In-Store requires Self-Pickup, and the Vendor must offer the method.
+     */
+    paymentMethod?: ChatDecisionPaymentMethodEnum;
+    /**
      *
      */
     budgetOverrideReason?: string;
@@ -45,6 +49,18 @@ export interface ChatDecision {
     nrpcTermsVersionId?: string;
 }
 
+
+/**
+ * @export
+ */
+export const ChatDecisionPaymentMethodEnum = {
+    Online: 'ONLINE',
+    CashOnDelivery: 'CASH_ON_DELIVERY',
+    InStore: 'IN_STORE',
+} as const;
+export type ChatDecisionPaymentMethodEnum = typeof ChatDecisionPaymentMethodEnum[keyof typeof ChatDecisionPaymentMethodEnum];
+
+
 /**
  * Check if a given object implements the ChatDecision interface.
  */
@@ -63,6 +79,7 @@ export function ChatDecisionFromJSONTyped(json: any, ignoreDiscriminator: boolea
     }
     return {
 
+        'paymentMethod': json['payment_method'] == null ? undefined : json['payment_method'],
         'budgetOverrideReason': json['budget_override_reason'] == null ? undefined : json['budget_override_reason'],
         'versionId': json['version_id'],
         'contentHash': json['content_hash'] == null ? undefined : json['content_hash'],
@@ -83,6 +100,7 @@ export function ChatDecisionToJSONTyped(value?: ChatDecision | null, ignoreDiscr
 
     return {
 
+        'payment_method': value['paymentMethod'],
         'budget_override_reason': value['budgetOverrideReason'],
         'version_id': value['versionId'],
         'content_hash': value['contentHash'],

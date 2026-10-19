@@ -15,6 +15,7 @@ import { AdminShell, ErrorState, LoadingState, PageHeader } from './PhaseThreeAd
 import { Paged, Table } from '../components/OperationsKit'
 import { FinanceKpiPanel, RemittanceQueue, TaxAdjustmentQueue, TaxEvidenceQueue } from './FinanceOperationsPanels'
 import { usePaged } from '../lib/operations-hooks'
+import { CommissionPolicyPanel } from './CommissionPolicyPanel'
 
 type View = 'overview' | 'payments' | 'queue' | 'remittances' | 'evidence' | 'adjustments' | 'withholding' | 'statements' | 'overdue' | 'channels'
 const VIEWS: { value: View; label: string }[] = [
@@ -22,6 +23,7 @@ const VIEWS: { value: View; label: string }[] = [
   { value: 'queue', label: 'Work queue' }, { value: 'remittances', label: 'Remittance reconciliation' }, { value: 'evidence', label: 'Tax evidence' },
   { value: 'adjustments', label: 'Tax adjustments' }, { value: 'withholding', label: 'Withholding threshold' }, { value: 'channels', label: 'Channel fees' },
 ]
+const PRIMARY_VIEWS = [{ value: 'overview', label: 'Overview' }, { value: 'statements', label: 'Commission management' }, { value: 'payments', label: 'Payments and refunds' }, { value: 'queue', label: 'Reconciliation' }]
 
 /**
  * Admin finance on the existing finance.* permissions. Every action is authorized again on the server; a 403
@@ -30,6 +32,7 @@ const VIEWS: { value: View; label: string }[] = [
 export function AdminFinancePage() {
   const [params, setParams] = useSearchParams()
   const view = (VIEWS.some(item => item.value === params.get('view')) ? params.get('view') : 'overview') as View
+  const primary = ['statements', 'overdue'].includes(view) ? 'statements' : ['payments', 'channels'].includes(view) ? 'payments' : view === 'overview' ? 'overview' : 'queue'
   const [refresh, setRefresh] = useState(0)
   const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
   const [busy, setBusy] = useState(false)
@@ -40,10 +43,12 @@ export function AdminFinancePage() {
     finally { setBusy(false) }
   }
   return <AdminShell activeHref="/finance"><div className="grid min-w-0 gap-6">
-    <PageHeader eyebrow="Finance" title="Transactions and finance" description="Recorded payments, commission statements, refunds and platform earnings. Shared financial records keep Admin and Vendor balances consistent."
+    <PageHeader eyebrow="Finance" title="Platform accounting" description="Monitor platform earnings, collect commission bills and review financial exceptions."
       actions={<Button variant="secondary" disabled={busy} onClick={() => void reconcile()}><RefreshCw size={16} aria-hidden="true" />{busy ? 'Reconciling…' : 'Run reconciliation'}</Button>} />
     {notice && <StatusMessage tone={notice.tone}>{notice.text}</StatusMessage>}
-    <FilterChips label="Finance view" chips={VIEWS} value={view} appearance="tabs" onChange={value => setParams({ view: value })} />
+    <FilterChips label="Finance view" chips={PRIMARY_VIEWS} value={primary} appearance="tabs" onChange={value => setParams({ view: value })} />
+    {primary === 'payments' && <FilterChips label="Payment sections" chips={VIEWS.filter(item => ['payments', 'channels'].includes(item.value))} value={view} onChange={value => setParams({ view: value })} />}
+    {primary === 'queue' && <FilterChips label="Reconciliation sections" chips={VIEWS.filter(item => ['queue', 'remittances', 'evidence', 'withholding'].includes(item.value))} value={view} onChange={value => setParams({ view: value })} />}
     <div key={`${view}-${refresh}`} className="grid min-w-0 gap-6">
     {view === 'overview' && <FinanceKpiPanel />}
     {view === 'queue' && <ReviewQueue />}
@@ -52,8 +57,7 @@ export function AdminFinancePage() {
     {view === 'adjustments' && <TaxAdjustmentQueue />}
     {view === 'payments' && <PaymentLog />}
     {view === 'withholding' && <Accumulators />}
-    {view === 'statements' && <><Statements /><ReviewQueue kind="FEE_CREDIT_PROPOSAL" title="Commission credit approvals" empty="No commission credits awaiting approval." /></>}
-    {view === 'overdue' && <Statements overdue />}
+    {primary === 'statements' && <><CommissionPolicyPanel /><FilterChips label="Commission sections" chips={[{ value: 'statements', label: 'All statements' }, { value: 'overdue', label: 'Overdue debt' }]} value={view} onChange={value => setParams({ view: value })} /><Statements overdue={view === 'overdue'} />{view === 'statements' && <ReviewQueue kind="FEE_CREDIT_PROPOSAL" title="Commission credit approvals" empty="No commission credits awaiting approval." />}</>}
     {view === 'channels' && <ChannelFees />}
     </div>
   </div></AdminShell>
@@ -237,7 +241,7 @@ function Statements({ overdue = false }: { overdue?: boolean }) {
     <p className="text-sm text-text-secondary">Drafted automatically at 00:05 on the first (Asia/Manila); approve by the third. Due on the fifteenth, or twelve days after a late issue.</p>
     <Toolbar filters={<><DateFilter title="Statement issue dates" value={range} onChange={setRange} />{(range.from || range.to) && <Button variant="quiet" onClick={() => setRange(ALL_DATES)}>Reset dates</Button>}</>} />
     {message && <StatusMessage tone={message.tone}>{message.text}</StatusMessage>}
-    <Paged state={paged} empty="No statements in this state.">
+    <Paged state={paged} empty="No statements match these filters. Completed orders are included in the next monthly draft.">
       {items => <Table caption="Commission statements" headers={['Statement', 'Vendor', 'Period', 'Charges', 'Credits', 'Paid before refunds', 'Outstanding', 'Due (Asia/Manila)', 'Status / Action']}>
         {items.map(row => <tr key={String(row.id)}><td className="px-4 py-3 font-semibold">{String(row.reference)}</td><td className="px-4 py-3">{String(row.vendor_name)}</td>
           <td className="px-4 py-3">{String(row.period_start)} – {String(row.period_end)}</td>

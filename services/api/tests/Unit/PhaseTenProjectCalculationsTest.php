@@ -31,9 +31,9 @@ final class PhaseTenProjectCalculationsTest extends TestCase
         self::assertSame('0', FMS::calculate('5', '10', 1, 0, 0, 5, null, FMS::DEFAULTS)['components']['budget_fit']);
     }
 
-    public function test_separate_project_preferences_require_four_integer_weights_and_100_percent(): void
+    public function test_separate_project_preferences_require_four_bounded_integer_weights_and_not_all_zero(): void
     {
-        foreach ([['material_match' => 40, 'budget_fit' => 25, 'distance' => 20, 'vps' => 14], ['material_match' => '40', 'budget_fit' => 25, 'distance' => 20, 'vps' => 15], ['material_match' => 40, 'budget_fit' => 25, 'distance' => 20, 'vps' => 15, 'extra' => 0]] as $weights) {
+        foreach ([['material_match' => 0, 'budget_fit' => 0, 'distance' => 0, 'vps' => 0], ['material_match' => '40', 'budget_fit' => 25, 'distance' => 20, 'vps' => 15], ['material_match' => 40, 'budget_fit' => 25, 'distance' => 20, 'vps' => 15, 'extra' => 0]] as $weights) {
             try {
                 FMS::validate($weights);
                 self::fail('Invalid weights must fail');
@@ -42,6 +42,19 @@ final class PhaseTenProjectCalculationsTest extends TestCase
             }
         }
         self::assertSame(FMS::DEFAULTS, FMS::validate(FMS::DEFAULTS));
+    }
+
+    public function test_fms_normalizes_without_mutating_raw_weights_and_zero_has_no_influence(): void
+    {
+        $raw = ['material_match' => 80, 'budget_fit' => 50, 'distance' => 40, 'vps' => 30];
+        $score = FMS::calculate('10', '10', 9000, 10000, 2500, 5, null, $raw);
+        self::assertSame('82.50', $score['score']);
+        self::assertSame($raw, $score['weights']);
+        self::assertSame(FMS::calculate('10', '10', 9000, 10000, 2500, 5, null, FMS::DEFAULTS)['score'], $score['score']);
+        $single = ['material_match' => 1, 'budget_fit' => 0, 'distance' => 0, 'vps' => 0];
+        self::assertSame('100.00', FMS::calculate('10', '10', null, 10000, 5000, 5, '1', $single)['score']);
+        self::assertSame('100.00', FMS::calculate('10', '10', 9000, 10000, 0, 5, '5', array_fill_keys(array_keys($raw), 100))['score']);
+        self::assertSame('0.00', FMS::calculate('0', '10', 20000, 10000, 5000, 5, '1', $raw)['score']);
     }
 
     public function test_fin_11_keeps_order_buckets_disjoint_and_actual_is_subtracted_once(): void

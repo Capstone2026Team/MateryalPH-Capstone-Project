@@ -7,7 +7,7 @@ manifest. None of these files are committed: they are written to the git-ignored
   services/api/database/demo-assets/photos/
     products/<slug>/<SKU>-<n>.jpg   (square, 1200 px, padded with the photo's own background)
     vendors/<slug>/banner.jpg       (1600 x 500)
-    vendors/<slug>/vehicle.jpg      (1200 x 800)
+    vendors/<slug>/vehicle*.jpg     (1200 x 800; one file per configured vehicle, e.g. vehicle-mixer.jpg)
 
 Re-running skips files that already exist; pass --force to rebuild them. Run from the repository root:
 
@@ -124,7 +124,7 @@ def main(argv: list[str]) -> int:
             image = crop_fraction(open_rgb(download(photo["url"])), photo.get("crop"))
             if kind == "banner":
                 image = cover(image, 1600, 500, photo.get("focus"))
-            elif kind == "vehicle":
+            elif kind.startswith("vehicle"):
                 image = cover(image, 1200, 800, photo.get("focus"))
             else:
                 image = square(image)

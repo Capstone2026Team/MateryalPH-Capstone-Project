@@ -10,6 +10,9 @@ Name | Type
 `quantity` | string
 `unitPriceCentavos` | number
 `description` | string
+`brand` | string
+`variantLabel` | string
+`specifications` | { [key: string]: string; }
 `unitCode` | string
 `taxCategory` | string
 `sourcePriceVersionId` | string
@@ -26,6 +29,9 @@ const example = {
   "quantity": null,
   "unitPriceCentavos": null,
   "description": null,
+  "brand": null,
+  "variantLabel": null,
+  "specifications": null,
   "unitCode": null,
   "taxCategory": null,
   "sourcePriceVersionId": null,

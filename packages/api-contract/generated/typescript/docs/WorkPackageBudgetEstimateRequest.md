@@ -6,6 +6,8 @@
 
 Name | Type
 ------------ | -------------
+`heavyVehicleRestriction` | string
+`alternateDropOffLocationId` | string
 `siteId` | string
 `radiusKm` | number
 `fulfillmentMethod` | string
@@ -18,6 +20,8 @@ import type { WorkPackageBudgetEstimateRequest } from '@materyalph/api-client-ts
 
 // TODO: Update the object below with actual values
 const example = {
+  "heavyVehicleRestriction": null,
+  "alternateDropOffLocationId": null,
   "siteId": null,
   "radiusKm": null,
   "fulfillmentMethod": null,

@@ -6,15 +6,81 @@ part of 'project_selection_preview.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
+const ProjectSelectionPreviewFulfillmentMethodEnum
+    _$projectSelectionPreviewFulfillmentMethodEnum_PICKUP =
+    const ProjectSelectionPreviewFulfillmentMethodEnum._('PICKUP');
+const ProjectSelectionPreviewFulfillmentMethodEnum
+    _$projectSelectionPreviewFulfillmentMethodEnum_DELIVERY =
+    const ProjectSelectionPreviewFulfillmentMethodEnum._('DELIVERY');
+
+ProjectSelectionPreviewFulfillmentMethodEnum
+    _$projectSelectionPreviewFulfillmentMethodEnumValueOf(String name) {
+  switch (name) {
+    case 'PICKUP':
+      return _$projectSelectionPreviewFulfillmentMethodEnum_PICKUP;
+    case 'DELIVERY':
+      return _$projectSelectionPreviewFulfillmentMethodEnum_DELIVERY;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<ProjectSelectionPreviewFulfillmentMethodEnum>
+    _$projectSelectionPreviewFulfillmentMethodEnumValues = BuiltSet<
+        ProjectSelectionPreviewFulfillmentMethodEnum>(const <ProjectSelectionPreviewFulfillmentMethodEnum>[
+  _$projectSelectionPreviewFulfillmentMethodEnum_PICKUP,
+  _$projectSelectionPreviewFulfillmentMethodEnum_DELIVERY,
+]);
+
+Serializer<ProjectSelectionPreviewFulfillmentMethodEnum>
+    _$projectSelectionPreviewFulfillmentMethodEnumSerializer =
+    _$ProjectSelectionPreviewFulfillmentMethodEnumSerializer();
+
+class _$ProjectSelectionPreviewFulfillmentMethodEnumSerializer
+    implements
+        PrimitiveSerializer<ProjectSelectionPreviewFulfillmentMethodEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'PICKUP': 'PICKUP',
+    'DELIVERY': 'DELIVERY',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'PICKUP': 'PICKUP',
+    'DELIVERY': 'DELIVERY',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    ProjectSelectionPreviewFulfillmentMethodEnum
+  ];
+  @override
+  final String wireName = 'ProjectSelectionPreviewFulfillmentMethodEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          ProjectSelectionPreviewFulfillmentMethodEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  ProjectSelectionPreviewFulfillmentMethodEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      ProjectSelectionPreviewFulfillmentMethodEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$ProjectSelectionPreview extends ProjectSelectionPreview {
   @override
   final BuiltList<ProjectSpecificationSelection>? selections;
+  @override
+  final ProjectSelectionPreviewFulfillmentMethodEnum? fulfillmentMethod;
 
   factory _$ProjectSelectionPreview(
           [void Function(ProjectSelectionPreviewBuilder)? updates]) =>
       (ProjectSelectionPreviewBuilder()..update(updates))._build();
 
-  _$ProjectSelectionPreview._({this.selections}) : super._();
+  _$ProjectSelectionPreview._({this.selections, this.fulfillmentMethod})
+      : super._();
   @override
   ProjectSelectionPreview rebuild(
           void Function(ProjectSelectionPreviewBuilder) updates) =>
@@ -27,13 +93,16 @@ class _$ProjectSelectionPreview extends ProjectSelectionPreview {
   @override
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
-    return other is ProjectSelectionPreview && selections == other.selections;
+    return other is ProjectSelectionPreview &&
+        selections == other.selections &&
+        fulfillmentMethod == other.fulfillmentMethod;
   }
 
   @override
   int get hashCode {
     var _$hash = 0;
     _$hash = $jc(_$hash, selections.hashCode);
+    _$hash = $jc(_$hash, fulfillmentMethod.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -41,7 +110,8 @@ class _$ProjectSelectionPreview extends ProjectSelectionPreview {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'ProjectSelectionPreview')
-          ..add('selections', selections))
+          ..add('selections', selections)
+          ..add('fulfillmentMethod', fulfillmentMethod))
         .toString();
   }
 }
@@ -57,6 +127,13 @@ class ProjectSelectionPreviewBuilder
   set selections(ListBuilder<ProjectSpecificationSelection>? selections) =>
       _$this._selections = selections;
 
+  ProjectSelectionPreviewFulfillmentMethodEnum? _fulfillmentMethod;
+  ProjectSelectionPreviewFulfillmentMethodEnum? get fulfillmentMethod =>
+      _$this._fulfillmentMethod;
+  set fulfillmentMethod(
+          ProjectSelectionPreviewFulfillmentMethodEnum? fulfillmentMethod) =>
+      _$this._fulfillmentMethod = fulfillmentMethod;
+
   ProjectSelectionPreviewBuilder() {
     ProjectSelectionPreview._defaults(this);
   }
@@ -65,6 +142,7 @@ class ProjectSelectionPreviewBuilder
     final $v = _$v;
     if ($v != null) {
       _selections = $v.selections?.toBuilder();
+      _fulfillmentMethod = $v.fulfillmentMethod;
       _$v = null;
     }
     return this;
@@ -89,6 +167,7 @@ class ProjectSelectionPreviewBuilder
       _$result = _$v ??
           _$ProjectSelectionPreview._(
             selections: _selections?.build(),
+            fulfillmentMethod: fulfillmentMethod,
           );
     } catch (_) {
       late String _$failedField;

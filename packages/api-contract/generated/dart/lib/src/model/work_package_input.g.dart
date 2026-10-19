@@ -6,32 +6,12 @@ part of 'work_package_input.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
-const WorkPackageInputRadiusKmEnum _$workPackageInputRadiusKmEnum_number5 =
-    const WorkPackageInputRadiusKmEnum._('number5');
-const WorkPackageInputRadiusKmEnum _$workPackageInputRadiusKmEnum_number10 =
-    const WorkPackageInputRadiusKmEnum._('number10');
-const WorkPackageInputRadiusKmEnum _$workPackageInputRadiusKmEnum_number20 =
-    const WorkPackageInputRadiusKmEnum._('number20');
-const WorkPackageInputRadiusKmEnum _$workPackageInputRadiusKmEnum_number30 =
-    const WorkPackageInputRadiusKmEnum._('number30');
-const WorkPackageInputRadiusKmEnum _$workPackageInputRadiusKmEnum_number40 =
-    const WorkPackageInputRadiusKmEnum._('number40');
 const WorkPackageInputRadiusKmEnum _$workPackageInputRadiusKmEnum_number50 =
     const WorkPackageInputRadiusKmEnum._('number50');
 
 WorkPackageInputRadiusKmEnum _$workPackageInputRadiusKmEnumValueOf(
     String name) {
   switch (name) {
-    case 'number5':
-      return _$workPackageInputRadiusKmEnum_number5;
-    case 'number10':
-      return _$workPackageInputRadiusKmEnum_number10;
-    case 'number20':
-      return _$workPackageInputRadiusKmEnum_number20;
-    case 'number30':
-      return _$workPackageInputRadiusKmEnum_number30;
-    case 'number40':
-      return _$workPackageInputRadiusKmEnum_number40;
     case 'number50':
       return _$workPackageInputRadiusKmEnum_number50;
     default:
@@ -42,11 +22,6 @@ WorkPackageInputRadiusKmEnum _$workPackageInputRadiusKmEnumValueOf(
 final BuiltSet<WorkPackageInputRadiusKmEnum>
     _$workPackageInputRadiusKmEnumValues =
     BuiltSet<WorkPackageInputRadiusKmEnum>(const <WorkPackageInputRadiusKmEnum>[
-  _$workPackageInputRadiusKmEnum_number5,
-  _$workPackageInputRadiusKmEnum_number10,
-  _$workPackageInputRadiusKmEnum_number20,
-  _$workPackageInputRadiusKmEnum_number30,
-  _$workPackageInputRadiusKmEnum_number40,
   _$workPackageInputRadiusKmEnum_number50,
 ]);
 
@@ -56,6 +31,9 @@ const WorkPackageInputFulfillmentMethodEnum
 const WorkPackageInputFulfillmentMethodEnum
     _$workPackageInputFulfillmentMethodEnum_DELIVERY =
     const WorkPackageInputFulfillmentMethodEnum._('DELIVERY');
+const WorkPackageInputFulfillmentMethodEnum
+    _$workPackageInputFulfillmentMethodEnum_BOTH =
+    const WorkPackageInputFulfillmentMethodEnum._('BOTH');
 
 WorkPackageInputFulfillmentMethodEnum
     _$workPackageInputFulfillmentMethodEnumValueOf(String name) {
@@ -64,6 +42,8 @@ WorkPackageInputFulfillmentMethodEnum
       return _$workPackageInputFulfillmentMethodEnum_PICKUP;
     case 'DELIVERY':
       return _$workPackageInputFulfillmentMethodEnum_DELIVERY;
+    case 'BOTH':
+      return _$workPackageInputFulfillmentMethodEnum_BOTH;
     default:
       throw ArgumentError(name);
   }
@@ -74,6 +54,7 @@ final BuiltSet<WorkPackageInputFulfillmentMethodEnum>
         WorkPackageInputFulfillmentMethodEnum>(const <WorkPackageInputFulfillmentMethodEnum>[
   _$workPackageInputFulfillmentMethodEnum_PICKUP,
   _$workPackageInputFulfillmentMethodEnum_DELIVERY,
+  _$workPackageInputFulfillmentMethodEnum_BOTH,
 ]);
 
 const WorkPackageInputPaymentMethodEnum
@@ -150,19 +131,9 @@ Serializer<WorkPackageInputHeavyVehicleRestrictionEnum>
 class _$WorkPackageInputRadiusKmEnumSerializer
     implements PrimitiveSerializer<WorkPackageInputRadiusKmEnum> {
   static const Map<String, Object> _toWire = const <String, Object>{
-    'number5': 5,
-    'number10': 10,
-    'number20': 20,
-    'number30': 30,
-    'number40': 40,
     'number50': 50,
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
-    5: 'number5',
-    10: 'number10',
-    20: 'number20',
-    30: 'number30',
-    40: 'number40',
     50: 'number50',
   };
 
@@ -189,10 +160,12 @@ class _$WorkPackageInputFulfillmentMethodEnumSerializer
   static const Map<String, Object> _toWire = const <String, Object>{
     'PICKUP': 'PICKUP',
     'DELIVERY': 'DELIVERY',
+    'BOTH': 'BOTH',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'PICKUP': 'PICKUP',
     'DELIVERY': 'DELIVERY',
+    'BOTH': 'BOTH',
   };
 
   @override
@@ -293,11 +266,11 @@ class _$WorkPackageInput extends WorkPackageInput {
   @override
   final String siteId;
   @override
-  final WorkPackageInputRadiusKmEnum radiusKm;
+  final WorkPackageInputRadiusKmEnum? radiusKm;
   @override
   final WorkPackageInputFulfillmentMethodEnum fulfillmentMethod;
   @override
-  final WorkPackageInputPaymentMethodEnum paymentMethod;
+  final WorkPackageInputPaymentMethodEnum? paymentMethod;
   @override
   final String? siteContact;
   @override
@@ -319,9 +292,9 @@ class _$WorkPackageInput extends WorkPackageInput {
       this.description,
       required this.budgetCentavos,
       required this.siteId,
-      required this.radiusKm,
+      this.radiusKm,
       required this.fulfillmentMethod,
-      required this.paymentMethod,
+      this.paymentMethod,
       this.siteContact,
       this.heavyVehicleRestriction,
       this.alternateDropOffLocationId,
@@ -515,12 +488,10 @@ class WorkPackageInputBuilder
                 budgetCentavos, r'WorkPackageInput', 'budgetCentavos'),
             siteId: BuiltValueNullFieldError.checkNotNull(
                 siteId, r'WorkPackageInput', 'siteId'),
-            radiusKm: BuiltValueNullFieldError.checkNotNull(
-                radiusKm, r'WorkPackageInput', 'radiusKm'),
+            radiusKm: radiusKm,
             fulfillmentMethod: BuiltValueNullFieldError.checkNotNull(
                 fulfillmentMethod, r'WorkPackageInput', 'fulfillmentMethod'),
-            paymentMethod: BuiltValueNullFieldError.checkNotNull(
-                paymentMethod, r'WorkPackageInput', 'paymentMethod'),
+            paymentMethod: paymentMethod,
             siteContact: siteContact,
             heavyVehicleRestriction: heavyVehicleRestriction,
             alternateDropOffLocationId: alternateDropOffLocationId,

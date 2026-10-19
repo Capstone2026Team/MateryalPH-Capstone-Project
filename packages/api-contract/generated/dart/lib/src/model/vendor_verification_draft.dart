@@ -29,7 +29,7 @@ part 'vendor_verification_draft.g.dart';
 /// * [storeEmail]
 /// * [storePhone]
 /// * [classification]
-/// * [address] - New or changed addresses require province_code, city_code, psgc_code, street (2–200 characters), four-digit postal_code and canonical display names. source MANUAL is sufficient without geocoding or a token and stores null coordinates. Otherwise resolution_token from resolveVendorAddress is required. Client latitude and longitude are prohibited. Omit address to retain an existing record.
+/// * [address] - New or changed addresses require province, city_municipality, barangay, street (2–200 characters) and four-digit postal_code. PSGC codes are optional legacy inputs, validated when supplied; otherwise the server matches geographic references where possible. source MANUAL is sufficient without geocoding or a token and stores null coordinates. Otherwise resolution_token from resolveVendorAddress is required. Client latitude and longitude are prohibited. Omit address to retain an existing record.
 /// * [representative]
 /// * [legalIdentity]
 /// * [taxProfile]
@@ -72,7 +72,7 @@ abstract class VendorVerificationDraft implements Built<VendorVerificationDraft,
   @BuiltValueField(wireName: r'classification')
   VendorVerificationDraftClassification? get classification;
 
-  /// New or changed addresses require province_code, city_code, psgc_code, street (2–200 characters), four-digit postal_code and canonical display names. source MANUAL is sufficient without geocoding or a token and stores null coordinates. Otherwise resolution_token from resolveVendorAddress is required. Client latitude and longitude are prohibited. Omit address to retain an existing record.
+  /// New or changed addresses require province, city_municipality, barangay, street (2–200 characters) and four-digit postal_code. PSGC codes are optional legacy inputs, validated when supplied; otherwise the server matches geographic references where possible. source MANUAL is sufficient without geocoding or a token and stores null coordinates. Otherwise resolution_token from resolveVendorAddress is required. Client latitude and longitude are prohibited. Omit address to retain an existing record.
   @BuiltValueField(wireName: r'address')
   BuiltMap<String, JsonObject?>? get address;
 

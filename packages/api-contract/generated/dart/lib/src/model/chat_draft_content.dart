@@ -17,7 +17,7 @@ part 'chat_draft_content.g.dart';
 /// Properties:
 /// * [lines]
 /// * [fulfillmentMethod]
-/// * [paymentMethod]
+/// * [paymentMethod] - Legacy editor preference, ignored. The Buyer selects payment before accepting the quotation.
 /// * [fulfillmentDate]
 /// * [deadlineHours]
 /// * [vendorDiscountCentavos] - Legacy fixed materials discount. Omit when discount is supplied.
@@ -33,8 +33,10 @@ abstract class ChatDraftContent implements Built<ChatDraftContent, ChatDraftCont
   ChatDraftContentFulfillmentMethodEnum get fulfillmentMethod;
   // enum fulfillmentMethodEnum {  PICKUP,  DELIVERY,  };
 
+  /// Legacy editor preference, ignored. The Buyer selects payment before accepting the quotation.
+  @Deprecated('paymentMethod has been deprecated')
   @BuiltValueField(wireName: r'payment_method')
-  ChatDraftContentPaymentMethodEnum get paymentMethod;
+  ChatDraftContentPaymentMethodEnum? get paymentMethod;
   // enum paymentMethodEnum {  ONLINE,  CASH_ON_DELIVERY,  IN_STORE,  };
 
   @BuiltValueField(wireName: r'fulfillment_date')
@@ -91,11 +93,13 @@ class _$ChatDraftContentSerializer implements PrimitiveSerializer<ChatDraftConte
       object.fulfillmentMethod,
       specifiedType: const FullType(ChatDraftContentFulfillmentMethodEnum),
     );
-    yield r'payment_method';
-    yield serializers.serialize(
-      object.paymentMethod,
-      specifiedType: const FullType(ChatDraftContentPaymentMethodEnum),
-    );
+    if (object.paymentMethod != null) {
+      yield r'payment_method';
+      yield serializers.serialize(
+        object.paymentMethod,
+        specifiedType: const FullType(ChatDraftContentPaymentMethodEnum),
+      );
+    }
     yield r'fulfillment_date';
     yield serializers.serialize(
       object.fulfillmentDate,
@@ -176,8 +180,9 @@ class _$ChatDraftContentSerializer implements PrimitiveSerializer<ChatDraftConte
         case r'payment_method':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(ChatDraftContentPaymentMethodEnum),
-          ) as ChatDraftContentPaymentMethodEnum;
+            specifiedType: const FullType.nullable(ChatDraftContentPaymentMethodEnum),
+          ) as ChatDraftContentPaymentMethodEnum?;
+          if (valueDes == null) continue;
           result.paymentMethod = valueDes;
           break;
         case r'fulfillment_date':
@@ -272,6 +277,7 @@ class ChatDraftContentFulfillmentMethodEnum extends EnumClass {
   static ChatDraftContentFulfillmentMethodEnum valueOf(String name) => _$chatDraftContentFulfillmentMethodEnumValueOf(name);
 }
 
+/// Legacy editor preference, ignored. The Buyer selects payment before accepting the quotation.
 class ChatDraftContentPaymentMethodEnum extends EnumClass {
 
   @BuiltValueEnumConst(wireName: r'ONLINE')

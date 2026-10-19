@@ -20,6 +20,13 @@ import {
     WorkPackageAlternativeToJSON,
     WorkPackageAlternativeToJSONTyped,
 } from './WorkPackageAlternative';
+import type { WorkPackageAlternativePageExcluded } from './WorkPackageAlternativePageExcluded';
+import {
+    WorkPackageAlternativePageExcludedFromJSON,
+    WorkPackageAlternativePageExcludedFromJSONTyped,
+    WorkPackageAlternativePageExcludedToJSON,
+    WorkPackageAlternativePageExcludedToJSONTyped,
+} from './WorkPackageAlternativePageExcluded';
 
 /**
  *
@@ -32,17 +39,25 @@ export interface WorkPackageAlternativePage {
      */
     line: { [key: string]: any; };
     /**
-     *
+     * NO_SUITABLE_ALTERNATIVE: no eligible store within the radius can supply the quantity still needed (see `excluded`). COVERED: separate purchases already satisfy the line. A failed request is an error response, never one of these.
      */
     status: WorkPackageAlternativePageStatusEnum;
     /**
-     * The Project site's saved location; pass it with radius_km when adding to the cart.
+     * The quantity still to source: the compared Vendor's gap less the separate purchases that satisfy the line (the full line quantity when no `candidate_id` is sent).
      */
-    locationId?: string;
+    neededQuantity: string;
     /**
      *
      */
-    radiusKm: number;
+    excluded: WorkPackageAlternativePageExcluded;
+    /**
+     * The Project site's saved location, for display only. The server scopes the purchase from the package's locked site point.
+     */
+    locationId?: string;
+    /**
+     * The fixed Project-Based radius.
+     */
+    radiusKm: WorkPackageAlternativePageRadiusKmEnum;
     /**
      *
      */
@@ -67,9 +82,19 @@ export interface WorkPackageAlternativePage {
  */
 export const WorkPackageAlternativePageStatusEnum = {
     Catalog: 'CATALOG',
+    NoSuitableAlternative: 'NO_SUITABLE_ALTERNATIVE',
+    Covered: 'COVERED',
     Unlisted: 'UNLISTED',
 } as const;
 export type WorkPackageAlternativePageStatusEnum = typeof WorkPackageAlternativePageStatusEnum[keyof typeof WorkPackageAlternativePageStatusEnum];
+
+/**
+ * @export
+ */
+export const WorkPackageAlternativePageRadiusKmEnum = {
+    NUMBER_50: 50,
+} as const;
+export type WorkPackageAlternativePageRadiusKmEnum = typeof WorkPackageAlternativePageRadiusKmEnum[keyof typeof WorkPackageAlternativePageRadiusKmEnum];
 
 
 /**
@@ -78,7 +103,11 @@ export type WorkPackageAlternativePageStatusEnum = typeof WorkPackageAlternative
 export function instanceOfWorkPackageAlternativePage(value: object): value is WorkPackageAlternativePage {
     if (!('line' in value) || value['line'] === undefined) return false;
     if (!('status' in value) || value['status'] === undefined) return false;
+    if ((!('neededQuantity' in (value as Record<string, any>)) && !('needed_quantity' in (value as Record<string, any>))) || ((value as Record<string, any>)['neededQuantity'] === undefined && (value as Record<string, any>)['needed_quantity'] === undefined)) return false;
+    if (!('excluded' in value) || value['excluded'] === undefined) return false;
     if ((!('radiusKm' in (value as Record<string, any>)) && !('radius_km' in (value as Record<string, any>))) || ((value as Record<string, any>)['radiusKm'] === undefined && (value as Record<string, any>)['radius_km'] === undefined)) return false;
+
+    if ((value as Record<string, any>)['radiusKm'] !== 50 && (value as Record<string, any>)['radius_km'] !== 50) return false;
     if (!('items' in value) || value['items'] === undefined) return false;
     if (!('page' in value) || value['page'] === undefined) return false;
     if ((!('hasMore' in (value as Record<string, any>)) && !('has_more' in (value as Record<string, any>))) || ((value as Record<string, any>)['hasMore'] === undefined && (value as Record<string, any>)['has_more'] === undefined)) return false;
@@ -98,6 +127,8 @@ export function WorkPackageAlternativePageFromJSONTyped(json: any, ignoreDiscrim
 
         'line': json['line'],
         'status': json['status'],
+        'neededQuantity': json['needed_quantity'],
+        'excluded': WorkPackageAlternativePageExcludedFromJSON(json['excluded']),
         'locationId': json['location_id'] == null ? undefined : json['location_id'],
         'radiusKm': json['radius_km'],
         'items': ((json['items'] as Array<any>).map(WorkPackageAlternativeFromJSON)),
@@ -120,6 +151,8 @@ export function WorkPackageAlternativePageToJSONTyped(value?: WorkPackageAlterna
 
         'line': value['line'],
         'status': value['status'],
+        'needed_quantity': value['neededQuantity'],
+        'excluded': WorkPackageAlternativePageExcludedToJSON(value['excluded']),
         'location_id': value['locationId'],
         'radius_km': value['radiusKm'],
         'items': ((value['items'] as Array<any>).map(WorkPackageAlternativeToJSON)),

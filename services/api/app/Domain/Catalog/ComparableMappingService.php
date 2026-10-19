@@ -88,11 +88,11 @@ final class ComparableMappingService
      *
      * @return array{status: string, group_version_id: ?string, assignment_id: ?string}
      */
-    public function assign(string $variantId): array
+    public function assign(string $variantId, bool $deriveGroup = false): array
     {
         $variant = DB::table('listing_variants as v')->join('vendor_listings as l', 'l.id', '=', 'v.vendor_listing_id')->join('products as p', 'p.id', '=', 'l.product_id')
             ->where('v.id', $variantId)->first(['v.id', 'v.unit_id', 'v.attributes', 'v.active', 'l.technical_attributes', 'l.material_category_id', 'p.material_id', 'p.brand', 'p.model']);
-        $candidate = $variant === null || ! $variant->active || $variant->material_id === null ? null : $this->matchingGroupVersion($variant);
+        $candidate = $variant === null || ! $variant->active || $variant->material_id === null ? null : $this->matchingGroupVersion($variant, $deriveGroup);
         $current = DB::table('listing_comparable_assignments')->where('listing_variant_id', $variantId)->whereNull('effective_until')->where('mapping_state', 'APPROVED')->first();
         if ($current !== null && $candidate !== null && $current->material_comparable_group_version_id === $candidate) {
             return ['status' => 'COMPARABLE', 'group_version_id' => $candidate, 'assignment_id' => (string) $current->id];
@@ -190,7 +190,29 @@ final class ComparableMappingService
         });
     }
 
-    private function matchingGroupVersion(object $variant): ?string
+    /**
+     * Maps every active, unmapped variant whose listing states the full exact key (MAT-03) to its comparable group,
+     * creating the group from that exact key when no Admin-authored group exists yet. A variant with an incomplete key,
+     * a category without controlled specifications, or a unit that is not the material's canonical unit stays Not Yet
+     * Comparable. Idempotent; Admin-authored groups always win because they are matched first.
+     *
+     * @return array{examined: int, mapped: int}
+     */
+    public function deriveForUnmapped(): array
+    {
+        $variantIds = DB::table('listing_variants as v')->join('vendor_listings as l', 'l.id', '=', 'v.vendor_listing_id')->join('products as p', 'p.id', '=', 'l.product_id')
+            ->join('materials as m', 'm.id', '=', 'p.material_id')->where('l.status', 'ACTIVE')->where('v.active', true)->where('m.active', true)
+            ->whereNotExists(fn (Builder $q) => $q->selectRaw('1')->from('listing_comparable_assignments as ca')->whereColumn('ca.listing_variant_id', 'v.id')->whereNull('ca.effective_until')->where('ca.mapping_state', 'APPROVED'))
+            ->orderBy('v.id')->pluck('v.id');
+        $mapped = 0;
+        foreach ($variantIds as $variantId) {
+            $mapped += DB::transaction(fn (): int => $this->assign((string) $variantId, true)['status'] === 'COMPARABLE' ? 1 : 0);
+        }
+
+        return ['examined' => $variantIds->count(), 'mapped' => $mapped];
+    }
+
+    private function matchingGroupVersion(object $variant, bool $deriveGroup = false): ?string
     {
         $specification = array_merge(self::decode($variant->technical_attributes), self::decode($variant->attributes));
         $keys = $this->comparabilityKeys($variant->material_category_id === null ? null : (string) $variant->material_category_id);
@@ -208,7 +230,48 @@ final class ComparableMappingService
             }
         }
 
-        return null;
+        return $deriveGroup && $keys !== [] ? $this->deriveGroupVersion($variant, $specification, $controlled, $key) : null;
+    }
+
+    /**
+     * Creates the group for one exact key. Only a variant sold in the material's canonical unit can found a group, so the
+     * identity conversion is always valid; every other pack unit needs an approved material-specific conversion.
+     *
+     * @param  array<string, mixed>  $specification
+     * @param  array<string, string>  $controlled
+     */
+    private function deriveGroupVersion(object $variant, array $specification, array $controlled, string $variantKey): ?string
+    {
+        $material = DB::table('materials')->where('id', $variant->material_id)->where('active', true)->first(['id', 'code', 'name', 'canonical_unit_id']);
+        if ($material === null || (string) $material->canonical_unit_id !== (string) $variant->unit_id) {
+            return null;
+        }
+        $labels = DB::table('technical_attribute_definitions')->where('material_category_id', $variant->material_category_id)->whereIn('code', array_keys($controlled))->get(['code', 'label', 'unit_code'])->keyBy('code');
+        $parts = [];
+        foreach (array_keys($controlled) as $code) {
+            $definition = $labels[$code] ?? null;
+            $parts[] = trim(($definition->label ?? $code).' '.(string) $specification[$code].(($definition->unit_code ?? null) !== null && ! str_contains((string) $definition->label, '(') ? ' '.$definition->unit_code : ''));
+        }
+        $displayName = trim(implode(' · ', array_filter([(string) $material->name, trim($variant->brand.' '.$variant->model), ...$parts])));
+        $code = 'AUTO_'.$material->code.'_'.substr($variantKey, 0, 16);
+        $groupId = (string) Str::uuid7();
+        $created = DB::table('material_comparable_groups')->insertOrIgnore(['id' => $groupId, 'material_id' => $material->id, 'code' => $code, 'display_name' => mb_substr($displayName, 0, 255), 'status' => 'ACTIVE', 'created_at' => now(), 'updated_at' => now()]);
+        if ($created === 0) {
+            $existing = DB::table('material_comparable_groups as g')->join('material_comparable_group_versions as gv', 'gv.id', '=', 'g.current_version_id')->where('g.code', $code)->where('g.status', 'ACTIVE')
+                ->where('gv.review_state', 'APPROVED')->where('gv.variant_key', $variantKey)->whereNull('gv.effective_until')->first(['gv.id', 'gv.canonical_unit_id']);
+
+            return $existing !== null && (string) $existing->canonical_unit_id === (string) $material->canonical_unit_id ? (string) $existing->id : null;
+        }
+        $versionId = (string) Str::uuid7();
+        DB::table('material_comparable_group_versions')->insert([
+            'id' => $versionId, 'material_comparable_group_id' => $groupId, 'version' => 1, 'brand' => $variant->brand, 'model' => $variant->model,
+            'controlled_specification' => json_encode($controlled, JSON_THROW_ON_ERROR), 'variant_key' => $variantKey, 'canonical_unit_id' => $material->canonical_unit_id,
+            'conversion_version' => self::IDENTITY_CONVERSION, 'review_state' => 'APPROVED', 'reviewed_by_user_id' => null, 'reviewed_at' => now(), 'effective_from' => now(),
+            'content_hash' => hash('sha256', $variantKey.'|'.$material->canonical_unit_id.'|'.self::IDENTITY_CONVERSION), 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        DB::table('material_comparable_groups')->where('id', $groupId)->update(['current_version_id' => $versionId]);
+
+        return $versionId;
     }
 
     private function conversionMultiplier(string $materialId, string $fromUnitId, string $toUnitId, string $conversionVersion): ?string

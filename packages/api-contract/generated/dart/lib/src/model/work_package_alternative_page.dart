@@ -4,6 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/work_package_alternative_page_excluded.dart';
 import 'package:built_value/json_object.dart';
 import 'package:materyalph_api_client/src/model/work_package_alternative.dart';
 import 'package:built_value/built_value.dart';
@@ -15,9 +16,11 @@ part 'work_package_alternative_page.g.dart';
 ///
 /// Properties:
 /// * [line]
-/// * [status]
-/// * [locationId] - The Project site's saved location; pass it with radius_km when adding to the cart.
-/// * [radiusKm]
+/// * [status] - NO_SUITABLE_ALTERNATIVE: no eligible store within the radius can supply the quantity still needed (see `excluded`). COVERED: separate purchases already satisfy the line. A failed request is an error response, never one of these.
+/// * [neededQuantity] - The quantity still to source: the compared Vendor's gap less the separate purchases that satisfy the line (the full line quantity when no `candidate_id` is sent).
+/// * [excluded]
+/// * [locationId] - The Project site's saved location, for display only. The server scopes the purchase from the package's locked site point.
+/// * [radiusKm] - The fixed Project-Based radius.
 /// * [items]
 /// * [page]
 /// * [hasMore]
@@ -27,16 +30,26 @@ abstract class WorkPackageAlternativePage implements Built<WorkPackageAlternativ
   @BuiltValueField(wireName: r'line')
   BuiltMap<String, JsonObject?> get line;
 
+  /// NO_SUITABLE_ALTERNATIVE: no eligible store within the radius can supply the quantity still needed (see `excluded`). COVERED: separate purchases already satisfy the line. A failed request is an error response, never one of these.
   @BuiltValueField(wireName: r'status')
   WorkPackageAlternativePageStatusEnum get status;
-  // enum statusEnum {  CATALOG,  UNLISTED,  };
+  // enum statusEnum {  CATALOG,  NO_SUITABLE_ALTERNATIVE,  COVERED,  UNLISTED,  };
 
-  /// The Project site's saved location; pass it with radius_km when adding to the cart.
+  /// The quantity still to source: the compared Vendor's gap less the separate purchases that satisfy the line (the full line quantity when no `candidate_id` is sent).
+  @BuiltValueField(wireName: r'needed_quantity')
+  String get neededQuantity;
+
+  @BuiltValueField(wireName: r'excluded')
+  WorkPackageAlternativePageExcluded get excluded;
+
+  /// The Project site's saved location, for display only. The server scopes the purchase from the package's locked site point.
   @BuiltValueField(wireName: r'location_id')
   String? get locationId;
 
+  /// The fixed Project-Based radius.
   @BuiltValueField(wireName: r'radius_km')
-  int get radiusKm;
+  WorkPackageAlternativePageRadiusKmEnum get radiusKm;
+  // enum radiusKmEnum {  50,  };
 
   @BuiltValueField(wireName: r'items')
   BuiltList<WorkPackageAlternative> get items;
@@ -83,6 +96,16 @@ class _$WorkPackageAlternativePageSerializer implements PrimitiveSerializer<Work
       object.status,
       specifiedType: const FullType(WorkPackageAlternativePageStatusEnum),
     );
+    yield r'needed_quantity';
+    yield serializers.serialize(
+      object.neededQuantity,
+      specifiedType: const FullType(String),
+    );
+    yield r'excluded';
+    yield serializers.serialize(
+      object.excluded,
+      specifiedType: const FullType(WorkPackageAlternativePageExcluded),
+    );
     if (object.locationId != null) {
       yield r'location_id';
       yield serializers.serialize(
@@ -93,7 +116,7 @@ class _$WorkPackageAlternativePageSerializer implements PrimitiveSerializer<Work
     yield r'radius_km';
     yield serializers.serialize(
       object.radiusKm,
-      specifiedType: const FullType(int),
+      specifiedType: const FullType(WorkPackageAlternativePageRadiusKmEnum),
     );
     yield r'items';
     yield serializers.serialize(
@@ -152,6 +175,20 @@ class _$WorkPackageAlternativePageSerializer implements PrimitiveSerializer<Work
           ) as WorkPackageAlternativePageStatusEnum;
           result.status = valueDes;
           break;
+        case r'needed_quantity':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.neededQuantity = valueDes;
+          break;
+        case r'excluded':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(WorkPackageAlternativePageExcluded),
+          ) as WorkPackageAlternativePageExcluded;
+          result.excluded.replace(valueDes);
+          break;
         case r'location_id':
           final valueDes = serializers.deserialize(
             value,
@@ -163,8 +200,8 @@ class _$WorkPackageAlternativePageSerializer implements PrimitiveSerializer<Work
         case r'radius_km':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(int),
-          ) as int;
+            specifiedType: const FullType(WorkPackageAlternativePageRadiusKmEnum),
+          ) as WorkPackageAlternativePageRadiusKmEnum;
           result.radiusKm = valueDes;
           break;
         case r'items':
@@ -225,10 +262,15 @@ class _$WorkPackageAlternativePageSerializer implements PrimitiveSerializer<Work
 }
 
 
+/// NO_SUITABLE_ALTERNATIVE: no eligible store within the radius can supply the quantity still needed (see `excluded`). COVERED: separate purchases already satisfy the line. A failed request is an error response, never one of these.
 class WorkPackageAlternativePageStatusEnum extends EnumClass {
 
   @BuiltValueEnumConst(wireName: r'CATALOG')
   static const WorkPackageAlternativePageStatusEnum CATALOG = _$workPackageAlternativePageStatusEnum_CATALOG;
+  @BuiltValueEnumConst(wireName: r'NO_SUITABLE_ALTERNATIVE')
+  static const WorkPackageAlternativePageStatusEnum NO_SUITABLE_ALTERNATIVE = _$workPackageAlternativePageStatusEnum_NO_SUITABLE_ALTERNATIVE;
+  @BuiltValueEnumConst(wireName: r'COVERED')
+  static const WorkPackageAlternativePageStatusEnum COVERED = _$workPackageAlternativePageStatusEnum_COVERED;
   @BuiltValueEnumConst(wireName: r'UNLISTED')
   static const WorkPackageAlternativePageStatusEnum UNLISTED = _$workPackageAlternativePageStatusEnum_UNLISTED;
 
@@ -238,5 +280,19 @@ class WorkPackageAlternativePageStatusEnum extends EnumClass {
 
   static BuiltSet<WorkPackageAlternativePageStatusEnum> get values => _$workPackageAlternativePageStatusEnumValues;
   static WorkPackageAlternativePageStatusEnum valueOf(String name) => _$workPackageAlternativePageStatusEnumValueOf(name);
+}
+
+/// The fixed Project-Based radius.
+class WorkPackageAlternativePageRadiusKmEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireNumber: 50)
+  static const WorkPackageAlternativePageRadiusKmEnum number50 = _$workPackageAlternativePageRadiusKmEnum_number50;
+
+  static Serializer<WorkPackageAlternativePageRadiusKmEnum> get serializer => _$workPackageAlternativePageRadiusKmEnumSerializer;
+
+  const WorkPackageAlternativePageRadiusKmEnum._(String name): super(name);
+
+  static BuiltSet<WorkPackageAlternativePageRadiusKmEnum> get values => _$workPackageAlternativePageRadiusKmEnumValues;
+  static WorkPackageAlternativePageRadiusKmEnum valueOf(String name) => _$workPackageAlternativePageRadiusKmEnumValueOf(name);
 }
 

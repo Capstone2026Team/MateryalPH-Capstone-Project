@@ -77,7 +77,7 @@ export function VendorAddressMapSelector({ latitude, longitude, onCoordinatesCha
     setError(null)
     const googleWindow = window as GoogleWindow
     const previousAuthFailure = googleWindow.gm_authFailure
-    const authFailure = () => { setState('unavailable'); setError('Google Maps authorization failed. Check the browser key, enabled Maps JavaScript API, billing, and allowed website restrictions.'); previousAuthFailure?.() }
+    const authFailure = () => { setState('unavailable'); setError('Google Maps authorization failed. Please enter your address manually or retry later.'); previousAuthFailure?.() }
     googleWindow.gm_authFailure = authFailure
     let mounted = true
     let map: GoogleMap | undefined
@@ -110,7 +110,7 @@ export function VendorAddressMapSelector({ latitude, longitude, onCoordinatesCha
     }).catch(() => {
       if (mounted) {
         setState('unavailable')
-        setError('Interactive map is unavailable. Check your connection and retry. You can still select your structured address fields.')
+        setError('Interactive map is unavailable. Check your connection and retry, or enter your address manually.')
       }
     })
 
@@ -136,9 +136,9 @@ export function VendorAddressMapSelector({ latitude, longitude, onCoordinatesCha
 
   return <div className="grid gap-3" aria-describedby="address-map-help">
     <p className="text-sm font-semibold">Map</p>
-    <div ref={containerRef} style={state === 'unavailable' ? { height: 0 } : undefined} className="h-96 w-full overflow-hidden rounded-control border border-border-default sm:h-[480px] lg:h-[560px]" aria-label="Interactive business address map" />
-    {state !== 'ready' && <div role="status" className="text-sm text-text-secondary">{state === 'loading' ? 'Loading Google Maps…' : error ?? (onCoordinatesChange ? 'Interactive map is unavailable. Complete the structured fields using Manual Address Entry or retry the map.' : 'Interactive map is unavailable. Your registered address remains available. Retry to load the map.')}</div>}
+    <div ref={containerRef} style={state === 'unavailable' ? { height: 0 } : undefined} className="h-72 w-full overflow-hidden rounded-control border border-border-default sm:h-96" aria-label="Interactive business address map" />
+    {state !== 'ready' && <div role="status" className="text-sm text-text-secondary">{state === 'loading' ? 'Loading Google Maps…' : error ?? (onCoordinatesChange ? 'Interactive map is unavailable. Choose Enter address manually or retry the map.' : 'Interactive map is unavailable. Your registered address remains available. Retry to load the map.')}</div>}
     {state === 'unavailable' && <button type="button" className="min-h-11 text-action-primary underline" onClick={() => setAttempt(value => value + 1)}>Retry map</button>}
-    <p id="address-map-help" className="text-sm text-text-secondary">{onCoordinatesChange ? 'Manual Address Entry needs no map interaction. Click the map or drag the pin to fill the address automatically. Review matched locations and select any missing PSGC fields. Coordinates are managed by the system.' : 'The pin marks your registered store location. Pan or zoom to explore the map.'}</p>
+    <p id="address-map-help" className="text-sm text-text-secondary">{onCoordinatesChange ? 'Click the map or drag the pin to your business. The address details below will fill automatically.' : 'The pin marks your registered store location. Pan or zoom to explore the map.'}</p>
   </div>
 }

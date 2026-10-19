@@ -6,7 +6,75 @@ part of 'chat_decision.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
+const ChatDecisionPaymentMethodEnum _$chatDecisionPaymentMethodEnum_ONLINE =
+    const ChatDecisionPaymentMethodEnum._('ONLINE');
+const ChatDecisionPaymentMethodEnum
+    _$chatDecisionPaymentMethodEnum_CASH_ON_DELIVERY =
+    const ChatDecisionPaymentMethodEnum._('CASH_ON_DELIVERY');
+const ChatDecisionPaymentMethodEnum _$chatDecisionPaymentMethodEnum_IN_STORE =
+    const ChatDecisionPaymentMethodEnum._('IN_STORE');
+
+ChatDecisionPaymentMethodEnum _$chatDecisionPaymentMethodEnumValueOf(
+    String name) {
+  switch (name) {
+    case 'ONLINE':
+      return _$chatDecisionPaymentMethodEnum_ONLINE;
+    case 'CASH_ON_DELIVERY':
+      return _$chatDecisionPaymentMethodEnum_CASH_ON_DELIVERY;
+    case 'IN_STORE':
+      return _$chatDecisionPaymentMethodEnum_IN_STORE;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<ChatDecisionPaymentMethodEnum>
+    _$chatDecisionPaymentMethodEnumValues = BuiltSet<
+        ChatDecisionPaymentMethodEnum>(const <ChatDecisionPaymentMethodEnum>[
+  _$chatDecisionPaymentMethodEnum_ONLINE,
+  _$chatDecisionPaymentMethodEnum_CASH_ON_DELIVERY,
+  _$chatDecisionPaymentMethodEnum_IN_STORE,
+]);
+
+Serializer<ChatDecisionPaymentMethodEnum>
+    _$chatDecisionPaymentMethodEnumSerializer =
+    _$ChatDecisionPaymentMethodEnumSerializer();
+
+class _$ChatDecisionPaymentMethodEnumSerializer
+    implements PrimitiveSerializer<ChatDecisionPaymentMethodEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'ONLINE': 'ONLINE',
+    'CASH_ON_DELIVERY': 'CASH_ON_DELIVERY',
+    'IN_STORE': 'IN_STORE',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'ONLINE': 'ONLINE',
+    'CASH_ON_DELIVERY': 'CASH_ON_DELIVERY',
+    'IN_STORE': 'IN_STORE',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[ChatDecisionPaymentMethodEnum];
+  @override
+  final String wireName = 'ChatDecisionPaymentMethodEnum';
+
+  @override
+  Object serialize(
+          Serializers serializers, ChatDecisionPaymentMethodEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  ChatDecisionPaymentMethodEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      ChatDecisionPaymentMethodEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$ChatDecision extends ChatDecision {
+  @override
+  final ChatDecisionPaymentMethodEnum? paymentMethod;
   @override
   final String? budgetOverrideReason;
   @override
@@ -24,7 +92,8 @@ class _$ChatDecision extends ChatDecision {
       (ChatDecisionBuilder()..update(updates))._build();
 
   _$ChatDecision._(
-      {this.budgetOverrideReason,
+      {this.paymentMethod,
+      this.budgetOverrideReason,
       required this.versionId,
       this.contentHash,
       this.reason,
@@ -42,6 +111,7 @@ class _$ChatDecision extends ChatDecision {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is ChatDecision &&
+        paymentMethod == other.paymentMethod &&
         budgetOverrideReason == other.budgetOverrideReason &&
         versionId == other.versionId &&
         contentHash == other.contentHash &&
@@ -53,6 +123,7 @@ class _$ChatDecision extends ChatDecision {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, paymentMethod.hashCode);
     _$hash = $jc(_$hash, budgetOverrideReason.hashCode);
     _$hash = $jc(_$hash, versionId.hashCode);
     _$hash = $jc(_$hash, contentHash.hashCode);
@@ -66,6 +137,7 @@ class _$ChatDecision extends ChatDecision {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'ChatDecision')
+          ..add('paymentMethod', paymentMethod)
           ..add('budgetOverrideReason', budgetOverrideReason)
           ..add('versionId', versionId)
           ..add('contentHash', contentHash)
@@ -79,6 +151,11 @@ class _$ChatDecision extends ChatDecision {
 class ChatDecisionBuilder
     implements Builder<ChatDecision, ChatDecisionBuilder> {
   _$ChatDecision? _$v;
+
+  ChatDecisionPaymentMethodEnum? _paymentMethod;
+  ChatDecisionPaymentMethodEnum? get paymentMethod => _$this._paymentMethod;
+  set paymentMethod(ChatDecisionPaymentMethodEnum? paymentMethod) =>
+      _$this._paymentMethod = paymentMethod;
 
   String? _budgetOverrideReason;
   String? get budgetOverrideReason => _$this._budgetOverrideReason;
@@ -114,6 +191,7 @@ class ChatDecisionBuilder
   ChatDecisionBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _paymentMethod = $v.paymentMethod;
       _budgetOverrideReason = $v.budgetOverrideReason;
       _versionId = $v.versionId;
       _contentHash = $v.contentHash;
@@ -141,6 +219,7 @@ class ChatDecisionBuilder
   _$ChatDecision _build() {
     final _$result = _$v ??
         _$ChatDecision._(
+          paymentMethod: paymentMethod,
           budgetOverrideReason: budgetOverrideReason,
           versionId: BuiltValueNullFieldError.checkNotNull(
               versionId, r'ChatDecision', 'versionId'),

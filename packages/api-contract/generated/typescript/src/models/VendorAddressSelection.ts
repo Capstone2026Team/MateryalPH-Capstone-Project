@@ -14,11 +14,23 @@
 
 import { mapValues } from '../runtime';
 /**
- *
+ * Supply address names or all three legacy PSGC codes. Missing or ambiguous geographic references do not block named address entry.
  * @export
  * @interface VendorAddressSelection
  */
 export interface VendorAddressSelection {
+    /**
+     *
+     */
+    province?: string;
+    /**
+     *
+     */
+    cityMunicipality?: string;
+    /**
+     *
+     */
+    barangay?: string;
     /**
      * Optional server-issued map pin token; never raw coordinates.
      */
@@ -26,15 +38,15 @@ export interface VendorAddressSelection {
     /**
      * Province code or region code for a city without a province parent.
      */
-    provinceCode: string;
+    provinceCode?: string;
     /**
      *
      */
-    cityCode: string;
+    cityCode?: string;
     /**
      * Official barangay code.
      */
-    psgcCode: string;
+    psgcCode?: string;
     /**
      *
      */
@@ -53,9 +65,6 @@ export interface VendorAddressSelection {
  * Check if a given object implements the VendorAddressSelection interface.
  */
 export function instanceOfVendorAddressSelection(value: object): value is VendorAddressSelection {
-    if ((!('provinceCode' in (value as Record<string, any>)) && !('province_code' in (value as Record<string, any>))) || ((value as Record<string, any>)['provinceCode'] === undefined && (value as Record<string, any>)['province_code'] === undefined)) return false;
-    if ((!('cityCode' in (value as Record<string, any>)) && !('city_code' in (value as Record<string, any>))) || ((value as Record<string, any>)['cityCode'] === undefined && (value as Record<string, any>)['city_code'] === undefined)) return false;
-    if ((!('psgcCode' in (value as Record<string, any>)) && !('psgc_code' in (value as Record<string, any>))) || ((value as Record<string, any>)['psgcCode'] === undefined && (value as Record<string, any>)['psgc_code'] === undefined)) return false;
     return true;
 }
 
@@ -69,10 +78,13 @@ export function VendorAddressSelectionFromJSONTyped(json: any, ignoreDiscriminat
     }
     return {
 
+        'province': json['province'] == null ? undefined : json['province'],
+        'cityMunicipality': json['city_municipality'] == null ? undefined : json['city_municipality'],
+        'barangay': json['barangay'] == null ? undefined : json['barangay'],
         'pinToken': json['pin_token'] === undefined ? undefined : json['pin_token'] === null ? null : json['pin_token'],
-        'provinceCode': json['province_code'],
-        'cityCode': json['city_code'],
-        'psgcCode': json['psgc_code'],
+        'provinceCode': json['province_code'] == null ? undefined : json['province_code'],
+        'cityCode': json['city_code'] == null ? undefined : json['city_code'],
+        'psgcCode': json['psgc_code'] == null ? undefined : json['psgc_code'],
         'street': json['street'] === undefined ? undefined : json['street'] === null ? null : json['street'],
         'unit': json['unit'] === undefined ? undefined : json['unit'] === null ? null : json['unit'],
         'postalCode': json['postal_code'] === undefined ? undefined : json['postal_code'] === null ? null : json['postal_code'],
@@ -90,6 +102,9 @@ export function VendorAddressSelectionToJSONTyped(value?: VendorAddressSelection
 
     return {
 
+        'province': value['province'],
+        'city_municipality': value['cityMunicipality'],
+        'barangay': value['barangay'],
         'pin_token': value['pinToken'],
         'province_code': value['provinceCode'],
         'city_code': value['cityCode'],

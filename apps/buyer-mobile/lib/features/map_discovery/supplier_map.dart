@@ -30,6 +30,7 @@ class SupplierMapProps {
     required this.recenterToken,
     this.baseMap = BaseMapStyle.standard,
     this.procurementContext = SupplierMapContext.itemBased,
+    this.highlightedIds = const {},
   });
 
   final List<SupplierResultView> items;
@@ -47,6 +48,7 @@ class SupplierMapProps {
 
   final BaseMapStyle baseMap;
   final SupplierMapContext procurementContext;
+  final Set<String> highlightedIds;
 }
 
 typedef SupplierMapBuilder =
@@ -124,6 +126,9 @@ class _GoogleSupplierMapState extends State<GoogleSupplierMap>
   void didUpdateWidget(covariant GoogleSupplierMap old) {
     super.didUpdateWidget(old);
     final reduce = BuyerMotion.reduced(context);
+    final highlightsChanged =
+        old.props.highlightedIds.length != props.highlightedIds.length ||
+        !old.props.highlightedIds.containsAll(props.highlightedIds);
     if (old.props.bottomInset != props.bottomInset &&
         props.selectedId != null) {
       _cameraFitDebounce?.cancel();
@@ -132,6 +137,7 @@ class _GoogleSupplierMapState extends State<GoogleSupplierMap>
       });
     }
     if (!identical(old.props.items, props.items) ||
+        highlightsChanged ||
         old.props.selectedId != props.selectedId ||
         old.props.origin != props.origin) {
       _rebuildMarkers();
@@ -146,7 +152,8 @@ class _GoogleSupplierMapState extends State<GoogleSupplierMap>
         _reveal.forward(from: 0);
       }
       _fitSelection(reduce);
-    } else if (old.props.selectedId != props.selectedId &&
+    } else if ((old.props.selectedId != props.selectedId ||
+            highlightsChanged) &&
         props.selectedId != null) {
       _fitSelection(reduce);
     }
@@ -169,11 +176,27 @@ class _GoogleSupplierMapState extends State<GoogleSupplierMap>
     final sequence = ++_renderSequence;
     final ratio = MediaQuery.devicePixelRatioOf(context);
     final textScale = MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.6);
-    final groups = clusterSuppliers(
-      mapVisibleSuppliers(props.items, props.selectedId),
-      _zoom,
-      selectedId: props.selectedId,
-    );
+    final groups = props.highlightedIds.isEmpty
+        ? clusterSuppliers(
+            mapVisibleSuppliers(props.items, props.selectedId),
+            _zoom,
+            selectedId: props.selectedId,
+          )
+        : [
+            ...clusterSuppliers(
+              mapVisibleSuppliers(props.items, props.selectedId)
+                  .where(
+                    (item) => !props.highlightedIds.contains(item.resultId),
+                  )
+                  .toList(),
+              _zoom,
+              selectedId: props.selectedId,
+            ),
+            for (final item in props.items.where(
+              (item) => props.highlightedIds.contains(item.resultId),
+            ))
+              MapGroup([item]),
+          ];
     final labeled = placeLabels(
       groups,
       _zoom,
@@ -192,7 +215,10 @@ class _GoogleSupplierMapState extends State<GoogleSupplierMap>
           position: LatLng(center.latitude, center.longitude),
           icon: icon,
           anchor: const Offset(0.5, 1),
-          zIndexInt: !isCluster && group.single.resultId == props.selectedId
+          zIndexInt:
+              !isCluster &&
+                  (group.single.resultId == props.selectedId ||
+                      props.highlightedIds.contains(group.single.resultId))
               ? 10
               : 1,
           consumeTapEvents: true,
@@ -229,7 +255,9 @@ class _GoogleSupplierMapState extends State<GoogleSupplierMap>
     double textScale,
   ) async {
     final selected =
-        !group.isCluster && group.single.resultId == props.selectedId;
+        !group.isCluster &&
+        (group.single.resultId == props.selectedId ||
+            props.highlightedIds.contains(group.single.resultId));
     final showLabel =
         !group.isCluster && labeled.contains(group.single.resultId);
     final key = group.isCluster
@@ -261,10 +289,16 @@ class _GoogleSupplierMapState extends State<GoogleSupplierMap>
 
   void _fitSelection(bool reduce) {
     final selected = props.items.where(
-      (item) => item.resultId == props.selectedId,
+      (item) =>
+          item.resultId == props.selectedId ||
+          props.highlightedIds.contains(item.resultId),
     );
     if (selected.isEmpty) return;
-    final points = [selected.first.point, ...?props.routePath, ?props.origin];
+    final points = [
+      ...selected.map((item) => item.point),
+      ...?props.routePath,
+      ?props.origin,
+    ];
     _move(CameraUpdate.newLatLngBounds(_bounds(points), 56), reduce);
   }
 

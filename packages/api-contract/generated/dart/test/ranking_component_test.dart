@@ -17,7 +17,8 @@ void main() {
       // TODO
     });
 
-    // int weightPercent
+    // Effective normalized percentage used for scoring; not the saved slider value.
+    // num weightPercent
     test('to test the property `weightPercent`', () async {
       // TODO
     });

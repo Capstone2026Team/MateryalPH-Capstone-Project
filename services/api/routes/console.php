@@ -6,6 +6,8 @@ use App\Domain\Analytics\Geo\BoundaryImporter;
 use App\Domain\Analytics\Geo\DemoGeoAnalytics;
 use App\Domain\Analytics\Geo\GeoFactsBuilder;
 use App\Domain\Analytics\MaterialPriceCaptureService;
+use App\Domain\Catalog\ComparableMappingService;
+use App\Domain\Catalog\EligibleOfferQuery;
 use App\Domain\Compliance\ComplianceRegisterImporter;
 use App\Domain\Compliance\ComplianceRegisterSync;
 use App\Domain\Demo\DemoVendorMarketplace;
@@ -83,6 +85,17 @@ Artisan::command('materyalph:finance-daily', function (): void {
 })->purpose('Statement due/overdue notices and FIN-04A taxable-year rollover');
 Schedule::command('materyalph:finance-daily')->dailyAt('00:10')->timezone('Asia/Manila')->withoutOverlapping();
 
+Artisan::command('analytics:derive-comparable-groups', function (): int {
+    $result = app(ComparableMappingService::class)->deriveForUnmapped();
+    AnalyticsDataset::bump();
+    EligibleOfferQuery::invalidate();
+    $this->info('Comparable groups: '.json_encode($result));
+
+    return 0;
+})->purpose('MAT-03 maps unmapped listings that state the full exact key to a comparable group, creating the group when none exists');
+// Hourly, so the 00:00 run precedes the 00:10 capture and new listings become comparable within the hour.
+Schedule::command('analytics:derive-comparable-groups')->hourly()->timezone('Asia/Manila')->withoutOverlapping()->onOneServer();
+
 Artisan::command('analytics:capture-material-prices', function (): int {
     $result = app(MaterialPriceCaptureService::class)->capture(CarbonImmutable::now());
     $this->info('Material price capture: '.json_encode($result));
@@ -122,7 +135,7 @@ Artisan::command('materyalph:demo-vendors-seed {--only=* : Seed only these Vendo
 
         return 1;
     }
-    if ($payments === 'xendit' && ! app()->environment('local', 'development', 'testing') && ! $this->confirm('Create real Xendit TEST sub-accounts for ten demo Vendors?', false)) {
+    if ($payments === 'xendit' && ! app()->environment('local', 'development', 'testing') && ! $this->confirm('Create real Xendit TEST sub-accounts for twelve demo Vendors?', false)) {
         return 1;
     }
     $path = (string) ($this->option('credentials') ?: storage_path('app/demo-vendor-credentials.json'));
@@ -184,6 +197,14 @@ Artisan::command('analytics:aggregate-marketplace', function (): int {
 })->purpose('Rebuild the daily PSGC geographic analytics facts for the TEST marketplace (idempotent; a retry publishes the next revision)');
 // After the 00:10 price capture and 00:30 scores so the dashboard and snapshot health read the same day.
 Schedule::command('analytics:aggregate-marketplace')->dailyAt('01:00')->timezone('Asia/Manila')->withoutOverlapping()->onOneServer();
+
+Artisan::command('analytics:refresh-presence', function (): int {
+    $rows = app(GeoFactsBuilder::class)->refreshPresence();
+    $this->info('Presence snapshot rows: '.($rows ?? 'none (no published daily run yet)'));
+
+    return 0;
+})->purpose("Refresh today's storefront and registered-Buyer presence facts so new stores and Buyers appear without waiting for the daily run");
+Schedule::command('analytics:refresh-presence')->everyTenMinutes()->withoutOverlapping()->onOneServer();
 
 Artisan::command('materyalph:enforcement-sweep', function (): void {
     $this->info('Temporary restrictions lifted at the end of their duration: '.app(EnforcementService::class)->sweep());

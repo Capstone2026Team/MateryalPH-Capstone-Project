@@ -7,6 +7,36 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(ChatQuotationVersion, () {
+    // Buyer's exact recorded counter-offer for this version, retained after revision. Omitted when no changes were requested. Only visible to authorized conversation participants.
+    // String requestedChanges
+    test('to test the property `requestedChanges`', () async {
+      // TODO
+    });
+
+    // UTC ISO 8601 timestamp of the recorded counter-offer for this version.
+    // String changeRequestedAt
+    test('to test the property `changeRequestedAt`', () async {
+      // TODO
+    });
+
+    // Exact recorded UTC ISO 8601 deadline for the Vendor to revise and republish. Historical requests retain their original deadline; it is active only while the version is current and COUNTERED.
+    // String vendorResponseDueAt
+    test('to test the property `vendorResponseDueAt`', () async {
+      // TODO
+    });
+
+    // Currently available Buyer choices for this quotation's fulfillment, subject to Vendor settings. Revalidated at acceptance.
+    // BuiltSet<String> availablePaymentMethods
+    test('to test the property `availablePaymentMethods`', () async {
+      // TODO
+    });
+
+    // The Buyer's recorded method from the accepted order, including historical accepted quotations.
+    // String selectedPaymentMethod
+    test('to test the property `selectedPaymentMethod`', () async {
+      // TODO
+    });
+
     // String id
     test('to test the property `id`', () async {
       // TODO

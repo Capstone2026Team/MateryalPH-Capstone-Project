@@ -7,6 +7,21 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(VendorAddressSelection, () {
+    // String province
+    test('to test the property `province`', () async {
+      // TODO
+    });
+
+    // String cityMunicipality
+    test('to test the property `cityMunicipality`', () async {
+      // TODO
+    });
+
+    // String barangay
+    test('to test the property `barangay`', () async {
+      // TODO
+    });
+
     // Optional server-issued map pin token; never raw coordinates.
     // String pinToken
     test('to test the property `pinToken`', () async {

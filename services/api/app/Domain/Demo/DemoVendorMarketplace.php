@@ -7,6 +7,8 @@ namespace App\Domain\Demo;
 use App\Domain\Authorization\AccountAccess;
 use App\Domain\Catalog\MarketplaceDiscoverability;
 use App\Domain\Catalog\VendorCatalogService;
+use App\Domain\Compliance\ComplianceRegisterImporter;
+use App\Domain\Compliance\ProductComplianceService;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\ManageProfilePhoto;
@@ -25,12 +27,13 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
 
 /**
- * Seeds ten fictional, fully onboarded Tier 2 Vendors for the capstone demonstration: Owner and staff accounts with
+ * Seeds twelve fictional, fully onboarded Tier 2 Vendors for the capstone demonstration: Owner and staff accounts with
  * profile photos and authenticator factors, a verified Store Profile (logo, banner, hours, address), approved
  * verification evidence, an approved TEST tax profile, a Xendit TEST sub-account, delivery configuration (area,
  * vehicle, Fulfillment Staff), accepted agreements, an activated Store, and published catalog listings with photos,
@@ -41,10 +44,13 @@ use Throwable;
  * Only the evidence an Admin would otherwise review is written directly, as approved SAMPLE documents.
  *
  * The catalog lists real Philippine-market brands with retail prices, up to eight photos per listing and Vendor-typed
- * search tags. It uses non-regulated materials and "Other" classifications only, so no PS/ICC compliance evidence is
- * fabricated. Product, banner and vehicle photos come from the git-ignored photos folder (fetch_demo_photos.py);
- * logos, SAMPLE documents and AI-generated staff portraits are committed. Re-running is idempotent: existing Vendors,
- * listings and media are reused and stock confirmations refreshed.
+ * search tags. A regulated (PS/ICC) listing names a real PS License No. or ICC sticker serial from the DTI-BPS
+ * registers; the seeder submits it through the Vendor's register lookup (Manual Entry with the product's packaging
+ * photo as the marking photo), so it is verified only when the active register matches and no compliance decision is
+ * written directly. When no register snapshot is active, the copies in materials/ are imported and activated first.
+ * One store also sells ready-mixed concrete with a transit mixer. Product, banner and vehicle photos come from the
+ * git-ignored photos folder (fetch_demo_photos.py); logos, SAMPLE documents and AI-generated staff portraits are
+ * committed. Re-running is idempotent: existing Vendors, listings and media are reused and stock confirmations refreshed.
  */
 final class DemoVendorMarketplace
 {
@@ -54,8 +60,14 @@ final class DemoVendorMarketplace
 
     /** Fictional team members; only their roles and fixed demo names are used. */
     private const STAFF_NAMES = [
-        'STORE_STAFF' => ['Mario Reyes', 'Cynthia Lopez', 'Rolando Cruz', 'Grace Tolentino', 'Dennis Alcantara', 'Josephine Rivera', 'Ernesto Flores', 'Marites Soriano', 'Rodel Estrada', 'Liza Manalo'],
-        'FULFILLMENT' => ['Jun Macaraeg', 'Paolo Salazar', 'Noel Abad', 'Ramil Cabrera', 'Arnel Dizon', 'Edwin Mercado', 'Gilbert Tan', 'Rey Sison', 'Alvin Bernal', 'Joey Padilla'],
+        'STORE_STAFF' => ['Mario Reyes', 'Cynthia Lopez', 'Rolando Cruz', 'Grace Tolentino', 'Dennis Alcantara', 'Josephine Rivera', 'Ernesto Flores', 'Marites Soriano', 'Rodel Estrada', 'Liza Manalo', 'Teresita Ramos', 'Arnold Pascual'],
+        'FULFILLMENT' => ['Jun Macaraeg', 'Paolo Salazar', 'Noel Abad', 'Ramil Cabrera', 'Arnel Dizon', 'Edwin Mercado', 'Gilbert Tan', 'Rey Sison', 'Alvin Bernal', 'Joey Padilla', 'Ronaldo Javier', 'Efren Galang'],
+    ];
+
+    /** Register copies imported only when no snapshot of that kind is active (DTI-BPS lists, as downloaded). */
+    private const REGISTER_FILES = [
+        'PS_LICENSE' => ['List_of_PS_Licensee_MASTERLIST.csv', 'DTI-BPS List of PS Licensees (materials/List_of_PS_Licensee_MASTERLIST.csv)'],
+        'ICC_CERTIFICATE' => ['List_of_ICC_Certificate_Holders.csv', 'DTI-BPS List of ICC Certificate Holders (materials/List_of_ICC_Certificate_Holders.csv)'],
     ];
 
     private const BASE32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
@@ -75,10 +87,12 @@ final class DemoVendorMarketplace
         private readonly VendorCatalogService $catalog,
         private readonly MarketplaceDiscoverability $discoverability,
         private readonly XenditAccountVerificationGateway $xendit,
+        private readonly ProductComplianceService $compliance,
+        private readonly ComplianceRegisterImporter $registers,
     ) {}
 
     /**
-     * @param  list<string>  $only  Vendor slugs to seed; empty seeds all ten.
+     * @param  list<string>  $only  Vendor slugs to seed; empty seeds all twelve.
      * @param  'xendit'|'simulate'  $payments  xendit provisions real TEST sub-accounts; simulate is for automated tests only.
      * @return list<array<string, mixed>>
      */
@@ -90,18 +104,68 @@ final class DemoVendorMarketplace
         $catalog = $this->blueprint();
         $admin = DB::table('users')->where('account_type', 'ADMIN')->where('account_status', 'ACTIVE')->orderBy('id')->value('id');
         $credentials = $this->loadCredentials($credentialsPath);
+        $selected = array_values(array_filter($catalog['vendors'], static fn (array $vendor): bool => $only === [] || in_array($vendor['slug'], $only, true)));
+        $registerNotes = $refreshOnly ? [] : $this->ensureComplianceRegisters($selected, $admin === null ? null : (int) $admin);
         $report = [];
-        foreach ($catalog['vendors'] as $vendor) {
-            if ($only !== [] && ! in_array($vendor['slug'], $only, true)) {
-                continue;
-            }
-            $this->notes = [];
+        foreach ($selected as $vendor) {
+            $this->notes = $registerNotes;
+            $registerNotes = [];
             try {
                 $report[] = $this->seedVendor($vendor, $payments, $password, $admin === null ? null : (int) $admin, $credentials, $refreshOnly);
             } catch (Throwable $error) {
                 $report[] = ['slug' => $vendor['slug'], 'status' => 'FAILED', 'error' => $error::class.': '.Str::limit($error->getMessage(), 300), 'notes' => $this->notes];
             }
             $this->saveCredentials($credentialsPath, $credentials, $password);
+        }
+        if ($payments === 'xendit' && ! $refreshOnly) {
+            $report = $this->finishWhenSubAccountsGoLive($selected, $report, $password, $admin === null ? null : (int) $admin, $credentials, $credentialsPath);
+        }
+
+        return $report;
+    }
+
+    /**
+     * Xendit moves a new OWNED TEST sub-account from REGISTERED to LIVE a few minutes after creation, so the first pass
+     * leaves those Stores blocked on payment_connection. Poll each waiting account (bounded by
+     * materyalph.demo.xendit_live_wait_seconds) and finish its Store in this same run once Xendit reports LIVE.
+     *
+     * @param  list<array<string, mixed>>  $selected
+     * @param  list<array<string, mixed>>  $report
+     * @param  array<string, mixed>  $credentials
+     * @return list<array<string, mixed>>
+     */
+    private function finishWhenSubAccountsGoLive(array $selected, array $report, string $password, ?int $adminId, array &$credentials, string $credentialsPath): array
+    {
+        $waiting = [];
+        foreach ($report as $index => $row) {
+            $account = isset($row['organization_id']) ? DB::table('vendor_payment_accounts')->where('vendor_organization_id', $row['organization_id'])->first(['connection_status', 'provider_account_id']) : null;
+            if ($row['status'] !== 'OK' && $account?->connection_status === 'PENDING' && is_string($account->provider_account_id)) {
+                $waiting[$index] = $account->provider_account_id;
+            }
+        }
+        $vendors = array_column($selected, null, 'slug');
+        $deadline = now()->addSeconds(max(0, (int) config('materyalph.demo.xendit_live_wait_seconds', 600)));
+        while ($waiting !== [] && now()->lt($deadline)) {
+            Sleep::for(20)->seconds();
+            foreach ($waiting as $index => $providerAccountId) {
+                try {
+                    $live = $this->xendit->reconcile($providerAccountId)['status'] === 'LIVE';
+                } catch (XenditProviderUnavailable) {
+                    continue;
+                }
+                if (! $live) {
+                    continue;
+                }
+                unset($waiting[$index]);
+                $vendor = $vendors[$report[$index]['slug']];
+                $this->notes = [];
+                try {
+                    $report[$index] = $this->seedVendor($vendor, 'xendit', $password, $adminId, $credentials, false);
+                } catch (Throwable $error) {
+                    $report[$index] = ['slug' => $vendor['slug'], 'status' => 'FAILED', 'error' => $error::class.': '.Str::limit($error->getMessage(), 300), 'notes' => $this->notes];
+                }
+                $this->saveCredentials($credentialsPath, $credentials, $password);
+            }
         }
 
         return $report;
@@ -217,7 +281,7 @@ final class DemoVendorMarketplace
                 $roles[] = 'FULFILLMENT';
             }
             foreach ($roles as $role) {
-                $name = self::STAFF_NAMES[$role][($v['n'] - 1) % 10];
+                $name = self::STAFF_NAMES[$role][($v['n'] - 1) % count(self::STAFF_NAMES[$role])];
                 $account = $this->createUser($name, $this->taggedEmail($v['n'], $role === 'FULFILLMENT' ? 'ful' : 'stf'), '+639170000'.sprintf('%03d', 200 + $v['n'] + ($role === 'FULFILLMENT' ? 20 : 0)), $password);
                 DB::table('vendor_memberships')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organizationId, 'user_id' => $account['id'], 'role' => $role, 'status' => 'ACTIVE', 'can_manage_staff' => false, 'activated_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
                 $credentials['vendors'][$v['slug']]['accounts'][] = ['role' => $role, 'email' => $account['email'], 'totp_secret' => $account['totp_secret']];
@@ -306,6 +370,8 @@ final class DemoVendorMarketplace
     {
         $addressId = DB::table('vendor_addresses')->where('vendor_organization_id', $organizationId)->value('id');
         if ($addressId !== null && DB::table('vendor_addresses')->where('id', $addressId)->whereNotNull('current_version_id')->exists()) {
+            $this->ensureBusinessAddress($organizationId);
+
             return;
         }
         $a = $v['address'];
@@ -327,6 +393,29 @@ final class DemoVendorMarketplace
             round((float) $a['lat'], 7), round((float) $a['lng'], 7), 'MAP', round((float) $a['lng'], 7), round((float) $a['lat'], 7),
         ]);
         DB::table('vendor_addresses')->where('id', $addressId)->update(['current_version_id' => $versionId, 'updated_at' => now()]);
+        $this->ensureBusinessAddress($organizationId);
+    }
+
+    /**
+     * The portal saves the store address twice: as the Store's address version and as the current "Registered business
+     * address" (addresses), which the Admin verification queue reads for its region and city. Mirror that here.
+     */
+    private function ensureBusinessAddress(string $organizationId): void
+    {
+        if (DB::table('addresses')->where('owner_type', 'VENDOR_ORGANIZATION')->where('owner_id', $organizationId)->where('is_current', true)->exists()) {
+            return;
+        }
+        $store = DB::table('vendor_addresses as a')->join('vendor_address_versions as v', 'v.id', '=', 'a.current_version_id')->where('a.vendor_organization_id', $organizationId)
+            ->first(['v.street', 'v.barangay', 'v.city_municipality', 'v.province', 'v.postal_code', 'v.psgc_code', 'v.psgc_source', 'v.province_code', 'v.city_code', 'v.formatted_address', 'v.latitude', 'v.longitude', 'v.source']);
+        if ($store === null) {
+            return;
+        }
+        $id = (string) Str::uuid7();
+        DB::table('addresses')->insert(['id' => $id, 'owner_type' => 'VENDOR_ORGANIZATION', 'owner_id' => $organizationId, 'label' => 'Registered business address', 'street' => $store->street, 'barangay' => $store->barangay,
+            'city_municipality' => $store->city_municipality, 'province' => $store->province, 'postal_code' => $store->postal_code, 'formatted_address' => $store->formatted_address, 'latitude' => $store->latitude, 'longitude' => $store->longitude,
+            'psgc_code' => $store->psgc_code, 'psgc_source' => $store->psgc_source, 'province_code' => $store->province_code, 'city_code' => $store->city_code, 'source' => $store->source, 'review_state' => 'PENDING_REVIEW', 'verified' => false,
+            'version' => 1, 'is_current' => true, 'created_at' => now(), 'updated_at' => now()]);
+        DB::statement('UPDATE addresses SET location = ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, geography_wkt = ? WHERE id = ?', [(float) $store->longitude, (float) $store->latitude, 'POINT('.$store->longitude.' '.$store->latitude.')', $id]);
     }
 
     // ---------------------------------------------------------------------------------------------------------
@@ -347,13 +436,20 @@ final class DemoVendorMarketplace
         if (DB::table('vendor_vehicles')->where('vendor_organization_id', $organizationId)->whereNull('removed_at')->exists()) {
             return;
         }
-        $image = $this->onboarding->uploadMedia($request, $this->upload($this->photo('vendors/'.$v['slug'].'/vehicle.jpg'), 'demo-'.$v['slug'].'-vehicle.jpg', 'image/jpeg'), 'VEHICLE_IMAGE', $d['vehicle']['name']);
-        $vehicle = $d['vehicle'];
-        $this->vehicles->save($organizationId, [[
-            'vehicle_category' => $vehicle['category'], 'vehicle_type' => $vehicle['type'], 'name' => $vehicle['name'], 'brand' => $vehicle['brand'], 'capacity_kg' => $vehicle['capacity_kg'], 'number_available' => $vehicle['n'],
-            'cargo_length_m' => $vehicle['dim'][0], 'cargo_width_m' => $vehicle['dim'][1], 'cargo_height_m' => $vehicle['dim'][2], 'heavy_classification' => $vehicle['heavy'], 'image_file_id' => $image['file_id'],
-            'base_fee_centavos' => $vehicle['base'], 'per_km_centavos' => $vehicle['per_km'], 'maximum_distance_km' => $d['max_km'], 'active' => true, 'available' => true,
-        ]], (int) $owner->getKey());
+        $rows = [];
+        foreach ($d['vehicles'] ?? [$d['vehicle'] + ['photo' => 'vehicle']] as $vehicle) {
+            $image = $this->onboarding->uploadMedia($request, $this->upload($this->photo('vendors/'.$v['slug'].'/'.$vehicle['photo'].'.jpg'), 'demo-'.$v['slug'].'-'.$vehicle['photo'].'.jpg', 'image/jpeg'), 'VEHICLE_IMAGE', $vehicle['name']);
+            $mixer = $vehicle['type'] === 'CONCRETE_MIXER';
+            $rows[] = [
+                'vehicle_category' => $vehicle['category'], 'vehicle_type' => $vehicle['type'], 'name' => $vehicle['name'], 'brand' => $vehicle['brand'], 'capacity_kg' => $vehicle['capacity_kg'], 'number_available' => $vehicle['n'],
+                'heavy_classification' => $vehicle['heavy'], 'image_file_id' => $image['file_id'],
+                'base_fee_centavos' => $vehicle['base'], 'per_km_centavos' => $vehicle['per_km'], 'maximum_distance_km' => $d['max_km'], 'active' => true, 'available' => true,
+            ] + ($mixer
+                // A Concrete Mixer Truck carries Mixer Capacity (m³) instead of cargo dimensions, and the Vendor's own mobilization basis.
+                ? ['mixer_capacity_m3' => $vehicle['mixer_m3'], 'mobilization_fee_centavos' => $vehicle['mobilization'][0], 'mobilization_basis' => $vehicle['mobilization'][1]]
+                : ['cargo_length_m' => $vehicle['dim'][0], 'cargo_width_m' => $vehicle['dim'][1], 'cargo_height_m' => $vehicle['dim'][2]]);
+        }
+        $this->vehicles->save($organizationId, $rows, (int) $owner->getKey());
     }
 
     // ---------------------------------------------------------------------------------------------------------
@@ -623,14 +719,16 @@ final class DemoVendorMarketplace
         $classification = ['material_category_id' => $categories[$p['cat']] ?? throw new RuntimeException('Unknown category '.$p['cat'])];
         if ($p['mat'] !== null) {
             $material = $materials[$p['mat']] ?? throw new RuntimeException('Unknown material '.$p['mat']);
-            if ($material->regulated) {
-                throw new RuntimeException('Regulated material '.$p['mat'].' needs PS/ICC compliance evidence and is excluded from the demo catalog.');
+            if ($material->regulated && ! isset($p['compliance'])) {
+                throw new RuntimeException('Regulated material '.$p['mat'].' needs a PS License No. or ICC sticker serial (compliance block) from the DTI-BPS registers.');
             }
             $classification = ['material_id' => (string) $material->id, 'material_category_id' => (string) $material->material_category_id, 'material_match' => 'EXACT'];
         } else {
             $classification += ['material_id' => null, 'other_label' => $p['label']];
         }
-        $this->catalog->update($request, (string) $listingId, $classification + [
+        // A regulated listing names its manufacturer (from the DTI-BPS register record) before its marking is submitted.
+        $maker = isset($p['maker']) ? ['manufacturer' => $p['maker']['name'], 'manufacturer_address' => $p['maker']['address'], 'country_of_manufacture' => $p['maker']['country']] : [];
+        $this->catalog->update($request, (string) $listingId, $classification + $maker + [
             'lock_version' => $this->lock((string) $listingId), 'description' => $p['desc'], 'brand' => $p['brand'], 'technical_attributes' => $p['attr'],
             'tag_ids' => array_map(fn (string $tag): string => $tags[$tag] ?? throw new RuntimeException('Unknown tag '.$tag), $p['tags']),
             'custom_tags' => $p['custom_tags'] ?? [],
@@ -655,7 +753,79 @@ final class DemoVendorMarketplace
                 $this->catalog->uploadMedia($request, (string) $listingId, $this->upload($path, basename($path), 'image/jpeg'), $n === 0 ? $p['name'] : $p['name'].', photo '.($n + 1), null);
             }
         }
+        if (isset($p['compliance'])) {
+            $this->verifyCompliance($v, $p, (string) $listingId, $owner);
+        }
         $this->catalog->publish($this->withKey($request), (string) $listingId, $this->lock((string) $listingId));
+    }
+
+    /**
+     * Submits the product's PS License No. or ICC sticker serial exactly as a Vendor would through Manual Entry: the
+     * marking photo is uploaded as evidence, then Review and Confirm runs in AUTOMATIC mode. Only a current register
+     * match verifies it; anything else fails here (COMPLIANCE_REGISTER_NOT_MATCHED) and is reported, never forced.
+     *
+     * @param  array<string, mixed>  $v
+     * @param  array<string, mixed>  $p
+     */
+    private function verifyCompliance(array $v, array $p, string $listingId, User $owner): void
+    {
+        $status = DB::table('vendor_listings')->where('id', $listingId)->value('compliance_status');
+        if ($status === 'VERIFIED') {
+            return;
+        }
+        $marking = (string) $p['compliance']['marking'];
+        $photos = $this->productPhotos($v['slug'], $p['sku']);
+        $photo = $photos[((int) ($p['compliance']['photo'] ?? 1)) - 1] ?? $photos[0];
+        $evidence = $this->compliance->uploadEvidence($this->requestFor($owner), $listingId, 'MANUAL', $this->upload($photo, 'marking-'.basename($photo), 'image/jpeg'), null, $marking);
+        $this->compliance->submit($this->withKey($this->requestFor($owner)), $listingId, [
+            'listing_lock_version' => $this->lock($listingId), 'path' => 'MANUAL', 'review_mode' => 'AUTOMATIC', 'evidence_ids' => [$evidence['evidence_id']],
+            'marking_type' => $marking, 'certificate_number' => (string) $p['compliance']['number'], 'confirmed' => true,
+        ]);
+    }
+
+    /**
+     * Regulated listings need an active DTI-BPS register snapshot to match against. When the selected Vendors list any
+     * and no snapshot of that kind is active, the register copy in materials/ is imported and activated as the first
+     * Admin would through Product Compliance; an existing active snapshot is never replaced.
+     *
+     * @param  list<array<string, mixed>>  $vendors
+     * @return array<string, string>
+     */
+    private function ensureComplianceRegisters(array $vendors, ?int $adminId): array
+    {
+        $needed = [];
+        foreach ($vendors as $vendor) {
+            foreach ($vendor['products'] as $product) {
+                if (isset($product['compliance'])) {
+                    $needed[$product['compliance']['marking'] === 'ICC_STICKER' ? 'ICC_CERTIFICATE' : 'PS_LICENSE'] = true;
+                }
+            }
+        }
+        $notes = [];
+        foreach (array_keys($needed) as $kind) {
+            if (DB::table('compliance_reference_registers')->where('register_kind', $kind)->where('status', 'ACTIVE')->exists()) {
+                continue;
+            }
+            [$file, $reference] = self::REGISTER_FILES[$kind];
+            $path = $this->registerDirectory().'/'.$file;
+            if ($adminId === null || ! is_file($path)) {
+                $notes['register_'.$kind] = 'No active '.$kind.' register and '.($adminId === null ? 'no active Admin to import it' : 'materials/'.$file.' is missing').'; regulated listings stay unverified.';
+
+                continue;
+            }
+            $snapshot = $this->registers->import($this->upload($path, $file, 'text/csv'), $kind, $reference, now('Asia/Manila')->toDateString(), $adminId);
+            $this->registers->activate($snapshot['id'], $adminId);
+            $notes['register_'.$kind] = 'imported and activated materials/'.$file.' ('.$snapshot['row_count'].' rows)';
+        }
+
+        return $notes;
+    }
+
+    private function registerDirectory(): string
+    {
+        $configured = (string) config('materyalph.demo.register_directory', '');
+
+        return $configured !== '' ? $configured : dirname(base_path(), 2).'/materials';
     }
 
     private function lock(string $listingId): int

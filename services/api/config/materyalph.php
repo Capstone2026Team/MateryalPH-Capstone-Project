@@ -48,6 +48,10 @@ return [
         'password' => env('DEMO_SEED_PASSWORD', ''),
         // Fetched (git-ignored) demo photos; empty means database/demo-assets/photos.
         'photo_directory' => env('DEMO_SEED_PHOTO_DIRECTORY', ''),
+        // DTI-BPS register copies imported when no snapshot is active; empty means the repository's materials/ folder.
+        'register_directory' => env('DEMO_SEED_REGISTER_DIRECTORY', ''),
+        // How long a run waits for new Xendit TEST sub-accounts to turn LIVE before finishing those Stores; 0 skips the wait.
+        'xendit_live_wait_seconds' => (int) env('DEMO_SEED_XENDIT_LIVE_WAIT_SECONDS', 600),
     ],
     'compliance_ocr' => [
         'driver' => env('COMPLIANCE_OCR_DRIVER', 'tesseract'),

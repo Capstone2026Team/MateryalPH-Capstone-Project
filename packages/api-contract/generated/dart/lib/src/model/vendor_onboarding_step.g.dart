@@ -6,6 +6,44 @@ part of 'vendor_onboarding_step.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
+const VendorOnboardingStepProgressStatusEnum
+    _$vendorOnboardingStepProgressStatusEnum_NOT_STARTED =
+    const VendorOnboardingStepProgressStatusEnum._('NOT_STARTED');
+const VendorOnboardingStepProgressStatusEnum
+    _$vendorOnboardingStepProgressStatusEnum_IN_PROGRESS =
+    const VendorOnboardingStepProgressStatusEnum._('IN_PROGRESS');
+const VendorOnboardingStepProgressStatusEnum
+    _$vendorOnboardingStepProgressStatusEnum_COMPLETED =
+    const VendorOnboardingStepProgressStatusEnum._('COMPLETED');
+const VendorOnboardingStepProgressStatusEnum
+    _$vendorOnboardingStepProgressStatusEnum_NOT_APPLICABLE =
+    const VendorOnboardingStepProgressStatusEnum._('NOT_APPLICABLE');
+
+VendorOnboardingStepProgressStatusEnum
+    _$vendorOnboardingStepProgressStatusEnumValueOf(String name) {
+  switch (name) {
+    case 'NOT_STARTED':
+      return _$vendorOnboardingStepProgressStatusEnum_NOT_STARTED;
+    case 'IN_PROGRESS':
+      return _$vendorOnboardingStepProgressStatusEnum_IN_PROGRESS;
+    case 'COMPLETED':
+      return _$vendorOnboardingStepProgressStatusEnum_COMPLETED;
+    case 'NOT_APPLICABLE':
+      return _$vendorOnboardingStepProgressStatusEnum_NOT_APPLICABLE;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<VendorOnboardingStepProgressStatusEnum>
+    _$vendorOnboardingStepProgressStatusEnumValues = BuiltSet<
+        VendorOnboardingStepProgressStatusEnum>(const <VendorOnboardingStepProgressStatusEnum>[
+  _$vendorOnboardingStepProgressStatusEnum_NOT_STARTED,
+  _$vendorOnboardingStepProgressStatusEnum_IN_PROGRESS,
+  _$vendorOnboardingStepProgressStatusEnum_COMPLETED,
+  _$vendorOnboardingStepProgressStatusEnum_NOT_APPLICABLE,
+]);
+
 const VendorOnboardingStepLevelEnum _$vendorOnboardingStepLevelEnum_REQUIRED =
     const VendorOnboardingStepLevelEnum._('REQUIRED');
 const VendorOnboardingStepLevelEnum _$vendorOnboardingStepLevelEnum_OPTIONAL =
@@ -107,12 +145,51 @@ final BuiltSet<VendorOnboardingStepStatusEnum>
   _$vendorOnboardingStepStatusEnum_COMPLETED,
 ]);
 
+Serializer<VendorOnboardingStepProgressStatusEnum>
+    _$vendorOnboardingStepProgressStatusEnumSerializer =
+    _$VendorOnboardingStepProgressStatusEnumSerializer();
 Serializer<VendorOnboardingStepLevelEnum>
     _$vendorOnboardingStepLevelEnumSerializer =
     _$VendorOnboardingStepLevelEnumSerializer();
 Serializer<VendorOnboardingStepStatusEnum>
     _$vendorOnboardingStepStatusEnumSerializer =
     _$VendorOnboardingStepStatusEnumSerializer();
+
+class _$VendorOnboardingStepProgressStatusEnumSerializer
+    implements PrimitiveSerializer<VendorOnboardingStepProgressStatusEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'NOT_STARTED': 'NOT_STARTED',
+    'IN_PROGRESS': 'IN_PROGRESS',
+    'COMPLETED': 'COMPLETED',
+    'NOT_APPLICABLE': 'NOT_APPLICABLE',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'NOT_STARTED': 'NOT_STARTED',
+    'IN_PROGRESS': 'IN_PROGRESS',
+    'COMPLETED': 'COMPLETED',
+    'NOT_APPLICABLE': 'NOT_APPLICABLE',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    VendorOnboardingStepProgressStatusEnum
+  ];
+  @override
+  final String wireName = 'VendorOnboardingStepProgressStatusEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          VendorOnboardingStepProgressStatusEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  VendorOnboardingStepProgressStatusEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      VendorOnboardingStepProgressStatusEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
 
 class _$VendorOnboardingStepLevelEnumSerializer
     implements PrimitiveSerializer<VendorOnboardingStepLevelEnum> {
@@ -200,6 +277,8 @@ class _$VendorOnboardingStep extends VendorOnboardingStep {
   @override
   final String label;
   @override
+  final VendorOnboardingStepProgressStatusEnum? progressStatus;
+  @override
   final VendorOnboardingStepLevelEnum level;
   @override
   final VendorOnboardingStepStatusEnum status;
@@ -220,6 +299,7 @@ class _$VendorOnboardingStep extends VendorOnboardingStep {
       {required this.id,
       required this.key,
       required this.label,
+      this.progressStatus,
       required this.level,
       required this.status,
       this.reason,
@@ -243,6 +323,7 @@ class _$VendorOnboardingStep extends VendorOnboardingStep {
         id == other.id &&
         key == other.key &&
         label == other.label &&
+        progressStatus == other.progressStatus &&
         level == other.level &&
         status == other.status &&
         reason == other.reason &&
@@ -257,6 +338,7 @@ class _$VendorOnboardingStep extends VendorOnboardingStep {
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, key.hashCode);
     _$hash = $jc(_$hash, label.hashCode);
+    _$hash = $jc(_$hash, progressStatus.hashCode);
     _$hash = $jc(_$hash, level.hashCode);
     _$hash = $jc(_$hash, status.hashCode);
     _$hash = $jc(_$hash, reason.hashCode);
@@ -273,6 +355,7 @@ class _$VendorOnboardingStep extends VendorOnboardingStep {
           ..add('id', id)
           ..add('key', key)
           ..add('label', label)
+          ..add('progressStatus', progressStatus)
           ..add('level', level)
           ..add('status', status)
           ..add('reason', reason)
@@ -298,6 +381,12 @@ class VendorOnboardingStepBuilder
   String? _label;
   String? get label => _$this._label;
   set label(String? label) => _$this._label = label;
+
+  VendorOnboardingStepProgressStatusEnum? _progressStatus;
+  VendorOnboardingStepProgressStatusEnum? get progressStatus =>
+      _$this._progressStatus;
+  set progressStatus(VendorOnboardingStepProgressStatusEnum? progressStatus) =>
+      _$this._progressStatus = progressStatus;
 
   VendorOnboardingStepLevelEnum? _level;
   VendorOnboardingStepLevelEnum? get level => _$this._level;
@@ -333,6 +422,7 @@ class VendorOnboardingStepBuilder
       _id = $v.id;
       _key = $v.key;
       _label = $v.label;
+      _progressStatus = $v.progressStatus;
       _level = $v.level;
       _status = $v.status;
       _reason = $v.reason;
@@ -366,6 +456,7 @@ class VendorOnboardingStepBuilder
               key, r'VendorOnboardingStep', 'key'),
           label: BuiltValueNullFieldError.checkNotNull(
               label, r'VendorOnboardingStep', 'label'),
+          progressStatus: progressStatus,
           level: BuiltValueNullFieldError.checkNotNull(
               level, r'VendorOnboardingStep', 'level'),
           status: BuiltValueNullFieldError.checkNotNull(

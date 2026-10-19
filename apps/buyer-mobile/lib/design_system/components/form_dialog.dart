@@ -5,12 +5,13 @@ import 'package:flutter/material.dart';
 Future<T?> showBuyerFormDialog<T>({
   required BuildContext context,
   required WidgetBuilder builder,
+  bool barrierDismissible = false,
 }) async {
   final navigator = Navigator.of(context, rootNavigator: true);
   final route = DialogRoute<T>(
     context: context,
     builder: builder,
-    barrierDismissible: false,
+    barrierDismissible: barrierDismissible,
     barrierColor: Theme.of(context).dialogTheme.barrierColor,
     themes: InheritedTheme.capture(from: context, to: navigator.context),
   );

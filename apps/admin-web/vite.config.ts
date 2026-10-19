@@ -31,8 +31,8 @@ const publicTunnelHosts = ['.trycloudflare.com']
 export default defineConfig({
   resolve: { dedupe: ['react', 'react-dom'] },
   plugins: [react(), tailwindcss()],
-  // Prebundle the linked client so startup does not load its thousand-plus generated modules individually.
-  optimizeDeps: { include: ['@materyalph/api-client-ts'] },
+  // Prebundle the linked client, rebuilding on startup because regeneration does not change the npm lockfile.
+  optimizeDeps: { include: ['@materyalph/api-client-ts'], force: true },
   server: {
     port: 5174,
     allowedHosts: publicTunnelHosts,

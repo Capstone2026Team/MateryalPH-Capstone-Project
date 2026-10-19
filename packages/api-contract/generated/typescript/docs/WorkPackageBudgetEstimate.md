@@ -6,6 +6,11 @@
 
 Name | Type
 ------------ | -------------
+`deliveryCentavos` | number
+`estimatedTotalCentavos` | number
+`deliveryStatus` | string
+`deliveryIssues` | Array&lt;string&gt;
+`fulfillmentMethod` | string
 `lines` | [Array&lt;WorkPackageBudgetEstimateLine&gt;](WorkPackageBudgetEstimateLine.md)
 `materialsTotalCentavos` | number
 `pricedLineCount` | number
@@ -22,6 +27,11 @@ import type { WorkPackageBudgetEstimate } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "deliveryCentavos": null,
+  "estimatedTotalCentavos": null,
+  "deliveryStatus": null,
+  "deliveryIssues": null,
+  "fulfillmentMethod": null,
   "lines": null,
   "materialsTotalCentavos": null,
   "pricedLineCount": null,

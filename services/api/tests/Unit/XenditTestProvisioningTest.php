@@ -32,6 +32,16 @@ final class XenditTestProvisioningTest extends TestCase
         Http::assertSentCount(1);
     }
 
+    public function test_business_name_is_sent_in_the_format_xendit_accepts(): void
+    {
+        Http::fake(['https://api.xendit.co/v2/accounts' => Http::response(array_replace($this->payload(), ['public_profile' => ['business_name' => 'Sucat Cement Steel and Ready Mix Supply']]))]);
+        $result = app(ConfiguredXenditAccountVerificationGateway::class)->initiate('owner@example.test', 'Sucat Cement, Steel & Ready-Mix Supply');
+        self::assertSame('5cafeb170a2b18519b1b8763', $result['provider_account_id']);
+        Http::assertSent(fn ($request) => $request->data()['public_profile'] === ['business_name' => 'Sucat Cement Steel and Ready Mix Supply']);
+        self::assertSame('Mang Bens Hardware and Co', ConfiguredXenditAccountVerificationGateway::providerBusinessName("Mang Ben's Hardware&Co."));
+        self::assertSame('Peñafrancia Tiles', ConfiguredXenditAccountVerificationGateway::providerBusinessName('  Peñafrancia   Tiles. '));
+    }
+
     /** @return array<string, mixed> */
     private function payload(): array
     {

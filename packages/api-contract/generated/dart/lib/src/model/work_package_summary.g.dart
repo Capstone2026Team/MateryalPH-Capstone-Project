@@ -110,6 +110,10 @@ class _$WorkPackageSummaryStatusEnumSerializer
 
 class _$WorkPackageSummary extends WorkPackageSummary {
   @override
+  final String? selectedArrangementId;
+  @override
+  final BuiltList<BuiltMap<String, JsonObject?>>? vendorOrders;
+  @override
   final String id;
   @override
   final String projectId;
@@ -127,13 +131,17 @@ class _$WorkPackageSummary extends WorkPackageSummary {
   final String? selectedVendorId;
   @override
   final String? orderId;
+  @override
+  final String? procurementCandidateId;
 
   factory _$WorkPackageSummary(
           [void Function(WorkPackageSummaryBuilder)? updates]) =>
       (WorkPackageSummaryBuilder()..update(updates))._build();
 
   _$WorkPackageSummary._(
-      {required this.id,
+      {this.selectedArrangementId,
+      this.vendorOrders,
+      required this.id,
       required this.projectId,
       required this.name,
       required this.status,
@@ -141,7 +149,8 @@ class _$WorkPackageSummary extends WorkPackageSummary {
       required this.lockVersion,
       this.currentVersionId,
       this.selectedVendorId,
-      this.orderId})
+      this.orderId,
+      this.procurementCandidateId})
       : super._();
   @override
   WorkPackageSummary rebuild(
@@ -156,6 +165,8 @@ class _$WorkPackageSummary extends WorkPackageSummary {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is WorkPackageSummary &&
+        selectedArrangementId == other.selectedArrangementId &&
+        vendorOrders == other.vendorOrders &&
         id == other.id &&
         projectId == other.projectId &&
         name == other.name &&
@@ -164,12 +175,15 @@ class _$WorkPackageSummary extends WorkPackageSummary {
         lockVersion == other.lockVersion &&
         currentVersionId == other.currentVersionId &&
         selectedVendorId == other.selectedVendorId &&
-        orderId == other.orderId;
+        orderId == other.orderId &&
+        procurementCandidateId == other.procurementCandidateId;
   }
 
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, selectedArrangementId.hashCode);
+    _$hash = $jc(_$hash, vendorOrders.hashCode);
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, projectId.hashCode);
     _$hash = $jc(_$hash, name.hashCode);
@@ -179,6 +193,7 @@ class _$WorkPackageSummary extends WorkPackageSummary {
     _$hash = $jc(_$hash, currentVersionId.hashCode);
     _$hash = $jc(_$hash, selectedVendorId.hashCode);
     _$hash = $jc(_$hash, orderId.hashCode);
+    _$hash = $jc(_$hash, procurementCandidateId.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -186,6 +201,8 @@ class _$WorkPackageSummary extends WorkPackageSummary {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'WorkPackageSummary')
+          ..add('selectedArrangementId', selectedArrangementId)
+          ..add('vendorOrders', vendorOrders)
           ..add('id', id)
           ..add('projectId', projectId)
           ..add('name', name)
@@ -194,7 +211,8 @@ class _$WorkPackageSummary extends WorkPackageSummary {
           ..add('lockVersion', lockVersion)
           ..add('currentVersionId', currentVersionId)
           ..add('selectedVendorId', selectedVendorId)
-          ..add('orderId', orderId))
+          ..add('orderId', orderId)
+          ..add('procurementCandidateId', procurementCandidateId))
         .toString();
   }
 }
@@ -202,6 +220,17 @@ class _$WorkPackageSummary extends WorkPackageSummary {
 class WorkPackageSummaryBuilder
     implements Builder<WorkPackageSummary, WorkPackageSummaryBuilder> {
   _$WorkPackageSummary? _$v;
+
+  String? _selectedArrangementId;
+  String? get selectedArrangementId => _$this._selectedArrangementId;
+  set selectedArrangementId(String? selectedArrangementId) =>
+      _$this._selectedArrangementId = selectedArrangementId;
+
+  ListBuilder<BuiltMap<String, JsonObject?>>? _vendorOrders;
+  ListBuilder<BuiltMap<String, JsonObject?>> get vendorOrders =>
+      _$this._vendorOrders ??= ListBuilder<BuiltMap<String, JsonObject?>>();
+  set vendorOrders(ListBuilder<BuiltMap<String, JsonObject?>>? vendorOrders) =>
+      _$this._vendorOrders = vendorOrders;
 
   String? _id;
   String? get id => _$this._id;
@@ -242,6 +271,11 @@ class WorkPackageSummaryBuilder
   String? get orderId => _$this._orderId;
   set orderId(String? orderId) => _$this._orderId = orderId;
 
+  String? _procurementCandidateId;
+  String? get procurementCandidateId => _$this._procurementCandidateId;
+  set procurementCandidateId(String? procurementCandidateId) =>
+      _$this._procurementCandidateId = procurementCandidateId;
+
   WorkPackageSummaryBuilder() {
     WorkPackageSummary._defaults(this);
   }
@@ -249,6 +283,8 @@ class WorkPackageSummaryBuilder
   WorkPackageSummaryBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _selectedArrangementId = $v.selectedArrangementId;
+      _vendorOrders = $v.vendorOrders?.toBuilder();
       _id = $v.id;
       _projectId = $v.projectId;
       _name = $v.name;
@@ -258,6 +294,7 @@ class WorkPackageSummaryBuilder
       _currentVersionId = $v.currentVersionId;
       _selectedVendorId = $v.selectedVendorId;
       _orderId = $v.orderId;
+      _procurementCandidateId = $v.procurementCandidateId;
       _$v = null;
     }
     return this;
@@ -277,24 +314,40 @@ class WorkPackageSummaryBuilder
   WorkPackageSummary build() => _build();
 
   _$WorkPackageSummary _build() {
-    final _$result = _$v ??
-        _$WorkPackageSummary._(
-          id: BuiltValueNullFieldError.checkNotNull(
-              id, r'WorkPackageSummary', 'id'),
-          projectId: BuiltValueNullFieldError.checkNotNull(
-              projectId, r'WorkPackageSummary', 'projectId'),
-          name: BuiltValueNullFieldError.checkNotNull(
-              name, r'WorkPackageSummary', 'name'),
-          status: BuiltValueNullFieldError.checkNotNull(
-              status, r'WorkPackageSummary', 'status'),
-          budgetCentavos: BuiltValueNullFieldError.checkNotNull(
-              budgetCentavos, r'WorkPackageSummary', 'budgetCentavos'),
-          lockVersion: BuiltValueNullFieldError.checkNotNull(
-              lockVersion, r'WorkPackageSummary', 'lockVersion'),
-          currentVersionId: currentVersionId,
-          selectedVendorId: selectedVendorId,
-          orderId: orderId,
-        );
+    _$WorkPackageSummary _$result;
+    try {
+      _$result = _$v ??
+          _$WorkPackageSummary._(
+            selectedArrangementId: selectedArrangementId,
+            vendorOrders: _vendorOrders?.build(),
+            id: BuiltValueNullFieldError.checkNotNull(
+                id, r'WorkPackageSummary', 'id'),
+            projectId: BuiltValueNullFieldError.checkNotNull(
+                projectId, r'WorkPackageSummary', 'projectId'),
+            name: BuiltValueNullFieldError.checkNotNull(
+                name, r'WorkPackageSummary', 'name'),
+            status: BuiltValueNullFieldError.checkNotNull(
+                status, r'WorkPackageSummary', 'status'),
+            budgetCentavos: BuiltValueNullFieldError.checkNotNull(
+                budgetCentavos, r'WorkPackageSummary', 'budgetCentavos'),
+            lockVersion: BuiltValueNullFieldError.checkNotNull(
+                lockVersion, r'WorkPackageSummary', 'lockVersion'),
+            currentVersionId: currentVersionId,
+            selectedVendorId: selectedVendorId,
+            orderId: orderId,
+            procurementCandidateId: procurementCandidateId,
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'vendorOrders';
+        _vendorOrders?.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'WorkPackageSummary', _$failedField, e.toString());
+      }
+      rethrow;
+    }
     replace(_$result);
     return _$result;
   }

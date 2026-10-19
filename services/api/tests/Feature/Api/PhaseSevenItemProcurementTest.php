@@ -290,7 +290,7 @@ final class PhaseSevenItemProcurementTest extends TestCase
         self::assertSame($stores['Farther']['listing'], $this->searchListings(['sort' => 'FAVORITES_FIRST'])->json('data.0.listing_id'));
         self::assertTrue($this->searchListings(['sort' => 'FAVORITES_FIRST'])->json('data.0.is_favorite'));
 
-        $this->putJson('/api/v1/buyers/ranking-preferences/item-based', ['version' => 0, 'weights' => ['distance' => 0, 'price' => 0, 'vps' => 0, 'stock' => 0, 'product_rating' => 100]])->assertOk();
+        $this->putJson('/api/v1/buyers/ranking-preferences/item-based', ['version' => 0, 'weights' => ['distance' => 0, 'price' => 0, 'vps' => 0, 'stock' => 0, 'product_rating' => 1]])->assertOk();
         $tied = $this->searchListings(['sort' => 'BEST_DEAL'])->assertOk()->assertJsonPath('meta.ranking.personalized', true);
         $expected = [$stores['Near']['listing'], $stores['Middle']['listing'], $stores['Farther']['listing']];
         self::assertSame($expected, array_column($tied->json('data'), 'listing_id'), 'Equal SRS breaks ties by distance, then price, then listing id.');
@@ -354,7 +354,7 @@ final class PhaseSevenItemProcurementTest extends TestCase
 
     // ── Ranking preferences ────────────────────────────────────────────────────────────────────────
 
-    public function test_item_based_preferences_total_100_reject_all_zero_reset_and_stay_private_to_the_buyer(): void
+    public function test_item_based_preferences_preserve_raw_weights_reject_all_zero_reset_and_stay_private_to_the_buyer(): void
     {
         $this->getJson('/api/v1/buyers/ranking-preferences/item-based')->assertUnauthorized();
         $first = $this->buyer();
@@ -362,8 +362,8 @@ final class PhaseSevenItemProcurementTest extends TestCase
             ->assertJsonPath('data.weights', ['distance' => 30, 'price' => 25, 'vps' => 20, 'stock' => 15, 'product_rating' => 10])
             ->assertJsonPath('data.personalized', false)->assertJsonPath('data.version', 0);
 
-        $this->putJson('/api/v1/buyers/ranking-preferences/item-based', ['version' => 0, 'weights' => ['distance' => 40, 'price' => 20, 'vps' => 20, 'stock' => 10, 'product_rating' => 0]])
-            ->assertStatus(422)->assertJsonPath('errors.0.code', 'WEIGHTS_TOTAL_INVALID');
+        $this->putJson('/api/v1/buyers/ranking-preferences/item-based', ['version' => 0, 'weights' => ['distance' => 101, 'price' => 20, 'vps' => 20, 'stock' => 10, 'product_rating' => 0]])
+            ->assertStatus(422)->assertJsonPath('errors.0.code', 'VALIDATION_FAILED');
         $this->putJson('/api/v1/buyers/ranking-preferences/item-based', ['version' => 0, 'weights' => ['distance' => 0, 'price' => 0, 'vps' => 0, 'stock' => 0, 'product_rating' => 0]])
             ->assertStatus(422)->assertJsonPath('errors.0.code', 'WEIGHTS_ALL_ZERO');
         $this->putJson('/api/v1/buyers/ranking-preferences/item-based', ['version' => 0, 'weights' => ['distance' => 50.5, 'price' => 49.5, 'vps' => 0, 'stock' => 0, 'product_rating' => 0]])
@@ -371,9 +371,10 @@ final class PhaseSevenItemProcurementTest extends TestCase
         $this->putJson('/api/v1/buyers/ranking-preferences/item-based', ['version' => 0, 'weights' => ['distance' => 50, 'price' => 50, 'vps' => 0, 'stock' => 0, 'product_rating' => 0, 'sponsored' => 0]])
             ->assertStatus(422);
 
-        $weights = ['distance' => 50, 'price' => 30, 'vps' => 10, 'stock' => 10, 'product_rating' => 0];
+        $weights = ['distance' => 80, 'price' => 60, 'vps' => 70, 'stock' => 90, 'product_rating' => 50];
         $this->putJson('/api/v1/buyers/ranking-preferences/item-based', ['version' => 0, 'weights' => $weights])->assertOk()
-            ->assertJsonPath('data.personalized', true)->assertJsonPath('data.version', 1)->assertJsonPath('data.total_percent', 100);
+            ->assertJsonPath('data.personalized', true)->assertJsonPath('data.version', 1)->assertJsonPath('data.total_percent', 350)->assertJsonPath('data.weights', $weights);
+        $this->getJson('/api/v1/buyers/ranking-preferences/item-based')->assertOk()->assertJsonPath('data.weights', $weights);
         $this->putJson('/api/v1/buyers/ranking-preferences/item-based', ['version' => 0, 'weights' => $weights])->assertStatus(409)->assertJsonPath('errors.0.code', 'PREFERENCE_VERSION_CONFLICT');
         $this->assertDatabaseHas('buyer_ranking_preferences', ['buyer_profile_id' => $this->buyerProfileId($first), 'procurement_type' => 'ITEM_BASED', 'version' => 1]);
         $this->assertDatabaseHas('audit_logs', ['action' => 'BUYER_RANKING_PREFERENCES_UPDATED', 'actor_user_id' => $first->id]);
@@ -394,7 +395,7 @@ final class PhaseSevenItemProcurementTest extends TestCase
 
         try {
             DB::transaction(fn () => DB::table('buyer_ranking_preferences')->insert(['id' => (string) Str::uuid7(), 'buyer_profile_id' => $this->buyerProfileId($second), 'procurement_type' => 'ITEM_BASED',
-                'weights' => json_encode(['distance' => 90, 'price' => 0, 'vps' => 0, 'stock' => 0, 'product_rating' => 0]), 'version' => 1, 'created_at' => now(), 'updated_at' => now()]));
+                'weights' => json_encode(['distance' => 0, 'price' => 0, 'vps' => 0, 'stock' => 0, 'product_rating' => 0]), 'version' => 1, 'created_at' => now(), 'updated_at' => now()]));
             self::fail('The database rejects a weight set that does not total 100.');
         } catch (QueryException $exception) {
             self::assertStringContainsString('buyer_ranking_item_weights_check', $exception->getMessage());

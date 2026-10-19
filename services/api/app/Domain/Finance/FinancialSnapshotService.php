@@ -17,7 +17,7 @@ use Illuminate\Support\Str;
  *   M = Σ L,  E = M − V
  *   D = delivery (advisory estimate or pending), F = processing fee (pending until a channel is chosen)
  *
- * Prices are VAT-inclusive payable amounts, so VAT is never added on top. The Vendor-paid 2% commission and
+ * Prices are VAT-inclusive payable amounts, so VAT is never added on top. The versioned Vendor-paid commission and
  * merchant withholding are Vendor-side settlements and never appear in a Buyer total. Market averages are
  * never an input: every amount comes from the listing's own current price version.
  */
@@ -35,12 +35,14 @@ final class FinancialSnapshotService
     }
 
     /** The fee policy version in force now for this environment; commission never uses a silent new price. */
-    public static function currentFeePolicyId(): ?string
+    public static function currentFeePolicyId(?string $organizationId = null): ?string
     {
-        $id = DB::table('fee_policy_versions')->where('environment', self::ENVIRONMENT)->where('code', self::FEE_POLICY_CODE)->where('effective_from', '<=', now())
-            ->where(fn ($query) => $query->whereNull('effective_until')->orWhere('effective_until', '>', now()))->orderByDesc('version')->value('id');
+        $policy = CommissionPolicyService::current();
+        if ($policy !== null && $organizationId !== null) {
+            CommissionPolicyService::assertAccepted($policy, $organizationId);
+        }
 
-        return $id === null ? null : (string) $id;
+        return $policy === null ? null : (string) $policy->id;
     }
 
     /**
@@ -60,7 +62,7 @@ final class FinancialSnapshotService
         }
         $version = (int) DB::table('financial_snapshots')->where('order_id', $order->id)->max('version') + 1;
         $acceptedContent = json_decode((string) $orderSnapshot->snapshot, true);
-        $feePolicyId = array_key_exists('fee_policy_version_id', $acceptedContent) ? $acceptedContent['fee_policy_version_id'] : self::currentFeePolicyId();
+        $feePolicyId = array_key_exists('fee_policy_version_id', $acceptedContent) ? $acceptedContent['fee_policy_version_id'] : self::currentFeePolicyId((string) $order->vendor_organization_id);
         $matrix = FinancialCalculator::paymentMatrix($commercial, (string) $order->payment_method, null);
         $canonical = json_encode(['order_id' => (string) $order->id, 'version' => $version, 'order_snapshot_version' => (int) $orderSnapshot->version,
             'commercial' => $commercial, 'payment_matrix' => $matrix, 'fee_policy_version_id' => $feePolicyId, 'nrpc_record_id' => $nrpcRecordId], JSON_THROW_ON_ERROR);

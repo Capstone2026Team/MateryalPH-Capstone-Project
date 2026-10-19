@@ -11,6 +11,8 @@ Name | Type
 `note` | string
 `budgetOverrideReason` | string
 `selections` | [Array&lt;ProjectSpecificationSelection&gt;](ProjectSpecificationSelection.md)
+`fulfillmentMethod` | string
+`paymentMethod` | string
 
 ## Example
 
@@ -24,6 +26,8 @@ const example = {
   "note": null,
   "budgetOverrideReason": null,
   "selections": null,
+  "fulfillmentMethod": null,
+  "paymentMethod": null,
 } satisfies ProjectCandidateRequest
 
 console.log(example)

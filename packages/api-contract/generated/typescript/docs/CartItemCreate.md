@@ -16,6 +16,7 @@ Name | Type
 `originSource` | string
 `radiusKm` | number
 `workPackageLineId` | string
+`allowPartialStock` | boolean
 
 ## Example
 
@@ -34,6 +35,7 @@ const example = {
   "originSource": null,
   "radiusKm": null,
   "workPackageLineId": null,
+  "allowPartialStock": null,
 } satisfies CartItemCreate
 
 console.log(example)

@@ -13,6 +13,11 @@ part 'chat_quotation_version.g.dart';
 /// ChatQuotationVersion
 ///
 /// Properties:
+/// * [requestedChanges] - Buyer's exact recorded counter-offer for this version, retained after revision. Omitted when no changes were requested. Only visible to authorized conversation participants.
+/// * [changeRequestedAt] - UTC ISO 8601 timestamp of the recorded counter-offer for this version.
+/// * [vendorResponseDueAt] - Exact recorded UTC ISO 8601 deadline for the Vendor to revise and republish. Historical requests retain their original deadline; it is active only while the version is current and COUNTERED.
+/// * [availablePaymentMethods] - Currently available Buyer choices for this quotation's fulfillment, subject to Vendor settings. Revalidated at acceptance.
+/// * [selectedPaymentMethod] - The Buyer's recorded method from the accepted order, including historical accepted quotations.
 /// * [id]
 /// * [version]
 /// * [latest]
@@ -27,6 +32,26 @@ part 'chat_quotation_version.g.dart';
 /// * [acceptedOrderId]
 @BuiltValue()
 abstract class ChatQuotationVersion implements Built<ChatQuotationVersion, ChatQuotationVersionBuilder> {
+  /// Buyer's exact recorded counter-offer for this version, retained after revision. Omitted when no changes were requested. Only visible to authorized conversation participants.
+  @BuiltValueField(wireName: r'requested_changes')
+  String? get requestedChanges;
+
+  /// UTC ISO 8601 timestamp of the recorded counter-offer for this version.
+  @BuiltValueField(wireName: r'change_requested_at')
+  String? get changeRequestedAt;
+
+  /// Exact recorded UTC ISO 8601 deadline for the Vendor to revise and republish. Historical requests retain their original deadline; it is active only while the version is current and COUNTERED.
+  @BuiltValueField(wireName: r'vendor_response_due_at')
+  String? get vendorResponseDueAt;
+
+  /// Currently available Buyer choices for this quotation's fulfillment, subject to Vendor settings. Revalidated at acceptance.
+  @BuiltValueField(wireName: r'available_payment_methods')
+  BuiltSet<String>? get availablePaymentMethods;
+
+  /// The Buyer's recorded method from the accepted order, including historical accepted quotations.
+  @BuiltValueField(wireName: r'selected_payment_method')
+  String? get selectedPaymentMethod;
+
   @BuiltValueField(wireName: r'id')
   String get id;
 
@@ -86,6 +111,41 @@ class _$ChatQuotationVersionSerializer implements PrimitiveSerializer<ChatQuotat
     ChatQuotationVersion object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.requestedChanges != null) {
+      yield r'requested_changes';
+      yield serializers.serialize(
+        object.requestedChanges,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.changeRequestedAt != null) {
+      yield r'change_requested_at';
+      yield serializers.serialize(
+        object.changeRequestedAt,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.vendorResponseDueAt != null) {
+      yield r'vendor_response_due_at';
+      yield serializers.serialize(
+        object.vendorResponseDueAt,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.availablePaymentMethods != null) {
+      yield r'available_payment_methods';
+      yield serializers.serialize(
+        object.availablePaymentMethods,
+        specifiedType: const FullType(BuiltSet, [FullType(String)]),
+      );
+    }
+    if (object.selectedPaymentMethod != null) {
+      yield r'selected_payment_method';
+      yield serializers.serialize(
+        object.selectedPaymentMethod,
+        specifiedType: const FullType(String),
+      );
+    }
     yield r'id';
     yield serializers.serialize(
       object.id,
@@ -173,6 +233,46 @@ class _$ChatQuotationVersionSerializer implements PrimitiveSerializer<ChatQuotat
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'requested_changes':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.requestedChanges = valueDes;
+          break;
+        case r'change_requested_at':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.changeRequestedAt = valueDes;
+          break;
+        case r'vendor_response_due_at':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.vendorResponseDueAt = valueDes;
+          break;
+        case r'available_payment_methods':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltSet, [FullType(String)]),
+          ) as BuiltSet<String>?;
+          if (valueDes == null) continue;
+          result.availablePaymentMethods.replace(valueDes);
+          break;
+        case r'selected_payment_method':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.selectedPaymentMethod = valueDes;
+          break;
         case r'id':
           final valueDes = serializers.deserialize(
             value,

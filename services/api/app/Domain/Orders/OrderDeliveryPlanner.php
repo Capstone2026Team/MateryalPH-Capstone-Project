@@ -8,6 +8,7 @@ use App\Domain\Identity\AuthenticationException;
 use App\Domain\Inventory\StockAvailability;
 use App\Domain\Procurement\DeliveryPreviewService;
 use App\Domain\Vendors\DeliveryRecommendationService;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Builds the delivery load for a child order from its frozen line snapshots and confirmed quantities, and the
@@ -27,11 +28,24 @@ final class OrderDeliveryPlanner
         return is_array($destination) ? $destination : [];
     }
 
+    /**
+     * A Self-Pickup order's destination is the Vendor's current store address, never the Buyer's chat location.
+     *
+     * @return array{type: string, store_address: string|null}
+     */
+    public static function pickupDestination(string $vendorOrganizationId): array
+    {
+        $address = DB::table('vendor_addresses as va')->join('vendor_address_versions as av', 'av.id', '=', 'va.current_version_id')
+            ->where('va.vendor_organization_id', $vendorOrganizationId)->value('av.formatted_address');
+
+        return ['type' => 'PICKUP', 'store_address' => is_string($address) && $address !== '' ? $address : null];
+    }
+
     /** @return array<string, mixed>|null the endpoint point, or null for Self-Pickup */
     public static function endpoint(object $order): ?array
     {
         $destination = self::destination($order);
-        if (($destination['type'] ?? null) !== 'DELIVERY') {
+        if (($destination['type'] ?? null) !== 'DELIVERY' || ($order->fulfillment_method ?? null) === 'PICKUP') {
             return null;
         }
 

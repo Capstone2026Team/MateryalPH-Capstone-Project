@@ -29,7 +29,7 @@ Generated guidance and design-review tools must not change roles, states, timers
 - Order, payment, fulfillment, refund, and dispute states remain separate.
 - Cart placement and quotation soft holds do not reserve sellable stock.
 - Published quotation versions are immutable; only the latest version can be accepted.
-- One Work Package can have multiple inquiries but only one selected Vendor.
+- One Work Package can have multiple inquiries and one selected procurement arrangement: a complete single Vendor or equal group members with separate Vendor quotations and orders. Historical single-Vendor awards keep their existing relationships.
 - Payment and refund success comes only from verified provider events or authoritative reconciliation.
 - Cancellation Refund and Dispute-Conclusion Refund are separate idempotent records.
 - NRPC is optional, manual, disclosed before payment, part of the existing order value, and has no platform-wide numeric cap.

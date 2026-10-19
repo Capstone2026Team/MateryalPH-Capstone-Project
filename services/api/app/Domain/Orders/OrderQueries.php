@@ -419,6 +419,10 @@ final class OrderQueries
         }
         $vendor = DB::table('store_profiles')->where('vendor_organization_id', $order->vendor_organization_id)->first(['public_store_name', 'logo_file_id']);
         $destination = OrderDeliveryPlanner::destination($order);
+        // A Self-Pickup order is delivered to the store, whatever location the chat quotation was opened from.
+        if ($order->fulfillment_method === 'PICKUP' && ($destination['type'] ?? null) !== 'PICKUP') {
+            $destination = OrderDeliveryPlanner::pickupDestination((string) $order->vendor_organization_id);
+        }
         $nrpc = $this->nrpc($order, $lines);
         $projectContext = null;
         if ($order->work_package_version_id !== null && (! $forVendor || $order->procurement_type === 'PROJECT_BASED')) {
@@ -444,12 +448,12 @@ final class OrderQueries
                 'payment_expires_at' => self::iso($order->payment_expires_at), 'server_time' => now()->toIso8601String(), 'timezone' => 'Asia/Manila'],
             'commercial_version' => ['current' => (int) $order->current_snapshot_version, 'accepted' => $order->accepted_snapshot_version === null ? null : (int) $order->accepted_snapshot_version,
                 'kind' => $current?->kind, 'content_hash' => $current?->content_hash, 'recorded_at' => $current === null ? null : self::iso($current->created_at)],
-            'changes' => $content['changes'] ?? [],
+            'changes' => self::orderChanges($content['changes'] ?? []),
             'expected_fulfillment_date' => $order->expected_fulfillment_date,
             'lines' => $lines,
             'destination' => $destination === [] ? null : (($destination['type'] ?? null) === 'PICKUP'
                 ? ['type' => 'PICKUP', 'store_address' => self::addressText($destination['store_address'] ?? null)]
-                : ['type' => 'DELIVERY', 'intended' => OrderDeliveryPlanner::publicPoint($destination['intended'] ?? null), 'heavy_vehicle_restriction' => $destination['heavy_vehicle_restriction'] ?? null,
+                : ['type' => 'DELIVERY', 'intended' => OrderDeliveryPlanner::publicPoint($destination['intended'] ?? null), 'heavy_vehicle_restriction' => in_array($destination['heavy_vehicle_restriction'] ?? null, ['YES', 'NO'], true) ? $destination['heavy_vehicle_restriction'] : null,
                     'alternate_drop_off' => OrderDeliveryPlanner::publicPoint($destination['alternate_drop_off'] ?? null), 'vehicle_endpoint' => $destination['vehicle_endpoint'] ?? null,
                     'access_instructions' => $forVendor && $order->access_instructions_encrypted !== null ? Crypt::decryptString((string) $order->access_instructions_encrypted) : null]),
             'delivery' => $this->delivery($order, $submitted),
@@ -461,6 +465,25 @@ final class OrderQueries
                     'actor_role' => $row->actor_role, 'reason_code' => $row->reason_code, 'snapshot_version' => $row->snapshot_version === null ? null : (int) $row->snapshot_version, 'at' => self::iso($row->created_at)])->all(),
             'lock_version' => (int) $order->lock_version,
         ];
+    }
+
+    /**
+     * Order changes are what the Vendor altered after the Buyer submitted the order. An order accepted
+     * from a chat quotation carries that quotation's field diff in its snapshot instead; the Buyer
+     * reviewed it on the quotation before accepting, so only entries in the order-change shape are
+     * returned.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function orderChanges(mixed $changes): array
+    {
+        if (! is_array($changes)) {
+            return [];
+        }
+
+        return array_values(array_filter($changes, static fn (mixed $change): bool => is_array($change)
+            && in_array($change['type'] ?? null, ['QUANTITY_REDUCED', 'LINE_REMOVED', 'VENDOR_DISCOUNT'], true)
+            && array_key_exists('order_line_id', $change) && isset($change['label'], $change['from'], $change['to'])));
     }
 
     /**

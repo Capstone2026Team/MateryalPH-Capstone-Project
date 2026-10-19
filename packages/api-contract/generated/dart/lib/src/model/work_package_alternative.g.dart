@@ -6,6 +6,130 @@ part of 'work_package_alternative.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
+const WorkPackageAlternativeAvailabilityEnum
+    _$workPackageAlternativeAvailabilityEnum_FULL =
+    const WorkPackageAlternativeAvailabilityEnum._('FULL');
+const WorkPackageAlternativeAvailabilityEnum
+    _$workPackageAlternativeAvailabilityEnum_PARTIAL =
+    const WorkPackageAlternativeAvailabilityEnum._('PARTIAL');
+
+WorkPackageAlternativeAvailabilityEnum
+    _$workPackageAlternativeAvailabilityEnumValueOf(String name) {
+  switch (name) {
+    case 'FULL':
+      return _$workPackageAlternativeAvailabilityEnum_FULL;
+    case 'PARTIAL':
+      return _$workPackageAlternativeAvailabilityEnum_PARTIAL;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<WorkPackageAlternativeAvailabilityEnum>
+    _$workPackageAlternativeAvailabilityEnumValues = BuiltSet<
+        WorkPackageAlternativeAvailabilityEnum>(const <WorkPackageAlternativeAvailabilityEnum>[
+  _$workPackageAlternativeAvailabilityEnum_FULL,
+  _$workPackageAlternativeAvailabilityEnum_PARTIAL,
+]);
+
+const WorkPackageAlternativeFulfillmentMethodsEnum
+    _$workPackageAlternativeFulfillmentMethodsEnum_DELIVERY =
+    const WorkPackageAlternativeFulfillmentMethodsEnum._('DELIVERY');
+const WorkPackageAlternativeFulfillmentMethodsEnum
+    _$workPackageAlternativeFulfillmentMethodsEnum_PICKUP =
+    const WorkPackageAlternativeFulfillmentMethodsEnum._('PICKUP');
+
+WorkPackageAlternativeFulfillmentMethodsEnum
+    _$workPackageAlternativeFulfillmentMethodsEnumValueOf(String name) {
+  switch (name) {
+    case 'DELIVERY':
+      return _$workPackageAlternativeFulfillmentMethodsEnum_DELIVERY;
+    case 'PICKUP':
+      return _$workPackageAlternativeFulfillmentMethodsEnum_PICKUP;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<WorkPackageAlternativeFulfillmentMethodsEnum>
+    _$workPackageAlternativeFulfillmentMethodsEnumValues = BuiltSet<
+        WorkPackageAlternativeFulfillmentMethodsEnum>(const <WorkPackageAlternativeFulfillmentMethodsEnum>[
+  _$workPackageAlternativeFulfillmentMethodsEnum_DELIVERY,
+  _$workPackageAlternativeFulfillmentMethodsEnum_PICKUP,
+]);
+
+Serializer<WorkPackageAlternativeAvailabilityEnum>
+    _$workPackageAlternativeAvailabilityEnumSerializer =
+    _$WorkPackageAlternativeAvailabilityEnumSerializer();
+Serializer<WorkPackageAlternativeFulfillmentMethodsEnum>
+    _$workPackageAlternativeFulfillmentMethodsEnumSerializer =
+    _$WorkPackageAlternativeFulfillmentMethodsEnumSerializer();
+
+class _$WorkPackageAlternativeAvailabilityEnumSerializer
+    implements PrimitiveSerializer<WorkPackageAlternativeAvailabilityEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'FULL': 'FULL',
+    'PARTIAL': 'PARTIAL',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'FULL': 'FULL',
+    'PARTIAL': 'PARTIAL',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    WorkPackageAlternativeAvailabilityEnum
+  ];
+  @override
+  final String wireName = 'WorkPackageAlternativeAvailabilityEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          WorkPackageAlternativeAvailabilityEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  WorkPackageAlternativeAvailabilityEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      WorkPackageAlternativeAvailabilityEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
+class _$WorkPackageAlternativeFulfillmentMethodsEnumSerializer
+    implements
+        PrimitiveSerializer<WorkPackageAlternativeFulfillmentMethodsEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'DELIVERY': 'DELIVERY',
+    'PICKUP': 'PICKUP',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'DELIVERY': 'DELIVERY',
+    'PICKUP': 'PICKUP',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    WorkPackageAlternativeFulfillmentMethodsEnum
+  ];
+  @override
+  final String wireName = 'WorkPackageAlternativeFulfillmentMethodsEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          WorkPackageAlternativeFulfillmentMethodsEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  WorkPackageAlternativeFulfillmentMethodsEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      WorkPackageAlternativeFulfillmentMethodsEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$WorkPackageAlternative extends WorkPackageAlternative {
   @override
   final String listingId;
@@ -24,7 +148,7 @@ class _$WorkPackageAlternative extends WorkPackageAlternative {
   @override
   final String? storeName;
   @override
-  final String? image;
+  final ListingImage? image;
   @override
   final int unitPriceCentavos;
   @override
@@ -39,6 +163,15 @@ class _$WorkPackageAlternative extends WorkPackageAlternative {
   final BuiltList<ProjectSpecificationDetail>? specifications;
   @override
   final bool exactMatch;
+  @override
+  final WorkPackageAlternativeAvailabilityEnum availability;
+  @override
+  final int estimatedTotalCentavos;
+  @override
+  final BuiltList<WorkPackageAlternativeFulfillmentMethodsEnum>
+      fulfillmentMethods;
+  @override
+  final bool alreadyAdded;
 
   factory _$WorkPackageAlternative(
           [void Function(WorkPackageAlternativeBuilder)? updates]) =>
@@ -60,7 +193,11 @@ class _$WorkPackageAlternative extends WorkPackageAlternative {
       required this.distanceMeters,
       required this.stockLabel,
       this.specifications,
-      required this.exactMatch})
+      required this.exactMatch,
+      required this.availability,
+      required this.estimatedTotalCentavos,
+      required this.fulfillmentMethods,
+      required this.alreadyAdded})
       : super._();
   @override
   WorkPackageAlternative rebuild(
@@ -90,7 +227,11 @@ class _$WorkPackageAlternative extends WorkPackageAlternative {
         distanceMeters == other.distanceMeters &&
         stockLabel == other.stockLabel &&
         specifications == other.specifications &&
-        exactMatch == other.exactMatch;
+        exactMatch == other.exactMatch &&
+        availability == other.availability &&
+        estimatedTotalCentavos == other.estimatedTotalCentavos &&
+        fulfillmentMethods == other.fulfillmentMethods &&
+        alreadyAdded == other.alreadyAdded;
   }
 
   @override
@@ -112,6 +253,10 @@ class _$WorkPackageAlternative extends WorkPackageAlternative {
     _$hash = $jc(_$hash, stockLabel.hashCode);
     _$hash = $jc(_$hash, specifications.hashCode);
     _$hash = $jc(_$hash, exactMatch.hashCode);
+    _$hash = $jc(_$hash, availability.hashCode);
+    _$hash = $jc(_$hash, estimatedTotalCentavos.hashCode);
+    _$hash = $jc(_$hash, fulfillmentMethods.hashCode);
+    _$hash = $jc(_$hash, alreadyAdded.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -134,7 +279,11 @@ class _$WorkPackageAlternative extends WorkPackageAlternative {
           ..add('distanceMeters', distanceMeters)
           ..add('stockLabel', stockLabel)
           ..add('specifications', specifications)
-          ..add('exactMatch', exactMatch))
+          ..add('exactMatch', exactMatch)
+          ..add('availability', availability)
+          ..add('estimatedTotalCentavos', estimatedTotalCentavos)
+          ..add('fulfillmentMethods', fulfillmentMethods)
+          ..add('alreadyAdded', alreadyAdded))
         .toString();
   }
 }
@@ -176,9 +325,9 @@ class WorkPackageAlternativeBuilder
   String? get storeName => _$this._storeName;
   set storeName(String? storeName) => _$this._storeName = storeName;
 
-  String? _image;
-  String? get image => _$this._image;
-  set image(String? image) => _$this._image = image;
+  ListingImageBuilder? _image;
+  ListingImageBuilder get image => _$this._image ??= ListingImageBuilder();
+  set image(ListingImageBuilder? image) => _$this._image = image;
 
   int? _unitPriceCentavos;
   int? get unitPriceCentavos => _$this._unitPriceCentavos;
@@ -213,6 +362,31 @@ class WorkPackageAlternativeBuilder
   bool? get exactMatch => _$this._exactMatch;
   set exactMatch(bool? exactMatch) => _$this._exactMatch = exactMatch;
 
+  WorkPackageAlternativeAvailabilityEnum? _availability;
+  WorkPackageAlternativeAvailabilityEnum? get availability =>
+      _$this._availability;
+  set availability(WorkPackageAlternativeAvailabilityEnum? availability) =>
+      _$this._availability = availability;
+
+  int? _estimatedTotalCentavos;
+  int? get estimatedTotalCentavos => _$this._estimatedTotalCentavos;
+  set estimatedTotalCentavos(int? estimatedTotalCentavos) =>
+      _$this._estimatedTotalCentavos = estimatedTotalCentavos;
+
+  ListBuilder<WorkPackageAlternativeFulfillmentMethodsEnum>?
+      _fulfillmentMethods;
+  ListBuilder<WorkPackageAlternativeFulfillmentMethodsEnum>
+      get fulfillmentMethods => _$this._fulfillmentMethods ??=
+          ListBuilder<WorkPackageAlternativeFulfillmentMethodsEnum>();
+  set fulfillmentMethods(
+          ListBuilder<WorkPackageAlternativeFulfillmentMethodsEnum>?
+              fulfillmentMethods) =>
+      _$this._fulfillmentMethods = fulfillmentMethods;
+
+  bool? _alreadyAdded;
+  bool? get alreadyAdded => _$this._alreadyAdded;
+  set alreadyAdded(bool? alreadyAdded) => _$this._alreadyAdded = alreadyAdded;
+
   WorkPackageAlternativeBuilder() {
     WorkPackageAlternative._defaults(this);
   }
@@ -228,7 +402,7 @@ class WorkPackageAlternativeBuilder
       _brand = $v.brand;
       _vendorId = $v.vendorId;
       _storeName = $v.storeName;
-      _image = $v.image;
+      _image = $v.image?.toBuilder();
       _unitPriceCentavos = $v.unitPriceCentavos;
       _unitCode = $v.unitCode;
       _unitPrecision = $v.unitPrecision;
@@ -236,6 +410,10 @@ class WorkPackageAlternativeBuilder
       _stockLabel = $v.stockLabel;
       _specifications = $v.specifications?.toBuilder();
       _exactMatch = $v.exactMatch;
+      _availability = $v.availability;
+      _estimatedTotalCentavos = $v.estimatedTotalCentavos;
+      _fulfillmentMethods = $v.fulfillmentMethods.toBuilder();
+      _alreadyAdded = $v.alreadyAdded;
       _$v = null;
     }
     return this;
@@ -272,7 +450,7 @@ class WorkPackageAlternativeBuilder
             vendorId: BuiltValueNullFieldError.checkNotNull(
                 vendorId, r'WorkPackageAlternative', 'vendorId'),
             storeName: storeName,
-            image: image,
+            image: _image?.build(),
             unitPriceCentavos: BuiltValueNullFieldError.checkNotNull(
                 unitPriceCentavos,
                 r'WorkPackageAlternative',
@@ -288,12 +466,27 @@ class WorkPackageAlternativeBuilder
             specifications: _specifications?.build(),
             exactMatch: BuiltValueNullFieldError.checkNotNull(
                 exactMatch, r'WorkPackageAlternative', 'exactMatch'),
+            availability: BuiltValueNullFieldError.checkNotNull(
+                availability, r'WorkPackageAlternative', 'availability'),
+            estimatedTotalCentavos: BuiltValueNullFieldError.checkNotNull(
+                estimatedTotalCentavos,
+                r'WorkPackageAlternative',
+                'estimatedTotalCentavos'),
+            fulfillmentMethods: fulfillmentMethods.build(),
+            alreadyAdded: BuiltValueNullFieldError.checkNotNull(
+                alreadyAdded, r'WorkPackageAlternative', 'alreadyAdded'),
           );
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'image';
+        _image?.build();
+
         _$failedField = 'specifications';
         _specifications?.build();
+
+        _$failedField = 'fulfillmentMethods';
+        fulfillmentMethods.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'WorkPackageAlternative', _$failedField, e.toString());

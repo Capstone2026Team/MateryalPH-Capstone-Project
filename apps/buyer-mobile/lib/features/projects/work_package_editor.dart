@@ -6,6 +6,7 @@ import '../../design_system/components/bottom_action_bar.dart';
 import '../../design_system/components/buyer_app_bar.dart';
 import '../../design_system/components/peso_amount_field.dart';
 import '../../design_system/components/procurement_components.dart';
+import '../../design_system/components/setting_switch_row.dart';
 import '../../design_system/theme.dart';
 import '../map_discovery/discovery_models.dart';
 import 'material_edit_sheet.dart';
@@ -24,6 +25,17 @@ const _lineKeys = [
   'description',
   'color',
 ];
+
+/// Fulfillment choices in menu order. Both means the Buyer is open to either:
+/// the scan lists Vendors offering delivery, pickup or both.
+const _fulfillmentLabels = {
+  'DELIVERY': 'Delivery',
+  'PICKUP': 'Pickup',
+  'BOTH': 'Both',
+};
+
+/// Vertical gap between the site card's fields: two steps of the 8 dp grid.
+const _fieldGap = 16.0;
 
 /// One page: name and materials, site and fulfillment, then the budget with
 /// an optional advisory estimate. Finalize saves the Draft; activation stays
@@ -53,13 +65,15 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
   final scroll = ScrollController();
   final lines = <ProjectData>[];
   String? site, alternate, alternateLabel, error;
-  String fulfillment = 'PICKUP', heavy = 'NO', payment = 'ONLINE';
-  int radius = 5;
+  String fulfillment = 'PICKUP', heavy = 'NO';
   bool busy = false;
   final key = projectKey();
 
   /// Collapsed-by-default sections; each opens in place on tap.
   bool showDescription = false, siteOpen = false;
+
+  /// The Buyer edited Site contact, so the profile number never overwrites it.
+  bool contactTouched = false;
 
   bool estimateOn = false, estimating = false;
   ProjectData? estimate;
@@ -102,14 +116,6 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
     fulfillment = projectText(original['fulfillment_method']).isEmpty
         ? 'PICKUP'
         : projectText(original['fulfillment_method']);
-    payment = switch (projectText(original['payment_method'])) {
-      'CASH_ON_DELIVERY' when fulfillment == 'DELIVERY' => 'CASH_ON_DELIVERY',
-      'IN_STORE' when fulfillment == 'PICKUP' => 'IN_STORE',
-      _ => 'ONLINE',
-    };
-    radius = projectInt(original['radius_km']) == 0
-        ? 5
-        : projectInt(original['radius_km']);
     final destination = projectObject(original['destination']);
     heavy = projectText(destination['heavy_vehicle_restriction']).isEmpty
         ? 'NO'
@@ -119,6 +125,20 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
             as String?;
     lines.addAll(projectRows(original['lines']));
     showDescription = description.text.isNotEmpty;
+    if (contact.text.isEmpty) unawaited(_prefillContact());
+  }
+
+  /// Offers the Buyer's profile number as the Site contact. Supplementary: a
+  /// failed lookup or a profile without a number leaves the field empty.
+  Future<void> _prefillContact() async {
+    try {
+      final phone = await widget.repository.profilePhone();
+      if (phone != null && mounted && !contactTouched && contact.text.isEmpty) {
+        contact.text = phone;
+      }
+    } on Object {
+      // The Buyer can still type a contact.
+    }
   }
 
   @override
@@ -160,7 +180,9 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
   /// fulfillment change; stale responses are ignored.
   void _scheduleEstimate() {
     estimateDebounce?.cancel();
+    estimateSequence++;
     if (!estimateOn || !estimateReady) return;
+    if (mounted) setState(() => estimating = true);
     estimateDebounce = Timer(
       const Duration(milliseconds: 400),
       _refreshEstimate,
@@ -179,8 +201,11 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
         projectText(widget.project['id']),
         {
           'site_id': site,
-          'radius_km': radius,
+          'radius_km': projectSearchRadiusKm,
           'fulfillment_method': fulfillment,
+          'heavy_vehicle_restriction': fulfillment == 'PICKUP' ? 'NO' : heavy,
+          if (fulfillment != 'PICKUP' && heavy == 'YES' && alternate != null)
+            'alternate_drop_off_location_id': alternate,
           'lines': [
             for (final l in lines)
               {
@@ -256,7 +281,8 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
         'This budget is more than the ${projectMoney(reserveCentavos)} still available from the Project budget.',
       );
     }
-    if (fulfillment == 'DELIVERY' &&
+    // Both is open to delivery, so it needs the same delivery details.
+    if (fulfillment != 'PICKUP' &&
         (contact.text.trim().length < 3 ||
             instructions.text.trim().length < 5 ||
             (heavy == 'YES' && alternate == null))) {
@@ -277,13 +303,12 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
           'description': description.text.trim(),
           'budget_centavos': amount,
           'site_id': site,
-          'radius_km': radius,
+          'radius_km': projectSearchRadiusKm,
           'fulfillment_method': fulfillment,
-          'payment_method': payment,
           'site_contact': contact.text.trim(),
           'access_instructions': instructions.text.trim(),
           'heavy_vehicle_restriction': fulfillment == 'PICKUP' ? 'NO' : heavy,
-          if (fulfillment == 'DELIVERY' && heavy == 'YES')
+          if (fulfillment != 'PICKUP' && heavy == 'YES')
             'alternate_drop_off_location_id': alternate,
           if (widget.package != null)
             'lock_version': widget.package!['lock_version'],
@@ -475,7 +500,7 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
       widget.project['sites'],
     ).where((s) => s['id'] == site).map((s) => projectText(s['name']));
     return [
-      fulfillment == 'DELIVERY' ? 'Delivery' : 'Pickup',
+      _fulfillmentLabels[fulfillment] ?? 'Pickup',
       name.firstOrNull ?? 'Choose a Project site',
     ].join(' · ');
   }
@@ -506,14 +531,16 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
                           'Site and fulfillment',
                           style: theme.textTheme.titleMedium,
                         ),
-                        Text(
-                          _siteSummary,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: BuyerTheme.muted,
+                        // Expanded, the fields below show the same facts.
+                        if (!siteOpen)
+                          Text(
+                            _siteSummary,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: BuyerTheme.muted,
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),
@@ -547,16 +574,48 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
     );
   }
 
+  /// Fulfillment, Project site, Site contact, Access
+  /// instructions, then the heavy-vehicle switch for Delivery or Both. Each
+  /// field is separated by [_fieldGap] on the 8 dp grid.
   List<Widget> _siteFields(BuildContext context) => [
+    DropdownButtonFormField<String>(
+      initialValue: fulfillment,
+      isExpanded: true,
+      decoration: const InputDecoration(labelText: 'Fulfillment'),
+      items: [
+        for (final e in _fulfillmentLabels.entries)
+          DropdownMenuItem(value: e.key, child: Text(e.value)),
+      ],
+      onChanged: (v) {
+        setState(() {
+          fulfillment = v!;
+          // The switch is hidden for Pickup, so it goes back to off.
+          if (fulfillment == 'PICKUP') {
+            heavy = 'NO';
+            alternate = alternateLabel = null;
+          }
+        });
+        _scheduleEstimate();
+      },
+    ),
+    const SizedBox(height: _fieldGap),
+    // A long address wraps to two lines, then ends in an ellipsis. A dense
+    // dropdown pins the selected text to one clipped line, so it is not dense.
     DropdownButtonFormField<String>(
       initialValue: site,
       isExpanded: true,
+      isDense: false,
+      itemHeight: null,
       decoration: const InputDecoration(labelText: 'Project site'),
+      selectedItemBuilder: (context) => [
+        for (final s in projectRows(widget.project['sites']))
+          _SiteName(projectText(s['name'])),
+      ],
       items: [
         for (final s in projectRows(widget.project['sites']))
           DropdownMenuItem(
             value: projectText(s['id']),
-            child: Text(projectText(s['name'])),
+            child: _SiteName(projectText(s['name'])),
           ),
       ],
       onChanged: (v) {
@@ -564,70 +623,28 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
         _scheduleEstimate();
       },
     ),
-    const SizedBox(height: CompactDensity.gapLarge),
-    DropdownButtonFormField<String>(
-      initialValue: fulfillment,
-      decoration: const InputDecoration(labelText: 'Fulfillment'),
-      items: const [
-        DropdownMenuItem(value: 'PICKUP', child: Text('Pickup')),
-        DropdownMenuItem(value: 'DELIVERY', child: Text('Delivery')),
-      ],
-      onChanged: (v) {
-        setState(() {
-          fulfillment = v!;
-          // Cash on Delivery pairs with Delivery, In-Store with Pickup.
-          if (payment != 'ONLINE') payment = 'ONLINE';
-        });
-        _scheduleEstimate();
-      },
+    const SizedBox(height: _fieldGap),
+    TextField(
+      controller: contact,
+      keyboardType: TextInputType.phone,
+      onChanged: (_) => contactTouched = true,
+      decoration: const InputDecoration(labelText: 'Site contact'),
     ),
-    const SizedBox(height: CompactDensity.gapLarge),
-    DropdownButtonFormField<String>(
-      key: ValueKey('payment-$fulfillment-$payment'),
-      initialValue: payment,
-      isExpanded: true,
-      decoration: const InputDecoration(
-        labelText: 'Payment method',
-        helperText: 'Only Vendors that support it appear in the scan',
-      ),
-      items: [
-        const DropdownMenuItem(value: 'ONLINE', child: Text('Online payment')),
-        if (fulfillment == 'DELIVERY')
-          const DropdownMenuItem(
-            value: 'CASH_ON_DELIVERY',
-            child: Text('Cash on Delivery'),
-          )
-        else
-          const DropdownMenuItem(
-            value: 'IN_STORE',
-            child: Text('In-Store Payment'),
-          ),
-      ],
-      onChanged: (v) => setState(() => payment = v!),
+    const SizedBox(height: _fieldGap),
+    TextField(
+      controller: instructions,
+      decoration: const InputDecoration(labelText: 'Access instructions'),
     ),
-    if (fulfillment == 'DELIVERY') ...[
-      const SizedBox(height: CompactDensity.gapLarge),
-      TextField(
-        controller: contact,
-        decoration: const InputDecoration(labelText: 'Site contact'),
-      ),
-      const SizedBox(height: CompactDensity.gapLarge),
-      TextField(
-        controller: instructions,
-        decoration: const InputDecoration(labelText: 'Access instructions'),
-      ),
-      SwitchListTile(
-        contentPadding: EdgeInsets.zero,
-        visualDensity: VisualDensity.compact,
-        title: const Text('Heavy vehicles restricted at Project site'),
-        subtitle: Text(
-          'A separate vehicle drop-off preserves the intended Project site.',
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: BuyerTheme.muted),
-        ),
+    if (fulfillment != 'PICKUP') ...[
+      const SizedBox(height: _fieldGap),
+      SettingSwitchRow(
+        label: 'Heavy vehicles restricted',
+        helper: "You'll set a separate drop-off point for trucks.",
         value: heavy == 'YES',
-        onChanged: (v) => setState(() => heavy = v ? 'YES' : 'NO'),
+        onChanged: (v) {
+          setState(() => heavy = v ? 'YES' : 'NO');
+          _scheduleEstimate();
+        },
       ),
       if (heavy == 'YES')
         OutlinedButton.icon(
@@ -639,6 +656,7 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
                   alternate = point.locationId;
                   alternateLabel = point.label;
                 });
+                _scheduleEstimate();
               }
             } on DiscoveryFailure catch (e) {
               if (mounted) _fail(e.message);
@@ -674,6 +692,17 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
       ),
     ],
   );
+}
+
+/// A Project site name that wraps to two lines before it is cut with an
+/// ellipsis, so an address never ends mid-text.
+class _SiteName extends StatelessWidget {
+  const _SiteName(this.name);
+  final String name;
+
+  @override
+  Widget build(BuildContext context) =>
+      Text(name, maxLines: 2, overflow: TextOverflow.ellipsis);
 }
 
 class _EditorCard extends StatelessWidget {

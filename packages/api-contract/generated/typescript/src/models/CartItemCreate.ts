@@ -56,9 +56,13 @@ export interface CartItemCreate {
      */
     radiusKm?: number;
     /**
-     * Work Package line this purchase covers; same material and unit only (422 MISSING_LINE_TAG_INVALID).
+     * Work Package line this purchase covers; same material and unit only (422 MISSING_LINE_TAG_INVALID), at most the line quantity (422 TAGGED_QUANTITY_EXCEEDS_REQUIREMENT). The server scopes it from the package site at the fixed 50 km Project-Based radius, ignoring any radius_km sent. It never stacks: adding the same product again keeps the larger quantity.
      */
     workPackageLineId?: string | null;
+    /**
+     * With work_package_line_id: add what the store can confirm when it holds less than quantity, instead of failing with QUANTITY_UNAVAILABLE.
+     */
+    allowPartialStock?: boolean;
 }
 
 
@@ -112,6 +116,7 @@ export function CartItemCreateFromJSONTyped(json: any, ignoreDiscriminator: bool
         'originSource': json['origin_source'] == null ? undefined : json['origin_source'],
         'radiusKm': json['radius_km'] == null ? undefined : json['radius_km'],
         'workPackageLineId': json['work_package_line_id'] === undefined ? undefined : json['work_package_line_id'] === null ? null : json['work_package_line_id'],
+        'allowPartialStock': json['allow_partial_stock'] == null ? undefined : json['allow_partial_stock'],
     };
 }
 
@@ -136,6 +141,7 @@ export function CartItemCreateToJSONTyped(value?: CartItemCreate | null, ignoreD
         'origin_source': value['originSource'],
         'radius_km': value['radiusKm'],
         'work_package_line_id': value['workPackageLineId'],
+        'allow_partial_stock': value['allowPartialStock'],
     };
 }
 

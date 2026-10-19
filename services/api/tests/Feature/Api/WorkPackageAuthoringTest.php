@@ -69,7 +69,7 @@ final class WorkPackageAuthoringTest extends TestCase
 
     private function input(array $project, int $budget, ?array $lines = null): array
     {
-        return ['name' => 'Masonry', 'budget_centavos' => $budget, 'site_id' => $project['sites'][0]['id'], 'radius_km' => 5, 'fulfillment_method' => 'PICKUP',
+        return ['name' => 'Masonry', 'budget_centavos' => $budget, 'site_id' => $project['sites'][0]['id'], 'radius_km' => 50, 'fulfillment_method' => 'PICKUP',
             'payment_method' => 'ONLINE', 'lines' => $lines ?? [$this->catalogLine()]];
     }
 
@@ -117,7 +117,7 @@ final class WorkPackageAuthoringTest extends TestCase
         $this->expectsDatabaseCheck(fn () => DB::table('work_package_lines')->where('id', $row->id)->update(['material_kind' => 'CATALOG']));
 
         $w = $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/activate', ['lock_version' => $w['lock_version']], $this->key())->assertOk()->json('data');
-        $scan = $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/estimates', ['lock_version' => $w['lock_version'], 'radius_km' => 5])->assertOk()->json('data');
+        $scan = $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/estimates', ['lock_version' => $w['lock_version'], 'radius_km' => 50])->assertOk()->json('data');
         self::assertFalse($scan['items'][0]['complete']);
         self::assertSame([['Washed river sand S-1', 'UNLISTED_MATERIAL']], array_map(static fn (array $m): array => [$m['name'], $m['reason']], $scan['items'][0]['missing_lines']));
     }
@@ -135,22 +135,23 @@ final class WorkPackageAuthoringTest extends TestCase
 
     public function test_budget_estimate_averages_one_lowest_price_per_vendor_within_the_radius(): void
     {
-        foreach ([['Near A', 1800, 500], ['Near B', 2001, 1000], ['Far C', 1000, 6000]] as [$name, $price, $meters]) {
+        foreach ([['Near A', 1800, 500], ['Near B', 2001, 1000], ['Far C', 1000, 60000]] as [$name, $price, $meters]) {
             [$vendor] = $this->pickupStore($name, [['price' => $price, 'qty' => '20']], $meters);
             DB::table('store_profiles')->where('vendor_organization_id', $vendor->id)->update(['bulk_capability' => true]);
         }
         $buyer = $this->buyer();
         $p = $this->project();
-        $body = ['site_id' => $p['sites'][0]['id'], 'radius_km' => 5, 'fulfillment_method' => 'PICKUP',
+        $body = ['site_id' => $p['sites'][0]['id'], 'radius_km' => 50, 'fulfillment_method' => 'PICKUP',
             'lines' => [$this->catalogLine('10'), $this->unlistedLine(), $this->catalogLine('10', ['thickness_mm' => '150'])]];
         $estimate = $this->postJson('/api/v1/buyers/projects/'.$p['id'].'/work-package-estimate', $body)->assertOk()->json('data');
-        // (1800 + 2001) / 2 = 1900.5 rounds half-up to 1901; 10 x 1901 = 19010. The far store is outside 5 km.
+        // (1800 + 2001) / 2 = 1900.5 rounds half-up to 1901; 10 x 1901 = 19010. The far store is outside the fixed 50 km Project-Based radius.
         self::assertSame(['PRICED', 1901, 19010, 2], [$estimate['lines'][0]['status'], $estimate['lines'][0]['average_unit_price_centavos'], $estimate['lines'][0]['amount_centavos'], $estimate['lines'][0]['vendor_count']]);
         self::assertSame(['UNLISTED', null], [$estimate['lines'][1]['status'], $estimate['lines'][1]['amount_centavos']]);
         self::assertSame('NO_PRICE_DATA', $estimate['lines'][2]['status']);
         self::assertSame([19010, 1, 2], [$estimate['materials_total_centavos'], $estimate['priced_line_count'], $estimate['unpriced_line_count']]);
         self::assertSame(['DELIVERY_FEE', 'LABOR'], $estimate['excludes']);
-        self::assertSame(3, $this->postJson('/api/v1/buyers/projects/'.$p['id'].'/work-package-estimate', ['radius_km' => 10] + $body)->assertOk()->json('data.lines.0.vendor_count'));
+        // 50 km is the only Project-Based radius: another value is refused, never applied.
+        $this->postJson('/api/v1/buyers/projects/'.$p['id'].'/work-package-estimate', ['radius_km' => 10] + $body)->assertUnprocessable();
         self::assertSame(0, DB::table('compiled_estimates')->count());
 
         $this->buyer();
@@ -172,7 +173,7 @@ final class WorkPackageAuthoringTest extends TestCase
         self::assertSame(1, DB::table('work_package_versions')->where('work_package_id', $w['id'])->count());
 
         $w = $this->postJson($url.'/activate', ['lock_version' => $w['lock_version']], $this->key())->assertOk()->json('data');
-        $estimate = $this->postJson($url.'/estimates', ['lock_version' => $w['lock_version'], 'radius_km' => 5])->assertOk()->json('data.estimate.id');
+        $estimate = $this->postJson($url.'/estimates', ['lock_version' => $w['lock_version'], 'radius_km' => 50])->assertOk()->json('data.estimate.id');
         $locked = DB::table('work_package_versions')->where('id', $w['current_version_id'])->first();
         $w = $this->getJson($url)->assertOk()->json('data');
 
@@ -290,7 +291,7 @@ final class WorkPackageAuthoringTest extends TestCase
         $p = $this->project(1000000);
         $w = $this->postJson('/api/v1/buyers/projects/'.$p['id'].'/work-packages', $this->input($p, 300000), $this->key())->assertCreated()->json('data');
         $w = $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/activate', ['lock_version' => $w['lock_version']], $this->key())->assertOk()->assertJsonPath('data.can_delete', true)->assertJsonPath('data.has_order', false)->json('data');
-        $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/estimates', ['lock_version' => $w['lock_version'], 'radius_km' => 5])->assertOk();
+        $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/estimates', ['lock_version' => $w['lock_version'], 'radius_km' => 50])->assertOk();
         $w = $this->getJson('/api/v1/buyers/work-packages/'.$w['id'])->assertOk()->json('data');
 
         $this->deleteJson('/api/v1/buyers/work-packages/'.$w['id'], ['lock_version' => $w['lock_version']])->assertOk();

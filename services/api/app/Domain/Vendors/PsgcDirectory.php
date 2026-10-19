@@ -96,6 +96,10 @@ final class PsgcDirectory
         if (! $group) {
             return [];
         }
+        $province = (string) ($address['province'] ?? '');
+        if ($province !== '' && $this->normalizeProvince($province) !== $this->normalizeProvince($group['name'])) {
+            return [];
+        }
         $result = ['province' => $group['name'], 'province_code' => $group['code'], 'city_municipality' => $city['name'], 'city_code' => $city['code']];
         $barangays = array_values(array_filter($this->provider->list('cities-municipalities/'.$city['code'].'/barangays'), fn (array $row): bool => $this->normalize($row['name']) === $this->normalize((string) ($address['barangay'] ?? ''))));
         if (count($barangays) === 1) {
@@ -108,6 +112,13 @@ final class PsgcDirectory
     private function normalize(string $name): string
     {
         return trim((string) preg_replace('/\s+/', ' ', preg_replace('/\b(city of|city|municipality of|barangay|brgy\.?)\b/i', '', mb_strtolower($name)) ?? ''));
+    }
+
+    private function normalizeProvince(string $name): string
+    {
+        $name = $this->normalize($name);
+
+        return in_array($name, ['metro manila', 'ncr', 'national capital region', 'national capital region (ncr)'], true) ? 'ncr' : $name;
     }
 
     /** @param list<array<string, mixed>> $rows

@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(ChatDecision, () {
+    // Required for accept and prohibited for other actions. Explicit Buyer choice; COD requires Site Delivery, In-Store requires Self-Pickup, and the Vendor must offer the method.
+    // String paymentMethod
+    test('to test the property `paymentMethod`', () async {
+      // TODO
+    });
+
     // String budgetOverrideReason
     test('to test the property `budgetOverrideReason`', () async {
       // TODO

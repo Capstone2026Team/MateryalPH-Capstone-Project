@@ -4,6 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
+import 'package:built_value/json_object.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -12,6 +13,8 @@ part 'work_package_summary.g.dart';
 /// WorkPackageSummary
 ///
 /// Properties:
+/// * [selectedArrangementId]
+/// * [vendorOrders]
 /// * [id]
 /// * [projectId]
 /// * [name]
@@ -19,10 +22,17 @@ part 'work_package_summary.g.dart';
 /// * [budgetCentavos]
 /// * [lockVersion]
 /// * [currentVersionId]
-/// * [selectedVendorId]
+/// * [selectedVendorId] - Current active Vendor selection; null when the corresponding order is cancelled, declined or expired. The order itself remains available as history.
 /// * [orderId]
+/// * [procurementCandidateId] - Candidate used by the open primary request; reopens the saved supplementary procurement arrangement.
 @BuiltValue()
 abstract class WorkPackageSummary implements Built<WorkPackageSummary, WorkPackageSummaryBuilder> {
+  @BuiltValueField(wireName: r'selected_arrangement_id')
+  String? get selectedArrangementId;
+
+  @BuiltValueField(wireName: r'vendor_orders')
+  BuiltList<BuiltMap<String, JsonObject?>>? get vendorOrders;
+
   @BuiltValueField(wireName: r'id')
   String get id;
 
@@ -45,11 +55,16 @@ abstract class WorkPackageSummary implements Built<WorkPackageSummary, WorkPacka
   @BuiltValueField(wireName: r'current_version_id')
   String? get currentVersionId;
 
+  /// Current active Vendor selection; null when the corresponding order is cancelled, declined or expired. The order itself remains available as history.
   @BuiltValueField(wireName: r'selected_vendor_id')
   String? get selectedVendorId;
 
   @BuiltValueField(wireName: r'order_id')
   String? get orderId;
+
+  /// Candidate used by the open primary request; reopens the saved supplementary procurement arrangement.
+  @BuiltValueField(wireName: r'procurement_candidate_id')
+  String? get procurementCandidateId;
 
   WorkPackageSummary._();
 
@@ -74,6 +89,20 @@ class _$WorkPackageSummarySerializer implements PrimitiveSerializer<WorkPackageS
     WorkPackageSummary object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.selectedArrangementId != null) {
+      yield r'selected_arrangement_id';
+      yield serializers.serialize(
+        object.selectedArrangementId,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.vendorOrders != null) {
+      yield r'vendor_orders';
+      yield serializers.serialize(
+        object.vendorOrders,
+        specifiedType: const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])]),
+      );
+    }
     yield r'id';
     yield serializers.serialize(
       object.id,
@@ -125,6 +154,13 @@ class _$WorkPackageSummarySerializer implements PrimitiveSerializer<WorkPackageS
         specifiedType: const FullType(String),
       );
     }
+    if (object.procurementCandidateId != null) {
+      yield r'procurement_candidate_id';
+      yield serializers.serialize(
+        object.procurementCandidateId,
+        specifiedType: const FullType(String),
+      );
+    }
   }
 
   @override
@@ -148,6 +184,22 @@ class _$WorkPackageSummarySerializer implements PrimitiveSerializer<WorkPackageS
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'selected_arrangement_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.selectedArrangementId = valueDes;
+          break;
+        case r'vendor_orders':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])]),
+          ) as BuiltList<BuiltMap<String, JsonObject?>>?;
+          if (valueDes == null) continue;
+          result.vendorOrders.replace(valueDes);
+          break;
         case r'id':
           final valueDes = serializers.deserialize(
             value,
@@ -213,6 +265,14 @@ class _$WorkPackageSummarySerializer implements PrimitiveSerializer<WorkPackageS
           ) as String?;
           if (valueDes == null) continue;
           result.orderId = valueDes;
+          break;
+        case r'procurement_candidate_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.procurementCandidateId = valueDes;
           break;
         default:
           unhandled.add(key);

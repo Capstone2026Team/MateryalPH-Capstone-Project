@@ -1,3 +1,5 @@
+import '../features/support/support_repository.dart';
+import '../features/support/support_screens.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -158,7 +160,8 @@ const buyerHelpTopics = <HelpTopic>[
 
 /// Answers to common Buyer questions, browsed by topic or found by search.
 class BuyerHelpCenterScreen extends StatefulWidget {
-  const BuyerHelpCenterScreen({super.key});
+  const BuyerHelpCenterScreen({super.key, this.supportRepository});
+  final SupportRepository? supportRepository;
 
   @override
   State<BuyerHelpCenterScreen> createState() => _BuyerHelpCenterScreenState();
@@ -215,6 +218,31 @@ class _BuyerHelpCenterScreenState extends State<BuyerHelpCenterScreen> {
                   ),
                 ),
               ),
+            if (widget.supportRepository != null) ...[
+              const BuyerSectionLabel('Contact MateryalPH'),
+              BuyerMenuRow(
+                label: 'Contact Us',
+                icon: LucideIcons.mail,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => SupportFormScreen(
+                      repository: widget.supportRepository!,
+                    ),
+                  ),
+                ),
+              ),
+              BuyerMenuRow(
+                label: 'My Support Requests',
+                icon: LucideIcons.messagesSquare,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => SupportRequestsScreen(
+                      repository: widget.supportRepository!,
+                    ),
+                  ),
+                ),
+              ),
+            ],
             if (!searching) ...[
               const BuyerSectionLabel('Get help with'),
               for (final topic in buyerHelpTopics)
@@ -289,6 +317,7 @@ class _StillNeedHelp extends StatelessWidget {
     tone: BandTone.info,
     title: 'Still need help?',
     message:
+        'For platform concerns, choose Contact Us in Help Center. '
         'Message the Vendor from the order, or follow your case under Disputes. '
         'Decisions and refunds on a case appear in that case.',
   );

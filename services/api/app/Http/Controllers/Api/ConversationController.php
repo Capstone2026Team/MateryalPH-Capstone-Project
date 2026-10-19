@@ -196,7 +196,8 @@ final class ConversationController extends Controller
     {
         $input = $request->validate(['version_id' => ['required', 'uuid'], 'content_hash' => ['required_if:action,accept', 'sometimes', 'string', 'size:64'],
             'reason' => [$action === 'counter' ? 'required' : 'nullable', 'string', 'min:3', 'max:2000'], 'nrpc_acknowledged' => ['sometimes', 'boolean'], 'nrpc_terms_version_id' => ['nullable', 'uuid'],
-            'budget_override_reason' => ['nullable', 'string', 'min:10', 'max:2000']]);
+            'budget_override_reason' => ['nullable', 'string', 'min:10', 'max:2000'],
+            'payment_method' => [$action === 'accept' ? 'sometimes' : 'prohibited', 'string', 'in:ONLINE,CASH_ON_DELIVERY,IN_STORE']]);
 
         return ApiResponse::success(['order_id' => $quotations->decide($request, $conversationId, $action, $input)]);
     }

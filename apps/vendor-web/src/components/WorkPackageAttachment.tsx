@@ -10,7 +10,7 @@ function Copy({ title, content }: { title: string; content: Data }) {
     <h3 className="text-base font-semibold">{title}</h3>
     {content.name != null && <p className="mt-2 font-medium">{text(content.name)}</p>}
     {typeof content.budget_centavos === 'number' && <p className="mt-1 text-sm">Budget {formatPesoCentavos(content.budget_centavos)}</p>}
-    <p className="mt-2 text-sm text-text-secondary">{text(content.fulfillment_method)} · {text(content.payment_method)}</p>
+    {(content.fulfillment_method != null || content.payment_method != null) && <p className="mt-2 text-sm text-text-secondary">{[content.fulfillment_method, content.payment_method].filter(value => value != null).map(text).join(' · ')}</p>}
     {content.fulfillment_date != null && <p className="text-sm">Fulfillment: {text(content.fulfillment_date)}</p>}
     <ol className="mt-4 divide-y divide-border-default">{rows(content.lines).map((line, i) => <li className="py-3" key={`${text(line.id ?? line.variant_id)}:${i}`}>
       <p className="font-medium">{text(line.name ?? line.description ?? `Material ${i + 1}`)}</p>
@@ -28,6 +28,10 @@ export function WorkPackageAttachment({ reference, proposal }: { reference: unkn
   const site = object(original.site), point = object(site.point), destination = object(original.destination)
   return <aside className="space-y-3 p-4 sm:p-5" aria-label="Work Package comparison">
     <div><h2 className="text-lg font-semibold">Work Package · locked original</h2><p className="mt-1 text-sm text-text-secondary">Site: {text(site.name)} · {text(point.formatted_address)}</p><p className="text-sm">Delivery endpoint: {destination.vehicle_endpoint === 'ALTERNATE_DROP_OFF' ? 'Alternative vehicle drop-off' : 'Project site'} · Project site remains the discovery origin.</p></div>
+    {ref.arrangement_id != null && <div className="space-y-3">
+      <p className="text-sm text-text-secondary">You are a member of this Work Package’s quotation group. Quote and confirm only the materials assigned to your store. Other vendors manage their own quotations and orders.</p>
+      <Copy title="Your assigned materials" content={{ lines: rows(ref.vendor_allocations) }} />
+    </div>}
     <div className="grid min-w-0 gap-4 lg:grid-cols-2"><Copy title="Buyer original" content={original} /><Copy title="Vendor working duplicate / proposal" content={object(proposal ?? ref.working_duplicate)} /></div>
     <p className="text-xs text-text-secondary">Locked Work Package version {text(ref.version ?? 'saved')}</p>
     <p className="text-sm text-text-secondary">System delivery estimates are advisory. Owner/Manager-confirmed accepted terms create the delivery arrangement.</p>

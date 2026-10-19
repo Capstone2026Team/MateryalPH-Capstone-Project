@@ -21,7 +21,9 @@ import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import 'package:share_plus/share_plus.dart';
 
 import '../../design_system/components/buyer_overlays.dart';
+import '../../design_system/components/form_dialog.dart';
 import '../../design_system/components/messaging_components.dart';
+import '../../design_system/components/quotation_payment_choices.dart';
 
 import '../../design_system/theme.dart';
 
@@ -32,6 +34,8 @@ import '../map_discovery/discovery_repository.dart' show newIdempotencyKey;
 import 'messaging_repository.dart';
 import 'chat_drafts.dart';
 import 'chat_product_picker.dart';
+import 'conversation_quotation_dialog.dart';
+import 'conversation_timeline.dart';
 import 'project_inquiries_screen.dart';
 import '../orders/orders_repository.dart';
 import '../orders/order_details_screen.dart';
@@ -130,6 +134,9 @@ class _MessagingScreenState extends State<MessagingScreen>
   final _search = TextEditingController();
 
   api.ConversationDetail? _detail;
+
+  /// The quotation page shown on the dedicated quotations screen, kept current while it is open.
+  final _quotes = ValueNotifier<api.ChatQuotationPage?>(null);
 
   api.ConversationPage? _inbox;
 
@@ -240,6 +247,7 @@ class _MessagingScreenState extends State<MessagingScreen>
     _typingDebounce?.cancel();
     _draftTimer?.cancel();
     _saveDraft();
+    _quotes.dispose();
     _text.dispose();
     _search.dispose();
     super.dispose();
@@ -324,6 +332,25 @@ class _MessagingScreenState extends State<MessagingScreen>
         if (mounted) setState(() => _inbox = value);
       } else {
         var value = await widget.repository.conversation(id);
+        final loadedQuotationPages = _detail?.quotations.page ?? 1;
+        for (
+          var page = 2;
+          page <= loadedQuotationPages && value.quotations.hasMore;
+          page++
+        ) {
+          final older = await widget.repository.conversation(id, page: page);
+          if (!mounted) return;
+          value = value.rebuild(
+            (b) => b.quotations.replace(
+              older.quotations.rebuild(
+                (q) => q.versions.replace([
+                  ...value.quotations.versions,
+                  ...older.quotations.versions,
+                ]),
+              ),
+            ),
+          );
+        }
         final previous = _detail?.messages;
         final anchor = previous?.items.lastOrNull?.id;
         if (anchor != null && value.messages.items.isNotEmpty) {
@@ -368,6 +395,7 @@ class _MessagingScreenState extends State<MessagingScreen>
           // The store's message replaces its typing indicator immediately.
           if (arrived) _typing = false;
         });
+        _quotes.value = value.quotations;
         if (previous == null) {
           _scrollToEnd(force: true, animate: false);
         } else if (newTail != previous.items.lastOrNull?.id) {
@@ -508,6 +536,7 @@ class _MessagingScreenState extends State<MessagingScreen>
                 DiscoveryFailureKind.sessionExpired,
               ].contains(e.kind)) {
             _detail = null;
+            _quotes.value = null;
             _inbox = null;
             _avatar = null;
             _subscriptionGeneration++;
@@ -622,6 +651,7 @@ class _MessagingScreenState extends State<MessagingScreen>
   Future<void> _mutate(
     Future<void> Function() action, {
     bool refresh = true,
+    bool rethrowErrors = false,
   }) async {
     if (_busy) return;
 
@@ -635,16 +665,25 @@ class _MessagingScreenState extends State<MessagingScreen>
       if (refresh) await _load();
     } catch (e) {
       if (mounted) setState(() => _error = _message(e));
+      if (rethrowErrors) rethrow;
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<void> _decide(String action, api.ChatQuotationVersion version) async {
+  /// Runs the Buyer's decision on [version]. Returns the message to show on the quotation page, or
+  /// null when the Buyer cancelled.
+  Future<String?> _decide(
+    String action,
+    api.ChatQuotationVersion version,
+  ) async {
     final reason = TextEditingController();
     final budgetOverride = TextEditingController();
 
     var acknowledged = false;
+    String? paymentMethod;
+    final availableMethods =
+        version.availablePaymentMethods?.toList() ?? <String>[];
 
     final nrpc = version.content.nrpc;
 
@@ -652,10 +691,12 @@ class _MessagingScreenState extends State<MessagingScreen>
 
     final termsMap = terms is Map ? terms : const <String, Object?>{};
 
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showBuyerFormDialog<bool>(
       context: context,
+      barrierDismissible: true,
       builder: (context) => StatefulBuilder(
         builder: (context, update) => BuyerDialog(
+          fullWidthActions: action != 'counter',
           title: Text(
             action == 'accept'
                 ? 'Review and accept quotation'
@@ -674,14 +715,27 @@ class _MessagingScreenState extends State<MessagingScreen>
                   Text(
                     'Version ${version.version} · ${chatMoney(version.content.commercial.commercialTotalCentavos)}',
                   ),
+                  if (action == 'counter') const SizedBox(height: 16),
 
                   if (action == 'accept') ...[
+                    const SizedBox(height: 16),
+                    QuotationPaymentChoices(
+                      fulfillmentMethod: version.content.fulfillmentMethod,
+                      availableMethods: availableMethods,
+                      value: paymentMethod,
+                      nrpcRequired: version.content.commercial.nrpcCentavos > 0,
+                      onChanged: (value) => update(() => paymentMethod = value),
+                    ),
+                    const SizedBox(height: 12),
                     QuotationDeliveryTerms(content: version.content),
-                    ...version.content.originalChanges.map(
-                      (change) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Text(change.label),
+                    const SizedBox(height: 12),
+                    QuotationChangeList(
+                      notes: importantQuotationChanges(
+                        version.content,
+                        version.content.originalChanges,
                       ),
+                      emptyLabel:
+                          'Matches the products, prices and schedule you requested.',
                     ),
                     if (_detail?.conversation.contextType.name ==
                         'PROJECT_BASED')
@@ -723,12 +777,20 @@ class _MessagingScreenState extends State<MessagingScreen>
                       controller: reason,
                       maxLength: 2000,
                       minLines: 3,
-                      maxLines: 6,
+                      maxLines: action == 'counter' ? 5 : 6,
+                      textAlignVertical: TextAlignVertical.top,
                       onChanged: (_) => update(() {}),
                       decoration: InputDecoration(
                         labelText: action == 'counter'
                             ? 'Requested changes'
                             : 'Reason (optional)',
+                        alignLabelWithHint: true,
+                        floatingLabelBehavior: action == 'counter'
+                            ? FloatingLabelBehavior.always
+                            : FloatingLabelBehavior.auto,
+                        hintText: action == 'counter'
+                            ? 'Describe the changes you need.'
+                            : null,
                       ),
                     ),
                 ],
@@ -742,14 +804,22 @@ class _MessagingScreenState extends State<MessagingScreen>
               child: const Text('Cancel'),
             ),
             FilledButton(
+              style: action == 'counter'
+                  ? FilledButton.styleFrom(minimumSize: const Size(0, 48))
+                  : null,
               onPressed:
-                  (action == 'accept' && nrpc != null && !acknowledged) ||
+                  (action == 'accept' &&
+                          (paymentMethod == null ||
+                              !availableMethods.contains(paymentMethod) ||
+                              (nrpc != null && !acknowledged))) ||
                       (action == 'counter' && reason.text.trim().length < 3)
                   ? null
                   : () => Navigator.pop(context, true),
               child: Text(
                 action == 'accept'
                     ? 'Accept version ${version.version}'
+                    : action == 'counter'
+                    ? 'Send request'
                     : 'Confirm',
               ),
             ),
@@ -764,8 +834,9 @@ class _MessagingScreenState extends State<MessagingScreen>
 
     reason.dispose();
 
-    if (confirmed != true || !mounted) return;
+    if (confirmed != true || !mounted) return null;
 
+    _notice = null;
     await _mutate(() async {
       final order = await widget.repository.decide(
         widget.conversationId!,
@@ -776,6 +847,7 @@ class _MessagingScreenState extends State<MessagingScreen>
         nrpcAcknowledged: acknowledged,
         termsId: termsMap['id'] as String?,
         budgetOverrideReason: overrideReason.isEmpty ? null : overrideReason,
+        paymentMethod: action == 'accept' ? paymentMethod : null,
       );
 
       if (mounted) {
@@ -786,6 +858,60 @@ class _MessagingScreenState extends State<MessagingScreen>
         );
       }
     });
+    return _error ?? _notice;
+  }
+
+  Future<void> _loadOlderQuotations() async {
+    final d = _detail;
+    if (d == null) return;
+    await _mutate(
+      () async {
+        final older = await widget.repository.conversation(
+          widget.conversationId!,
+          page: (d.quotations.page ?? 1) + 1,
+        );
+        if (!mounted || _detail == null) return;
+        setState(
+          () => _detail = _detail!.rebuild(
+            (b) => b.quotations.replace(
+              older.quotations.rebuild(
+                (q) => q.versions.replace([
+                  ...d.quotations.versions,
+                  ...older.quotations.versions,
+                ]),
+              ),
+            ),
+          ),
+        );
+        _quotes.value = _detail?.quotations;
+      },
+      refresh: false,
+      rethrowErrors: true,
+    );
+  }
+
+  Future<void> _openQuotations([String? versionId]) async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => ConversationQuotationDialog(
+        quotations: _quotes,
+        initialVersionId: versionId,
+        onDecide: _decide,
+        onLoadOlder: _loadOlderQuotations,
+        onOpenOrder: widget.orders == null
+            ? null
+            : (orderId) => Navigator.of(context).push<void>(
+                MaterialPageRoute(
+                  builder: (_) => OrderDetailsScreen(
+                    orderId: orderId,
+                    repository: widget.orders!,
+                  ),
+                ),
+              ),
+      ),
+    );
+    if (mounted) await _load();
   }
 
   Future<void> _attach() => _mutate(() async {
@@ -938,11 +1064,31 @@ class _MessagingScreenState extends State<MessagingScreen>
           ),
   );
 
-  List<Widget> _headerActions() => [
-    if (widget.onOpenCart != null)
-      BuyerCartButton(onPressed: widget.onOpenCart),
-    if (widget.conversationId != null &&
-        _detail?.conversation.purpose.name != 'FULFILLMENT')
+  List<Widget> _headerActions() {
+    final sales =
+        widget.conversationId != null &&
+        _detail?.conversation.purpose.name != 'FULFILLMENT';
+    final awaiting =
+        _detail?.quotations.versions.where(quotationIsActive).length ?? 0;
+    return [
+      // In a sales thread the cart gives way to this conversation's quotations.
+      if (sales)
+        BuyerHeaderIconButton(
+          icon: LucideIcons.fileText,
+          tooltip: awaiting > 0
+              ? 'Quotations, $awaiting awaiting your response'
+              : 'Quotations',
+          badgeCount: awaiting,
+          onPressed: _detail == null ? null : _openQuotations,
+        )
+      else if (widget.onOpenCart != null)
+        BuyerCartButton(onPressed: widget.onOpenCart),
+      ..._trailingHeaderActions(sales),
+    ];
+  }
+
+  List<Widget> _trailingHeaderActions(bool sales) => [
+    if (sales)
       BuyerHeaderIconButton(
         icon: LucideIcons.folderOpen,
         tooltip: (_detail?.conversation.projectUnreadCount ?? 0) > 0
@@ -1215,6 +1361,11 @@ class _MessagingScreenState extends State<MessagingScreen>
       return const Center(child: Text('This conversation is unavailable.'));
     }
 
+    final timeline = conversationTimeline(
+      d.messages.items,
+      d.quotations.versions,
+    );
+
     return Column(
       children: [
         Expanded(
@@ -1304,7 +1455,7 @@ class _MessagingScreenState extends State<MessagingScreen>
                     ),
                   ),
                 ),
-              if (d.messages.items.isEmpty)
+              if (timeline.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 48, horizontal: 24),
                   child: Text(
@@ -1313,23 +1464,6 @@ class _MessagingScreenState extends State<MessagingScreen>
                     style: TextStyle(color: BuyerTheme.muted),
                   ),
                 ),
-              for (final accepted in d.quotations.versions.where(
-                (version) =>
-                    version.acceptedOrderId != null && widget.orders != null,
-              ))
-                FilledButton.tonalIcon(
-                  icon: const Icon(Icons.receipt_long_outlined),
-                  label: const Text('Open Order Details'),
-                  onPressed: () => Navigator.of(context).push<void>(
-                    MaterialPageRoute(
-                      builder: (_) => OrderDetailsScreen(
-                        orderId: accepted.acceptedOrderId!,
-                        repository: widget.orders!,
-                      ),
-                    ),
-                  ),
-                ),
-
               if (d.messages.hasMore)
                 TextButton(
                   onPressed: _busy
@@ -1354,14 +1488,14 @@ class _MessagingScreenState extends State<MessagingScreen>
                   child: const Text('Earlier messages'),
                 ),
 
-              for (var index = 0; index < d.messages.items.length; index++) ...[
+              for (var index = 0; index < timeline.length; index++) ...[
                 if (index == 0 ||
-                    chatDate(d.messages.items[index - 1].sentAt) !=
-                        chatDate(d.messages.items[index].sentAt))
+                    chatDate(timeline[index - 1].timestamp) !=
+                        chatDate(timeline[index].timestamp))
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 20),
                     child: Text(
-                      chatDate(d.messages.items[index].sentAt),
+                      chatDate(timeline[index].timestamp),
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 12,
@@ -1370,14 +1504,22 @@ class _MessagingScreenState extends State<MessagingScreen>
                       ),
                     ),
                   ),
-                ConversationMessageBubble(
-                  message: d.messages.items[index],
-                  busy: _busy,
-                  onOpenFile: (file) => unawaited(_openFile(file)),
-                  loadImage: _imageBytes,
-                  onSaveImage: (file) => unawaited(_saveImage(file)),
-                  onOpenProduct: widget.onOpenProduct,
-                ),
+                if (timeline[index].message case final message?)
+                  ConversationMessageBubble(
+                    key: ValueKey(timeline[index].id),
+                    message: message,
+                    busy: _busy,
+                    onOpenFile: (file) => unawaited(_openFile(file)),
+                    loadImage: _imageBytes,
+                    onSaveImage: (file) => unawaited(_saveImage(file)),
+                    onOpenProduct: widget.onOpenProduct,
+                  ),
+                if (timeline[index].quotation case final version?)
+                  QuotationThreadButton(
+                    key: ValueKey(timeline[index].id),
+                    version: version,
+                    onOpen: () => unawaited(_openQuotations(version.id)),
+                  ),
               ],
 
               for (final item in _pending.entries)
@@ -1443,40 +1585,6 @@ class _MessagingScreenState extends State<MessagingScreen>
 
               if (_typing)
                 TypingIndicator(name: d.conversation.handler?.displayName),
-
-              for (final version in d.quotations.versions)
-                QuotationVersionCard(
-                  version: version,
-                  busy: _busy,
-                  onAction: (action) => unawaited(_decide(action, version)),
-                ),
-
-              if (d.quotations.hasMore)
-                TextButton(
-                  onPressed: _busy
-                      ? null
-                      : () => _mutate(() async {
-                          final older = await widget.repository.conversation(
-                            widget.conversationId!,
-                            page: (d.quotations.page ?? 1) + 1,
-                          );
-                          if (mounted) {
-                            setState(
-                              () => _detail = d.rebuild(
-                                (b) => b.quotations.replace(
-                                  older.quotations.rebuild(
-                                    (q) => q.versions.replace([
-                                      ...d.quotations.versions,
-                                      ...older.quotations.versions,
-                                    ]),
-                                  ),
-                                ),
-                              ),
-                            );
-                          }
-                        }, refresh: false),
-                  child: const Text('Older quotations'),
-                ),
 
               const SizedBox(height: 16),
             ].reversed.toList(),

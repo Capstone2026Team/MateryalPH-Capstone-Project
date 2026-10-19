@@ -23,14 +23,14 @@ part 'work_package_view.g.dart';
 /// * [budgetCentavos]
 /// * [lockVersion]
 /// * [currentVersionId]
-/// * [selectedVendorId]
+/// * [selectedVendorId] - Current active Vendor selection; null when the corresponding order is cancelled, declined or expired. The order itself remains available as history.
 /// * [orderId]
 /// * [version]
 /// * [budget]
 /// * [missingLines]
 /// * [document]
-/// * [hasOrder] - True when an order, tagged purchase for a missing line or selected Vendor is tied to the package.
-/// * [canDelete] - True while the package has no order and its Project is Active. Clients hide the delete action otherwise; the server enforces the rule.
+/// * [hasOrder] - True while a non-cancelled, non-declined, non-expired order or tagged purchase is tied to this package, or a Vendor selection has no matching closed order. A historical closed order and its old selection do not block editing, reactivation or deletion. Completed commercial work remains protected.
+/// * [canDelete] - True when has_order is false and the Project is Active. Cancelled order history is retained; deleting a package with locked history hides it instead of deleting commercial records.
 @BuiltValue()
 abstract class WorkPackageView implements Built<WorkPackageView, WorkPackageViewBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -58,6 +58,7 @@ abstract class WorkPackageView implements Built<WorkPackageView, WorkPackageView
   @BuiltValueField(wireName: r'current_version_id')
   String? get currentVersionId;
 
+  /// Current active Vendor selection; null when the corresponding order is cancelled, declined or expired. The order itself remains available as history.
   @BuiltValueField(wireName: r'selected_vendor_id')
   String? get selectedVendorId;
 
@@ -76,11 +77,11 @@ abstract class WorkPackageView implements Built<WorkPackageView, WorkPackageView
   @BuiltValueField(wireName: r'document')
   BuiltMap<String, JsonObject?> get document;
 
-  /// True when an order, tagged purchase for a missing line or selected Vendor is tied to the package.
+  /// True while a non-cancelled, non-declined, non-expired order or tagged purchase is tied to this package, or a Vendor selection has no matching closed order. A historical closed order and its old selection do not block editing, reactivation or deletion. Completed commercial work remains protected.
   @BuiltValueField(wireName: r'has_order')
   bool? get hasOrder;
 
-  /// True while the package has no order and its Project is Active. Clients hide the delete action otherwise; the server enforces the rule.
+  /// True when has_order is false and the Project is Active. Cancelled order history is retained; deleting a package with locked history hides it instead of deleting commercial records.
   @BuiltValueField(wireName: r'can_delete')
   bool? get canDelete;
 

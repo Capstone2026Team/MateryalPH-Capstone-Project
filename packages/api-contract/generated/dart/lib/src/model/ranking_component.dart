@@ -14,7 +14,7 @@ part 'ranking_component.g.dart';
 /// Properties:
 /// * [key]
 /// * [label]
-/// * [weightPercent]
+/// * [weightPercent] - Effective normalized percentage used for scoring; not the saved slider value.
 /// * [score] - Normalized 0–100 component score
 /// * [weighted] - score × weight / 100
 /// * [basis] - Plain-language source of the score
@@ -27,8 +27,9 @@ abstract class RankingComponent implements Built<RankingComponent, RankingCompon
   @BuiltValueField(wireName: r'label')
   String get label;
 
+  /// Effective normalized percentage used for scoring; not the saved slider value.
   @BuiltValueField(wireName: r'weight_percent')
-  int get weightPercent;
+  num get weightPercent;
 
   /// Normalized 0–100 component score
   @BuiltValueField(wireName: r'score')
@@ -78,7 +79,7 @@ class _$RankingComponentSerializer implements PrimitiveSerializer<RankingCompone
     yield r'weight_percent';
     yield serializers.serialize(
       object.weightPercent,
-      specifiedType: const FullType(int),
+      specifiedType: const FullType(num),
     );
     yield r'score';
     yield serializers.serialize(
@@ -135,8 +136,8 @@ class _$RankingComponentSerializer implements PrimitiveSerializer<RankingCompone
         case r'weight_percent':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(int),
-          ) as int;
+            specifiedType: const FullType(num),
+          ) as num;
           result.weightPercent = valueDes;
           break;
         case r'score':

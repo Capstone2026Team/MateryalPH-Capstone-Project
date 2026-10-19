@@ -24,6 +24,36 @@ import {
     ChatIdResponseToJSON,
 } from '../models/ChatIdResponse';
 import {
+    type ProjectArrangementCreate,
+    ProjectArrangementCreateFromJSON,
+    ProjectArrangementCreateToJSON,
+} from '../models/ProjectArrangementCreate';
+import {
+    type ProjectArrangementEdit,
+    ProjectArrangementEditFromJSON,
+    ProjectArrangementEditToJSON,
+} from '../models/ProjectArrangementEdit';
+import {
+    type ProjectArrangementInquiry,
+    ProjectArrangementInquiryFromJSON,
+    ProjectArrangementInquiryToJSON,
+} from '../models/ProjectArrangementInquiry';
+import {
+    type ProjectArrangementPageResponse,
+    ProjectArrangementPageResponseFromJSON,
+    ProjectArrangementPageResponseToJSON,
+} from '../models/ProjectArrangementPageResponse';
+import {
+    type ProjectArrangementResponse,
+    ProjectArrangementResponseFromJSON,
+    ProjectArrangementResponseToJSON,
+} from '../models/ProjectArrangementResponse';
+import {
+    type ProjectArrangementSubmit,
+    ProjectArrangementSubmitFromJSON,
+    ProjectArrangementSubmitToJSON,
+} from '../models/ProjectArrangementSubmit';
+import {
     type ProjectCandidateRequest,
     ProjectCandidateRequestFromJSON,
     ProjectCandidateRequestToJSON,
@@ -43,6 +73,16 @@ import {
     ProjectCreateFromJSON,
     ProjectCreateToJSON,
 } from '../models/ProjectCreate';
+import {
+    type ProjectDraftItemInput,
+    ProjectDraftItemInputFromJSON,
+    ProjectDraftItemInputToJSON,
+} from '../models/ProjectDraftItemInput';
+import {
+    type ProjectDraftSupplierRequest,
+    ProjectDraftSupplierRequestFromJSON,
+    ProjectDraftSupplierRequestToJSON,
+} from '../models/ProjectDraftSupplierRequest';
 import {
     type ProjectEstimatePageResponse,
     ProjectEstimatePageResponseFromJSON,
@@ -103,6 +143,11 @@ import {
     ProjectUpdateFromJSON,
     ProjectUpdateToJSON,
 } from '../models/ProjectUpdate';
+import {
+    type ProjectVendorSelectionRequest,
+    ProjectVendorSelectionRequestFromJSON,
+    ProjectVendorSelectionRequestToJSON,
+} from '../models/ProjectVendorSelectionRequest';
 import {
     type ProjectVersionRequest,
     ProjectVersionRequestFromJSON,
@@ -187,6 +232,21 @@ export interface CreateProjectRequest {
     projectCreate: ProjectCreate;
 }
 
+export interface CreateProjectArrangementRequest {
+    /**
+     *
+     */
+    packageId: string;
+    /**
+     *
+     */
+    idempotencyKey: string;
+    /**
+     *
+     */
+    projectArrangementCreate: ProjectArrangementCreate;
+}
+
 export interface CreateWorkPackageRequest {
     /**
      *
@@ -222,6 +282,21 @@ export interface DeleteWorkPackageRequest {
      *
      */
     projectVersionRequest: ProjectVersionRequest;
+}
+
+export interface EditProjectArrangementRequest {
+    /**
+     *
+     */
+    packageId: string;
+    /**
+     *
+     */
+    arrangementId: string;
+    /**
+     *
+     */
+    projectArrangementEdit: ProjectArrangementEdit;
 }
 
 export interface EditWorkPackageRequest {
@@ -261,6 +336,17 @@ export interface GetProjectRequest {
     page?: number;
 }
 
+export interface GetProjectArrangementRequest {
+    /**
+     *
+     */
+    packageId: string;
+    /**
+     *
+     */
+    arrangementId: string;
+}
+
 export interface GetProjectCandidateRouteRequest {
     /**
      *
@@ -286,6 +372,10 @@ export interface GetProjectEstimatesRequest {
      */
     sort?: GetProjectEstimatesSortEnum;
     /**
+     * ASC is low to high and DESC high to low. Omitted, each ordering opens on its default: BUDGET_FIT and RATING DESC (best first), PRICE ASC (cheapest first). Ignored for BEST_MATCH, a fixed ranking. A Vendor without a value (no rating, cost under review) is always last, and ties go to the nearest store.
+     */
+    direction?: GetProjectEstimatesDirectionEnum;
+    /**
      *
      */
     favoritesOnly?: boolean;
@@ -310,6 +400,25 @@ export interface GetWorkPackageRequest {
     page?: number;
 }
 
+export interface InquireProjectArrangementVendorRequest {
+    /**
+     *
+     */
+    packageId: string;
+    /**
+     *
+     */
+    arrangementId: string;
+    /**
+     *
+     */
+    vendorId: string;
+    /**
+     *
+     */
+    projectArrangementInquiry: ProjectArrangementInquiry;
+}
+
 export interface InquireProjectVendorRequest {
     /**
      *
@@ -323,6 +432,37 @@ export interface InquireProjectVendorRequest {
      *
      */
     projectCandidateRequest: ProjectCandidateRequest;
+}
+
+export interface ListProjectArrangementOptionsRequest {
+    /**
+     *
+     */
+    packageId: string;
+    /**
+     *
+     */
+    page?: number;
+    /**
+     *
+     */
+    sort?: ListProjectArrangementOptionsSortEnum;
+    /**
+     *
+     */
+    direction?: ListProjectArrangementOptionsDirectionEnum;
+    /**
+     *
+     */
+    favoritesOnly?: boolean;
+    /**
+     *
+     */
+    completeOnly?: boolean;
+    /**
+     *
+     */
+    withinBudget?: boolean;
 }
 
 export interface ListProjectsRequest {
@@ -344,11 +484,31 @@ export interface ListWorkPackageLineAlternativesRequest {
     /**
      *
      */
+    arrangementId?: string;
+    /**
+     *
+     */
+    replace?: boolean;
+    /**
+     *
+     */
     page?: number;
     /**
      *
      */
     excludeVendorId?: string;
+    /**
+     * The compared Vendor candidate. The quantity to source becomes that Vendor's gap less the separate purchases that satisfy the line, and the Vendor itself is left out.
+     */
+    candidateId?: string;
+    /**
+     * JSON array of {line_id, option_id} choices. Sizes the recommendation from the same selected specifications as quotation review.
+     */
+    specificationChoices?: string;
+    /**
+     * Concrete method chosen on quotation review; suggestions must support it.
+     */
+    fulfillmentMethod?: ListWorkPackageLineAlternativesFulfillmentMethodEnum;
 }
 
 export interface PreviewProjectSpecificationSelectionRequest {
@@ -388,6 +548,52 @@ export interface ReactivateWorkPackageRequest {
     projectVersionRequest: ProjectVersionRequest;
 }
 
+export interface RemoveProjectDraftItemRequest {
+    /**
+     *
+     */
+    packageId: string;
+    /**
+     *
+     */
+    candidateId: string;
+    /**
+     *
+     */
+    lineId: string;
+    /**
+     *
+     */
+    variantId: string;
+    /**
+     *
+     */
+    projectVersionRequest: ProjectVersionRequest;
+}
+
+export interface RequestProjectDraftSupplierRequest {
+    /**
+     *
+     */
+    packageId: string;
+    /**
+     *
+     */
+    candidateId: string;
+    /**
+     *
+     */
+    vendorId: string;
+    /**
+     *
+     */
+    idempotencyKey: string;
+    /**
+     *
+     */
+    projectDraftSupplierRequest: ProjectDraftSupplierRequest;
+}
+
 export interface ResetProjectRankingPreferencesRequest {
     /**
      *
@@ -408,6 +614,29 @@ export interface ResolveProjectMissingLineRequest {
      *
      */
     projectMissingResolve: ProjectMissingResolve;
+}
+
+export interface SaveProjectDraftItemRequest {
+    /**
+     *
+     */
+    packageId: string;
+    /**
+     *
+     */
+    candidateId: string;
+    /**
+     *
+     */
+    lineId: string;
+    /**
+     *
+     */
+    variantId: string;
+    /**
+     *
+     */
+    projectDraftItemInput: ProjectDraftItemInput;
 }
 
 export interface SaveProjectRankingPreferencesRequest {
@@ -436,7 +665,26 @@ export interface SelectProjectVendorRequest {
     /**
      *
      */
-    projectCandidateRequest: ProjectCandidateRequest;
+    projectVendorSelectionRequest: ProjectVendorSelectionRequest;
+}
+
+export interface SubmitProjectArrangementRequest {
+    /**
+     *
+     */
+    packageId: string;
+    /**
+     *
+     */
+    arrangementId: string;
+    /**
+     *
+     */
+    idempotencyKey: string;
+    /**
+     *
+     */
+    projectArrangementSubmit: ProjectArrangementSubmit;
 }
 
 export interface UpdateProjectRequest {
@@ -642,7 +890,7 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Scan eligible Bulk Yes Tier 2 offers within the confirmed radius from the Project site. FMS uses exact normalized weights. Unknown delivery cost remains pending; schedules never change validity or score.
+     * Scan eligible Bulk Yes Tier 2 offers within the fixed 50 km Project-Based radius from the Project site. FMS uses exact normalized weights. Unknown delivery cost remains pending; schedules never change validity or score.
      */
     async compileProjectEstimatesRaw(requestParameters: CompileProjectEstimatesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ProjectEstimatePageResponse>> {
         const requestOptions = await this.compileProjectEstimatesRequestOpts(requestParameters);
@@ -652,7 +900,7 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Scan eligible Bulk Yes Tier 2 offers within the confirmed radius from the Project site. FMS uses exact normalized weights. Unknown delivery cost remains pending; schedules never change validity or score.
+     * Scan eligible Bulk Yes Tier 2 offers within the fixed 50 km Project-Based radius from the Project site. FMS uses exact normalized weights. Unknown delivery cost remains pending; schedules never change validity or score.
      */
     async compileProjectEstimates(requestParameters: CompileProjectEstimatesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ProjectEstimatePageResponse> {
         const response = await this.compileProjectEstimatesRaw(requestParameters, initOverrides);
@@ -722,6 +970,78 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
      */
     async createProject(requestParameters: CreateProjectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ProjectViewResponse> {
         const response = await this.createProjectRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for createProjectArrangement without sending the request
+     */
+    async createProjectArrangementRequestOpts(requestParameters: CreateProjectArrangementRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['packageId'] == null) {
+            throw new runtime.RequiredError(
+                'packageId',
+                'Required parameter "packageId" was null or undefined when calling createProjectArrangement().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling createProjectArrangement().'
+            );
+        }
+
+        if (requestParameters['projectArrangementCreate'] == null) {
+            throw new runtime.RequiredError(
+                'projectArrangementCreate',
+                'Required parameter "projectArrangementCreate" was null or undefined when calling createProjectArrangement().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/work-packages/{packageId}/arrangements`;
+        urlPath = urlPath.replace('{packageId}', encodeURIComponent(String(requestParameters['packageId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ProjectArrangementCreateToJSON(requestParameters['projectArrangementCreate']),
+        };
+    }
+
+    /**
+     */
+    async createProjectArrangementRaw(requestParameters: CreateProjectArrangementRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ProjectArrangementResponse>> {
+        const requestOptions = await this.createProjectArrangementRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ProjectArrangementResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async createProjectArrangement(requestParameters: CreateProjectArrangementRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ProjectArrangementResponse> {
+        const response = await this.createProjectArrangementRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -926,6 +1246,75 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for editProjectArrangement without sending the request
+     */
+    async editProjectArrangementRequestOpts(requestParameters: EditProjectArrangementRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['packageId'] == null) {
+            throw new runtime.RequiredError(
+                'packageId',
+                'Required parameter "packageId" was null or undefined when calling editProjectArrangement().'
+            );
+        }
+
+        if (requestParameters['arrangementId'] == null) {
+            throw new runtime.RequiredError(
+                'arrangementId',
+                'Required parameter "arrangementId" was null or undefined when calling editProjectArrangement().'
+            );
+        }
+
+        if (requestParameters['projectArrangementEdit'] == null) {
+            throw new runtime.RequiredError(
+                'projectArrangementEdit',
+                'Required parameter "projectArrangementEdit" was null or undefined when calling editProjectArrangement().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/work-packages/{packageId}/arrangements/{arrangementId}`;
+        urlPath = urlPath.replace('{packageId}', encodeURIComponent(String(requestParameters['packageId'])));
+        urlPath = urlPath.replace('{arrangementId}', encodeURIComponent(String(requestParameters['arrangementId'])));
+
+        return {
+            path: urlPath,
+            method: 'PATCH',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ProjectArrangementEditToJSON(requestParameters['projectArrangementEdit']),
+        };
+    }
+
+    /**
+     */
+    async editProjectArrangementRaw(requestParameters: EditProjectArrangementRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ProjectArrangementResponse>> {
+        const requestOptions = await this.editProjectArrangementRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ProjectArrangementResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async editProjectArrangement(requestParameters: EditProjectArrangementRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ProjectArrangementResponse> {
+        const response = await this.editProjectArrangementRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for editWorkPackage without sending the request
      */
     async editWorkPackageRequestOpts(requestParameters: EditWorkPackageRequest): Promise<runtime.RequestOpts> {
@@ -1045,7 +1434,7 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Advisory materials-only budget estimate for a Work Package being drafted. Each catalog line is priced at the half-up average of one price per eligible Vendor (that Vendor\'s lowest exact match) within the radius of the site. Unlisted and unmatched lines carry no price. Excludes delivery fees and labor. Nothing is stored.
+     * Advisory budget estimate for a Work Package being drafted. Each catalog line is priced at the half-up average of one price per eligible Vendor (that Vendor\'s lowest exact match) within the radius of the site. Unlisted and unmatched lines carry no price. Excludes labor and processing fees. Site Delivery and Both include actual route/vehicle estimates for a representative exact-match supplier plan, consolidated per supplier. Unknown delivery remains null. Nothing is stored.
      */
     async estimateWorkPackageBudgetRaw(requestParameters: EstimateWorkPackageBudgetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkPackageBudgetEstimateResponse>> {
         const requestOptions = await this.estimateWorkPackageBudgetRequestOpts(requestParameters);
@@ -1055,7 +1444,7 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Advisory materials-only budget estimate for a Work Package being drafted. Each catalog line is priced at the half-up average of one price per eligible Vendor (that Vendor\'s lowest exact match) within the radius of the site. Unlisted and unmatched lines carry no price. Excludes delivery fees and labor. Nothing is stored.
+     * Advisory budget estimate for a Work Package being drafted. Each catalog line is priced at the half-up average of one price per eligible Vendor (that Vendor\'s lowest exact match) within the radius of the site. Unlisted and unmatched lines carry no price. Excludes labor and processing fees. Site Delivery and Both include actual route/vehicle estimates for a representative exact-match supplier plan, consolidated per supplier. Unknown delivery remains null. Nothing is stored.
      */
     async estimateWorkPackageBudget(requestParameters: EstimateWorkPackageBudgetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkPackageBudgetEstimateResponse> {
         const response = await this.estimateWorkPackageBudgetRaw(requestParameters, initOverrides);
@@ -1116,6 +1505,65 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
      */
     async getProject(requestParameters: GetProjectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ProjectViewResponse> {
         const response = await this.getProjectRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getProjectArrangement without sending the request
+     */
+    async getProjectArrangementRequestOpts(requestParameters: GetProjectArrangementRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['packageId'] == null) {
+            throw new runtime.RequiredError(
+                'packageId',
+                'Required parameter "packageId" was null or undefined when calling getProjectArrangement().'
+            );
+        }
+
+        if (requestParameters['arrangementId'] == null) {
+            throw new runtime.RequiredError(
+                'arrangementId',
+                'Required parameter "arrangementId" was null or undefined when calling getProjectArrangement().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/work-packages/{packageId}/arrangements/{arrangementId}`;
+        urlPath = urlPath.replace('{packageId}', encodeURIComponent(String(requestParameters['packageId'])));
+        urlPath = urlPath.replace('{arrangementId}', encodeURIComponent(String(requestParameters['arrangementId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async getProjectArrangementRaw(requestParameters: GetProjectArrangementRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ProjectArrangementResponse>> {
+        const requestOptions = await this.getProjectArrangementRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ProjectArrangementResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async getProjectArrangement(requestParameters: GetProjectArrangementRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ProjectArrangementResponse> {
+        const response = await this.getProjectArrangementRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1199,6 +1647,10 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
 
         if (requestParameters['sort'] != null) {
             queryParameters['sort'] = requestParameters['sort'];
+        }
+
+        if (requestParameters['direction'] != null) {
+            queryParameters['direction'] = requestParameters['direction'];
         }
 
         if (requestParameters['favoritesOnly'] != null) {
@@ -1356,6 +1808,83 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for inquireProjectArrangementVendor without sending the request
+     */
+    async inquireProjectArrangementVendorRequestOpts(requestParameters: InquireProjectArrangementVendorRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['packageId'] == null) {
+            throw new runtime.RequiredError(
+                'packageId',
+                'Required parameter "packageId" was null or undefined when calling inquireProjectArrangementVendor().'
+            );
+        }
+
+        if (requestParameters['arrangementId'] == null) {
+            throw new runtime.RequiredError(
+                'arrangementId',
+                'Required parameter "arrangementId" was null or undefined when calling inquireProjectArrangementVendor().'
+            );
+        }
+
+        if (requestParameters['vendorId'] == null) {
+            throw new runtime.RequiredError(
+                'vendorId',
+                'Required parameter "vendorId" was null or undefined when calling inquireProjectArrangementVendor().'
+            );
+        }
+
+        if (requestParameters['projectArrangementInquiry'] == null) {
+            throw new runtime.RequiredError(
+                'projectArrangementInquiry',
+                'Required parameter "projectArrangementInquiry" was null or undefined when calling inquireProjectArrangementVendor().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/work-packages/{packageId}/arrangements/{arrangementId}/vendors/{vendorId}/inquiry`;
+        urlPath = urlPath.replace('{packageId}', encodeURIComponent(String(requestParameters['packageId'])));
+        urlPath = urlPath.replace('{arrangementId}', encodeURIComponent(String(requestParameters['arrangementId'])));
+        urlPath = urlPath.replace('{vendorId}', encodeURIComponent(String(requestParameters['vendorId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ProjectArrangementInquiryToJSON(requestParameters['projectArrangementInquiry']),
+        };
+    }
+
+    /**
+     */
+    async inquireProjectArrangementVendorRaw(requestParameters: InquireProjectArrangementVendorRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ProjectArrangementResponse>> {
+        const requestOptions = await this.inquireProjectArrangementVendorRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ProjectArrangementResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async inquireProjectArrangementVendor(requestParameters: InquireProjectArrangementVendorRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ProjectArrangementResponse> {
+        const response = await this.inquireProjectArrangementVendorRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for inquireProjectVendor without sending the request
      */
     async inquireProjectVendorRequestOpts(requestParameters: InquireProjectVendorRequest): Promise<runtime.RequestOpts> {
@@ -1430,6 +1959,81 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for listProjectArrangementOptions without sending the request
+     */
+    async listProjectArrangementOptionsRequestOpts(requestParameters: ListProjectArrangementOptionsRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['packageId'] == null) {
+            throw new runtime.RequiredError(
+                'packageId',
+                'Required parameter "packageId" was null or undefined when calling listProjectArrangementOptions().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        if (requestParameters['sort'] != null) {
+            queryParameters['sort'] = requestParameters['sort'];
+        }
+
+        if (requestParameters['direction'] != null) {
+            queryParameters['direction'] = requestParameters['direction'];
+        }
+
+        if (requestParameters['favoritesOnly'] != null) {
+            queryParameters['favorites_only'] = requestParameters['favoritesOnly'];
+        }
+
+        if (requestParameters['completeOnly'] != null) {
+            queryParameters['complete_only'] = requestParameters['completeOnly'];
+        }
+
+        if (requestParameters['withinBudget'] != null) {
+            queryParameters['within_budget'] = requestParameters['withinBudget'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/work-packages/{packageId}/arrangement-options`;
+        urlPath = urlPath.replace('{packageId}', encodeURIComponent(String(requestParameters['packageId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async listProjectArrangementOptionsRaw(requestParameters: ListProjectArrangementOptionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ProjectArrangementPageResponse>> {
+        const requestOptions = await this.listProjectArrangementOptionsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ProjectArrangementPageResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async listProjectArrangementOptions(requestParameters: ListProjectArrangementOptionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ProjectArrangementPageResponse> {
+        const response = await this.listProjectArrangementOptionsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for listProjects without sending the request
      */
     async listProjectsRequestOpts(requestParameters: ListProjectsRequest): Promise<runtime.RequestOpts> {
@@ -1498,12 +2102,32 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
 
         const queryParameters: any = {};
 
+        if (requestParameters['arrangementId'] != null) {
+            queryParameters['arrangement_id'] = requestParameters['arrangementId'];
+        }
+
+        if (requestParameters['replace'] != null) {
+            queryParameters['replace'] = requestParameters['replace'];
+        }
+
         if (requestParameters['page'] != null) {
             queryParameters['page'] = requestParameters['page'];
         }
 
         if (requestParameters['excludeVendorId'] != null) {
             queryParameters['exclude_vendor_id'] = requestParameters['excludeVendorId'];
+        }
+
+        if (requestParameters['candidateId'] != null) {
+            queryParameters['candidate_id'] = requestParameters['candidateId'];
+        }
+
+        if (requestParameters['specificationChoices'] != null) {
+            queryParameters['specification_choices'] = requestParameters['specificationChoices'];
+        }
+
+        if (requestParameters['fulfillmentMethod'] != null) {
+            queryParameters['fulfillment_method'] = requestParameters['fulfillmentMethod'];
         }
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -1530,7 +2154,7 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Eligible Item-Based offers for the same canonical material and unit within the package radius of its site, for buying a missing line separately. Exact matches first, then price. Unlisted lines return status UNLISTED with no items.
+     * Eligible Item-Based offers for the same canonical material and unit within the fixed 50 km Project-Based radius of the package site, for buying a missing line separately. Ranked by specification match, whether the store covers the quantity, whether it can serve the package\'s fulfillment method, total price, then distance. Unlisted lines return status UNLISTED with no items; a line already covered returns COVERED; no suitable store returns NO_SUITABLE_ALTERNATIVE with the reasons in `excluded`.
      */
     async listWorkPackageLineAlternativesRaw(requestParameters: ListWorkPackageLineAlternativesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkPackageAlternativePageResponse>> {
         const requestOptions = await this.listWorkPackageLineAlternativesRequestOpts(requestParameters);
@@ -1540,7 +2164,7 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Eligible Item-Based offers for the same canonical material and unit within the package radius of its site, for buying a missing line separately. Exact matches first, then price. Unlisted lines return status UNLISTED with no items.
+     * Eligible Item-Based offers for the same canonical material and unit within the fixed 50 km Project-Based radius of the package site, for buying a missing line separately. Ranked by specification match, whether the store covers the quantity, whether it can serve the package\'s fulfillment method, total price, then distance. Unlisted lines return status UNLISTED with no items; a line already covered returns COVERED; no suitable store returns NO_SUITABLE_ALTERNATIVE with the reasons in `excluded`.
      */
     async listWorkPackageLineAlternatives(requestParameters: ListWorkPackageLineAlternativesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkPackageAlternativePageResponse> {
         const response = await this.listWorkPackageLineAlternativesRaw(requestParameters, initOverrides);
@@ -1601,7 +2225,7 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Re-price a fresh candidate with the Buyer\'s specification choices (lines, totals, delivery estimate, score and budget label). Nothing is stored; send the same selections when selecting or inquiring. An unknown option is SPECIFICATION_OPTION_INVALID.
+     * Re-price a fresh candidate with the Buyer\'s specification choices (lines, totals, delivery estimate, score and budget label). Exact-match defaults for missing materials are saved to the draft arrangement; explicit removals and manual replacements are preserved. No regular cart, order or payment is created. Send the same selections when selecting or inquiring. An unknown option is SPECIFICATION_OPTION_INVALID.
      */
     async previewProjectSpecificationSelectionRaw(requestParameters: PreviewProjectSpecificationSelectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ProjectCandidateResponse>> {
         const requestOptions = await this.previewProjectSpecificationSelectionRequestOpts(requestParameters);
@@ -1611,7 +2235,7 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Re-price a fresh candidate with the Buyer\'s specification choices (lines, totals, delivery estimate, score and budget label). Nothing is stored; send the same selections when selecting or inquiring. An unknown option is SPECIFICATION_OPTION_INVALID.
+     * Re-price a fresh candidate with the Buyer\'s specification choices (lines, totals, delivery estimate, score and budget label). Exact-match defaults for missing materials are saved to the draft arrangement; explicit removals and manual replacements are preserved. No regular cart, order or payment is created. Send the same selections when selecting or inquiring. An unknown option is SPECIFICATION_OPTION_INVALID.
      */
     async previewProjectSpecificationSelection(requestParameters: PreviewProjectSpecificationSelectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ProjectCandidateResponse> {
         const response = await this.previewProjectSpecificationSelectionRaw(requestParameters, initOverrides);
@@ -1730,7 +2354,7 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Return a cancelled Work Package to Active in place; no copy is made. The Project budget is checked again because cancelling released it. A package with an order, selected Vendor or tagged purchase cannot be reactivated.
+     * Reactivate the same owned Cancelled Work Package after current version, open-order and Project budget checks. Cancelled, declined and expired orders do not keep the old Vendor selection locked. A cancelled order original is retained internally and the reactivated package uses fresh requirement identities, estimates and inquiries; no order is reopened or duplicated.
      */
     async reactivateWorkPackageRaw(requestParameters: ReactivateWorkPackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkPackageViewResponse>> {
         const requestOptions = await this.reactivateWorkPackageRequestOpts(requestParameters);
@@ -1740,10 +2364,187 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Return a cancelled Work Package to Active in place; no copy is made. The Project budget is checked again because cancelling released it. A package with an order, selected Vendor or tagged purchase cannot be reactivated.
+     * Reactivate the same owned Cancelled Work Package after current version, open-order and Project budget checks. Cancelled, declined and expired orders do not keep the old Vendor selection locked. A cancelled order original is retained internally and the reactivated package uses fresh requirement identities, estimates and inquiries; no order is reopened or duplicated.
      */
     async reactivateWorkPackage(requestParameters: ReactivateWorkPackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkPackageViewResponse> {
         const response = await this.reactivateWorkPackageRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for removeProjectDraftItem without sending the request
+     */
+    async removeProjectDraftItemRequestOpts(requestParameters: RemoveProjectDraftItemRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['packageId'] == null) {
+            throw new runtime.RequiredError(
+                'packageId',
+                'Required parameter "packageId" was null or undefined when calling removeProjectDraftItem().'
+            );
+        }
+
+        if (requestParameters['candidateId'] == null) {
+            throw new runtime.RequiredError(
+                'candidateId',
+                'Required parameter "candidateId" was null or undefined when calling removeProjectDraftItem().'
+            );
+        }
+
+        if (requestParameters['lineId'] == null) {
+            throw new runtime.RequiredError(
+                'lineId',
+                'Required parameter "lineId" was null or undefined when calling removeProjectDraftItem().'
+            );
+        }
+
+        if (requestParameters['variantId'] == null) {
+            throw new runtime.RequiredError(
+                'variantId',
+                'Required parameter "variantId" was null or undefined when calling removeProjectDraftItem().'
+            );
+        }
+
+        if (requestParameters['projectVersionRequest'] == null) {
+            throw new runtime.RequiredError(
+                'projectVersionRequest',
+                'Required parameter "projectVersionRequest" was null or undefined when calling removeProjectDraftItem().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/work-packages/{packageId}/candidates/{candidateId}/draft-items/{lineId}/{variantId}`;
+        urlPath = urlPath.replace('{packageId}', encodeURIComponent(String(requestParameters['packageId'])));
+        urlPath = urlPath.replace('{candidateId}', encodeURIComponent(String(requestParameters['candidateId'])));
+        urlPath = urlPath.replace('{lineId}', encodeURIComponent(String(requestParameters['lineId'])));
+        urlPath = urlPath.replace('{variantId}', encodeURIComponent(String(requestParameters['variantId'])));
+
+        return {
+            path: urlPath,
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ProjectVersionRequestToJSON(requestParameters['projectVersionRequest']),
+        };
+    }
+
+    /**
+     * Remove an unsubmitted supplementary selection, preserving the requirement and restoring remaining fulfillment on the next preview. Submitted orders retain existing cancellation rules.
+     */
+    async removeProjectDraftItemRaw(requestParameters: RemoveProjectDraftItemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ChatIdResponse>> {
+        const requestOptions = await this.removeProjectDraftItemRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ChatIdResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Remove an unsubmitted supplementary selection, preserving the requirement and restoring remaining fulfillment on the next preview. Submitted orders retain existing cancellation rules.
+     */
+    async removeProjectDraftItem(requestParameters: RemoveProjectDraftItemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatIdResponse> {
+        const response = await this.removeProjectDraftItemRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for requestProjectDraftSupplier without sending the request
+     */
+    async requestProjectDraftSupplierRequestOpts(requestParameters: RequestProjectDraftSupplierRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['packageId'] == null) {
+            throw new runtime.RequiredError(
+                'packageId',
+                'Required parameter "packageId" was null or undefined when calling requestProjectDraftSupplier().'
+            );
+        }
+
+        if (requestParameters['candidateId'] == null) {
+            throw new runtime.RequiredError(
+                'candidateId',
+                'Required parameter "candidateId" was null or undefined when calling requestProjectDraftSupplier().'
+            );
+        }
+
+        if (requestParameters['vendorId'] == null) {
+            throw new runtime.RequiredError(
+                'vendorId',
+                'Required parameter "vendorId" was null or undefined when calling requestProjectDraftSupplier().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling requestProjectDraftSupplier().'
+            );
+        }
+
+        if (requestParameters['projectDraftSupplierRequest'] == null) {
+            throw new runtime.RequiredError(
+                'projectDraftSupplierRequest',
+                'Required parameter "projectDraftSupplierRequest" was null or undefined when calling requestProjectDraftSupplier().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/work-packages/{packageId}/candidates/{candidateId}/suppliers/{vendorId}/request`;
+        urlPath = urlPath.replace('{packageId}', encodeURIComponent(String(requestParameters['packageId'])));
+        urlPath = urlPath.replace('{candidateId}', encodeURIComponent(String(requestParameters['candidateId'])));
+        urlPath = urlPath.replace('{vendorId}', encodeURIComponent(String(requestParameters['vendorId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ProjectDraftSupplierRequestToJSON(requestParameters['projectDraftSupplierRequest']),
+        };
+    }
+
+    /**
+     * Explicit request to ONE supplementary supplier after the primary Project-Based request exists. Revalidate the reviewed fingerprint, prices, eligibility, fulfillment, payment, ownership and budgets. Create a separate linked Item-Based order awaiting manual Vendor confirmation; never touch the regular cart, auto-accept an order, request other suppliers or start payment.
+     */
+    async requestProjectDraftSupplierRaw(requestParameters: RequestProjectDraftSupplierRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ChatIdResponse>> {
+        const requestOptions = await this.requestProjectDraftSupplierRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ChatIdResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Explicit request to ONE supplementary supplier after the primary Project-Based request exists. Revalidate the reviewed fingerprint, prices, eligibility, fulfillment, payment, ownership and budgets. Create a separate linked Item-Based order awaiting manual Vendor confirmation; never touch the regular cart, auto-accept an order, request other suppliers or start payment.
+     */
+    async requestProjectDraftSupplier(requestParameters: RequestProjectDraftSupplierRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatIdResponse> {
+        const response = await this.requestProjectDraftSupplierRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1874,6 +2675,93 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for saveProjectDraftItem without sending the request
+     */
+    async saveProjectDraftItemRequestOpts(requestParameters: SaveProjectDraftItemRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['packageId'] == null) {
+            throw new runtime.RequiredError(
+                'packageId',
+                'Required parameter "packageId" was null or undefined when calling saveProjectDraftItem().'
+            );
+        }
+
+        if (requestParameters['candidateId'] == null) {
+            throw new runtime.RequiredError(
+                'candidateId',
+                'Required parameter "candidateId" was null or undefined when calling saveProjectDraftItem().'
+            );
+        }
+
+        if (requestParameters['lineId'] == null) {
+            throw new runtime.RequiredError(
+                'lineId',
+                'Required parameter "lineId" was null or undefined when calling saveProjectDraftItem().'
+            );
+        }
+
+        if (requestParameters['variantId'] == null) {
+            throw new runtime.RequiredError(
+                'variantId',
+                'Required parameter "variantId" was null or undefined when calling saveProjectDraftItem().'
+            );
+        }
+
+        if (requestParameters['projectDraftItemInput'] == null) {
+            throw new runtime.RequiredError(
+                'projectDraftItemInput',
+                'Required parameter "projectDraftItemInput" was null or undefined when calling saveProjectDraftItem().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/work-packages/{packageId}/candidates/{candidateId}/draft-items/{lineId}/{variantId}`;
+        urlPath = urlPath.replace('{packageId}', encodeURIComponent(String(requestParameters['packageId'])));
+        urlPath = urlPath.replace('{candidateId}', encodeURIComponent(String(requestParameters['candidateId'])));
+        urlPath = urlPath.replace('{lineId}', encodeURIComponent(String(requestParameters['lineId'])));
+        urlPath = urlPath.replace('{variantId}', encodeURIComponent(String(requestParameters['variantId'])));
+
+        return {
+            path: urlPath,
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ProjectDraftItemInputToJSON(requestParameters['projectDraftItemInput']),
+        };
+    }
+
+    /**
+     * Add one recommendation to the Work Package draft. Server caps quantity by the remaining requirement and available stock. Idempotent PUT never stacks duplicates. No cart, order, stock reservation or payment is created.
+     */
+    async saveProjectDraftItemRaw(requestParameters: SaveProjectDraftItemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ChatIdResponse>> {
+        const requestOptions = await this.saveProjectDraftItemRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ChatIdResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Add one recommendation to the Work Package draft. Server caps quantity by the remaining requirement and available stock. Idempotent PUT never stacks duplicates. No cart, order, stock reservation or payment is created.
+     */
+    async saveProjectDraftItem(requestParameters: SaveProjectDraftItemRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatIdResponse> {
+        const response = await this.saveProjectDraftItemRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for saveProjectRankingPreferences without sending the request
      */
     async saveProjectRankingPreferencesRequestOpts(requestParameters: SaveProjectRankingPreferencesRequest): Promise<runtime.RequestOpts> {
@@ -1911,7 +2799,7 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Exactly four integer weights in [0,100] totaling 100. Defaults: material_match 40, budget_fit 25, distance 20, vps 15.
+     * Exactly four independent integer weights in [0,100], at least one above zero (422 WEIGHTS_ALL_ZERO). Original values are stored and restored; scoring divides each by the sum of weights. Defaults: material_match 40, budget_fit 25, distance 20, vps 15.
      */
     async saveProjectRankingPreferencesRaw(requestParameters: SaveProjectRankingPreferencesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ProjectPreferencesResponse>> {
         const requestOptions = await this.saveProjectRankingPreferencesRequestOpts(requestParameters);
@@ -1921,7 +2809,7 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Exactly four integer weights in [0,100] totaling 100. Defaults: material_match 40, budget_fit 25, distance 20, vps 15.
+     * Exactly four independent integer weights in [0,100], at least one above zero (422 WEIGHTS_ALL_ZERO). Original values are stored and restored; scoring divides each by the sum of weights. Defaults: material_match 40, budget_fit 25, distance 20, vps 15.
      */
     async saveProjectRankingPreferences(requestParameters: SaveProjectRankingPreferencesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ProjectPreferencesResponse> {
         const response = await this.saveProjectRankingPreferencesRaw(requestParameters, initOverrides);
@@ -2002,10 +2890,10 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
             );
         }
 
-        if (requestParameters['projectCandidateRequest'] == null) {
+        if (requestParameters['projectVendorSelectionRequest'] == null) {
             throw new runtime.RequiredError(
-                'projectCandidateRequest',
-                'Required parameter "projectCandidateRequest" was null or undefined when calling selectProjectVendor().'
+                'projectVendorSelectionRequest',
+                'Required parameter "projectVendorSelectionRequest" was null or undefined when calling selectProjectVendor().'
             );
         }
 
@@ -2036,7 +2924,7 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: ProjectCandidateRequestToJSON(requestParameters['projectCandidateRequest']),
+            body: ProjectVendorSelectionRequestToJSON(requestParameters['projectVendorSelectionRequest']),
         };
     }
 
@@ -2055,6 +2943,86 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
      */
     async selectProjectVendor(requestParameters: SelectProjectVendorRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatIdResponse> {
         const response = await this.selectProjectVendorRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for submitProjectArrangement without sending the request
+     */
+    async submitProjectArrangementRequestOpts(requestParameters: SubmitProjectArrangementRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['packageId'] == null) {
+            throw new runtime.RequiredError(
+                'packageId',
+                'Required parameter "packageId" was null or undefined when calling submitProjectArrangement().'
+            );
+        }
+
+        if (requestParameters['arrangementId'] == null) {
+            throw new runtime.RequiredError(
+                'arrangementId',
+                'Required parameter "arrangementId" was null or undefined when calling submitProjectArrangement().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling submitProjectArrangement().'
+            );
+        }
+
+        if (requestParameters['projectArrangementSubmit'] == null) {
+            throw new runtime.RequiredError(
+                'projectArrangementSubmit',
+                'Required parameter "projectArrangementSubmit" was null or undefined when calling submitProjectArrangement().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/work-packages/{packageId}/arrangements/{arrangementId}/submit`;
+        urlPath = urlPath.replace('{packageId}', encodeURIComponent(String(requestParameters['packageId'])));
+        urlPath = urlPath.replace('{arrangementId}', encodeURIComponent(String(requestParameters['arrangementId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ProjectArrangementSubmitToJSON(requestParameters['projectArrangementSubmit']),
+        };
+    }
+
+    /**
+     */
+    async submitProjectArrangementRaw(requestParameters: SubmitProjectArrangementRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ProjectArrangementResponse>> {
+        const requestOptions = await this.submitProjectArrangementRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ProjectArrangementResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async submitProjectArrangement(requestParameters: SubmitProjectArrangementRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ProjectArrangementResponse> {
+        const response = await this.submitProjectArrangementRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -2144,3 +3112,35 @@ export const GetProjectEstimatesSortEnum = {
     Price: 'PRICE',
 } as const;
 export type GetProjectEstimatesSortEnum = typeof GetProjectEstimatesSortEnum[keyof typeof GetProjectEstimatesSortEnum];
+/**
+ * @export
+ */
+export const GetProjectEstimatesDirectionEnum = {
+    Asc: 'ASC',
+    Desc: 'DESC',
+} as const;
+export type GetProjectEstimatesDirectionEnum = typeof GetProjectEstimatesDirectionEnum[keyof typeof GetProjectEstimatesDirectionEnum];
+/**
+ * @export
+ */
+export const ListProjectArrangementOptionsSortEnum = {
+    BestMatch: 'BEST_MATCH',
+    Price: 'PRICE',
+} as const;
+export type ListProjectArrangementOptionsSortEnum = typeof ListProjectArrangementOptionsSortEnum[keyof typeof ListProjectArrangementOptionsSortEnum];
+/**
+ * @export
+ */
+export const ListProjectArrangementOptionsDirectionEnum = {
+    Asc: 'ASC',
+    Desc: 'DESC',
+} as const;
+export type ListProjectArrangementOptionsDirectionEnum = typeof ListProjectArrangementOptionsDirectionEnum[keyof typeof ListProjectArrangementOptionsDirectionEnum];
+/**
+ * @export
+ */
+export const ListWorkPackageLineAlternativesFulfillmentMethodEnum = {
+    Delivery: 'DELIVERY',
+    Pickup: 'PICKUP',
+} as const;
+export type ListWorkPackageLineAlternativesFulfillmentMethodEnum = typeof ListWorkPackageLineAlternativesFulfillmentMethodEnum[keyof typeof ListWorkPackageLineAlternativesFulfillmentMethodEnum];

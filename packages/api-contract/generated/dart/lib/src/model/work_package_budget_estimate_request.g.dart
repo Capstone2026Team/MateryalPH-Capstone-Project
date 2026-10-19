@@ -6,21 +6,41 @@ part of 'work_package_budget_estimate_request.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
-const WorkPackageBudgetEstimateRequestRadiusKmEnum
-    _$workPackageBudgetEstimateRequestRadiusKmEnum_number5 =
-    const WorkPackageBudgetEstimateRequestRadiusKmEnum._('number5');
-const WorkPackageBudgetEstimateRequestRadiusKmEnum
-    _$workPackageBudgetEstimateRequestRadiusKmEnum_number10 =
-    const WorkPackageBudgetEstimateRequestRadiusKmEnum._('number10');
-const WorkPackageBudgetEstimateRequestRadiusKmEnum
-    _$workPackageBudgetEstimateRequestRadiusKmEnum_number20 =
-    const WorkPackageBudgetEstimateRequestRadiusKmEnum._('number20');
-const WorkPackageBudgetEstimateRequestRadiusKmEnum
-    _$workPackageBudgetEstimateRequestRadiusKmEnum_number30 =
-    const WorkPackageBudgetEstimateRequestRadiusKmEnum._('number30');
-const WorkPackageBudgetEstimateRequestRadiusKmEnum
-    _$workPackageBudgetEstimateRequestRadiusKmEnum_number40 =
-    const WorkPackageBudgetEstimateRequestRadiusKmEnum._('number40');
+const WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum
+    _$workPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum_NO =
+    const WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum._('NO');
+const WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum
+    _$workPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum_YES =
+    const WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum._('YES');
+const WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum
+    _$workPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum_UNANSWERED =
+    const WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum._(
+        'UNANSWERED');
+
+WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum
+    _$workPackageBudgetEstimateRequestHeavyVehicleRestrictionEnumValueOf(
+        String name) {
+  switch (name) {
+    case 'NO':
+      return _$workPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum_NO;
+    case 'YES':
+      return _$workPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum_YES;
+    case 'UNANSWERED':
+      return _$workPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum_UNANSWERED;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum>
+    _$workPackageBudgetEstimateRequestHeavyVehicleRestrictionEnumValues =
+    BuiltSet<
+        WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum>(const <WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum>[
+  _$workPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum_NO,
+  _$workPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum_YES,
+  _$workPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum_UNANSWERED,
+]);
+
 const WorkPackageBudgetEstimateRequestRadiusKmEnum
     _$workPackageBudgetEstimateRequestRadiusKmEnum_number50 =
     const WorkPackageBudgetEstimateRequestRadiusKmEnum._('number50');
@@ -28,16 +48,6 @@ const WorkPackageBudgetEstimateRequestRadiusKmEnum
 WorkPackageBudgetEstimateRequestRadiusKmEnum
     _$workPackageBudgetEstimateRequestRadiusKmEnumValueOf(String name) {
   switch (name) {
-    case 'number5':
-      return _$workPackageBudgetEstimateRequestRadiusKmEnum_number5;
-    case 'number10':
-      return _$workPackageBudgetEstimateRequestRadiusKmEnum_number10;
-    case 'number20':
-      return _$workPackageBudgetEstimateRequestRadiusKmEnum_number20;
-    case 'number30':
-      return _$workPackageBudgetEstimateRequestRadiusKmEnum_number30;
-    case 'number40':
-      return _$workPackageBudgetEstimateRequestRadiusKmEnum_number40;
     case 'number50':
       return _$workPackageBudgetEstimateRequestRadiusKmEnum_number50;
     default:
@@ -48,11 +58,6 @@ WorkPackageBudgetEstimateRequestRadiusKmEnum
 final BuiltSet<WorkPackageBudgetEstimateRequestRadiusKmEnum>
     _$workPackageBudgetEstimateRequestRadiusKmEnumValues = BuiltSet<
         WorkPackageBudgetEstimateRequestRadiusKmEnum>(const <WorkPackageBudgetEstimateRequestRadiusKmEnum>[
-  _$workPackageBudgetEstimateRequestRadiusKmEnum_number5,
-  _$workPackageBudgetEstimateRequestRadiusKmEnum_number10,
-  _$workPackageBudgetEstimateRequestRadiusKmEnum_number20,
-  _$workPackageBudgetEstimateRequestRadiusKmEnum_number30,
-  _$workPackageBudgetEstimateRequestRadiusKmEnum_number40,
   _$workPackageBudgetEstimateRequestRadiusKmEnum_number50,
 ]);
 
@@ -62,6 +67,9 @@ const WorkPackageBudgetEstimateRequestFulfillmentMethodEnum
 const WorkPackageBudgetEstimateRequestFulfillmentMethodEnum
     _$workPackageBudgetEstimateRequestFulfillmentMethodEnum_DELIVERY =
     const WorkPackageBudgetEstimateRequestFulfillmentMethodEnum._('DELIVERY');
+const WorkPackageBudgetEstimateRequestFulfillmentMethodEnum
+    _$workPackageBudgetEstimateRequestFulfillmentMethodEnum_BOTH =
+    const WorkPackageBudgetEstimateRequestFulfillmentMethodEnum._('BOTH');
 
 WorkPackageBudgetEstimateRequestFulfillmentMethodEnum
     _$workPackageBudgetEstimateRequestFulfillmentMethodEnumValueOf(
@@ -71,6 +79,8 @@ WorkPackageBudgetEstimateRequestFulfillmentMethodEnum
       return _$workPackageBudgetEstimateRequestFulfillmentMethodEnum_PICKUP;
     case 'DELIVERY':
       return _$workPackageBudgetEstimateRequestFulfillmentMethodEnum_DELIVERY;
+    case 'BOTH':
+      return _$workPackageBudgetEstimateRequestFulfillmentMethodEnum_BOTH;
     default:
       throw ArgumentError(name);
   }
@@ -81,8 +91,12 @@ final BuiltSet<WorkPackageBudgetEstimateRequestFulfillmentMethodEnum>
         WorkPackageBudgetEstimateRequestFulfillmentMethodEnum>(const <WorkPackageBudgetEstimateRequestFulfillmentMethodEnum>[
   _$workPackageBudgetEstimateRequestFulfillmentMethodEnum_PICKUP,
   _$workPackageBudgetEstimateRequestFulfillmentMethodEnum_DELIVERY,
+  _$workPackageBudgetEstimateRequestFulfillmentMethodEnum_BOTH,
 ]);
 
+Serializer<WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum>
+    _$workPackageBudgetEstimateRequestHeavyVehicleRestrictionEnumSerializer =
+    _$WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnumSerializer();
 Serializer<WorkPackageBudgetEstimateRequestRadiusKmEnum>
     _$workPackageBudgetEstimateRequestRadiusKmEnumSerializer =
     _$WorkPackageBudgetEstimateRequestRadiusKmEnumSerializer();
@@ -90,23 +104,50 @@ Serializer<WorkPackageBudgetEstimateRequestFulfillmentMethodEnum>
     _$workPackageBudgetEstimateRequestFulfillmentMethodEnumSerializer =
     _$WorkPackageBudgetEstimateRequestFulfillmentMethodEnumSerializer();
 
+class _$WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnumSerializer
+    implements
+        PrimitiveSerializer<
+            WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'NO': 'NO',
+    'YES': 'YES',
+    'UNANSWERED': 'UNANSWERED',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'NO': 'NO',
+    'YES': 'YES',
+    'UNANSWERED': 'UNANSWERED',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum
+  ];
+  @override
+  final String wireName =
+      'WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$WorkPackageBudgetEstimateRequestRadiusKmEnumSerializer
     implements
         PrimitiveSerializer<WorkPackageBudgetEstimateRequestRadiusKmEnum> {
   static const Map<String, Object> _toWire = const <String, Object>{
-    'number5': 5,
-    'number10': 10,
-    'number20': 20,
-    'number30': 30,
-    'number40': 40,
     'number50': 50,
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
-    5: 'number5',
-    10: 'number10',
-    20: 'number20',
-    30: 'number30',
-    40: 'number40',
     50: 'number50',
   };
 
@@ -138,10 +179,12 @@ class _$WorkPackageBudgetEstimateRequestFulfillmentMethodEnumSerializer
   static const Map<String, Object> _toWire = const <String, Object>{
     'PICKUP': 'PICKUP',
     'DELIVERY': 'DELIVERY',
+    'BOTH': 'BOTH',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'PICKUP': 'PICKUP',
     'DELIVERY': 'DELIVERY',
+    'BOTH': 'BOTH',
   };
 
   @override
@@ -169,9 +212,14 @@ class _$WorkPackageBudgetEstimateRequestFulfillmentMethodEnumSerializer
 class _$WorkPackageBudgetEstimateRequest
     extends WorkPackageBudgetEstimateRequest {
   @override
+  final WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum?
+      heavyVehicleRestriction;
+  @override
+  final String? alternateDropOffLocationId;
+  @override
   final String siteId;
   @override
-  final WorkPackageBudgetEstimateRequestRadiusKmEnum radiusKm;
+  final WorkPackageBudgetEstimateRequestRadiusKmEnum? radiusKm;
   @override
   final WorkPackageBudgetEstimateRequestFulfillmentMethodEnum fulfillmentMethod;
   @override
@@ -182,8 +230,10 @@ class _$WorkPackageBudgetEstimateRequest
       (WorkPackageBudgetEstimateRequestBuilder()..update(updates))._build();
 
   _$WorkPackageBudgetEstimateRequest._(
-      {required this.siteId,
-      required this.radiusKm,
+      {this.heavyVehicleRestriction,
+      this.alternateDropOffLocationId,
+      required this.siteId,
+      this.radiusKm,
       required this.fulfillmentMethod,
       required this.lines})
       : super._();
@@ -200,6 +250,8 @@ class _$WorkPackageBudgetEstimateRequest
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is WorkPackageBudgetEstimateRequest &&
+        heavyVehicleRestriction == other.heavyVehicleRestriction &&
+        alternateDropOffLocationId == other.alternateDropOffLocationId &&
         siteId == other.siteId &&
         radiusKm == other.radiusKm &&
         fulfillmentMethod == other.fulfillmentMethod &&
@@ -209,6 +261,8 @@ class _$WorkPackageBudgetEstimateRequest
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, heavyVehicleRestriction.hashCode);
+    _$hash = $jc(_$hash, alternateDropOffLocationId.hashCode);
     _$hash = $jc(_$hash, siteId.hashCode);
     _$hash = $jc(_$hash, radiusKm.hashCode);
     _$hash = $jc(_$hash, fulfillmentMethod.hashCode);
@@ -220,6 +274,8 @@ class _$WorkPackageBudgetEstimateRequest
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'WorkPackageBudgetEstimateRequest')
+          ..add('heavyVehicleRestriction', heavyVehicleRestriction)
+          ..add('alternateDropOffLocationId', alternateDropOffLocationId)
           ..add('siteId', siteId)
           ..add('radiusKm', radiusKm)
           ..add('fulfillmentMethod', fulfillmentMethod)
@@ -233,6 +289,20 @@ class WorkPackageBudgetEstimateRequestBuilder
         Builder<WorkPackageBudgetEstimateRequest,
             WorkPackageBudgetEstimateRequestBuilder> {
   _$WorkPackageBudgetEstimateRequest? _$v;
+
+  WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum?
+      _heavyVehicleRestriction;
+  WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum?
+      get heavyVehicleRestriction => _$this._heavyVehicleRestriction;
+  set heavyVehicleRestriction(
+          WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum?
+              heavyVehicleRestriction) =>
+      _$this._heavyVehicleRestriction = heavyVehicleRestriction;
+
+  String? _alternateDropOffLocationId;
+  String? get alternateDropOffLocationId => _$this._alternateDropOffLocationId;
+  set alternateDropOffLocationId(String? alternateDropOffLocationId) =>
+      _$this._alternateDropOffLocationId = alternateDropOffLocationId;
 
   String? _siteId;
   String? get siteId => _$this._siteId;
@@ -265,6 +335,8 @@ class WorkPackageBudgetEstimateRequestBuilder
   WorkPackageBudgetEstimateRequestBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _heavyVehicleRestriction = $v.heavyVehicleRestriction;
+      _alternateDropOffLocationId = $v.alternateDropOffLocationId;
       _siteId = $v.siteId;
       _radiusKm = $v.radiusKm;
       _fulfillmentMethod = $v.fulfillmentMethod;
@@ -292,10 +364,11 @@ class WorkPackageBudgetEstimateRequestBuilder
     try {
       _$result = _$v ??
           _$WorkPackageBudgetEstimateRequest._(
+            heavyVehicleRestriction: heavyVehicleRestriction,
+            alternateDropOffLocationId: alternateDropOffLocationId,
             siteId: BuiltValueNullFieldError.checkNotNull(
                 siteId, r'WorkPackageBudgetEstimateRequest', 'siteId'),
-            radiusKm: BuiltValueNullFieldError.checkNotNull(
-                radiusKm, r'WorkPackageBudgetEstimateRequest', 'radiusKm'),
+            radiusKm: radiusKm,
             fulfillmentMethod: BuiltValueNullFieldError.checkNotNull(
                 fulfillmentMethod,
                 r'WorkPackageBudgetEstimateRequest',

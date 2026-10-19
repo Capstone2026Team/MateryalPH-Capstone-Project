@@ -3,7 +3,6 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -30,8 +29,7 @@ abstract class FeeAssessment implements Built<FeeAssessment, FeeAssessmentBuilde
   int get commissionBasisCentavos;
 
   @BuiltValueField(wireName: r'commission_basis_points')
-  FeeAssessmentCommissionBasisPointsEnum get commissionBasisPoints;
-  // enum commissionBasisPointsEnum {  200,  };
+  int get commissionBasisPoints;
 
   @BuiltValueField(wireName: r'earned_centavos')
   int get earnedCentavos;
@@ -80,7 +78,7 @@ class _$FeeAssessmentSerializer implements PrimitiveSerializer<FeeAssessment> {
     yield r'commission_basis_points';
     yield serializers.serialize(
       object.commissionBasisPoints,
-      specifiedType: const FullType(FeeAssessmentCommissionBasisPointsEnum),
+      specifiedType: const FullType(int),
     );
     yield r'earned_centavos';
     yield serializers.serialize(
@@ -139,8 +137,8 @@ class _$FeeAssessmentSerializer implements PrimitiveSerializer<FeeAssessment> {
         case r'commission_basis_points':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(FeeAssessmentCommissionBasisPointsEnum),
-          ) as FeeAssessmentCommissionBasisPointsEnum;
+            specifiedType: const FullType(int),
+          ) as int;
           result.commissionBasisPoints = valueDes;
           break;
         case r'earned_centavos':
@@ -186,17 +184,4 @@ class _$FeeAssessmentSerializer implements PrimitiveSerializer<FeeAssessment> {
   }
 }
 
-
-class FeeAssessmentCommissionBasisPointsEnum extends EnumClass {
-
-  @BuiltValueEnumConst(wireNumber: 200)
-  static const FeeAssessmentCommissionBasisPointsEnum number200 = _$feeAssessmentCommissionBasisPointsEnum_number200;
-
-  static Serializer<FeeAssessmentCommissionBasisPointsEnum> get serializer => _$feeAssessmentCommissionBasisPointsEnumSerializer;
-
-  const FeeAssessmentCommissionBasisPointsEnum._(String name): super(name);
-
-  static BuiltSet<FeeAssessmentCommissionBasisPointsEnum> get values => _$feeAssessmentCommissionBasisPointsEnumValues;
-  static FeeAssessmentCommissionBasisPointsEnum valueOf(String name) => _$feeAssessmentCommissionBasisPointsEnumValueOf(name);
-}
 

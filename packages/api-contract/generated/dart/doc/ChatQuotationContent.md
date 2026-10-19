@@ -12,7 +12,7 @@ Name | Type | Description | Notes
 **lines** | [**BuiltList&lt;ChatQuotationLine&gt;**](ChatQuotationLine.md) |  |
 **commercial** | [**ChatQuotationMoney**](ChatQuotationMoney.md) |  |
 **fulfillmentMethod** | **String** |  |
-**paymentMethod** | **String** |  |
+**paymentMethod** | **String** | Historical Vendor preference only. New quotations omit it; the Buyer chooses at acceptance. | [optional]
 **fulfillmentDate** | **String** |  |
 **delivery** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  | [optional]
 **nrpc** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  | [optional]

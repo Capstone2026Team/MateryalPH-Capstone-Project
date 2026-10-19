@@ -12,6 +12,7 @@ void main() {
       // TODO
     });
 
+    // Four independent integer importance values from 0 to 100: material_match, budget_fit, distance and vps. At least one above zero; persisted unchanged. Scores normalize by their sum.
     // BuiltMap<String, JsonObject> weights
     test('to test the property `weights`', () async {
       // TODO

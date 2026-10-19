@@ -18,11 +18,11 @@ class _$ProjectEstimatePage extends ProjectEstimatePage {
   @override
   final int total;
   @override
-  final int? suggestedRadiusKm;
-  @override
   final int? unfilteredTotal;
   @override
   final String? sort;
+  @override
+  final String? direction;
 
   factory _$ProjectEstimatePage(
           [void Function(ProjectEstimatePageBuilder)? updates]) =>
@@ -34,9 +34,9 @@ class _$ProjectEstimatePage extends ProjectEstimatePage {
       required this.page,
       required this.hasMore,
       required this.total,
-      this.suggestedRadiusKm,
       this.unfilteredTotal,
-      this.sort})
+      this.sort,
+      this.direction})
       : super._();
   @override
   ProjectEstimatePage rebuild(
@@ -56,9 +56,9 @@ class _$ProjectEstimatePage extends ProjectEstimatePage {
         page == other.page &&
         hasMore == other.hasMore &&
         total == other.total &&
-        suggestedRadiusKm == other.suggestedRadiusKm &&
         unfilteredTotal == other.unfilteredTotal &&
-        sort == other.sort;
+        sort == other.sort &&
+        direction == other.direction;
   }
 
   @override
@@ -69,9 +69,9 @@ class _$ProjectEstimatePage extends ProjectEstimatePage {
     _$hash = $jc(_$hash, page.hashCode);
     _$hash = $jc(_$hash, hasMore.hashCode);
     _$hash = $jc(_$hash, total.hashCode);
-    _$hash = $jc(_$hash, suggestedRadiusKm.hashCode);
     _$hash = $jc(_$hash, unfilteredTotal.hashCode);
     _$hash = $jc(_$hash, sort.hashCode);
+    _$hash = $jc(_$hash, direction.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -84,9 +84,9 @@ class _$ProjectEstimatePage extends ProjectEstimatePage {
           ..add('page', page)
           ..add('hasMore', hasMore)
           ..add('total', total)
-          ..add('suggestedRadiusKm', suggestedRadiusKm)
           ..add('unfilteredTotal', unfilteredTotal)
-          ..add('sort', sort))
+          ..add('sort', sort)
+          ..add('direction', direction))
         .toString();
   }
 }
@@ -118,11 +118,6 @@ class ProjectEstimatePageBuilder
   int? get total => _$this._total;
   set total(int? total) => _$this._total = total;
 
-  int? _suggestedRadiusKm;
-  int? get suggestedRadiusKm => _$this._suggestedRadiusKm;
-  set suggestedRadiusKm(int? suggestedRadiusKm) =>
-      _$this._suggestedRadiusKm = suggestedRadiusKm;
-
   int? _unfilteredTotal;
   int? get unfilteredTotal => _$this._unfilteredTotal;
   set unfilteredTotal(int? unfilteredTotal) =>
@@ -131,6 +126,10 @@ class ProjectEstimatePageBuilder
   String? _sort;
   String? get sort => _$this._sort;
   set sort(String? sort) => _$this._sort = sort;
+
+  String? _direction;
+  String? get direction => _$this._direction;
+  set direction(String? direction) => _$this._direction = direction;
 
   ProjectEstimatePageBuilder() {
     ProjectEstimatePage._defaults(this);
@@ -144,9 +143,9 @@ class ProjectEstimatePageBuilder
       _page = $v.page;
       _hasMore = $v.hasMore;
       _total = $v.total;
-      _suggestedRadiusKm = $v.suggestedRadiusKm;
       _unfilteredTotal = $v.unfilteredTotal;
       _sort = $v.sort;
+      _direction = $v.direction;
       _$v = null;
     }
     return this;
@@ -178,9 +177,9 @@ class ProjectEstimatePageBuilder
                 hasMore, r'ProjectEstimatePage', 'hasMore'),
             total: BuiltValueNullFieldError.checkNotNull(
                 total, r'ProjectEstimatePage', 'total'),
-            suggestedRadiusKm: suggestedRadiusKm,
             unfilteredTotal: unfilteredTotal,
             sort: sort,
+            direction: direction,
           );
     } catch (_) {
       late String _$failedField;

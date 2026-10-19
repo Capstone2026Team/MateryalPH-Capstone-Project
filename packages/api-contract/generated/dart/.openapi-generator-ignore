@@ -21,3 +21,10 @@
 #docs/*.md
 # Then explicitly reverse the ignore rule for a single file:
 #!docs/README.md
+
+# Project draft changes intentionally omit generated test scaffolds.
+test/project_payment_method_test.dart
+test/project_draft_vendor_group_test.dart
+test/project_draft_item_input_test.dart
+test/project_draft_supplier_request_test.dart
+test/project_vendor_selection_request_test.dart

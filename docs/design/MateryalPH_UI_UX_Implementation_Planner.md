@@ -192,6 +192,8 @@ Rules:
 - Map pins combine color, shape/icon, and text label.
 - High-contrast mode must preserve outlines, text, and selected state when map colors change.
 
+**Ranking preference visualization (owner request, 2026-10-18).** Both Buyer ranking editors place a live Ranking Influence panel above the priority controls: a segmented bar, a descending list of labeled influence percentages and bars, and the most influential factor (including ties and an explicit all-zero state). The `ranking-*` color tokens identify factors consistently as their order changes; labels and numbers carry the same meaning without color. Percentages are a local, rounded preview of `weight / sum of weights`, never replacements for saved slider values. Priority cards keep independent 0–100 sliders, descriptions, increment/decrement controls and low/high labels. Reset sits beside Adjust priorities; Save remains a persistent primary action. The controls and visualization reflow with large text and a constrained tablet width.
+
 ### 6.2 Map semantics
 
 | Entity/state | Marker treatment | Label |
@@ -532,6 +534,8 @@ Avoid unsupported marketing claims such as guaranteed sales, instant activation,
 
 ## 14. Vendor Portal UI Planner
 
+**Owner decision — 2026-10-19: onboarding address.** Provide **Use Google Maps** and **Enter address manually** choices. Google mode shows a compact map; clicking or dragging its pin fills the address details below. Both modes use the same editable Street address, optional Unit/floor/building, Barangay, City/Municipality, Province/Metro Manila and Postal code fields. Remove cascading PSGC selectors, code-entry requirements and technical helper text. Keep manual entry available during map/provider failures, preserve typed details on retry or mode changes, discard stale lookups, and hide raw coordinates. Server matching supplies geographic references when possible. Retain shared form controls, responsive stacking, keyboard access, and the existing saved-draft/review flow.
+
 | Area | Primary pages/components |
 | --- | --- |
 | Authentication | Sign in, sign up, email OTP, Google, recovery, TOTP, invitation acceptance |
@@ -551,6 +555,8 @@ In the authenticated Vendor Portal, the Business Type selector uses exactly **So
 Use a persistent desktop sidebar and a compact mobile drawer. Role permissions affect both visible actions and server authorization. A hidden button is never the authorization mechanism.
 
 ## 15. Admin Portal UI Planner
+
+**Owner decision — 2026-10-19: accounting and commission monitoring.** Use four primary Admin Finance views: Overview, Commission Management, Payments and Refunds, and Reconciliation. Place the current/scheduled commercial-rate summary and permission-scoped Edit Rate / History actions above commission statements; use a side panel for percentage, Manila effective time, reason and preview, with protected publishing and stale-version errors. Present four compact KPI cards with expandable calculations, one commission activity chart and its accessible data table, and actionable finance tasks near the top. Keep tax/evidence references reachable. Vendor navigation calls the existing Transactions module Finance and adds a Commission Monitoring tab with the shared rate summary, authoritative billing totals, original rates per paginated order and links to statements. Review Commission Terms opens a shared FormDialog in Finance with freshly loaded versioned terms, recorded acceptance, retry and authority-checked explicit consent, without routing to onboarding. Preserve semantic tokens, shared components, readable narrow layouts, keyboard focus and existing authorization.
 
 | Area | Primary pages/components |
 | --- | --- |

@@ -13,6 +13,28 @@
  */
 
 import { mapValues } from '../runtime';
+import type { ProjectPaymentMethod } from './ProjectPaymentMethod';
+import {
+    ProjectPaymentMethodFromJSON,
+    ProjectPaymentMethodFromJSONTyped,
+    ProjectPaymentMethodToJSON,
+    ProjectPaymentMethodToJSONTyped,
+} from './ProjectPaymentMethod';
+import type { ProjectDraftVendorGroup } from './ProjectDraftVendorGroup';
+import {
+    ProjectDraftVendorGroupFromJSON,
+    ProjectDraftVendorGroupFromJSONTyped,
+    ProjectDraftVendorGroupToJSON,
+    ProjectDraftVendorGroupToJSONTyped,
+} from './ProjectDraftVendorGroup';
+import type { ProjectFulfillment } from './ProjectFulfillment';
+import {
+    ProjectFulfillmentFromJSON,
+    ProjectFulfillmentFromJSONTyped,
+    ProjectFulfillmentToJSON,
+    ProjectFulfillmentToJSONTyped,
+} from './ProjectFulfillment';
+
 /**
  *
  * @export
@@ -124,9 +146,13 @@ export interface ProjectCandidate {
      */
     etaSeconds?: number;
     /**
-     *
+     * The concrete method this view is priced for: DELIVERY or PICKUP. For a Both package it is the Vendor's preferred method until the Buyer picks one. A supplier quotation containing ready-mixed concrete uses DELIVERY only, even when the Work Package requests pickup.
      */
     fulfillmentMethod: string;
+    /**
+     * Methods this Vendor offers for the package. More than one means the Buyer must send `fulfillment_method` when inquiring or selecting; selection-preview re-prices for the chosen method. Ready-mixed concrete restricts its supplier quotation to DELIVERY.
+     */
+    fulfillmentOptions?: Array<ProjectCandidateFulfillmentOptionsEnum>;
     /**
      *
      */
@@ -159,7 +185,65 @@ export interface ProjectCandidate {
      * The Buyer saved this store as a preferred seller.
      */
     isFavorite?: boolean;
+    /**
+     *
+     */
+    fulfillment: ProjectFulfillment;
+    /**
+     *
+     */
+    paymentMethods?: Array<ProjectPaymentMethod>;
+    /**
+     * Draft supplementary items by supplying Vendor, including automatic exact-match defaults. Defaults are saved during selection preview; explicit removals and replacements are preserved. Independent of the regular cart.
+     */
+    draftGroups?: Array<ProjectDraftVendorGroup>;
+    /**
+     *
+     */
+    primaryOrderId?: string;
+    /**
+     * Primary and supplementary materials, including existing linked purchases.
+     */
+    procurementMaterialsCentavos?: number;
+    /**
+     * Delivery for supplementary suppliers and linked orders, counted once per order or draft supplier. Null while any fee needs review.
+     */
+    separateDeliveryCentavos?: number | null;
+    /**
+     * Delivery for the primary Vendor and all separate suppliers. Null while any fee needs review.
+     */
+    procurementDeliveryCentavos?: number | null;
+    /**
+     * Work Package budget status for the complete procurement total.
+     */
+    procurementBudgetLabel?: ProjectCandidateProcurementBudgetLabelEnum;
+    /**
+     * Materials and each supplying Vendor delivery counted once. Null while any delivery remains unconfirmed or unavailable. Processing fees are excluded until payment.
+     */
+    procurementTotalCentavos?: number;
 }
+
+
+/**
+ * @export
+ */
+export const ProjectCandidateFulfillmentOptionsEnum = {
+    Delivery: 'DELIVERY',
+    Pickup: 'PICKUP',
+} as const;
+export type ProjectCandidateFulfillmentOptionsEnum = typeof ProjectCandidateFulfillmentOptionsEnum[keyof typeof ProjectCandidateFulfillmentOptionsEnum];
+
+/**
+ * @export
+ */
+export const ProjectCandidateProcurementBudgetLabelEnum = {
+    UnderBudget: 'UNDER_BUDGET',
+    WithinBudget: 'WITHIN_BUDGET',
+    OverBudget: 'OVER_BUDGET',
+    CostReviewRequired: 'COST_REVIEW_REQUIRED',
+} as const;
+export type ProjectCandidateProcurementBudgetLabelEnum = typeof ProjectCandidateProcurementBudgetLabelEnum[keyof typeof ProjectCandidateProcurementBudgetLabelEnum];
+
 
 /**
  * Check if a given object implements the ProjectCandidate interface.
@@ -192,6 +276,7 @@ export function instanceOfProjectCandidate(value: object): value is ProjectCandi
     if (!('stale' in value) || value['stale'] === undefined) return false;
     if (!('label' in value) || value['label'] === undefined) return false;
     if ((!('currentQuotationState' in (value as Record<string, any>)) && !('current_quotation_state' in (value as Record<string, any>))) || ((value as Record<string, any>)['currentQuotationState'] === undefined && (value as Record<string, any>)['current_quotation_state'] === undefined)) return false;
+    if (!('fulfillment' in value) || value['fulfillment'] === undefined) return false;
     return true;
 }
 
@@ -232,6 +317,7 @@ export function ProjectCandidateFromJSONTyped(json: any, ignoreDiscriminator: bo
         'distanceBasis': json['distance_basis'],
         'etaSeconds': json['eta_seconds'] == null ? undefined : json['eta_seconds'],
         'fulfillmentMethod': json['fulfillment_method'],
+        'fulfillmentOptions': json['fulfillment_options'] == null ? undefined : json['fulfillment_options'],
         'paymentMethod': json['payment_method'],
         'delivery': json['delivery'],
         'destination': json['destination'],
@@ -240,6 +326,15 @@ export function ProjectCandidateFromJSONTyped(json: any, ignoreDiscriminator: bo
         'label': json['label'],
         'currentQuotationState': json['current_quotation_state'],
         'isFavorite': json['is_favorite'] == null ? undefined : json['is_favorite'],
+        'fulfillment': ProjectFulfillmentFromJSON(json['fulfillment']),
+        'paymentMethods': json['payment_methods'] == null ? undefined : ((json['payment_methods'] as Array<any>).map(ProjectPaymentMethodFromJSON)),
+        'draftGroups': json['draft_groups'] == null ? undefined : ((json['draft_groups'] as Array<any>).map(ProjectDraftVendorGroupFromJSON)),
+        'primaryOrderId': json['primary_order_id'] == null ? undefined : json['primary_order_id'],
+        'procurementMaterialsCentavos': json['procurement_materials_centavos'] == null ? undefined : json['procurement_materials_centavos'],
+        'separateDeliveryCentavos': json['separate_delivery_centavos'] === undefined ? undefined : json['separate_delivery_centavos'] === null ? null : json['separate_delivery_centavos'],
+        'procurementDeliveryCentavos': json['procurement_delivery_centavos'] === undefined ? undefined : json['procurement_delivery_centavos'] === null ? null : json['procurement_delivery_centavos'],
+        'procurementBudgetLabel': json['procurement_budget_label'] == null ? undefined : json['procurement_budget_label'],
+        'procurementTotalCentavos': json['procurement_total_centavos'] == null ? undefined : json['procurement_total_centavos'],
     };
 }
 
@@ -281,6 +376,7 @@ export function ProjectCandidateToJSONTyped(value?: ProjectCandidate | null, ign
         'distance_basis': value['distanceBasis'],
         'eta_seconds': value['etaSeconds'],
         'fulfillment_method': value['fulfillmentMethod'],
+        'fulfillment_options': value['fulfillmentOptions'],
         'payment_method': value['paymentMethod'],
         'delivery': value['delivery'],
         'destination': value['destination'],
@@ -289,6 +385,15 @@ export function ProjectCandidateToJSONTyped(value?: ProjectCandidate | null, ign
         'label': value['label'],
         'current_quotation_state': value['currentQuotationState'],
         'is_favorite': value['isFavorite'],
+        'fulfillment': ProjectFulfillmentToJSON(value['fulfillment']),
+        'payment_methods': value['paymentMethods'] == null ? undefined : ((value['paymentMethods'] as Array<any>).map(ProjectPaymentMethodToJSON)),
+        'draft_groups': value['draftGroups'] == null ? undefined : ((value['draftGroups'] as Array<any>).map(ProjectDraftVendorGroupToJSON)),
+        'primary_order_id': value['primaryOrderId'],
+        'procurement_materials_centavos': value['procurementMaterialsCentavos'],
+        'separate_delivery_centavos': value['separateDeliveryCentavos'],
+        'procurement_delivery_centavos': value['procurementDeliveryCentavos'],
+        'procurement_budget_label': value['procurementBudgetLabel'],
+        'procurement_total_centavos': value['procurementTotalCentavos'],
     };
 }
 

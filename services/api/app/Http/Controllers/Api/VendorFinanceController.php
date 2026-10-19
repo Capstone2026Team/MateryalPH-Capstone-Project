@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Domain\Finance\FinanceAccess;
+use App\Domain\Finance\VendorCommissionService;
 use App\Domain\Finance\VendorFinanceReviewService;
 use App\Domain\Finance\VendorFinanceService;
 use App\Domain\Identity\AuthenticationException;
@@ -35,6 +36,14 @@ final class VendorFinanceController extends Controller
     public function overview(Request $request): JsonResponse
     {
         return ApiResponse::success($this->finance->overview($request));
+    }
+
+    public function commissions(Request $request, VendorCommissionService $commissions): JsonResponse
+    {
+        $input = $request->validate(['page' => ['sometimes', 'integer', 'between:1,1000']]);
+        $result = $commissions->monitor($request, (int) ($input['page'] ?? 1));
+
+        return ApiResponse::success($result['data'], $result['meta']);
     }
 
     /** Owner-only audited reveal of the store's own full TIN; never cached. */

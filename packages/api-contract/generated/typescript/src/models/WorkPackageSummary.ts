@@ -22,6 +22,14 @@ export interface WorkPackageSummary {
     /**
      *
      */
+    selectedArrangementId?: string | null;
+    /**
+     *
+     */
+    vendorOrders?: Array<{ [key: string]: any; }>;
+    /**
+     *
+     */
     id: string;
     /**
      *
@@ -48,13 +56,17 @@ export interface WorkPackageSummary {
      */
     currentVersionId?: string;
     /**
-     *
+     * Current active Vendor selection; null when the corresponding order is cancelled, declined or expired. The order itself remains available as history.
      */
     selectedVendorId?: string;
     /**
      *
      */
     orderId?: string;
+    /**
+     * Candidate used by the open primary request; reopens the saved supplementary procurement arrangement.
+     */
+    procurementCandidateId?: string;
 }
 
 
@@ -97,6 +109,8 @@ export function WorkPackageSummaryFromJSONTyped(json: any, ignoreDiscriminator: 
     }
     return {
 
+        'selectedArrangementId': json['selected_arrangement_id'] === undefined ? undefined : json['selected_arrangement_id'] === null ? null : json['selected_arrangement_id'],
+        'vendorOrders': json['vendor_orders'] == null ? undefined : json['vendor_orders'],
         'id': json['id'],
         'projectId': json['project_id'],
         'name': json['name'],
@@ -106,6 +120,7 @@ export function WorkPackageSummaryFromJSONTyped(json: any, ignoreDiscriminator: 
         'currentVersionId': json['current_version_id'] == null ? undefined : json['current_version_id'],
         'selectedVendorId': json['selected_vendor_id'] == null ? undefined : json['selected_vendor_id'],
         'orderId': json['order_id'] == null ? undefined : json['order_id'],
+        'procurementCandidateId': json['procurement_candidate_id'] == null ? undefined : json['procurement_candidate_id'],
     };
 }
 
@@ -120,6 +135,8 @@ export function WorkPackageSummaryToJSONTyped(value?: WorkPackageSummary | null,
 
     return {
 
+        'selected_arrangement_id': value['selectedArrangementId'],
+        'vendor_orders': value['vendorOrders'],
         'id': value['id'],
         'project_id': value['projectId'],
         'name': value['name'],
@@ -129,6 +146,7 @@ export function WorkPackageSummaryToJSONTyped(value?: WorkPackageSummary | null,
         'current_version_id': value['currentVersionId'],
         'selected_vendor_id': value['selectedVendorId'],
         'order_id': value['orderId'],
+        'procurement_candidate_id': value['procurementCandidateId'],
     };
 }
 

@@ -132,10 +132,12 @@ Class | Method | HTTP request | Description
 [*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**getWithholdingAccumulator**](doc/AdminFinanceApi.md#getwithholdingaccumulator) | **GET** /admin/finance/withholding-accumulators/{accumulatorId} |
 [*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**listAdminPayments**](doc/AdminFinanceApi.md#listadminpayments) | **GET** /admin/finance/payments |
 [*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**listChannelFees**](doc/AdminFinanceApi.md#listchannelfees) | **GET** /admin/finance/channel-fees |
+[*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**listCommissionPolicies**](doc/AdminFinanceApi.md#listcommissionpolicies) | **GET** /admin/finance/commission-policies |
 [*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**listFeeStatements**](doc/AdminFinanceApi.md#listfeestatements) | **GET** /admin/finance/statements |
 [*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**listFinanceReviewItems**](doc/AdminFinanceApi.md#listfinancereviewitems) | **GET** /admin/finance/review-items |
 [*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**listWithholdingAccumulators**](doc/AdminFinanceApi.md#listwithholdingaccumulators) | **GET** /admin/finance/withholding-accumulators |
 [*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**proposeFeeCredit**](doc/AdminFinanceApi.md#proposefeecredit) | **POST** /admin/finance/fee-credits |
+[*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**publishCommissionPolicy**](doc/AdminFinanceApi.md#publishcommissionpolicy) | **POST** /admin/finance/commission-policies |
 [*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**resolveFinanceReviewItem**](doc/AdminFinanceApi.md#resolvefinancereviewitem) | **POST** /admin/finance/review-items/{itemId}/resolve |
 [*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**resolveWithholdingOverlap**](doc/AdminFinanceApi.md#resolvewithholdingoverlap) | **POST** /admin/finance/withholding-accumulators/{accumulatorId}/overlap |
 [*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**runPaymentReconciliation**](doc/AdminFinanceApi.md#runpaymentreconciliation) | **POST** /admin/finance/reconciliation/run |
@@ -192,6 +194,13 @@ Class | Method | HTTP request | Description
 [*AdminScoreMonitoringApi*](doc/AdminScoreMonitoringApi.md) | [**listAdminScores**](doc/AdminScoreMonitoringApi.md#listadminscores) | **GET** /admin/scores |
 [*AdminScoreMonitoringApi*](doc/AdminScoreMonitoringApi.md) | [**revokeAdminScoreExclusion**](doc/AdminScoreMonitoringApi.md#revokeadminscoreexclusion) | **POST** /admin/scores/exclusions/{exclusionId}/revoke |
 [*AdminScoreMonitoringApi*](doc/AdminScoreMonitoringApi.md) | [**suppressAdminBadge**](doc/AdminScoreMonitoringApi.md#suppressadminbadge) | **POST** /admin/scores/{vendorId}/badge-suppressions |
+[*AdminUserDirectoryApi*](doc/AdminUserDirectoryApi.md) | [**getDirectoryBuyer**](doc/AdminUserDirectoryApi.md#getdirectorybuyer) | **GET** /admin/buyers/{buyerId} |
+[*AdminUserDirectoryApi*](doc/AdminUserDirectoryApi.md) | [**getDirectoryVendor**](doc/AdminUserDirectoryApi.md#getdirectoryvendor) | **GET** /admin/vendors/{vendorId} |
+[*AdminUserDirectoryApi*](doc/AdminUserDirectoryApi.md) | [**listDirectoryBuyerReviews**](doc/AdminUserDirectoryApi.md#listdirectorybuyerreviews) | **GET** /admin/buyers/{buyerId}/reviews |
+[*AdminUserDirectoryApi*](doc/AdminUserDirectoryApi.md) | [**listDirectoryBuyers**](doc/AdminUserDirectoryApi.md#listdirectorybuyers) | **GET** /admin/buyers |
+[*AdminUserDirectoryApi*](doc/AdminUserDirectoryApi.md) | [**listDirectoryVendorListings**](doc/AdminUserDirectoryApi.md#listdirectoryvendorlistings) | **GET** /admin/vendors/{vendorId}/listings |
+[*AdminUserDirectoryApi*](doc/AdminUserDirectoryApi.md) | [**listDirectoryVendorReviews**](doc/AdminUserDirectoryApi.md#listdirectoryvendorreviews) | **GET** /admin/vendors/{vendorId}/reviews |
+[*AdminUserDirectoryApi*](doc/AdminUserDirectoryApi.md) | [**listDirectoryVendors**](doc/AdminUserDirectoryApi.md#listdirectoryvendors) | **GET** /admin/vendors |
 [*AdminVendorVerificationApi*](doc/AdminVendorVerificationApi.md) | [**decideVendorVerificationRequirement**](doc/AdminVendorVerificationApi.md#decidevendorverificationrequirement) | **POST** /admin/vendor-verification/{organizationId}/requirements/{requirementKey}/decision |
 [*AdminVendorVerificationApi*](doc/AdminVendorVerificationApi.md) | [**getAdminDashboard**](doc/AdminVendorVerificationApi.md#getadmindashboard) | **GET** /admin/dashboard |
 [*AdminVendorVerificationApi*](doc/AdminVendorVerificationApi.md) | [**getAdminVendorEvidenceUrl**](doc/AdminVendorVerificationApi.md#getadminvendorevidenceurl) | **GET** /admin/vendor-verification/files/{fileId} |
@@ -320,27 +329,36 @@ Class | Method | HTTP request | Description
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**closeWorkPackage**](doc/BuyerProjectsApi.md#closeworkpackage) | **POST** /buyers/work-packages/{packageId}/close |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**compileProjectEstimates**](doc/BuyerProjectsApi.md#compileprojectestimates) | **POST** /buyers/work-packages/{packageId}/estimates |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**createProject**](doc/BuyerProjectsApi.md#createproject) | **POST** /buyers/projects |
+[*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**createProjectArrangement**](doc/BuyerProjectsApi.md#createprojectarrangement) | **POST** /buyers/work-packages/{packageId}/arrangements |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**createWorkPackage**](doc/BuyerProjectsApi.md#createworkpackage) | **POST** /buyers/projects/{projectId}/work-packages |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**deleteProject**](doc/BuyerProjectsApi.md#deleteproject) | **DELETE** /buyers/projects/{projectId} |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**deleteWorkPackage**](doc/BuyerProjectsApi.md#deleteworkpackage) | **DELETE** /buyers/work-packages/{packageId} |
+[*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**editProjectArrangement**](doc/BuyerProjectsApi.md#editprojectarrangement) | **PATCH** /buyers/work-packages/{packageId}/arrangements/{arrangementId} |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**editWorkPackage**](doc/BuyerProjectsApi.md#editworkpackage) | **PUT** /buyers/work-packages/{packageId} |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**estimateWorkPackageBudget**](doc/BuyerProjectsApi.md#estimateworkpackagebudget) | **POST** /buyers/projects/{projectId}/work-package-estimate |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**getProject**](doc/BuyerProjectsApi.md#getproject) | **GET** /buyers/projects/{projectId} |
+[*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**getProjectArrangement**](doc/BuyerProjectsApi.md#getprojectarrangement) | **GET** /buyers/work-packages/{packageId}/arrangements/{arrangementId} |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**getProjectCandidateRoute**](doc/BuyerProjectsApi.md#getprojectcandidateroute) | **POST** /buyers/work-packages/{packageId}/candidates/{candidateId}/route |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**getProjectEstimates**](doc/BuyerProjectsApi.md#getprojectestimates) | **GET** /buyers/work-packages/{packageId}/estimates |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**getProjectRankingPreferences**](doc/BuyerProjectsApi.md#getprojectrankingpreferences) | **GET** /buyers/project-ranking-preferences |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**getWorkPackage**](doc/BuyerProjectsApi.md#getworkpackage) | **GET** /buyers/work-packages/{packageId} |
+[*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**inquireProjectArrangementVendor**](doc/BuyerProjectsApi.md#inquireprojectarrangementvendor) | **POST** /buyers/work-packages/{packageId}/arrangements/{arrangementId}/vendors/{vendorId}/inquiry |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**inquireProjectVendor**](doc/BuyerProjectsApi.md#inquireprojectvendor) | **POST** /buyers/work-packages/{packageId}/inquiries |
+[*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**listProjectArrangementOptions**](doc/BuyerProjectsApi.md#listprojectarrangementoptions) | **GET** /buyers/work-packages/{packageId}/arrangement-options |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**listProjects**](doc/BuyerProjectsApi.md#listprojects) | **GET** /buyers/projects |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**listWorkPackageLineAlternatives**](doc/BuyerProjectsApi.md#listworkpackagelinealternatives) | **GET** /buyers/work-packages/{packageId}/lines/{lineId}/alternatives |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**previewProjectSpecificationSelection**](doc/BuyerProjectsApi.md#previewprojectspecificationselection) | **POST** /buyers/work-packages/{packageId}/candidates/{candidateId}/selection-preview |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**previewWorkPackageCsv**](doc/BuyerProjectsApi.md#previewworkpackagecsv) | **POST** /buyers/work-packages/import-preview |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**reactivateWorkPackage**](doc/BuyerProjectsApi.md#reactivateworkpackage) | **POST** /buyers/work-packages/{packageId}/reactivate |
+[*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**removeProjectDraftItem**](doc/BuyerProjectsApi.md#removeprojectdraftitem) | **DELETE** /buyers/work-packages/{packageId}/candidates/{candidateId}/draft-items/{lineId}/{variantId} |
+[*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**requestProjectDraftSupplier**](doc/BuyerProjectsApi.md#requestprojectdraftsupplier) | **POST** /buyers/work-packages/{packageId}/candidates/{candidateId}/suppliers/{vendorId}/request |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**resetProjectRankingPreferences**](doc/BuyerProjectsApi.md#resetprojectrankingpreferences) | **POST** /buyers/project-ranking-preferences/reset |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**resolveProjectMissingLine**](doc/BuyerProjectsApi.md#resolveprojectmissingline) | **PUT** /buyers/work-packages/{packageId}/missing-lines/{lineId} |
+[*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**saveProjectDraftItem**](doc/BuyerProjectsApi.md#saveprojectdraftitem) | **PUT** /buyers/work-packages/{packageId}/candidates/{candidateId}/draft-items/{lineId}/{variantId} |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**saveProjectRankingPreferences**](doc/BuyerProjectsApi.md#saveprojectrankingpreferences) | **PUT** /buyers/project-ranking-preferences |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**searchProjectMaterials**](doc/BuyerProjectsApi.md#searchprojectmaterials) | **GET** /buyers/project-materials |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**selectProjectVendor**](doc/BuyerProjectsApi.md#selectprojectvendor) | **POST** /buyers/work-packages/{packageId}/selection |
+[*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**submitProjectArrangement**](doc/BuyerProjectsApi.md#submitprojectarrangement) | **POST** /buyers/work-packages/{packageId}/arrangements/{arrangementId}/submit |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**updateProject**](doc/BuyerProjectsApi.md#updateproject) | **PATCH** /buyers/projects/{projectId} |
 [*BuyerReviewsApi*](doc/BuyerReviewsApi.md) | [**addBuyerReviewMedia**](doc/BuyerReviewsApi.md#addbuyerreviewmedia) | **POST** /buyers/reviews/{reviewId}/media |
 [*BuyerReviewsApi*](doc/BuyerReviewsApi.md) | [**editBuyerReview**](doc/BuyerReviewsApi.md#editbuyerreview) | **PATCH** /buyers/reviews/{reviewId} |
@@ -404,6 +422,16 @@ Class | Method | HTTP request | Description
 [*ReportingApi*](doc/ReportingApi.md) | [**reviewTaxPackage**](doc/ReportingApi.md#reviewtaxpackage) | **POST** /admin/reports/tax/{packageId}/review | review Tax Package
 [*StoresApi*](doc/StoresApi.md) | [**getPublicStoreProfile**](doc/StoresApi.md#getpublicstoreprofile) | **GET** /stores/{storeId}/profile |
 [*StoresApi*](doc/StoresApi.md) | [**listPublicStores**](doc/StoresApi.md#listpublicstores) | **GET** /stores |
+[*SupportApi*](doc/SupportApi.md) | [**createSupportTicket**](doc/SupportApi.md#createsupportticket) | **POST** /support/{supportPortal}/tickets |
+[*SupportApi*](doc/SupportApi.md) | [**downloadSupportAttachment**](doc/SupportApi.md#downloadsupportattachment) | **GET** /support/{supportPortal}/tickets/{ticketId}/attachments/{fileId} |
+[*SupportApi*](doc/SupportApi.md) | [**exchangeSupportAccess**](doc/SupportApi.md#exchangesupportaccess) | **POST** /support/guest/access |
+[*SupportApi*](doc/SupportApi.md) | [**getSupportTicket**](doc/SupportApi.md#getsupportticket) | **GET** /support/{supportPortal}/tickets/{ticketId} |
+[*SupportApi*](doc/SupportApi.md) | [**listSupportEntries**](doc/SupportApi.md#listsupportentries) | **GET** /support/{supportPortal}/tickets/{ticketId}/entries |
+[*SupportApi*](doc/SupportApi.md) | [**listSupportHandlers**](doc/SupportApi.md#listsupporthandlers) | **GET** /support/admin/handlers |
+[*SupportApi*](doc/SupportApi.md) | [**listSupportTickets**](doc/SupportApi.md#listsupporttickets) | **GET** /support/{supportPortal}/tickets |
+[*SupportApi*](doc/SupportApi.md) | [**replyToSupportTicket**](doc/SupportApi.md#replytosupportticket) | **POST** /support/{supportPortal}/tickets/{ticketId}/entries |
+[*SupportApi*](doc/SupportApi.md) | [**requestSupportAccessEmail**](doc/SupportApi.md#requestsupportaccessemail) | **POST** /support/guest/access-email |
+[*SupportApi*](doc/SupportApi.md) | [**updateSupportTicket**](doc/SupportApi.md#updatesupportticket) | **PATCH** /support/{supportPortal}/tickets/{ticketId} |
 [*SystemApi*](doc/SystemApi.md) | [**getApiHealth**](doc/SystemApi.md#getapihealth) | **GET** /health |
 [*VendorAutoAcceptApi*](doc/VendorAutoAcceptApi.md) | [**configureAutoAcceptPolicy**](doc/VendorAutoAcceptApi.md#configureautoacceptpolicy) | **PUT** /vendor/auto-accept/policies/{variantId} |
 [*VendorAutoAcceptApi*](doc/VendorAutoAcceptApi.md) | [**getAutoAcceptPolicy**](doc/VendorAutoAcceptApi.md#getautoacceptpolicy) | **GET** /vendor/auto-accept/policies/{variantId} |
@@ -454,6 +482,7 @@ Class | Method | HTTP request | Description
 [*VendorDisputesApi*](doc/VendorDisputesApi.md) | [**sendVendorDisputeMessage**](doc/VendorDisputesApi.md#sendvendordisputemessage) | **POST** /vendor/disputes/{caseId}/messages |
 [*VendorFinanceApi*](doc/VendorFinanceApi.md) | [**approveVendorOnlineBalance**](doc/VendorFinanceApi.md#approvevendoronlinebalance) | **POST** /vendor/orders/{orderId}/online-balance/approve |
 [*VendorFinanceApi*](doc/VendorFinanceApi.md) | [**exportVendorTransactions**](doc/VendorFinanceApi.md#exportvendortransactions) | **GET** /vendor/finance/transactions/export |
+[*VendorFinanceApi*](doc/VendorFinanceApi.md) | [**getVendorCommissionMonitoring**](doc/VendorFinanceApi.md#getvendorcommissionmonitoring) | **GET** /vendor/finance/commissions |
 [*VendorFinanceApi*](doc/VendorFinanceApi.md) | [**getVendorEarnings**](doc/VendorFinanceApi.md#getvendorearnings) | **GET** /vendor/finance/earnings |
 [*VendorFinanceApi*](doc/VendorFinanceApi.md) | [**getVendorFeePayment**](doc/VendorFinanceApi.md#getvendorfeepayment) | **GET** /vendor/finance/payments/{paymentId} |
 [*VendorFinanceApi*](doc/VendorFinanceApi.md) | [**getVendorFeeStatement**](doc/VendorFinanceApi.md#getvendorfeestatement) | **GET** /vendor/finance/statements/{statementId} |
@@ -865,6 +894,11 @@ Class | Method | HTTP request | Description
  - [CheckoutSubmissionEnvelope](doc/CheckoutSubmissionEnvelope.md)
  - [CheckoutSubmitRequest](doc/CheckoutSubmitRequest.md)
  - [CheckoutVendorRef](doc/CheckoutVendorRef.md)
+ - [CommissionPolicies](doc/CommissionPolicies.md)
+ - [CommissionPoliciesEnvelope](doc/CommissionPoliciesEnvelope.md)
+ - [CommissionPolicy](doc/CommissionPolicy.md)
+ - [CommissionPolicyEnvelope](doc/CommissionPolicyEnvelope.md)
+ - [CommissionPolicyPublishRequest](doc/CommissionPolicyPublishRequest.md)
  - [CommissionTrendPoint](doc/CommissionTrendPoint.md)
  - [ComparableGroupCreate](doc/ComparableGroupCreate.md)
  - [ComparableGroupEnvelope](doc/ComparableGroupEnvelope.md)
@@ -934,11 +968,38 @@ Class | Method | HTTP request | Description
  - [DeliveryWorkspacePage](doc/DeliveryWorkspacePage.md)
  - [DeliveryWorkspacePageMeta](doc/DeliveryWorkspacePageMeta.md)
  - [DirectoryAvailability](doc/DirectoryAvailability.md)
+ - [DirectoryBuyerEnvelope](doc/DirectoryBuyerEnvelope.md)
+ - [DirectoryBuyerListEnvelope](doc/DirectoryBuyerListEnvelope.md)
+ - [DirectoryBuyerProfile](doc/DirectoryBuyerProfile.md)
+ - [DirectoryBuyerProfileActivity](doc/DirectoryBuyerProfileActivity.md)
+ - [DirectoryBuyerProfileProfile](doc/DirectoryBuyerProfileProfile.md)
+ - [DirectoryBuyerProfileRatings](doc/DirectoryBuyerProfileRatings.md)
+ - [DirectoryBuyerProfileRatingsReceived](doc/DirectoryBuyerProfileRatingsReceived.md)
+ - [DirectoryBuyerProfileRatingsWritten](doc/DirectoryBuyerProfileRatingsWritten.md)
+ - [DirectoryBuyerProfileRecentOrdersInner](doc/DirectoryBuyerProfileRecentOrdersInner.md)
+ - [DirectoryBuyerRow](doc/DirectoryBuyerRow.md)
+ - [DirectoryListing](doc/DirectoryListing.md)
+ - [DirectoryListingListEnvelope](doc/DirectoryListingListEnvelope.md)
+ - [DirectoryPageMeta](doc/DirectoryPageMeta.md)
+ - [DirectoryReview](doc/DirectoryReview.md)
+ - [DirectoryReviewListEnvelope](doc/DirectoryReviewListEnvelope.md)
+ - [DirectoryReviewRatingsValue](doc/DirectoryReviewRatingsValue.md)
+ - [DirectorySanction](doc/DirectorySanction.md)
  - [DirectorySupplierDetail](doc/DirectorySupplierDetail.md)
  - [DirectorySupplierDetailEnvelope](doc/DirectorySupplierDetailEnvelope.md)
  - [DirectorySupplierPhoto](doc/DirectorySupplierPhoto.md)
  - [DirectorySupplierPhotoEnvelope](doc/DirectorySupplierPhotoEnvelope.md)
  - [DirectorySupplierSummary](doc/DirectorySupplierSummary.md)
+ - [DirectoryVendorEnvelope](doc/DirectoryVendorEnvelope.md)
+ - [DirectoryVendorListEnvelope](doc/DirectoryVendorListEnvelope.md)
+ - [DirectoryVendorProfile](doc/DirectoryVendorProfile.md)
+ - [DirectoryVendorProfileActivity](doc/DirectoryVendorProfileActivity.md)
+ - [DirectoryVendorProfileOwner](doc/DirectoryVendorProfileOwner.md)
+ - [DirectoryVendorProfileRatings](doc/DirectoryVendorProfileRatings.md)
+ - [DirectoryVendorProfileRatingsProduct](doc/DirectoryVendorProfileRatingsProduct.md)
+ - [DirectoryVendorProfileRatingsStore](doc/DirectoryVendorProfileRatingsStore.md)
+ - [DirectoryVendorProfileStore](doc/DirectoryVendorProfileStore.md)
+ - [DirectoryVendorRow](doc/DirectoryVendorRow.md)
  - [DiscoveryCounts](doc/DiscoveryCounts.md)
  - [DiscoveryPreferences](doc/DiscoveryPreferences.md)
  - [DiscoveryPreferencesEnvelope](doc/DiscoveryPreferencesEnvelope.md)
@@ -1323,6 +1384,15 @@ Class | Method | HTTP request | Description
  - [ProductComplianceQueueItem](doc/ProductComplianceQueueItem.md)
  - [ProductDeliveryPreviewRequest](doc/ProductDeliveryPreviewRequest.md)
  - [ProductRatingSummary](doc/ProductRatingSummary.md)
+ - [ProjectArrangement](doc/ProjectArrangement.md)
+ - [ProjectArrangementCreate](doc/ProjectArrangementCreate.md)
+ - [ProjectArrangementEdit](doc/ProjectArrangementEdit.md)
+ - [ProjectArrangementInquiry](doc/ProjectArrangementInquiry.md)
+ - [ProjectArrangementPage](doc/ProjectArrangementPage.md)
+ - [ProjectArrangementPageResponse](doc/ProjectArrangementPageResponse.md)
+ - [ProjectArrangementResponse](doc/ProjectArrangementResponse.md)
+ - [ProjectArrangementSubmit](doc/ProjectArrangementSubmit.md)
+ - [ProjectArrangementSubmitPaymentsInner](doc/ProjectArrangementSubmitPaymentsInner.md)
  - [ProjectBudget](doc/ProjectBudget.md)
  - [ProjectCandidate](doc/ProjectCandidate.md)
  - [ProjectCandidateRequest](doc/ProjectCandidateRequest.md)
@@ -1330,8 +1400,13 @@ Class | Method | HTTP request | Description
  - [ProjectCompile](doc/ProjectCompile.md)
  - [ProjectCompiledEstimate](doc/ProjectCompiledEstimate.md)
  - [ProjectCreate](doc/ProjectCreate.md)
+ - [ProjectDraftItemInput](doc/ProjectDraftItemInput.md)
+ - [ProjectDraftSupplierRequest](doc/ProjectDraftSupplierRequest.md)
+ - [ProjectDraftVendorGroup](doc/ProjectDraftVendorGroup.md)
  - [ProjectEstimatePage](doc/ProjectEstimatePage.md)
  - [ProjectEstimatePageResponse](doc/ProjectEstimatePageResponse.md)
+ - [ProjectFulfillment](doc/ProjectFulfillment.md)
+ - [ProjectFulfillmentLine](doc/ProjectFulfillmentLine.md)
  - [ProjectImportPreview](doc/ProjectImportPreview.md)
  - [ProjectImportPreviewResponse](doc/ProjectImportPreviewResponse.md)
  - [ProjectImportRequest](doc/ProjectImportRequest.md)
@@ -1343,6 +1418,7 @@ Class | Method | HTTP request | Description
  - [ProjectMissingResolve](doc/ProjectMissingResolve.md)
  - [ProjectPage](doc/ProjectPage.md)
  - [ProjectPageResponse](doc/ProjectPageResponse.md)
+ - [ProjectPaymentMethod](doc/ProjectPaymentMethod.md)
  - [ProjectPreferenceReset](doc/ProjectPreferenceReset.md)
  - [ProjectPreferenceSave](doc/ProjectPreferenceSave.md)
  - [ProjectPreferences](doc/ProjectPreferences.md)
@@ -1350,11 +1426,13 @@ Class | Method | HTTP request | Description
  - [ProjectRoute](doc/ProjectRoute.md)
  - [ProjectRouteResponse](doc/ProjectRouteResponse.md)
  - [ProjectSelectionPreview](doc/ProjectSelectionPreview.md)
+ - [ProjectSeparatePurchase](doc/ProjectSeparatePurchase.md)
  - [ProjectSite](doc/ProjectSite.md)
  - [ProjectSpecificationDetail](doc/ProjectSpecificationDetail.md)
  - [ProjectSpecificationSelection](doc/ProjectSpecificationSelection.md)
  - [ProjectSummary](doc/ProjectSummary.md)
  - [ProjectUpdate](doc/ProjectUpdate.md)
+ - [ProjectVendorSelectionRequest](doc/ProjectVendorSelectionRequest.md)
  - [ProjectVersionRequest](doc/ProjectVersionRequest.md)
  - [ProjectView](doc/ProjectView.md)
  - [ProjectViewResponse](doc/ProjectViewResponse.md)
@@ -1458,6 +1536,33 @@ Class | Method | HTTP request | Description
  - [SupplierResult](doc/SupplierResult.md)
  - [SupplierServiceability](doc/SupplierServiceability.md)
  - [SupplierTier](doc/SupplierTier.md)
+ - [SupportAccessEmail](doc/SupportAccessEmail.md)
+ - [SupportAccessExchange](doc/SupportAccessExchange.md)
+ - [SupportAccessResponse](doc/SupportAccessResponse.md)
+ - [SupportAccessResult](doc/SupportAccessResult.md)
+ - [SupportAttachment](doc/SupportAttachment.md)
+ - [SupportCategory](doc/SupportCategory.md)
+ - [SupportCommandResponse](doc/SupportCommandResponse.md)
+ - [SupportCommandResult](doc/SupportCommandResult.md)
+ - [SupportEmailResponse](doc/SupportEmailResponse.md)
+ - [SupportEmailResult](doc/SupportEmailResult.md)
+ - [SupportEntry](doc/SupportEntry.md)
+ - [SupportEntryDetails](doc/SupportEntryDetails.md)
+ - [SupportEntryListResponse](doc/SupportEntryListResponse.md)
+ - [SupportHandler](doc/SupportHandler.md)
+ - [SupportHandlerListResponse](doc/SupportHandlerListResponse.md)
+ - [SupportPageMeta](doc/SupportPageMeta.md)
+ - [SupportPortal](doc/SupportPortal.md)
+ - [SupportReceipt](doc/SupportReceipt.md)
+ - [SupportReceiptResponse](doc/SupportReceiptResponse.md)
+ - [SupportReferenceType](doc/SupportReferenceType.md)
+ - [SupportReplyResponse](doc/SupportReplyResponse.md)
+ - [SupportStatus](doc/SupportStatus.md)
+ - [SupportTicket](doc/SupportTicket.md)
+ - [SupportTicketListResponse](doc/SupportTicketListResponse.md)
+ - [SupportTicketResponse](doc/SupportTicketResponse.md)
+ - [SupportUpdate](doc/SupportUpdate.md)
+ - [SupportUserType](doc/SupportUserType.md)
  - [TaxAdjustment](doc/TaxAdjustment.md)
  - [TaxAdjustmentEnvelope](doc/TaxAdjustmentEnvelope.md)
  - [TaxAdjustmentListEnvelope](doc/TaxAdjustmentListEnvelope.md)
@@ -1485,6 +1590,10 @@ Class | Method | HTTP request | Description
  - [VendorCancellationPreviewEnvelope](doc/VendorCancellationPreviewEnvelope.md)
  - [VendorCancellationRequestRef](doc/VendorCancellationRequestRef.md)
  - [VendorCommissionAcceptance](doc/VendorCommissionAcceptance.md)
+ - [VendorCommissionAssessment](doc/VendorCommissionAssessment.md)
+ - [VendorCommissionMonitoring](doc/VendorCommissionMonitoring.md)
+ - [VendorCommissionMonitoringEnvelope](doc/VendorCommissionMonitoringEnvelope.md)
+ - [VendorCommissionSummary](doc/VendorCommissionSummary.md)
  - [VendorCurrentCompetitors](doc/VendorCurrentCompetitors.md)
  - [VendorDashboardDisputes](doc/VendorDashboardDisputes.md)
  - [VendorDashboardDisputesSeriesInner](doc/VendorDashboardDisputesSeriesInner.md)
@@ -1650,6 +1759,7 @@ Class | Method | HTTP request | Description
  - [WithholdingThresholdPanel](doc/WithholdingThresholdPanel.md)
  - [WorkPackageAlternative](doc/WorkPackageAlternative.md)
  - [WorkPackageAlternativePage](doc/WorkPackageAlternativePage.md)
+ - [WorkPackageAlternativePageExcluded](doc/WorkPackageAlternativePageExcluded.md)
  - [WorkPackageAlternativePageResponse](doc/WorkPackageAlternativePageResponse.md)
  - [WorkPackageBudgetEstimate](doc/WorkPackageBudgetEstimate.md)
  - [WorkPackageBudgetEstimateLine](doc/WorkPackageBudgetEstimateLine.md)
@@ -1672,6 +1782,12 @@ Class | Method | HTTP request | Description
 
 
 Authentication schemes defined for the API:
+### supportGuestCookie
+
+- **Type**: API key
+- **API key parameter name**: mp_support
+- **Location**:
+
 ### passportBearer
 
 - **Type**: HTTP Bearer Token authentication (JWT)

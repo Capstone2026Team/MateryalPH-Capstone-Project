@@ -67,7 +67,7 @@ export interface WorkPackageView {
      */
     currentVersionId?: string;
     /**
-     *
+     * Current active Vendor selection; null when the corresponding order is cancelled, declined or expired. The order itself remains available as history.
      */
     selectedVendorId?: string;
     /**
@@ -91,11 +91,11 @@ export interface WorkPackageView {
      */
     document: { [key: string]: any; };
     /**
-     * True when an order, tagged purchase for a missing line or selected Vendor is tied to the package.
+     * True while a non-cancelled, non-declined, non-expired order or tagged purchase is tied to this package, or a Vendor selection has no matching closed order. A historical closed order and its old selection do not block editing, reactivation or deletion. Completed commercial work remains protected.
      */
     hasOrder?: boolean;
     /**
-     * True while the package has no order and its Project is Active. Clients hide the delete action otherwise; the server enforces the rule.
+     * True when has_order is false and the Project is Active. Cancelled order history is retained; deleting a package with locked history hides it instead of deleting commercial records.
      */
     canDelete?: boolean;
 }

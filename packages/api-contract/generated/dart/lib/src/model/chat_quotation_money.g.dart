@@ -8,6 +8,8 @@ part of 'chat_quotation_money.dart';
 
 class _$ChatQuotationMoney extends ChatQuotationMoney {
   @override
+  final int? materialsGrossCentavos;
+  @override
   final int materialsPayableCentavos;
   @override
   final int materialsVatCentavos;
@@ -25,7 +27,8 @@ class _$ChatQuotationMoney extends ChatQuotationMoney {
       (ChatQuotationMoneyBuilder()..update(updates))._build();
 
   _$ChatQuotationMoney._(
-      {required this.materialsPayableCentavos,
+      {this.materialsGrossCentavos,
+      required this.materialsPayableCentavos,
       required this.materialsVatCentavos,
       required this.vendorDiscountCentavos,
       required this.deliveryCentavos,
@@ -45,6 +48,7 @@ class _$ChatQuotationMoney extends ChatQuotationMoney {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is ChatQuotationMoney &&
+        materialsGrossCentavos == other.materialsGrossCentavos &&
         materialsPayableCentavos == other.materialsPayableCentavos &&
         materialsVatCentavos == other.materialsVatCentavos &&
         vendorDiscountCentavos == other.vendorDiscountCentavos &&
@@ -56,6 +60,7 @@ class _$ChatQuotationMoney extends ChatQuotationMoney {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, materialsGrossCentavos.hashCode);
     _$hash = $jc(_$hash, materialsPayableCentavos.hashCode);
     _$hash = $jc(_$hash, materialsVatCentavos.hashCode);
     _$hash = $jc(_$hash, vendorDiscountCentavos.hashCode);
@@ -69,6 +74,7 @@ class _$ChatQuotationMoney extends ChatQuotationMoney {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'ChatQuotationMoney')
+          ..add('materialsGrossCentavos', materialsGrossCentavos)
           ..add('materialsPayableCentavos', materialsPayableCentavos)
           ..add('materialsVatCentavos', materialsVatCentavos)
           ..add('vendorDiscountCentavos', vendorDiscountCentavos)
@@ -82,6 +88,11 @@ class _$ChatQuotationMoney extends ChatQuotationMoney {
 class ChatQuotationMoneyBuilder
     implements Builder<ChatQuotationMoney, ChatQuotationMoneyBuilder> {
   _$ChatQuotationMoney? _$v;
+
+  int? _materialsGrossCentavos;
+  int? get materialsGrossCentavos => _$this._materialsGrossCentavos;
+  set materialsGrossCentavos(int? materialsGrossCentavos) =>
+      _$this._materialsGrossCentavos = materialsGrossCentavos;
 
   int? _materialsPayableCentavos;
   int? get materialsPayableCentavos => _$this._materialsPayableCentavos;
@@ -119,6 +130,7 @@ class ChatQuotationMoneyBuilder
   ChatQuotationMoneyBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _materialsGrossCentavos = $v.materialsGrossCentavos;
       _materialsPayableCentavos = $v.materialsPayableCentavos;
       _materialsVatCentavos = $v.materialsVatCentavos;
       _vendorDiscountCentavos = $v.vendorDiscountCentavos;
@@ -146,6 +158,7 @@ class ChatQuotationMoneyBuilder
   _$ChatQuotationMoney _build() {
     final _$result = _$v ??
         _$ChatQuotationMoney._(
+          materialsGrossCentavos: materialsGrossCentavos,
           materialsPayableCentavos: BuiltValueNullFieldError.checkNotNull(
               materialsPayableCentavos,
               r'ChatQuotationMoney',

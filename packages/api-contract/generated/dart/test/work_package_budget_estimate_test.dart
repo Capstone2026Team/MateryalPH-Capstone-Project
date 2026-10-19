@@ -7,6 +7,34 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(WorkPackageBudgetEstimate, () {
+    // Actual route/vehicle estimate for a representative exact-match supplier plan, consolidated per supplier. Zero for pickup-only supplies; ready-mixed concrete includes mixer delivery even under PICKUP. Null when delivery or supplier availability needs review.
+    // int deliveryCentavos
+    test('to test the property `deliveryCentavos`', () async {
+      // TODO
+    });
+
+    // Average eligible material prices plus applicable supplier delivery. Null until every material and delivery fee can be estimated.
+    // int estimatedTotalCentavos
+    test('to test the property `estimatedTotalCentavos`', () async {
+      // TODO
+    });
+
+    // String deliveryStatus
+    test('to test the property `deliveryStatus`', () async {
+      // TODO
+    });
+
+    // BuiltList<String> deliveryIssues
+    test('to test the property `deliveryIssues`', () async {
+      // TODO
+    });
+
+    // Both is budgeted using the Site Delivery scenario.
+    // String fulfillmentMethod
+    test('to test the property `fulfillmentMethod`', () async {
+      // TODO
+    });
+
     // BuiltList<WorkPackageBudgetEstimateLine> lines
     test('to test the property `lines`', () async {
       // TODO

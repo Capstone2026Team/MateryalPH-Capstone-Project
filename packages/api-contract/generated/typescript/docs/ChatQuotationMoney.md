@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`materialsGrossCentavos` | number
 `materialsPayableCentavos` | number
 `materialsVatCentavos` | number
 `vendorDiscountCentavos` | number
@@ -20,6 +21,7 @@ import type { ChatQuotationMoney } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "materialsGrossCentavos": null,
   "materialsPayableCentavos": null,
   "materialsVatCentavos": null,
   "vendorDiscountCentavos": null,

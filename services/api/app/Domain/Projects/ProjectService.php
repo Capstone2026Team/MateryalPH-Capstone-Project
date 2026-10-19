@@ -6,6 +6,7 @@ namespace App\Domain\Projects;
 
 use App\Domain\Catalog\CatalogAccess;
 use App\Domain\Geography\BuyerProfiles;
+use App\Domain\Geography\RadiusPolicy;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Messaging\QuotationService;
@@ -79,9 +80,21 @@ final class ProjectService
     /** @return array<string, mixed> */
     public function packageSummary(object $w): array
     {
-        $order = DB::table('orders')->where('work_package_id', $w->id)->where('procurement_type', 'PROJECT_BASED')->where('work_package_version_id', $w->current_version_id)->orderByDesc('created_at')->first();
+        $order = $this->currentPackageOrder($w);
         $status = $w->status;
-        if ($order !== null) {
+        $vendorOrders = [];
+        if ($w->selected_arrangement_id !== null) {
+            $all = DB::table('orders')->where('project_arrangement_id', $w->selected_arrangement_id)->orderBy('created_at')->get();
+            $active = $all->reject(static fn (object $o): bool => in_array($o->order_state, OrderStates::CLOSED_BEFORE_FULFILLMENT, true));
+            $status = match (true) {
+                $active->isNotEmpty() && $active->every(static fn (object $o): bool => $o->order_state === 'COMPLETED') && $this->arrangementComplete($w) => 'COMPLETED',
+                $active->contains(static fn (object $o): bool => $o->accepted_at !== null && $o->order_state !== 'AWAITING_PAYMENT') => 'IN_PROGRESS',
+                $active->contains('order_state', 'AWAITING_PAYMENT') => 'AWAITING_PAYMENT',
+                $active->contains(static fn (object $o): bool => $o->order_state !== 'COMPLETED') => 'VENDOR_SELECTED',
+                default => 'ACTIVE',
+            };
+            $vendorOrders = $all->map(static fn (object $o): array => ['id' => $o->id, 'vendor_id' => $o->vendor_organization_id, 'reference' => $o->reference, 'order_state' => $o->order_state])->all();
+        } elseif ($order !== null) {
             $status = match (true) {
                 in_array($order->order_state, ['CANCELLED', 'DECLINED', 'EXPIRED'], true) => 'CANCELLED',
                 $order->order_state === 'COMPLETED' && $this->missingComplete((string) $w->current_version_id) => 'COMPLETED',
@@ -92,7 +105,30 @@ final class ProjectService
         }
 
         return ['id' => $w->id, 'project_id' => $w->project_id, 'name' => $w->name, 'status' => $status, 'budget_centavos' => (int) $w->budget_centavos,
-            'lock_version' => (int) $w->lock_version, 'current_version_id' => $w->current_version_id, 'selected_vendor_id' => $w->selected_vendor_organization_id, 'order_id' => $order?->id];
+            'lock_version' => (int) $w->lock_version, 'current_version_id' => $w->current_version_id, 'selected_vendor_id' => $this->hasActiveSelection($w, $order) ? $w->selected_vendor_organization_id : null, 'order_id' => $order?->id,
+            'procurement_candidate_id' => $order !== null && ! in_array($order->order_state, OrderStates::CLOSED_BEFORE_FULFILLMENT, true) ? $order->compiled_estimate_vendor_id : null,
+            'selected_arrangement_id' => $w->selected_arrangement_id, 'vendor_orders' => $vendorOrders];
+    }
+
+    private function arrangementComplete(object $w): bool
+    {
+        $buyer = (string) DB::table('projects')->where('id', $w->project_id)->value('buyer_profile_id');
+        $purchases = PackageFulfillment::purchases($w, $buyer);
+        $completed = DB::table('orders')->where('project_arrangement_id', $w->selected_arrangement_id)->where('order_state', 'COMPLETED')->pluck('id')->all();
+        foreach (DB::table('work_package_lines')->where('work_package_version_id', $w->current_version_id)->get() as $line) {
+            $quantity = '0';
+            foreach ($purchases[$line->id] ?? [] as $purchase) {
+                if ($purchase['satisfies_requirement'] && in_array($purchase['order_id'], $completed, true)) {
+                    $quantity = bcadd($quantity, $purchase['quantity'], 4);
+                }
+            }
+            $waiver = DB::table('work_package_missing_lines')->where('work_package_version_id', $w->current_version_id)->where('work_package_line_id', $line->id)->whereNotNull('waiver_reason')->value('quantity');
+            if (bccomp(bcadd($quantity, (string) ($waiver ?? '0'), 4), (string) $line->quantity, 4) < 0) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /** @return array<string, mixed> */
@@ -105,7 +141,12 @@ final class ProjectService
         // Item-Based orders bought for a missing line (owner decision 2026-10-12); linking still verifies them.
         $buyer = $this->buyers->idFor($request);
         foreach ($missing as &$m) {
-            $m['tagged_orders'] = DB::table('orders as o')->join('order_lines as ol', 'ol.order_id', '=', 'o.id')->where('ol.work_package_line_id', $m['work_package_line_id'])
+            $m['tagged_orders'] = DB::table('orders as o')->join('order_lines as ol', 'ol.order_id', '=', 'o.id')->where(function ($query) use ($m, $w): void {
+                $query->where('ol.work_package_line_id', $m['work_package_line_id'])->orWhereExists(function ($allocation) use ($m, $w): void {
+                    $allocation->selectRaw('1')->from('project_procurement_draft_items as d')->whereColumn('d.order_id', 'o.id')
+                        ->where('d.work_package_version_id', $w->current_version_id)->where('d.work_package_line_id', $m['work_package_line_id']);
+                });
+            })
                 ->where('o.buyer_profile_id', $buyer)->where('o.procurement_type', 'ITEM_BASED')->whereNotIn('o.order_state', OrderStates::CLOSED_BEFORE_FULFILLMENT)
                 ->distinct()->orderBy('o.reference')->get(['o.id', 'o.reference', 'o.order_state', 'o.accepted_at'])
                 ->map(static fn (object $o): array => ['id' => $o->id, 'reference' => $o->reference, 'order_state' => $o->order_state, 'linkable' => $o->accepted_at !== null])->all();
@@ -130,16 +171,34 @@ final class ProjectService
         $versions = DB::table('work_package_versions')->select('id')->where('work_package_id', $w->id);
         $open = static fn ($query) => $query->whereNotIn('o.order_state', OrderStates::CLOSED_BEFORE_FULFILLMENT);
 
-        return $w->selected_vendor_organization_id !== null
+        return $this->hasActiveSelection($w, $this->currentPackageOrder($w))
+            || ($w->selected_arrangement_id !== null && DB::table('project_arrangement_vendors as m')->join('quotations as q', 'q.conversation_id', '=', 'm.conversation_id')
+                ->where('m.arrangement_id', $w->selected_arrangement_id)->whereNotNull('m.requested_at')->whereIn('q.state', ['DRAFT', 'PUBLISHED', 'VIEWED', 'COUNTERED', 'STOCK_REVALIDATION_REQUIRED'])
+                ->where(fn ($q) => $q->whereNotIn('q.state', ['PUBLISHED', 'VIEWED', 'COUNTERED'])->orWhere('q.response_due_at', '>', now()))->exists())
             || DB::table('orders as o')->where('o.work_package_id', $w->id)->where($open)->exists()
             || DB::table('work_package_missing_lines as m')->join('orders as o', 'o.id', '=', 'm.linked_order_id')->whereIn('m.work_package_version_id', $versions)->where($open)->exists()
             || DB::table('order_lines as ol')->join('orders as o', 'o.id', '=', 'ol.order_id')->join('work_package_lines as l', 'l.id', '=', 'ol.work_package_line_id')->whereIn('l.work_package_version_id', $versions)->where($open)->exists();
     }
 
+    private function currentPackageOrder(object $w): ?object
+    {
+        return DB::table('orders')->where('work_package_id', $w->id)->where('procurement_type', 'PROJECT_BASED')->where('work_package_version_id', $w->current_version_id)
+            ->orderByDesc('created_at')->orderByDesc('id')->first();
+    }
+
+    /** A closed order's historical Vendor pointer is not an active assignment. */
+    private function hasActiveSelection(object $w, ?object $order): bool
+    {
+        return $w->selected_vendor_organization_id !== null && ! ($order !== null
+            && $order->vendor_organization_id === $w->selected_vendor_organization_id
+            && in_array($order->order_state, OrderStates::CLOSED_BEFORE_FULFILLMENT, true));
+    }
+
     /** @return array<string, mixed> */
     private function versionView(object $v): array
     {
-        return ['id' => $v->id, 'content_hash' => $v->content_hash, 'locked_at' => $v->locked_at, 'content' => json_decode($v->content, true)];
+        // Versions saved before the single Project-Based radius carry their old value; the radius in force is reported, the saved copy stays untouched.
+        return ['id' => $v->id, 'content_hash' => $v->content_hash, 'locked_at' => $v->locked_at, 'content' => array_merge(json_decode($v->content, true), ['radius_km' => RadiusPolicy::PROJECT_BASED_KM])];
     }
 
     /** @param array<string, mixed> $input */
@@ -189,7 +248,7 @@ final class ProjectService
                 throw new AuthenticationException('PROJECT_INCOMPLETE', 'Complete or cancel all Work Packages first.', 409);
             }
             if (in_array($input['status'] ?? null, ['COMPLETED', 'ARCHIVED'], true)) {
-                foreach (DB::table('work_packages')->where('project_id', $id)->whereNull('selected_vendor_organization_id')->orderBy('id')->lockForUpdate()->get() as $unassigned) {
+                foreach (DB::table('work_packages')->where('project_id', $id)->whereNull('selected_vendor_organization_id')->whereNull('selected_arrangement_id')->orderBy('id')->lockForUpdate()->get() as $unassigned) {
                     $this->invalidate($unassigned->id);
                 }
             }
@@ -267,13 +326,14 @@ final class ProjectService
                 if ($this->hasOrder($w)) {
                     throw new AuthenticationException('WORK_PACKAGE_HAS_ORDER', 'This Work Package has an order, so it cannot be edited. Cancel the order before correcting the package.', 409);
                 }
-                if (! in_array($w->status, ['DRAFT', 'ACTIVE', 'QUOTATION_INQUIRY', 'CANCELLED'], true)) {
+                $currentStatus = $this->packageSummary($w)['status'];
+                if (! in_array($currentStatus, ['DRAFT', 'ACTIVE', 'QUOTATION_INQUIRY', 'CANCELLED'], true)) {
                     throw new AuthenticationException('WORK_PACKAGE_LOCKED', 'This Work Package can no longer be edited.', 409);
                 }
                 // An edited Draft stays a Draft and a Cancelled package stays Cancelled; a compared or quoted package returns to Active.
-                $status = match ($w->status) {
+                $status = match ($currentStatus) {
                     'ACTIVE', 'QUOTATION_INQUIRY' => 'ACTIVE',
-                    default => $w->status,
+                    default => $currentStatus,
                 };
                 $previous = DB::table('work_package_versions')->where('id', $w->current_version_id)->first();
                 $this->invalidate($packageId);
@@ -319,6 +379,12 @@ final class ProjectService
             }
             unset($line);
             $content = array_intersect_key($input, array_flip(['name', 'description', 'budget_centavos', 'site_id', 'radius_km', 'fulfillment_method', 'payment_method', 'site_contact', 'access_instructions']));
+            $content['radius_km'] = RadiusPolicy::PROJECT_BASED_KM;
+            // Retain legacy saved metadata without making it a new procurement choice.
+            $legacyPayment = $previous === null ? null : (json_decode($previous->content, true)['payment_method'] ?? null);
+            if (! isset($content['payment_method']) && $legacyPayment !== null) {
+                $content['payment_method'] = $legacyPayment;
+            }
             $content['site'] = $this->siteView($site);
             $content['destination'] = ['type' => $input['fulfillment_method'], 'intended' => $intended, 'heavy_vehicle_restriction' => $input['heavy_vehicle_restriction'] ?? 'NO',
                 'alternate_drop_off' => $alternate, 'vehicle_endpoint' => $alternate === null ? 'INTENDED_LOCATION' : 'ALTERNATE_DROP_OFF', 'access_instructions' => $input['access_instructions'] ?? null];
@@ -347,7 +413,7 @@ final class ProjectService
                 DB::table('work_package_versions')->where('id', $versionId)->update(['locked_at' => now()]);
             }
             DB::table('work_packages')->where('id', $packageId)->update(['name' => $input['name'], 'budget_centavos' => $input['budget_centavos'], 'status' => $status,
-                'selected_vendor_organization_id' => null, 'current_version_id' => $versionId, 'lock_version' => (int) ($w->lock_version ?? 0) + 1, 'updated_at' => now()]);
+                'selected_vendor_organization_id' => null, 'selected_arrangement_id' => null, 'current_version_id' => $versionId, 'lock_version' => (int) ($w->lock_version ?? 0) + 1, 'updated_at' => now()]);
             $this->record($request, $w === null ? 'WORK_PACKAGE_DRAFT_SAVED' : 'WORK_PACKAGE_UPDATED', $packageId);
             if ($previous !== null) {
                 $this->audit->account($request, 'WORK_PACKAGE_EDITED', 'WORK_PACKAGE', $packageId,
@@ -432,16 +498,38 @@ final class ProjectService
                 return;
             }
             self::version($w, $lock);
-            if ($w->status !== 'CANCELLED' || $w->current_version_id === null) {
+            if ($this->packageSummary($w)['status'] !== 'CANCELLED' || $w->current_version_id === null) {
                 throw new AuthenticationException('WORK_PACKAGE_NOT_CANCELLED', 'Only a cancelled Work Package can be reactivated.', 409);
             }
             if ($this->hasOrder($w)) {
                 throw new AuthenticationException('WORK_PACKAGE_HAS_ORDER', 'This Work Package has an order, so it cannot be reactivated.', 409);
             }
             ProjectBudget::assertAllocation($this->project($request, $w->project_id, true), $id, (int) $w->budget_centavos);
-            DB::table('work_package_versions')->where('id', $w->current_version_id)->whereNull('locked_at')->update(['locked_at' => now()]);
-            DB::table('work_packages')->where('id', $id)->update(['status' => 'ACTIVE', 'lock_version' => $lock + 1, 'updated_at' => now()]);
-            $this->audit->account($request, 'WORK_PACKAGE_REACTIVATED', 'WORK_PACKAGE', $id, before: ['status' => 'CANCELLED'], after: ['status' => 'ACTIVE']);
+            $versionId = (string) $w->current_version_id;
+            if ($this->currentPackageOrder($w) !== null) {
+                // The same Buyer-visible package gets a new internal original so cancelled
+                // order gaps, waivers and draft selections stay with their historical order.
+                $previous = DB::table('work_package_versions')->where('id', $versionId)->first();
+                $content = json_decode($previous->content, true);
+                $versionId = (string) Str::uuid7();
+                $lineIds = [];
+                foreach ($content['lines'] as &$line) {
+                    $lineIds[$line['id']] = (string) Str::uuid7();
+                    $line['id'] = $lineIds[$line['id']];
+                }
+                unset($line);
+                $json = json_encode($content, JSON_THROW_ON_ERROR);
+                DB::table('work_package_versions')->insert(['id' => $versionId, 'work_package_id' => $id,
+                    'version' => (int) DB::table('work_package_versions')->where('work_package_id', $id)->max('version') + 1,
+                    'content' => $json, 'content_hash' => hash('sha256', $json), 'created_by_user_id' => $request->user()->id, 'created_at' => now(), 'updated_at' => now()]);
+                foreach (DB::table('work_package_lines')->where('work_package_version_id', $previous->id)->orderBy('line_number')->get() as $line) {
+                    DB::table('work_package_lines')->insert(array_merge((array) $line, ['id' => $lineIds[$line->id], 'work_package_version_id' => $versionId, 'created_at' => now(), 'updated_at' => now()]));
+                }
+            }
+            DB::table('work_package_versions')->where('id', $versionId)->whereNull('locked_at')->update(['locked_at' => now()]);
+            $this->invalidate($id);
+            DB::table('work_packages')->where('id', $id)->update(['status' => 'ACTIVE', 'selected_vendor_organization_id' => null, 'selected_arrangement_id' => null, 'current_version_id' => $versionId, 'lock_version' => $lock + 1, 'updated_at' => now()]);
+            $this->audit->account($request, 'WORK_PACKAGE_REACTIVATED', 'WORK_PACKAGE', $id, before: ['status' => 'CANCELLED', 'version_id' => $w->current_version_id], after: ['status' => 'ACTIVE', 'version_id' => $versionId]);
             $this->record($request, 'WORK_PACKAGE_REACTIVATED', $id);
             $this->keys->claim($request, 'PACKAGE_REACTIVATE', $key, $id, 200);
         });
@@ -455,8 +543,31 @@ final class ProjectService
 
     public function missingComplete(string $version): bool
     {
-        return ! DB::table('work_package_missing_lines as m')->leftJoin('orders as o', 'o.id', '=', 'm.linked_order_id')->where('m.work_package_version_id', $version)->whereNull('m.waived_by_user_id')
-            ->where(fn ($q) => $q->whereNull('o.id')->orWhere('o.order_state', '<>', 'COMPLETED'))->exists();
+        $open = DB::table('work_package_missing_lines as m')->leftJoin('orders as o', 'o.id', '=', 'm.linked_order_id')->where('m.work_package_version_id', $version)->whereNull('m.waived_by_user_id')
+            ->where(fn ($q) => $q->whereNull('o.id')->orWhere('o.order_state', '<>', 'COMPLETED'))->get(['m.work_package_line_id', 'm.quantity']);
+        if ($open->isEmpty()) {
+            return true;
+        }
+        $package = DB::table('work_packages')->where('current_version_id', $version)->first();
+        if ($package === null) {
+            return false;
+        }
+        $buyer = (string) DB::table('projects')->where('id', $package->project_id)->value('buyer_profile_id');
+        $purchases = PackageFulfillment::purchases($package, $buyer);
+        $completed = DB::table('orders')->where('buyer_profile_id', $buyer)->where('work_package_id', $package->id)->where('order_state', 'COMPLETED')->pluck('id')->all();
+        foreach ($open as $line) {
+            $supplied = '0';
+            foreach ($purchases[(string) $line->work_package_line_id] ?? [] as $purchase) {
+                if ($purchase['satisfies_requirement'] && in_array($purchase['order_id'], $completed, true)) {
+                    $supplied = bcadd($supplied, $purchase['quantity'], 4);
+                }
+            }
+            if (bccomp($supplied, (string) $line->quantity, 4) < 0) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /** @param array<string, mixed> $input */
@@ -465,7 +576,19 @@ final class ProjectService
         DB::transaction(function () use ($request, $id, $lineId, $input): void {
             $w = $this->package($request, $id, true);
             self::version($w, $input['lock_version']);
-            $m = DB::table('work_package_missing_lines')->where('id', $lineId)->where('work_package_version_id', $w->current_version_id)->lockForUpdate()->first();
+            $order = $w->selected_arrangement_id === null ? $this->currentPackageOrder($w) : DB::table('orders')->where('project_arrangement_id', $w->selected_arrangement_id)->whereNotIn('order_state', OrderStates::CLOSED_BEFORE_FULFILLMENT)->orderBy('id')->first();
+            if ($order === null || in_array($order->order_state, OrderStates::CLOSED_BEFORE_FULFILLMENT, true)) {
+                throw new AuthenticationException('MISSING_LINE_INACTIVE', 'Missing materials belong to an active Vendor request. Reactivate the Work Package and compare Vendors again.', 409);
+            }
+            if ($w->selected_arrangement_id !== null) {
+                app(ProjectInquiryService::class)->acceptedMissing($w, []);
+            }
+            $m = DB::table('work_package_missing_lines')->where('work_package_version_id', $w->current_version_id)->where(function ($q) use ($w, $lineId): void {
+                $q->where('id', $lineId);
+                if ($w->selected_arrangement_id !== null) {
+                    $q->orWhere('work_package_line_id', $lineId);
+                }
+            })->lockForUpdate()->first();
             $oldOrderState = $m?->linked_order_id === null ? null : DB::table('orders')->where('id', $m->linked_order_id)->value('order_state');
             if ($m === null || ($m->linked_order_id !== null && ! in_array($oldOrderState, OrderStates::CLOSED_BEFORE_FULFILLMENT, true)) || $m->waived_by_user_id !== null) {
                 throw new AuthenticationException('MISSING_LINE_CONFLICT', 'This missing line changed. Refresh the package.', 409);
@@ -511,9 +634,12 @@ final class ProjectService
             } else {
                 $update = ['linked_order_id' => null, 'waived_by_user_id' => $request->user()->id, 'waiver_reason' => $input['reason']];
             }
-            DB::table('work_package_missing_lines')->where('id', $lineId)->update($update + ['updated_at' => now()]);
+            DB::table('work_package_missing_lines')->where('id', $m->id)->update($update + ['updated_at' => now()]);
             DB::table('work_packages')->where('id', $id)->update(['lock_version' => $w->lock_version + 1]);
-            $this->audit->account($request, 'WORK_PACKAGE_MISSING_LINE_RESOLUTION', 'WORK_PACKAGE_MISSING_LINE', $lineId,
+            if ($w->selected_arrangement_id !== null) {
+                DB::table('project_procurement_arrangements')->where('id', $w->selected_arrangement_id)->increment('lock_version');
+            }
+            $this->audit->account($request, 'WORK_PACKAGE_MISSING_LINE_RESOLUTION', 'WORK_PACKAGE_MISSING_LINE', $m->id,
                 ['linked_order_id' => $m->linked_order_id, 'waived_by_user_id' => $m->waived_by_user_id], $update, reason: $input['reason'] ?? null);
             $this->record($request, 'WORK_PACKAGE_MISSING_LINE_RESOLVED', $id);
         });

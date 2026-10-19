@@ -3,16 +3,17 @@ import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Banknote, ClipboardCheck, CreditCard, Download, ExternalLink, Landmark, Percent, ReceiptText, RefreshCw, ShieldAlert, ShieldCheck, Wallet } from 'lucide-react'
 import {
-  ActiveFilters, ALL_DATES, BarList, Button, ChartDataTable, DashboardPanel, DateFilter, DemoLabel, FilterTabs, FinanceDetails, FinanceSection, FormDialog, KpiCard, MethodNote, Pagination, PaymentAttemptBadge, PaymentChannelList, ShareBar,
+  ActiveFilters, ALL_DATES, BarList, Button, ChartDataTable, CommissionRateSummary, DashboardPanel, DataTable, DateFilter, DemoLabel, FilterTabs, FinanceDetails, FinanceSection, FormDialog, KpiCard, MethodNote, Pagination, PaymentAttemptBadge, PaymentChannelList, ShareBar,
   RankedList, RevealableValue, StatusBadge, StatusMessage, StatCards, InfoNote, EmptyState, SectionWorkspace, ThresholdPanel, Toolbar, TrendLineChart,
   analyticsDay, dateFilterLabel, formatChartDay, formatChartMonth, formatCompactCentavos, formatCount, formatManilaDateTime, formatPesoCentavos, type DateFilterRange, type TrendSeries, type VizColor,
 } from '@materyalph/web-ui'
 import {
-  channelRows, exportTransactions, getEarnings, getFinanceOverview, getFinanceReviews, getStatement, listTransactions, payStatement, readableFinanceError, refreshFeePayment, revealTin, section,
+  channelRows, exportTransactions, getCommissionMonitoring, getEarnings, getFinanceOverview, getFinanceReviews, getStatement, listTransactions, payStatement, readableFinanceError, refreshFeePayment, revealTin, section,
   thresholdData, type FeeStatementDetail, type FinanceRow, type FinanceTab, type PaymentAttempt, type PaymentStatusFilter, type VendorEarnings, type VendorEarningsTrendPoint,
 } from '../lib/finance-api'
 import { pesoInputToCentavos } from '../lib/orders-api'
-import { newIdempotencyKey } from '../lib/onboarding-api'
+import { getVendorOnboarding, newIdempotencyKey } from '../lib/onboarding-api'
+import { CommissionTerms } from '../components/CommissionTerms'
 import { storeName } from '../lib/catalog-access'
 import { useOnboardingSnapshot } from '../lib/vendor-status'
 import { ErrorState, LoadingState, PageHeader, VendorShell } from './PhaseThreeVendorPages'
@@ -24,12 +25,12 @@ type Snapshot = NonNullable<ReturnType<typeof useOnboardingSnapshot>['snapshot']
  * Owner-only finance gate. The server enforces it on every request (FINANCE_OWNER_ONLY); this gate only avoids
  * showing a dead page. A Store Manager's operational order access never reaches these modules.
  */
-function FinanceGate({ activeHref, permission, children }: { activeHref: string; permission: 'portal.wallet' | 'portal.earnings'; children: (snapshot: Snapshot) => ReactNode }) {
-  const { snapshot, loading, error, refresh } = useOnboardingSnapshot()
+function FinanceGate({ activeHref, permission, children }: { activeHref: string; permission: 'portal.wallet' | 'portal.earnings'; children: (snapshot: Snapshot, publish: (snapshot: Snapshot) => void) => ReactNode }) {
+  const { snapshot, loading, error, refresh, setSnapshot } = useOnboardingSnapshot()
   if (loading) return <VendorShell activeHref={activeHref} accountLabel="Vendor" navigationData={null}><LoadingState label="Loading finance…" /></VendorShell>
   if (error || !snapshot) return <VendorShell activeHref={activeHref} accountLabel="Vendor" navigationData={null}><ErrorState message={error ?? 'Finance is unavailable.'} onRetry={() => void refresh()} /></VendorShell>
   return <VendorShell activeHref={activeHref} accountLabel={storeName(snapshot)} navigationData={snapshot}>
-    {snapshot.permissions.includes(permission) ? children(snapshot) : <OwnerOnly />}
+    {snapshot.permissions.includes(permission) ? children(snapshot, setSnapshot) : <OwnerOnly />}
   </VendorShell>
 }
 
@@ -42,9 +43,9 @@ function OwnerOnly() {
   </div>
 }
 
-function FinanceTabs({ current }: { current: 'overview' | 'transactions' }) {
+function FinanceTabs({ current }: { current: 'overview' | 'transactions' | 'commissions' }) {
   const navigate = useNavigate()
-  return <FilterTabs appearance="tabs" label="Finance sections" value={current} chips={[{ value: 'overview', label: 'Finance overview' }, { value: 'transactions', label: 'Transaction History' }]} onChange={value => navigate(value === 'transactions' ? '/finance/transactions' : '/finance')} />
+  return <FilterTabs appearance="tabs" label="Finance sections" value={current} chips={[{ value: 'overview', label: 'Finance overview' }, { value: 'commissions', label: 'Commission monitoring' }, { value: 'transactions', label: 'Transaction History' }]} onChange={value => navigate(value === 'overview' ? '/finance' : `/finance/${value}`)} />
 }
 
 function useLoader<T>(load: () => Promise<T>, key?: string) {
@@ -86,7 +87,7 @@ function FinanceOverview() {
   const tin = tax.tin_masked ? <RevealableValue masked={String(tax.tin_masked)} label="TIN" reveal={revealTin} readError={readableFinanceError} /> : 'Not provided'
 
   return <div className="grid min-w-0 gap-6">
-    <PageHeader eyebrow="Finance" title="Finance overview" description="Manage your TEST connection, tax profile, withholding and commission terms." />
+    <PageHeader eyebrow="Finance" title="Finance overview" description="Manage your TEST connection, tax profile, withholding and commission terms." actions={<Link className="inline-flex min-h-11 items-center gap-2 rounded-control border border-border-default bg-surface-primary px-4 text-sm font-semibold text-action-primary" to="/finance/commissions"><Percent size={16} aria-hidden="true" />Monitor commission fees</Link>} />
     <FinanceTabs current="overview" />
     <InfoNote>MateryalPH holds no wallet or balance for your store.</InfoNote>
     {mandatory.length > 0 && <section aria-labelledby="notices-heading" className="grid gap-2">
@@ -139,6 +140,62 @@ function FinanceOverview() {
       <p className="text-sm leading-6 text-text-secondary">This previews the Xendit account shortcut. Account access is simulated while MateryalPH uses Xendit TEST mode.</p>
     </FormDialog>}
   </div>
+}
+
+export function VendorCommissionPage() {
+  return <FinanceGate activeHref="/finance" permission="portal.wallet">{(_, publish) => <CommissionMonitoring onSnapshotSaved={publish} />}</FinanceGate>
+}
+
+function CommissionMonitoring({ onSnapshotSaved }: { onSnapshotSaved: (snapshot: Snapshot) => void }) {
+  const [page, setPage] = useState(1)
+  const [termsOpen, setTermsOpen] = useState(false)
+  const result = useLoader(() => getCommissionMonitoring(page), String(page))
+  const data = result.data?.monitoring
+  const total = data?.summary
+  return <div className="grid min-w-0 gap-6">
+    <PageHeader eyebrow="Finance" title="Commission monitoring" description="Track your store's commission fees from accepted order to monthly statement and payment." actions={<Button variant="outline" onClick={result.reload}><RefreshCw size={16} aria-hidden="true" />Refresh</Button>} />
+    <FinanceTabs current="commissions" />
+    {result.error ? <ErrorState message={result.error} onRetry={result.reload} /> : !data || !total ? <LoadingState label="Loading commission monitoring…" /> : <>
+      {!data.termsAccepted && <StatusMessage tone="info">Review and accept the current Commission Terms before new transactions use this rate. Existing orders keep their saved rate.</StatusMessage>}
+      <CommissionRateSummary rateLabel={data.currentPolicy?.rateLabel} effectiveFrom={data.currentPolicy?.effectiveFrom} nextRateLabel={data.nextPolicy?.rateLabel} nextEffectiveFrom={data.nextPolicy?.effectiveFrom}
+        actions={<Button variant="outline" aria-haspopup="dialog" onClick={() => setTermsOpen(true)}>Review Commission Terms</Button>} />
+      <StatCards label="Commission fee monitoring" tiles={[
+        { key: 'estimated', label: 'Estimated fees', value: formatPesoCentavos(total.estimatedCentavos), hint: 'Accepted orders awaiting completion' },
+        { key: 'earned', label: 'Net earned commission', value: formatPesoCentavos(total.netEarnedCentavos), hint: 'Completed orders less approved credits' },
+        { key: 'outstanding', label: 'Unpaid statements', value: formatPesoCentavos(total.outstandingCentavos), hint: 'Issued bills still due' },
+        { key: 'overdue', label: 'Overdue', value: formatPesoCentavos(total.overdueCentavos), hint: 'Unpaid after the statement due date', tone: total.overdueCentavos > 0 ? 'warning' : 'neutral' },
+      ]} />
+      <DashboardPanel title="Billing and payments" description="All-time recorded fees and payments. Estimated fees are earned only when an order completes.">
+        <FinanceDetails appearance="rows" items={[
+          ['Not yet billed', formatPesoCentavos(total.unbilledCentavos)], ['Draft bills awaiting issue', formatPesoCentavos(total.draftCentavos)],
+          ['Approved commission credits', formatPesoCentavos(total.creditedCentavos)], ['Payments collected', formatPesoCentavos(total.collectedCentavos)],
+          ['Confirmed fee refunds', formatPesoCentavos(total.refundedCentavos)], ['Net collected payments', formatPesoCentavos(total.netCollectedCentavos)],
+        ]} />
+        <Link className="mt-4 inline-flex min-h-11 items-center gap-2 font-semibold text-action-primary underline underline-offset-4" to="/finance/transactions?tab=STATEMENTS"><ReceiptText size={16} aria-hidden="true" />View and pay commission statements</Link>
+      </DashboardPanel>
+      <DashboardPanel title="Commission by order" description="Each order keeps its original rate, including later returns. Amounts exclude materials VAT and delivery.">
+        {data.assessments.length === 0 ? <p className="py-5 text-sm text-text-secondary">No commission assessments yet. An estimate appears when an order is accepted; the fee is earned at completion.</p> : <DataTable caption="Commission by order" minWidth="48rem" headers={['Order', 'Materials basis', 'Saved rate', 'Estimated', 'Earned', 'Credits', 'Net earned', 'Status']}>
+            {data.assessments.map(row => <tr key={row.id}>
+              <th scope="row" className="px-4 py-4 font-semibold">{row.orderReference}</th><td className="px-4 py-4 tabular-nums">{formatPesoCentavos(row.commissionBasisCentavos)}</td><td className="px-4 py-4 tabular-nums">{(row.commissionBasisPoints / 100).toFixed(2)}%</td>
+              {[row.estimatedCentavos, row.earnedCentavos, row.creditedCentavos, row.netCentavos].map((amount, index) => <td key={index} className="px-4 py-4 tabular-nums">{formatPesoCentavos(amount)}</td>)}
+              <td className="px-4 py-4"><StatusBadge label={row.disputeHold ? 'Dispute hold' : row.state.toLowerCase()} tone={row.disputeHold ? 'warning' : 'neutral'} />{row.earnedAt && <p className="mt-1 text-xs text-text-secondary">{formatManilaDateTime(row.earnedAt)}</p>}</td>
+            </tr>)}
+        </DataTable>}
+        {(page > 1 || result.data?.hasMore) && <Pagination page={page} hasMore={result.data?.hasMore ?? false} onChange={setPage} />}
+      </DashboardPanel>
+    </>}
+    {termsOpen && <CommissionTermsDialog onClose={() => setTermsOpen(false)} onSaved={snapshot => { onSnapshotSaved(snapshot); result.reload() }} />}
+  </div>
+}
+
+function CommissionTermsDialog({ onClose, onSaved }: { onClose: () => void; onSaved: (snapshot: Snapshot) => void }) {
+  // Fetch again on every open so the version and organization lock are current.
+  const { data, setData, error, reload } = useLoader(getVendorOnboarding)
+  const [busy, setBusy] = useState(false)
+  return <FormDialog open title="Review Commission Terms" description="Read your store's current agreement and review its acceptance status here in Finance." busy={busy} onClose={onClose}
+    footer={<div className="flex justify-end"><Button variant="outline" disabled={busy} onClick={onClose}>Done</Button></div>}>
+    {error ? <ErrorState message={error} onRetry={reload} /> : !data ? <LoadingState label="Loading Commission Terms…" /> : <CommissionTerms snapshot={data} onBusyChange={setBusy} onSaved={snapshot => { setData(snapshot); onSaved(snapshot) }} />}
+  </FormDialog>
 }
 
 // ── Finance review status (FIN-10) ─────────────────────────────────────────────────────────────
@@ -306,9 +363,9 @@ function StatementDetail({ statementId }: { statementId: string }) {
   const payable = ['ISSUED', 'PARTIALLY_PAID'].includes(data.state) && data.outstandingCentavos > 0
   return <div className="grid min-w-0 gap-6">
     <BackToStatements />
-    <PageHeader eyebrow="Commission statement" title={data.reference} status={data.overdue ? 'OVERDUE' : data.state} description={`Monthly 2% commission for ${data.periodStart} to ${data.periodEnd}. Due ${data.dueOn} (end of day, Asia/Manila).`} actions={<><DemoLabel>{data.sampleNotice}</DemoLabel><DocumentExportButton basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} audience="vendor" types={['FEE_STATEMENT']} resourceId={statementId} title={data.reference} /></>} />
+    <PageHeader eyebrow="Commission statement" title={data.reference} status={data.overdue ? 'OVERDUE' : data.state} description={`Monthly commission for ${data.periodStart} to ${data.periodEnd}. Due ${data.dueOn} (end of day, Asia/Manila).`} actions={<><DemoLabel>{data.sampleNotice}</DemoLabel><DocumentExportButton basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} audience="vendor" types={['FEE_STATEMENT']} resourceId={statementId} title={data.reference} /></>} />
     <StatCards label="Statement amounts" tiles={[
-      { key: 'charges', label: 'Earned commission', value: formatPesoCentavos(data.chargesCentavos), hint: 'Completed, non-refunded materials excluding VAT × 2%' },
+      { key: 'charges', label: 'Earned commission', value: formatPesoCentavos(data.chargesCentavos), hint: 'Completed materials excluding VAT × each order’s saved rate' },
       { key: 'credits', label: 'Credits', value: formatPesoCentavos(data.creditsCentavos), hint: 'Approved adjustments' },
       { key: 'paid', label: 'Paid', value: formatPesoCentavos(data.paidCentavos), hint: 'Verified platform-fee payments' },
       { key: 'outstanding', label: 'Outstanding', value: formatPesoCentavos(data.outstandingCentavos), hint: data.disputedHeldCentavos > 0 ? `${formatPesoCentavos(data.disputedHeldCentavos)} held for disputes` : 'Due by the date shown', tone: payable ? 'warning' : 'success' },

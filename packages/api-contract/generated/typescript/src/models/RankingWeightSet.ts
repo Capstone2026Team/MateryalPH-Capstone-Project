@@ -14,7 +14,7 @@
 
 import { mapValues } from '../runtime';
 /**
- * Whole percentages for the five Item-Based SRS components; they total exactly 100.
+ * Independent whole importance values for the five Item-Based SRS components. At least one must be above zero; their sum need not be 100. Persisted unchanged; scoring uses each value divided by their sum. Platform defaults still total 100.
  * @export
  * @interface RankingWeightSet
  */

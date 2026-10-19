@@ -12,5 +12,11 @@ void main() {
       // TODO
     });
 
+    // Re-prices the candidate for this method. Omitted, a Vendor offering both opens on its preferred method.
+    // String fulfillmentMethod
+    test('to test the property `fulfillmentMethod`', () async {
+      // TODO
+    });
+
   });
 }

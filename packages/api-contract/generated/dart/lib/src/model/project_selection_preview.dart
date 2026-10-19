@@ -14,10 +14,16 @@ part 'project_selection_preview.g.dart';
 ///
 /// Properties:
 /// * [selections]
+/// * [fulfillmentMethod] - Re-prices the candidate for this method. Omitted, a Vendor offering both opens on its preferred method.
 @BuiltValue()
 abstract class ProjectSelectionPreview implements Built<ProjectSelectionPreview, ProjectSelectionPreviewBuilder> {
   @BuiltValueField(wireName: r'selections')
   BuiltList<ProjectSpecificationSelection>? get selections;
+
+  /// Re-prices the candidate for this method. Omitted, a Vendor offering both opens on its preferred method.
+  @BuiltValueField(wireName: r'fulfillment_method')
+  ProjectSelectionPreviewFulfillmentMethodEnum? get fulfillmentMethod;
+  // enum fulfillmentMethodEnum {  PICKUP,  DELIVERY,  };
 
   ProjectSelectionPreview._();
 
@@ -47,6 +53,13 @@ class _$ProjectSelectionPreviewSerializer implements PrimitiveSerializer<Project
       yield serializers.serialize(
         object.selections,
         specifiedType: const FullType(BuiltList, [FullType(ProjectSpecificationSelection)]),
+      );
+    }
+    if (object.fulfillmentMethod != null) {
+      yield r'fulfillment_method';
+      yield serializers.serialize(
+        object.fulfillmentMethod,
+        specifiedType: const FullType(ProjectSelectionPreviewFulfillmentMethodEnum),
       );
     }
   }
@@ -80,6 +93,14 @@ class _$ProjectSelectionPreviewSerializer implements PrimitiveSerializer<Project
           if (valueDes == null) continue;
           result.selections.replace(valueDes);
           break;
+        case r'fulfillment_method':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ProjectSelectionPreviewFulfillmentMethodEnum),
+          ) as ProjectSelectionPreviewFulfillmentMethodEnum?;
+          if (valueDes == null) continue;
+          result.fulfillmentMethod = valueDes;
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -109,4 +130,20 @@ class _$ProjectSelectionPreviewSerializer implements PrimitiveSerializer<Project
   }
 }
 
+
+/// Re-prices the candidate for this method. Omitted, a Vendor offering both opens on its preferred method.
+class ProjectSelectionPreviewFulfillmentMethodEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'PICKUP')
+  static const ProjectSelectionPreviewFulfillmentMethodEnum PICKUP = _$projectSelectionPreviewFulfillmentMethodEnum_PICKUP;
+  @BuiltValueEnumConst(wireName: r'DELIVERY')
+  static const ProjectSelectionPreviewFulfillmentMethodEnum DELIVERY = _$projectSelectionPreviewFulfillmentMethodEnum_DELIVERY;
+
+  static Serializer<ProjectSelectionPreviewFulfillmentMethodEnum> get serializer => _$projectSelectionPreviewFulfillmentMethodEnumSerializer;
+
+  const ProjectSelectionPreviewFulfillmentMethodEnum._(String name): super(name);
+
+  static BuiltSet<ProjectSelectionPreviewFulfillmentMethodEnum> get values => _$projectSelectionPreviewFulfillmentMethodEnumValues;
+  static ProjectSelectionPreviewFulfillmentMethodEnum valueOf(String name) => _$projectSelectionPreviewFulfillmentMethodEnumValueOf(name);
+}
 

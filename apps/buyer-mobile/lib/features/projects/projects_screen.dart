@@ -20,6 +20,8 @@ import '../map_discovery/select_location_screen.dart';
 import '../map_discovery/supplier_map.dart';
 import 'projects_repository.dart';
 import 'vendor_selection_screen.dart';
+import 'project_selection_checkout_screen.dart';
+import 'project_arrangement_screen.dart';
 import 'work_package_editor.dart';
 import 'work_package_material_widgets.dart' show materialQuantity;
 import 'work_package_overview_widgets.dart';
@@ -339,6 +341,56 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     );
     if (mounted && _package != null) await _run(_reload);
   }
+
+  Future<void> _reviewProcurement() => _run(() async {
+    if (_package!['selected_arrangement_id'] != null) {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => ProjectArrangementScreen(
+            repository: repo,
+            package: _package!,
+            option: {'id': _package!['selected_arrangement_id'], 'version': 1},
+            links: ProjectSourcingLinks(
+              openConversation: widget.openConversation,
+              openOrder: widget.openOrder,
+              openStore: widget.openStore,
+              openProduct: widget.openProduct,
+            ),
+          ),
+        ),
+      );
+      if (mounted) await _reload();
+      return;
+    }
+    final candidate = await repo.selectionPreview(
+      id,
+      projectText(_package!['procurement_candidate_id']),
+      const {},
+    );
+    if (!mounted) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => ProjectSelectionCheckoutScreen(
+          repository: repo,
+          package: _package!,
+          candidate: candidate,
+          selections: {
+            for (final e in projectObject(
+              candidate['specification_selections'],
+            ).entries)
+              e.key: projectText(e.value),
+          },
+          links: ProjectSourcingLinks(
+            openConversation: widget.openConversation,
+            openOrder: widget.openOrder,
+            openStore: widget.openStore,
+            openProduct: widget.openProduct,
+          ),
+        ),
+      ),
+    );
+    if (mounted) await _reload();
+  });
 
   Future<void> _preferences() => Navigator.of(context).push<void>(
     MaterialPageRoute(
@@ -820,6 +872,13 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
               'QUOTATION_INQUIRY',
               'CANCELLED',
             ].contains(w['status']);
+    final missingMaterials =
+        !cancelled &&
+            !draft &&
+            w['has_order'] == true &&
+            w['selected_arrangement_id'] == null
+        ? projectRows(w['missing_lines'])
+        : <ProjectData>[];
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -849,11 +908,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                           _key('activate'),
                         );
                         _keys.remove('activate');
-                        compiled = await repo.compile(
-                          id,
-                          lock,
-                          projectInt(content['radius_km']),
-                        );
+                        compiled = await repo.compile(id, lock);
                       });
                       if (compiled != null && mounted) {
                         await _findVendors(compiled);
@@ -865,7 +920,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           ),
           const SizedBox(height: 12),
         ],
-        if (w['order_id'] != null) ...[
+        if (w['order_id'] != null && w['selected_arrangement_id'] == null) ...[
           FilledButton.icon(
             onPressed: () =>
                 widget.openOrder(context, projectText(w['order_id'])),
@@ -874,7 +929,33 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           ),
           const SizedBox(height: 12),
         ],
-        if (!draft && !cancelled) ...[
+        if (w['selected_arrangement_id'] != null) ...[
+          FilledButton.icon(
+            onPressed: _busy ? null : _reviewProcurement,
+            icon: const Icon(LucideIcons.clipboardList, size: 18),
+            label: const Text('Review procurement arrangement'),
+          ),
+          const SizedBox(height: 12),
+          for (final order in projectRows(w['vendor_orders']))
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(projectText(order['reference'])),
+              subtitle: Text(projectStatus(order['order_state'])),
+              trailing: const Icon(LucideIcons.chevronRight, size: 18),
+              onTap: () => widget.openOrder(context, projectText(order['id'])),
+            ),
+        ],
+        if (projectActive &&
+            w['procurement_candidate_id'] != null &&
+            w['selected_arrangement_id'] == null) ...[
+          OutlinedButton.icon(
+            onPressed: _busy ? null : _reviewProcurement,
+            icon: const Icon(LucideIcons.clipboardList, size: 18),
+            label: const Text('Review quotation checkout'),
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (!draft && !cancelled && w['selected_arrangement_id'] == null) ...[
           FilledButton.icon(
             onPressed: _busy ? null : () => _findVendors(),
             icon: const Icon(LucideIcons.search, size: 18),
@@ -917,11 +998,15 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             ],
           ),
         const SectionHeading('Requirements'),
-        WorkPackageAttachment(original: content, title: 'Work Package details'),
+        WorkPackageAttachment(
+          original: content,
+          title: 'Work Package details',
+          showPaymentMethod: false,
+        ),
         const SizedBox(height: 8),
-        if (projectRows(w['missing_lines']).isNotEmpty)
+        if (missingMaterials.isNotEmpty)
           const SectionHeading('Missing materials'),
-        ...projectRows(w['missing_lines']).map(
+        ...missingMaterials.map(
           (m) => Container(
             margin: const EdgeInsets.only(bottom: 8),
             decoration: BoxDecoration(

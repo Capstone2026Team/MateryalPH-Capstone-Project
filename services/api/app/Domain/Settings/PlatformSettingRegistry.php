@@ -89,7 +89,7 @@ final class PlatformSettingRegistry
                 'applies_to' => 'Invoice requests opened after the change.'],
             'analytics.disclosure_min_persons' => ['group' => 'Analytics disclosure', 'label' => 'Small-cell disclosure threshold', 'default' => 5,
                 'description' => 'Person-derived geographic cells built from fewer distinct Buyers or users are suppressed and rolled up into the parent area. Public storefront Vendor counts are not suppressed.',
-                'rule' => 'Whole number of distinct persons from 3 to 50.',
+                'rule' => 'Whole number of distinct persons from 1 to 50. 1 shows every value; raise it before real Buyer data is shared beyond Admin staff.',
                 'applies_to' => 'Every geographic analytics response and export after the change.'],
             'uploads.limits_kb' => ['group' => 'Uploads', 'label' => 'Upload size limits', 'default' => ['vendor_document' => 10240, 'store_media' => 20480, 'listing_image' => 5120,
                 'compliance_evidence' => 10240, 'case_evidence' => 10240, 'review_photo' => 10240, 'review_video' => 102400],
@@ -115,7 +115,7 @@ final class PlatformSettingRegistry
             ['key' => 'ranking.vps_weights', 'label' => 'VPS weights', 'value' => ['vcs' => 50, 'ohs' => 50], 'reason' => 'VPS is fixed at 50% VCS and 50% OHS.'],
             ['key' => 'orders.nrpc_cap', 'label' => 'NRPC platform cap', 'value' => null, 'reason' => 'There is no platform-wide numeric NRPC cap; oversight uses disclosure, evidence, flags, disputes and enforcement.'],
             ['key' => 'finance.live_commerce', 'label' => 'LIVE commerce', 'value' => false, 'reason' => 'LIVE commerce stays disabled for the capstone; no Admin control can enable it.'],
-            ['key' => 'finance.statutory_rates', 'label' => 'Commission and withholding rates', 'value' => ['commission_percent' => '2.00', 'withholding_percent' => '0.50'], 'reason' => 'Versioned financial rules change only with a cited effective legal basis and independent approval, never here.'],
+            ['key' => 'finance.statutory_rates', 'label' => 'Withholding rate', 'value' => ['withholding_percent' => '0.50'], 'reason' => 'Statutory rules require a cited effective legal basis and independent approval. Commercial commission rates are managed in Finance.'],
         ];
     }
 
@@ -156,6 +156,9 @@ final class PlatformSettingRegistry
                     foreach ($messages as $message) {
                         $add(str_replace('weights.', '', $field === 'weights' ? '' : $field), $message);
                     }
+                }
+                if ($errors === [] && array_sum($value) !== 100) {
+                    $add('', sprintf('Weights must total 100%%. They currently total %d%%.', array_sum($value)));
                 }
                 break;
             case 'ranking.fms.default_weights':
@@ -311,7 +314,7 @@ final class PlatformSettingRegistry
                 $check($int($value, 1, 10), '', 'Enter whole business days from 1 to 10.');
                 break;
             case 'analytics.disclosure_min_persons':
-                $check($int($value, 3, 50), '', 'Enter a whole number of persons from 3 to 50.');
+                $check($int($value, 1, 50), '', 'Enter a whole number of persons from 1 to 50.');
                 break;
             case 'uploads.limits_kb':
                 if (! $object($value, array_keys(self::UPLOAD_CEILINGS_KB))) {

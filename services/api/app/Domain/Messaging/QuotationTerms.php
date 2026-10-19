@@ -15,7 +15,7 @@ use App\Domain\Inventory\StockAvailability;
 use App\Domain\Orders\NrpcTerms;
 use App\Domain\Orders\OrderDeliveryPlanner;
 use App\Domain\Orders\OrderEligibility;
-use App\Domain\Payments\PaymentMethodPolicy;
+use App\Domain\Projects\ProjectArrangementTerms;
 use App\Domain\Settings\PlatformSettings;
 use App\Domain\Vendors\ConfirmedDeliverySnapshot;
 use App\Domain\Vendors\DeliveryRecommendationService;
@@ -42,7 +42,7 @@ final class QuotationTerms
             'lines.*.unit_price_centavos' => ['required', 'integer', 'between:1,100000000000'],
             'lines.*.description' => ['sometimes', 'string', 'max:200'], 'lines.*.specifications' => ['sometimes', 'array', 'max:30'],
             'lines.*.specifications.*' => ['string', 'max:200'],
-            'fulfillment_method' => ['required', 'in:PICKUP,DELIVERY'], 'payment_method' => ['required', 'in:ONLINE,CASH_ON_DELIVERY,IN_STORE'],
+            'fulfillment_method' => ['required', 'in:PICKUP,DELIVERY'], 'payment_method' => ['sometimes', 'in:ONLINE,CASH_ON_DELIVERY,IN_STORE'],
             'fulfillment_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:'.now('Asia/Manila')->toDateString()],
             'deadline_hours' => ['sometimes', 'integer', 'between:'.(int) $limits['min_hours'].','.(int) $limits['max_hours']], 'vendor_discount_centavos' => ['sometimes', 'integer', 'min:0', Rule::prohibitedIf(array_key_exists('discount', $input))],
             'discount' => ['sometimes', 'array:scope,percent', 'min:2'],
@@ -63,6 +63,9 @@ final class QuotationTerms
         if (($validated['discount']['scope'] ?? null) === 'DELIVERY' && $validated['fulfillment_method'] !== 'DELIVERY') {
             throw ValidationException::withMessages(['discount.scope' => ['A delivery discount requires Site Delivery.']]);
         }
+
+        // Older editors may still send a preference. Only the Buyer chooses at acceptance.
+        unset($validated['payment_method']);
 
         return $validated;
     }
@@ -124,10 +127,10 @@ final class QuotationTerms
                 'source_price_version_id' => (string) $v->price_version_id, 'source_tax_version_id' => $taxVersion, 'publication_version' => (int) $v->publication_version,
                 'load' => ['weight_kg' => $v->weight_kg, 'length_cm' => $v->length_cm, 'width_cm' => $v->width_cm, 'height_cm' => $v->height_cm] + $this->materialLoad($v)];
         }
+        $lines = ProjectArrangementTerms::allocate($c, $lines);
         if ($input['fulfillment_method'] !== 'DELIVERY' && array_any($lines, static fn (array $line): bool => ($line['load']['material_kind'] ?? null) === DeliveryRecommendationService::READY_MIXED_CONCRETE)) {
             throw new AuthenticationException('SITE_DELIVERY_REQUIRED', ReadyMixedConcrete::SITE_DELIVERY_MESSAGE, 422, ['fulfillment_method' => ['Choose Site Delivery.']]);
         }
-        app(PaymentMethodPolicy::class)->assertAllowed((string) $c->vendor_organization_id, (string) $input['fulfillment_method'], (string) $input['payment_method']);
         $blockers = app(OrderEligibility::class)->lineBlockers((string) $c->vendor_organization_id, array_column($lines, 'tax_category', 'variant_id'));
         if ($blockers !== []) {
             throw new AuthenticationException('LINE_NOT_ELIGIBLE', 'A product is no longer available for quotation.', 409);
@@ -159,10 +162,10 @@ final class QuotationTerms
         }
         $commercial = FinancialCalculator::commercial($lines, $materialsDiscount, $delivery === null ? 0 : (int) $delivery['final_charge_centavos'], $nrpc);
 
-        return ['lines' => $lines, 'commercial' => $commercial, 'fulfillment_method' => $input['fulfillment_method'], 'payment_method' => $input['payment_method'],
+        return ['lines' => $lines, 'commercial' => $commercial, 'fulfillment_method' => $input['fulfillment_method'],
             'fulfillment_date' => $input['fulfillment_date'], 'delivery' => $delivery, 'destination' => json_decode($this->deliveryOrder($c)->destination, true),
             'nrpc' => $nrpc === null ? null : $nrpc + ['terms' => $terms], 'price_source' => 'PRIVATE_TRANSACTION',
-            'fee_policy_version_id' => FinancialSnapshotService::currentFeePolicyId(), 'processing_fee_status' => 'PENDING_PAYMENT_CHANNEL'] + ($discount === null ? [] : ['discount' => $discount]);
+            'fee_policy_version_id' => FinancialSnapshotService::currentFeePolicyId((string) $c->vendor_organization_id), 'processing_fee_status' => 'PENDING_PAYMENT_CHANNEL'] + ($discount === null ? [] : ['discount' => $discount]);
     }
 
     /** @return array<string, mixed> */
@@ -207,8 +210,15 @@ final class QuotationTerms
     {
         $before = ['lines' => array_map(static fn (array $l): array => ['description' => $l['name'], 'quantity' => $l['quantity'], 'unit_code' => $l['unit_code'],
             'specifications' => $l['specifications'], 'preferred_brand' => $l['preferred_brand']], $original['lines']),
-            'fulfillment_method' => $original['fulfillment_method'], 'payment_method' => $original['payment_method'], 'destination' => $original['destination'],
+            'fulfillment_method' => $original['fulfillment_method'], 'destination' => $original['destination'],
             'fulfillment_date' => null, 'delivery' => null, 'nrpc' => null];
+        // A Both package is the Buyer's choice of either; the method picked for this Vendor is not a Vendor change.
+        if ($original['fulfillment_method'] === 'BOTH' && in_array($proposed['fulfillment_method'] ?? null, ['DELIVERY', 'PICKUP'], true)) {
+            $before['fulfillment_method'] = $proposed['fulfillment_method'];
+            if (isset($proposed['destination']['type'])) {
+                $before['destination']['type'] = $proposed['destination']['type'];
+            }
+        }
         $after = array_intersect_key($proposed, $before);
         $after['lines'] = array_map(static fn (array $l): array => array_intersect_key($l, array_flip(['description', 'quantity', 'unit_code', 'specifications', 'preferred_brand', 'variant_id', 'unit_price_centavos'])), $proposed['lines']);
 

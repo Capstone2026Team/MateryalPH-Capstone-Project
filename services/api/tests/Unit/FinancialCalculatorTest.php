@@ -24,6 +24,8 @@ final class FinancialCalculatorTest extends TestCase
         self::assertSame(200, Money::commission(10000), 'FIN-06: E=10,000 earns a 200 completion fee.');
         self::assertSame(1, Money::commission(25), '0.5 centavo rounds half-up.');
         self::assertSame(0, Money::commission(24));
+        self::assertSame(32500, Money::commission(1000000, 325));
+        self::assertSame(0, Money::commission(1000000, 0));
     }
 
     public function test_largest_remainder_allocation_sums_exactly_and_breaks_ties_by_key_order(): void

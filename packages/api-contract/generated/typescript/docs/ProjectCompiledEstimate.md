@@ -1,6 +1,7 @@
 
 # ProjectCompiledEstimate
 
+Advisory comparison snapshot. An unassigned current comparison reports INVALIDATED after saved Project ranking weights or the scoring version change, so Find vendors refreshes it. Historical snapshots and selected packages retain their original ranking.
 
 ## Properties
 

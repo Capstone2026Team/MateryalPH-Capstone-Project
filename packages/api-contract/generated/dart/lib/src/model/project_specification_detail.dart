@@ -14,7 +14,7 @@ part 'project_specification_detail.g.dart';
 /// * [code]
 /// * [label] - The category's name for the detail.
 /// * [value]
-/// * [unitCode]
+/// * [unitCode] - Measurement unit, or null for unitless specifications such as steel grade.
 @BuiltValue()
 abstract class ProjectSpecificationDetail implements Built<ProjectSpecificationDetail, ProjectSpecificationDetailBuilder> {
   @BuiltValueField(wireName: r'code')
@@ -27,8 +27,9 @@ abstract class ProjectSpecificationDetail implements Built<ProjectSpecificationD
   @BuiltValueField(wireName: r'value')
   String get value;
 
+  /// Measurement unit, or null for unitless specifications such as steel grade.
   @BuiltValueField(wireName: r'unit_code')
-  String get unitCode;
+  String? get unitCode;
 
   ProjectSpecificationDetail._();
 
@@ -69,9 +70,9 @@ class _$ProjectSpecificationDetailSerializer implements PrimitiveSerializer<Proj
       specifiedType: const FullType(String),
     );
     yield r'unit_code';
-    yield serializers.serialize(
+    yield object.unitCode == null ? null : serializers.serialize(
       object.unitCode,
-      specifiedType: const FullType(String),
+      specifiedType: const FullType.nullable(String),
     );
   }
 
@@ -120,8 +121,9 @@ class _$ProjectSpecificationDetailSerializer implements PrimitiveSerializer<Proj
         case r'unit_code':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(String),
-          ) as String;
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
           result.unitCode = valueDes;
           break;
         default:

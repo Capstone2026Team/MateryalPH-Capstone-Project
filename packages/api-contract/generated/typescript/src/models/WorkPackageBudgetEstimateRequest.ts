@@ -28,13 +28,21 @@ import {
  */
 export interface WorkPackageBudgetEstimateRequest {
     /**
+     * Current site access answer for the delivery estimate.
+     */
+    heavyVehicleRestriction?: WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum;
+    /**
+     * Buyer-owned alternative vehicle drop-off when access is restricted.
+     */
+    alternateDropOffLocationId?: string | null;
+    /**
      *
      */
     siteId: string;
     /**
-     *
+     * Optional. 50 km is the only Project-Based radius.
      */
-    radiusKm: WorkPackageBudgetEstimateRequestRadiusKmEnum;
+    radiusKm?: WorkPackageBudgetEstimateRequestRadiusKmEnum;
     /**
      *
      */
@@ -49,12 +57,17 @@ export interface WorkPackageBudgetEstimateRequest {
 /**
  * @export
  */
+export const WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum = {
+    No: 'NO',
+    Yes: 'YES',
+    Unanswered: 'UNANSWERED',
+} as const;
+export type WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum = typeof WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum[keyof typeof WorkPackageBudgetEstimateRequestHeavyVehicleRestrictionEnum];
+
+/**
+ * @export
+ */
 export const WorkPackageBudgetEstimateRequestRadiusKmEnum = {
-    NUMBER_5: 5,
-    NUMBER_10: 10,
-    NUMBER_20: 20,
-    NUMBER_30: 30,
-    NUMBER_40: 40,
     NUMBER_50: 50,
 } as const;
 export type WorkPackageBudgetEstimateRequestRadiusKmEnum = typeof WorkPackageBudgetEstimateRequestRadiusKmEnum[keyof typeof WorkPackageBudgetEstimateRequestRadiusKmEnum];
@@ -65,6 +78,7 @@ export type WorkPackageBudgetEstimateRequestRadiusKmEnum = typeof WorkPackageBud
 export const WorkPackageBudgetEstimateRequestFulfillmentMethodEnum = {
     Pickup: 'PICKUP',
     Delivery: 'DELIVERY',
+    Both: 'BOTH',
 } as const;
 export type WorkPackageBudgetEstimateRequestFulfillmentMethodEnum = typeof WorkPackageBudgetEstimateRequestFulfillmentMethodEnum[keyof typeof WorkPackageBudgetEstimateRequestFulfillmentMethodEnum];
 
@@ -74,7 +88,6 @@ export type WorkPackageBudgetEstimateRequestFulfillmentMethodEnum = typeof WorkP
  */
 export function instanceOfWorkPackageBudgetEstimateRequest(value: object): value is WorkPackageBudgetEstimateRequest {
     if ((!('siteId' in (value as Record<string, any>)) && !('site_id' in (value as Record<string, any>))) || ((value as Record<string, any>)['siteId'] === undefined && (value as Record<string, any>)['site_id'] === undefined)) return false;
-    if ((!('radiusKm' in (value as Record<string, any>)) && !('radius_km' in (value as Record<string, any>))) || ((value as Record<string, any>)['radiusKm'] === undefined && (value as Record<string, any>)['radius_km'] === undefined)) return false;
     if ((!('fulfillmentMethod' in (value as Record<string, any>)) && !('fulfillment_method' in (value as Record<string, any>))) || ((value as Record<string, any>)['fulfillmentMethod'] === undefined && (value as Record<string, any>)['fulfillment_method'] === undefined)) return false;
     if (!('lines' in value) || value['lines'] === undefined) return false;
     return true;
@@ -90,8 +103,10 @@ export function WorkPackageBudgetEstimateRequestFromJSONTyped(json: any, ignoreD
     }
     return {
 
+        'heavyVehicleRestriction': json['heavy_vehicle_restriction'] == null ? undefined : json['heavy_vehicle_restriction'],
+        'alternateDropOffLocationId': json['alternate_drop_off_location_id'] === undefined ? undefined : json['alternate_drop_off_location_id'] === null ? null : json['alternate_drop_off_location_id'],
         'siteId': json['site_id'],
-        'radiusKm': json['radius_km'],
+        'radiusKm': json['radius_km'] == null ? undefined : json['radius_km'],
         'fulfillmentMethod': json['fulfillment_method'],
         'lines': ((json['lines'] as Array<any>).map(WorkPackageBudgetEstimateLineInputFromJSON)),
     };
@@ -108,6 +123,8 @@ export function WorkPackageBudgetEstimateRequestToJSONTyped(value?: WorkPackageB
 
     return {
 
+        'heavy_vehicle_restriction': value['heavyVehicleRestriction'],
+        'alternate_drop_off_location_id': value['alternateDropOffLocationId'],
         'site_id': value['siteId'],
         'radius_km': value['radiusKm'],
         'fulfillment_method': value['fulfillmentMethod'],

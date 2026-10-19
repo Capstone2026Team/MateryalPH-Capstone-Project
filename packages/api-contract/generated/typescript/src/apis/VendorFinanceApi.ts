@@ -59,6 +59,11 @@ import {
     StatementPaymentRequestToJSON,
 } from '../models/StatementPaymentRequest';
 import {
+    type VendorCommissionMonitoringEnvelope,
+    VendorCommissionMonitoringEnvelopeFromJSON,
+    VendorCommissionMonitoringEnvelopeToJSON,
+} from '../models/VendorCommissionMonitoringEnvelope';
+import {
     type VendorEarningsEnvelope,
     VendorEarningsEnvelopeFromJSON,
     VendorEarningsEnvelopeToJSON,
@@ -102,6 +107,13 @@ export interface ExportVendorTransactionsRequest {
      * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound.
      */
     to?: Date;
+}
+
+export interface GetVendorCommissionMonitoringRequest {
+    /**
+     *
+     */
+    page?: number;
 }
 
 export interface GetVendorEarningsRequest {
@@ -338,6 +350,51 @@ export class VendorFinanceApi extends runtime.BaseAPI {
      */
     async exportVendorTransactions(requestParameters: ExportVendorTransactionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<string> {
         const response = await this.exportVendorTransactionsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getVendorCommissionMonitoring without sending the request
+     */
+    async getVendorCommissionMonitoringRequestOpts(requestParameters: GetVendorCommissionMonitoringRequest): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendor/finance/commissions`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Owner-only all-time commission monitoring with current and next policy, estimated and earned fees, approved credits, unbilled fees, draft bills, issued outstanding and overdue debt, verified allocations and successful fee refunds. Assessments are paginated and retain their original basis and percentage. Cash and earnings are separate; no wallet balance is represented.
+     */
+    async getVendorCommissionMonitoringRaw(requestParameters: GetVendorCommissionMonitoringRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorCommissionMonitoringEnvelope>> {
+        const requestOptions = await this.getVendorCommissionMonitoringRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorCommissionMonitoringEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Owner-only all-time commission monitoring with current and next policy, estimated and earned fees, approved credits, unbilled fees, draft bills, issued outstanding and overdue debt, verified allocations and successful fee refunds. Assessments are paginated and retain their original basis and percentage. Cash and earnings are separate; no wallet balance is represented.
+     */
+    async getVendorCommissionMonitoring(requestParameters: GetVendorCommissionMonitoringRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorCommissionMonitoringEnvelope> {
+        const response = await this.getVendorCommissionMonitoringRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

@@ -33,6 +33,7 @@ Name | Type
 `distanceBasis` | string
 `etaSeconds` | number
 `fulfillmentMethod` | string
+`fulfillmentOptions` | Array&lt;string&gt;
 `paymentMethod` | string
 `delivery` | { [key: string]: any; }
 `destination` | { [key: string]: any; }
@@ -41,6 +42,15 @@ Name | Type
 `label` | string
 `currentQuotationState` | string
 `isFavorite` | boolean
+`fulfillment` | [ProjectFulfillment](ProjectFulfillment.md)
+`paymentMethods` | [Array&lt;ProjectPaymentMethod&gt;](ProjectPaymentMethod.md)
+`draftGroups` | [Array&lt;ProjectDraftVendorGroup&gt;](ProjectDraftVendorGroup.md)
+`primaryOrderId` | string
+`procurementMaterialsCentavos` | number
+`separateDeliveryCentavos` | number
+`procurementDeliveryCentavos` | number
+`procurementBudgetLabel` | string
+`procurementTotalCentavos` | number
 
 ## Example
 
@@ -76,6 +86,7 @@ const example = {
   "distanceBasis": null,
   "etaSeconds": null,
   "fulfillmentMethod": null,
+  "fulfillmentOptions": null,
   "paymentMethod": null,
   "delivery": null,
   "destination": null,
@@ -84,6 +95,15 @@ const example = {
   "label": null,
   "currentQuotationState": null,
   "isFavorite": null,
+  "fulfillment": null,
+  "paymentMethods": null,
+  "draftGroups": null,
+  "primaryOrderId": null,
+  "procurementMaterialsCentavos": null,
+  "separateDeliveryCentavos": null,
+  "procurementDeliveryCentavos": null,
+  "procurementBudgetLabel": null,
+  "procurementTotalCentavos": null,
 } satisfies ProjectCandidate
 
 console.log(example)

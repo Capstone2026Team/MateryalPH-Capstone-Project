@@ -20,6 +20,13 @@ import {
     ProjectSpecificationDetailToJSON,
     ProjectSpecificationDetailToJSONTyped,
 } from './ProjectSpecificationDetail';
+import type { ListingImage } from './ListingImage';
+import {
+    ListingImageFromJSON,
+    ListingImageFromJSONTyped,
+    ListingImageToJSON,
+    ListingImageToJSONTyped,
+} from './ListingImage';
 
 /**
  *
@@ -60,9 +67,9 @@ export interface WorkPackageAlternative {
      */
     storeName?: string;
     /**
-     *
+     * First public photo of the listing. The server returns an object ({url, alt_text}); declaring it as a string made the generated client reject any page containing a photographed offer, which surfaced as a generic 'Something went wrong' instead of the recommendations.
      */
-    image?: string;
+    image?: ListingImage | null;
     /**
      *
      */
@@ -91,7 +98,43 @@ export interface WorkPackageAlternative {
      * Brand (when set) and every stated specification match the Work Package line.
      */
     exactMatch: boolean;
+    /**
+     * Whether the store can confirm the whole quantity still needed. PARTIAL stores can be added with `allow_partial_stock` for what they can confirm.
+     */
+    availability: WorkPackageAlternativeAvailabilityEnum;
+    /**
+     * Unit price times the quantity still needed.
+     */
+    estimatedTotalCentavos: number;
+    /**
+     * Methods the store can serve for this product. Ready-mixed concrete uses DELIVERY only even when the primary quotation or package uses PICKUP.
+     */
+    fulfillmentMethods: Array<WorkPackageAlternativeFulfillmentMethodsEnum>;
+    /**
+     * This product is already in the cart or an open order for the line; adding it again never stacks the quantity.
+     */
+    alreadyAdded: boolean;
 }
+
+
+/**
+ * @export
+ */
+export const WorkPackageAlternativeAvailabilityEnum = {
+    Full: 'FULL',
+    Partial: 'PARTIAL',
+} as const;
+export type WorkPackageAlternativeAvailabilityEnum = typeof WorkPackageAlternativeAvailabilityEnum[keyof typeof WorkPackageAlternativeAvailabilityEnum];
+
+/**
+ * @export
+ */
+export const WorkPackageAlternativeFulfillmentMethodsEnum = {
+    Delivery: 'DELIVERY',
+    Pickup: 'PICKUP',
+} as const;
+export type WorkPackageAlternativeFulfillmentMethodsEnum = typeof WorkPackageAlternativeFulfillmentMethodsEnum[keyof typeof WorkPackageAlternativeFulfillmentMethodsEnum];
+
 
 /**
  * Check if a given object implements the WorkPackageAlternative interface.
@@ -108,6 +151,10 @@ export function instanceOfWorkPackageAlternative(value: object): value is WorkPa
     if ((!('distanceMeters' in (value as Record<string, any>)) && !('distance_meters' in (value as Record<string, any>))) || ((value as Record<string, any>)['distanceMeters'] === undefined && (value as Record<string, any>)['distance_meters'] === undefined)) return false;
     if ((!('stockLabel' in (value as Record<string, any>)) && !('stock_label' in (value as Record<string, any>))) || ((value as Record<string, any>)['stockLabel'] === undefined && (value as Record<string, any>)['stock_label'] === undefined)) return false;
     if ((!('exactMatch' in (value as Record<string, any>)) && !('exact_match' in (value as Record<string, any>))) || ((value as Record<string, any>)['exactMatch'] === undefined && (value as Record<string, any>)['exact_match'] === undefined)) return false;
+    if (!('availability' in value) || value['availability'] === undefined) return false;
+    if ((!('estimatedTotalCentavos' in (value as Record<string, any>)) && !('estimated_total_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['estimatedTotalCentavos'] === undefined && (value as Record<string, any>)['estimated_total_centavos'] === undefined)) return false;
+    if ((!('fulfillmentMethods' in (value as Record<string, any>)) && !('fulfillment_methods' in (value as Record<string, any>))) || ((value as Record<string, any>)['fulfillmentMethods'] === undefined && (value as Record<string, any>)['fulfillment_methods'] === undefined)) return false;
+    if ((!('alreadyAdded' in (value as Record<string, any>)) && !('already_added' in (value as Record<string, any>))) || ((value as Record<string, any>)['alreadyAdded'] === undefined && (value as Record<string, any>)['already_added'] === undefined)) return false;
     return true;
 }
 
@@ -129,7 +176,7 @@ export function WorkPackageAlternativeFromJSONTyped(json: any, ignoreDiscriminat
         'brand': json['brand'] == null ? undefined : json['brand'],
         'vendorId': json['vendor_id'],
         'storeName': json['store_name'] == null ? undefined : json['store_name'],
-        'image': json['image'] == null ? undefined : json['image'],
+        'image': json['image'] === undefined ? undefined : json['image'] === null ? null : ListingImageFromJSON(json['image']),
         'unitPriceCentavos': json['unit_price_centavos'],
         'unitCode': json['unit_code'],
         'unitPrecision': json['unit_precision'],
@@ -137,6 +184,10 @@ export function WorkPackageAlternativeFromJSONTyped(json: any, ignoreDiscriminat
         'stockLabel': json['stock_label'],
         'specifications': json['specifications'] == null ? undefined : ((json['specifications'] as Array<any>).map(ProjectSpecificationDetailFromJSON)),
         'exactMatch': json['exact_match'],
+        'availability': json['availability'],
+        'estimatedTotalCentavos': json['estimated_total_centavos'],
+        'fulfillmentMethods': json['fulfillment_methods'],
+        'alreadyAdded': json['already_added'],
     };
 }
 
@@ -159,7 +210,7 @@ export function WorkPackageAlternativeToJSONTyped(value?: WorkPackageAlternative
         'brand': value['brand'],
         'vendor_id': value['vendorId'],
         'store_name': value['storeName'],
-        'image': value['image'],
+        'image': ListingImageToJSON(value['image']),
         'unit_price_centavos': value['unitPriceCentavos'],
         'unit_code': value['unitCode'],
         'unit_precision': value['unitPrecision'],
@@ -167,6 +218,10 @@ export function WorkPackageAlternativeToJSONTyped(value?: WorkPackageAlternative
         'stock_label': value['stockLabel'],
         'specifications': value['specifications'] == null ? undefined : ((value['specifications'] as Array<any>).map(ProjectSpecificationDetailToJSON)),
         'exact_match': value['exactMatch'],
+        'availability': value['availability'],
+        'estimated_total_centavos': value['estimatedTotalCentavos'],
+        'fulfillment_methods': value['fulfillmentMethods'],
+        'already_added': value['alreadyAdded'],
     };
 }
 

@@ -249,7 +249,7 @@ class RankingComponentView {
 
   final String key;
   final String label;
-  final int weightPercent;
+  final num weightPercent;
   final String score;
   final String weighted;
   final String basis;
@@ -348,7 +348,8 @@ class RankingWeights {
   final int productRating;
 
   int get total => distance + price + vps + stock + productRating;
-  bool get valid => total == 100;
+  bool get valid =>
+      total > 0 && toMap().values.every((v) => v >= 0 && v <= 100);
 
   int valueOf(String key) => switch (key) {
     'distance' => distance,
@@ -358,13 +359,8 @@ class RankingWeights {
     _ => productRating,
   };
 
-  RankingWeights withValue(String key, int value) => RankingWeights(
-    distance: key == 'distance' ? value : distance,
-    price: key == 'price' ? value : price,
-    vps: key == 'vps' ? value : vps,
-    stock: key == 'stock' ? value : stock,
-    productRating: key == 'product_rating' ? value : productRating,
-  );
+  RankingWeights withValue(String key, int value) =>
+      RankingWeights.fromMap(updateRankingWeight(toMap(), key, value));
 
   Map<String, int> toMap() => {
     'distance': distance,
@@ -379,13 +375,6 @@ class RankingWeights {
     vps: values['vps']!,
     stock: values['stock']!,
     productRating: values['product_rating']!,
-  );
-  RankingWeights rebalance(
-    String key,
-    int value, {
-    required RankingWeights defaults,
-  }) => RankingWeights.fromMap(
-    rebalanceRankingWeights(toMap(), key, value, defaults: defaults.toMap()),
   );
 
   @override

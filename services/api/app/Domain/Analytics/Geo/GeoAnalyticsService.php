@@ -23,7 +23,7 @@ use Illuminate\Validation\Rule;
  */
 final class GeoAnalyticsService
 {
-    public const DATASETS = ['TEST' => 'TEST — Recorded Test Marketplace Activity', 'DEMO' => 'DEMO — Simulated Marketplace Data'];
+    public const DATASETS = ['TEST' => 'Recorded Marketplace Activity', 'DEMO' => 'DEMO — Simulated Marketplace Data'];
 
     public const TRANSACTION_FILTERS = ['procurement_type', 'category_id', 'material_id', 'fulfillment_method', 'payment_method', 'order_state'];
 

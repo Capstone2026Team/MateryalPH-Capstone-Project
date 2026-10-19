@@ -27,6 +27,24 @@ void main() {
       // TODO
     });
 
+    // Brand captured in the immutable published quotation, not the current listing.
+    // String brand
+    test('to test the property `brand`', () async {
+      // TODO
+    });
+
+    // Product variant label captured when the quotation was published.
+    // String variantLabel
+    test('to test the property `variantLabel`', () async {
+      // TODO
+    });
+
+    // Technical details captured for this quotation line. Older versions may omit these details.
+    // BuiltMap<String, String> specifications
+    test('to test the property `specifications`', () async {
+      // TODO
+    });
+
     // String unitCode
     test('to test the property `unitCode`', () async {
       // TODO

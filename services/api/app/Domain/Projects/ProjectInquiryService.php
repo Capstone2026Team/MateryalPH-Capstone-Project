@@ -66,7 +66,7 @@ final class ProjectInquiryService
     {
         $selections = self::selections($input);
 
-        return $selections === [] ? null : $this->estimates->withSelections($request, $id, $input['candidate_id'], $selections);
+        return $selections === [] ? null : $this->estimates->withSelections($request, $id, $input['candidate_id'], $selections, $input['fulfillment_method'] ?? null);
     }
 
     /** Owner request 2026-10-16: a line with several matching specifications is never ordered on a guess.
@@ -105,13 +105,19 @@ final class ProjectInquiryService
 
                 return $existing;
             }
-            $s = $applied ?? $candidate['snapshot'];
+            // A Vendor offering both Delivery and Pickup needs the Buyer's choice; the quotation is then one concrete method.
+            $resolved = ProjectEstimateService::resolve($candidate['snapshot'], $input['fulfillment_method'] ?? null);
+            $s = $applied ?? $resolved;
+            if (isset($input['payment_method'])) {
+                $s['payment_method'] = $input['payment_method'];
+                app(PaymentMethodPolicy::class)->assertAllowed((string) $s['vendor_id'], (string) $s['fulfillment_method'], (string) $s['payment_method']);
+            }
             self::assertChosen($s);
             $v = DB::table('work_package_versions')->where('id', $w->current_version_id)->first();
             $content = json_decode($v->content, true);
             $duplicate = self::duplicate($s);
             $reference = ['version_id' => $v->id, 'version' => (int) $v->version, 'content_hash' => $v->content_hash, 'work_package' => $content, 'system_estimate' => $s,
-                'working_duplicate' => $duplicate, 'destination' => $content['destination'], 'lines' => $content['lines']];
+                'working_duplicate' => $duplicate, 'destination' => $s['destination'], 'lines' => $content['lines']];
             app(ConversationService::class)->createProject($request, $key, $candidate['snapshot']['vendor_id'], $id, $reference);
             DB::table('quotations')->insert(['id' => (string) Str::uuid7(), 'conversation_id' => $key, 'buyer_profile_id' => DB::table('projects')->where('id', $w->project_id)->value('buyer_profile_id'),
                 'vendor_organization_id' => $candidate['snapshot']['vendor_id'], 'procurement_type' => 'PROJECT_BASED', 'work_package_id' => $id, 'state' => 'DRAFT',
@@ -129,7 +135,14 @@ final class ProjectInquiryService
     {
         BuyerCommerceRestriction::assertAllowed(app(BuyerProfiles::class)->idFor($request));
         $key = $this->keys->requireIdempotencyKey($request);
+        $this->projects->package($request, $id);
+        if ($this->keys->replayed($request, 'PROJECT_SELECT', $key, $id)) {
+            return $key;
+        }
         $applied = $this->applied($request, $id, $input);
+        $package = $this->projects->package($request, $id);
+        $snapshot = $applied ?? ProjectEstimateService::resolve($this->estimates->candidate($request, $id, $input['candidate_id'])['snapshot'], $input['fulfillment_method'] ?? null);
+        app(ProjectProcurementDraft::class)->saveAutomatic($request, $package, $input['candidate_id'], $snapshot);
 
         return DB::transaction(function () use ($request, $id, $input, $key, $applied): string {
             $w = $this->projects->package($request, $id, true);
@@ -139,8 +152,16 @@ final class ProjectInquiryService
             ProjectService::version($w, $input['lock_version']);
             $this->unassigned($w);
             $candidate = $this->estimates->candidate($request, $id, $input['candidate_id']);
-            $s = $applied ?? $candidate['snapshot'];
+            $resolved = ProjectEstimateService::resolve($candidate['snapshot'], $input['fulfillment_method'] ?? null);
+            $s = $applied ?? $resolved;
+            if (! isset($input['payment_method'])) {
+                throw new AuthenticationException('PAYMENT_METHOD_REQUIRED', 'Choose a payment method in the selection checklist.', 422);
+            }
+            $s['payment_method'] = $input['payment_method'];
             self::assertChosen($s);
+            if (ProjectProcurementDraft::excessiveLines($w, $s) !== []) {
+                throw new AuthenticationException('PROJECT_DRAFT_QUANTITY_REVIEW', 'Review supplementary quantities in quotation checkout before sending the primary request.', 409);
+            }
             // Capability updates acquire the same organization lock; accepted history is never revalidated.
             DB::table('vendor_organizations')->where('id', $s['vendor_id'])->lockForUpdate()->first();
             if ($s['fulfillment_method'] === 'DELIVERY' && ! app(VendorDeliveryEligibility::class)->available((string) $s['vendor_id'])) {
@@ -151,33 +172,9 @@ final class ProjectInquiryService
                 throw new AuthenticationException('FULFILLMENT_REVIEW_REQUIRED', 'Resolve the delivery endpoint or coverage before selection.', 422);
             }
             app(PaymentMethodPolicy::class)->assertAllowed((string) $s['vendor_id'], (string) $s['fulfillment_method'], (string) $s['payment_method']);
+            $order = $this->createRequest($request, $w, $s, $input, $key, $input['candidate_id']);
             $actor = OrderActor::buyer($request);
-            $buyer = DB::table('projects')->where('id', $w->project_id)->value('buyer_profile_id');
-            DB::table('orders')->insert(['id' => $key, 'reference' => 'ORD-'.now('Asia/Manila')->format('Y').'-'.Str::upper(Str::random(10)), 'buyer_profile_id' => $buyer,
-                'vendor_organization_id' => $s['vendor_id'], 'work_package_id' => $id, 'work_package_version_id' => $w->current_version_id, 'compiled_estimate_vendor_id' => $input['candidate_id'],
-                'procurement_type' => 'PROJECT_BASED', 'order_state' => 'AWAITING_VENDOR_CONFIRMATION', 'payment_state' => 'NOT_REQUIRED', 'fulfillment_method' => $s['fulfillment_method'], 'payment_method' => $s['payment_method'],
-                'materials_centavos' => $s['materials_centavos'], 'delivery_centavos' => $s['fulfillment_method'] === 'PICKUP' ? 0 : null, 'commercial_total_centavos' => $s['materials_centavos'],
-                'project_note' => $input['note'] ?? null, 'destination' => json_encode($s['destination'], JSON_THROW_ON_ERROR), 'submitted_at' => now(), 'vendor_response_due_at' => now()->addHours(PlatformSettings::current()->int('orders.vendor_response_hours')), 'created_at' => now(), 'updated_at' => now()]);
-            if (! empty($s['destination']['access_instructions'])) {
-                DB::table('orders')->where('id', $key)->update(['access_instructions_encrypted' => Crypt::encryptString($s['destination']['access_instructions'])]);
-            }
-            $lineNumber = 0;
-            foreach (self::aggregateLines($s['lines']) as $l) {
-                if ($l['variant_id'] === null || bccomp($l['matched_quantity'], '0', 4) <= 0) {
-                    continue;
-                }
-                DB::table('order_lines')->insert(['id' => (string) Str::uuid7(), 'order_id' => $key, 'line_number' => ++$lineNumber, 'listing_variant_id' => $l['variant_id'], 'vendor_listing_id' => $l['listing_id'],
-                    'unit_id' => $l['unit_id'], 'quantity' => $l['matched_quantity'], 'unit_price_centavos' => $l['unit_price_centavos'], 'payable_centavos' => $l['amount_centavos'], 'included_vat_centavos' => $l['included_vat_centavos'],
-                    'tax_category' => $l['tax_category'], 'listing_price_version_id' => $l['source_price_version_id'], 'snapshot' => json_encode($l + ['display_name' => $l['name']], JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now()]);
-            }
-            $order = DB::table('orders')->where('id', $key)->first();
-            $commercial = app(OrderCommercial::class);
-            $money = $commercial->compute($commercial->lines($key), [], 0, $order->delivery_centavos);
-            $commercial->record($order, 'SUBMITTED', ['work_package_version_id' => $w->current_version_id, 'system_estimate' => $s, 'note' => $input['note'] ?? null,
-                'note_response_required' => false, 'fulfillment_method' => $s['fulfillment_method'], 'payment_method' => $s['payment_method']], $money, $actor);
             app(ProjectBudget::class)->guard($request, $w, $s['projected_total_centavos'] ?? $s['materials_centavos'], $input, $key);
-            app(OrderTransitionService::class)->opened($order, $actor);
-            app(FulfillmentThreadService::class)->ensureForOrder($key);
             $this->missing($w, $s['missing_lines']);
             app(QuotationService::class)->expireForPackage($id);
             DB::table('work_packages')->where('id', $id)->update(['status' => 'VENDOR_SELECTED', 'selected_vendor_organization_id' => $s['vendor_id'], 'lock_version' => $w->lock_version + 1, 'updated_at' => now()]);
@@ -187,6 +184,51 @@ final class ProjectInquiryService
 
             return $key;
         });
+    }
+
+    /** One supplier's pending Project request. Caller owns the transaction, authorization and budget guard.
+     * @param array<string, mixed> $s
+     * @param array<string, mixed> $input */
+    public function createRequest(Request $request, object $w, array $s, array $input, string $orderId, ?string $candidateId, ?string $arrangementId = null, ?string $memberId = null): object
+    {
+        $actor = OrderActor::buyer($request);
+        $buyer = DB::table('projects')->where('id', $w->project_id)->value('buyer_profile_id');
+        DB::table('orders')->insert(['id' => $orderId, 'reference' => 'ORD-'.now('Asia/Manila')->format('Y').'-'.Str::upper(Str::random(10)), 'buyer_profile_id' => $buyer,
+            'vendor_organization_id' => $s['vendor_id'], 'work_package_id' => $w->id, 'work_package_version_id' => $w->current_version_id, 'compiled_estimate_vendor_id' => $candidateId, 'project_arrangement_id' => $arrangementId, 'project_arrangement_vendor_id' => $memberId,
+            'procurement_type' => 'PROJECT_BASED', 'order_state' => 'AWAITING_VENDOR_CONFIRMATION', 'payment_state' => 'NOT_REQUIRED', 'fulfillment_method' => $s['fulfillment_method'], 'payment_method' => $s['payment_method'],
+            'materials_centavos' => $s['materials_centavos'], 'delivery_centavos' => $s['fulfillment_method'] === 'PICKUP' ? 0 : null, 'commercial_total_centavos' => $s['materials_centavos'],
+            'project_note' => $input['note'] ?? null, 'destination' => json_encode($s['destination'], JSON_THROW_ON_ERROR), 'submitted_at' => now(), 'vendor_response_due_at' => now()->addHours(PlatformSettings::current()->int('orders.vendor_response_hours')), 'created_at' => now(), 'updated_at' => now()]);
+        if (! empty($s['destination']['access_instructions'])) {
+            DB::table('orders')->where('id', $orderId)->update(['access_instructions_encrypted' => Crypt::encryptString($s['destination']['access_instructions'])]);
+        }
+        $allocations = [];
+        foreach ($s['lines'] as $requirement) {
+            foreach ($requirement['allocations'] ?? [$requirement] as $allocation) {
+                if (($allocation['variant_id'] ?? null) !== null && bccomp($allocation['matched_quantity'], '0', 4) > 0) {
+                    $allocations[$allocation['variant_id']][] = ['line_id' => $requirement['line_id'], 'quantity' => $allocation['matched_quantity']];
+                }
+            }
+        }
+        $lineNumber = 0;
+        foreach (self::aggregateLines($s['lines']) as $l) {
+            if ($l['variant_id'] === null || bccomp($l['matched_quantity'], '0', 4) <= 0) {
+                continue;
+            }
+            DB::table('order_lines')->insert(['id' => (string) Str::uuid7(), 'order_id' => $orderId, 'line_number' => ++$lineNumber, 'listing_variant_id' => $l['variant_id'], 'vendor_listing_id' => $l['listing_id'],
+                'work_package_line_id' => $allocations[$l['variant_id']][0]['line_id'] ?? null,
+                'unit_id' => $l['unit_id'], 'quantity' => $l['matched_quantity'], 'unit_price_centavos' => $l['unit_price_centavos'], 'payable_centavos' => $l['amount_centavos'], 'included_vat_centavos' => $l['included_vat_centavos'],
+                'tax_category' => $l['tax_category'], 'listing_price_version_id' => $l['source_price_version_id'], 'snapshot' => json_encode($l + ['display_name' => $l['name'], 'work_package_allocations' => $allocations[$l['variant_id']] ?? []], JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now()]);
+        }
+        $order = DB::table('orders')->where('id', $orderId)->first();
+        $commercial = app(OrderCommercial::class);
+        $money = $commercial->compute($commercial->lines($orderId), [], 0, $order->delivery_centavos);
+        $commercial->record($order, 'SUBMITTED', ['work_package_version_id' => $w->current_version_id, 'system_estimate' => $s, 'note' => $input['note'] ?? null,
+            'note_response_required' => false, 'fulfillment_method' => $s['fulfillment_method'], 'payment_method' => $s['payment_method']], $money, $actor);
+
+        app(OrderTransitionService::class)->opened($order, $actor);
+        app(FulfillmentThreadService::class)->ensureForOrder($orderId);
+
+        return $order;
     }
 
     private function unassigned(object $w): void
@@ -232,17 +274,27 @@ final class ProjectInquiryService
     }
 
     /** Reconcile the accepted proposal against the locked original without rewriting that original.
-     * @param list<array<string, mixed>> $supplied */
-    public function acceptedMissing(object $w, array $supplied): void
+     * @param list<array<string, mixed>> $supplied
+     * @param array{order_id: string, quantities: array<string, string>}|null $confirmation */
+    public function acceptedMissing(object $w, array $supplied, ?array $confirmation = null): void
     {
         if ($w->current_version_id === null) {
             return;
         }
         $version = DB::table('work_package_versions')->where('id', $w->current_version_id)->first();
         $original = json_decode($version->content, true);
+        $groupPurchases = $w->selected_arrangement_id === null ? null : PackageFulfillment::purchases($w, (string) DB::table('projects')->where('id', $w->project_id)->value('buyer_profile_id'), $confirmation);
         foreach ($original['lines'] as $required) {
             $needed = $required['quantity'];
-            foreach ($supplied as &$line) {
+            if ($groupPurchases !== null) {
+                foreach ($groupPurchases[$required['id']] ?? [] as $purchase) {
+                    if ($purchase['stage'] === 'ORDERED' && $purchase['satisfies_requirement']) {
+                        $needed = bcsub($needed, bccomp($needed, $purchase['quantity'], 4) <= 0 ? $needed : $purchase['quantity'], 4);
+                    }
+                }
+            }
+            foreach ($groupPurchases === null ? array_keys($supplied) : [] as $index) {
+                $line = &$supplied[$index];
                 // An unlisted requirement is never machine-matched, even against another unlisted supply line.
                 if (($required['material_id'] ?? null) === null || ($line['material_id'] ?? null) !== $required['material_id'] || $line['unit_id'] !== $required['unit_id']
                     || ($required['preferred_brand'] !== null && ($line['brand'] ?? null) !== $required['preferred_brand'])
@@ -255,6 +307,9 @@ final class ProjectInquiryService
             }
             unset($line);
             if (bccomp($needed, '0', 4) > 0) {
+                if ($groupPurchases !== null && DB::table('work_package_missing_lines')->where('work_package_version_id', $w->current_version_id)->where('work_package_line_id', $required['id'])->whereNotNull('waived_by_user_id')->exists()) {
+                    continue;
+                }
                 DB::table('work_package_missing_lines')->updateOrInsert(['work_package_version_id' => $w->current_version_id, 'work_package_line_id' => $required['id']],
                     ['id' => DB::table('work_package_missing_lines')->where('work_package_line_id', $required['id'])->value('id') ?? (string) Str::uuid7(), 'quantity' => $needed, 'created_at' => now(), 'updated_at' => now()]);
             } else {

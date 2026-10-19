@@ -34,7 +34,7 @@ export interface FeeAssessment {
     /**
      *
      */
-    commissionBasisPoints: FeeAssessmentCommissionBasisPointsEnum;
+    commissionBasisPoints: number;
     /**
      *
      */
@@ -45,16 +45,6 @@ export interface FeeAssessment {
     state: string;
 }
 
-
-/**
- * @export
- */
-export const FeeAssessmentCommissionBasisPointsEnum = {
-    NUMBER_200: 200,
-} as const;
-export type FeeAssessmentCommissionBasisPointsEnum = typeof FeeAssessmentCommissionBasisPointsEnum[keyof typeof FeeAssessmentCommissionBasisPointsEnum];
-
-
 /**
  * Check if a given object implements the FeeAssessment interface.
  */
@@ -63,8 +53,6 @@ export function instanceOfFeeAssessment(value: object): value is FeeAssessment {
     if ((!('orderId' in (value as Record<string, any>)) && !('order_id' in (value as Record<string, any>))) || ((value as Record<string, any>)['orderId'] === undefined && (value as Record<string, any>)['order_id'] === undefined)) return false;
     if ((!('commissionBasisCentavos' in (value as Record<string, any>)) && !('commission_basis_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['commissionBasisCentavos'] === undefined && (value as Record<string, any>)['commission_basis_centavos'] === undefined)) return false;
     if ((!('commissionBasisPoints' in (value as Record<string, any>)) && !('commission_basis_points' in (value as Record<string, any>))) || ((value as Record<string, any>)['commissionBasisPoints'] === undefined && (value as Record<string, any>)['commission_basis_points'] === undefined)) return false;
-
-    if ((value as Record<string, any>)['commissionBasisPoints'] !== 200 && (value as Record<string, any>)['commission_basis_points'] !== 200) return false;
     if ((!('earnedCentavos' in (value as Record<string, any>)) && !('earned_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['earnedCentavos'] === undefined && (value as Record<string, any>)['earned_centavos'] === undefined)) return false;
     if (!('state' in value) || value['state'] === undefined) return false;
     return true;

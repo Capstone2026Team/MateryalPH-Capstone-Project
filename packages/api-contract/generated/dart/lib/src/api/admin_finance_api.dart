@@ -10,6 +10,9 @@ import 'package:dio/dio.dart';
 import 'package:materyalph_api_client/src/api_util.dart';
 import 'package:materyalph_api_client/src/model/admin_payment_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/channel_fee_version_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/commission_policies_envelope.dart';
+import 'package:materyalph_api_client/src/model/commission_policy_envelope.dart';
+import 'package:materyalph_api_client/src/model/commission_policy_publish_request.dart';
 import 'package:materyalph_api_client/src/model/date.dart';
 import 'package:materyalph_api_client/src/model/fee_credit_proposal_request.dart';
 import 'package:materyalph_api_client/src/model/fee_statement_envelope.dart';
@@ -593,6 +596,98 @@ class AdminFinanceApi {
     );
   }
 
+  /// listCommissionPolicies
+  /// finance.view. Current and next commercial commission policies and paginated append-only history. can_manage additionally requires platform_settings.manage.
+  ///
+  /// Parameters:
+  /// * [page]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [CommissionPoliciesEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<CommissionPoliciesEnvelope>> listCommissionPolicies({
+    int? page = 1,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/admin/finance/commission-policies';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    CommissionPoliciesEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(CommissionPoliciesEnvelope),
+      ) as CommissionPoliciesEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<CommissionPoliciesEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
   /// listFeeStatements
   /// finance.view. Monthly commission statements shared with Vendor Finance. Inclusive Manila dates filter issued_on. overdue&#x3D;true returns only issued/partially paid positive balances past the due date; drafts, settled and voided statements are excluded. Approved credits reduce debt on the original statement and any paid excess becomes a separate original-payment refund payable.
   ///
@@ -995,6 +1090,116 @@ class AdminFinanceApi {
     }
 
     return Response<FinanceActionResultEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// publishCommissionPolicy
+  /// Requires finance.view, platform_settings.manage, recent authentication, CSRF, Idempotency-Key and expected_version. Publishes a new commercial rate with immutable, hash-verified Vendor terms and Owner notices. Existing quotations, orders, assessments and credits keep their saved rate. Statutory rates and provider mode are unchanged. No backdating or insertion before the latest scheduled policy.
+  ///
+  /// Parameters:
+  /// * [idempotencyKey]
+  /// * [commissionPolicyPublishRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [CommissionPolicyEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<CommissionPolicyEnvelope>> publishCommissionPolicy({
+    required String idempotencyKey,
+    required CommissionPolicyPublishRequest commissionPolicyPublishRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/admin/finance/commission-policies';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        r'Idempotency-Key': idempotencyKey,
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(CommissionPolicyPublishRequest);
+      _bodyData = _serializers.serialize(commissionPolicyPublishRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    CommissionPolicyEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(CommissionPolicyEnvelope),
+      ) as CommissionPolicyEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<CommissionPolicyEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

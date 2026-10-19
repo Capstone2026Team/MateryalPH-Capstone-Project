@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Analytics\Geo;
 
+use App\Domain\Geography\PsgcResolver;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -50,12 +51,7 @@ final class GeoFactsBuilder
     {
         $now ??= CarbonImmutable::now();
         $through = $now->setTimezone('Asia/Manila')->toDateString();
-        $this->psgc->forget();
-        $this->addressGeo = [];
-        $this->vendorGeo = [];
-        $this->versionId = $this->psgc->version()?->id;
-        $this->boundaries = $this->versionId !== null && DB::table('psgc_boundaries as b')->join('psgc_areas as a', 'a.id', '=', 'b.psgc_area_id')
-            ->where('a.psgc_version_id', $this->versionId)->whereNotNull('b.geom')->exists();
+        $this->prepare();
         $revision = (int) DB::table('analytics_geo_runs')->where('environment', self::ENVIRONMENT)->where('through_date', $through)->max('revision') + 1;
         $runId = (string) Str::uuid7();
         DB::table('analytics_geo_runs')->insert(['id' => $runId, 'environment' => self::ENVIRONMENT, 'through_date' => $through, 'revision' => $revision, 'state' => 'RUNNING',
@@ -82,6 +78,38 @@ final class GeoFactsBuilder
         }
 
         return ['run_id' => $runId, 'state' => 'PUBLISHED', 'revision' => $revision, 'counts' => $counts];
+    }
+
+    /**
+     * Rebuilds only today's presence snapshot (active storefronts and registered Buyers by place) under the same lock as
+     * the daily run, so stores activated and Buyers registered after the 01:00 aggregation appear within minutes. Order,
+     * activity and response facts stay daily. Returns the rows written, or null before the first published run.
+     */
+    public function refreshPresence(?CarbonImmutable $now = null): ?int
+    {
+        $runId = DB::table('analytics_geo_runs')->where('environment', self::ENVIRONMENT)->where('state', 'PUBLISHED')->orderByDesc('through_date')->orderByDesc('revision')->value('id');
+        if ($runId === null) {
+            return null;
+        }
+        $through = ($now ?? CarbonImmutable::now())->setTimezone('Asia/Manila')->toDateString();
+        $this->prepare();
+
+        return DB::transaction(function () use ($runId, $through): int {
+            DB::statement('SELECT pg_advisory_xact_lock(?)', [crc32('materyalph-geo-facts')]);
+            DB::table('analytics_presence_facts')->where('environment', self::ENVIRONMENT)->where('snapshot_on', $through)->delete();
+
+            return $this->presence((string) $runId, $through);
+        });
+    }
+
+    private function prepare(): void
+    {
+        $this->psgc->forget();
+        $this->addressGeo = [];
+        $this->vendorGeo = [];
+        $this->versionId = $this->psgc->version()?->id;
+        $this->boundaries = $this->versionId !== null && DB::table('psgc_boundaries as b')->join('psgc_areas as a', 'a.id', '=', 'b.psgc_area_id')
+            ->where('a.psgc_version_id', $this->versionId)->whereNotNull('b.geom')->exists();
     }
 
     public static function personKey(string $kind, string|int $id): string
@@ -171,8 +199,11 @@ final class GeoFactsBuilder
         if (isset($this->addressGeo[$addressId])) {
             return $this->addressGeo[$addressId];
         }
-        $row = DB::table('addresses')->where('id', $addressId)->first(['id', 'city_code', 'province_code', 'region_code', 'psgc_code']);
+        $row = DB::table('addresses')->where('id', $addressId)->first(['id', 'city_code', 'province_code', 'region_code', 'psgc_code', 'city_municipality', 'province', 'barangay']);
         $geo = $row === null ? self::unresolved() : $this->psgc->place($row->city_code, $row->province_code, $row->region_code, $row->psgc_code);
+        if ($geo['resolution'] !== 'RESOLVED' && $row !== null) {
+            $geo = $this->byNames($row) ?? $geo;
+        }
         if ($geo['resolution'] !== 'RESOLVED' && $row !== null && $this->boundaries) {
             $geo = $this->pointInBoundary('SELECT location::geometry FROM addresses WHERE id = ?', $addressId) ?? $geo;
         }
@@ -187,13 +218,33 @@ final class GeoFactsBuilder
             return $this->vendorGeo[$organizationId];
         }
         $row = DB::table('vendor_addresses as a')->join('vendor_address_versions as v', 'v.id', '=', 'a.current_version_id')->where('a.vendor_organization_id', $organizationId)
-            ->first(['v.id', 'v.city_code', 'v.province_code', 'v.psgc_code']);
+            ->first(['v.id', 'v.city_code', 'v.province_code', 'v.psgc_code', 'v.city_municipality', 'v.province', 'v.barangay']);
         $geo = $row === null ? self::unresolved() : $this->psgc->place($row->city_code, $row->province_code, null, $row->psgc_code);
+        if ($geo['resolution'] !== 'RESOLVED' && $row !== null) {
+            $geo = $this->byNames($row) ?? $geo;
+        }
         if ($geo['resolution'] !== 'RESOLVED' && $row !== null && $this->boundaries) {
             $geo = $this->pointInBoundary('SELECT location::geometry FROM vendor_address_versions WHERE id = ?', (string) $row->id) ?? $geo;
         }
 
         return $this->vendorGeo[$organizationId] = $geo;
+    }
+
+    /**
+     * An address stored with place names but no PSGC codes (for example a pin picked on the map) is placed through the
+     * same unique-name match used at onboarding; ambiguous or unmatched names stay unresolved rather than guessed.
+     *
+     * @return array{region_code: ?string, area_code: ?string, locality_code: ?string, resolution: string}|null
+     */
+    private function byNames(object $row): ?array
+    {
+        $named = (new PsgcResolver)->resolveNames(['city_municipality' => $row->city_municipality, 'province' => $row->province, 'barangay' => $row->barangay]);
+        if (($named['psgc_resolution'] ?? 'UNRESOLVED') === 'UNRESOLVED') {
+            return null;
+        }
+        $geo = $this->psgc->place($named['city_code'] ?? null, $named['province_code'] ?? null, $named['region_code'] ?? null);
+
+        return $geo['resolution'] === 'UNRESOLVED' ? null : $geo;
     }
 
     /** @return array{region_code: ?string, area_code: ?string, locality_code: ?string, resolution: string}|null */

@@ -32,16 +32,19 @@ void main() {
       // TODO
     });
 
+    // Optional. 50 km is the only Project-Based vendor-selection radius; the server applies it whether or not it is sent.
     // int radiusKm
     test('to test the property `radiusKm`', () async {
       // TODO
     });
 
+    // BOTH means the Buyer is open to either. The scan lists every Vendor offering Site Delivery, Self-Pickup or both; each candidate then lists its `fulfillment_options` and the Buyer picks one when inquiring or selecting. BOTH requires `payment_method` ONLINE and the delivery details (`site_contact`, `access_instructions`, `heavy_vehicle_restriction`).
     // String fulfillmentMethod
     test('to test the property `fulfillmentMethod`', () async {
       // TODO
     });
 
+    // Optional legacy value. New authoring omits payment; it is explicitly chosen in the selection checklist.
     // String paymentMethod
     test('to test the property `paymentMethod`', () async {
       // TODO

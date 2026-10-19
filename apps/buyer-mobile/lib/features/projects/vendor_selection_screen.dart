@@ -12,6 +12,7 @@ import '../map_discovery/supplier_map.dart';
 import '../map_discovery/supplier_preview_sheet.dart';
 import '../orders/order_models.dart' show formatManilaDateTime;
 import 'projects_repository.dart';
+import 'project_arrangement_screen.dart';
 import 'vendor_quotation_screen.dart';
 import 'vendor_selection_widgets.dart';
 
@@ -40,9 +41,8 @@ class ProjectSourcingLinks {
   openProduct;
 }
 
-/// Messages a Vendor (quotation inquiry) or selects it directly with an
-/// optional Note. Returns the conversation or order id, or null when the Buyer
-/// cancels. Idempotency keys live in [keys] so a retry reuses them.
+/// Opens a quotation inquiry. Direct selection belongs to the checklist and
+/// quotation checkout. Idempotency keys live in [keys] so a retry reuses them.
 Future<String?> chooseCandidate(
   BuildContext context, {
   required ProjectsRepository repository,
@@ -52,72 +52,26 @@ Future<String?> chooseCandidate(
   required Map<String, String> keys,
   Map<String, String> selections = const {},
 }) async {
-  String? note, reason;
+  // A Vendor offering both Delivery and Pickup needs the Buyer's pick; the
+  // candidate shown is already priced for it.
+  final method = needsFulfillmentChoice(candidate)
+      ? projectText(candidate['fulfillment_method'])
+      : null;
   if (select) {
-    final input = TextEditingController(), override = TextEditingController();
-    final confirmed = await showBuyerFormDialog<bool>(
-      context: context,
-      builder: (context) => BuyerDialog(
-        title: Text('Select ${candidate['store_name']}?'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Other active quotations expire. This Vendor manually confirms the package before your final approval.',
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: input,
-                maxLength: 2000,
-                decoration: const InputDecoration(
-                  labelText: 'Optional informational Note',
-                  helperText: 'No Vendor response required',
-                ),
-              ),
-              TextField(
-                controller: override,
-                maxLength: 2000,
-                decoration: const InputDecoration(
-                  labelText: 'Budget override reason',
-                  helperText:
-                      'Required when the purchase exceeds either budget',
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Select Vendor'),
-          ),
-        ],
-      ),
-    );
-    note = input.text.trim();
-    reason = override.text.trim();
-    input.dispose();
-    override.dispose();
-    if (confirmed != true) return null;
+    throw StateError('Direct selection must pass through quotation checkout.');
   }
-  // Different specification choices are a different request, never a retry.
+  // Different specification or method choices are a different request, never a retry.
   final action =
-      '${select ? 'select' : 'inquire'}:${candidate['id']}:'
+      '${select ? 'select' : 'inquire'}:${candidate['id']}:${method ?? ''}:'
       '${(selections.entries.map((e) => '${e.key}=${e.value}').toList()..sort()).join(',')}';
   final result = await repository.candidate(
     projectText(package['id']),
     {
       'lock_version': projectInt(package['lock_version']),
       'candidate_id': candidate['id'],
-      if (note?.isNotEmpty ?? false) 'note': note,
-      if (reason?.isNotEmpty ?? false) 'budget_override_reason': reason,
       if (selections.isNotEmpty)
         'selections': specificationSelections(selections),
+      'fulfillment_method': ?method,
     },
     keys.putIfAbsent(action, projectKey),
     select: select,
@@ -162,9 +116,19 @@ class _VendorSelectionScreenState extends State<VendorSelectionScreen> {
   late ProjectData package = widget.package;
   ProjectData? page;
   String sort = 'BEST_MATCH';
+
+  /// Direction of the selected ordering; unused by Best Match. A radius change
+  /// rescans but keeps both.
+  bool sortDescending = false;
+
+  /// The results list's controller, so a re-sort can return to the top.
+  ScrollController? listScroll;
+  final wideScroll = ScrollController();
   bool favorites = false, complete = false, withinBudget = false;
   bool busy = false, loading = false;
-  String? error, selected, routeError;
+  // Appending preserves positions; replacing criteria must first load their order.
+  bool rankingsCurrent = true;
+  String? error, selected, routeError, focusedVendor;
   List<GeoPoint>? path;
   ProjectData? route;
   int sequence = 0, routeSequence = 0;
@@ -178,9 +142,38 @@ class _VendorSelectionScreenState extends State<VendorSelectionScreen> {
   ProjectData? get estimate =>
       page?['estimate'] == null ? null : projectObject(page!['estimate']);
   List<ProjectData> get candidates => projectRows(page?['items']);
-  int get radius => projectInt(
-    projectObject(estimate?['context'])['radius_km'] ?? content['radius_km'],
-  );
+  bool get legacy =>
+      package['selected_arrangement_id'] == null &&
+      package['procurement_candidate_id'] != null;
+
+  /// Always the fixed Project-Based radius, never a value read back from a
+  /// package or estimate saved before the radius was fixed.
+  int get radius => projectSearchRadiusKm;
+  List<ProjectData> get mapVendors {
+    final byId = <String, ProjectData>{};
+    for (final candidate in candidates) {
+      for (final vendor
+          in candidate.containsKey('vendors')
+              ? projectRows(candidate['vendors'])
+              : [candidate]) {
+        if (vendor['latitude'] is num && vendor['longitude'] is num) {
+          byId[projectText(vendor['vendor_id'])] = vendor;
+        }
+      }
+    }
+    return byId.values.toList();
+  }
+
+  Set<String> get highlightedVendors => {
+    for (final option in candidates.where((c) => c['id'] == selected))
+      for (final vendor in projectRows(option['vendors']))
+        projectText(vendor['vendor_id']),
+  };
+
+  /// An estimate scanned at another radius is outdated and is replaced.
+  bool get radiusOutdated =>
+      estimate != null &&
+      projectInt(projectObject(estimate!['context'])['radius_km']) != radius;
   bool get scannable =>
       package['project_status'] == 'ACTIVE' &&
       ['ACTIVE', 'QUOTATION_INQUIRY'].contains(package['status']);
@@ -188,32 +181,70 @@ class _VendorSelectionScreenState extends State<VendorSelectionScreen> {
   @override
   void initState() {
     super.initState();
-    page = widget.initialEstimates;
-    if (page == null) unawaited(_load());
+    page = null;
+    unawaited(_open());
+  }
+
+  /// Opening Find vendors scans at once: the saved radius when no estimate
+  /// exists yet or the saved one expired. An active estimate is shown as-is.
+  Future<void> _open() async {
+    if (page == null) await _load();
+    if (!mounted || !scannable) return;
+    final state = projectText(estimate?['state']);
+    if (estimate == null ||
+        radiusOutdated ||
+        (state != 'ACTIVE' && error == null)) {
+      await _scan(confirm: false);
+    }
   }
 
   @override
   void dispose() {
     sequence++;
     routeSequence++;
+    wideScroll.dispose();
     super.dispose();
+  }
+
+  /// Applies a tab tap: the new ordering and direction, re-sorted by the
+  /// server, with the list back at the top.
+  void _sort(String code, bool descending) {
+    setState(() {
+      sort = code;
+      sortDescending = descending;
+    });
+    final scroll = listScroll;
+    if (scroll != null && scroll.hasClients) scroll.jumpTo(0);
+    unawaited(_load());
   }
 
   Future<void> _load({bool append = false}) async {
     final token = ++sequence;
     setState(() {
       loading = true;
+      if (!append) rankingsCurrent = false;
       error = null;
     });
     try {
-      final next = await repo.estimates(
-        id,
-        page: append ? projectInt(page?['page']) + 1 : 1,
-        sort: sort,
-        favoritesOnly: favorites,
-        completeOnly: complete,
-        withinBudget: withinBudget,
-      );
+      final next = legacy
+          ? await repo.estimates(
+              id,
+              page: append ? projectInt(page?['page']) + 1 : 1,
+              sort: sort,
+              direction: vendorSortDirection(sortDescending),
+              favoritesOnly: favorites,
+              completeOnly: complete,
+              withinBudget: withinBudget,
+            )
+          : await repo.arrangementOptions(
+              id,
+              page: append ? projectInt(page?['page']) + 1 : 1,
+              sort: sort,
+              direction: vendorSortDirection(sortDescending),
+              favoritesOnly: favorites,
+              completeOnly: complete,
+              withinBudget: withinBudget,
+            );
       if (!mounted || token != sequence) return;
       setState(() {
         page = append
@@ -223,6 +254,7 @@ class _VendorSelectionScreenState extends State<VendorSelectionScreen> {
               }
             : next;
         loading = false;
+        rankingsCurrent = true;
       });
     } on DiscoveryFailure catch (e) {
       if (mounted && token == sequence) {
@@ -269,15 +301,16 @@ class _VendorSelectionScreenState extends State<VendorSelectionScreen> {
     }
   }
 
-  Future<void> _scan(int km) async {
-    if (!await _confirm(
-      'Find Vendors within $km km?',
-      'Scan from the locked Project site. This replaces the comparison with a fresh 48-hour advisory estimate.',
-    )) {
+  Future<void> _scan({bool confirm = true}) async {
+    if (confirm &&
+        !await _confirm(
+          'Find Vendors within $radius km?',
+          'Scan from the locked Project site. This replaces the comparison with a fresh 48-hour advisory estimate.',
+        )) {
       return;
     }
     await _run(() async {
-      await repo.compile(id, projectInt(package['lock_version']), km);
+      await repo.compile(id, projectInt(package['lock_version']));
       package = await repo.package(id);
       selected = null;
       path = null;
@@ -286,11 +319,33 @@ class _VendorSelectionScreenState extends State<VendorSelectionScreen> {
     });
   }
 
-  Future<void> _select(String candidate) async {
+  Future<void> _select(String candidate, {String? vendorId}) async {
+    final matching = candidates
+        .where(
+          (c) =>
+              c['id'] == candidate ||
+              projectRows(c['vendors']).any((v) => v['vendor_id'] == candidate),
+        )
+        .toList();
+    if (matching.isEmpty) return;
+    final option = matching.firstWhere(
+      (c) => c['id'] == selected,
+      orElse: () => matching.first,
+    );
+    final members = projectRows(option['vendors']);
+    final member = members.isEmpty
+        ? option
+        : members.firstWhere(
+            (v) => v['vendor_id'] == (vendorId ?? candidate),
+            orElse: () => members.first,
+          );
+    final routeCandidate = projectText(member['candidate_id'] ?? option['id']);
+    candidate = projectText(option['id']);
     final token = ++routeSequence;
     final version = package['current_version_id'];
     setState(() {
       selected = candidate;
+      focusedVendor = projectText(member['vendor_id'] ?? member['id']);
       path = null;
       route = null;
       routeError = null;
@@ -310,7 +365,7 @@ class _VendorSelectionScreenState extends State<VendorSelectionScreen> {
       }
     });
     try {
-      final result = await repo.route(id, candidate);
+      final result = await repo.route(id, routeCandidate);
       if (mounted &&
           token == routeSequence &&
           result['version_id'] == version) {
@@ -327,8 +382,13 @@ class _VendorSelectionScreenState extends State<VendorSelectionScreen> {
   }
 
   Future<void> _choose(ProjectData c, bool select) async {
-    // A specification still to choose is chosen on the quotation first.
-    if (c['selection_required'] == true) return _openQuotation(c);
+    // A specification or a Delivery/Pickup method still to choose is chosen on
+    // the quotation first, where each method shows its own total.
+    if (select ||
+        c['selection_required'] == true ||
+        needsFulfillmentChoice(c)) {
+      return _openQuotation(c);
+    }
     return _chooseNow(c, select);
   }
 
@@ -354,13 +414,20 @@ class _VendorSelectionScreenState extends State<VendorSelectionScreen> {
   Future<void> _openQuotation(ProjectData c) async {
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
-        builder: (_) => VendorQuotationScreen(
-          repository: repo,
-          package: package,
-          candidate: c,
-          estimate: estimate,
-          links: widget.links,
-        ),
+        builder: (_) => c.containsKey('vendors')
+            ? ProjectArrangementScreen(
+                repository: repo,
+                package: package,
+                option: c,
+                links: widget.links,
+              )
+            : VendorQuotationScreen(
+                repository: repo,
+                package: package,
+                candidate: c,
+                estimate: estimate,
+                links: widget.links,
+              ),
       ),
     );
     if (!mounted) return;
@@ -385,7 +452,7 @@ class _VendorSelectionScreenState extends State<VendorSelectionScreen> {
       double.tryParse(projectText(point['longitude'])) ?? 0,
     );
     return Scaffold(
-      appBar: buyerAppBar(context, 'Vendor selection'),
+      appBar: buyerAppBar(context, 'Quotation options'),
       body: LayoutBuilder(
         builder: (context, size) {
           final wide = size.maxWidth >= 1024;
@@ -396,26 +463,27 @@ class _VendorSelectionScreenState extends State<VendorSelectionScreen> {
                   context,
                   SupplierMapProps(
                     items: [
-                      for (final (i, c) in candidates.indexed)
+                      for (final (i, vendor) in mapVendors.indexed)
                         SupplierResultView(
-                          resultId: projectText(c['id']),
+                          resultId: projectText(vendor['vendor_id']),
                           tier: SupplierTier.verified,
                           rank: i + 1,
-                          name: projectText(c['store_name']),
+                          name: projectText(vendor['store_name']),
                           point: GeoPoint(
-                            (c['latitude'] as num).toDouble(),
-                            (c['longitude'] as num).toDouble(),
+                            (vendor['latitude'] as num).toDouble(),
+                            (vendor['longitude'] as num).toDouble(),
                           ),
-                          distanceMeters: projectInt(c['distance_meters']),
-                          scoreKind: c['vps'] == null
+                          distanceMeters: projectInt(vendor['distance_meters']),
+                          scoreKind: vendor['vps'] == null
                               ? ScoreKind.newVendor
                               : ScoreKind.vps,
-                          scoreText: projectText(c['score_label']),
+                          scoreText: projectText(vendor['score_label']),
                         ),
                     ],
                     origin: origin,
                     radiusKm: radius,
-                    selectedId: selected,
+                    selectedId: focusedVendor,
+                    highlightedIds: highlightedVendors,
                     routePath: path,
                     onSelect: _select,
                     bottomInset: wide ? 0 : size.maxHeight * .42,
@@ -428,25 +496,25 @@ class _VendorSelectionScreenState extends State<VendorSelectionScreen> {
                 left: 0,
                 right: 0,
                 top: 8,
-                child: _RadiusChips(
-                  radius: radius,
-                  scanned: estimate != null,
-                  enabled: scannable && !busy,
-                  onChanged: _scan,
-                ),
+                child: const _RadiusBadge(radius: projectSearchRadiusKm),
               ),
             ],
           );
-          Widget list(ScrollController? controller) => ListView(
-            controller: controller,
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            children: _results(context, point),
-          );
+          Widget list(ScrollController controller) {
+            listScroll = controller;
+
+            return ListView(
+              controller: controller,
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              children: _results(context, point),
+            );
+          }
+
           return wide
               ? Row(
                   children: [
                     Expanded(child: map),
-                    SizedBox(width: 460, child: list(null)),
+                    SizedBox(width: 460, child: list(wideScroll)),
                   ],
                 )
               : Stack(
@@ -467,7 +535,6 @@ class _VendorSelectionScreenState extends State<VendorSelectionScreen> {
     final state = projectText(estimate?['state']);
     final total = projectInt(page?['total']);
     final unfiltered = projectInt(page?['unfiltered_total'] ?? page?['total']);
-    final suggested = page?['suggested_radius_km'];
     return [
       if (busy || loading) const LinearProgressIndicator(),
       Row(
@@ -536,7 +603,7 @@ class _VendorSelectionScreenState extends State<VendorSelectionScreen> {
               TextSpan(
                 children: [
                   const TextSpan(
-                    text: 'Vendor results: ',
+                    text: 'Quotation options: ',
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   TextSpan(text: projectText(package['name'])),
@@ -546,8 +613,8 @@ class _VendorSelectionScreenState extends State<VendorSelectionScreen> {
             const SizedBox(height: 2),
             Text(
               estimate == null
-                  ? 'No scan yet. Choose a radius above to find Vendors.'
-                  : 'Found $unfiltered Vendor${unfiltered == 1 ? '' : 's'} within $radius km'
+                  ? 'No scan yet. Find Vendors within $radius km of the Project site.'
+                  : '$unfiltered procurement option${unfiltered == 1 ? '' : 's'} · suppliers within $radius km'
                         '${total != unfiltered ? ' · $total match your filters' : ''}',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: BuyerTheme.muted,
@@ -566,7 +633,7 @@ class _VendorSelectionScreenState extends State<VendorSelectionScreen> {
               ),
             if (scannable && estimate == null)
               TextButton.icon(
-                onPressed: busy ? null : () => _scan(radius),
+                onPressed: busy ? null : _scan,
                 icon: const Icon(LucideIcons.search, size: 18),
                 label: Text('Find Vendors within $radius km'),
               ),
@@ -575,7 +642,7 @@ class _VendorSelectionScreenState extends State<VendorSelectionScreen> {
                 (state != 'ACTIVE' ||
                     candidates.any((candidate) => candidate['stale'] == true)))
               TextButton.icon(
-                onPressed: busy ? null : () => _scan(radius),
+                onPressed: busy ? null : _scan,
                 icon: const Icon(LucideIcons.refreshCw, size: 18),
                 label: const Text('Refresh estimate'),
               ),
@@ -593,10 +660,9 @@ class _VendorSelectionScreenState extends State<VendorSelectionScreen> {
       const SizedBox(height: 8),
       VendorSortTabs(
         value: sort,
-        onChanged: (value) {
-          setState(() => sort = value);
-          unawaited(_load());
-        },
+        descending: sortDescending,
+        onChanged: _sort,
+        grouped: !legacy,
       ),
       const Divider(height: 1),
       const SizedBox(height: 8),
@@ -608,28 +674,44 @@ class _VendorSelectionScreenState extends State<VendorSelectionScreen> {
       ),
       const SizedBox(height: 12),
       if (estimate != null && candidates.isEmpty && !loading)
-        _EmptyResults(
-          filtered: total != unfiltered,
-          suggestedRadius: scannable && suggested != null
-              ? projectInt(suggested)
-              : null,
-          onWiden: (km) => _scan(km),
-        ),
-      for (final c in candidates)
+        _EmptyResults(filtered: total != unfiltered),
+      for (final (index, c) in candidates.indexed)
         KeyedSubtree(
           key: cardKeys.putIfAbsent(projectText(c['id']), GlobalKey.new),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              VendorResultCard(
-                candidate: c,
-                selected: selected == c['id'],
-                onSelect: () => _select(projectText(c['id'])),
-                onMessage: !busy && candidateActionable(package, estimate, c)
-                    ? () => _choose(c, false)
-                    : null,
-                onViewQuotation: () => _openQuotation(c),
-              ),
+              if (c.containsKey('vendors'))
+                ProjectArrangementCard(
+                  option: c,
+                  rankingPosition:
+                      sort == 'BEST_MATCH' &&
+                          rankingsCurrent &&
+                          c['rank'] != null
+                      ? projectInt(c['rank'])
+                      : null,
+                  selected: selected == c['id'],
+                  onSelect: () => _select(projectText(c['id'])),
+                  onVendor: (vendor) =>
+                      _select(projectText(c['id']), vendorId: vendor),
+                  onReview: () => _openQuotation(c),
+                )
+              else
+                VendorResultCard(
+                  candidate: c,
+                  rankingPosition:
+                      sort == 'BEST_MATCH' &&
+                          (page?['sort'] ?? 'BEST_MATCH') == 'BEST_MATCH' &&
+                          rankingsCurrent
+                      ? index + 1
+                      : null,
+                  selected: selected == c['id'],
+                  onSelect: () => _select(projectText(c['id'])),
+                  onMessage: !busy && candidateActionable(package, estimate, c)
+                      ? () => _choose(c, false)
+                      : null,
+                  onViewQuotation: () => _openQuotation(c),
+                ),
               if (selected == c['id'] && (route != null || routeError != null))
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
@@ -647,60 +729,41 @@ class _VendorSelectionScreenState extends State<VendorSelectionScreen> {
       if (page?['has_more'] == true)
         OutlinedButton(
           onPressed: loading ? null : () => _load(append: true),
-          child: const Text('More Vendors'),
+          child: const Text('More options'),
         ),
     ];
   }
 }
 
-class _RadiusChips extends StatelessWidget {
-  const _RadiusChips({
-    required this.radius,
-    required this.scanned,
-    required this.enabled,
-    required this.onChanged,
-  });
+/// The fixed Project-Based search radius, shown on the map as one selected,
+/// non-interactive chip. There is nothing to choose: 50 km is the only radius.
+class _RadiusBadge extends StatelessWidget {
+  const _RadiusBadge({required this.radius});
   final int radius;
-  final bool scanned;
-  final bool enabled;
-  final ValueChanged<int> onChanged;
 
   @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-    scrollDirection: Axis.horizontal,
+  Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 12),
-    child: Row(
-      children: [
-        for (final km in [5, 10, 20, 30, 40, 50])
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
-              label: Text('$km km'),
-              selected: km == radius,
-              showCheckmark: false,
-              // The current radius stays enabled so it reads as selected; it
-              // only scans again when no scan exists yet.
-              onSelected: enabled
-                  ? (_) {
-                      if (km != radius || !scanned) onChanged(km);
-                    }
-                  : null,
-            ),
-          ),
-      ],
+    child: Align(
+      alignment: Alignment.centerLeft,
+      child: Semantics(
+        label: 'Search radius $radius kilometres, fixed',
+        excludeSemantics: true,
+        child: ChoiceChip(
+          avatar: const Icon(LucideIcons.mapPin, size: 16),
+          label: Text('$radius km'),
+          selected: true,
+          showCheckmark: false,
+          onSelected: null,
+        ),
+      ),
     ),
   );
 }
 
 class _EmptyResults extends StatelessWidget {
-  const _EmptyResults({
-    required this.filtered,
-    required this.suggestedRadius,
-    required this.onWiden,
-  });
+  const _EmptyResults({required this.filtered});
   final bool filtered;
-  final int? suggestedRadius;
-  final ValueChanged<int> onWiden;
 
   @override
   Widget build(BuildContext context) => StateMessage(
@@ -708,15 +771,9 @@ class _EmptyResults extends StatelessWidget {
     compact: true,
     title: filtered
         ? 'No Vendors match these filters'
-        : 'No eligible Vendors yet',
+        : 'No eligible Vendors within $projectSearchRadiusKm km',
     message: filtered
         ? 'Clear a filter to see every Vendor in this estimate.'
-        : 'Fewer than three Vendors stock these materials nearby.',
-    secondaryLabel: !filtered && suggestedRadius != null
-        ? 'Search within $suggestedRadius km'
-        : null,
-    onSecondary: !filtered && suggestedRadius != null
-        ? () => onWiden(suggestedRadius!)
-        : null,
+        : 'No open Vendor within $projectSearchRadiusKm km of the Project site stocks these materials for this fulfillment method.',
   );
 }

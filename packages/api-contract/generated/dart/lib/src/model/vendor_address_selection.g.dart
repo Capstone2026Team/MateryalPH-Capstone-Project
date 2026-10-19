@@ -8,13 +8,19 @@ part of 'vendor_address_selection.dart';
 
 class _$VendorAddressSelection extends VendorAddressSelection {
   @override
+  final String? province;
+  @override
+  final String? cityMunicipality;
+  @override
+  final String? barangay;
+  @override
   final String? pinToken;
   @override
-  final String provinceCode;
+  final String? provinceCode;
   @override
-  final String cityCode;
+  final String? cityCode;
   @override
-  final String psgcCode;
+  final String? psgcCode;
   @override
   final String? street;
   @override
@@ -27,10 +33,13 @@ class _$VendorAddressSelection extends VendorAddressSelection {
       (VendorAddressSelectionBuilder()..update(updates))._build();
 
   _$VendorAddressSelection._(
-      {this.pinToken,
-      required this.provinceCode,
-      required this.cityCode,
-      required this.psgcCode,
+      {this.province,
+      this.cityMunicipality,
+      this.barangay,
+      this.pinToken,
+      this.provinceCode,
+      this.cityCode,
+      this.psgcCode,
       this.street,
       this.unit,
       this.postalCode})
@@ -48,6 +57,9 @@ class _$VendorAddressSelection extends VendorAddressSelection {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is VendorAddressSelection &&
+        province == other.province &&
+        cityMunicipality == other.cityMunicipality &&
+        barangay == other.barangay &&
         pinToken == other.pinToken &&
         provinceCode == other.provinceCode &&
         cityCode == other.cityCode &&
@@ -60,6 +72,9 @@ class _$VendorAddressSelection extends VendorAddressSelection {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, province.hashCode);
+    _$hash = $jc(_$hash, cityMunicipality.hashCode);
+    _$hash = $jc(_$hash, barangay.hashCode);
     _$hash = $jc(_$hash, pinToken.hashCode);
     _$hash = $jc(_$hash, provinceCode.hashCode);
     _$hash = $jc(_$hash, cityCode.hashCode);
@@ -74,6 +89,9 @@ class _$VendorAddressSelection extends VendorAddressSelection {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'VendorAddressSelection')
+          ..add('province', province)
+          ..add('cityMunicipality', cityMunicipality)
+          ..add('barangay', barangay)
           ..add('pinToken', pinToken)
           ..add('provinceCode', provinceCode)
           ..add('cityCode', cityCode)
@@ -88,6 +106,19 @@ class _$VendorAddressSelection extends VendorAddressSelection {
 class VendorAddressSelectionBuilder
     implements Builder<VendorAddressSelection, VendorAddressSelectionBuilder> {
   _$VendorAddressSelection? _$v;
+
+  String? _province;
+  String? get province => _$this._province;
+  set province(String? province) => _$this._province = province;
+
+  String? _cityMunicipality;
+  String? get cityMunicipality => _$this._cityMunicipality;
+  set cityMunicipality(String? cityMunicipality) =>
+      _$this._cityMunicipality = cityMunicipality;
+
+  String? _barangay;
+  String? get barangay => _$this._barangay;
+  set barangay(String? barangay) => _$this._barangay = barangay;
 
   String? _pinToken;
   String? get pinToken => _$this._pinToken;
@@ -124,6 +155,9 @@ class VendorAddressSelectionBuilder
   VendorAddressSelectionBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _province = $v.province;
+      _cityMunicipality = $v.cityMunicipality;
+      _barangay = $v.barangay;
       _pinToken = $v.pinToken;
       _provinceCode = $v.provinceCode;
       _cityCode = $v.cityCode;
@@ -152,13 +186,13 @@ class VendorAddressSelectionBuilder
   _$VendorAddressSelection _build() {
     final _$result = _$v ??
         _$VendorAddressSelection._(
+          province: province,
+          cityMunicipality: cityMunicipality,
+          barangay: barangay,
           pinToken: pinToken,
-          provinceCode: BuiltValueNullFieldError.checkNotNull(
-              provinceCode, r'VendorAddressSelection', 'provinceCode'),
-          cityCode: BuiltValueNullFieldError.checkNotNull(
-              cityCode, r'VendorAddressSelection', 'cityCode'),
-          psgcCode: BuiltValueNullFieldError.checkNotNull(
-              psgcCode, r'VendorAddressSelection', 'psgcCode'),
+          provinceCode: provinceCode,
+          cityCode: cityCode,
+          psgcCode: psgcCode,
           street: street,
           unit: unit,
           postalCode: postalCode,

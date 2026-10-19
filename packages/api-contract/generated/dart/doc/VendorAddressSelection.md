@@ -8,10 +8,13 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**province** | **String** |  | [optional]
+**cityMunicipality** | **String** |  | [optional]
+**barangay** | **String** |  | [optional]
 **pinToken** | **String** | Optional server-issued map pin token; never raw coordinates. | [optional]
-**provinceCode** | **String** | Province code or region code for a city without a province parent. |
-**cityCode** | **String** |  |
-**psgcCode** | **String** | Official barangay code. |
+**provinceCode** | **String** | Province code or region code for a city without a province parent. | [optional]
+**cityCode** | **String** |  | [optional]
+**psgcCode** | **String** | Official barangay code. | [optional]
 **street** | **String** |  | [optional]
 **unit** | **String** |  | [optional]
 **postalCode** | **String** |  | [optional]

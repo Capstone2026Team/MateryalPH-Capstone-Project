@@ -32,9 +32,9 @@ export interface ProjectSpecificationDetail {
      */
     value: string;
     /**
-     *
+     * Measurement unit, or null for unitless specifications such as steel grade.
      */
-    unitCode: string;
+    unitCode: string | null;
 }
 
 /**

@@ -7,10 +7,13 @@ namespace App\Http\Controllers\Api;
 use App\Domain\Catalog\EligibleOfferQuery;
 use App\Domain\Catalog\MaterialSearch;
 use App\Domain\Geography\BuyerProfiles;
+use App\Domain\Geography\RadiusPolicy;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Projects\FulfillmentMatchScore;
+use App\Domain\Projects\ProjectArrangements;
 use App\Domain\Projects\ProjectEstimateService;
 use App\Domain\Projects\ProjectInquiryService;
+use App\Domain\Projects\ProjectProcurementDraft;
 use App\Domain\Projects\ProjectService;
 use App\Domain\Projects\SpecificationMatch;
 use App\Domain\Projects\WorkPackageAlternatives;
@@ -20,6 +23,7 @@ use App\Http\Requests\Projects\WorkPackageRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
 final class BuyerProjectController extends Controller
@@ -104,25 +108,78 @@ final class BuyerProjectController extends Controller
     public function estimates(Request $r, string $packageId, ProjectEstimateService $estimates): JsonResponse
     {
         $this->page($r);
-        $r->validate(['sort' => ['sometimes', 'in:BEST_MATCH,BUDGET_FIT,RATING,PRICE'], 'favorites_only' => ['sometimes', 'in:0,1,true,false'],
+        $r->validate(['sort' => ['sometimes', 'in:BEST_MATCH,BUDGET_FIT,RATING,PRICE'], 'direction' => ['sometimes', 'in:ASC,DESC'], 'favorites_only' => ['sometimes', 'in:0,1,true,false'],
             'complete_only' => ['sometimes', 'in:0,1,true,false'], 'within_budget' => ['sometimes', 'in:0,1,true,false']]);
 
-        return ApiResponse::success($estimates->show($r, $packageId, null, ['sort' => (string) $r->query('sort', 'BEST_MATCH'),
+        return ApiResponse::success($estimates->show($r, $packageId, null, ['sort' => (string) $r->query('sort', 'BEST_MATCH'), 'direction' => $r->query('direction'),
             'favorites_only' => $r->boolean('favorites_only'), 'complete_only' => $r->boolean('complete_only'), 'within_budget' => $r->boolean('within_budget')]));
+    }
+
+    public function arrangementOptions(Request $r, string $packageId, ProjectArrangements $arrangements): JsonResponse
+    {
+        $this->page($r);
+        $r->validate(['sort' => ['sometimes', 'in:BEST_MATCH,PRICE'], 'direction' => ['sometimes', 'in:ASC,DESC'],
+            'favorites_only' => ['sometimes', 'in:0,1,true,false'], 'complete_only' => ['sometimes', 'in:0,1,true,false'], 'within_budget' => ['sometimes', 'in:0,1,true,false']]);
+
+        return ApiResponse::success($arrangements->options($r, $packageId));
+    }
+
+    public function createArrangement(Request $r, string $packageId, ProjectArrangements $arrangements): JsonResponse
+    {
+        $input = $r->validate(['source_candidate_id' => ['required', 'uuid'], 'proposal_token' => ['sometimes', 'string', 'max:200000']]);
+
+        return ApiResponse::success($arrangements->create($r, $packageId, $input['source_candidate_id'], $input['proposal_token'] ?? null), [], 201);
+    }
+
+    public function arrangementShow(Request $r, string $packageId, string $arrangementId, ProjectArrangements $arrangements): JsonResponse
+    {
+        return ApiResponse::success($arrangements->show($r, $packageId, $arrangementId));
+    }
+
+    public function editArrangement(Request $r, string $packageId, string $arrangementId, ProjectArrangements $arrangements): JsonResponse
+    {
+        $input = $r->validate(['version' => ['required', 'integer', 'min:1'], 'vendor_id' => ['sometimes', 'uuid'], 'line_id' => ['required_without:fulfillment_method', 'uuid'],
+            'fulfillment_method' => ['sometimes', 'in:DELIVERY,PICKUP'], 'method' => ['sometimes', 'in:DELIVERY,PICKUP'], 'option_id' => ['sometimes', 'string', 'max:200'],
+            'item_id' => ['required_if:remove,true', 'required_if:replace_item,true', 'uuid'], 'remove' => ['sometimes', 'boolean'], 'replace_item' => ['sometimes', 'boolean'],
+            'variant_id' => ['required_without_all:fulfillment_method,option_id,item_id', 'uuid'], 'price_version_id' => ['required_with:variant_id', 'uuid']]);
+        if ((isset($input['fulfillment_method']) || isset($input['option_id'])) && ! isset($input['vendor_id'])) {
+            throw new AuthenticationException('VENDOR_REQUIRED', 'Choose a supplier from this arrangement.', 422);
+        }
+
+        return ApiResponse::success($arrangements->edit($r, $packageId, $arrangementId, $input));
+    }
+
+    public function submitArrangement(Request $r, string $packageId, string $arrangementId, ProjectArrangements $arrangements): JsonResponse
+    {
+        $input = $r->validate(['version' => ['required', 'integer', 'min:1'], 'fingerprint' => ['required', 'string', 'size:64'],
+            'payments' => ['required', 'array', 'min:1', 'max:100'], 'payments.*.vendor_id' => ['required', 'uuid', 'distinct'], 'payments.*.payment_method' => ['required', 'in:ONLINE,CASH_ON_DELIVERY,IN_STORE'],
+            'acknowledged' => ['required', 'accepted'], 'note' => ['nullable', 'string', 'max:2000'], 'budget_override_reason' => ['nullable', 'string', 'min:10', 'max:2000']]);
+
+        return ApiResponse::success($arrangements->submit($r, $packageId, $arrangementId, $input), [], 201);
+    }
+
+    public function arrangementInquiry(Request $r, string $packageId, string $arrangementId, string $vendorId, ProjectArrangements $arrangements): JsonResponse
+    {
+        $input = $r->validate(['version' => ['required', 'integer', 'min:1']]);
+
+        return ApiResponse::success($arrangements->inquire($r, $packageId, $arrangementId, $vendorId, $input['version']));
     }
 
     public function alternatives(Request $r, string $packageId, string $lineId, WorkPackageAlternatives $alternatives): JsonResponse
     {
-        $input = $r->validate(['page' => ['sometimes', 'integer', 'between:1,1000'], 'exclude_vendor_id' => ['sometimes', 'nullable', 'uuid']]);
+        $input = $r->validate(['page' => ['sometimes', 'integer', 'between:1,1000'], 'exclude_vendor_id' => ['sometimes', 'nullable', 'uuid'], 'candidate_id' => ['sometimes', 'nullable', 'uuid'],
+            'fulfillment_method' => ['sometimes', 'in:PICKUP,DELIVERY'], 'arrangement_id' => ['sometimes', 'uuid'], 'replace' => ['sometimes', 'in:0,1,true,false'], 'specification_choices' => ['sometimes', 'string', 'json', 'max:15000']]);
+        $choices = Validator::make(['selections' => json_decode($input['specification_choices'] ?? '[]', true)], self::SELECTION_RULES)->validate();
 
-        return ApiResponse::success($alternatives->list($r, $packageId, $lineId, $input['exclude_vendor_id'] ?? null, (int) ($input['page'] ?? 1)));
+        return ApiResponse::success($alternatives->list($r, $packageId, $lineId, $input['exclude_vendor_id'] ?? null, (int) ($input['page'] ?? 1), $input['candidate_id'] ?? null,
+            ProjectInquiryService::selections($choices), $input['fulfillment_method'] ?? null, $input['arrangement_id'] ?? null, $r->boolean('replace')));
     }
 
     public function compile(Request $r, string $packageId, ProjectEstimateService $estimates): JsonResponse
     {
-        $input = $r->validate(['lock_version' => ['required', 'integer', 'min:1'], 'radius_km' => ['required', 'integer', 'in:5,10,20,30,40,50']]);
+        $input = $r->validate(['lock_version' => ['required', 'integer', 'min:1'], 'radius_km' => ['sometimes', 'integer', 'in:'.RadiusPolicy::PROJECT_BASED_KM]]);
 
-        return ApiResponse::success($estimates->compile($r, $packageId, $input['lock_version'], $input['radius_km']));
+        return ApiResponse::success($estimates->compile($r, $packageId, $input['lock_version']));
     }
 
     public function inquire(Request $r, string $packageId, ProjectInquiryService $inquiries): JsonResponse
@@ -134,7 +191,7 @@ final class BuyerProjectController extends Controller
 
     public function select(Request $r, string $packageId, ProjectInquiryService $inquiries): JsonResponse
     {
-        $input = $r->validate(['lock_version' => ['required', 'integer', 'min:1'], 'candidate_id' => ['required', 'uuid'], 'note' => ['nullable', 'string', 'max:2000'], 'budget_override_reason' => ['nullable', 'string', 'min:10', 'max:2000']] + self::SELECTION_RULES);
+        $input = $r->validate(['lock_version' => ['required', 'integer', 'min:1'], 'candidate_id' => ['required', 'uuid'], 'payment_method' => ['required', 'in:ONLINE,CASH_ON_DELIVERY,IN_STORE'], 'note' => ['nullable', 'string', 'max:2000'], 'budget_override_reason' => ['nullable', 'string', 'min:10', 'max:2000']] + self::SELECTION_RULES);
 
         return ApiResponse::success(['id' => $inquiries->select($r, $packageId, $input)], [], 201);
     }
@@ -323,15 +380,41 @@ final class BuyerProjectController extends Controller
     {
         $input = $r->validate(self::SELECTION_RULES);
 
-        return ApiResponse::success($estimates->selectionPreview($r, $packageId, $candidateId, ProjectInquiryService::selections($input)));
+        return ApiResponse::success($estimates->selectionPreview($r, $packageId, $candidateId, ProjectInquiryService::selections($input), $input['fulfillment_method'] ?? null));
     }
 
-    /** One specification option per Work Package line. */
-    private const SELECTION_RULES = ['selections' => ['sometimes', 'array', 'max:100'], 'selections.*.line_id' => ['required', 'uuid', 'distinct'], 'selections.*.option_id' => ['required', 'string', 'regex:/^[0-9a-f]{16}$/']];
+    public function saveDraftItem(Request $r, string $packageId, string $candidateId, string $lineId, string $variantId, ProjectProcurementDraft $draft): JsonResponse
+    {
+        $input = $r->validate(['lock_version' => ['required', 'integer', 'min:1'], 'price_version_id' => ['required', 'uuid']] + self::SELECTION_RULES);
+        $draft->change($r, $packageId, $candidateId, $lineId, $variantId, $input, false);
+
+        return ApiResponse::success(['id' => $variantId]);
+    }
+
+    public function removeDraftItem(Request $r, string $packageId, string $candidateId, string $lineId, string $variantId, ProjectProcurementDraft $draft): JsonResponse
+    {
+        $input = $r->validate(['lock_version' => ['required', 'integer', 'min:1']]);
+        $draft->change($r, $packageId, $candidateId, $lineId, $variantId, $input, true);
+
+        return ApiResponse::success(['id' => $variantId]);
+    }
+
+    public function requestDraftSupplier(Request $r, string $packageId, string $candidateId, string $vendorId, ProjectProcurementDraft $draft): JsonResponse
+    {
+        $input = $r->validate(['lock_version' => ['required', 'integer', 'min:1'], 'payment_method' => ['required', 'in:ONLINE,CASH_ON_DELIVERY,IN_STORE'],
+            'draft_fingerprint' => ['required', 'string', 'size:64'], 'budget_override_reason' => ['nullable', 'string', 'min:10', 'max:2000']]);
+
+        return ApiResponse::success(['id' => $draft->submit($r, $packageId, $candidateId, $vendorId, $input)], [], 201);
+    }
+
+    /** One specification option per Work Package line, and the Delivery or Pickup choice for a Vendor offering both. */
+    private const SELECTION_RULES = ['selections' => ['sometimes', 'array', 'max:100'], 'selections.*.line_id' => ['required', 'uuid', 'distinct'], 'selections.*.option_id' => ['required', 'string', 'regex:/^[0-9a-f]{16}$/'],
+        'fulfillment_method' => ['sometimes', 'in:PICKUP,DELIVERY']];
 
     public function budgetEstimate(Request $r, string $projectId, ProjectEstimateService $estimates): JsonResponse
     {
-        $input = $r->validate(['site_id' => ['required', 'uuid'], 'radius_km' => ['required', 'integer', 'in:5,10,20,30,40,50'], 'fulfillment_method' => ['required', 'in:PICKUP,DELIVERY'],
+        $input = $r->validate(['site_id' => ['required', 'uuid'], 'radius_km' => ['sometimes', 'integer', 'in:'.RadiusPolicy::PROJECT_BASED_KM], 'fulfillment_method' => ['required', 'in:PICKUP,DELIVERY,BOTH'],
+            'heavy_vehicle_restriction' => ['sometimes', 'in:NO,YES,UNANSWERED'], 'alternate_drop_off_location_id' => ['sometimes', 'nullable', 'uuid'],
             'lines' => ['required', 'array', 'min:1', 'max:100'], 'lines.*.material_id' => ['nullable', 'uuid'], 'lines.*.unit_id' => ['required', 'uuid'],
             'lines.*.quantity' => ['required', 'regex:/^\d{1,7}(\.\d{1,4})?$/', 'numeric', 'gt:0', 'max:1000000'], 'lines.*.preferred_brand' => ['nullable', 'string', 'max:100'],
             'lines.*.specifications' => ['present', 'array', 'max:30'], 'lines.*.specifications.*' => ['string', 'max:200']]);
@@ -348,17 +431,19 @@ final class BuyerProjectController extends Controller
             if ($this->projects->hasOrder($w)) {
                 throw new AuthenticationException('WORK_PACKAGE_HAS_ORDER', 'This Work Package has an order, so it cannot be deleted. Its records stay available.', 409);
             }
-            $retained = $w->status !== 'DRAFT' || DB::table('work_package_versions')->where('work_package_id', $w->id)->whereNotNull('locked_at')->exists()
+            $retained = $w->status !== 'DRAFT' || DB::table('orders')->where('work_package_id', $w->id)->exists()
+                || DB::table('work_package_versions')->where('work_package_id', $w->id)->whereNotNull('locked_at')->exists()
                 || DB::table('work_package_version_deletions')->whereIn('work_package_version_id', DB::table('work_package_versions')->select('id')->where('work_package_id', $w->id))->exists();
             if ($retained) {
                 // Saved originals, estimates and quotations are commercial records: close them and hide the package instead of removing it.
                 $this->projects->invalidate($packageId);
-                DB::table('work_packages')->where('id', $w->id)->update(['status' => 'CANCELLED', 'deleted_at' => now(), 'lock_version' => $w->lock_version + 1, 'updated_at' => now()]);
+                DB::table('work_packages')->where('id', $w->id)->update(['status' => 'CANCELLED', 'selected_vendor_organization_id' => null, 'deleted_at' => now(), 'lock_version' => $w->lock_version + 1, 'updated_at' => now()]);
                 $this->projects->record($r, 'WORK_PACKAGE_DELETED', $packageId);
 
                 return;
             }
             DB::table('work_packages')->where('id', $w->id)->update(['current_version_id' => null]);
+            DB::table('project_procurement_draft_exclusions')->whereIn('work_package_version_id', DB::table('work_package_versions')->select('id')->where('work_package_id', $w->id))->delete();
             DB::table('work_package_lines')->whereIn('work_package_version_id', DB::table('work_package_versions')->select('id')->where('work_package_id', $w->id))->delete();
             DB::table('work_package_versions')->where('work_package_id', $w->id)->delete();
             DB::table('work_packages')->where('id', $w->id)->delete();

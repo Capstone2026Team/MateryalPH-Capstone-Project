@@ -66,6 +66,7 @@ abstract interface class MessagingRepository {
     bool nrpcAcknowledged = false,
     String? termsId,
     String? budgetOverrideReason,
+    String? paymentMethod,
   });
   Future<void> upload(String id, Uint8List bytes, String name, String key);
   Future<Uint8List> attachment(String id, String attachmentId);
@@ -337,6 +338,7 @@ final class ApiMessagingRepository implements MessagingRepository {
     bool nrpcAcknowledged = false,
     String? termsId,
     String? budgetOverrideReason,
+    String? paymentMethod,
   }) => _guard(
     () async => (await _api.decideChatQuotation(
       messagingPortal: 'buyers',
@@ -350,7 +352,10 @@ final class ApiMessagingRepository implements MessagingRepository {
           ..reason = reason
           ..nrpcAcknowledged = nrpcAcknowledged
           ..nrpcTermsVersionId = termsId
-          ..budgetOverrideReason = budgetOverrideReason,
+          ..budgetOverrideReason = budgetOverrideReason
+          ..paymentMethod = paymentMethod == null
+              ? null
+              : api.ChatDecisionPaymentMethodEnum.valueOf(paymentMethod),
       ),
     )).data?.data.orderId,
   );

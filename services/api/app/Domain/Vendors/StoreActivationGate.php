@@ -121,7 +121,7 @@ final class StoreActivationGate
             $block(8, 'payment_connection', 'A backend-provisioned Xendit TEST sub-account is required.');
         }
         if ($owner === null || ! $this->commissionAccepted($organizationId, (int) $owner->id)) {
-            $block(9, 'commission_terms', 'The Owner must accept the current versioned 2% commission agreement.');
+            $block(9, 'commission_terms', 'The Owner must accept the current versioned commission agreement.');
         }
         if ($organization === null || $organization->account_status !== 'ACTIVE' || $organization->activation_hold_code !== null || in_array($organization->store_activation_status, ['RESTRICTED', 'SUSPENDED'], true)) {
             $block(10, 'activation_hold', 'Resolve the account suspension or blocking payment, refund, compliance or administrative hold.');

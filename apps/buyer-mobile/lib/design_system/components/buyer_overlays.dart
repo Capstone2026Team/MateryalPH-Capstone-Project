@@ -5,6 +5,60 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../theme.dart';
 
+/// A bounded modal for feature content that owns its scrolling.
+class BuyerContentDialog extends StatelessWidget {
+  const BuyerContentDialog({
+    super.key,
+    required this.title,
+    required this.child,
+    this.busy = false,
+  });
+
+  final String title;
+  final Widget child;
+  final bool busy;
+
+  @override
+  Widget build(BuildContext context) => PopScope(
+    canPop: !busy,
+    child: Dialog(
+      clipBehavior: Clip.antiAlias,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: SizedBox(
+        width: 640,
+        height: MediaQuery.sizeOf(context).height * .85,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 8, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Semantics(
+                      header: true,
+                      child: Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Close ${title.toLowerCase()}',
+                    onPressed: busy ? null : () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(child: child),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 /// One layout for confirmations and forms, including large-text and keyboard use.
 class BuyerDialog extends StatelessWidget {
   const BuyerDialog({
@@ -12,11 +66,14 @@ class BuyerDialog extends StatelessWidget {
     required this.title,
     this.content,
     this.actions = const [],
+    this.fullWidthActions = true,
   });
 
   final Widget title;
   final Widget? content;
   final List<Widget> actions;
+  /// False uses Material's compact action row and automatic narrow-width overflow.
+  final bool fullWidthActions;
 
   @override
   Widget build(BuildContext context) => AlertDialog(
@@ -27,10 +84,13 @@ class BuyerDialog extends StatelessWidget {
     contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
     actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
     buttonPadding: EdgeInsets.zero,
+    actionsOverflowButtonSpacing: fullWidthActions ? 0 : 8,
     title: Semantics(header: true, child: title),
     content: content,
     actions: actions.isEmpty
         ? null
+        : !fullWidthActions
+        ? actions
         : [
             SizedBox(
               width: double.infinity,

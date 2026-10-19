@@ -131,7 +131,7 @@ void main() {
       expect(find.text('Sample Store'), findsOneWidget);
       expect(find.text('New Vendor'), findsOneWidget);
       expect(find.text('Quezon City, Metro Manila'), findsOneWidget);
-      expect(find.text('Shop Front'), findsOneWidget);
+      expect(find.text('Shop Front'), findsNothing);
       expect(find.text('Products'), findsOneWidget);
       await tester.tap(find.text('Store Profile'));
       await tester.pumpAndSettle();
@@ -207,16 +207,12 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Products'));
-    await tester.pumpAndSettle();
 
     expect(find.text('KD Wood Mouldings'), findsOneWidget);
     expect(find.text('SikaGrout 112 PH'), findsOneWidget);
     expect(sorts, [
-      ListingSort.topSelling,
-      ListingSort.rating,
       ListingSort.bestDeal,
-    ], reason: 'Shop Front highlights load first; Products keeps Best Deal.');
+    ], reason: 'Products is the first tab and opens on Best Deal.');
 
     await tester.tap(find.text('Price'));
     await tester.pumpAndSettle();
@@ -226,109 +222,6 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('KD Wood Mouldings'));
     expect(opened, 'listing-1');
-  });
-
-  testWidgets(
-    'Shop Front shows Top Selling, Top Rated and Cheapest from server sorts',
-    (tester) async {
-      tester.view.physicalSize = const Size(1080, 2400);
-      tester.view.devicePixelRatio = 3;
-      addTearDown(tester.view.reset);
-      final sorts = <ListingSort>[];
-      String? opened;
-      await tester.pumpWidget(
-        MaterialApp(
-          home: BuyerPublicStoreProfileScreen(
-            storeId: 'store-1',
-            repository: _StoreRepository(),
-            loadProducts: (sort, cursor) async {
-              sorts.add(sort);
-              return switch (sort) {
-                ListingSort.topSelling => searchPage([
-                  listingCard('sold-1', name: 'Portland Cement', sold: '120'),
-                  listingCard('unsold-1', name: 'Never Sold Nails'),
-                ]),
-                ListingSort.rating => searchPage([
-                  listingCard('rated-1', name: 'Rated Plywood', rating: '4.80'),
-                  listingCard('unrated-1', name: 'Unrated Tile'),
-                ]),
-                _ => searchPage([
-                  listingCard('cheap-1', name: 'Tie Wire', price: 4500),
-                ]),
-              };
-            },
-            onOpenListing: (context, id) => opened = id,
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('Top Selling'), findsOneWidget);
-      expect(find.text('Portland Cement'), findsOneWidget);
-      expect(
-        find.text('Never Sold Nails'),
-        findsNothing,
-        reason: 'A product with no completed sales is not "top selling".',
-      );
-      await tester.scrollUntilVisible(
-        find.text('Rated Plywood'),
-        200,
-        scrollable: find.byType(Scrollable).first,
-      );
-      expect(find.text('Rated Plywood'), findsOneWidget);
-      expect(find.text('Unrated Tile'), findsNothing);
-
-      await tester.ensureVisible(find.bySemanticsLabel('Sort by Cheapest'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.bySemanticsLabel('Sort by Cheapest'));
-      await tester.pumpAndSettle();
-      expect(sorts.last, ListingSort.price);
-      await tester.ensureVisible(find.text('Tie Wire'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Tie Wire'));
-      expect(opened, 'cheap-1');
-
-      await tester.ensureVisible(
-        find.bySemanticsLabel('See all cheapest products'),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.bySemanticsLabel('See all cheapest products'));
-      await tester.pumpAndSettle();
-      expect(sorts.last, ListingSort.price);
-      expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is Semantics &&
-              widget.properties.selected == true &&
-              widget.properties.label == 'Price',
-        ),
-        findsOneWidget,
-        reason: 'See all opens Products already sorted by price.',
-      );
-    },
-  );
-
-  testWidgets('Shop Front notes a store without sales or ratings', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: BuyerPublicStoreProfileScreen(
-          storeId: 'store-1',
-          repository: _StoreRepository(),
-          loadProducts: (sort, cursor) async =>
-              searchPage([listingCard('listing-1', name: 'New Product')]),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.textContaining('No completed sales yet'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.textContaining('No rated products yet'),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.textContaining('No rated products yet'), findsOneWidget);
   });
 
   testWidgets(
@@ -473,7 +366,7 @@ void main() {
       expect(
         find.text('Message'),
         findsNothing,
-        reason: 'Message is an icon in the header, not a Shop Front button.',
+        reason: 'Message is an icon in the header, not a button in the page body.',
       );
       await tester.tap(find.byTooltip('Message Sample Store'));
       await tester.tap(find.byTooltip('Show Sample Store on the Map'));

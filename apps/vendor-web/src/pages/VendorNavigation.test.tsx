@@ -253,7 +253,7 @@ test('limited dashboard retains both workstreams without extra next-step content
   expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page')
 })
 
-test('five completed checklist items still show the final setup state and activation blocker', async () => {
+test('completed checklists retain the final setup action without a duplicate activation panel', async () => {
   const verificationSteps = ['business_information', 'identity_evidence', 'bir_cor', 'business_registration', 'lgu_permit'].map(key => ({ id: key, key, label: key.replaceAll('_', ' '), level: 'REQUIRED' as const, status: 'APPROVED' as const, lockVersion: 1 }))
   const setupSteps = ['public_store_profile', 'bulk_capability', 'fulfillment_method', 'payment_connection', 'store_operation'].map(key => ({ id: key, key, label: key.replaceAll('_', ' '), level: 'REQUIRED' as const, status: 'COMPLETED' as const, lockVersion: 1 }))
   snapshot.sections = {
@@ -268,14 +268,15 @@ test('five completed checklist items still show the final setup state and activa
   expect(screen.getByText('Review status:')).toHaveTextContent('Approved')
   expect(screen.getByText('Setup status:')).toHaveTextContent('In Progress')
   expect(screen.getByRole('link', { name: 'Complete Store Setup' })).toBeVisible()
-  expect(within(screen.getByRole('region', { name: 'Store activation requirements' })).getByText('Complete Store Setup.')).toBeVisible()
+  expect(screen.queryByRole('region', { name: 'Store activation requirements' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Request Store Activation' })).not.toBeInTheDocument()
 })
 
 test('unverified Owner email has no duplicate verification action on the limited dashboard', async () => {
   snapshot.activation = { ...snapshot.activation, readiness: { ready: false, status: 'NOT_READY', ruleVersion: 'phase3a.v1', blockers: [{ key: 'owner_email_verification', condition: 1, reason: 'Verify the Vendor Owner account email address.' }] } }
   open('/dashboard')
-  expect(await screen.findByText('Verify the Vendor Owner account email address.')).toBeVisible()
+  await screen.findByRole('heading', { name: /Welcome back/ })
+  expect(screen.queryByText('Verify the Vendor Owner account email address.')).not.toBeInTheDocument()
   expect(screen.queryByRole('link', { name: 'Verify Owner email' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Request Store Activation' })).not.toBeInTheDocument()
 })
@@ -289,6 +290,40 @@ test('ready store can still request activation from the limited dashboard', asyn
   expect(await screen.findByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
 })
 
+test('saved progress completes the address step while keeping Admin review separate', async () => {
+  snapshot.sections.STORE_VERIFICATION = { key: 'STORE_VERIFICATION', label: 'Store Verification', status: 'IN_PROGRESS', complete: 1, total: 1, progress: { complete: 1, total: 1 }, steps: [{ id: 'address', key: 'registered_business_address', label: 'Registered business address', level: 'REQUIRED', status: 'NOT_STARTED', progressStatus: 'COMPLETED', lockVersion: 1 }] }
+  open('/onboarding/verification')
+  const nav = await screen.findByRole('navigation', { name: 'Store Verification steps' })
+  expect(within(nav).getByRole('button', { name: /Completed, Registered Business Address/ })).toBeVisible()
+  expect(within(nav).getByText('1 of 1 checklist items complete')).toBeVisible()
+})
+
+test.each([['2', true], ['1', false]])('privacy draft for version %s restores only the current notice', async (version, checked) => {
+  snapshot.verification = { ...snapshot.verification, form_state: { privacy_acknowledged: ['on'], privacy_notice_version: [version] } }
+  open('/onboarding/verification')
+  fireEvent.click(await screen.findByRole('button', { name: /Privacy, Review and Submit/ }))
+  const checkbox = await screen.findByRole('checkbox', { name: /I acknowledge the current Privacy Notice/ })
+  expect(checkbox).toHaveProperty('checked', checked)
+  if (checked) fireEvent.click(checkbox)
+  fireEvent.click(checkbox)
+  fireEvent.click(screen.getByRole('button', { name: 'Finish Later' }))
+  await waitFor(() => expect(api.saveVendorVerificationDraft).toHaveBeenCalled())
+  const state = JSON.parse(vi.mocked(api.saveVendorVerificationDraft).mock.calls.at(-1)![0].formState!)
+  expect(state).toMatchObject({ privacy_acknowledged: ['on'], privacy_notice_version: ['2'] })
+})
+
+test('reopening an unfinished schedule preserves it when another setup field saves', async () => {
+  const operatingScheduleDraft = Array.from({ length: 7 }, (_, index) => ({ dayOfWeek: index + 1, status: index === 0 ? 'OPEN' : 'CLOSED', opensAt: '', closesAt: '' }))
+  snapshot.setup = { ...snapshot.setup, form_state: { operatingScheduleDraft } }
+  open('/onboarding/setup')
+  fireEvent.change(await screen.findByRole('textbox', { name: 'Store description' }), { target: { value: 'Updated description' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Finish Later' }))
+  await waitFor(() => expect(api.saveVendorSetupDraft).toHaveBeenCalled())
+  const draft = vi.mocked(api.saveVendorSetupDraft).mock.calls.at(-1)![0]
+  expect(draft.operatingSchedule).toBeUndefined()
+  expect(JSON.parse(draft.formState!)).toMatchObject({ operatingScheduleDraft })
+})
+
 test('verification shows one step, retains draft fields and adapts legal identity before saving', async () => {
   open('/onboarding/verification')
   await screen.findByRole('radio', { name: 'One Person Corporation (OPC)' })
@@ -299,7 +334,7 @@ test('verification shows one step, retains draft fields and adapts legal identit
   expect(screen.getByRole('textbox', { name: 'Surname' })).toBeVisible()
   expect(screen.getByRole('radio', { name: 'One Person Corporation (OPC)' })).toBeVisible()
   fireEvent.click(screen.getByRole('button', { name: '2 Registered Business Address' }))
-  expect(await screen.findByRole('textbox', { name: 'Detailed Address' })).toBeVisible()
+  expect(await screen.findByRole('textbox', { name: 'Street address' })).toBeVisible()
   expect(screen.queryByLabelText('Latitude')).not.toBeInTheDocument()
   expect(screen.queryByLabelText('Longitude')).not.toBeInTheDocument()
   expect(screen.queryByRole('textbox', { name: 'Company registered name' })).not.toBeInTheDocument()
@@ -507,6 +542,14 @@ test('failed setup autosave retains input and retries without reentry', async ()
 })
 
 
+test('saved invalid TIN explains incomplete Business Information without exposing the number', async () => {
+  snapshot.sections.STORE_VERIFICATION = { key: 'STORE_VERIFICATION', label: 'Store Verification', status: 'IN_PROGRESS', complete: 0, total: 1, progress: { complete: 0, total: 1 }, steps: [{ id: 'tax', key: 'tax_profile', label: 'Tax profile', level: 'REQUIRED', status: 'NOT_STARTED', progressStatus: 'IN_PROGRESS', lockVersion: 1, reason: 'Enter your 9-digit TIN followed by a 3- to 5-digit branch code (for example, 123-456-789-000).' }] }
+  open('/onboarding/verification')
+  expect(await screen.findByLabelText('Taxpayer Identification Number (TIN)')).toHaveAttribute('aria-invalid', 'true')
+  expect(screen.getByLabelText('Taxpayer Identification Number (TIN)')).toHaveValue('')
+  expect(screen.getByText('Enter your 9-digit TIN followed by a 3- to 5-digit branch code (for example, 123-456-789-000).')).toBeVisible()
+})
+
 test('tax uses one combined TIN with VAT radio choices and no office controls', async () => {
   open('/onboarding/verification')
   await screen.findByRole('radio', { name: 'One Person Corporation (OPC)' })
@@ -560,7 +603,7 @@ test.each(['123', '1234', '12345'])('autosave retains combined TIN and separate 
   fireEvent.change(await screen.findByLabelText('Taxpayer Identification Number (TIN)'), { target: { value: `123-456-789-${code}` } })
   fireEvent.change(screen.getByRole('textbox', { name: 'Registered Business Name' }), { target: { value: 'Legal Trading Name' } })
   fireEvent.click(screen.getByRole('button', { name: '2 Registered Business Address' }))
-  await screen.findByRole('textbox', { name: 'Detailed Address' })
+  await screen.findByRole('textbox', { name: 'Street address' })
   const saved = vi.mocked(api.saveVendorVerificationDraft).mock.calls[0]![0]
   expect(saved).toMatchObject({ lockVersion: 7, draftLockVersion: 4 })
   expect(JSON.parse(saved.formState!)).toMatchObject({ store_name: ['Public Supply'], legal_business_name: ['Legal Trading Name'], tin: [`123-456-789-${code}`] })
@@ -703,7 +746,7 @@ test('representative file survives a failed automatic save and is staged on retr
   expect(screen.getByRole('textbox', { name: 'Representative full legal name' })).toHaveValue('Test Representative')
   fireEvent.click(screen.getByRole('button', { name: '2 Registered Business Address' }))
   await waitFor(() => expect(api.uploadVendorDocument).toHaveBeenCalledWith('representative_identity', file))
-  await screen.findByRole('textbox', { name: 'Detailed Address' })
+  await screen.findByRole('textbox', { name: 'Street address' })
   expect(api.submitVendorVerification).not.toHaveBeenCalled()
 })
 
@@ -771,7 +814,7 @@ test('Admin correction reason stays with its document and approved evidence cann
 
 test('Submit for Admin Review sends current form data directly with the package after autosave', async () => {
   snapshot.organization = { business_type: 'SOLE_PROPRIETORSHIP', date_established: '2020-01-01', store_name: 'Current Store', store_email: 'store@example.test', store_email_verified: true, store_phone: '+639171234567', lock_version: 7 }
-  snapshot.verification = { ...snapshot.verification, classification: { supplier_type: 'RETAIL_HARDWARE_STORE', niches: ['Construction Materials'] }, legal_identity: { surname: 'Owner', first_name: 'Test', id_type: 'PASSPORT' }, address: { street: '123 Test Street', postal_code: '1100', province_code: '1300000000', city_code: '1381300000', psgc_code: '1381300001' } }
+  snapshot.verification = { ...snapshot.verification, classification: { supplier_type: 'RETAIL_HARDWARE_STORE', niches: ['Construction Materials'] }, legal_identity: { surname: 'Owner', first_name: 'Test', id_type: 'PASSPORT' }, address: { source: 'MANUAL', street: '123 Test Street', postal_code: '1100', province: 'Metro Manila', city_municipality: 'Quezon City', barangay: 'Alicia' } }
   vi.mocked(api.submitVendorVerification).mockImplementation(async () => ({ ...snapshot, verification: { ...snapshot.verification, status: 'PENDING_VERIFICATION' } }))
   open('/onboarding/verification')
   fireEvent.change(await screen.findByRole('textbox', { name: 'Public Store Name' }), { target: { value: 'Latest Store Name' } })

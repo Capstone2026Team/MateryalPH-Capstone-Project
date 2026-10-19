@@ -91,11 +91,11 @@ export interface ConversationView {
      */
     mainConversationId?: string;
     /**
-     * Number of currently authorized project inquiries for this Buyer and Store.
+     * Number of currently authorized open project quotation inquiries for this Buyer and Store, using the project-inquiries list filter.
      */
     projectInquiryCount?: number;
     /**
-     * Received unread messages across all currently authorized project inquiries, including every page. Opening the main thread does not mark these messages read.
+     * Received unread messages across all currently authorized open project quotation inquiries, including every page. Opening the main thread does not mark these messages read.
      */
     projectUnreadCount?: number;
     /**

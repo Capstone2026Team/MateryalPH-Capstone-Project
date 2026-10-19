@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`paymentMethod` | string
 `budgetOverrideReason` | string
 `versionId` | string
 `contentHash` | string
@@ -20,6 +21,7 @@ import type { ChatDecision } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "paymentMethod": null,
   "budgetOverrideReason": null,
   "versionId": null,
   "contentHash": null,

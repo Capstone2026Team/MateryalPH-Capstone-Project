@@ -8,9 +8,9 @@ use App\Domain\Identity\AuthenticationException;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Item-Based SRS weights as whole percentages. The platform default lives in platform_settings
+ * Item-Based SRS weights as independent importance values. The platform default lives in platform_settings
  * (ranking.srs.default_weights); a Buyer override is stored separately per procurement type. Every weight
- * set has exactly the five components, each 0–100, totalling 100 — so an all-zero set is impossible.
+ * set has exactly the five components, each 0–100, with at least one above zero.
  */
 final readonly class RankingWeights
 {
@@ -33,9 +33,9 @@ final readonly class RankingWeights
     {
         $errors = self::errors($input);
         if ($errors !== []) {
-            $code = isset($errors['weights']) && str_contains($errors['weights'][0], 'zero') ? 'WEIGHTS_ALL_ZERO' : (isset($errors['weights']) ? 'WEIGHTS_TOTAL_INVALID' : 'VALIDATION_FAILED');
+            $code = isset($errors['weights']) ? 'WEIGHTS_ALL_ZERO' : 'VALIDATION_FAILED';
 
-            throw new AuthenticationException($code, 'Ranking weights must be whole percentages that total 100%.', 422, $errors);
+            throw new AuthenticationException($code, $code === 'WEIGHTS_ALL_ZERO' ? 'Enable at least one ranking criterion by setting its weight above zero.' : 'Use whole ranking weights from 0 to 100 for every criterion.', 422, $errors);
         }
         $values = [];
         foreach (self::COMPONENTS as $component) {
@@ -60,7 +60,7 @@ final readonly class RankingWeights
         foreach (self::COMPONENTS as $component) {
             $value = $input[$component] ?? null;
             if (! is_int($value) || $value < 0 || $value > 100) {
-                $errors['weights.'.$component][] = 'Enter a whole percentage from 0 to 100.';
+                $errors['weights.'.$component][] = 'Enter a whole weight from 0 to 100.';
 
                 continue;
             }
@@ -69,8 +69,6 @@ final readonly class RankingWeights
         if ($errors === []) {
             if ($total === 0) {
                 $errors['weights'][] = 'At least one weight must be above zero.';
-            } elseif ($total !== 100) {
-                $errors['weights'][] = sprintf('Weights must total 100%%. They currently total %d%%.', $total);
             }
         }
 
@@ -82,7 +80,7 @@ final readonly class RankingWeights
     {
         $setting = DB::table('platform_settings')->where('key', self::SETTING_KEY)->first(['value', 'version']);
         $decoded = $setting === null ? null : json_decode((string) $setting->value, true);
-        if (is_array($decoded) && self::errors($decoded) === []) {
+        if (is_array($decoded) && self::errors($decoded) === [] && array_sum($decoded) === 100) {
             return ['weights' => self::fromInput($decoded), 'version' => (int) $setting->version];
         }
 

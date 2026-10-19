@@ -126,10 +126,12 @@ All URIs are relative to */api/v1*
 *AdminFinanceApi* | [**getWithholdingAccumulator**](docs/AdminFinanceApi.md#getwithholdingaccumulator) | **GET** /admin/finance/withholding-accumulators/{accumulatorId} |
 *AdminFinanceApi* | [**listAdminPayments**](docs/AdminFinanceApi.md#listadminpayments) | **GET** /admin/finance/payments |
 *AdminFinanceApi* | [**listChannelFees**](docs/AdminFinanceApi.md#listchannelfees) | **GET** /admin/finance/channel-fees |
+*AdminFinanceApi* | [**listCommissionPolicies**](docs/AdminFinanceApi.md#listcommissionpolicies) | **GET** /admin/finance/commission-policies |
 *AdminFinanceApi* | [**listFeeStatements**](docs/AdminFinanceApi.md#listfeestatements) | **GET** /admin/finance/statements |
 *AdminFinanceApi* | [**listFinanceReviewItems**](docs/AdminFinanceApi.md#listfinancereviewitems) | **GET** /admin/finance/review-items |
 *AdminFinanceApi* | [**listWithholdingAccumulators**](docs/AdminFinanceApi.md#listwithholdingaccumulators) | **GET** /admin/finance/withholding-accumulators |
 *AdminFinanceApi* | [**proposeFeeCredit**](docs/AdminFinanceApi.md#proposefeecredit) | **POST** /admin/finance/fee-credits |
+*AdminFinanceApi* | [**publishCommissionPolicy**](docs/AdminFinanceApi.md#publishcommissionpolicy) | **POST** /admin/finance/commission-policies |
 *AdminFinanceApi* | [**resolveFinanceReviewItem**](docs/AdminFinanceApi.md#resolvefinancereviewitem) | **POST** /admin/finance/review-items/{itemId}/resolve |
 *AdminFinanceApi* | [**resolveWithholdingOverlap**](docs/AdminFinanceApi.md#resolvewithholdingoverlap) | **POST** /admin/finance/withholding-accumulators/{accumulatorId}/overlap |
 *AdminFinanceApi* | [**runPaymentReconciliation**](docs/AdminFinanceApi.md#runpaymentreconciliation) | **POST** /admin/finance/reconciliation/run |
@@ -186,6 +188,13 @@ All URIs are relative to */api/v1*
 *AdminScoreMonitoringApi* | [**listAdminScores**](docs/AdminScoreMonitoringApi.md#listadminscores) | **GET** /admin/scores |
 *AdminScoreMonitoringApi* | [**revokeAdminScoreExclusion**](docs/AdminScoreMonitoringApi.md#revokeadminscoreexclusion) | **POST** /admin/scores/exclusions/{exclusionId}/revoke |
 *AdminScoreMonitoringApi* | [**suppressAdminBadge**](docs/AdminScoreMonitoringApi.md#suppressadminbadge) | **POST** /admin/scores/{vendorId}/badge-suppressions |
+*AdminUserDirectoryApi* | [**getDirectoryBuyer**](docs/AdminUserDirectoryApi.md#getdirectorybuyer) | **GET** /admin/buyers/{buyerId} |
+*AdminUserDirectoryApi* | [**getDirectoryVendor**](docs/AdminUserDirectoryApi.md#getdirectoryvendor) | **GET** /admin/vendors/{vendorId} |
+*AdminUserDirectoryApi* | [**listDirectoryBuyerReviews**](docs/AdminUserDirectoryApi.md#listdirectorybuyerreviews) | **GET** /admin/buyers/{buyerId}/reviews |
+*AdminUserDirectoryApi* | [**listDirectoryBuyers**](docs/AdminUserDirectoryApi.md#listdirectorybuyers) | **GET** /admin/buyers |
+*AdminUserDirectoryApi* | [**listDirectoryVendorListings**](docs/AdminUserDirectoryApi.md#listdirectoryvendorlistings) | **GET** /admin/vendors/{vendorId}/listings |
+*AdminUserDirectoryApi* | [**listDirectoryVendorReviews**](docs/AdminUserDirectoryApi.md#listdirectoryvendorreviews) | **GET** /admin/vendors/{vendorId}/reviews |
+*AdminUserDirectoryApi* | [**listDirectoryVendors**](docs/AdminUserDirectoryApi.md#listdirectoryvendors) | **GET** /admin/vendors |
 *AdminVendorVerificationApi* | [**decideVendorVerificationRequirement**](docs/AdminVendorVerificationApi.md#decidevendorverificationrequirement) | **POST** /admin/vendor-verification/{organizationId}/requirements/{requirementKey}/decision |
 *AdminVendorVerificationApi* | [**getAdminDashboard**](docs/AdminVendorVerificationApi.md#getadmindashboard) | **GET** /admin/dashboard |
 *AdminVendorVerificationApi* | [**getAdminVendorEvidenceUrl**](docs/AdminVendorVerificationApi.md#getadminvendorevidenceurl) | **GET** /admin/vendor-verification/files/{fileId} |
@@ -314,27 +323,36 @@ All URIs are relative to */api/v1*
 *BuyerProjectsApi* | [**closeWorkPackage**](docs/BuyerProjectsApi.md#closeworkpackage) | **POST** /buyers/work-packages/{packageId}/close |
 *BuyerProjectsApi* | [**compileProjectEstimates**](docs/BuyerProjectsApi.md#compileprojectestimates) | **POST** /buyers/work-packages/{packageId}/estimates |
 *BuyerProjectsApi* | [**createProject**](docs/BuyerProjectsApi.md#createproject) | **POST** /buyers/projects |
+*BuyerProjectsApi* | [**createProjectArrangement**](docs/BuyerProjectsApi.md#createprojectarrangement) | **POST** /buyers/work-packages/{packageId}/arrangements |
 *BuyerProjectsApi* | [**createWorkPackage**](docs/BuyerProjectsApi.md#createworkpackage) | **POST** /buyers/projects/{projectId}/work-packages |
 *BuyerProjectsApi* | [**deleteProject**](docs/BuyerProjectsApi.md#deleteproject) | **DELETE** /buyers/projects/{projectId} |
 *BuyerProjectsApi* | [**deleteWorkPackage**](docs/BuyerProjectsApi.md#deleteworkpackage) | **DELETE** /buyers/work-packages/{packageId} |
+*BuyerProjectsApi* | [**editProjectArrangement**](docs/BuyerProjectsApi.md#editprojectarrangement) | **PATCH** /buyers/work-packages/{packageId}/arrangements/{arrangementId} |
 *BuyerProjectsApi* | [**editWorkPackage**](docs/BuyerProjectsApi.md#editworkpackage) | **PUT** /buyers/work-packages/{packageId} |
 *BuyerProjectsApi* | [**estimateWorkPackageBudget**](docs/BuyerProjectsApi.md#estimateworkpackagebudget) | **POST** /buyers/projects/{projectId}/work-package-estimate |
 *BuyerProjectsApi* | [**getProject**](docs/BuyerProjectsApi.md#getproject) | **GET** /buyers/projects/{projectId} |
+*BuyerProjectsApi* | [**getProjectArrangement**](docs/BuyerProjectsApi.md#getprojectarrangement) | **GET** /buyers/work-packages/{packageId}/arrangements/{arrangementId} |
 *BuyerProjectsApi* | [**getProjectCandidateRoute**](docs/BuyerProjectsApi.md#getprojectcandidateroute) | **POST** /buyers/work-packages/{packageId}/candidates/{candidateId}/route |
 *BuyerProjectsApi* | [**getProjectEstimates**](docs/BuyerProjectsApi.md#getprojectestimates) | **GET** /buyers/work-packages/{packageId}/estimates |
 *BuyerProjectsApi* | [**getProjectRankingPreferences**](docs/BuyerProjectsApi.md#getprojectrankingpreferences) | **GET** /buyers/project-ranking-preferences |
 *BuyerProjectsApi* | [**getWorkPackage**](docs/BuyerProjectsApi.md#getworkpackage) | **GET** /buyers/work-packages/{packageId} |
+*BuyerProjectsApi* | [**inquireProjectArrangementVendor**](docs/BuyerProjectsApi.md#inquireprojectarrangementvendor) | **POST** /buyers/work-packages/{packageId}/arrangements/{arrangementId}/vendors/{vendorId}/inquiry |
 *BuyerProjectsApi* | [**inquireProjectVendor**](docs/BuyerProjectsApi.md#inquireprojectvendor) | **POST** /buyers/work-packages/{packageId}/inquiries |
+*BuyerProjectsApi* | [**listProjectArrangementOptions**](docs/BuyerProjectsApi.md#listprojectarrangementoptions) | **GET** /buyers/work-packages/{packageId}/arrangement-options |
 *BuyerProjectsApi* | [**listProjects**](docs/BuyerProjectsApi.md#listprojects) | **GET** /buyers/projects |
 *BuyerProjectsApi* | [**listWorkPackageLineAlternatives**](docs/BuyerProjectsApi.md#listworkpackagelinealternatives) | **GET** /buyers/work-packages/{packageId}/lines/{lineId}/alternatives |
 *BuyerProjectsApi* | [**previewProjectSpecificationSelection**](docs/BuyerProjectsApi.md#previewprojectspecificationselection) | **POST** /buyers/work-packages/{packageId}/candidates/{candidateId}/selection-preview |
 *BuyerProjectsApi* | [**previewWorkPackageCsv**](docs/BuyerProjectsApi.md#previewworkpackagecsv) | **POST** /buyers/work-packages/import-preview |
 *BuyerProjectsApi* | [**reactivateWorkPackage**](docs/BuyerProjectsApi.md#reactivateworkpackage) | **POST** /buyers/work-packages/{packageId}/reactivate |
+*BuyerProjectsApi* | [**removeProjectDraftItem**](docs/BuyerProjectsApi.md#removeprojectdraftitem) | **DELETE** /buyers/work-packages/{packageId}/candidates/{candidateId}/draft-items/{lineId}/{variantId} |
+*BuyerProjectsApi* | [**requestProjectDraftSupplier**](docs/BuyerProjectsApi.md#requestprojectdraftsupplier) | **POST** /buyers/work-packages/{packageId}/candidates/{candidateId}/suppliers/{vendorId}/request |
 *BuyerProjectsApi* | [**resetProjectRankingPreferences**](docs/BuyerProjectsApi.md#resetprojectrankingpreferences) | **POST** /buyers/project-ranking-preferences/reset |
 *BuyerProjectsApi* | [**resolveProjectMissingLine**](docs/BuyerProjectsApi.md#resolveprojectmissingline) | **PUT** /buyers/work-packages/{packageId}/missing-lines/{lineId} |
+*BuyerProjectsApi* | [**saveProjectDraftItem**](docs/BuyerProjectsApi.md#saveprojectdraftitem) | **PUT** /buyers/work-packages/{packageId}/candidates/{candidateId}/draft-items/{lineId}/{variantId} |
 *BuyerProjectsApi* | [**saveProjectRankingPreferences**](docs/BuyerProjectsApi.md#saveprojectrankingpreferences) | **PUT** /buyers/project-ranking-preferences |
 *BuyerProjectsApi* | [**searchProjectMaterials**](docs/BuyerProjectsApi.md#searchprojectmaterials) | **GET** /buyers/project-materials |
 *BuyerProjectsApi* | [**selectProjectVendor**](docs/BuyerProjectsApi.md#selectprojectvendor) | **POST** /buyers/work-packages/{packageId}/selection |
+*BuyerProjectsApi* | [**submitProjectArrangement**](docs/BuyerProjectsApi.md#submitprojectarrangement) | **POST** /buyers/work-packages/{packageId}/arrangements/{arrangementId}/submit |
 *BuyerProjectsApi* | [**updateProject**](docs/BuyerProjectsApi.md#updateproject) | **PATCH** /buyers/projects/{projectId} |
 *BuyerReviewsApi* | [**addBuyerReviewMedia**](docs/BuyerReviewsApi.md#addbuyerreviewmedia) | **POST** /buyers/reviews/{reviewId}/media |
 *BuyerReviewsApi* | [**editBuyerReview**](docs/BuyerReviewsApi.md#editbuyerreview) | **PATCH** /buyers/reviews/{reviewId} |
@@ -398,6 +416,16 @@ All URIs are relative to */api/v1*
 *ReportingApi* | [**reviewTaxPackage**](docs/ReportingApi.md#reviewtaxpackage) | **POST** /admin/reports/tax/{packageId}/review | review Tax Package
 *StoresApi* | [**getPublicStoreProfile**](docs/StoresApi.md#getpublicstoreprofile) | **GET** /stores/{storeId}/profile |
 *StoresApi* | [**listPublicStores**](docs/StoresApi.md#listpublicstores) | **GET** /stores |
+*SupportApi* | [**createSupportTicket**](docs/SupportApi.md#createsupportticket) | **POST** /support/{supportPortal}/tickets |
+*SupportApi* | [**downloadSupportAttachment**](docs/SupportApi.md#downloadsupportattachment) | **GET** /support/{supportPortal}/tickets/{ticketId}/attachments/{fileId} |
+*SupportApi* | [**exchangeSupportAccess**](docs/SupportApi.md#exchangesupportaccess) | **POST** /support/guest/access |
+*SupportApi* | [**getSupportTicket**](docs/SupportApi.md#getsupportticket) | **GET** /support/{supportPortal}/tickets/{ticketId} |
+*SupportApi* | [**listSupportEntries**](docs/SupportApi.md#listsupportentries) | **GET** /support/{supportPortal}/tickets/{ticketId}/entries |
+*SupportApi* | [**listSupportHandlers**](docs/SupportApi.md#listsupporthandlers) | **GET** /support/admin/handlers |
+*SupportApi* | [**listSupportTickets**](docs/SupportApi.md#listsupporttickets) | **GET** /support/{supportPortal}/tickets |
+*SupportApi* | [**replyToSupportTicket**](docs/SupportApi.md#replytosupportticket) | **POST** /support/{supportPortal}/tickets/{ticketId}/entries |
+*SupportApi* | [**requestSupportAccessEmail**](docs/SupportApi.md#requestsupportaccessemail) | **POST** /support/guest/access-email |
+*SupportApi* | [**updateSupportTicket**](docs/SupportApi.md#updatesupportticket) | **PATCH** /support/{supportPortal}/tickets/{ticketId} |
 *SystemApi* | [**getApiHealth**](docs/SystemApi.md#getapihealth) | **GET** /health |
 *VendorAutoAcceptApi* | [**configureAutoAcceptPolicy**](docs/VendorAutoAcceptApi.md#configureautoacceptpolicy) | **PUT** /vendor/auto-accept/policies/{variantId} |
 *VendorAutoAcceptApi* | [**getAutoAcceptPolicy**](docs/VendorAutoAcceptApi.md#getautoacceptpolicy) | **GET** /vendor/auto-accept/policies/{variantId} |
@@ -448,6 +476,7 @@ All URIs are relative to */api/v1*
 *VendorDisputesApi* | [**sendVendorDisputeMessage**](docs/VendorDisputesApi.md#sendvendordisputemessage) | **POST** /vendor/disputes/{caseId}/messages |
 *VendorFinanceApi* | [**approveVendorOnlineBalance**](docs/VendorFinanceApi.md#approvevendoronlinebalance) | **POST** /vendor/orders/{orderId}/online-balance/approve |
 *VendorFinanceApi* | [**exportVendorTransactions**](docs/VendorFinanceApi.md#exportvendortransactions) | **GET** /vendor/finance/transactions/export |
+*VendorFinanceApi* | [**getVendorCommissionMonitoring**](docs/VendorFinanceApi.md#getvendorcommissionmonitoring) | **GET** /vendor/finance/commissions |
 *VendorFinanceApi* | [**getVendorEarnings**](docs/VendorFinanceApi.md#getvendorearnings) | **GET** /vendor/finance/earnings |
 *VendorFinanceApi* | [**getVendorFeePayment**](docs/VendorFinanceApi.md#getvendorfeepayment) | **GET** /vendor/finance/payments/{paymentId} |
 *VendorFinanceApi* | [**getVendorFeeStatement**](docs/VendorFinanceApi.md#getvendorfeestatement) | **GET** /vendor/finance/statements/{statementId} |
@@ -859,6 +888,11 @@ All URIs are relative to */api/v1*
 - [CheckoutSubmissionEnvelope](docs/CheckoutSubmissionEnvelope.md)
 - [CheckoutSubmitRequest](docs/CheckoutSubmitRequest.md)
 - [CheckoutVendorRef](docs/CheckoutVendorRef.md)
+- [CommissionPolicies](docs/CommissionPolicies.md)
+- [CommissionPoliciesEnvelope](docs/CommissionPoliciesEnvelope.md)
+- [CommissionPolicy](docs/CommissionPolicy.md)
+- [CommissionPolicyEnvelope](docs/CommissionPolicyEnvelope.md)
+- [CommissionPolicyPublishRequest](docs/CommissionPolicyPublishRequest.md)
 - [CommissionTrendPoint](docs/CommissionTrendPoint.md)
 - [ComparableGroupCreate](docs/ComparableGroupCreate.md)
 - [ComparableGroupEnvelope](docs/ComparableGroupEnvelope.md)
@@ -928,11 +962,38 @@ All URIs are relative to */api/v1*
 - [DeliveryWorkspacePage](docs/DeliveryWorkspacePage.md)
 - [DeliveryWorkspacePageMeta](docs/DeliveryWorkspacePageMeta.md)
 - [DirectoryAvailability](docs/DirectoryAvailability.md)
+- [DirectoryBuyerEnvelope](docs/DirectoryBuyerEnvelope.md)
+- [DirectoryBuyerListEnvelope](docs/DirectoryBuyerListEnvelope.md)
+- [DirectoryBuyerProfile](docs/DirectoryBuyerProfile.md)
+- [DirectoryBuyerProfileActivity](docs/DirectoryBuyerProfileActivity.md)
+- [DirectoryBuyerProfileProfile](docs/DirectoryBuyerProfileProfile.md)
+- [DirectoryBuyerProfileRatings](docs/DirectoryBuyerProfileRatings.md)
+- [DirectoryBuyerProfileRatingsReceived](docs/DirectoryBuyerProfileRatingsReceived.md)
+- [DirectoryBuyerProfileRatingsWritten](docs/DirectoryBuyerProfileRatingsWritten.md)
+- [DirectoryBuyerProfileRecentOrdersInner](docs/DirectoryBuyerProfileRecentOrdersInner.md)
+- [DirectoryBuyerRow](docs/DirectoryBuyerRow.md)
+- [DirectoryListing](docs/DirectoryListing.md)
+- [DirectoryListingListEnvelope](docs/DirectoryListingListEnvelope.md)
+- [DirectoryPageMeta](docs/DirectoryPageMeta.md)
+- [DirectoryReview](docs/DirectoryReview.md)
+- [DirectoryReviewListEnvelope](docs/DirectoryReviewListEnvelope.md)
+- [DirectoryReviewRatingsValue](docs/DirectoryReviewRatingsValue.md)
+- [DirectorySanction](docs/DirectorySanction.md)
 - [DirectorySupplierDetail](docs/DirectorySupplierDetail.md)
 - [DirectorySupplierDetailEnvelope](docs/DirectorySupplierDetailEnvelope.md)
 - [DirectorySupplierPhoto](docs/DirectorySupplierPhoto.md)
 - [DirectorySupplierPhotoEnvelope](docs/DirectorySupplierPhotoEnvelope.md)
 - [DirectorySupplierSummary](docs/DirectorySupplierSummary.md)
+- [DirectoryVendorEnvelope](docs/DirectoryVendorEnvelope.md)
+- [DirectoryVendorListEnvelope](docs/DirectoryVendorListEnvelope.md)
+- [DirectoryVendorProfile](docs/DirectoryVendorProfile.md)
+- [DirectoryVendorProfileActivity](docs/DirectoryVendorProfileActivity.md)
+- [DirectoryVendorProfileOwner](docs/DirectoryVendorProfileOwner.md)
+- [DirectoryVendorProfileRatings](docs/DirectoryVendorProfileRatings.md)
+- [DirectoryVendorProfileRatingsProduct](docs/DirectoryVendorProfileRatingsProduct.md)
+- [DirectoryVendorProfileRatingsStore](docs/DirectoryVendorProfileRatingsStore.md)
+- [DirectoryVendorProfileStore](docs/DirectoryVendorProfileStore.md)
+- [DirectoryVendorRow](docs/DirectoryVendorRow.md)
 - [DiscoveryCounts](docs/DiscoveryCounts.md)
 - [DiscoveryPreferences](docs/DiscoveryPreferences.md)
 - [DiscoveryPreferencesEnvelope](docs/DiscoveryPreferencesEnvelope.md)
@@ -1317,6 +1378,15 @@ All URIs are relative to */api/v1*
 - [ProductComplianceQueueItem](docs/ProductComplianceQueueItem.md)
 - [ProductDeliveryPreviewRequest](docs/ProductDeliveryPreviewRequest.md)
 - [ProductRatingSummary](docs/ProductRatingSummary.md)
+- [ProjectArrangement](docs/ProjectArrangement.md)
+- [ProjectArrangementCreate](docs/ProjectArrangementCreate.md)
+- [ProjectArrangementEdit](docs/ProjectArrangementEdit.md)
+- [ProjectArrangementInquiry](docs/ProjectArrangementInquiry.md)
+- [ProjectArrangementPage](docs/ProjectArrangementPage.md)
+- [ProjectArrangementPageResponse](docs/ProjectArrangementPageResponse.md)
+- [ProjectArrangementResponse](docs/ProjectArrangementResponse.md)
+- [ProjectArrangementSubmit](docs/ProjectArrangementSubmit.md)
+- [ProjectArrangementSubmitPaymentsInner](docs/ProjectArrangementSubmitPaymentsInner.md)
 - [ProjectBudget](docs/ProjectBudget.md)
 - [ProjectCandidate](docs/ProjectCandidate.md)
 - [ProjectCandidateRequest](docs/ProjectCandidateRequest.md)
@@ -1324,8 +1394,13 @@ All URIs are relative to */api/v1*
 - [ProjectCompile](docs/ProjectCompile.md)
 - [ProjectCompiledEstimate](docs/ProjectCompiledEstimate.md)
 - [ProjectCreate](docs/ProjectCreate.md)
+- [ProjectDraftItemInput](docs/ProjectDraftItemInput.md)
+- [ProjectDraftSupplierRequest](docs/ProjectDraftSupplierRequest.md)
+- [ProjectDraftVendorGroup](docs/ProjectDraftVendorGroup.md)
 - [ProjectEstimatePage](docs/ProjectEstimatePage.md)
 - [ProjectEstimatePageResponse](docs/ProjectEstimatePageResponse.md)
+- [ProjectFulfillment](docs/ProjectFulfillment.md)
+- [ProjectFulfillmentLine](docs/ProjectFulfillmentLine.md)
 - [ProjectImportPreview](docs/ProjectImportPreview.md)
 - [ProjectImportPreviewResponse](docs/ProjectImportPreviewResponse.md)
 - [ProjectImportRequest](docs/ProjectImportRequest.md)
@@ -1337,6 +1412,7 @@ All URIs are relative to */api/v1*
 - [ProjectMissingResolve](docs/ProjectMissingResolve.md)
 - [ProjectPage](docs/ProjectPage.md)
 - [ProjectPageResponse](docs/ProjectPageResponse.md)
+- [ProjectPaymentMethod](docs/ProjectPaymentMethod.md)
 - [ProjectPreferenceReset](docs/ProjectPreferenceReset.md)
 - [ProjectPreferenceSave](docs/ProjectPreferenceSave.md)
 - [ProjectPreferences](docs/ProjectPreferences.md)
@@ -1344,11 +1420,13 @@ All URIs are relative to */api/v1*
 - [ProjectRoute](docs/ProjectRoute.md)
 - [ProjectRouteResponse](docs/ProjectRouteResponse.md)
 - [ProjectSelectionPreview](docs/ProjectSelectionPreview.md)
+- [ProjectSeparatePurchase](docs/ProjectSeparatePurchase.md)
 - [ProjectSite](docs/ProjectSite.md)
 - [ProjectSpecificationDetail](docs/ProjectSpecificationDetail.md)
 - [ProjectSpecificationSelection](docs/ProjectSpecificationSelection.md)
 - [ProjectSummary](docs/ProjectSummary.md)
 - [ProjectUpdate](docs/ProjectUpdate.md)
+- [ProjectVendorSelectionRequest](docs/ProjectVendorSelectionRequest.md)
 - [ProjectVersionRequest](docs/ProjectVersionRequest.md)
 - [ProjectView](docs/ProjectView.md)
 - [ProjectViewResponse](docs/ProjectViewResponse.md)
@@ -1452,6 +1530,33 @@ All URIs are relative to */api/v1*
 - [SupplierResult](docs/SupplierResult.md)
 - [SupplierServiceability](docs/SupplierServiceability.md)
 - [SupplierTier](docs/SupplierTier.md)
+- [SupportAccessEmail](docs/SupportAccessEmail.md)
+- [SupportAccessExchange](docs/SupportAccessExchange.md)
+- [SupportAccessResponse](docs/SupportAccessResponse.md)
+- [SupportAccessResult](docs/SupportAccessResult.md)
+- [SupportAttachment](docs/SupportAttachment.md)
+- [SupportCategory](docs/SupportCategory.md)
+- [SupportCommandResponse](docs/SupportCommandResponse.md)
+- [SupportCommandResult](docs/SupportCommandResult.md)
+- [SupportEmailResponse](docs/SupportEmailResponse.md)
+- [SupportEmailResult](docs/SupportEmailResult.md)
+- [SupportEntry](docs/SupportEntry.md)
+- [SupportEntryDetails](docs/SupportEntryDetails.md)
+- [SupportEntryListResponse](docs/SupportEntryListResponse.md)
+- [SupportHandler](docs/SupportHandler.md)
+- [SupportHandlerListResponse](docs/SupportHandlerListResponse.md)
+- [SupportPageMeta](docs/SupportPageMeta.md)
+- [SupportPortal](docs/SupportPortal.md)
+- [SupportReceipt](docs/SupportReceipt.md)
+- [SupportReceiptResponse](docs/SupportReceiptResponse.md)
+- [SupportReferenceType](docs/SupportReferenceType.md)
+- [SupportReplyResponse](docs/SupportReplyResponse.md)
+- [SupportStatus](docs/SupportStatus.md)
+- [SupportTicket](docs/SupportTicket.md)
+- [SupportTicketListResponse](docs/SupportTicketListResponse.md)
+- [SupportTicketResponse](docs/SupportTicketResponse.md)
+- [SupportUpdate](docs/SupportUpdate.md)
+- [SupportUserType](docs/SupportUserType.md)
 - [TaxAdjustment](docs/TaxAdjustment.md)
 - [TaxAdjustmentEnvelope](docs/TaxAdjustmentEnvelope.md)
 - [TaxAdjustmentListEnvelope](docs/TaxAdjustmentListEnvelope.md)
@@ -1479,6 +1584,10 @@ All URIs are relative to */api/v1*
 - [VendorCancellationPreviewEnvelope](docs/VendorCancellationPreviewEnvelope.md)
 - [VendorCancellationRequestRef](docs/VendorCancellationRequestRef.md)
 - [VendorCommissionAcceptance](docs/VendorCommissionAcceptance.md)
+- [VendorCommissionAssessment](docs/VendorCommissionAssessment.md)
+- [VendorCommissionMonitoring](docs/VendorCommissionMonitoring.md)
+- [VendorCommissionMonitoringEnvelope](docs/VendorCommissionMonitoringEnvelope.md)
+- [VendorCommissionSummary](docs/VendorCommissionSummary.md)
 - [VendorCurrentCompetitors](docs/VendorCurrentCompetitors.md)
 - [VendorDashboardDisputes](docs/VendorDashboardDisputes.md)
 - [VendorDashboardDisputesSeriesInner](docs/VendorDashboardDisputesSeriesInner.md)
@@ -1644,6 +1753,7 @@ All URIs are relative to */api/v1*
 - [WithholdingThresholdPanel](docs/WithholdingThresholdPanel.md)
 - [WorkPackageAlternative](docs/WorkPackageAlternative.md)
 - [WorkPackageAlternativePage](docs/WorkPackageAlternativePage.md)
+- [WorkPackageAlternativePageExcluded](docs/WorkPackageAlternativePageExcluded.md)
 - [WorkPackageAlternativePageResponse](docs/WorkPackageAlternativePageResponse.md)
 - [WorkPackageBudgetEstimate](docs/WorkPackageBudgetEstimate.md)
 - [WorkPackageBudgetEstimateLine](docs/WorkPackageBudgetEstimateLine.md)
@@ -1665,6 +1775,13 @@ All URIs are relative to */api/v1*
 
 
 Authentication schemes defined for the API:
+<a id="supportGuestCookie"></a>
+#### supportGuestCookie
+
+
+- **Type**: API key
+- **API key parameter name**: `mp_support`
+- **Location**:
 <a id="passportBearer"></a>
 #### passportBearer
 

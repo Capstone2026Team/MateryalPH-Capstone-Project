@@ -48,17 +48,17 @@ export interface WorkPackageInput {
      */
     siteId: string;
     /**
-     *
+     * Optional. 50 km is the only Project-Based vendor-selection radius; the server applies it whether or not it is sent.
      */
-    radiusKm: WorkPackageInputRadiusKmEnum;
+    radiusKm?: WorkPackageInputRadiusKmEnum;
     /**
-     *
+     * BOTH means the Buyer is open to either. The scan lists every Vendor offering Site Delivery, Self-Pickup or both; each candidate then lists its `fulfillment_options` and the Buyer picks one when inquiring or selecting. BOTH requires `payment_method` ONLINE and the delivery details (`site_contact`, `access_instructions`, `heavy_vehicle_restriction`).
      */
     fulfillmentMethod: WorkPackageInputFulfillmentMethodEnum;
     /**
-     *
+     * Optional legacy value. New authoring omits payment; it is explicitly chosen in the selection checklist.
      */
-    paymentMethod: WorkPackageInputPaymentMethodEnum;
+    paymentMethod?: WorkPackageInputPaymentMethodEnum;
     /**
      *
      */
@@ -86,11 +86,6 @@ export interface WorkPackageInput {
  * @export
  */
 export const WorkPackageInputRadiusKmEnum = {
-    NUMBER_5: 5,
-    NUMBER_10: 10,
-    NUMBER_20: 20,
-    NUMBER_30: 30,
-    NUMBER_40: 40,
     NUMBER_50: 50,
 } as const;
 export type WorkPackageInputRadiusKmEnum = typeof WorkPackageInputRadiusKmEnum[keyof typeof WorkPackageInputRadiusKmEnum];
@@ -101,6 +96,7 @@ export type WorkPackageInputRadiusKmEnum = typeof WorkPackageInputRadiusKmEnum[k
 export const WorkPackageInputFulfillmentMethodEnum = {
     Pickup: 'PICKUP',
     Delivery: 'DELIVERY',
+    Both: 'BOTH',
 } as const;
 export type WorkPackageInputFulfillmentMethodEnum = typeof WorkPackageInputFulfillmentMethodEnum[keyof typeof WorkPackageInputFulfillmentMethodEnum];
 
@@ -131,9 +127,7 @@ export function instanceOfWorkPackageInput(value: object): value is WorkPackageI
     if (!('name' in value) || value['name'] === undefined) return false;
     if ((!('budgetCentavos' in (value as Record<string, any>)) && !('budget_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['budgetCentavos'] === undefined && (value as Record<string, any>)['budget_centavos'] === undefined)) return false;
     if ((!('siteId' in (value as Record<string, any>)) && !('site_id' in (value as Record<string, any>))) || ((value as Record<string, any>)['siteId'] === undefined && (value as Record<string, any>)['site_id'] === undefined)) return false;
-    if ((!('radiusKm' in (value as Record<string, any>)) && !('radius_km' in (value as Record<string, any>))) || ((value as Record<string, any>)['radiusKm'] === undefined && (value as Record<string, any>)['radius_km'] === undefined)) return false;
     if ((!('fulfillmentMethod' in (value as Record<string, any>)) && !('fulfillment_method' in (value as Record<string, any>))) || ((value as Record<string, any>)['fulfillmentMethod'] === undefined && (value as Record<string, any>)['fulfillment_method'] === undefined)) return false;
-    if ((!('paymentMethod' in (value as Record<string, any>)) && !('payment_method' in (value as Record<string, any>))) || ((value as Record<string, any>)['paymentMethod'] === undefined && (value as Record<string, any>)['payment_method'] === undefined)) return false;
     if (!('lines' in value) || value['lines'] === undefined) return false;
     return true;
 }
@@ -153,9 +147,9 @@ export function WorkPackageInputFromJSONTyped(json: any, ignoreDiscriminator: bo
         'description': json['description'] == null ? undefined : json['description'],
         'budgetCentavos': json['budget_centavos'],
         'siteId': json['site_id'],
-        'radiusKm': json['radius_km'],
+        'radiusKm': json['radius_km'] == null ? undefined : json['radius_km'],
         'fulfillmentMethod': json['fulfillment_method'],
-        'paymentMethod': json['payment_method'],
+        'paymentMethod': json['payment_method'] == null ? undefined : json['payment_method'],
         'siteContact': json['site_contact'] == null ? undefined : json['site_contact'],
         'heavyVehicleRestriction': json['heavy_vehicle_restriction'] == null ? undefined : json['heavy_vehicle_restriction'],
         'alternateDropOffLocationId': json['alternate_drop_off_location_id'] == null ? undefined : json['alternate_drop_off_location_id'],

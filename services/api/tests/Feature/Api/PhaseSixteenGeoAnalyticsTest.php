@@ -94,7 +94,7 @@ final class PhaseSixteenGeoAnalyticsTest extends TestCase
         $national = $this->getJson('/api/v1/admin/geo-analytics?dataset=TEST')->assertOk();
         $national->assertJsonPath('data.scope.label', 'Philippines')->assertJsonPath('data.scope.children_label', 'Regions')
             ->assertJsonPath('data.kpis.order_volume.value', 5)->assertJsonPath('data.kpis.order_volume.suppressed', false)
-            ->assertJsonPath('data.dataset.label', 'TEST — Recorded Test Marketplace Activity')->assertJsonPath('data.disclosure.minimum_persons', 3)
+            ->assertJsonPath('data.dataset.label', 'Recorded Marketplace Activity')->assertJsonPath('data.disclosure.minimum_persons', 3)
             ->assertJsonPath('data.unresolved.orders', 1);
         $this->assertNoCoordinates($national->getContent());
 
@@ -200,7 +200,7 @@ final class PhaseSixteenGeoAnalyticsTest extends TestCase
             ['Idempotency-Key' => (string) Str::uuid7()])->assertStatus(202);
         $row = DB::table('data_exports')->where('id', $export->json('data.id'))->first();
         self::assertSame('GEO_ANALYTICS', $row->export_type);
-        self::assertStringContainsString('TEST — Recorded Test Marketplace Activity', (string) $row->source_snapshot);
+        self::assertStringContainsString('Recorded Marketplace Activity', (string) $row->source_snapshot);
         self::assertStringNotContainsString('latitude', (string) $row->source_snapshot);
         $this->signInAdmin($this->admin('ADMIN_USER_MANAGEMENT'));
         $this->postJson('/api/v1/admin/reports', ['type' => 'GEO_ANALYTICS', 'format' => 'CSV', 'purpose' => 'Not permitted for this role', 'filters' => ['dataset' => 'TEST']],

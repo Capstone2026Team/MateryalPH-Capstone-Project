@@ -34,6 +34,7 @@ final class BuyerCartController extends Controller
             'origin_source' => ['sometimes', Rule::in(['DEVICE', 'MAP_PIN', 'SEARCH'])],
             'radius_km' => ['sometimes', 'integer'],
             'work_package_line_id' => ['sometimes', 'nullable', 'uuid'],
+            'allow_partial_stock' => ['sometimes', 'in:0,1,true,false'],
         ]);
 
         return ApiResponse::success($carts->addItem($request, array_filter($input, static fn (mixed $value): bool => $value !== null)));

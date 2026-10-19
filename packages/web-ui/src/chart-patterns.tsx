@@ -58,7 +58,7 @@ export type KpiBreakdownData = { caption: string; rows: readonly KpiBreakdownRow
  * calculation behind the number. The change is text plus an arrow icon in neutral ink: whether a rise is good depends
  * on the measure, so colour never judges it. The breakdown sits at the bottom so cards in one row line up.
  */
-export function KpiCard({ label, value, hint, icon, delta, sparkline, breakdown, accent = false }: { label: string; value: ReactNode; hint?: ReactNode; icon?: ReactNode; delta?: KpiDelta | null; sparkline?: (number | null)[]; breakdown?: KpiBreakdownData; accent?: boolean }) {
+export function KpiCard({ label, value, hint, icon, delta, sparkline, breakdown, collapsibleBreakdown = false, accent = false }: { label: string; value: ReactNode; hint?: ReactNode; icon?: ReactNode; delta?: KpiDelta | null; sparkline?: (number | null)[]; breakdown?: KpiBreakdownData; collapsibleBreakdown?: boolean; accent?: boolean }) {
   const change = delta?.changePercent
   const Icon = change === null || change === undefined || change === 0 ? Minus : change > 0 ? ArrowUpRight : ArrowDownRight
   return <div className={`mp-viz flex min-w-0 flex-col rounded-surface border border-border-default border-t-2 bg-surface-primary p-5 ${accent ? 'border-t-brand-orange-500' : 'border-t-border-default'}`}>
@@ -68,7 +68,7 @@ export function KpiCard({ label, value, hint, icon, delta, sparkline, breakdown,
       {change === null || change === undefined ? `No ${delta.periodLabel} to compare` : `${change > 0 ? '+' : ''}${change.toFixed(1)}% vs ${delta.periodLabel}`}</dd>}
     {hint && <dd className="mt-1 text-xs leading-5 text-text-secondary">{hint}</dd>}
     {sparkline && sparkline.some(point => point !== null) && <dd className="mt-3" aria-hidden="true"><Sparkline values={sparkline} /></dd>}
-    {breakdown && <dd className="mt-auto pt-4"><KpiBreakdown {...breakdown} /></dd>}
+    {breakdown && <dd className="mt-auto pt-4">{collapsibleBreakdown ? <details><summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-action-primary focus-visible:outline-2 focus-visible:outline-focus-ring">View breakdown<span className="sr-only"> for {label}</span></summary><KpiBreakdown {...breakdown} /></details> : <KpiBreakdown {...breakdown} />}</dd>}
   </div>
 }
 

@@ -6,6 +6,145 @@ part of 'project_candidate.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
+const ProjectCandidateFulfillmentOptionsEnum
+    _$projectCandidateFulfillmentOptionsEnum_DELIVERY =
+    const ProjectCandidateFulfillmentOptionsEnum._('DELIVERY');
+const ProjectCandidateFulfillmentOptionsEnum
+    _$projectCandidateFulfillmentOptionsEnum_PICKUP =
+    const ProjectCandidateFulfillmentOptionsEnum._('PICKUP');
+
+ProjectCandidateFulfillmentOptionsEnum
+    _$projectCandidateFulfillmentOptionsEnumValueOf(String name) {
+  switch (name) {
+    case 'DELIVERY':
+      return _$projectCandidateFulfillmentOptionsEnum_DELIVERY;
+    case 'PICKUP':
+      return _$projectCandidateFulfillmentOptionsEnum_PICKUP;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<ProjectCandidateFulfillmentOptionsEnum>
+    _$projectCandidateFulfillmentOptionsEnumValues = BuiltSet<
+        ProjectCandidateFulfillmentOptionsEnum>(const <ProjectCandidateFulfillmentOptionsEnum>[
+  _$projectCandidateFulfillmentOptionsEnum_DELIVERY,
+  _$projectCandidateFulfillmentOptionsEnum_PICKUP,
+]);
+
+const ProjectCandidateProcurementBudgetLabelEnum
+    _$projectCandidateProcurementBudgetLabelEnum_UNDER_BUDGET =
+    const ProjectCandidateProcurementBudgetLabelEnum._('UNDER_BUDGET');
+const ProjectCandidateProcurementBudgetLabelEnum
+    _$projectCandidateProcurementBudgetLabelEnum_WITHIN_BUDGET =
+    const ProjectCandidateProcurementBudgetLabelEnum._('WITHIN_BUDGET');
+const ProjectCandidateProcurementBudgetLabelEnum
+    _$projectCandidateProcurementBudgetLabelEnum_OVER_BUDGET =
+    const ProjectCandidateProcurementBudgetLabelEnum._('OVER_BUDGET');
+const ProjectCandidateProcurementBudgetLabelEnum
+    _$projectCandidateProcurementBudgetLabelEnum_COST_REVIEW_REQUIRED =
+    const ProjectCandidateProcurementBudgetLabelEnum._('COST_REVIEW_REQUIRED');
+
+ProjectCandidateProcurementBudgetLabelEnum
+    _$projectCandidateProcurementBudgetLabelEnumValueOf(String name) {
+  switch (name) {
+    case 'UNDER_BUDGET':
+      return _$projectCandidateProcurementBudgetLabelEnum_UNDER_BUDGET;
+    case 'WITHIN_BUDGET':
+      return _$projectCandidateProcurementBudgetLabelEnum_WITHIN_BUDGET;
+    case 'OVER_BUDGET':
+      return _$projectCandidateProcurementBudgetLabelEnum_OVER_BUDGET;
+    case 'COST_REVIEW_REQUIRED':
+      return _$projectCandidateProcurementBudgetLabelEnum_COST_REVIEW_REQUIRED;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<ProjectCandidateProcurementBudgetLabelEnum>
+    _$projectCandidateProcurementBudgetLabelEnumValues = BuiltSet<
+        ProjectCandidateProcurementBudgetLabelEnum>(const <ProjectCandidateProcurementBudgetLabelEnum>[
+  _$projectCandidateProcurementBudgetLabelEnum_UNDER_BUDGET,
+  _$projectCandidateProcurementBudgetLabelEnum_WITHIN_BUDGET,
+  _$projectCandidateProcurementBudgetLabelEnum_OVER_BUDGET,
+  _$projectCandidateProcurementBudgetLabelEnum_COST_REVIEW_REQUIRED,
+]);
+
+Serializer<ProjectCandidateFulfillmentOptionsEnum>
+    _$projectCandidateFulfillmentOptionsEnumSerializer =
+    _$ProjectCandidateFulfillmentOptionsEnumSerializer();
+Serializer<ProjectCandidateProcurementBudgetLabelEnum>
+    _$projectCandidateProcurementBudgetLabelEnumSerializer =
+    _$ProjectCandidateProcurementBudgetLabelEnumSerializer();
+
+class _$ProjectCandidateFulfillmentOptionsEnumSerializer
+    implements PrimitiveSerializer<ProjectCandidateFulfillmentOptionsEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'DELIVERY': 'DELIVERY',
+    'PICKUP': 'PICKUP',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'DELIVERY': 'DELIVERY',
+    'PICKUP': 'PICKUP',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    ProjectCandidateFulfillmentOptionsEnum
+  ];
+  @override
+  final String wireName = 'ProjectCandidateFulfillmentOptionsEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          ProjectCandidateFulfillmentOptionsEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  ProjectCandidateFulfillmentOptionsEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      ProjectCandidateFulfillmentOptionsEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
+class _$ProjectCandidateProcurementBudgetLabelEnumSerializer
+    implements PrimitiveSerializer<ProjectCandidateProcurementBudgetLabelEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'UNDER_BUDGET': 'UNDER_BUDGET',
+    'WITHIN_BUDGET': 'WITHIN_BUDGET',
+    'OVER_BUDGET': 'OVER_BUDGET',
+    'COST_REVIEW_REQUIRED': 'COST_REVIEW_REQUIRED',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'UNDER_BUDGET': 'UNDER_BUDGET',
+    'WITHIN_BUDGET': 'WITHIN_BUDGET',
+    'OVER_BUDGET': 'OVER_BUDGET',
+    'COST_REVIEW_REQUIRED': 'COST_REVIEW_REQUIRED',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    ProjectCandidateProcurementBudgetLabelEnum
+  ];
+  @override
+  final String wireName = 'ProjectCandidateProcurementBudgetLabelEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          ProjectCandidateProcurementBudgetLabelEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  ProjectCandidateProcurementBudgetLabelEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      ProjectCandidateProcurementBudgetLabelEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$ProjectCandidate extends ProjectCandidate {
   @override
   final String id;
@@ -62,6 +201,8 @@ class _$ProjectCandidate extends ProjectCandidate {
   @override
   final String fulfillmentMethod;
   @override
+  final BuiltList<ProjectCandidateFulfillmentOptionsEnum>? fulfillmentOptions;
+  @override
   final String paymentMethod;
   @override
   final BuiltMap<String, JsonObject?> delivery;
@@ -77,6 +218,24 @@ class _$ProjectCandidate extends ProjectCandidate {
   final String currentQuotationState;
   @override
   final bool? isFavorite;
+  @override
+  final ProjectFulfillment fulfillment;
+  @override
+  final BuiltList<ProjectPaymentMethod>? paymentMethods;
+  @override
+  final BuiltList<ProjectDraftVendorGroup>? draftGroups;
+  @override
+  final String? primaryOrderId;
+  @override
+  final int? procurementMaterialsCentavos;
+  @override
+  final int? separateDeliveryCentavos;
+  @override
+  final int? procurementDeliveryCentavos;
+  @override
+  final ProjectCandidateProcurementBudgetLabelEnum? procurementBudgetLabel;
+  @override
+  final int? procurementTotalCentavos;
 
   factory _$ProjectCandidate(
           [void Function(ProjectCandidateBuilder)? updates]) =>
@@ -110,6 +269,7 @@ class _$ProjectCandidate extends ProjectCandidate {
       required this.distanceBasis,
       this.etaSeconds,
       required this.fulfillmentMethod,
+      this.fulfillmentOptions,
       required this.paymentMethod,
       required this.delivery,
       required this.destination,
@@ -117,7 +277,16 @@ class _$ProjectCandidate extends ProjectCandidate {
       required this.stale,
       required this.label,
       required this.currentQuotationState,
-      this.isFavorite})
+      this.isFavorite,
+      required this.fulfillment,
+      this.paymentMethods,
+      this.draftGroups,
+      this.primaryOrderId,
+      this.procurementMaterialsCentavos,
+      this.separateDeliveryCentavos,
+      this.procurementDeliveryCentavos,
+      this.procurementBudgetLabel,
+      this.procurementTotalCentavos})
       : super._();
   @override
   ProjectCandidate rebuild(void Function(ProjectCandidateBuilder) updates) =>
@@ -158,6 +327,7 @@ class _$ProjectCandidate extends ProjectCandidate {
         distanceBasis == other.distanceBasis &&
         etaSeconds == other.etaSeconds &&
         fulfillmentMethod == other.fulfillmentMethod &&
+        fulfillmentOptions == other.fulfillmentOptions &&
         paymentMethod == other.paymentMethod &&
         delivery == other.delivery &&
         destination == other.destination &&
@@ -165,7 +335,16 @@ class _$ProjectCandidate extends ProjectCandidate {
         stale == other.stale &&
         label == other.label &&
         currentQuotationState == other.currentQuotationState &&
-        isFavorite == other.isFavorite;
+        isFavorite == other.isFavorite &&
+        fulfillment == other.fulfillment &&
+        paymentMethods == other.paymentMethods &&
+        draftGroups == other.draftGroups &&
+        primaryOrderId == other.primaryOrderId &&
+        procurementMaterialsCentavos == other.procurementMaterialsCentavos &&
+        separateDeliveryCentavos == other.separateDeliveryCentavos &&
+        procurementDeliveryCentavos == other.procurementDeliveryCentavos &&
+        procurementBudgetLabel == other.procurementBudgetLabel &&
+        procurementTotalCentavos == other.procurementTotalCentavos;
   }
 
   @override
@@ -198,6 +377,7 @@ class _$ProjectCandidate extends ProjectCandidate {
     _$hash = $jc(_$hash, distanceBasis.hashCode);
     _$hash = $jc(_$hash, etaSeconds.hashCode);
     _$hash = $jc(_$hash, fulfillmentMethod.hashCode);
+    _$hash = $jc(_$hash, fulfillmentOptions.hashCode);
     _$hash = $jc(_$hash, paymentMethod.hashCode);
     _$hash = $jc(_$hash, delivery.hashCode);
     _$hash = $jc(_$hash, destination.hashCode);
@@ -206,6 +386,15 @@ class _$ProjectCandidate extends ProjectCandidate {
     _$hash = $jc(_$hash, label.hashCode);
     _$hash = $jc(_$hash, currentQuotationState.hashCode);
     _$hash = $jc(_$hash, isFavorite.hashCode);
+    _$hash = $jc(_$hash, fulfillment.hashCode);
+    _$hash = $jc(_$hash, paymentMethods.hashCode);
+    _$hash = $jc(_$hash, draftGroups.hashCode);
+    _$hash = $jc(_$hash, primaryOrderId.hashCode);
+    _$hash = $jc(_$hash, procurementMaterialsCentavos.hashCode);
+    _$hash = $jc(_$hash, separateDeliveryCentavos.hashCode);
+    _$hash = $jc(_$hash, procurementDeliveryCentavos.hashCode);
+    _$hash = $jc(_$hash, procurementBudgetLabel.hashCode);
+    _$hash = $jc(_$hash, procurementTotalCentavos.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -240,6 +429,7 @@ class _$ProjectCandidate extends ProjectCandidate {
           ..add('distanceBasis', distanceBasis)
           ..add('etaSeconds', etaSeconds)
           ..add('fulfillmentMethod', fulfillmentMethod)
+          ..add('fulfillmentOptions', fulfillmentOptions)
           ..add('paymentMethod', paymentMethod)
           ..add('delivery', delivery)
           ..add('destination', destination)
@@ -247,7 +437,16 @@ class _$ProjectCandidate extends ProjectCandidate {
           ..add('stale', stale)
           ..add('label', label)
           ..add('currentQuotationState', currentQuotationState)
-          ..add('isFavorite', isFavorite))
+          ..add('isFavorite', isFavorite)
+          ..add('fulfillment', fulfillment)
+          ..add('paymentMethods', paymentMethods)
+          ..add('draftGroups', draftGroups)
+          ..add('primaryOrderId', primaryOrderId)
+          ..add('procurementMaterialsCentavos', procurementMaterialsCentavos)
+          ..add('separateDeliveryCentavos', separateDeliveryCentavos)
+          ..add('procurementDeliveryCentavos', procurementDeliveryCentavos)
+          ..add('procurementBudgetLabel', procurementBudgetLabel)
+          ..add('procurementTotalCentavos', procurementTotalCentavos))
         .toString();
   }
 }
@@ -383,6 +582,15 @@ class ProjectCandidateBuilder
   set fulfillmentMethod(String? fulfillmentMethod) =>
       _$this._fulfillmentMethod = fulfillmentMethod;
 
+  ListBuilder<ProjectCandidateFulfillmentOptionsEnum>? _fulfillmentOptions;
+  ListBuilder<ProjectCandidateFulfillmentOptionsEnum> get fulfillmentOptions =>
+      _$this._fulfillmentOptions ??=
+          ListBuilder<ProjectCandidateFulfillmentOptionsEnum>();
+  set fulfillmentOptions(
+          ListBuilder<ProjectCandidateFulfillmentOptionsEnum>?
+              fulfillmentOptions) =>
+      _$this._fulfillmentOptions = fulfillmentOptions;
+
   String? _paymentMethod;
   String? get paymentMethod => _$this._paymentMethod;
   set paymentMethod(String? paymentMethod) =>
@@ -421,6 +629,56 @@ class ProjectCandidateBuilder
   bool? get isFavorite => _$this._isFavorite;
   set isFavorite(bool? isFavorite) => _$this._isFavorite = isFavorite;
 
+  ProjectFulfillmentBuilder? _fulfillment;
+  ProjectFulfillmentBuilder get fulfillment =>
+      _$this._fulfillment ??= ProjectFulfillmentBuilder();
+  set fulfillment(ProjectFulfillmentBuilder? fulfillment) =>
+      _$this._fulfillment = fulfillment;
+
+  ListBuilder<ProjectPaymentMethod>? _paymentMethods;
+  ListBuilder<ProjectPaymentMethod> get paymentMethods =>
+      _$this._paymentMethods ??= ListBuilder<ProjectPaymentMethod>();
+  set paymentMethods(ListBuilder<ProjectPaymentMethod>? paymentMethods) =>
+      _$this._paymentMethods = paymentMethods;
+
+  ListBuilder<ProjectDraftVendorGroup>? _draftGroups;
+  ListBuilder<ProjectDraftVendorGroup> get draftGroups =>
+      _$this._draftGroups ??= ListBuilder<ProjectDraftVendorGroup>();
+  set draftGroups(ListBuilder<ProjectDraftVendorGroup>? draftGroups) =>
+      _$this._draftGroups = draftGroups;
+
+  String? _primaryOrderId;
+  String? get primaryOrderId => _$this._primaryOrderId;
+  set primaryOrderId(String? primaryOrderId) =>
+      _$this._primaryOrderId = primaryOrderId;
+
+  int? _procurementMaterialsCentavos;
+  int? get procurementMaterialsCentavos => _$this._procurementMaterialsCentavos;
+  set procurementMaterialsCentavos(int? procurementMaterialsCentavos) =>
+      _$this._procurementMaterialsCentavos = procurementMaterialsCentavos;
+
+  int? _separateDeliveryCentavos;
+  int? get separateDeliveryCentavos => _$this._separateDeliveryCentavos;
+  set separateDeliveryCentavos(int? separateDeliveryCentavos) =>
+      _$this._separateDeliveryCentavos = separateDeliveryCentavos;
+
+  int? _procurementDeliveryCentavos;
+  int? get procurementDeliveryCentavos => _$this._procurementDeliveryCentavos;
+  set procurementDeliveryCentavos(int? procurementDeliveryCentavos) =>
+      _$this._procurementDeliveryCentavos = procurementDeliveryCentavos;
+
+  ProjectCandidateProcurementBudgetLabelEnum? _procurementBudgetLabel;
+  ProjectCandidateProcurementBudgetLabelEnum? get procurementBudgetLabel =>
+      _$this._procurementBudgetLabel;
+  set procurementBudgetLabel(
+          ProjectCandidateProcurementBudgetLabelEnum? procurementBudgetLabel) =>
+      _$this._procurementBudgetLabel = procurementBudgetLabel;
+
+  int? _procurementTotalCentavos;
+  int? get procurementTotalCentavos => _$this._procurementTotalCentavos;
+  set procurementTotalCentavos(int? procurementTotalCentavos) =>
+      _$this._procurementTotalCentavos = procurementTotalCentavos;
+
   ProjectCandidateBuilder() {
     ProjectCandidate._defaults(this);
   }
@@ -455,6 +713,7 @@ class ProjectCandidateBuilder
       _distanceBasis = $v.distanceBasis;
       _etaSeconds = $v.etaSeconds;
       _fulfillmentMethod = $v.fulfillmentMethod;
+      _fulfillmentOptions = $v.fulfillmentOptions?.toBuilder();
       _paymentMethod = $v.paymentMethod;
       _delivery = $v.delivery.toBuilder();
       _destination = $v.destination.toBuilder();
@@ -463,6 +722,15 @@ class ProjectCandidateBuilder
       _label = $v.label;
       _currentQuotationState = $v.currentQuotationState;
       _isFavorite = $v.isFavorite;
+      _fulfillment = $v.fulfillment.toBuilder();
+      _paymentMethods = $v.paymentMethods?.toBuilder();
+      _draftGroups = $v.draftGroups?.toBuilder();
+      _primaryOrderId = $v.primaryOrderId;
+      _procurementMaterialsCentavos = $v.procurementMaterialsCentavos;
+      _separateDeliveryCentavos = $v.separateDeliveryCentavos;
+      _procurementDeliveryCentavos = $v.procurementDeliveryCentavos;
+      _procurementBudgetLabel = $v.procurementBudgetLabel;
+      _procurementTotalCentavos = $v.procurementTotalCentavos;
       _$v = null;
     }
     return this;
@@ -534,6 +802,7 @@ class ProjectCandidateBuilder
             etaSeconds: etaSeconds,
             fulfillmentMethod: BuiltValueNullFieldError.checkNotNull(
                 fulfillmentMethod, r'ProjectCandidate', 'fulfillmentMethod'),
+            fulfillmentOptions: _fulfillmentOptions?.build(),
             paymentMethod: BuiltValueNullFieldError.checkNotNull(
                 paymentMethod, r'ProjectCandidate', 'paymentMethod'),
             delivery: delivery.build(),
@@ -549,6 +818,15 @@ class ProjectCandidateBuilder
                 r'ProjectCandidate',
                 'currentQuotationState'),
             isFavorite: isFavorite,
+            fulfillment: fulfillment.build(),
+            paymentMethods: _paymentMethods?.build(),
+            draftGroups: _draftGroups?.build(),
+            primaryOrderId: primaryOrderId,
+            procurementMaterialsCentavos: procurementMaterialsCentavos,
+            separateDeliveryCentavos: separateDeliveryCentavos,
+            procurementDeliveryCentavos: procurementDeliveryCentavos,
+            procurementBudgetLabel: procurementBudgetLabel,
+            procurementTotalCentavos: procurementTotalCentavos,
           );
     } catch (_) {
       late String _$failedField;
@@ -564,10 +842,20 @@ class ProjectCandidateBuilder
         _$failedField = 'specificationSelections';
         _specificationSelections?.build();
 
+        _$failedField = 'fulfillmentOptions';
+        _fulfillmentOptions?.build();
+
         _$failedField = 'delivery';
         delivery.build();
         _$failedField = 'destination';
         destination.build();
+
+        _$failedField = 'fulfillment';
+        fulfillment.build();
+        _$failedField = 'paymentMethods';
+        _paymentMethods?.build();
+        _$failedField = 'draftGroups';
+        _draftGroups?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'ProjectCandidate', _$failedField, e.toString());

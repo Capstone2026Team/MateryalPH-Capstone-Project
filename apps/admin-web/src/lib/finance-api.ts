@@ -1,6 +1,9 @@
 import {
   AdminFinanceApi,
   AdminFinanceOperationsApi,
+  type CommissionPolicy,
+  type CommissionPolicies,
+  type CommissionPolicyPublishRequest,
   type FinanceKpis,
   type RemittanceQueueRow,
   type TaxAdjustment,
@@ -20,6 +23,7 @@ import { dateQuery, type CalendarRange, type JsonRecord } from './admin-format'
 
 export type { ChannelFeeVersion, FinanceKpis, FinanceReviewItem, RemittanceQueueRow, TaxAdjustment, TaxAdjustmentPrepareRequestCertificateImpactEnum as CertificateImpact, TaxEvidenceRow, WithholdingAccumulatorDetail, WithholdingAccumulatorView }
 export type Page<T> = { items: T[]; hasMore: boolean; total: number }
+export type { CommissionPolicy, CommissionPolicies, CommissionPolicyPublishRequest }
 
 const basePath = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'
 const financeApi = () => new AdminFinanceApi(createWebApiConfiguration(basePath, { refreshSession: true }))
@@ -27,6 +31,15 @@ const operationsApi = () => new AdminFinanceOperationsApi(createWebApiConfigurat
 const pageOf = <T>(data: T[], meta: unknown): Page<T> => {
   const value = (meta ?? {}) as { has_more?: boolean; total?: number }
   return { items: data, hasMore: Boolean(value.has_more), total: Number(value.total ?? data.length) }
+}
+
+export async function listCommissionPolicies(page = 1): Promise<{ policies: CommissionPolicies; hasMore: boolean }> {
+  const response = await financeApi().listCommissionPolicies({ page })
+  return { policies: response.data, hasMore: Boolean((response.meta as { has_more?: boolean }).has_more) }
+}
+
+export async function publishCommissionPolicy(input: CommissionPolicyPublishRequest, idempotencyKey: string): Promise<CommissionPolicy> {
+  return (await financeApi().publishCommissionPolicy({ commissionPolicyPublishRequest: input, idempotencyKey })).data
 }
 
 export async function listPayments(page: number, state?: string, range?: CalendarRange): Promise<Page<JsonRecord>> {

@@ -92,7 +92,7 @@ final class DocumentSnapshot
                 $rows[] = [self::label($key), str_ends_with($key, '_centavos') ? self::money((int) $statement->$key) : (string) $statement->$key];
             }
             foreach (DB::table('fee_statement_lines')->where('fee_statement_id', $id)->orderBy('id')->get() as $line) {
-                $rows[] = ['Statement line', $line->id, self::money((int) $line->amount_centavos)];
+                $rows[] = ['Statement line', $line->id, $line->description, self::money((int) $line->amount_centavos)];
             }
         } elseif ($type === 'TAX_PACKAGE') {
             $package = DB::table('tax_report_packages')->where('id', $id)->first();

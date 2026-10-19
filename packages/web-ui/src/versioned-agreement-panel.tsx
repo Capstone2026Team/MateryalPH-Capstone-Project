@@ -14,8 +14,7 @@ export function VersionedAgreementPanel({ title, version, content, accepted, eli
   }, [opened])
   return <section aria-labelledby="commission-title" className="overflow-hidden rounded-surface border border-border-default bg-surface-primary">
     <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border-default bg-surface-canvas p-5 sm:p-7">
-      <div><p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Vendor agreement · TEST/DEMO</p><h2 id="commission-title" className="mt-2 text-xl font-semibold sm:text-2xl">{title}</h2><p className="mt-2 text-sm text-text-secondary">{version ? `Version ${version}` : 'Current version unavailable'} · Required before Store Activation</p></div>
-      <span className="rounded-control border border-border-default bg-surface-primary px-4 py-2 text-3xl font-semibold text-action-primary">2%</span>
+      <div><p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Vendor agreement · TEST/DEMO</p><h2 id="commission-title" className="mt-2 text-xl font-semibold sm:text-2xl">{title}</h2><p className="mt-2 text-sm text-text-secondary">{version ? `Version ${version}` : 'Current version unavailable'} · Vendor-paid commission</p></div>
     </div>
     <div className="grid gap-5 p-5 sm:p-7">{children}
       {content ? <details onToggle={event => setOpened(event.currentTarget.open)} className="rounded-control border border-border-default">

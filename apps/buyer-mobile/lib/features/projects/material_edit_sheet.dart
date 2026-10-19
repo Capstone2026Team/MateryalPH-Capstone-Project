@@ -9,6 +9,9 @@ import 'material_search_results.dart';
 import 'projects_repository.dart';
 import 'work_package_material_widgets.dart';
 
+/// Catalog code of Ready-Mixed Concrete, whose quantity is the Order Volume (m³).
+const readyMixedCode = 'READY_MIXED_CONCRETE';
+
 /// Generic details for an unlisted material, which has no category attributes.
 const unlistedDetails = [
   ('size', 'Size'),
@@ -98,6 +101,9 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
 
   bool get editing => widget.initial != null;
   bool get chosen => material != null || unlisted;
+
+  /// Ready-mixed concrete is ordered by volume, not by a count of pieces.
+  bool get readyMixed => !unlisted && material?['code'] == readyMixedCode;
 
   List<ProjectData> get unitChoices =>
       unlisted ? units : projectRows(material?['compatible_units']);
@@ -250,7 +256,9 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
         : !RegExp(r'^\d{1,7}(\.\d{1,4})?$').hasMatch(qty) ||
               (double.tryParse(qty) ?? 0) <= 0 ||
               (double.tryParse(qty) ?? 0) > 1000000
-        ? 'Use a quantity above zero, up to 1,000,000.'
+        ? readyMixed
+              ? 'Use an order volume above zero, up to 1,000,000 m³.'
+              : 'Use a quantity above zero, up to 1,000,000.'
         : decimals > precision
         ? precision == 0
               ? 'This unit is counted in whole numbers.'
@@ -380,7 +388,9 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
               ],
-              decoration: const InputDecoration(labelText: 'Quantity'),
+              decoration: InputDecoration(
+                labelText: readyMixed ? 'Order volume (m³)' : 'Quantity',
+              ),
             ),
           ),
           const SizedBox(width: CompactDensity.gap),
@@ -419,6 +429,8 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
       Text(
         unlisted
             ? 'Any normalized unit, e.g. bag, meter, sheet, cu.m.'
+            : readyMixed
+            ? 'Cubic meters of concrete to deliver to your site.'
             : 'Units this material is sold in.',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,

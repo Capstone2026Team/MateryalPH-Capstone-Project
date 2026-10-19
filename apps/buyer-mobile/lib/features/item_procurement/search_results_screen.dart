@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/components/discovery_controls.dart';
 import '../../design_system/components/procurement_components.dart';
+import '../../design_system/components/ranking_indicator.dart';
 import '../../design_system/generated/color_tokens.dart';
 import '../../design_system/theme.dart';
 import '../map_discovery/discovery_models.dart';
@@ -164,13 +165,14 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
     }
   }
 
-  void _explain(ListingCardView card) => showBuyerBottomSheet<void>(
-    context: context,
-    builder: (context) => SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      child: RankingExplanation(card: card),
-    ),
-  );
+  void _explain(ListingCardView card, {int? position}) =>
+      showBuyerBottomSheet<void>(
+        context: context,
+        builder: (context) => SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          child: RankingExplanation(card: card, position: position),
+        ),
+      );
 
   String? get _title {
     final filters = _controller.filters;
@@ -529,17 +531,21 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
         ),
       ];
     }
+    final ranked =
+        _controller.effectiveSort == ListingSort.bestDeal && failure == null;
     return [
       _grid(
         count: results.length,
         item: (index) => ListingCard(
           card: results[index],
+          rankingPosition: ranked ? index + 1 : null,
           onOpen: () =>
               widget.navigation.openListing(context, results[index].listingId),
           onFavorite: _controller.favoriteBusy(results[index].vendorId)
               ? null
               : () => _favorite(results[index]),
-          onExplain: () => _explain(results[index]),
+          onExplain: () =>
+              _explain(results[index], position: ranked ? index + 1 : null),
         ),
       ),
       SliverToBoxAdapter(
@@ -583,6 +589,7 @@ class ListingCard extends StatelessWidget {
     this.onFavorite,
     this.onExplain,
     this.showFavorite = true,
+    this.rankingPosition,
   });
 
   /// False where the card is already inside one store's page, where a store Favorite adds nothing.
@@ -591,6 +598,7 @@ class ListingCard extends StatelessWidget {
   final VoidCallback onOpen;
   final VoidCallback? onFavorite;
   final VoidCallback? onExplain;
+  final int? rankingPosition;
 
   @override
   Widget build(BuildContext context) {
@@ -667,6 +675,13 @@ class ListingCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (rankingPosition != null) ...[
+                        RankingIndicator(
+                          position: rankingPosition!,
+                          recommendation: RankingRecommendation.bestDeal,
+                        ),
+                        const SizedBox(height: 8),
+                      ],
                       Text(
                         card.displayName,
                         maxLines: 2,
@@ -853,8 +868,9 @@ class _Fulfillment extends StatelessWidget {
 }
 
 class RankingExplanation extends StatelessWidget {
-  const RankingExplanation({super.key, required this.card});
+  const RankingExplanation({super.key, required this.card, this.position});
   final ListingCardView card;
+  final int? position;
   @override
   Widget build(BuildContext context) => Column(
     mainAxisSize: MainAxisSize.min,
@@ -868,6 +884,8 @@ class RankingExplanation extends StatelessWidget {
         ),
       ),
       const SizedBox(height: 4),
+      if (position != null)
+        Text('Rank #$position in the current Best Deal results'),
       Text(
         '${card.displayName} · Best Deal score ${card.srs}',
         style: const TextStyle(fontWeight: FontWeight.w600),
@@ -880,7 +898,7 @@ class RankingExplanation extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${component.label}: ${component.score} × ${component.weightPercent}% = ${component.weighted}',
+                '${component.label}: ${component.score} × ${component.weightPercent.toStringAsFixed(component.weightPercent % 1 == 0 ? 0 : 2)}% = ${component.weighted}',
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               Text(
@@ -894,6 +912,13 @@ class RankingExplanation extends StatelessWidget {
         'Scores are normalized to 0–100 and combined as a weighted sum. Ties break by distance, then price, then listing.',
         style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
       ),
+      if (position != null) ...[
+        const SizedBox(height: 8),
+        const Text(
+          'The highest-ranked option under your active criteria may not have the lowest price or the best score in every category.',
+          style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
+        ),
+      ],
     ],
   );
 }

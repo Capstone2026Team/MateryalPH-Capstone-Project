@@ -136,7 +136,7 @@ const child = (code: string, name: string, gross: number | null, suppressed = fa
   suppressionReason: suppressed ? 'SMALL_CELL' : null, suppressionNote: suppressed ? 'Fewer than 5 distinct Buyers' : null })
 const dashboard = {
   scope: { code: null, name: 'Philippines', level: null, levelLabel: 'Country', label: 'Philippines', breadcrumbs: [{ code: null, name: 'Philippines', level: null }], childrenLabel: 'Regions', drillable: true, psgcVersion: null },
-  dataset: { environment: 'TEST', label: 'TEST — Recorded Test Marketplace Activity', demo: false, lastAggregatedAt: new Date('2026-10-09T17:00:00Z'), throughDate: '2026-10-08', revision: 3, available: true },
+  dataset: { environment: 'TEST', label: 'Recorded Marketplace Activity', demo: false, lastAggregatedAt: new Date('2026-10-09T17:00:00Z'), throughDate: '2026-10-08', revision: 3, available: true },
   period: { from: new Date('2026-07-12'), to: new Date('2026-10-08'), granularity: 'WEEK' }, filters: {},
   filterApplicability: [{ filter: 'payment_method', appliesTo: ['ORDERS'], notApplicableTo: ['VENDOR_COUNT', 'MATERIALS_ANALYTICS_PRICES'], note: 'Transaction filters apply to order metrics only.' }],
   disclosure: { minimumPersons: 5, method: 'ROLL_UP_TO_PARENT', description: 'Person-derived cells with fewer than 5 distinct Buyers or users are suppressed.' },

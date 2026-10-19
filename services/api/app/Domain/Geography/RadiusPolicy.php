@@ -22,6 +22,13 @@ final class RadiusPolicy
     public const EXPANSION_THRESHOLD = 3;
 
     /**
+     * Owner decision 2026-10-17: Project-Based vendor selection (Find vendors, estimates, alternatives for a missing
+     * line and the purchases tagged to it) always uses this one radius. It is never stored per package, never chosen
+     * by a client and never expanded; Item-Based discovery keeps the allowlist above.
+     */
+    public const PROJECT_BASED_KM = 50;
+
+    /**
      * Spheroidal distance of a point projected exactly N metres away can evaluate a few nanometres above N,
      * which would drop an exact-boundary Vendor at some bearings. One centimetre is below the stored
      * 7-decimal coordinate precision, keeps the boundary inclusive and still excludes points 5 cm outside.

@@ -6,6 +6,8 @@
 
 Name | Type
 ------------ | -------------
+`selectedArrangementId` | string
+`vendorOrders` | Array&lt;{ [key: string]: any; }&gt;
 `id` | string
 `projectId` | string
 `name` | string
@@ -15,6 +17,7 @@ Name | Type
 `currentVersionId` | string
 `selectedVendorId` | string
 `orderId` | string
+`procurementCandidateId` | string
 
 ## Example
 
@@ -23,6 +26,8 @@ import type { WorkPackageSummary } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "selectedArrangementId": null,
+  "vendorOrders": null,
   "id": null,
   "projectId": null,
   "name": null,
@@ -32,6 +37,7 @@ const example = {
   "currentVersionId": null,
   "selectedVendorId": null,
   "orderId": null,
+  "procurementCandidateId": null,
 } satisfies WorkPackageSummary
 
 console.log(example)

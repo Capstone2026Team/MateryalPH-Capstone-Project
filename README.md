@@ -1,6 +1,6 @@
 # MateryalPH
 
-MateryalPH is a geolocation-based construction-material marketplace with separate Buyer, Vendor, and Admin experiences backed by one versioned API.
+MateryalPH is a geolocation-based construction-material marketplace with separate Buyer, Vendor, and Admin connected by one backed by versioned API.
 
 ## Repository layout
 
@@ -131,15 +131,20 @@ npm run build
 # apps/buyer-mobile
 flutter analyze
 flutter test
-
-
-# 10 Vendor Seeded 
-docker compose exec api php artisan materyalph:demo-vendors-seed
-
-# For new machine run this
-py tools/demo-assets/fetch_demo_photos.py
 ```
 
+## Demo Seeded Data
+Sign-in details were written to /workspace/services/api/storage/app/demo-vendor-credentials.json (git-ignored). Passwords and authenticator secrets are never printed.
+
+```powershell
+# For new machine run this
+py tools/demo-assets/fetch_demo_photos.py
+
+# 12 Vendor Seeded 
+docker compose exec api php artisan materyalph:demo-vendors-seed
+```
+
+## Other Information
 The API test runner finds Docker Desktop on PATH or in its standard user/system
 installation folder, waits for the test services to be healthy, and runs Laravel
 checks inside `api-test`. Do not run `php artisan test` directly from Windows:
@@ -152,4 +157,3 @@ and Vendor reCAPTCHA Enterprise setup. Buyer iOS acceptance requires macOS with 
 
 The approved authentication target is Laravel Passport. See `docs/adr/0001-api-authentication-passport.md` for the controlled transition from the scaffold's Sanctum dependency.
 
-# MateryalPH-Capstone-Project

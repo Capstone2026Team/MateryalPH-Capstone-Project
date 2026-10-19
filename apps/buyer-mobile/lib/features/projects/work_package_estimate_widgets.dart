@@ -10,8 +10,7 @@ BoxDecoration _card(BuildContext context) => BoxDecoration(
   border: Border.all(color: BuyerTheme.border),
 );
 
-/// Advisory materials-only estimate (owner decision 2026-10-12): the total,
-/// a reminder of what it excludes, and the per-line breakdown. It never
+/// Advisory material prices and applicable supplier delivery estimates. It never
 /// replaces a system-compiled estimate or a Vendor quotation.
 class WorkPackageEstimateSection extends StatelessWidget {
   const WorkPackageEstimateSection({
@@ -39,7 +38,11 @@ class WorkPackageEstimateSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final total = projectInt(estimate?['materials_total_centavos']);
+    final completeTotal = estimate?['estimated_total_centavos'];
+    final total = projectInt(
+      completeTotal ?? estimate?['materials_total_centavos'],
+    );
+    final complete = completeTotal != null;
     final priced = projectInt(estimate?['priced_line_count']);
     final rows = {
       for (final row in projectRows(estimate?['lines']))
@@ -55,7 +58,7 @@ class WorkPackageEstimateSection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Material Budget Cost Estimate',
+                'Work Package cost estimate',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -91,7 +94,8 @@ class WorkPackageEstimateSection extends StatelessWidget {
                 )
               else ...[
                 Semantics(
-                  label: 'Estimated total cost ${projectMoney(total)}',
+                  label:
+                      '${complete ? 'Estimated total cost' : 'Materials subtotal'} ${projectMoney(total)}',
                   excludeSemantics: true,
                   child: Column(
                     children: [
@@ -106,7 +110,9 @@ class WorkPackageEstimateSection extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Estimated total cost',
+                        complete
+                            ? 'Estimated total cost'
+                            : 'Materials subtotal · estimate incomplete',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: BuyerTheme.muted,
                         ),
@@ -127,14 +133,17 @@ class WorkPackageEstimateSection extends StatelessWidget {
                     color: BuyerTheme.muted,
                   ),
                 ),
-                if (budgetCentavos != null && total > 0) ...[
+                if (budgetCentavos != null &&
+                    total > 0 &&
+                    complete &&
+                    !loading) ...[
                   const SizedBox(height: 12),
                   _BudgetFit(budget: budgetCentavos!, total: total),
                 ],
-                if (total > 0 && total != budgetCentavos)
+                if (total > 0 && complete && total != budgetCentavos)
                   Center(
                     child: TextButton.icon(
-                      onPressed: () => onUseAsBudget(total),
+                      onPressed: loading ? null : () => onUseAsBudget(total),
                       icon: const Icon(LucideIcons.arrowDownToLine, size: 18),
                       label: const Text('Use estimate as budget'),
                     ),
@@ -163,9 +172,10 @@ class WorkPackageEstimateSection extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const TextSpan(
-                      text:
-                          'The estimate covers materials only. It excludes delivery fees and labor, and it is not a Vendor quotation.',
+                    TextSpan(
+                      text: estimate?['delivery_status'] == 'NOT_APPLICABLE'
+                          ? 'Self pick-up has no delivery fee. Labor and payment processing fees are excluded. This is an advisory estimate, not a Vendor quotation.'
+                          : 'Includes estimated supplier delivery. Ready-mixed concrete always uses site delivery; Both also estimates delivery. Fees need Vendor confirmation. Labor and payment processing are excluded. This is not a Vendor quotation.',
                     ),
                   ],
                 ),
@@ -193,6 +203,32 @@ class WorkPackageEstimateSection extends StatelessWidget {
                 const SizedBox(height: 8),
                 for (final (i, line) in lines.indexed)
                   EstimateLineRow(line: line, row: rows[i]),
+                const Divider(height: 24),
+                _EstimateAmount(
+                  'Materials',
+                  projectMoney(estimate!['materials_total_centavos']),
+                ),
+                _EstimateAmount(
+                  'Delivery estimate',
+                  estimate!['delivery_centavos'] == null
+                      ? 'Vendor review'
+                      : projectMoney(estimate!['delivery_centavos']),
+                ),
+                _EstimateAmount(
+                  'Estimated total',
+                  complete ? projectMoney(total) : 'Incomplete',
+                ),
+                for (final issue
+                    in (estimate!['delivery_issues'] as List?) ?? const [])
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      projectText(issue),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: BuyerTheme.actionPressed,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -200,6 +236,29 @@ class WorkPackageEstimateSection extends StatelessWidget {
       ],
     );
   }
+}
+
+class _EstimateAmount extends StatelessWidget {
+  const _EstimateAmount(this.label, this.amount);
+  final String label, amount;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(label, style: Theme.of(context).textTheme.bodySmall),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          amount,
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+        ),
+      ],
+    ),
+  );
 }
 
 class _BudgetFit extends StatelessWidget {

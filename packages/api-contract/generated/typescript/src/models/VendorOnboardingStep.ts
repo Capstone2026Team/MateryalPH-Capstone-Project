@@ -32,6 +32,10 @@ export interface VendorOnboardingStep {
      */
     label: string;
     /**
+     * Saved form or evidence completion for the Vendor checklist. COMPLETED means ready to submit or already supplied, never Admin approval or activation eligibility. The status field retains the review decision.
+     */
+    progressStatus?: VendorOnboardingStepProgressStatusEnum;
+    /**
      *
      */
     level: VendorOnboardingStepLevelEnum;
@@ -57,6 +61,17 @@ export interface VendorOnboardingStep {
     reviewedAt?: Date | null;
 }
 
+
+/**
+ * @export
+ */
+export const VendorOnboardingStepProgressStatusEnum = {
+    NotStarted: 'NOT_STARTED',
+    InProgress: 'IN_PROGRESS',
+    Completed: 'COMPLETED',
+    NotApplicable: 'NOT_APPLICABLE',
+} as const;
+export type VendorOnboardingStepProgressStatusEnum = typeof VendorOnboardingStepProgressStatusEnum[keyof typeof VendorOnboardingStepProgressStatusEnum];
 
 /**
  * @export
@@ -112,6 +127,7 @@ export function VendorOnboardingStepFromJSONTyped(json: any, ignoreDiscriminator
         'id': json['id'],
         'key': json['key'],
         'label': json['label'],
+        'progressStatus': json['progress_status'] == null ? undefined : json['progress_status'],
         'level': json['level'],
         'status': json['status'],
         'reason': json['reason'] === undefined ? undefined : json['reason'] === null ? null : json['reason'],
@@ -135,6 +151,7 @@ export function VendorOnboardingStepToJSONTyped(value?: VendorOnboardingStep | n
         'id': value['id'],
         'key': value['key'],
         'label': value['label'],
+        'progress_status': value['progressStatus'],
         'level': value['level'],
         'status': value['status'],
         'reason': value['reason'],

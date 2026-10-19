@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Domain\Finance\AdminFinanceService;
+use App\Domain\Finance\CommissionPolicyService;
 use App\Domain\Finance\WithholdingThresholdEngine;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
@@ -19,6 +20,23 @@ final class AdminFinanceController extends Controller
     private const KINDS = ['RECONCILIATION_EXCEPTION', 'PAYMENT_MISMATCH', 'LATE_CAPTURE_COMPENSATION', 'OVERLAP_UNRESOLVED', 'THRESHOLD_ADJUSTMENT_REQUIRED', 'BASE_REVIEW_REQUIRED', 'FEE_OVERPAYMENT', 'STATEMENT_OVERDUE', 'FEE_CREDIT_PROPOSAL', 'PAID_FEE_CREDIT_PAYABLE'];
 
     public function __construct(private readonly AdminFinanceService $finance) {}
+
+    public function commissionPolicies(Request $request, CommissionPolicyService $policies): JsonResponse
+    {
+        $input = $request->validate(['page' => ['sometimes', 'integer', 'between:1,1000']]);
+        $result = $policies->index($request, (int) ($input['page'] ?? 1));
+
+        return ApiResponse::success($result['data'], $result['meta']);
+    }
+
+    public function publishCommissionPolicy(Request $request, CommissionPolicyService $policies): JsonResponse
+    {
+        $input = $request->validate(['commission_basis_points' => ['required', 'integer', 'between:0,10000'],
+            'expected_version' => ['required', 'integer', 'min:0'], 'effective_from' => ['nullable', 'date'], 'reason' => ['required', 'string', 'min:10', 'max:2000']]);
+
+        /** @var array{commission_basis_points: int, expected_version: int, effective_from?: ?string, reason: string} $input */
+        return ApiResponse::success($policies->publish($request, $input));
+    }
 
     public function payments(Request $request): JsonResponse
     {

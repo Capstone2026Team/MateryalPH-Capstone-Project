@@ -24,6 +24,21 @@ import {
     ChannelFeeVersionListEnvelopeToJSON,
 } from '../models/ChannelFeeVersionListEnvelope';
 import {
+    type CommissionPoliciesEnvelope,
+    CommissionPoliciesEnvelopeFromJSON,
+    CommissionPoliciesEnvelopeToJSON,
+} from '../models/CommissionPoliciesEnvelope';
+import {
+    type CommissionPolicyEnvelope,
+    CommissionPolicyEnvelopeFromJSON,
+    CommissionPolicyEnvelopeToJSON,
+} from '../models/CommissionPolicyEnvelope';
+import {
+    type CommissionPolicyPublishRequest,
+    CommissionPolicyPublishRequestFromJSON,
+    CommissionPolicyPublishRequestToJSON,
+} from '../models/CommissionPolicyPublishRequest';
+import {
     type ErrorEnvelope,
     ErrorEnvelopeFromJSON,
     ErrorEnvelopeToJSON,
@@ -135,6 +150,13 @@ export interface ListAdminPaymentsRequest {
     to?: Date;
 }
 
+export interface ListCommissionPoliciesRequest {
+    /**
+     *
+     */
+    page?: number;
+}
+
 export interface ListFeeStatementsRequest {
     /**
      * Issued balances past their due date.
@@ -201,6 +223,17 @@ export interface ProposeFeeCreditRequest {
      *
      */
     feeCreditProposalRequest: FeeCreditProposalRequest;
+}
+
+export interface PublishCommissionPolicyRequest {
+    /**
+     *
+     */
+    idempotencyKey: string;
+    /**
+     *
+     */
+    commissionPolicyPublishRequest: CommissionPolicyPublishRequest;
 }
 
 export interface ResolveFinanceReviewItemRequest {
@@ -539,6 +572,51 @@ export class AdminFinanceApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for listCommissionPolicies without sending the request
+     */
+    async listCommissionPoliciesRequestOpts(requestParameters: ListCommissionPoliciesRequest): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/admin/finance/commission-policies`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * finance.view. Current and next commercial commission policies and paginated append-only history. can_manage additionally requires platform_settings.manage.
+     */
+    async listCommissionPoliciesRaw(requestParameters: ListCommissionPoliciesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CommissionPoliciesEnvelope>> {
+        const requestOptions = await this.listCommissionPoliciesRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => CommissionPoliciesEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * finance.view. Current and next commercial commission policies and paginated append-only history. can_manage additionally requires platform_settings.manage.
+     */
+    async listCommissionPolicies(requestParameters: ListCommissionPoliciesRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CommissionPoliciesEnvelope> {
+        const response = await this.listCommissionPoliciesRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for listFeeStatements without sending the request
      */
     async listFeeStatementsRequestOpts(requestParameters: ListFeeStatementsRequest): Promise<runtime.RequestOpts> {
@@ -761,6 +839,68 @@ export class AdminFinanceApi extends runtime.BaseAPI {
      */
     async proposeFeeCredit(requestParameters: ProposeFeeCreditRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<FinanceActionResultEnvelope> {
         const response = await this.proposeFeeCreditRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for publishCommissionPolicy without sending the request
+     */
+    async publishCommissionPolicyRequestOpts(requestParameters: PublishCommissionPolicyRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling publishCommissionPolicy().'
+            );
+        }
+
+        if (requestParameters['commissionPolicyPublishRequest'] == null) {
+            throw new runtime.RequiredError(
+                'commissionPolicyPublishRequest',
+                'Required parameter "commissionPolicyPublishRequest" was null or undefined when calling publishCommissionPolicy().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/admin/finance/commission-policies`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: CommissionPolicyPublishRequestToJSON(requestParameters['commissionPolicyPublishRequest']),
+        };
+    }
+
+    /**
+     * Requires finance.view, platform_settings.manage, recent authentication, CSRF, Idempotency-Key and expected_version. Publishes a new commercial rate with immutable, hash-verified Vendor terms and Owner notices. Existing quotations, orders, assessments and credits keep their saved rate. Statutory rates and provider mode are unchanged. No backdating or insertion before the latest scheduled policy.
+     */
+    async publishCommissionPolicyRaw(requestParameters: PublishCommissionPolicyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CommissionPolicyEnvelope>> {
+        const requestOptions = await this.publishCommissionPolicyRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => CommissionPolicyEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Requires finance.view, platform_settings.manage, recent authentication, CSRF, Idempotency-Key and expected_version. Publishes a new commercial rate with immutable, hash-verified Vendor terms and Owner notices. Existing quotations, orders, assessments and credits keep their saved rate. Statutory rates and provider mode are unchanged. No backdating or insertion before the latest scheduled policy.
+     */
+    async publishCommissionPolicy(requestParameters: PublishCommissionPolicyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CommissionPolicyEnvelope> {
+        const response = await this.publishCommissionPolicyRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

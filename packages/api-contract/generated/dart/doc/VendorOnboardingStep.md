@@ -11,6 +11,7 @@ Name | Type | Description | Notes
 **id** | **String** |  |
 **key** | **String** |  |
 **label** | **String** |  |
+**progressStatus** | **String** | Saved form or evidence completion for the Vendor checklist. COMPLETED means ready to submit or already supplied, never Admin approval or activation eligibility. The status field retains the review decision. | [optional]
 **level** | **String** |  |
 **status** | **String** |  |
 **reason** | **String** |  | [optional]

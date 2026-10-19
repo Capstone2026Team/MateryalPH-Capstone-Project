@@ -114,6 +114,11 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('payment-webhook', fn (Request $request): Limit => Limit::perMinute(600)->by($request->ip()));
         RateLimiter::for('provider-webhook', fn (Request $request): Limit => Limit::perMinute(10)->by($request->ip()));
         RateLimiter::for('auth-registration', fn (Request $request): Limit => Limit::perHour(5)->by($request->ip()));
+        RateLimiter::for('support-guest', fn (Request $request): Limit => Limit::perMinute(30)->by('support|'.$request->ip()));
+        RateLimiter::for('support-submit', fn (Request $request): array => [
+            Limit::perHour(10)->by('support-ip|'.$request->ip()),
+            Limit::perHour(5)->by('support-identity|'.hash('sha256', (string) ($request->user()?->getAuthIdentifier() ?? mb_strtolower((string) $request->input('email'))))),
+        ]);
         RateLimiter::for('auth-refresh', fn (Request $request): Limit => Limit::perMinute(30)->by($request->ip()));
     }
 }

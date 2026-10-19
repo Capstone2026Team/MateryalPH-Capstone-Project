@@ -1,4 +1,4 @@
-import { PageHeader as SharedPageHeader, InfoNote, FilterTabs, PortalPagePatterns, FinanceSection, PhysicalPaymentOptions, VendorDeliverySetup } from '@materyalph/web-ui'
+import { PageHeader as SharedPageHeader, InfoNote, PortalPagePatterns, FinanceSection, PhysicalPaymentOptions, VendorDeliverySetup } from '@materyalph/web-ui'
 import { useParams } from 'react-router-dom'
 import { VendorInsightsWorkspace } from './VendorDashboardInsights'
 import { VendorStaffDashboard } from './VendorStaffDashboard'
@@ -34,7 +34,7 @@ import { type FormEvent, type ReactNode, createContext, useContext, useCallback,
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 
 import {
-  AccountWorkspace, VersionedAgreementPanel, VendorTeamInvitations, VendorTeamActivity, VendorTeamMembers, useAccountVerification, type RequestAccountVerification,
+  AccountWorkspace, VendorTeamInvitations, VendorTeamActivity, VendorTeamMembers, useAccountVerification, type RequestAccountVerification,
   DeliveryVehicles, emptyDeliveryVehicle, ChoiceField, FieldRow, OnboardingFormSection, EmailVerificationPanel, AuthorityScopePanel, DocumentUploadField,
   Button,
   Field, FormErrors,
@@ -53,6 +53,7 @@ import { vehicleDraft, vehiclePayload, vehicleErrors } from '../lib/delivery-veh
 import { vendorLoginDestination } from '../lib/vendor-destination'
 import type { VendorOnboardingSection } from '@materyalph/api-client-ts'
 import { OnboardingFlow, OnboardingStepContent } from '../components/OnboardingFlow'
+import { CommissionTerms } from '../components/CommissionTerms'
 import { statusLabel, statusTone, useOnboardingSnapshot } from '../lib/vendor-status'
 import { useVendorNavigationUpdates } from '../lib/navigation-updates'
 import { verificationSteps, setupSteps } from '../lib/onboarding-steps'
@@ -60,7 +61,7 @@ import { StoreBusinessInformation, StoreLocation, StoreVacationMode } from '../c
 import { getFinanceOverview, section, updatePhysicalPayments, type PhysicalPaymentSettings } from '../lib/finance-api'
 import { VendorBusinessAddress } from '../components/VendorBusinessAddress'
 import {
-  activateVendorStore, acceptVendorCommission,
+  activateVendorStore,
   connectVendorPayment,
   reconcileVendorPaymentConnection,
   completeVendorSetup,
@@ -85,7 +86,7 @@ import {
 type JsonRecord = Record<string, ReactNode>
 type OnboardingSectionKey = 'STORE_VERIFICATION' | 'STORE_SETUP'
 
-const vendorModules: Record<string, string> = { orders: 'Orders', fulfillment: 'Fulfillment', messages: 'Messages', invoices: 'E-Invoices', notifications: 'Notifications', disputes: 'Disputes & Appeals', products: 'My Products', vehicles: 'Vehicles', wallet: 'Transactions', tracking: 'Team Tracking', performance: 'Store Performance', materials_analytics: 'Materials Analytics', reviews: 'Ratings & Reviews', earnings: 'Earnings' }
+const vendorModules: Record<string, string> = { orders: 'Orders', fulfillment: 'Fulfillment', messages: 'Messages', invoices: 'E-Invoices', notifications: 'Notifications', disputes: 'Disputes & Appeals', products: 'My Products', vehicles: 'Vehicles', wallet: 'Finance', tracking: 'Team Tracking', performance: 'Store Performance', materials_analytics: 'Materials Analytics', reviews: 'Ratings & Reviews', earnings: 'Earnings' }
 const vendorModuleIcons = { orders: FileText, fulfillment: Truck, messages: MessageSquare, invoices: ReceiptText, disputes: Scale, products: Package, vehicles: Truck, wallet: Wallet, performance: ChartNoAxesCombined, materials_analytics: LineChart, reviews: Star, earnings: CreditCard }
 const vendorNavigation: PortalNavSection[] = [
   { label: 'Overview', items: [{ label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={16} aria-hidden="true" /> }] },
@@ -168,10 +169,10 @@ export function PageHeader({ eyebrow, title, description, status, actions }: { e
 }
 
 function Checklist({ title, section }: { title: string; section: ReturnType<typeof sectionFor> }) {
-  const steps = section.steps.filter(item => item.status !== 'NOT_APPLICABLE')
+  const steps = section.steps.filter(item => item.level !== 'OPTIONAL' && (item.progressStatus ?? item.status) !== 'NOT_APPLICABLE')
   const items = section.key === 'STORE_VERIFICATION' ? verificationChecklist(steps) : steps.map(item => ({ ...item, requirements: [item] }))
   const { complete } = checklistProgress(section)
-  return <ChecklistPanel title={title} items={items}><p className="mt-2 text-sm text-text-secondary">{complete} of {items.length} checklist items complete.</p><div className="mt-3"><ProgressBar value={items.length ? complete / items.length * 100 : 0} label={`${complete} of ${items.length} complete`} /></div></ChecklistPanel>
+  return <ChecklistPanel title={title} items={items}><div className="mt-3"><ProgressBar value={items.length ? complete / items.length * 100 : 0} label={`${complete} of ${items.length} checklist items complete.`} /></div></ChecklistPanel>
 }
 
 
@@ -227,7 +228,7 @@ export function VendorShell({ activeHref, accountLabel, accountStatus, children,
     finally { setSigningOut(false) }
   }
   if (activeHref === '/welcome' || activeHref.startsWith('/onboarding')) return <div className="min-h-screen bg-surface-canvas text-text-strong"><header className="flex flex-wrap items-center justify-between gap-3 border-b border-border-default bg-surface-primary px-6 py-4"><Link to="/dashboard" className="text-xl font-bold">Materyal<span className="text-action-primary">PH</span></Link><p className="text-xs text-text-secondary" aria-label="System date">{portalDate()}</p><PortalAccountMenu portal="vendors" basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} onNavigate={navigate} onSignOut={logout} /></header><main className="mx-auto max-w-7xl p-5 sm:p-8">{refreshError && <StatusMessage tone="error">{refreshError}</StatusMessage>}{children}</main></div>
-  return <PortalShell contentLayout={activeHref === '/preview/tracking' ? 'full' : 'standard'} apiBasePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} onSignOut={logout} onNavigate={navigate} notificationUnreadCount={navigationUpdates?.['/notifications'] ?? 0} portalLabel="VENDOR PORTAL" pageTitle={activeHref === '/settings' ? 'Settings' : activeHref === '/notifications' ? 'Notifications' : activeHref === '/store-profile' ? 'Store Profile' : activeHref.includes('onboarding') ? 'Vendor Onboarding' : vendorNavigation.flatMap(section => section.items).find(item => item.href === activeHref)?.label ?? 'Dashboard'} dateLabel={portalDate()} sections={navigation} activeHref={activeHref} accountLabel={accountLabel} accountStatus={accountStatus ?? 'Vendor account'} accountAvatarUrl={storeLogoUrl} headerActions={<><Link className="inline-flex min-h-11 items-center px-3 text-sm font-semibold" to="/settings">Account</Link><Button variant="secondary" disabled={signingOut} onClick={() => void logout()}>{signingOut ? 'Signing out…' : 'Sign out'}</Button></>}>{logoutError && <StatusMessage tone="error">{logoutError}</StatusMessage>}{refreshError && navigationSnapshot && <StatusMessage tone="error">{refreshError}</StatusMessage>}<PortalPagePatterns.Provider value><div className="vendor-page text-sm">{children}</div></PortalPagePatterns.Provider></PortalShell>
+  return <PortalShell contentLayout={activeHref === '/preview/tracking' ? 'full' : 'standard'} apiBasePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} onSignOut={logout} onNavigate={navigate} notificationUnreadCount={navigationUpdates?.['/notifications'] ?? 0} portalLabel="VENDOR PORTAL" pageTitle={activeHref === '/settings' ? 'Settings' : activeHref === '/notifications' ? 'Notifications' : activeHref === '/store-profile' ? 'Store Profile' : activeHref.includes('onboarding') ? 'Vendor Onboarding' : vendorNavigation.flatMap(section => section.items).find(item => item.href === activeHref)?.label ?? 'Dashboard'} dateLabel={portalDate()} sections={navigation} activeHref={activeHref} accountLabel={accountLabel} accountStatus={accountStatus ?? 'Vendor account'} accountAvatarUrl={storeLogoUrl} headerActions={<><Link className="inline-flex min-h-11 items-center px-3 text-sm font-semibold" to="/support/requests">Support</Link><Link className="inline-flex min-h-11 items-center px-3 text-sm font-semibold" to="/settings">Account</Link><Button variant="secondary" disabled={signingOut} onClick={() => void logout()}>{signingOut ? 'Signing out…' : 'Sign out'}</Button></>}>{logoutError && <StatusMessage tone="error">{logoutError}</StatusMessage>}{refreshError && navigationSnapshot && <StatusMessage tone="error">{refreshError}</StatusMessage>}<PortalPagePatterns.Provider value><div className="vendor-page text-sm">{children}</div></PortalPagePatterns.Provider></PortalShell>
 }
 
 export function VendorWelcomePage() {
@@ -279,7 +280,6 @@ export function VendorDashboardPage() {
   const verificationStatus = stringValue(record(snapshot.verification).status, 'NOT_STARTED')
   const setupStatus = stringValue(record(snapshot.setup).status, 'NOT_STARTED')
   const setupProgress = checklistProgress(setupSection)
-  const activationBlockers = arrayValue(readiness.blockers)
   const accountLabel = stringValue(org.storeName, stringValue(org.legalName, 'Vendor Owner'))
   if (!snapshot.permissions.includes('vendor.onboarding.submit')) {
     const copy = staffDashboardCopy(snapshot.permissions)
@@ -303,7 +303,6 @@ export function VendorDashboardPage() {
     <div className="phase3-page space-y-6">
       <SharedPageHeader eyebrow="Limited-Access Vendor Dashboard" title={`Welcome back, ${accountLabel}.`} description={booleanValue(readiness.ready) ? 'Your store meets activation requirements. Request activation to open marketplace features.' : 'Review and complete the requirements for Store Activation below.'} status={<StatusBadge label={statusLabel(stringValue(activation.status, 'NOT_READY'))} tone="warning" />} />
       {actionMessage && <StatusMessage tone={actionMessage.includes('recorded') ? 'success' : 'error'}>{actionMessage}</StatusMessage>}
-      {!booleanValue(readiness.ready) && <section aria-label="Store activation requirements" className="rounded-surface border border-border-default bg-surface-primary p-5 sm:p-6"><h2 className="text-lg font-semibold">Store activation requirements</h2>{activationBlockers.length ? <><p className="mt-2 text-sm text-text-secondary">The server reports these items before your store can be activated:</p><ul className="mt-4 list-disc space-y-2 pl-5 text-sm text-text-strong">{activationBlockers.map((blocker, index) => <li key={`${stringValue(blocker.key)}-${index}`}>{stringValue(blocker.reason, 'An activation requirement needs attention.')}</li>)}</ul></> : <p className="mt-2 text-sm text-text-secondary">Activation readiness is unavailable. The dashboard will check again automatically.</p>}</section>}
       {booleanValue(readiness.ready) && <Button className="w-fit" disabled={busy} onClick={() => void activate()}>{busy ? 'Recording…' : 'Request Store Activation'} <ArrowRight size={16} aria-hidden="true" /></Button>}
       <div className="grid gap-5 lg:grid-cols-2">
         <div className="space-y-3"><Checklist title="Store Verification" section={verificationSection} /><p className="text-sm text-text-secondary">Review status: <strong className="text-text-strong">{statusLabel(verificationStatus)}</strong></p><Link className="inline-flex min-h-11 items-center font-semibold text-action-primary" to="/onboarding/verification">{verificationStatus === 'APPROVED' ? 'Review Store Verification' : 'Continue Store Verification / Review requirements'}</Link></div>
@@ -322,7 +321,6 @@ export function VendorSetupPage() {
 }
 
 function VendorOnboardingPage({ initialSection }: { initialSection: OnboardingSectionKey }) {
-  const navigate = useNavigate()
   const { snapshot, loading, error, refresh, setSnapshot } = useOnboardingSnapshot()
   const activeSection = initialSection
 
@@ -332,16 +330,11 @@ function VendorOnboardingPage({ initialSection }: { initialSection: OnboardingSe
   const org = record(snapshot.organization)
   if (!snapshot.permissions.includes('vendor.onboarding.manage')) return <Navigate to="/dashboard" replace />
   const accountLabel = stringValue(org.storeName, 'Vendor Owner')
-  const verificationSection = sectionFor(snapshot, 'STORE_VERIFICATION')
-  const setupSection = sectionFor(snapshot, 'STORE_SETUP')
   const activeHref = activeSection === 'STORE_SETUP' ? '/onboarding/setup' : '/onboarding/verification'
 
   return <VendorShell refreshError={error} navigationData={snapshot} activeHref={activeHref} accountLabel={accountLabel} accountStatus="Onboarding in progress"><div className="phase3-page mx-auto max-w-[1120px] space-y-8"><header className="space-y-4">
         <Link className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-text-secondary hover:text-action-primary" to="/dashboard"><ArrowLeft size={16} aria-hidden="true" />Back to dashboard</Link>
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-10">
-          <PageHeader eyebrow="Store onboarding" title={activeSection === 'STORE_SETUP' ? 'Store Setup' : 'Store Verification'} status={stringValue(record(activeSection === 'STORE_SETUP' ? snapshot.setup : snapshot.verification).status, 'NOT_STARTED')} description={activeSection === 'STORE_SETUP' ? 'Configure your public profile, fulfillment and TEST payment connection.' : 'Provide business information and private evidence for Admin review.'} />
-          <div className="min-w-0 space-y-4"><FilterTabs appearance="tabs" label="Onboarding area" value={activeSection} chips={[{ value: 'STORE_VERIFICATION', label: 'Store Verification' }, { value: 'STORE_SETUP', label: 'Store Setup' }]} onChange={value => navigate(value === 'STORE_SETUP' ? '/onboarding/setup' : '/onboarding/verification')} /><p className="text-[13px] text-text-secondary">Verification: {checklistProgress(verificationSection).complete}/{checklistProgress(verificationSection).total} · Setup: {checklistProgress(setupSection).complete}/{checklistProgress(setupSection).total} checklist items complete</p></div>
-        </div>
+        <PageHeader eyebrow="Store onboarding" title={activeSection === 'STORE_SETUP' ? 'Store Setup' : 'Store Verification'} status={stringValue(record(activeSection === 'STORE_SETUP' ? snapshot.setup : snapshot.verification).status, 'NOT_STARTED')} description={activeSection === 'STORE_SETUP' ? 'Configure your public profile, fulfillment and TEST payment connection.' : 'Provide business information and private evidence for Admin review.'} />
       </header>{activeSection === 'STORE_VERIFICATION' ? <VerificationWorkspace snapshot={snapshot} onSaved={setSnapshot} onRefresh={refresh} /> : <SetupWorkspace snapshot={snapshot} onSaved={setSnapshot} onRefresh={refresh} />}</div></VendorShell>
 }
 
@@ -410,6 +403,7 @@ function VerificationForm({ snapshot, onSaved, onRefresh, editing = false, regis
   const [preview, setPreview] = useState<JsonRecord>({})
   const [previewError, setPreviewError] = useState('')
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const savedTaxReason = sectionFor(snapshot, 'STORE_VERIFICATION').steps.find(item => item.key === 'tax_profile')?.reason ?? ''
   const [previewPending, setPreviewPending] = useState(false)
   const [previewRetry, setPreviewRetry] = useState(0)
   const [declarationClaim, setDeclarationClaim] = useState(booleanValue(details.taxReliefClaimed))
@@ -421,7 +415,13 @@ function VerificationForm({ snapshot, onSaved, onRefresh, editing = false, regis
     return () => { current = false }
   }, [selectedBusinessType, representativeRole, identityType, representativeIdType, previewRetry])
   const [step, setStep] = useState(() => { const key = new URLSearchParams(window.location.search).get('requirement'); return Math.max(0, verificationSteps.findIndex(item => item.requirements.includes(key ?? ''))) })
-  const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false)
+  const privacyVersion = stringValue(record(verification.privacyNotice).version)
+  const savedPrivacy = useRef({ acknowledged: savedValue('privacy_acknowledged') === 'on', version: savedValue('privacy_notice_version') }).current
+  const [privacyAcknowledged, setPrivacyAcknowledged] = useState(() => (savedPrivacy.acknowledged && savedPrivacy.version === privacyVersion) || booleanValue(verification.privacyAcknowledged))
+  useEffect(() => {
+    setPrivacyAcknowledged((savedPrivacy.acknowledged && savedPrivacy.version === privacyVersion) || booleanValue(verification.privacyAcknowledged))
+    // A saved acknowledgement applies only to the notice the Vendor actually reviewed.
+  }, [privacyVersion, verification.privacyAcknowledged, savedPrivacy])
   const [dirty, setDirty] = useState(false)
   const [editedFields, setEditedFields] = useState<string[]>([])
   const companyIdentityRequired = ['PARTNERSHIP', 'CORPORATION', 'ONE_PERSON_CORPORATION', 'COOPERATIVE'].includes(selectedBusinessType)
@@ -437,6 +437,10 @@ function VerificationForm({ snapshot, onSaved, onRefresh, editing = false, regis
   latest.current = snapshot
   const staged = useRef<Record<string, File>>({})
   const working = useRef(false)
+  const editRevision = useRef(0)
+  const failedRevision = useRef<number | null>(null)
+  const [editVersion, setEditVersion] = useState(0)
+  function markDirty() { editRevision.current++; setEditVersion(value => value + 1); setDirty(true) }
   const restored = useRef(false)
   useEffect(() => {
     if (restored.current || !formRef.current) return
@@ -485,6 +489,7 @@ function VerificationForm({ snapshot, onSaved, onRefresh, editing = false, regis
     if ((verification.status === 'PENDING_VERIFICATION' || (!editing && verification.status === 'APPROVED'))) return true
     if (!force && !dirty && !Object.entries(files).some(([key, file]) => staged.current[key] !== file)) return true
     if (working.current || !formRef.current) return false
+    const revision = editRevision.current
     working.current = true; setBusy(true); setMessage(null)
     try {
       const data = new FormData(formRef.current)
@@ -493,16 +498,22 @@ function VerificationForm({ snapshot, onSaved, onRefresh, editing = false, regis
         if ((field instanceof HTMLInputElement || field instanceof HTMLSelectElement) && field.name && field.type !== 'file') state[field.name] = data.getAll(field.name).filter((value): value is string => typeof value === 'string')
       }
       state.representative_relationship = [representativeRole]
+      state.privacy_notice_version = [privacyVersion]
       const current = latest.current
       publish(await saveVendorVerificationDraft({ lockVersion: numberValue(record(current.organization).lockVersion, 1), draftLockVersion: numberValue(arrayValue(current.drafts).find(item => item.workstream === 'STORE_VERIFICATION')?.lockVersion, 0), formState: JSON.stringify(state) }))
       if (!await persistFiles()) return false
-      setDirty(false); setEditedFields([])
-      return true
-    } catch (cause) { await showError(cause); return false }
+      if (editRevision.current === revision) { setDirty(false); setEditedFields([]) }
+      return editRevision.current === revision
+    } catch (cause) { failedRevision.current = revision; await showError(cause); return false }
     finally { working.current = false; setBusy(false) }
   }
   const leave = useRef(saveProgress)
   leave.current = saveProgress
+  useEffect(() => {
+    if (!dirty || busy || failedRevision.current === editRevision.current) return
+    const timer = window.setTimeout(() => { void leave.current() }, 650)
+    return () => window.clearTimeout(timer)
+  }, [dirty, busy, editVersion, files])
   useEffect(() => {
     registerBeforeLeave?.(() => leave.current())
     return () => registerBeforeLeave?.(null)
@@ -558,8 +569,8 @@ function VerificationForm({ snapshot, onSaved, onRefresh, editing = false, regis
     const addressPayload = stringValue(data.get('address_payload'))
     if (addressPayload) {
       const selected = JSON.parse(addressPayload) as Record<string, string>
-      if (!selected.province_code || !selected.city_code || !selected.psgc_code || !selected.street?.trim() || !selected.postal_code?.trim() || (selected.source !== 'MANUAL' && !selected.resolution_token)) {
-        setFieldErrors({ address_payload: 'Complete the structured address. For map selection, wait for resolution or choose Manual Address Entry.' }); setStep(1); setBusy(false); working.current = false; return
+      if (!selected.province?.trim() || !selected.city_municipality?.trim() || !selected.barangay?.trim() || !selected.street?.trim() || !selected.postal_code?.trim() || (selected.source !== 'MANUAL' && !selected.resolution_token)) {
+        setFieldErrors({ address_payload: 'Complete the address details. If you use Google Maps, wait for the location to be confirmed or choose manual entry.' }); setStep(1); setBusy(false); working.current = false; return
       }
       draft.address = selected
     }
@@ -620,7 +631,7 @@ function VerificationForm({ snapshot, onSaved, onRefresh, editing = false, regis
 
   return <FormErrors.Provider value={fieldErrors}><PendingDocuments.Provider value={{ files, pending: arrayValue(record(snapshot.verification).pendingDocuments).filter(doc => !removedFiles.has(stringValue(doc.requirementKey))), errors: fieldErrors, busy, editing, select: (key, file) => {
     setFieldErrors(current => { const next = { ...current }; delete next[key]; return next })
-    setFiles(current => { const next = { ...current }; if (file) next[key] = file; else delete next[key]; return next }); setDirty(true)
+    setFiles(current => { const next = { ...current }; if (file) next[key] = file; else delete next[key]; return next }); markDirty()
     if (file) setRemovedFiles(current => { const next = new Set(current); next.delete(key); return next })
     else {
       const saved = Boolean(staged.current[key]) || arrayValue(record(latest.current.verification).pendingDocuments).some(doc => doc.requirementKey === key)
@@ -637,7 +648,7 @@ function VerificationForm({ snapshot, onSaved, onRefresh, editing = false, regis
       <Button type="button" variant="secondary" disabled={busy} onClick={() => { void saveProgress().then(saved => { if (saved) navigate('/dashboard') }) }}>Finish Later</Button>
       {step === 3 && <Button type="button" disabled={busy || (verification.status === 'PENDING_VERIFICATION' || (!editing && verification.status === 'APPROVED'))} onClick={() => void save()}>{busy ? 'Submitting…' : 'Submit for Admin Review'}</Button>}</>}>
     {message && <p role={message.tone === 'error' ? 'alert' : 'status'} className={`mb-4 text-sm ${message.tone === 'error' ? 'text-status-error' : 'text-text-secondary'}`}>{message.text}{message.text.startsWith('This draft changed') && <Button type="button" variant="quiet" onClick={() => { void getVendorOnboarding().then(publish).catch(showError) }}>Reload latest version</Button>}</p>}
-    <form id="verification-draft" noValidate ref={formRef} onChange={(event) => { if (event.target instanceof HTMLInputElement && event.target.type === 'file') return; setDirty(true); if (event.target instanceof HTMLSelectElement || event.target instanceof HTMLInputElement) {
+    <form id="verification-draft" noValidate ref={formRef} onChange={(event) => { if (event.target instanceof HTMLInputElement && event.target.type === 'file') return; markDirty(); if (event.target instanceof HTMLSelectElement || event.target instanceof HTMLInputElement) {
       const title = event.target.labels?.[0]?.textContent?.trim() || statusLabel(event.target.name)
       if (title) setEditedFields(fields => [...new Set([...fields, title])])
       if (event.target.name === 'business_type') setSelectedBusinessType(event.target.value)
@@ -660,11 +671,11 @@ function VerificationForm({ snapshot, onSaved, onRefresh, editing = false, regis
         {companyIdentityRequired && <RepresentativeInformation representative={{ ...record(verification.representative), ...(savedValue('authority_document_type') ? { authorityDocumentType: savedValue('authority_document_type') } : {}) }} owner={record(verification.owner)} documents={arrayValue(verification.documents)} review={record(verification.authorityReview)} role={representativeRole} idType={representativeIdType} authorityEvidence={<DocumentChecklist embedded reviewUploads keys={['authority_to_act']} snapshot={snapshot} onRefresh={onRefresh} preview={preview} pendingChanges={selectedBusinessType !== stringValue(org.businessType)} />} identityEvidence={representativeIdType ? <DocumentChecklist key={representativeIdType} identityLayout embedded keys={['representative_identity', ...(representativeIdType !== 'PASSPORT' ? ['representative_identity_back'] : [])]} snapshot={snapshot} onRefresh={onRefresh} preview={preview} pendingChanges={dirty || busy || selectedBusinessType !== stringValue(org.businessType)} /> : null} />}
         <FormSection panel title="Business identity" description="The registered business name and public Store name are separate values."><FieldRow>{companyIdentityRequired && <Field label="Registered Business Name" name="legal_business_name" required maxLength={200} defaultValue={stringValue(org.legalBusinessName, stringValue(org.registeredName))} />}<Field label="Date established" name="date_established" required type="date" max={new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Manila' }).format(new Date())} defaultValue={dateInput(org.dateEstablished)} /></FieldRow><Field label="Public Store Name" name="store_name" required maxLength={100} defaultValue={stringValue(org.storeName)} /></FormSection>
         <StoreContactInformation snapshot={snapshot} onSaved={onSaved} initialEmail={savedValue('store_email', stringValue(org.storeEmail))} />
-        <BusinessTaxInformation tax={tax} details={details} businessType={selectedBusinessType} canAttest={(selectedBusinessType === 'SOLE_PROPRIETORSHIP' && representativeRole === 'PROPRIETOR') || (record(verification.authorityReview).decision === 'APPROVED' && stringValue(record(verification.authorityReview).scope).split(',').includes('TAX_DECLARATIONS'))} errors={fieldErrors} evidence={<DocumentChecklist embedded reviewUploads keys={['bir_cor']} declarationClaim={declarationClaim} snapshot={snapshot} onRefresh={onRefresh} preview={preview} pendingChanges={selectedBusinessType !== stringValue(org.businessType)} />} declarationEvidence={<DocumentChecklist embedded reviewUploads keys={['tax_relief_evidence']} declarationClaim={declarationClaim} snapshot={snapshot} onRefresh={onRefresh} preview={preview} pendingChanges={selectedBusinessType !== stringValue(org.businessType)} />} />
+        <BusinessTaxInformation tax={tax} details={details} businessType={selectedBusinessType} canAttest={(selectedBusinessType === 'SOLE_PROPRIETORSHIP' && representativeRole === 'PROPRIETOR') || (record(verification.authorityReview).decision === 'APPROVED' && stringValue(record(verification.authorityReview).scope).split(',').includes('TAX_DECLARATIONS'))} errors={{ ...(savedTaxReason.startsWith('Enter your 9-digit TIN') ? { tin: savedTaxReason } : {}), ...fieldErrors }} evidence={<DocumentChecklist embedded reviewUploads keys={['bir_cor']} declarationClaim={declarationClaim} snapshot={snapshot} onRefresh={onRefresh} preview={preview} pendingChanges={selectedBusinessType !== stringValue(org.businessType)} />} declarationEvidence={<DocumentChecklist embedded reviewUploads keys={['tax_relief_evidence']} declarationClaim={declarationClaim} snapshot={snapshot} onRefresh={onRefresh} preview={preview} pendingChanges={selectedBusinessType !== stringValue(org.businessType)} />} />
         <FormSection panel title="Business and Compliance Evidence" description="Select the required documents. They stay pending until you submit for Admin Review."><DocumentChecklist embedded reviewUploads keys={['business_registration', 'lgu_permit']} snapshot={snapshot} onRefresh={onRefresh} preview={preview} pendingChanges={selectedBusinessType !== stringValue(org.businessType)} /></FormSection>
       </div></OnboardingStepContent>
-      <OnboardingStepContent active={step === 1}><div className="grid gap-5"><p className="text-sm text-text-secondary">Select your official Philippine address, then add the street and building details. Use Manual Address Entry or review a resolved map location before submitting.</p><InlineError name="address_payload" /><VendorBusinessAddress initial={address} restoreDraft={Boolean(savedValue('address_payload'))} active={step === 1} onDirty={() => setDirty(true)} /></div></OnboardingStepContent>
-      <OnboardingStepContent active={step === 2}><SupplierClassification classification={classification} onDirty={() => setDirty(true)} /></OnboardingStepContent>
+      <OnboardingStepContent active={step === 1}><div className="grid gap-5"><p className="text-sm text-text-secondary">Find your registered business address on Google Maps or enter it manually. Check that the details match your business documents.</p><InlineError name="address_payload" /><VendorBusinessAddress initial={address} restoreDraft={Boolean(savedValue('address_payload'))} active={step === 1} onDirty={markDirty} /></div></OnboardingStepContent>
+      <OnboardingStepContent active={step === 2}><SupplierClassification classification={classification} onDirty={markDirty} /></OnboardingStepContent>
 
     </fieldset></form>
 
@@ -675,32 +686,12 @@ function VerificationForm({ snapshot, onSaved, onRefresh, editing = false, regis
         <PrivacyNotice notice={record(verification.privacyNotice)}>
           <div className="grid gap-5 border-t border-border-default pt-5">
             <p className="max-w-2xl text-sm leading-6 text-text-secondary">Your business details and evidence remain private during review. This acknowledgement is recorded when you submit Store Verification.</p>
-            <label className="flex min-h-11 max-w-2xl items-start gap-3 text-sm leading-6"><input id="privacy_acknowledged" className="mt-1 h-5 w-5 shrink-0 accent-action-primary" type="checkbox" disabled={!stringValue(record(verification.privacyNotice).content)} checked={privacyAcknowledged} onChange={event => { setPrivacyAcknowledged(event.target.checked); setFieldErrors(current => { const next = { ...current }; delete next.privacy_acknowledged; return next }); if (Object.keys(fieldErrors).every(key => key === 'privacy_acknowledged')) setMessage(null) }} /><span>I acknowledge the current Privacy Notice and authorize MateryalPH to review these Vendor business details and private evidence.</span></label><InlineError name="privacy_acknowledged" />
+            <label className="flex min-h-11 max-w-2xl items-start gap-3 text-sm leading-6"><input id="privacy_acknowledged" name="privacy_acknowledged" form="verification-draft" className="mt-1 h-5 w-5 shrink-0 accent-action-primary" type="checkbox" disabled={!stringValue(record(verification.privacyNotice).content)} checked={privacyAcknowledged} onChange={event => { setPrivacyAcknowledged(event.target.checked); markDirty(); setFieldErrors(current => { const next = { ...current }; delete next.privacy_acknowledged; return next }); if (Object.keys(fieldErrors).every(key => key === 'privacy_acknowledged')) setMessage(null) }} /><span>I acknowledge the current Privacy Notice and authorize MateryalPH to review these Vendor business details and private evidence.</span></label><InlineError name="privacy_acknowledged" />
           </div>
         </PrivacyNotice>
       </div>
     </OnboardingStepContent>
   </OnboardingFlow></PendingDocuments.Provider></FormErrors.Provider>
-}
-
-function CommissionTerms({ snapshot, onSaved, disabled }: { snapshot: VendorOnboardingSnapshot; onSaved: (snapshot: VendorOnboardingSnapshot) => void; disabled: boolean }) {
-  const terms = record(record(snapshot.verification).commissionTerms)
-  const agreement = record(terms.agreement)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  async function accept() {
-    setBusy(true); setError('')
-    try { onSaved(await acceptVendorCommission({ organizationLockVersion: numberValue(record(snapshot.organization).lockVersion, 1), agreementVersionId: stringValue(agreement.id), accepted: true })) }
-    catch (cause) { setError(await readableOnboardingError(cause)) }
-    finally { setBusy(false) }
-  }
-  return <VersionedAgreementPanel key={stringValue(agreement.id)} title="2% Commission Terms" version={numberValue(agreement.version)} content={stringValue(agreement.content)} accepted={terms.accepted === true} eligible={terms.canAccept === true} busy={busy || disabled} error={error} onAccept={() => void accept()}>
-    <p className="max-w-3xl text-sm leading-6 text-text-secondary">A versioned agreement for the Vendor-paid commission on completed materials. Review the full terms before accepting for your organization.</p>
-    <dl className="grid gap-4 sm:grid-cols-2">
-      {[["Commission base", "2% of completed materials after Vendor discounts, excluding included materials VAT."], ["Monthly collection", "Collected monthly, with VAT-inclusive commission fee treatment where applicable."], ["Credits and disputes", "Cancellation and partial-refund credits, statement due dates, and the dispute process follow the versioned terms."], ["Authorized acceptance", "The Vendor Owner or an Admin-approved Owner-linked representative with the COMMISSION_AGREEMENT scope."]].map(([label, detail]) => <div key={label} className="rounded-control border border-border-default p-4"><dt className="text-sm font-semibold">{label}</dt><dd className="mt-2 text-sm leading-6 text-text-secondary">{detail}</dd></div>)}
-    </dl>
-    <p className="rounded-control bg-surface-canvas p-4 text-sm leading-6">Changing settings never adds a fee to an already accepted order.</p>
-  </VersionedAgreementPanel>
 }
 
 function PrivacyNotice({ notice, children }: { notice: JsonRecord; children?: ReactNode }) {
@@ -888,7 +879,7 @@ function SetupForm({ snapshot, onSaved, onRefresh }: { snapshot: VendorOnboardin
   const [step, setStep] = useState(() => { const value = new URLSearchParams(window.location.search).get('step'); return /^S[1-6]$/.test(value ?? '') ? Number(value!.slice(1)) - 1 : 0 })
   const [dirty, setDirty] = useState(false)
   const [schedule, setSchedule] = useState<StoreOperatingDay[]>(() => operatingDays(progress.operatingScheduleDraft ?? setup.operating_schedule))
-  const [scheduleTouched, setScheduleTouched] = useState(false)
+  const [scheduleTouched, setScheduleTouched] = useState(Boolean(progress.operatingScheduleDraft))
   const [scheduleErrors, setScheduleErrors] = useState<Record<number, string>>({})
   const [servicesCapability, setServicesCapability] = useState(stringValue(profile.fulfillmentMethod))
   const [bulkCapability, setBulkCapability] = useState(profile.bulkCapability === true ? 'yes' : profile.bulkCapability === false ? 'no' : '')

@@ -20,11 +20,11 @@ import { mapValues } from '../runtime';
  */
 export interface ChatIdentity {
     /**
-     *
+     * Current public profile name. Historical messages fall back to the stored public name when no current profile name exists. System messages retain their system identity.
      */
     displayName: string;
     /**
-     *
+     * Public role. For historical messages, this is the role recorded when the message was sent, even after a handler transfer or role change.
      */
     role: string;
     /**

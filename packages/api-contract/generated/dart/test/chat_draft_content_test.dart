@@ -17,6 +17,7 @@ void main() {
       // TODO
     });
 
+    // Legacy editor preference, ignored. The Buyer selects payment before accepting the quotation.
     // String paymentMethod
     test('to test the property `paymentMethod`', () async {
       // TODO

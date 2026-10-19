@@ -5,11 +5,11 @@ import { PaymentAttemptBadge, ThresholdPanel, WithholdingStatusBadge } from '@ma
 import * as onboarding from '../lib/onboarding-api'
 import * as finance from '../lib/finance-api'
 import type { FeeStatementDetail, VendorFinanceOverview } from '../lib/finance-api'
-import { VendorEarningsPage, VendorFinancePage, VendorStatementPage, VendorTransactionHistoryPage } from './FinancePages'
+import { VendorCommissionPage, VendorEarningsPage, VendorFinancePage, VendorStatementPage, VendorTransactionHistoryPage } from './FinancePages'
 
-vi.mock('../lib/onboarding-api', async original => ({ ...await original<typeof import('../lib/onboarding-api')>(), getVendorOnboarding: vi.fn(), getVendorPrivateFileUrl: vi.fn() }))
+vi.mock('../lib/onboarding-api', async original => ({ ...await original<typeof import('../lib/onboarding-api')>(), getVendorOnboarding: vi.fn(), getVendorPrivateFileUrl: vi.fn(), acceptVendorCommission: vi.fn() }))
 vi.mock('../lib/finance-api', async original => ({ ...await original<typeof import('../lib/finance-api')>(), getFinanceOverview: vi.fn(), updatePhysicalPayments: vi.fn(), listTransactions: vi.fn(),
-  getStatement: vi.fn(), payStatement: vi.fn(), refreshFeePayment: vi.fn(), getEarnings: vi.fn(), exportTransactions: vi.fn(), revealTin: vi.fn(),
+  getStatement: vi.fn(), payStatement: vi.fn(), refreshFeePayment: vi.fn(), getEarnings: vi.fn(), exportTransactions: vi.fn(), revealTin: vi.fn(), getCommissionMonitoring: vi.fn(),
   getFinanceReviews: vi.fn(async () => ({ label: 'DEMO — No real funds or BIR filing', statements: [], taxAdjustments: [], evidence: [], openReviews: [] })) }))
 
 function snapshot(permissions: string[]): Awaited<ReturnType<typeof onboarding.getVendorOnboarding>> {
@@ -49,6 +49,93 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(onboarding.getVendorOnboarding).mockResolvedValue(snapshot(['portal.orders', 'portal.wallet', 'portal.earnings', 'finance.view', 'finance.pay', 'payments.configure']))
   vi.mocked(onboarding.getVendorPrivateFileUrl).mockResolvedValue({ url: 'https://example.test/logo', expiresAt: new Date() })
+  vi.mocked(finance.getCommissionMonitoring).mockResolvedValue({ hasMore: false, monitoring: {
+    currentPolicy: { id: 'policy-1', version: 1, commissionBasisPoints: 200, rateLabel: '2.00%', effectiveFrom: new Date('2026-10-19T00:00:00Z'), status: 'CURRENT' }, termsAccepted: true,
+    summary: { estimatedCentavos: 0, earnedCentavos: 0, creditedCentavos: 0, netEarnedCentavos: 0, unbilledCentavos: 0, draftCentavos: 0, outstandingCentavos: 0, overdueCentavos: 0, collectedCentavos: 0, refundedCentavos: 0, netCollectedCentavos: 0 }, assessments: [],
+  } })
+})
+
+test('commission monitoring distinguishes estimated fees, earned fees and issued debt and shows each saved rate', async () => {
+  vi.mocked(finance.getCommissionMonitoring).mockResolvedValue({ hasMore: false, monitoring: {
+    currentPolicy: { id: 'policy-2', version: 2, commissionBasisPoints: 325, rateLabel: '3.25%', effectiveFrom: new Date('2026-10-19T00:00:00Z'), status: 'CURRENT' }, termsAccepted: true,
+    summary: { estimatedCentavos: 3250, earnedCentavos: 20000, creditedCentavos: 4000, netEarnedCentavos: 16000, unbilledCentavos: 16000, draftCentavos: 0, outstandingCentavos: 8000, overdueCentavos: 2000, collectedCentavos: 9000, refundedCentavos: 1000, netCollectedCentavos: 8000 },
+    assessments: [{ id: 'assessment-1', orderReference: 'ORD-OLD-RATE', state: 'EARNED', commissionBasisCentavos: 1000000, commissionBasisPoints: 200, estimatedCentavos: 0, earnedCentavos: 20000, creditedCentavos: 4000, netCentavos: 16000, disputeHold: false }],
+  } })
+  at('/finance/commissions', <VendorCommissionPage />)
+  expect(await screen.findByRole('table', { name: 'Commission by order' })).toBeInTheDocument()
+  expect(screen.getByText('3.25%')).toBeInTheDocument()
+  expect(within(screen.getByRole('table', { name: 'Commission by order' })).getByText('2.00%')).toBeInTheDocument()
+  expect(screen.getByText('Estimated fees')).toBeInTheDocument()
+  expect(screen.getByText('Unpaid statements')).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'View and pay commission statements' })).toHaveAttribute('href', '/finance/transactions?tab=STATEMENTS')
+  expect(screen.queryByRole('button', { name: 'Edit rate' })).not.toBeInTheDocument()
+})
+
+test('commission monitoring remains Owner-only', async () => {
+  vi.mocked(onboarding.getVendorOnboarding).mockResolvedValue(snapshot(['portal.orders']))
+  at('/finance/commissions', <VendorCommissionPage />)
+  expect(await screen.findByText('Store-wide finance is Owner-only')).toBeInTheDocument()
+  expect(finance.getCommissionMonitoring).not.toHaveBeenCalled()
+})
+
+test('reviewing commission terms opens a popup with fresh terms and keeps the Vendor in Finance', async () => {
+  const current = snapshot(['portal.wallet'])
+  const fresh = { ...current, verification: { commission_terms: { accepted: true, can_accept: true, agreement: { id: 'agreement-3', version: 3, content: 'Current published commission agreement' } } } }
+  vi.mocked(onboarding.getVendorOnboarding).mockResolvedValueOnce(current).mockResolvedValue(fresh)
+  at('/finance/commissions', <VendorCommissionPage />)
+  const review = await screen.findByRole('button', { name: 'Review Commission Terms' })
+  review.focus()
+  fireEvent.click(review)
+  const dialog = within(screen.getByRole('dialog', { name: 'Review Commission Terms' }))
+  expect(await dialog.findByText('Current commission terms accepted for this organization.')).toBeInTheDocument()
+  fireEvent.click(dialog.getByText('Read the full commission terms'))
+  expect(await dialog.findByRole('region', { name: 'Current commission agreement' })).toHaveTextContent('Current published commission agreement')
+  expect(onboarding.getVendorOnboarding).toHaveBeenCalledTimes(2)
+  expect(dialog.queryByRole('checkbox')).not.toBeInTheDocument()
+  fireEvent.click(dialog.getByRole('button', { name: 'Done' }))
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'Commission monitoring' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Review Commission Terms' })).toHaveFocus()
+  expect(onboarding.acceptVendorCommission).not.toHaveBeenCalled()
+})
+
+test('Finance consent uses the freshly loaded version and organization lock and refreshes fees after acceptance', async () => {
+  const current = snapshot(['portal.wallet'])
+  const terms = { accepted: false, can_accept: true, agreement: { id: 'agreement-4', version: 4, content: 'Version four commission terms' } }
+  const fresh = { ...current, lockVersion: 8, organization: { ...current.organization, lock_version: 7 }, verification: { commission_terms: terms } }
+  const accepted = { ...fresh, lockVersion: 9, verification: { commission_terms: { ...terms, accepted: true } } }
+  vi.mocked(onboarding.getVendorOnboarding).mockResolvedValueOnce(current).mockResolvedValue(fresh)
+  let complete!: (value: typeof accepted) => void
+  vi.mocked(onboarding.acceptVendorCommission).mockImplementation(() => new Promise(resolve => { complete = resolve }))
+  at('/finance/commissions', <VendorCommissionPage />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Review Commission Terms' }))
+  const dialog = within(screen.getByRole('dialog', { name: 'Review Commission Terms' }))
+  const checkbox = await dialog.findByRole('checkbox')
+  expect(checkbox).not.toBeChecked()
+  expect(checkbox).toBeDisabled()
+  fireEvent.click(dialog.getByText('Read the full commission terms'))
+  fireEvent.scroll(await dialog.findByRole('region', { name: 'Current commission agreement' }))
+  fireEvent.click(checkbox)
+  fireEvent.click(dialog.getByRole('button', { name: 'Accept commission terms' }))
+  expect(onboarding.acceptVendorCommission).toHaveBeenCalledWith({ organizationLockVersion: 7, agreementVersionId: 'agreement-4', accepted: true })
+  expect(dialog.getByRole('button', { name: 'Done' })).toBeDisabled()
+  expect(dialog.getByRole('button', { name: 'Close review commission terms' })).toBeDisabled()
+  complete(accepted)
+  expect(await dialog.findByText('Current commission terms accepted for this organization.')).toBeInTheDocument()
+  expect(finance.getCommissionMonitoring).toHaveBeenCalledTimes(2)
+  expect(screen.getByRole('heading', { name: 'Commission monitoring' })).toBeInTheDocument()
+})
+
+test('failed popup loading offers a retry while keeping commission monitoring open', async () => {
+  const current = snapshot(['portal.wallet'])
+  vi.mocked(onboarding.getVendorOnboarding).mockResolvedValueOnce(current).mockRejectedValueOnce(new Error('offline')).mockResolvedValue({ ...current, verification: { commissionTerms: { accepted: true, agreement: { id: 'agreement-1', version: 1, content: 'Published terms' } } } })
+  at('/finance/commissions', <VendorCommissionPage />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Review Commission Terms' }))
+  const dialog = within(screen.getByRole('dialog', { name: 'Review Commission Terms' }))
+  expect(await dialog.findByRole('alert')).toBeInTheDocument()
+  fireEvent.click(dialog.getByRole('button', { name: 'Try again' }))
+  expect(await dialog.findByText('Current commission terms accepted for this organization.')).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'Commission monitoring' })).toBeInTheDocument()
 })
 
 test('overview groups payment and tax sections and retains finance statuses and notices', async () => {

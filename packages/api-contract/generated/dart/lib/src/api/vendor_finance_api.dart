@@ -17,6 +17,7 @@ import 'package:materyalph_api_client/src/model/physical_payment_settings_envelo
 import 'package:materyalph_api_client/src/model/physical_payment_settings_update.dart';
 import 'package:materyalph_api_client/src/model/physical_payment_summary_envelope.dart';
 import 'package:materyalph_api_client/src/model/statement_payment_request.dart';
+import 'package:materyalph_api_client/src/model/vendor_commission_monitoring_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_earnings_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_finance_overview_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_tin_reveal_envelope.dart';
@@ -206,6 +207,98 @@ class VendorFinanceApi {
     }
 
     return Response<String>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// getVendorCommissionMonitoring
+  /// Owner-only all-time commission monitoring with current and next policy, estimated and earned fees, approved credits, unbilled fees, draft bills, issued outstanding and overdue debt, verified allocations and successful fee refunds. Assessments are paginated and retain their original basis and percentage. Cash and earnings are separate; no wallet balance is represented.
+  ///
+  /// Parameters:
+  /// * [page]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [VendorCommissionMonitoringEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<VendorCommissionMonitoringEnvelope>> getVendorCommissionMonitoring({
+    int? page = 1,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendor/finance/commissions';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    VendorCommissionMonitoringEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(VendorCommissionMonitoringEnvelope),
+      ) as VendorCommissionMonitoringEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<VendorCommissionMonitoringEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

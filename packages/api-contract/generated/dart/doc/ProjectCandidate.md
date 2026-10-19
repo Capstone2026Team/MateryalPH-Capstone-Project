@@ -34,7 +34,8 @@ Name | Type | Description | Notes
 **distanceMeters** | **int** |  |
 **distanceBasis** | **String** |  |
 **etaSeconds** | **int** |  | [optional]
-**fulfillmentMethod** | **String** |  |
+**fulfillmentMethod** | **String** | The concrete method this view is priced for: DELIVERY or PICKUP. For a Both package it is the Vendor's preferred method until the Buyer picks one. A supplier quotation containing ready-mixed concrete uses DELIVERY only, even when the Work Package requests pickup. |
+**fulfillmentOptions** | **BuiltList&lt;String&gt;** | Methods this Vendor offers for the package. More than one means the Buyer must send `fulfillment_method` when inquiring or selecting; selection-preview re-prices for the chosen method. Ready-mixed concrete restricts its supplier quotation to DELIVERY. | [optional]
 **paymentMethod** | **String** |  |
 **delivery** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  |
 **destination** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  |
@@ -43,6 +44,15 @@ Name | Type | Description | Notes
 **label** | **String** |  |
 **currentQuotationState** | **String** |  |
 **isFavorite** | **bool** | The Buyer saved this store as a preferred seller. | [optional]
+**fulfillment** | [**ProjectFulfillment**](ProjectFulfillment.md) |  |
+**paymentMethods** | [**BuiltList&lt;ProjectPaymentMethod&gt;**](ProjectPaymentMethod.md) |  | [optional]
+**draftGroups** | [**BuiltList&lt;ProjectDraftVendorGroup&gt;**](ProjectDraftVendorGroup.md) | Draft supplementary items by supplying Vendor, including automatic exact-match defaults. Defaults are saved during selection preview; explicit removals and replacements are preserved. Independent of the regular cart. | [optional]
+**primaryOrderId** | **String** |  | [optional]
+**procurementMaterialsCentavos** | **int** | Primary and supplementary materials, including existing linked purchases. | [optional]
+**separateDeliveryCentavos** | **int** | Delivery for supplementary suppliers and linked orders, counted once per order or draft supplier. Null while any fee needs review. | [optional]
+**procurementDeliveryCentavos** | **int** | Delivery for the primary Vendor and all separate suppliers. Null while any fee needs review. | [optional]
+**procurementBudgetLabel** | **String** | Work Package budget status for the complete procurement total. | [optional]
+**procurementTotalCentavos** | **int** | Materials and each supplying Vendor delivery counted once. Null while any delivery remains unconfirmed or unavailable. Processing fees are excluded until payment. | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

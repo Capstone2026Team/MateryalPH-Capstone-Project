@@ -47,7 +47,7 @@ final class CheckoutOptionsTest extends TestCase
     {
         $m = DB::table('materials')->where('code', 'CONCRETE_HOLLOW_BLOCK')->first();
 
-        return ['name' => 'Foundation', 'budget_centavos' => $budget, 'site_id' => $site, 'radius_km' => 5, 'fulfillment_method' => 'PICKUP', 'payment_method' => 'ONLINE',
+        return ['name' => 'Foundation', 'budget_centavos' => $budget, 'site_id' => $site, 'radius_km' => 50, 'fulfillment_method' => 'PICKUP', 'payment_method' => 'ONLINE',
             'lines' => [['material_id' => $m->id, 'unit_id' => $m->canonical_unit_id, 'quantity' => $quantity, 'name' => 'Hollow blocks', 'specifications' => ['thickness_mm' => '100'], 'preferred_brand' => 'BrandCo']]];
     }
 

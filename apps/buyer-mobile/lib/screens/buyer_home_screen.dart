@@ -1,3 +1,5 @@
+import '../features/support/support_repository.dart';
+import '../features/support/support_screens.dart';
 import '../design_system/components/count_badge.dart';
 import '../features/messaging/messaging_repository.dart';
 import 'dart:async';
@@ -275,6 +277,19 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen>
             : (context, listing, variant) => unawaited(
                 _navigation.openListing(context, listing, variantId: variant),
               ),
+      );
+    } else if (segments.length == 2 &&
+        segments[0] == 'support' &&
+        widget.repository != null) {
+      destination = SupportDetailScreen(
+        repository: BuyerSupportRepository(
+          widget.repository!.apiClient,
+          () async {
+            await widget.repository!.clearAccountSession();
+            if (mounted) _sessionEnded();
+          },
+        ),
+        ticketId: segments[1],
       );
     } else if (path == '/settings') {
       Navigator.of(context).popUntil((route) => route.isFirst);

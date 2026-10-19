@@ -90,6 +90,13 @@ final class PhaseElevenFinanceRulesTest extends TestCase
         self::assertSame(['vat_centavos' => 1, 'revenue_centavos' => 4], CommissionService::creditSplit(5, 1, 0, 0, 5));
     }
 
+    public function test_return_credits_use_the_original_order_rate_and_full_returns_consume_the_remainder(): void
+    {
+        self::assertSame(['target_centavos' => 26000, 'credit_centavos' => 6500], CommissionService::creditTarget(1000000, 32500, 0, 200000, 325));
+        self::assertSame(['target_centavos' => 0, 'credit_centavos' => 26000], CommissionService::creditTarget(1000000, 32500, 6500, 1000000, 325));
+        self::assertSame(['target_centavos' => 0, 'credit_centavos' => 0], CommissionService::creditTarget(1000000, 0, 0, 200000, 0));
+    }
+
     /** @return iterable<string, array{0: string, 1: int, 2: int, 3: bool, 4: int, 5: string, 6: int}> */
     public static function fin04aFixtures(): iterable
     {

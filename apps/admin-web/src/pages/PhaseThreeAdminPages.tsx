@@ -18,6 +18,7 @@ import {
   Check,
   CheckCircle2,
   ClipboardCheck,
+  ContactRound,
   FileText,
   RefreshCw,
   ShieldAlert,
@@ -39,12 +40,15 @@ import {
 
 import { formatDate, numberValue, record, records, statusLabel, statusTone, stringValue, type JsonRecord } from '../lib/admin-format'
 
-const adminModuleIcons: Record<string, typeof FileText> = { 'marketplace-analytics': ChartNoAxesCombined, 'buyer-management': Users, 'product-compliance': ShieldCheck, disputes: Scale, enforcement: ShieldAlert, scores: BadgeCheck, moderation: ClipboardCheck, transactions: CreditCard, 'order-operations': ReceiptText, invoices: ReceiptText, settings: Settings, privacy: ShieldCheck, integrations: Activity }
-const adminModuleHrefs: Record<string, string> = { 'marketplace-analytics': '/analytics', 'buyer-management': '/buyer-management', 'product-compliance': '/product-compliance', disputes: '/disputes', enforcement: '/enforcement', scores: '/scores', moderation: '/reviews', transactions: '/finance', 'order-operations': '/order-operations', invoices: '/invoices', settings: '/settings', privacy: '/privacy', integrations: '/integrations' }
+const adminModuleIcons: Record<string, typeof FileText> = { 'vendor-verification': Store,'marketplace-analytics': ChartNoAxesCombined, 'buyer-management': Users, 'product-compliance': ShieldCheck, disputes: Scale, enforcement: ShieldAlert, scores: BadgeCheck, moderation: ClipboardCheck, transactions: CreditCard, 'order-operations': ReceiptText, invoices: ReceiptText, settings: Settings, privacy: ShieldCheck, integrations: Activity }
+const adminModuleHrefs: Record<string, string> = { 'vendor-verification': '/vendor-verification','marketplace-analytics': '/analytics', 'buyer-management': '/buyer-management', 'product-compliance': '/product-compliance', disputes: '/disputes', enforcement: '/enforcement', scores: '/scores', moderation: '/reviews', transactions: '/finance', 'order-operations': '/order-operations', invoices: '/invoices', settings: '/settings', privacy: '/privacy', support: '/support', integrations: '/integrations' }
 const adminNavigation: PortalNavSection[] = [
   { label: 'Overview', items: [{ label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={16} aria-hidden="true" /> }] },
-  { label: 'User Management', items: [{ label: 'Vendor Management', href: '/vendor-verification', icon: <Store size={16} aria-hidden="true" /> }, { label: 'Buyer Management', href: adminModuleHrefs['buyer-management'] ?? '/buyer-management', icon: <Users size={16} aria-hidden="true" /> }] },
-  ...[['Marketplace', [['Marketplace Analytics', 'marketplace-analytics']]], ['Compliance & quality', [['Product Compliance Queue', 'product-compliance'], ['Disputes & Appeals', 'disputes'], ['Enforcement', 'enforcement'], ['Score & Badge Monitoring', 'scores'], ['Review Moderation', 'moderation']]], ['Finance', [['Transaction', 'transactions'], ['Orders & Refunds', 'order-operations'], ['Invoice Request Log', 'invoices']]], ['Platform', [['Platform Settings', 'settings'], ['Privacy Requests', 'privacy'], ['Integration & Job Health', 'integrations']]]].map(([label, entries]) => ({ label: label as string, items: (entries as string[][]).map(([label = '', key = '']) => ({ label, href: adminModuleHrefs[key] ?? `/preview/${key}`, icon: (() => { const Icon = adminModuleIcons[key] ?? FileText; return <Icon size={18} aria-hidden="true" /> })() })) })),
+  { label: 'User Management', items: [
+    { label: 'Vendor Users', href: '/vendor-users', icon: <ContactRound size={16} aria-hidden="true" />, child: true },
+    { label: 'Buyer Users', href: '/buyer-users', icon: <ContactRound size={16} aria-hidden="true" />, child: true },
+  ] },
+  ...[['Marketplace', [['Marketplace Analytics', 'marketplace-analytics']]], ['Compliance & quality', [['Vendor Verification', 'vendor-verification'],['Product Compliance Queue', 'product-compliance'], ['Disputes & Appeals', 'disputes'], ['Enforcement', 'enforcement'], ['Score & Badge Monitoring', 'scores'], ['Review Moderation', 'moderation']]], ['Finance', [['Transaction', 'transactions'], ['Orders & Refunds', 'order-operations'], ['Invoice Request Log', 'invoices']]], ['Platform', [['Platform Settings', 'settings'], ['Support Requests', 'support'], ['Privacy Requests', 'privacy'], ['Integration & Job Health', 'integrations']]]].map(([label, entries]) => ({ label: label as string, items: (entries as string[][]).map(([label = '', key = '']) => ({ label, href: adminModuleHrefs[key] ?? `/preview/${key}`, icon: (() => { const Icon = adminModuleIcons[key] ?? FileText; return <Icon size={18} aria-hidden="true" /> })() })) })),
   { label: 'Tracking', items: [{ label: 'Audit Log', href: '/audit', icon: <History size={16} aria-hidden="true" /> }] },
 ]
 
@@ -65,7 +69,7 @@ export function AdminShell({ activeHref, children }: { activeHref: string; child
   const basePath = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'
   const counts = useNavigationUpdates({ basePath, audience: 'admin' })
   const sections = adminNavigation.map(section => ({ ...section, items: section.items.map(item => ({ ...item, updateCount: counts?.[item.href] ?? 0, updateCountLabel: 'pending item' })) }))
-  return <PortalShell apiBasePath={basePath} onNavigate={navigate} notificationUnreadCount={counts?.['/notifications'] ?? 0} headerActions={<Link className="inline-flex min-h-11 items-center text-sm font-semibold" to="/workspace">Account settings</Link>} homeHref="/dashboard" portalLabel="ADMIN PORTAL" pageTitle={activeHref === '/dashboard' ? 'Dashboard' : activeHref === '/notifications' ? 'Notifications' : activeHref === '/workspace' ? 'Settings' : activeHref === '/audit' ? 'Audit tracking' : adminNavigation.flatMap(section => section.items).find(item => item.href === activeHref)?.label ?? 'Vendor Management'} dateLabel={adminDate()} sections={sections} activeHref={activeHref} accountLabel="Admin review team" accountStatus="Audited access"><PortalPagePatterns.Provider value><div className="admin-page text-sm">{children}</div></PortalPagePatterns.Provider></PortalShell>
+  return <PortalShell apiBasePath={basePath} onNavigate={navigate} notificationUnreadCount={counts?.['/notifications'] ?? 0} headerActions={<Link className="inline-flex min-h-11 items-center text-sm font-semibold" to="/workspace">Account settings</Link>} homeHref="/dashboard" portalLabel="ADMIN PORTAL" pageTitle={activeHref === '/dashboard' ? 'Dashboard' : activeHref === '/notifications' ? 'Notifications' : activeHref === '/workspace' ? 'Settings' : activeHref === '/audit' ? 'Audit tracking' : adminNavigation.flatMap(section => section.items).find(item => item.href === activeHref)?.label ?? 'Vendor Verification'} dateLabel={adminDate()} sections={sections} activeHref={activeHref} accountLabel="Admin review team" accountStatus="Audited access"><PortalPagePatterns.Provider value><div className="admin-page text-sm">{children}</div></PortalPagePatterns.Provider></PortalShell>
 }
 
 export function PageHeader({ eyebrow, title, description, actions }: { eyebrow: string; title: string; description: string; actions?: ReactNode; compact?: boolean }) {
@@ -119,7 +123,7 @@ export function AdminVendorVerificationQueuePage() {
   const [dateLabel, setDateLabel] = useState('All dates')
   const filterSelect = 'min-h-11 w-auto max-w-full rounded-control border border-border-default bg-surface-primary px-3 text-sm font-normal text-text-strong'
   return <AdminShell activeHref="/vendor-verification"><div className="space-y-6">
-    <PageHeader eyebrow="Admin review" title="Vendor Verification" description="Review submitted business requirements. Choose a review status and submission period, then open a case to review its evidence." actions={<Button variant="secondary" disabled={loading} onClick={() => void refresh()}><RefreshCw size={16} aria-hidden="true" />Refresh queue</Button>} />
+    <PageHeader eyebrow="Compliance & quality" title="Vendor Verification" description="Review submitted business requirements. Choose a review status and submission period, then open a case to review its evidence." actions={<Button variant="secondary" disabled={loading} onClick={() => void refresh()}><RefreshCw size={16} aria-hidden="true" />Refresh queue</Button>} />
     <InfoNote>Verification, setup, TEST provider readiness, activation and discovery are separate states. The number on each tab counts the cases under the filters below.</InfoNote>
     <FilterTabs label="Review status" value={filters.status} onChange={status => change({ status })} chips={verificationTabs.map(value => ({ value, label: statusLabel(value), ...(counts[value] !== undefined ? { count: counts[value] } : {}) }))} />
     <Toolbar filters={<>

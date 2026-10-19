@@ -15,10 +15,12 @@ Method | HTTP request | Description
 [**getWithholdingAccumulator**](AdminFinanceApi.md#getwithholdingaccumulator) | **GET** /admin/finance/withholding-accumulators/{accumulatorId} |
 [**listAdminPayments**](AdminFinanceApi.md#listadminpayments) | **GET** /admin/finance/payments |
 [**listChannelFees**](AdminFinanceApi.md#listchannelfees) | **GET** /admin/finance/channel-fees |
+[**listCommissionPolicies**](AdminFinanceApi.md#listcommissionpolicies) | **GET** /admin/finance/commission-policies |
 [**listFeeStatements**](AdminFinanceApi.md#listfeestatements) | **GET** /admin/finance/statements |
 [**listFinanceReviewItems**](AdminFinanceApi.md#listfinancereviewitems) | **GET** /admin/finance/review-items |
 [**listWithholdingAccumulators**](AdminFinanceApi.md#listwithholdingaccumulators) | **GET** /admin/finance/withholding-accumulators |
 [**proposeFeeCredit**](AdminFinanceApi.md#proposefeecredit) | **POST** /admin/finance/fee-credits |
+[**publishCommissionPolicy**](AdminFinanceApi.md#publishcommissionpolicy) | **POST** /admin/finance/commission-policies |
 [**resolveFinanceReviewItem**](AdminFinanceApi.md#resolvefinancereviewitem) | **POST** /admin/finance/review-items/{itemId}/resolve |
 [**resolveWithholdingOverlap**](AdminFinanceApi.md#resolvewithholdingoverlap) | **POST** /admin/finance/withholding-accumulators/{accumulatorId}/overlap |
 [**runPaymentReconciliation**](AdminFinanceApi.md#runpaymentreconciliation) | **POST** /admin/finance/reconciliation/run |
@@ -336,6 +338,57 @@ This endpoint does not need any parameter.
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **listCommissionPolicies**
+> CommissionPoliciesEnvelope listCommissionPolicies(page)
+
+
+
+finance.view. Current and next commercial commission policies and paginated append-only history. can_manage additionally requires platform_settings.manage.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAdminFinanceApi();
+final int page = 56; // int |
+
+try {
+    final response = api.listCommissionPolicies(page);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AdminFinanceApi->listCommissionPolicies: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **page** | **int**|  | [optional] [default to 1]
+
+### Return type
+
+[**CommissionPoliciesEnvelope**](CommissionPoliciesEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **listFeeStatements**
 > FeeStatementListEnvelope listFeeStatements(overdue, page, state, from, to)
 
@@ -548,6 +601,59 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**FinanceActionResultEnvelope**](FinanceActionResultEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **publishCommissionPolicy**
+> CommissionPolicyEnvelope publishCommissionPolicy(idempotencyKey, commissionPolicyPublishRequest)
+
+
+
+Requires finance.view, platform_settings.manage, recent authentication, CSRF, Idempotency-Key and expected_version. Publishes a new commercial rate with immutable, hash-verified Vendor terms and Owner notices. Existing quotations, orders, assessments and credits keep their saved rate. Statutory rates and provider mode are unchanged. No backdating or insertion before the latest scheduled policy.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAdminFinanceApi();
+final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final CommissionPolicyPublishRequest commissionPolicyPublishRequest = ; // CommissionPolicyPublishRequest |
+
+try {
+    final response = api.publishCommissionPolicy(idempotencyKey, commissionPolicyPublishRequest);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AdminFinanceApi->publishCommissionPolicy: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **idempotencyKey** | **String**|  |
+ **commissionPolicyPublishRequest** | [**CommissionPolicyPublishRequest**](CommissionPolicyPublishRequest.md)|  |
+
+### Return type
+
+[**CommissionPolicyEnvelope**](CommissionPolicyEnvelope.md)
 
 ### Authorization
 

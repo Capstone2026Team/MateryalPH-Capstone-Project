@@ -6,17 +6,22 @@ namespace Tests\Feature\Api;
 
 use App\Domain\Catalog\CustomTags;
 use App\Domain\Catalog\EligibleOfferQuery;
+use App\Domain\Compliance\RegisterNormalizer;
 use App\Domain\Demo\DemoVendorMarketplace;
 use App\Domain\Identity\ProfilePhotoScanner;
 use App\Domain\Vendors\StoreActivationGate;
 use App\Domain\Vendors\VendorDeliveryEligibility;
 use App\Domain\Vendors\VendorFileScanner;
+use App\Domain\Vendors\XenditAccountVerificationGateway;
+use App\Models\User;
 use Database\Seeders\SystemFoundationSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Sleep;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 final class DemoVendorSeedTest extends TestCase
@@ -26,6 +31,8 @@ final class DemoVendorSeedTest extends TestCase
     private string $credentials;
 
     private string $photos;
+
+    private string $registers;
 
     protected function setUp(): void
     {
@@ -40,6 +47,11 @@ final class DemoVendorSeedTest extends TestCase
         $this->credentials = sys_get_temp_dir().DIRECTORY_SEPARATOR.'demo-vendor-credentials-'.bin2hex(random_bytes(4)).'.json';
         $this->photos = $this->placeholderPhotos();
         config()->set('materyalph.demo.photo_directory', $this->photos);
+        $this->registers = $this->registerExtracts();
+        config()->set('materyalph.demo.register_directory', $this->registers);
+        // Register snapshots are imported and activated by an Admin; reviews of the SAMPLE documents name one too.
+        $admin = User::factory()->create(['account_type' => 'ADMIN', 'account_status' => 'ACTIVE', 'email_verified_at' => now()]);
+        DB::table('admin_memberships')->insert(['id' => (string) Str::uuid7(), 'user_id' => $admin->getKey(), 'platform_role_id' => DB::table('platform_roles')->where('code', 'ADMIN_COMPLIANCE')->value('id'), 'status' => 'ACTIVE', 'created_at' => now(), 'updated_at' => now()]);
     }
 
     protected function tearDown(): void
@@ -48,7 +60,71 @@ final class DemoVendorSeedTest extends TestCase
             unlink($this->credentials);
         }
         File::deleteDirectory($this->photos);
+        File::deleteDirectory($this->registers);
         parent::tearDown();
+    }
+
+    /**
+     * The real DTI-BPS register copies in materials/ hold tens of thousands of rows, so tests import only the rows the
+     * demo catalog cites, copied verbatim with the official header. A cited number missing from the copies fails here.
+     */
+    private function registerExtracts(): string
+    {
+        $directory = sys_get_temp_dir().DIRECTORY_SEPARATOR.'demo-vendor-registers-'.bin2hex(random_bytes(4));
+        File::ensureDirectoryExists($directory);
+        foreach ($this->registerRows() as $file => $rows) {
+            $handle = fopen($directory.DIRECTORY_SEPARATOR.$file, 'w');
+            foreach ($rows as $row) {
+                fputcsv($handle, $row, escape: '');
+            }
+            fclose($handle);
+        }
+
+        return $directory;
+    }
+
+    /** @return array<string, list<list<string>>> Header plus every row matching a cited PS License No. or ICC sticker serial. */
+    private function registerRows(): array
+    {
+        $cited = ['PS_MARK' => [], 'ICC_STICKER' => []];
+        foreach (app(DemoVendorMarketplace::class)->blueprint()['vendors'] as $vendor) {
+            foreach ($vendor['products'] as $product) {
+                if (isset($product['compliance'])) {
+                    $cited[$product['compliance']['marking']][] = RegisterNormalizer::number($product['compliance']['number']);
+                }
+            }
+        }
+        $materials = dirname(base_path(), 2).'/materials/';
+        $read = static function (string $path, callable $keep): array {
+            $handle = fopen($path, 'r');
+            $header = fgetcsv($handle, escape: '');
+            $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string) $header[0]);
+            $rows = [$header];
+            while (($row = fgetcsv($handle, escape: '')) !== false) {
+                if ($row !== [null] && $keep(array_combine($header, array_pad($row, count($header), '')))) {
+                    $rows[] = $row;
+                }
+            }
+            fclose($handle);
+
+            return $rows;
+        };
+        $serials = array_map(RegisterNormalizer::serial(...), array_unique($cited['ICC_STICKER']));
+
+        return [
+            'List_of_PS_Licensee_MASTERLIST.csv' => $read($materials.'List_of_PS_Licensee_MASTERLIST.csv', fn (array $row): bool => in_array(RegisterNormalizer::number((string) $row['License No.']), $cited['PS_MARK'], true)),
+            'List_of_ICC_Certificate_Holders.csv' => $read($materials.'List_of_ICC_Certificate_Holders.csv', function (array $row) use ($serials): bool {
+                $from = RegisterNormalizer::serial((string) $row['ICC Sticker Serial No. (From)']);
+                $to = RegisterNormalizer::serial((string) $row['ICC Sticker Serial No. (To)']);
+                foreach ($serials as $serial) {
+                    if ($from !== null && $to !== null && $serial !== null && $from['prefix'] === $serial['prefix'] && $from['number'] <= $serial['number'] && $serial['number'] <= $to['number']) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }),
+        ];
     }
 
     /** The real photos are third-party images kept out of git, so tests use one generated JPEG per manifest entry. */
@@ -89,25 +165,28 @@ final class DemoVendorSeedTest extends TestCase
         self::assertSame(0, $code, Artisan::output());
     }
 
-    public function test_every_catalog_product_has_attributed_photos_tags_and_stays_clear_of_regulated_materials(): void
+    public function test_every_catalog_product_has_attributed_photos_tags_and_cites_a_register_number_only_when_regulated(): void
     {
         $blueprint = app(DemoVendorMarketplace::class)->blueprint();
         $manifest = $this->manifest();
-        self::assertCount(10, $blueprint['vendors']);
+        self::assertCount(12, $blueprint['vendors']);
         $regulated = DB::table('materials')->where('regulated', true)->pluck('code')->all();
         foreach ($blueprint['vendors'] as $vendor) {
-            self::assertCount(12, $vendor['products'], $vendor['slug']);
+            self::assertCount($vendor['n'] <= 10 ? 12 : 10, $vendor['products'], $vendor['slug']);
             $assets = ['logo.png', 'owner.jpg', 'staff.jpg', 'doc-registration.jpg', 'doc-lgu-permit.jpg', 'doc-bir-cor.jpg', 'doc-identity.jpg'];
             if ($vendor['delivery'] !== null) {
                 $assets[] = 'fulfillment.jpg';
-                self::assertArrayHasKey('vehicle', $manifest['vendors'][$vendor['slug']]);
+                foreach ($vendor['delivery']['vehicles'] ?? [['photo' => 'vehicle']] as $vehicle) {
+                    self::assertArrayHasKey($vehicle['photo'], $manifest['vendors'][$vendor['slug']]);
+                }
             }
             foreach ($assets as $asset) {
                 self::assertFileExists(base_path('database/demo-assets/vendors/'.$vendor['slug'].'/'.$asset));
             }
             self::assertArrayHasKey('banner', $manifest['vendors'][$vendor['slug']]);
             foreach ($vendor['products'] as $product) {
-                self::assertNotContains($product['mat'], $regulated, $product['sku'].' must not use a regulated material.');
+                // A regulated product cites its PS License No. or ICC sticker serial; nothing else claims a marking.
+                self::assertSame(in_array($product['mat'], $regulated, true), isset($product['compliance']), $product['sku']);
                 self::assertLessThanOrEqual(3, count($product['tags']), $product['sku']);
                 self::assertNotEmpty($product['custom_tags'], $product['sku']);
                 self::assertSame([], CustomTags::invalid($product['custom_tags']), $product['sku']);
@@ -120,7 +199,57 @@ final class DemoVendorSeedTest extends TestCase
                 }
             }
         }
-        self::assertCount(120, $manifest['products']);
+        self::assertCount(140, $manifest['products']);
+        $rows = $this->registerRows();
+        $listed = array_map(static fn (array $row): string => RegisterNormalizer::number((string) $row[0]), array_slice($rows['List_of_PS_Licensee_MASTERLIST.csv'], 1));
+        foreach ($blueprint['vendors'] as $vendor) {
+            foreach ($vendor['products'] as $product) {
+                if (($product['compliance']['marking'] ?? null) === 'PS_MARK') {
+                    self::assertContains(RegisterNormalizer::number($product['compliance']['number']), $listed, $product['sku'].' cites a PS License No. in materials/.');
+                }
+            }
+        }
+        self::assertGreaterThanOrEqual(3, count($rows['List_of_ICC_Certificate_Holders.csv']) - 1, 'Each cited ICC sticker serial lies in a listed range.');
+    }
+
+    public function test_ps_and_icc_stores_verify_every_regulated_listing_through_the_register_and_sell_ready_mixed_concrete(): void
+    {
+        $code = Artisan::call('materyalph:demo-vendors-seed', ['--only' => ['sucat-cement-steel', 'potrero-pipes-tiles'], '--payments' => 'simulate', '--credentials' => $this->credentials]);
+        self::assertSame(0, $code, Artisan::output());
+
+        // No snapshot was active, so the register copies were imported and activated by the Admin.
+        self::assertSame(['ICC_CERTIFICATE', 'PS_LICENSE'], DB::table('compliance_reference_registers')->where('status', 'ACTIVE')->where('source_channel', 'UPLOAD')->orderBy('register_kind')->pluck('register_kind')->all());
+        foreach (['Sucat Cement, Steel & Ready-Mix Supply' => 10, 'Potrero Pipes, Tiles & Sanitary Center' => 10] as $store => $count) {
+            $organizationId = (string) DB::table('vendor_organizations')->where('store_name', $store)->value('id');
+            self::assertSame('DISCOVERABLE', DB::table('vendor_organizations')->where('id', $organizationId)->value('marketplace_discoverability_status'));
+            self::assertSame($count, DB::table('vendor_listings')->where('vendor_organization_id', $organizationId)->where('status', 'ACTIVE')->count(), Artisan::output());
+        }
+        $regulated = DB::table('vendor_listings')->where('regulated', true)->get(['id', 'compliance_status', 'current_compliance_submission_id']);
+        self::assertCount(19, $regulated, 'Every listing except ready-mixed concrete is a regulated PS/ICC product.');
+        foreach ($regulated as $listing) {
+            self::assertSame('VERIFIED', $listing->compliance_status);
+            $submission = DB::table('compliance_submissions')->where('id', $listing->current_compliance_submission_id)->first();
+            self::assertSame(['MANUAL', 'AUTOMATIC', 'VERIFIED'], [$submission->path, $submission->review_mode, $submission->status]);
+            self::assertSame('MATCHED', DB::table('compliance_reference_matches')->where('compliance_submission_id', $submission->id)->value('result'));
+            // Verified by the system register match, never by a written Admin decision.
+            self::assertNull(DB::table('compliance_reviews')->where('compliance_submission_id', $submission->id)->value('reviewer_user_id'));
+            self::assertSame(1, DB::table('compliance_evidence')->where('compliance_submission_id', $submission->id)->where('evidence_kind', 'MARKING_PHOTO')->count());
+        }
+        self::assertSame(3, DB::table('compliance_submissions')->where('marking_type', 'ICC_STICKER')->where('status', 'VERIFIED')->count());
+        $importer = json_decode((string) DB::table('compliance_submissions as s')->join('vendor_listings as l', 'l.id', '=', 's.vendor_listing_id')->where('l.vendor_sku', 'JBN-6060-IMPORT')->value('s.declared'), true);
+        self::assertSame('TA & J GALLERIA CERAMICA', $importer['importer_name'], 'The ICC register record supplies the importer.');
+        $maker = DB::table('vendor_listings as l')->join('products as p', 'p.id', '=', 'l.product_id')->where('l.vendor_sku', 'HCG-CS4510')->first(['p.manufacturer', 'p.country_of_manufacture']);
+        self::assertSame(['Hocheng Philippines Corporation', 'PH'], [$maker->manufacturer, $maker->country_of_manufacture]);
+
+        $sucat = (string) DB::table('vendor_organizations')->where('store_name', 'Sucat Cement, Steel & Ready-Mix Supply')->value('id');
+        $rmc = DB::table('vendor_listings as l')->join('products as p', 'p.id', '=', 'l.product_id')->join('materials as m', 'm.id', '=', 'p.material_id')->where('l.vendor_organization_id', $sucat)->where('m.code', 'READY_MIXED_CONCRETE')->first(['l.id', 'l.status', 'l.regulated']);
+        self::assertSame(['ACTIVE', false], [$rmc->status, (bool) $rmc->regulated]);
+        self::assertSame(['2500', '3000', '3500', '4000'], DB::table('listing_variants')->where('vendor_listing_id', $rmc->id)->orderBy('sku')->pluck('attributes')->map(fn (mixed $attributes): string => (string) json_decode((string) $attributes, true)['compressive_strength_psi'])->all());
+        $mixer = DB::table('vendor_vehicles')->where('vendor_organization_id', $sucat)->where('vehicle_type', 'CONCRETE_MIXER')->first(['id', 'mixer_capacity_m3']);
+        self::assertSame(6.0, (float) $mixer->mixer_capacity_m3);
+        $rate = DB::table('vehicle_rate_versions')->where('vendor_vehicle_id', $mixer->id)->orderByDesc('version')->first(['mobilization_fee_centavos', 'mobilization_basis']);
+        self::assertSame([150000, 'PER_TRUCK'], [(int) $rate->mobilization_fee_centavos, $rate->mobilization_basis]);
+        self::assertTrue(app(VendorDeliveryEligibility::class)->mixerOrganizations()->where('delivery_profile.vendor_organization_id', $sucat)->exists(), 'Ready-mixed concrete offers need a delivering store with a mixer.');
     }
 
     public function test_seeds_fully_onboarded_discoverable_vendors_with_delivery_media_and_listings(): void
@@ -154,6 +283,10 @@ final class DemoVendorSeedTest extends TestCase
                 self::assertTrue(DB::table('totp_factors')->where('user_id', $member->id)->whereNotNull('confirmed_at')->exists(), $member->role.' needs an authenticator factor.');
             }
             self::assertSame('CONNECTED_TEST', DB::table('vendor_payment_accounts')->where('vendor_organization_id', $organization->id)->value('connection_status'));
+            // The Admin verification queue reads the region and city from the current Registered business address.
+            $business = DB::table('addresses')->where('owner_type', 'VENDOR_ORGANIZATION')->where('owner_id', $organization->id)->where('is_current', true)->sole();
+            self::assertSame('National Capital Region (NCR)', $business->province);
+            self::assertNotEmpty($business->city_municipality);
         }
 
         $electrical = (string) DB::table('vendor_organizations')->where('store_name', 'Bahay Toro Electrical Trading')->value('id');
@@ -166,16 +299,16 @@ final class DemoVendorSeedTest extends TestCase
         self::assertGreaterThan(0, DB::table('listing_price_versions')->where('price_kind', 'VOLUME_TIER')->count(), 'Bulk pricing tiers are seeded.');
     }
 
-    public function test_all_ten_vendors_publish_every_listing_and_cover_both_fulfillment_modes(): void
+    public function test_all_twelve_vendors_publish_every_listing_and_cover_both_fulfillment_modes(): void
     {
         $code = Artisan::call('materyalph:demo-vendors-seed', ['--payments' => 'simulate', '--credentials' => $this->credentials]);
         self::assertSame(0, $code, Artisan::output());
 
-        self::assertSame(10, DB::table('vendor_organizations')->where('store_activation_status', 'ACTIVE')->where('marketplace_discoverability_status', 'DISCOVERABLE')->count());
-        self::assertSame(120, DB::table('vendor_listings')->where('status', 'ACTIVE')->count(), Artisan::output());
-        self::assertSame(10, (int) app(EligibleOfferQuery::class)->currentCounts()['vendors']);
-        self::assertSame(120, (int) app(EligibleOfferQuery::class)->currentCounts()['listings']);
-        self::assertSame(7, DB::table('store_profiles')->whereIn('fulfillment_method', ['VENDOR_DELIVERY', 'BOTH'])->count());
+        self::assertSame(12, DB::table('vendor_organizations')->where('store_activation_status', 'ACTIVE')->where('marketplace_discoverability_status', 'DISCOVERABLE')->count());
+        self::assertSame(140, DB::table('vendor_listings')->where('status', 'ACTIVE')->count(), Artisan::output());
+        self::assertSame(12, (int) app(EligibleOfferQuery::class)->currentCounts()['vendors']);
+        self::assertSame(140, (int) app(EligibleOfferQuery::class)->currentCounts()['listings']);
+        self::assertSame(9, DB::table('store_profiles')->whereIn('fulfillment_method', ['VENDOR_DELIVERY', 'BOTH'])->count());
         self::assertSame(3, DB::table('store_profiles')->where('fulfillment_method', 'SELF_PICKUP')->count());
         foreach (DB::table('vendor_organizations')->pluck('id') as $id) {
             self::assertTrue(app(StoreActivationGate::class)->evaluate((string) $id)['ready']);
@@ -210,6 +343,35 @@ final class DemoVendorSeedTest extends TestCase
             self::assertFalse(password_verify('wrong', (string) $hash));
             self::assertTrue(password_verify((string) $file['password'], (string) $hash));
         }
+    }
+
+    public function test_a_new_xendit_sub_account_is_awaited_until_live_and_its_store_finished_in_the_same_run(): void
+    {
+        Sleep::fake();
+        $xendit = new class implements XenditAccountVerificationGateway
+        {
+            public int $reconciles = 0;
+
+            public function initiate(string $email, string $businessName): array
+            {
+                return ['provider_account_id' => 'acct_demo_palanan', 'status' => 'REGISTERED', 'provider_created_at' => '2026-10-17T09:00:00Z'];
+            }
+
+            public function reconcile(string $providerAccountId): array
+            {
+                // REGISTERED for the first pass and the first poll, LIVE afterwards, as Xendit does a few minutes after creation.
+                return ['provider_account_id' => $providerAccountId, 'status' => ++$this->reconciles <= 2 ? 'REGISTERED' : 'LIVE', 'capabilities' => []];
+            }
+        };
+        $this->app->instance(XenditAccountVerificationGateway::class, $xendit);
+
+        $this->artisan('materyalph:demo-vendors-seed', ['--only' => ['palanan-paint'], '--credentials' => $this->credentials])->assertSuccessful();
+
+        Sleep::assertSleptTimes(2);
+        $organization = DB::table('vendor_organizations')->where('store_name', 'Palanan Paint & Coatings Center')->first(['id', 'store_activation_status']);
+        self::assertSame('ACTIVE', $organization->store_activation_status);
+        self::assertSame('CONNECTED_TEST', DB::table('vendor_payment_accounts')->where('vendor_organization_id', $organization->id)->value('connection_status'));
+        self::assertSame(12, DB::table('vendor_listings')->where('vendor_organization_id', $organization->id)->where('status', 'ACTIVE')->count());
     }
 
     public function test_it_refuses_to_run_in_production(): void

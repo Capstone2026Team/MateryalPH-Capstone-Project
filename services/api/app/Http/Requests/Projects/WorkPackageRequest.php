@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Projects;
 
+use App\Domain\Geography\RadiusPolicy;
 use Illuminate\Foundation\Http\FormRequest;
 
 final class WorkPackageRequest extends FormRequest
@@ -17,16 +18,20 @@ final class WorkPackageRequest extends FormRequest
     public function rules(): array
     {
         return ['lock_version' => ['sometimes', 'integer', 'min:1'], 'name' => ['required', 'string', 'max:150'], 'description' => ['nullable', 'string', 'max:2000'],
-            'budget_centavos' => ['required', 'integer', 'between:0,100000000000'], 'site_id' => ['required', 'uuid'], 'radius_km' => ['required', 'integer', 'in:5,10,20,30,40,50'],
-            'fulfillment_method' => ['required', 'in:PICKUP,DELIVERY'], 'payment_method' => ['required', 'in:ONLINE,CASH_ON_DELIVERY,IN_STORE', static function (string $attribute, mixed $value, \Closure $fail) {
-                if (($value === 'CASH_ON_DELIVERY' && request()->input('fulfillment_method') !== 'DELIVERY') || ($value === 'IN_STORE' && request()->input('fulfillment_method') !== 'PICKUP')) {
-                    $fail('Cash on Delivery pairs with Site Delivery and In-Store Payment with Self-Pickup.');
+            'budget_centavos' => ['required', 'integer', 'between:0,100000000000'], 'site_id' => ['required', 'uuid'], 'radius_km' => ['sometimes', 'integer', 'in:'.RadiusPolicy::PROJECT_BASED_KM],
+            // BOTH: the Buyer is open to either; each scanned Vendor offers what it supports and the Buyer picks one when inquiring or selecting.
+            'fulfillment_method' => ['required', 'in:PICKUP,DELIVERY,BOTH'], 'payment_method' => ['sometimes', 'in:ONLINE,CASH_ON_DELIVERY,IN_STORE', static function (string $attribute, mixed $value, \Closure $fail) {
+                $method = request()->input('fulfillment_method');
+                if (($value === 'CASH_ON_DELIVERY' && $method !== 'DELIVERY') || ($value === 'IN_STORE' && $method !== 'PICKUP')) {
+                    $fail($method === 'BOTH'
+                        ? 'Cash on Delivery and In-Store Payment need one fulfillment method; use Online payment when the package accepts either.'
+                        : 'Cash on Delivery pairs with Site Delivery and In-Store Payment with Self-Pickup.');
                 }
             }],
-            'site_contact' => ['required_if:fulfillment_method,DELIVERY', 'nullable', 'string', 'min:3', 'max:200'],
-            'heavy_vehicle_restriction' => ['required_if:fulfillment_method,DELIVERY', 'in:NO,YES'],
+            'site_contact' => ['required_if:fulfillment_method,DELIVERY,BOTH', 'nullable', 'string', 'min:3', 'max:200'],
+            'heavy_vehicle_restriction' => ['required_if:fulfillment_method,DELIVERY,BOTH', 'in:NO,YES'],
             'alternate_drop_off_location_id' => ['required_if:heavy_vehicle_restriction,YES', 'nullable', 'uuid'],
-            'access_instructions' => ['required_if:fulfillment_method,DELIVERY', 'nullable', 'string', 'min:5', 'max:500'],
+            'access_instructions' => ['required_if:fulfillment_method,DELIVERY,BOTH', 'nullable', 'string', 'min:5', 'max:500'],
             // An absent or null material_id is an unlisted material named by the Buyer.
             'lines' => ['required', 'array', 'min:1', 'max:100'], 'lines.*.material_id' => ['nullable', 'uuid'], 'lines.*.name' => ['required', 'string', 'max:200'],
             'lines.*.description' => ['nullable', 'string', 'max:500'], 'lines.*.color' => ['nullable', 'string', 'max:60'],

@@ -1,9 +1,15 @@
+import 'dart:convert';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import '../../core/api_guard.dart';
 import '../../design_system/components/peso_amount_field.dart';
 import '../map_discovery/discovery_repository.dart';
 
 typedef ProjectData = Map<String, Object?>;
+
+/// The one radius Project-Based vendor selection searches (owner decision
+/// 2026-10-17). It is shown, never chosen; the server applies it to the scan,
+/// the alternatives for missing items and the purchases tagged to them.
+const projectSearchRadiusKm = 50;
 
 /// Transport is always validated by the generated contract before entering the UI.
 final class ProjectsRepository {
@@ -149,6 +155,7 @@ final class ProjectsRepository {
     String id, {
     int page = 1,
     String sort = 'BEST_MATCH',
+    String? direction,
     bool favoritesOnly = false,
     bool completeOnly = false,
     bool withinBudget = false,
@@ -158,6 +165,7 @@ final class ProjectsRepository {
         packageId: id,
         page: page,
         sort: sort,
+        direction: direction,
         favoritesOnly: favoritesOnly ? true : null,
         completeOnly: completeOnly ? true : null,
         withinBudget: withinBudget ? true : null,
@@ -165,12 +173,19 @@ final class ProjectsRepository {
     ),
   );
 
-  /// Similar Item-Based offers for a missing Work Package line.
+  /// Item-Based offers for a missing Work Package line within the fixed
+  /// Project-Based radius. With [candidateId] the server sizes the quantity to
+  /// what that Vendor's quotation still lacks after the separate purchases.
   Future<ProjectData> alternatives(
     String packageId,
     String lineId, {
     int page = 1,
     String? excludeVendorId,
+    String? candidateId,
+    Map<String, String> selections = const {},
+    String? fulfillmentMethod,
+    String? arrangementId,
+    bool replace = false,
   }) => _guard(
     () async => _json(
       (await _api.listWorkPackageLineAlternatives(
@@ -178,60 +193,202 @@ final class ProjectsRepository {
         lineId: lineId,
         page: page,
         excludeVendorId: excludeVendorId,
+        candidateId: candidateId,
+        specificationChoices: jsonEncode(specificationSelections(selections)),
+        fulfillmentMethod: fulfillmentMethod,
+        arrangementId: arrangementId,
+        replace: replace,
       )).data?.data,
     ),
   );
 
-  /// Adds a separate Item-Based purchase for a missing line to the cart,
-  /// tagged with the line it covers (owner decision 2026-10-12).
-  Future<void> addMissingToCart({
+  Future<ProjectData> arrangementOptions(
+    String id, {
+    int page = 1,
+    String sort = 'BEST_MATCH',
+    String direction = 'ASC',
+    bool favoritesOnly = false,
+    bool completeOnly = false,
+    bool withinBudget = false,
+  }) => _guard(
+    () async => _json(
+      (await _api.listProjectArrangementOptions(
+        packageId: id,
+        page: page,
+        sort: sort,
+        direction: direction,
+        favoritesOnly: favoritesOnly,
+        completeOnly: completeOnly,
+        withinBudget: withinBudget,
+      )).data?.data,
+    ),
+  );
+
+  Future<ProjectData> createArrangement(
+    String packageId,
+    String source,
+    String key, {
+    String? proposalToken,
+  }) => _guard(
+    () async => _json(
+      (await _api.createProjectArrangement(
+        packageId: packageId,
+        idempotencyKey: key,
+        projectArrangementCreate: api.ProjectArrangementCreate(
+          (b) => b
+            ..sourceCandidateId = source
+            ..proposalToken = proposalToken,
+        ),
+      )).data?.data,
+    ),
+  );
+
+  Future<ProjectData> arrangement(String packageId, String id) => _guard(
+    () async => _json(
+      (await _api.getProjectArrangement(
+        packageId: packageId,
+        arrangementId: id,
+      )).data?.data,
+    ),
+  );
+
+  Future<ProjectData> editArrangement(
+    String packageId,
+    String id,
+    ProjectData input,
+  ) => _guard(
+    () async => _json(
+      (await _api.editProjectArrangement(
+        packageId: packageId,
+        arrangementId: id,
+        projectArrangementEdit: _guard.required(
+          _client.serializers.deserializeWith(
+            api.ProjectArrangementEdit.serializer,
+            input,
+          ),
+        ),
+      )).data?.data,
+    ),
+  );
+
+  Future<ProjectData> submitArrangement(
+    String packageId,
+    String id,
+    ProjectData input,
+    String key,
+  ) => _guard(
+    () async => _json(
+      (await _api.submitProjectArrangement(
+        packageId: packageId,
+        arrangementId: id,
+        idempotencyKey: key,
+        projectArrangementSubmit: _guard.required(
+          _client.serializers.deserializeWith(
+            api.ProjectArrangementSubmit.serializer,
+            input,
+          ),
+        ),
+      )).data?.data,
+    ),
+  );
+
+  Future<ProjectData> arrangementInquiry(
+    String packageId,
+    String id,
+    String vendorId,
+    int version,
+  ) => _guard(
+    () async => _json(
+      (await _api.inquireProjectArrangementVendor(
+        packageId: packageId,
+        arrangementId: id,
+        vendorId: vendorId,
+        projectArrangementInquiry: api.ProjectArrangementInquiry(
+          (b) => b..version = version,
+        ),
+      )).data?.data,
+    ),
+  );
+
+  /// Draft selections stay with this Work Package, independent of the cart.
+  Future<void> saveDraftItem({
+    required String packageId,
+    required String candidateId,
+    required String lineId,
     required ProjectData offer,
-    required String quantity,
-    required String workPackageLineId,
-    required String? locationId,
-    required int radiusKm,
-    required String idempotencyKey,
+    required int lockVersion,
+    required Map<String, String> selections,
+    required String fulfillmentMethod,
   }) => _guard(() async {
-    await _client.getBuyerCartApi().addBuyerCartItem(
-      idempotencyKey: idempotencyKey,
-      cartItemCreate: api.CartItemCreate(
-        (b) => b
-          ..listingVariantId = projectText(offer['variant_id'])
-          ..expectedPriceVersionId = projectText(offer['price_version_id'])
-          ..quantity = quantity
-          ..locationId = locationId
-          ..radiusKm = radiusKm
-          ..workPackageLineId = workPackageLineId,
+    await _api.saveProjectDraftItem(
+      packageId: packageId,
+      candidateId: candidateId,
+      lineId: lineId,
+      variantId: projectText(offer['variant_id']),
+      projectDraftItemInput: _guard.required(
+        _client.serializers
+            .deserializeWith(api.ProjectDraftItemInput.serializer, {
+              'lock_version': lockVersion,
+              'price_version_id': offer['price_version_id'],
+              'selections': specificationSelections(selections),
+              'fulfillment_method': fulfillmentMethod,
+            }),
       ),
     );
   });
 
-  /// Cart lines already bought for Work Package lines, keyed by that line.
-  Future<Map<String, List<ProjectData>>> taggedCartLines() => _guard(() async {
-    final cart = _json(
-      (await _client.getBuyerCartApi().getBuyerCart()).data?.data,
+  Future<void> removeDraftItem({
+    required String packageId,
+    required String candidateId,
+    required String lineId,
+    required String variantId,
+    required int lockVersion,
+  }) => _guard(() async {
+    await _api.removeProjectDraftItem(
+      packageId: packageId,
+      candidateId: candidateId,
+      lineId: lineId,
+      variantId: variantId,
+      projectVersionRequest: api.ProjectVersionRequest(
+        (b) => b..lockVersion = lockVersion,
+      ),
     );
-    final tagged = <String, List<ProjectData>>{};
-    for (final group in projectRows(cart['groups'])) {
-      final vendor = projectObject(group['vendor']);
-      for (final line in projectRows(group['lines'])) {
-        final tag = line['work_package_line_id'];
-        // Each separate purchase names the store that supplies it.
-        if (tag is String) {
-          (tagged[tag] ??= []).add({...line, 'store_name': vendor['name']});
-        }
-      }
-    }
-    return tagged;
   });
-  Future<ProjectData> compile(String id, int version, int radius) => _guard(
+
+  Future<String> requestDraftSupplier({
+    required String packageId,
+    required String candidateId,
+    required String vendorId,
+    required ProjectData input,
+    required String key,
+  }) => _guard(
+    () async => _guard
+        .required(
+          (await _api.requestProjectDraftSupplier(
+            packageId: packageId,
+            candidateId: candidateId,
+            vendorId: vendorId,
+            idempotencyKey: key,
+            projectDraftSupplierRequest: _guard.required(
+              _client.serializers.deserializeWith(
+                api.ProjectDraftSupplierRequest.serializer,
+                input,
+              ),
+            ),
+          )).data?.data,
+        )
+        .id,
+  );
+
+  /// Scans from the locked Project site at [projectSearchRadiusKm]; the radius
+  /// is not a parameter because the server fixes it.
+  Future<ProjectData> compile(String id, int version) => _guard(
     () async => _json(
       (await _api.compileProjectEstimates(
         packageId: id,
         projectCompile: _guard.required(
           _client.serializers.deserializeWith(api.ProjectCompile.serializer, {
             'lock_version': version,
-            'radius_km': radius,
           }),
         ),
       )).data?.data,
@@ -255,7 +412,12 @@ final class ProjectsRepository {
               ? (await _api.selectProjectVendor(
                   packageId: id,
                   idempotencyKey: key,
-                  projectCandidateRequest: body,
+                  projectVendorSelectionRequest: _guard.required(
+                    _client.serializers.deserializeWith(
+                      api.ProjectVendorSelectionRequest.serializer,
+                      input,
+                    ),
+                  ),
                 )).data?.data
               : (await _api.inquireProjectVendor(
                   packageId: id,
@@ -268,24 +430,39 @@ final class ProjectsRepository {
 
   /// The candidate re-priced with the Buyer's specification choices
   /// (line id → option id); the server stores nothing.
+  ///
+  /// [fulfillmentMethod] re-prices a Vendor that offers both Delivery and
+  /// Pickup for that method.
   Future<ProjectData> selectionPreview(
     String id,
     String candidate,
-    Map<String, String> selections,
-  ) => _guard(
+    Map<String, String> selections, {
+    String? fulfillmentMethod,
+  }) => _guard(
     () async => _json(
       (await _api.previewProjectSpecificationSelection(
         packageId: id,
         candidateId: candidate,
         projectSelectionPreview: _guard.required(
-          _client.serializers.deserializeWith(
-            api.ProjectSelectionPreview.serializer,
-            {'selections': specificationSelections(selections)},
-          ),
+          _client.serializers
+              .deserializeWith(api.ProjectSelectionPreview.serializer, {
+                'selections': specificationSelections(selections),
+                'fulfillment_method': ?fulfillmentMethod,
+              }),
         ),
       )).data?.data,
     ),
   );
+
+  /// The Buyer's registered contact number (E.164), or null when the profile
+  /// has none. The Work Package editor offers it as the default Site contact.
+  Future<String?> profilePhone() => _guard(() async {
+    final profile = (await _client.getAccountsApi().getAccountProfile(
+      accountPortal: 'buyers',
+    )).data?.data;
+    final phone = profile?.mobileE164?.trim();
+    return phone == null || phone.isEmpty ? null : phone;
+  });
   Future<ProjectData> route(String id, String candidate) => _guard(
     () async => _json(
       (await _api.getProjectCandidateRoute(

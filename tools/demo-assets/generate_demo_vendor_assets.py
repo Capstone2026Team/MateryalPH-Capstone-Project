@@ -4,9 +4,10 @@ Reads services/api/database/demo-assets/vendors.json and writes, next to it:
   vendors/<slug>/{logo.png, doc-registration.jpg, doc-lgu-permit.jpg, doc-bir-cor.jpg, doc-identity.jpg}
 
 Product, banner and vehicle photos come from tools/demo-assets/fetch_demo_photos.py instead. Documents are
-obviously labelled SAMPLE images, never copies of government records. Run from the repository root:
+obviously labelled SAMPLE images, never copies of government records. Run from the repository root (optionally
+naming the store slugs to regenerate; none regenerates every store):
 
-    py tools/demo-assets/generate_demo_vendor_assets.py
+    py tools/demo-assets/generate_demo_vendor_assets.py [slug ...]
 """
 from __future__ import annotations
 
@@ -102,9 +103,11 @@ def document_image(vendor: dict, title: str, fields: list[tuple[str, str]], out:
     img.save(out, "JPEG", quality=84, optimize=True)
 
 
-def main() -> int:
+def main(only: list[str]) -> int:
     data = json.loads((ROOT / "vendors.json").read_text(encoding="utf-8"))
     for vendor in data["vendors"]:
+        if only and vendor["slug"] not in only:
+            continue
         base = ROOT / "vendors" / vendor["slug"]
         owner = vendor["owner"]
         logo_image(vendor, base / "logo.png")
@@ -117,4 +120,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))

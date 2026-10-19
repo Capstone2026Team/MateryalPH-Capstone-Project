@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AdminFinanceOperationsController as F;
 use App\Http\Controllers\Api\AdminOperationsController as O;
+use App\Http\Controllers\Api\AdminUserDirectoryController as U;
 use App\Http\Controllers\Api\DashboardInsightsController;
 use App\Http\Controllers\Api\GeoAnalyticsController as G;
 use App\Http\Controllers\Api\VendorFinanceController;
@@ -27,6 +28,14 @@ Route::prefix('admin')->middleware($web('ADMIN'))->group(function (): void {
     Route::post('/enforcement/{actionId}/apply', [O::class, 'applyEnforcement'])->whereUuid('actionId');
     Route::post('/enforcement/{actionId}/decline', [O::class, 'declineEnforcement'])->whereUuid('actionId');
     Route::post('/enforcement/{actionId}/lift', [O::class, 'liftEnforcement'])->whereUuid('actionId');
+
+    Route::get('/buyers', [U::class, 'buyers']);
+    Route::get('/buyers/{buyerId}', [U::class, 'buyer'])->whereUuid('buyerId');
+    Route::get('/buyers/{buyerId}/reviews', [U::class, 'buyerReviews'])->whereUuid('buyerId');
+    Route::get('/vendors', [U::class, 'vendors']);
+    Route::get('/vendors/{vendorId}', [U::class, 'vendor'])->whereUuid('vendorId');
+    Route::get('/vendors/{vendorId}/reviews', [U::class, 'vendorReviews'])->whereUuid('vendorId');
+    Route::get('/vendors/{vendorId}/listings', [U::class, 'vendorListings'])->whereUuid('vendorId');
 
     Route::get('/privacy-requests', [O::class, 'privacyQueue']);
     Route::post('/privacy-requests', [O::class, 'recordPrivacyRequest']);

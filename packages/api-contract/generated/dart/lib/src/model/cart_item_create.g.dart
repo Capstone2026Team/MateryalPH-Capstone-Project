@@ -153,6 +153,8 @@ class _$CartItemCreate extends CartItemCreate {
   final int? radiusKm;
   @override
   final String? workPackageLineId;
+  @override
+  final bool? allowPartialStock;
 
   factory _$CartItemCreate([void Function(CartItemCreateBuilder)? updates]) =>
       (CartItemCreateBuilder()..update(updates))._build();
@@ -167,7 +169,8 @@ class _$CartItemCreate extends CartItemCreate {
       this.longitude,
       this.originSource,
       this.radiusKm,
-      this.workPackageLineId})
+      this.workPackageLineId,
+      this.allowPartialStock})
       : super._();
   @override
   CartItemCreate rebuild(void Function(CartItemCreateBuilder) updates) =>
@@ -189,7 +192,8 @@ class _$CartItemCreate extends CartItemCreate {
         longitude == other.longitude &&
         originSource == other.originSource &&
         radiusKm == other.radiusKm &&
-        workPackageLineId == other.workPackageLineId;
+        workPackageLineId == other.workPackageLineId &&
+        allowPartialStock == other.allowPartialStock;
   }
 
   @override
@@ -205,6 +209,7 @@ class _$CartItemCreate extends CartItemCreate {
     _$hash = $jc(_$hash, originSource.hashCode);
     _$hash = $jc(_$hash, radiusKm.hashCode);
     _$hash = $jc(_$hash, workPackageLineId.hashCode);
+    _$hash = $jc(_$hash, allowPartialStock.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -221,7 +226,8 @@ class _$CartItemCreate extends CartItemCreate {
           ..add('longitude', longitude)
           ..add('originSource', originSource)
           ..add('radiusKm', radiusKm)
-          ..add('workPackageLineId', workPackageLineId))
+          ..add('workPackageLineId', workPackageLineId)
+          ..add('allowPartialStock', allowPartialStock))
         .toString();
   }
 }
@@ -277,6 +283,11 @@ class CartItemCreateBuilder
   set workPackageLineId(String? workPackageLineId) =>
       _$this._workPackageLineId = workPackageLineId;
 
+  bool? _allowPartialStock;
+  bool? get allowPartialStock => _$this._allowPartialStock;
+  set allowPartialStock(bool? allowPartialStock) =>
+      _$this._allowPartialStock = allowPartialStock;
+
   CartItemCreateBuilder() {
     CartItemCreate._defaults(this);
   }
@@ -294,6 +305,7 @@ class CartItemCreateBuilder
       _originSource = $v.originSource;
       _radiusKm = $v.radiusKm;
       _workPackageLineId = $v.workPackageLineId;
+      _allowPartialStock = $v.allowPartialStock;
       _$v = null;
     }
     return this;
@@ -330,6 +342,7 @@ class CartItemCreateBuilder
           originSource: originSource,
           radiusKm: radiusKm,
           workPackageLineId: workPackageLineId,
+          allowPartialStock: allowPartialStock,
         );
     replace(_$result);
     return _$result;

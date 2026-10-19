@@ -31,7 +31,22 @@ export interface ProjectSelectionPreview {
      *
      */
     selections?: Array<ProjectSpecificationSelection>;
+    /**
+     * Re-prices the candidate for this method. Omitted, a Vendor offering both opens on its preferred method.
+     */
+    fulfillmentMethod?: ProjectSelectionPreviewFulfillmentMethodEnum;
 }
+
+
+/**
+ * @export
+ */
+export const ProjectSelectionPreviewFulfillmentMethodEnum = {
+    Pickup: 'PICKUP',
+    Delivery: 'DELIVERY',
+} as const;
+export type ProjectSelectionPreviewFulfillmentMethodEnum = typeof ProjectSelectionPreviewFulfillmentMethodEnum[keyof typeof ProjectSelectionPreviewFulfillmentMethodEnum];
+
 
 /**
  * Check if a given object implements the ProjectSelectionPreview interface.
@@ -51,6 +66,7 @@ export function ProjectSelectionPreviewFromJSONTyped(json: any, ignoreDiscrimina
     return {
 
         'selections': json['selections'] == null ? undefined : ((json['selections'] as Array<any>).map(ProjectSpecificationSelectionFromJSON)),
+        'fulfillmentMethod': json['fulfillment_method'] == null ? undefined : json['fulfillment_method'],
     };
 }
 
@@ -66,6 +82,7 @@ export function ProjectSelectionPreviewToJSONTyped(value?: ProjectSelectionPrevi
     return {
 
         'selections': value['selections'] == null ? undefined : ((value['selections'] as Array<any>).map(ProjectSpecificationSelectionToJSON)),
+        'fulfillment_method': value['fulfillmentMethod'],
     };
 }
 

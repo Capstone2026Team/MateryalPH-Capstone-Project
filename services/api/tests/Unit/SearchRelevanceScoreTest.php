@@ -57,15 +57,15 @@ final class SearchRelevanceScoreTest extends TestCase
         self::assertSame('1.0 km', $explained[0]['basis']);
     }
 
-    public function test_weights_must_be_whole_percentages_totalling_100_and_never_all_zero(): void
+    public function test_weights_are_independent_whole_values_and_never_all_zero(): void
     {
         self::assertSame([], RankingWeights::errors(['distance' => 20, 'price' => 20, 'vps' => 20, 'stock' => 20, 'product_rating' => 20]));
-        self::assertArrayHasKey('weights', RankingWeights::errors(['distance' => 20, 'price' => 20, 'vps' => 20, 'stock' => 20, 'product_rating' => 10]));
+        self::assertSame([], RankingWeights::errors(['distance' => 20, 'price' => 20, 'vps' => 20, 'stock' => 20, 'product_rating' => 10]));
         self::assertArrayHasKey('weights.distance', RankingWeights::errors(['distance' => -10, 'price' => 60, 'vps' => 20, 'stock' => 20, 'product_rating' => 10]));
         self::assertArrayHasKey('weights.distance', RankingWeights::errors(['distance' => 25.5, 'price' => 24.5, 'vps' => 20, 'stock' => 20, 'product_rating' => 10]));
         self::assertArrayHasKey('weights.product_rating', RankingWeights::errors(['distance' => 50, 'price' => 50, 'vps' => 0, 'stock' => 0]));
         self::assertArrayHasKey('weights.sponsored', RankingWeights::errors(['distance' => 50, 'price' => 50, 'vps' => 0, 'stock' => 0, 'product_rating' => 0, 'sponsored' => 0]));
-        foreach ([['distance' => 0, 'price' => 0, 'vps' => 0, 'stock' => 0, 'product_rating' => 0], ['distance' => 40, 'price' => 40, 'vps' => 0, 'stock' => 0, 'product_rating' => 0]] as $invalid) {
+        foreach ([['distance' => 0, 'price' => 0, 'vps' => 0, 'stock' => 0, 'product_rating' => 0]] as $invalid) {
             try {
                 RankingWeights::fromInput($invalid);
                 self::fail('Invalid weights must be rejected.');
@@ -74,6 +74,24 @@ final class SearchRelevanceScoreTest extends TestCase
                 self::assertSame(422, $exception->httpStatus);
             }
         }
+    }
+
+    public function test_srs_normalizes_raw_weights_only_during_calculation(): void
+    {
+        $raw = ['distance' => 80, 'price' => 60, 'vps' => 70, 'stock' => 90, 'product_rating' => 50];
+        $weights = RankingWeights::fromInput($raw);
+        $components = ['distance' => '80', 'price' => '50', 'vps' => '50', 'stock' => '100', 'product_rating' => '60'];
+        self::assertSame('71.1429', SearchRelevanceScore::combine($components, $weights));
+        $scaled = RankingWeights::fromInput(array_map(static fn (int $w): int => intdiv($w, 10), $raw));
+        self::assertSame(SearchRelevanceScore::combine($components, $weights), SearchRelevanceScore::combine($components, $scaled));
+        self::assertSame($raw, $weights->values);
+        $rows = SearchRelevanceScore::explain($components, $weights, []);
+        self::assertEqualsWithDelta(100, array_sum(array_column($rows, 'weight_percent')), 0.001);
+        self::assertSame('18.29', $rows[0]['weighted']);
+        self::assertSame('100.0000', SearchRelevanceScore::combine(array_fill_keys(RankingWeights::COMPONENTS, '100'), $weights));
+        $single = RankingWeights::fromInput(['distance' => 1, 'price' => 0, 'vps' => 0, 'stock' => 0, 'product_rating' => 0]);
+        self::assertSame('80.0000', SearchRelevanceScore::combine($components, $single));
+        self::assertSame('0.00', SearchRelevanceScore::explain($components, $single, [])[1]['weighted']);
     }
 
     public function test_fin02_line_amounts_round_half_up_and_included_vat_is_never_added(): void

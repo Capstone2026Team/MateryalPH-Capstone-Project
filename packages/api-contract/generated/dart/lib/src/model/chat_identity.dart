@@ -11,14 +11,16 @@ part 'chat_identity.g.dart';
 /// ChatIdentity
 ///
 /// Properties:
-/// * [displayName]
-/// * [role]
+/// * [displayName] - Current public profile name. Historical messages fall back to the stored public name when no current profile name exists. System messages retain their system identity.
+/// * [role] - Public role. For historical messages, this is the role recorded when the message was sent, even after a handler transfer or role change.
 /// * [avatarPath]
 @BuiltValue()
 abstract class ChatIdentity implements Built<ChatIdentity, ChatIdentityBuilder> {
+  /// Current public profile name. Historical messages fall back to the stored public name when no current profile name exists. System messages retain their system identity.
   @BuiltValueField(wireName: r'display_name')
   String get displayName;
 
+  /// Public role. For historical messages, this is the role recorded when the message was sent, even after a handler transfer or role change.
   @BuiltValueField(wireName: r'role')
   String get role;
 

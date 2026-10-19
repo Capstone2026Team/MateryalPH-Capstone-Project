@@ -14,7 +14,7 @@ Name | Type | Description | Notes
 **defaultsVersion** | **int** |  |
 **personalized** | **bool** | True while a Buyer override is stored. |
 **version** | **int** | 0 when following the platform defaults. |
-**totalPercent** | **int** |  |
+**totalPercent** | **int** | Legacy field name for the sum of raw importance values; need not be 100. |
 **algorithmVersion** | **String** |  |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

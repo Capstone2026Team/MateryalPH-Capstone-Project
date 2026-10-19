@@ -60,7 +60,7 @@ export function InfoNote({ children, dismissible = false }: { children: ReactNod
 }
 
 export function EmptyState({ icon, message, action }: { icon?: ReactNode; message: string; action?: ReactNode }) {
-  return <div className="grid justify-items-center gap-4 rounded-xl border border-dashed border-border-default bg-surface-primary px-6 py-8 text-center"><span className="text-text-secondary">{icon ?? <SearchX size={24} aria-hidden="true" />}</span><p className="text-sm text-text-secondary">{message}</p>{action}</div>
+  return <div className={`grid justify-items-center gap-4 rounded-xl border border-dashed border-border-default bg-surface-primary px-6 text-center ${icon === false ? 'py-10' : 'py-8'}`}>{icon !== false && <span className="text-text-secondary">{icon ?? <SearchX size={24} aria-hidden="true" />}</span>}<p className="text-sm text-text-secondary">{message}</p>{action}</div>
 }
 
 export function ActiveFilters({ filters, onClear }: { filters: { key: string; label: string; onRemove: () => void }[]; onClear: () => void }) {

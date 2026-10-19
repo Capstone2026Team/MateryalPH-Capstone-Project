@@ -22,8 +22,8 @@ Name | Type | Description | Notes
 **canTransfer** | **bool** |  |
 **canListFulfillmentConversations** | **bool** | Current vendor Owner or Store Manager may list this sales inquiry buyer's fulfillment conversations. False for other roles and fulfillment threads. | [optional]
 **mainConversationId** | **String** | Currently authorized Item-Based main conversation for this Buyer and Store. Null if the viewer cannot access it or this is a fulfillment thread. | [optional]
-**projectInquiryCount** | **int** | Number of currently authorized project inquiries for this Buyer and Store. | [optional]
-**projectUnreadCount** | **int** | Received unread messages across all currently authorized project inquiries, including every page. Opening the main thread does not mark these messages read. | [optional]
+**projectInquiryCount** | **int** | Number of currently authorized open project quotation inquiries for this Buyer and Store, using the project-inquiries list filter. | [optional]
+**projectUnreadCount** | **int** | Received unread messages across all currently authorized open project quotation inquiries, including every page. Opening the main thread does not mark these messages read. | [optional]
 **inquiryLabel** | **String** | Work Package name for a project inquiry, or Item inquiry for the main thread. | [optional]
 **fulfillmentUnreadCount** | **int** | Unread received messages across every fulfillment conversation for this inquiry buyer and store, including history and all pages. Zero unless can_list_fulfillment_conversations is true. Does not include sales messages or mark messages read. | [optional]
 **fulfillmentEntryEnabled** | **bool** |  |

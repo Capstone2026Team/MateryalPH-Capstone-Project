@@ -111,4 +111,71 @@ final class VendorAddressResolverTest extends TestCase
         $this->expectException(ValidationException::class);
         (new VendorAddressResolver($this->directory(), $geocoder))->resolve('vendor-one', $this->selection());
     }
+
+    /** @return array<string, string> */
+    private function namedAddress(): array
+    {
+        return ['province' => 'Metro Manila', 'city_municipality' => 'Quezon City', 'barangay' => 'Alicia', 'street' => '1 Test Street', 'unit' => '', 'postal_code' => '1100'];
+    }
+
+    public function test_manual_address_needs_no_codes_or_google_lookup_and_matches_references_when_available(): void
+    {
+        $geocoder = $this->createMock(AddressGeocoder::class);
+        $geocoder->expects($this->never())->method('forward');
+        $geocoder->expects($this->never())->method('reverse');
+        $result = (new VendorAddressResolver($this->directory(), $geocoder))->validated('vendor-one', $this->namedAddress() + ['source' => 'MANUAL']);
+        $this->assertSame('Metro Manila', $result['province']);
+        $this->assertSame('1381300001', $result['psgc_code']);
+        $this->assertSame('PSGC_CLOUD_V2', $result['psgc_source']);
+        $this->assertNull($result['latitude']);
+    }
+
+    public function test_directory_failure_does_not_block_named_manual_or_map_addresses(): void
+    {
+        $provider = $this->createStub(PsgcProvider::class);
+        $provider->method('list')->willThrowException(ValidationException::withMessages(['address' => 'Directory unavailable']));
+        $geocoder = $this->createStub(AddressGeocoder::class);
+        $geocoder->method('reverse')->willReturn($this->namedAddress() + ['formatted_address' => 'Test address', 'place_id' => 'test-place']);
+        $resolver = new VendorAddressResolver(new PsgcDirectory($provider), $geocoder);
+        $manual = $resolver->validated('vendor-one', $this->namedAddress() + ['source' => 'MANUAL']);
+        $this->assertArrayNotHasKey('psgc_code', $manual);
+        $this->assertNull($manual['latitude']);
+        $pin = $resolver->pin('vendor-one', 14.65, 121.02);
+        $resolved = $resolver->resolve('vendor-one', $this->namedAddress() + ['pin_token' => $pin['pin_token']]);
+        $saved = $resolver->validated('vendor-one', $this->namedAddress() + ['resolution_token' => $resolved['resolution_token']]);
+        $this->assertSame(14.65, $saved['latitude']);
+        $this->assertArrayNotHasKey('psgc_code', $saved);
+    }
+
+    public function test_named_address_resolution_is_bound_to_the_address_and_organization(): void
+    {
+        $geocoder = $this->createMock(AddressGeocoder::class);
+        $geocoder->expects($this->never())->method('forward');
+        $geocoder->method('reverse')->willReturn($this->namedAddress() + ['formatted_address' => 'Test address', 'place_id' => 'test-place']);
+        $resolver = new VendorAddressResolver($this->directory(), $geocoder);
+        $pin = $resolver->pin('vendor-one', 14.65, 121.02);
+        $this->assertSame('Quezon City', $pin['address']['city_municipality']);
+        $input = $this->namedAddress();
+        $input['province'] = $pin['address']['province'];
+        $resolved = $resolver->resolve('vendor-one', $input + ['pin_token' => $pin['pin_token']]);
+        $this->assertSame(14.65, $resolver->validated('vendor-one', $input + ['resolution_token' => $resolved['resolution_token']])['latitude']);
+        foreach ([['vendor-two', $input], ['vendor-one', array_replace($input, ['street' => 'Changed Street'])]] as [$organization, $changed]) {
+            try {
+                $resolver->validated($organization, $changed + ['resolution_token' => $resolved['resolution_token']]);
+                $this->fail('A stale or cross-organization token was accepted');
+            } catch (ValidationException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function test_unmatched_or_conflicting_names_do_not_receive_invented_codes(): void
+    {
+        $resolver = new VendorAddressResolver($this->directory(), $this->createStub(AddressGeocoder::class));
+        foreach ([['city_municipality' => 'Unlisted City'], ['province' => 'Sarangani']] as $changed) {
+            $result = $resolver->validated('vendor-one', array_replace($this->namedAddress(), $changed) + ['source' => 'MANUAL']);
+            $this->assertArrayNotHasKey('city_code', $result);
+            $this->assertNull($result['latitude']);
+        }
+    }
 }

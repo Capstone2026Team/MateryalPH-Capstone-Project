@@ -13,9 +13,9 @@ Name | Type | Description | Notes
 **description** | **String** |  | [optional]
 **budgetCentavos** | **int** |  |
 **siteId** | **String** |  |
-**radiusKm** | **int** |  |
-**fulfillmentMethod** | **String** |  |
-**paymentMethod** | **String** |  |
+**radiusKm** | **int** | Optional. 50 km is the only Project-Based vendor-selection radius; the server applies it whether or not it is sent. | [optional]
+**fulfillmentMethod** | **String** | BOTH means the Buyer is open to either. The scan lists every Vendor offering Site Delivery, Self-Pickup or both; each candidate then lists its `fulfillment_options` and the Buyer picks one when inquiring or selecting. BOTH requires `payment_method` ONLINE and the delivery details (`site_contact`, `access_instructions`, `heavy_vehicle_restriction`). |
+**paymentMethod** | **String** | Optional legacy value. New authoring omits payment; it is explicitly chosen in the selection checklist. | [optional]
 **siteContact** | **String** |  | [optional]
 **heavyVehicleRestriction** | **String** |  | [optional]
 **alternateDropOffLocationId** | **String** |  | [optional]

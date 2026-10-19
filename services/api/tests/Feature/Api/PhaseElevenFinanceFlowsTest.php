@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
+use App\Domain\Finance\CommissionPolicyService;
 use App\Domain\Finance\FeeAssessmentService;
 use App\Domain\Finance\FinancialLedgerService;
 use App\Domain\Finance\StatementService;
@@ -18,6 +19,7 @@ use App\Models\AuthSession;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Database\Seeders\SystemFoundationSeeder;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -87,7 +89,7 @@ final class PhaseElevenFinanceFlowsTest extends TestCase
 
         foreach ([$manager, $staff] as $member) {
             $this->signInStoreMember($member);
-            foreach (['/api/v1/vendor/finance', '/api/v1/vendor/finance/transactions', '/api/v1/vendor/finance/earnings', '/api/v1/vendor/finance/transactions/export?tab=PAYMENTS'] as $path) {
+            foreach (['/api/v1/vendor/finance', '/api/v1/vendor/finance/commissions', '/api/v1/vendor/finance/transactions', '/api/v1/vendor/finance/earnings', '/api/v1/vendor/finance/transactions/export?tab=PAYMENTS'] as $path) {
                 $this->getJson($path)->assertForbidden()->assertJsonPath('errors.0.code', 'FINANCE_OWNER_ONLY');
             }
             $this->putJson('/api/v1/vendor/finance/physical-payments', ['lock_version' => 0, 'cod_enabled' => true, 'in_store_enabled' => true])->assertForbidden();
@@ -421,6 +423,115 @@ final class PhaseElevenFinanceFlowsTest extends TestCase
         self::assertSame(10000, (int) DB::table('fee_statements')->where('id', $laterId)->value('outstanding_centavos'));
         self::assertSame($laterId, DB::table('fee_statement_lines')->where('id', $lineId)->value('fee_statement_id'));
         self::assertSame(2, DB::table('fee_statement_lines')->where('corrects_line_id', $lineId)->count(), 'One reversal and one transfer preserve the original line and consume the credit exactly once.');
+    }
+
+    public function test_commercial_commission_publishing_is_authorized_versioned_and_idempotent(): void
+    {
+        [$store, $owner] = $this->pickupStore('Commission Policy Notice Store');
+        $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/admin/finance/commission-policies')->assertForbidden();
+        $this->signInAdmin($this->admin('ADMIN_SUPPORT'));
+        $this->postJson('/api/v1/admin/finance/commission-policies', ['commission_basis_points' => 325, 'expected_version' => 1, 'reason' => 'Commercial rate review'], ['Idempotency-Key' => (string) Str::uuid7()])->assertForbidden();
+        $this->signInAdmin($this->admin('ADMIN_SUPERADMIN'));
+        $this->getJson('/api/v1/admin/finance/commission-policies')->assertOk()->assertJsonPath('data.current.commission_basis_points', 200)->assertJsonPath('data.can_manage', true);
+        $key = (string) Str::uuid7();
+        $input = ['commission_basis_points' => 325, 'expected_version' => 1, 'reason' => 'Commercial rate review'];
+        $policy = $this->postJson('/api/v1/admin/finance/commission-policies', $input, ['Idempotency-Key' => $key])->assertOk()->assertJsonPath('data.rate_label', '3.25%')->json('data');
+        $this->postJson('/api/v1/admin/finance/commission-policies', $input, ['Idempotency-Key' => $key])->assertOk()->assertJsonPath('data.id', $policy['id']);
+        $this->postJson('/api/v1/admin/finance/commission-policies', array_replace($input, ['commission_basis_points' => 400]), ['Idempotency-Key' => $key])->assertConflict();
+        $this->postJson('/api/v1/admin/finance/commission-policies', array_replace($input, ['commission_basis_points' => 400]), ['Idempotency-Key' => (string) Str::uuid7()])->assertConflict();
+        self::assertSame(2, CommissionPolicyService::policies()->count());
+        self::assertSame(1, DB::table('audit_logs')->where('action', 'COMMISSION_POLICY_PUBLISHED')->count());
+        self::assertSame(1, DB::table('notifications')->where('user_id', $owner->id)->where('title', 'Commission rate update')->count());
+        $terms = DB::table('agreement_versions')->where('id', $policy['agreement_version_id'])->first();
+        self::assertSame(hash('sha256', $terms->published_content), $terms->content_hash);
+        self::assertStringContainsString('3.25%', $terms->published_content);
+        foreach (['fee_policy_versions' => $policy['id'], 'agreement_versions' => $policy['agreement_version_id']] as $table => $id) {
+            try {
+                DB::transaction(fn () => DB::table($table)->where('id', $id)->update(['updated_at' => now()->addSecond()]));
+                self::fail('Published policy and terms must be immutable.');
+            } catch (QueryException $exception) {
+                self::assertStringContainsString('immutable', $exception->getMessage());
+            }
+        }
+        self::assertSame(200, (int) CommissionPolicyService::policies()->where('version', 1)->value('commission_basis_points'));
+        $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/vendors/onboarding')->assertOk()->assertJsonPath('data.verification.commission_terms.agreement.id', $policy['agreement_version_id'])
+            ->assertJsonPath('data.verification.commission_terms.agreement.content_available', true)->assertJsonPath('data.verification.commission_terms.accepted', false);
+        $this->getJson('/api/v1/vendor/finance/commissions')->assertOk()->assertJsonPath('data.current_policy.commission_basis_points', 325);
+    }
+
+    public function test_scheduled_commission_rates_do_not_change_the_current_rate_and_invalid_rates_do_not_publish(): void
+    {
+        $this->signInAdmin($this->admin('ADMIN_SUPERADMIN'));
+        foreach ([-1, 10001, 2.5] as $rate) {
+            $this->postJson('/api/v1/admin/finance/commission-policies', ['commission_basis_points' => $rate, 'expected_version' => 1, 'reason' => 'Invalid commercial rate'], ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable();
+        }
+        $future = CarbonImmutable::now()->addDay()->startOfMinute();
+        $this->postJson('/api/v1/admin/finance/commission-policies', ['commission_basis_points' => 350, 'expected_version' => 1, 'effective_from' => $future->toIso8601String(), 'reason' => 'Scheduled commercial rate'], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk()->assertJsonPath('data.status', 'SCHEDULED');
+        $this->getJson('/api/v1/admin/finance/commission-policies')->assertOk()->assertJsonPath('data.current.commission_basis_points', 200)->assertJsonPath('data.next.commission_basis_points', 350);
+        $this->postJson('/api/v1/admin/finance/commission-policies', ['commission_basis_points' => 400, 'expected_version' => 2, 'effective_from' => CarbonImmutable::now()->subDay()->toIso8601String(), 'reason' => 'Attempt backdated rate'], ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable();
+        self::assertSame(2, CommissionPolicyService::policies()->count());
+        CarbonImmutable::setTestNow($future->addMinute());
+        Carbon::setTestNow(CarbonImmutable::now());
+        self::assertSame(350, (int) CommissionPolicyService::current()->commission_basis_points);
+        self::assertNull(CommissionPolicyService::next());
+    }
+
+    public function test_publishing_a_commercial_rate_requires_recent_authentication_and_does_not_write_on_failure(): void
+    {
+        $admin = $this->admin('ADMIN_SUPERADMIN');
+        $this->signInAdmin($admin);
+        DB::table('auth_sessions')->where('user_id', $admin->id)->update(['reauthenticated_at' => null]);
+        $this->postJson('/api/v1/admin/finance/commission-policies', ['commission_basis_points' => 300, 'expected_version' => 1, 'reason' => 'Protected commercial rate review'], ['Idempotency-Key' => (string) Str::uuid7()])
+            ->assertForbidden()->assertJsonPath('errors.0.code', 'RECENT_AUTHENTICATION_REQUIRED');
+        self::assertSame(1, CommissionPolicyService::policies()->count());
+        self::assertSame(0, DB::table('audit_logs')->where('action', 'COMMISSION_POLICY_PUBLISHED')->count());
+    }
+
+    public function test_mixed_rate_monthly_billing_keeps_original_rates_and_return_credits(): void
+    {
+        [$store, $owner, , $oldOrder] = $this->awaitingPayment('Mixed Commission Rate Store');
+        $listing = (string) DB::table('vendor_listings')->where('vendor_organization_id', $store->id)->value('id');
+        $oldAssessment = DB::table('fee_assessments')->where('order_id', $oldOrder)->first();
+        [, $newOrder] = $this->pickupOrder($store, $listing, [['variant' => 0, 'quantity' => '1']]);
+        $admin = $this->admin('ADMIN_SUPERADMIN');
+        $this->signInAdmin($admin);
+        $policy = $this->postJson('/api/v1/admin/finance/commission-policies', ['commission_basis_points' => 325, 'expected_version' => 1, 'reason' => 'New commercial commission rate'], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk()->json('data');
+        $this->confirmOrder($owner, $newOrder)->assertConflict()->assertJsonPath('errors.0.code', 'COMMISSION_TERMS_ACCEPTANCE_REQUIRED');
+        self::assertSame(0, DB::table('fee_assessments')->where('order_id', $newOrder)->count());
+        $this->signInStoreMember($owner);
+        DB::table('vendor_organizations')->where('id', $store->id)->update(['business_type' => 'SOLE_PROPRIETORSHIP']);
+        $snapshot = $this->getJson('/api/v1/vendors/onboarding')->assertOk()->json('data');
+        $this->postJson('/api/v1/vendors/onboarding/verification/commission', ['organization_lock_version' => $snapshot['lock_version'], 'agreement_version_id' => $policy['agreement_version_id'], 'accepted' => true], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
+        // This commerce fixture omits onboarding media; restore its synthetic public-profile readiness.
+        DB::table('store_profiles')->where('vendor_organization_id', $store->id)->update(['status' => 'COMPLETED']);
+        DB::table('vendor_organizations')->where('id', $store->id)->update(['store_setup_status' => 'COMPLETED']);
+        $this->confirmOrder($owner, $newOrder)->assertOk();
+        $newAssessment = DB::table('fee_assessments')->where('order_id', $newOrder)->first();
+        self::assertSame([200, 20000, 325, 3250], [(int) $oldAssessment->commission_basis_points, (int) $oldAssessment->earned_target_centavos, (int) $newAssessment->commission_basis_points, (int) $newAssessment->earned_target_centavos]);
+        foreach ([$oldOrder, $newOrder] as $id) {
+            DB::table('orders')->where('id', $id)->update(['order_state' => 'COMPLETED', 'fulfillment_state' => 'PICKED_UP', 'closed_at' => now()]);
+            app(FeeAssessmentService::class)->earnOnCompletion($id, (string) Str::uuid7());
+            app(FeeAssessmentService::class)->earnOnCompletion($id, (string) Str::uuid7());
+        }
+        $this->getJson('/api/v1/vendor/finance/commissions')->assertOk()->assertJsonPath('data.summary.earned_centavos', 23250)->assertJsonPath('data.summary.unbilled_centavos', 23250);
+        [, $otherOwner] = $this->activeStore('Unrelated Commission Store', false);
+        $this->signInStoreMember($otherOwner);
+        $this->getJson('/api/v1/vendor/finance/commissions')->assertOk()->assertJsonPath('data.summary.earned_centavos', 0)->assertJsonCount(0, 'data.assessments');
+        $this->signInStoreMember($owner);
+        $nextMonth = CarbonImmutable::now('Asia/Manila')->startOfMonth()->addMonth()->addDay();
+        self::assertSame(1, app(StatementService::class)->draftMonthly($nextMonth));
+        $statement = DB::table('fee_statements')->where('vendor_organization_id', $store->id)->first();
+        self::assertSame(23250, (int) $statement->charges_centavos);
+        self::assertNull($statement->fee_policy_version_id, 'A mixed-rate bill must not claim one policy for all orders.');
+        self::assertSame(['Earned 2.00% commission on completed order', 'Earned 3.25% commission on completed order'], DB::table('fee_statement_lines')->where('fee_statement_id', $statement->id)->orderBy('description')->pluck('description')->all());
+        $preparer = $admin;
+        $approver = $this->admin('ADMIN_SUPERADMIN');
+        $this->approveReturn((string) $oldAssessment->id, 200000, $preparer, $approver);
+        self::assertSame(4000, (int) DB::table('fee_assessments')->where('id', $oldAssessment->id)->value('credited_centavos'));
+        $this->approveReturn((string) $newAssessment->id, 20000, $preparer, $approver);
+        self::assertSame(650, (int) DB::table('fee_assessments')->where('id', $newAssessment->id)->value('credited_centavos'));
     }
 
     /** @return array{User, string, object, User, User} */

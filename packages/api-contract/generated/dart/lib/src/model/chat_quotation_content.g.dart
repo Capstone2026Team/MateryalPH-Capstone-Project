@@ -70,7 +70,7 @@ class _$ChatQuotationContent extends ChatQuotationContent {
   @override
   final String fulfillmentMethod;
   @override
-  final String paymentMethod;
+  final String? paymentMethod;
   @override
   final String fulfillmentDate;
   @override
@@ -95,7 +95,7 @@ class _$ChatQuotationContent extends ChatQuotationContent {
       required this.lines,
       required this.commercial,
       required this.fulfillmentMethod,
-      required this.paymentMethod,
+      this.paymentMethod,
       required this.fulfillmentDate,
       this.delivery,
       this.nrpc,
@@ -287,8 +287,7 @@ class ChatQuotationContentBuilder
                 fulfillmentMethod,
                 r'ChatQuotationContent',
                 'fulfillmentMethod'),
-            paymentMethod: BuiltValueNullFieldError.checkNotNull(
-                paymentMethod, r'ChatQuotationContent', 'paymentMethod'),
+            paymentMethod: paymentMethod,
             fulfillmentDate: BuiltValueNullFieldError.checkNotNull(
                 fulfillmentDate, r'ChatQuotationContent', 'fulfillmentDate'),
             delivery: _delivery?.build(),

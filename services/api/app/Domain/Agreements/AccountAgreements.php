@@ -35,14 +35,7 @@ final class AccountAgreements
             $query->where(fn ($q) => $q->whereNull('vendor_organization_id')->orWhere('vendor_organization_id', $organization));
         }
         $acceptance = $query->first();
-        $path = config('materyalph.agreements.content_path', resource_path('agreements')).'/'.$row->code.'/'.$row->version.'.md';
-        $content = is_file($path) ? file_get_contents($path) : null;
-        if (is_string($content) && ! hash_equals($row->content_hash, hash('sha256', $content))) {
-            $content = null;
-        }
-        if (is_string($content)) {
-            $content = str_replace('{{PRIVACY_CONTACT}}', (string) config('materyalph.agreements.privacy_contact'), $content);
-        }
+        $content = app(AgreementContent::class)->read($row);
 
         return ['id' => $row->id, 'code' => $row->code, 'title' => $row->title, 'version' => (int) $row->version,
             'content' => is_string($content) ? $content : null, 'content_available' => is_string($content), 'accepted_at' => $acceptance?->accepted_at,

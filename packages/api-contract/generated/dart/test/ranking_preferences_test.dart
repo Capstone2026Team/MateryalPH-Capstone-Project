@@ -39,6 +39,7 @@ void main() {
       // TODO
     });
 
+    // Legacy field name for the sum of raw importance values; need not be 100.
     // int totalPercent
     test('to test the property `totalPercent`', () async {
       // TODO

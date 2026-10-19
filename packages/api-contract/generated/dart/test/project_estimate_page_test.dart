@@ -32,11 +32,6 @@ void main() {
       // TODO
     });
 
-    // int suggestedRadiusKm
-    test('to test the property `suggestedRadiusKm`', () async {
-      // TODO
-    });
-
     // Candidates in this estimate before filters.
     // int unfilteredTotal
     test('to test the property `unfilteredTotal`', () async {
@@ -45,6 +40,12 @@ void main() {
 
     // String sort
     test('to test the property `sort`', () async {
+      // TODO
+    });
+
+    // The direction applied, ASC or DESC; null for BEST_MATCH.
+    // String direction
+    test('to test the property `direction`', () async {
       // TODO
     });
 

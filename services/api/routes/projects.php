@@ -27,10 +27,21 @@ Route::prefix('buyers')->middleware(['auth.transport:MOBILE', 'auth:api', 'accou
         Route::post('close', [P::class, 'close']);
         Route::get('estimates', [P::class, 'estimates']);
         Route::post('estimates', [P::class, 'compile']);
+        Route::get('arrangement-options', [P::class, 'arrangementOptions']);
+        Route::post('arrangements', [P::class, 'createArrangement']);
+        Route::prefix('arrangements/{arrangementId}')->whereUuid('arrangementId')->group(function (): void {
+            Route::get('/', [P::class, 'arrangementShow']);
+            Route::patch('/', [P::class, 'editArrangement']);
+            Route::post('submit', [P::class, 'submitArrangement']);
+            Route::post('vendors/{vendorId}/inquiry', [P::class, 'arrangementInquiry'])->whereUuid('vendorId');
+        });
         Route::post('inquiries', [P::class, 'inquire']);
         Route::post('selection', [P::class, 'select']);
         Route::post('candidates/{candidateId}/route', [P::class, 'route'])->whereUuid('candidateId');
         Route::post('candidates/{candidateId}/selection-preview', [P::class, 'selectionPreview'])->whereUuid('candidateId');
+        Route::put('candidates/{candidateId}/draft-items/{lineId}/{variantId}', [P::class, 'saveDraftItem'])->whereUuid(['candidateId', 'lineId', 'variantId']);
+        Route::delete('candidates/{candidateId}/draft-items/{lineId}/{variantId}', [P::class, 'removeDraftItem'])->whereUuid(['candidateId', 'lineId', 'variantId']);
+        Route::post('candidates/{candidateId}/suppliers/{vendorId}/request', [P::class, 'requestDraftSupplier'])->whereUuid(['candidateId', 'vendorId']);
         Route::put('missing-lines/{lineId}', [P::class, 'missing'])->whereUuid('lineId');
         Route::get('lines/{lineId}/alternatives', [P::class, 'alternatives'])->whereUuid('lineId');
     });

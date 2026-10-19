@@ -21,6 +21,13 @@ void main() {
       // TODO
     });
 
+    // Owner-only all-time commission monitoring with current and next policy, estimated and earned fees, approved credits, unbilled fees, draft bills, issued outstanding and overdue debt, verified allocations and successful fee refunds. Assessments are paginated and retain their original basis and percentage. Cash and earnings are separate; no wallet balance is represented.
+    //
+    //Future<VendorCommissionMonitoringEnvelope> getVendorCommissionMonitoring({ int page }) async
+    test('test getVendorCommissionMonitoring', () async {
+      // TODO
+    });
+
     // Owner-only FIN-11 Earnings with separate sales, confirmed online refunds, net online collections, charges, simulated CWT and commission. Confirmed refunds adjust the original payment and assessment date buckets; pending and failed refunds leave collections unchanged. Posted provider charges, CWT and FIN-04A thresholds remain unchanged; estimated remittance cash deducts confirmed refunds without deducting refunds already included in the assessment twice.
     //
     //Future<VendorEarningsEnvelope> getVendorEarnings({ Date from, Date to }) async
