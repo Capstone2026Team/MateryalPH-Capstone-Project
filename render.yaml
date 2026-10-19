@@ -93,7 +93,7 @@ projects:
             autoDeployTrigger: "off"
             dockerfilePath: ./infrastructure/docker/api.render.Dockerfile
             dockerContext: .
-            dockerCommand: "/bin/sh -c 'render-start api'"
+            dockerCommand: "/bin/sh -c 'exec /usr/local/bin/render-start api'"
             healthCheckPath: /up
             envVars:
               - fromGroup: materyalph-staging-runtime
@@ -175,7 +175,7 @@ projects:
             autoDeployTrigger: "off"
             dockerfilePath: ./infrastructure/docker/api.render.Dockerfile
             dockerContext: .
-            dockerCommand: "/bin/sh -c 'render-start reverb'"
+            dockerCommand: "/bin/sh -c 'exec /usr/local/bin/render-start reverb'"
             envVars:
               - fromGroup: materyalph-staging-runtime
               - key: REDIS_URL

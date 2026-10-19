@@ -56,5 +56,5 @@ USER app
 ENV PORT=10000
 ENV RUN_FRESHCLAM=false
 
-ENTRYPOINT ["/sbin/tini", "--", "render-start"]
-CMD ["api"]
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["/usr/local/bin/render-start", "api"]
