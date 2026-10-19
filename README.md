@@ -25,6 +25,10 @@ Product behavior is defined by `docs/workflows`, architecture by `docs/architect
 
 Do not create local environment files until the repository-root `.gitignore` has been verified. Use only the safe committed examples described in `docs/architecture/MateryalPH_Environment_and_API_Key_Setup.md`; never commit real credentials.
 
+## Render staging deployment
+
+The [free Render staging runbook](docs/deployment/render-staging.md) covers the API, Vendor and Admin deployment, CI/CD setup, required staging credentials, generated URLs and free-plan limits. Infrastructure is declared in [render.yaml](render.yaml).
+
 ## Local development
 
 Start the approved PostgreSQL/PostGIS, Redis, API, queue worker, scheduler,

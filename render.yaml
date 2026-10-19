@@ -1,0 +1,231 @@
+# Free staging preview only. Read docs/deployment/render-staging.md before applying.
+# Render may append a suffix to generated hostnames. Verify and update both API rewrite destinations.
+previews:
+  generation: "off"
+
+projects:
+  - name: MateryalPH
+    environments:
+      - name: staging
+        envVarGroups:
+          - name: materyalph-staging-runtime
+            envVars:
+              - {key: APP_NAME, value: MateryalPH Staging}
+              - {key: APP_ENV, value: staging}
+              - {key: APP_DEBUG, value: "false"}
+              - {key: FREE_STAGING_PREVIEW, value: "true"}
+              # The scanner stays fail-closed; definitions cannot be loaded in 512 MB.
+              - {key: RUN_FRESHCLAM, value: "false"}
+              - {key: APP_KEY, generateValue: true}
+              - {key: APP_TIMEZONE, value: UTC}
+              - {key: BUSINESS_TIMEZONE, value: Asia/Manila}
+              - {key: HASH_DRIVER, value: argon2id}
+              - {key: LOG_CHANNEL, value: stderr}
+              - {key: LOG_LEVEL, value: warning}
+              - {key: LOG_REDACT_SENSITIVE, value: "true"}
+              - {key: DB_CONNECTION, value: pgsql}
+              - {key: CACHE_STORE, value: redis}
+              - {key: CACHE_PREFIX, value: materyalph_staging_cache_}
+              - {key: REDIS_PREFIX, value: materyalph_staging_}
+              - {key: QUEUE_CONNECTION, value: redis}
+              - {key: REDIS_QUEUE_RETRY_AFTER, value: "120"}
+              - {key: SESSION_DRIVER, value: redis}
+              - {key: SESSION_SECURE_COOKIE, value: "true"}
+              - {key: SESSION_SAME_SITE, value: lax}
+              - {key: COOKIE_SECURE, value: "true"}
+              - {key: COOKIE_SAME_SITE, value: lax}
+              - {key: SESSION_DOMAIN, value: ""}
+              - {key: TRUSTED_PROXIES, value: "*"}
+              - {key: FINANCE_MODE, value: TEST}
+              - {key: WITHHOLDING_SCENARIO, value: NONE}
+              - {key: PLATFORM_TAX_PROFILE, value: NON_VAT}
+              - {key: LIVE_COMMERCE_ENABLED, value: "false"}
+              - {key: XENDIT_MODE, value: TEST}
+              - {key: PAYMENT_GATEWAY, value: xendit}
+              - {key: FILESYSTEM_DISK, value: s3}
+              - {key: VENDOR_PRIVATE_DISK, value: s3}
+              - {key: AWS_USE_PATH_STYLE_ENDPOINT, value: "true"}
+              - {key: MAIL_MAILER, value: smtp}
+              - {key: MAIL_SCHEME, value: smtp}
+              # Render Free blocks 25/465/587. Use a provider supporting TLS on 2525.
+              - {key: MAIL_PORT, value: "2525"}
+              - {key: MAIL_REQUIRE_TLS, value: "true"}
+              - {key: MAIL_FROM_NAME, value: MateryalPH Staging}
+              - {key: CLOUDINARY_ASSET_FOLDER, value: materyalph-staging}
+              - {key: RECAPTCHA_ENABLED, value: "true"}
+              - {key: NOTIFICATION_PUSH_DRIVER, value: fcm}
+              - {key: WEB_PUSH_APPROVED, value: "false"}
+              - {key: BROADCAST_CONNECTION, value: reverb}
+              - {key: REVERB_APP_ID, value: materyalph-staging}
+              - {key: REVERB_APP_KEY, generateValue: true}
+              - {key: REVERB_APP_SECRET, generateValue: true}
+              - {key: REVERB_PORT, value: "443"}
+              - {key: REVERB_SCHEME, value: https}
+              - {key: REVERB_PUBLIC_PORT, value: "443"}
+              - {key: REVERB_PUBLIC_SCHEME, value: https}
+              - {key: SENTRY_ENVIRONMENT, value: staging}
+              - {key: SENTRY_TRACES_SAMPLE_RATE, value: "0.0"}
+
+        databases:
+          - name: materyalph-staging-db
+            databaseName: materyalph_staging
+            user: materyalph_staging
+            region: singapore
+            plan: free
+            postgresMajorVersion: "16"
+            ipAllowList: []
+
+        services:
+          - type: keyvalue
+            name: materyalph-staging-redis
+            region: singapore
+            plan: free
+            maxmemoryPolicy: noeviction
+            ipAllowList: []
+
+          - type: web
+            name: materyalph-staging-api
+            runtime: docker
+            region: singapore
+            plan: free
+            repo: https://github.com/Capstone2026Team/MateryalPH-Capstone-Project
+            branch: staging
+            autoDeployTrigger: "off"
+            dockerfilePath: ./infrastructure/docker/api.render.Dockerfile
+            dockerContext: .
+            dockerCommand: api
+            healthCheckPath: /up
+            maxShutdownDelaySeconds: 120
+            envVars:
+              - fromGroup: materyalph-staging-runtime
+              - key: DB_URL
+                fromDatabase: {name: materyalph-staging-db, property: connectionString}
+              - key: REDIS_URL
+                fromService: {name: materyalph-staging-redis, type: keyvalue, property: connectionString}
+              - key: FRONTEND_VENDOR_HOST
+                fromService: {name: materyalph-staging-vendor, type: web, envVarKey: RENDER_EXTERNAL_HOSTNAME}
+              - key: FRONTEND_ADMIN_HOST
+                fromService: {name: materyalph-staging-admin, type: web, envVarKey: RENDER_EXTERNAL_HOSTNAME}
+              - key: REVERB_HOST
+                fromService: {name: materyalph-staging-reverb, type: web, envVarKey: RENDER_EXTERNAL_HOSTNAME}
+              - key: REVERB_PUBLIC_HOST
+                fromService: {name: materyalph-staging-reverb, type: web, envVarKey: RENDER_EXTERNAL_HOSTNAME}
+              - key: RECAPTCHA_VENDOR_WEB_SITE_KEY
+                sync: false
+              - key: RECAPTCHA_ADMIN_WEB_SITE_KEY
+                sync: false
+              - key: PASSPORT_PRIVATE_KEY_BASE64
+                sync: false
+              - key: PASSPORT_PUBLIC_KEY_BASE64
+                sync: false
+              - key: AWS_ACCESS_KEY_ID
+                sync: false
+              - key: AWS_SECRET_ACCESS_KEY
+                sync: false
+              - key: AWS_DEFAULT_REGION
+                sync: false
+              - key: AWS_BUCKET
+                sync: false
+              - key: AWS_ENDPOINT
+                sync: false
+              - key: CLOUDINARY_CLOUD_NAME
+                sync: false
+              - key: CLOUDINARY_API_KEY
+                sync: false
+              - key: CLOUDINARY_API_SECRET
+                sync: false
+              - key: MAIL_HOST
+                sync: false
+              - key: MAIL_USERNAME
+                sync: false
+              - key: MAIL_PASSWORD
+                sync: false
+              - key: MAIL_FROM_ADDRESS
+                sync: false
+              - key: GOOGLE_OIDC_CLIENT_ID
+                sync: false
+              - key: GOOGLE_OIDC_CLIENT_SECRET
+                sync: false
+              - key: GOOGLE_MAPS_SERVER_API_KEY
+                sync: false
+              - key: RECAPTCHA_GOOGLE_CLOUD_PROJECT_ID
+                sync: false
+              - key: RECAPTCHA_ENTERPRISE_API_KEY
+                sync: false
+              - key: XENDIT_SECRET_KEY
+                sync: false
+              - key: XENDIT_WEBHOOK_VERIFICATION_TOKEN
+                sync: false
+              - key: FIREBASE_PROJECT_ID
+                sync: false
+              - key: FIREBASE_SERVICE_ACCOUNT_JSON_BASE64
+                sync: false
+              - key: SENTRY_LARAVEL_DSN
+                sync: false
+              # Optional: queues the existing one-time invitation when explicitly supplied.
+              - key: STAGING_BOOTSTRAP_ADMIN_EMAIL
+                sync: false
+
+          - type: web
+            name: materyalph-staging-reverb
+            runtime: docker
+            region: singapore
+            plan: free
+            repo: https://github.com/Capstone2026Team/MateryalPH-Capstone-Project
+            branch: staging
+            autoDeployTrigger: "off"
+            dockerfilePath: ./infrastructure/docker/api.render.Dockerfile
+            dockerContext: .
+            dockerCommand: reverb
+            maxShutdownDelaySeconds: 120
+            envVars:
+              - fromGroup: materyalph-staging-runtime
+              - key: REDIS_URL
+                fromService: {name: materyalph-staging-redis, type: keyvalue, property: connectionString}
+              - key: FRONTEND_VENDOR_HOST
+                fromService: {name: materyalph-staging-vendor, type: web, envVarKey: RENDER_EXTERNAL_HOSTNAME}
+              - key: FRONTEND_ADMIN_HOST
+                fromService: {name: materyalph-staging-admin, type: web, envVarKey: RENDER_EXTERNAL_HOSTNAME}
+
+          - type: web
+            name: materyalph-staging-vendor
+            runtime: static
+            repo: https://github.com/Capstone2026Team/MateryalPH-Capstone-Project
+            branch: staging
+            autoDeployTrigger: "off"
+            buildCommand: sh scripts/deployment/build-portal.sh vendor-web
+            staticPublishPath: apps/vendor-web/dist
+            envVars:
+              - {key: NODE_VERSION, value: "24"}
+              - {key: VITE_APP_ENV, value: staging}
+              - {key: VITE_API_BASE_URL, value: /api/v1}
+              - {key: VITE_FIREBASE_PUSH_ENABLED, value: "false"}
+              - {key: VITE_GOOGLE_MAPS_BROWSER_KEY, sync: false}
+              - {key: VITE_RECAPTCHA_SITE_KEY, sync: false}
+            headers: &portalHeaders
+              - {path: /api/*, name: Cache-Control, value: "private, no-store"}
+              - {path: /*, name: X-Content-Type-Options, value: nosniff}
+              - {path: /*, name: Referrer-Policy, value: strict-origin-when-cross-origin}
+            routes: &portalRoutes
+              - type: rewrite
+                source: /api/v1/*
+                destination: https://materyalph-staging-api.onrender.com/api/v1/*
+              - {type: rewrite, source: /*, destination: /index.html}
+
+          - type: web
+            name: materyalph-staging-admin
+            runtime: static
+            repo: https://github.com/Capstone2026Team/MateryalPH-Capstone-Project
+            branch: staging
+            autoDeployTrigger: "off"
+            buildCommand: sh scripts/deployment/build-portal.sh admin-web
+            staticPublishPath: apps/admin-web/dist
+            envVars:
+              - {key: NODE_VERSION, value: "24"}
+              - {key: VITE_APP_ENV, value: staging}
+              - {key: VITE_API_BASE_URL, value: /api/v1}
+              - {key: VITE_FIREBASE_PUSH_ENABLED, value: "false"}
+              - {key: VITE_GOOGLE_MAPS_BROWSER_KEY, sync: false}
+              - {key: VITE_RECAPTCHA_SITE_KEY, sync: false}
+            headers: *portalHeaders
+            routes: *portalRoutes

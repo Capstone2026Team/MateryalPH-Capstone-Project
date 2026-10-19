@@ -79,3 +79,4 @@ services/api/.env.testing
 # impeccable-ignore-end
 # Local realtime count validation artifacts and pre-edit comparisons
 /.tmp/realtime-counts/
+/.tmp/staging-deployment/
