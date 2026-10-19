@@ -13,6 +13,23 @@ This deploys the API backend, Vendor portal and Admin portal using Free Render r
 | materyalph-staging-db | Postgres 16 | Free | Separate staging data; PostGIS, pg_trgm and pgcrypto enabled by migrations |
 | materyalph-staging-redis | Key Value | Free | Cache, sessions, queue and scheduler locks |
 
+## Live Free staging preview
+
+These resources are already provisioned in the confirmed workspace. Do not apply `render.yaml` as a new empty Blueprint in this workspace.
+
+| Service | Plan | Generated URL | Live deploy |
+| --- | --- | --- | --- |
+| API (`srv-dbb2uafbtjjs7395h1r0`) | Free | [materyalph-staging-api.onrender.com](https://materyalph-staging-api.onrender.com) | `dep-dbb3hufavr4c738ju250` |
+| Reverb (`srv-dbb2u93rjlhs73b7huo0`) | Free | [materyalph-staging-reverb.onrender.com](https://materyalph-staging-reverb.onrender.com) | `dep-dbb3jsbrjlhs73b9i3rg` |
+| Vendor (`srv-dbb2teuq1p3s73dl011g`) | Static | [materyalph-staging-vendor.onrender.com](https://materyalph-staging-vendor.onrender.com) | `dep-dbb3keifngtc739jvu4g` |
+| Admin (`srv-dbb2tg3rjlhs73b7epsg`) | Static | [materyalph-staging-admin.onrender.com](https://materyalph-staging-admin.onrender.com) | `dep-dbb3l8jl550s73870veg` |
+
+All four services are live on source commit `3ef276d230d1c5ed37fb5933ea6015848fe49ad6`; each has automatic deployment turned off. The Free Postgres instance (`dpg-dbb2t561egvs73clqop0-a`) expires on **2026-11-18 14:52 UTC** (22:52 Asia/Manila). Free Key Value (`red-dbb2t68n74is73c2juvg`) is volatile on restart.
+
+The `render.yaml` passed Render's current schema and Free-plan checks. The resources were created with Render's authenticated public API fallback; no Render Blueprint object is linked to them yet. Before a future Blueprint sync, adopt the existing resources in the Dashboard rather than creating duplicates. This one-time preview was approved while the documented CI failures remain; the automatic GitHub deployment gate is unchanged.
+
+For this API-provisioned preview, `FRONTEND_VENDOR_HOST` and `FRONTEND_ADMIN_HOST` are set to the assigned generated hostnames. `render.yaml` declares the equivalent `fromService` references for a future Blueprint adoption. If an assigned hostname changes before adoption, update and redeploy the API host variables and both portal API rewrite destinations.
+
 All regional resources use Singapore. Portals use Render's CDN. No paid workers, cron jobs, disks or paid workspace upgrades are declared. No production resources are declared.
 
 Free means **preview limitations**, not a continuously available installation:
@@ -55,7 +72,7 @@ Do not set the repository variable `RENDER_STAGING_CONFIGURED=true` until the re
 
 ## 2. Validate and create the Blueprint
 
-The Render connector lists resources, but does not apply Blueprints. The Render CLI validates a Blueprint; initial application uses the Dashboard.
+The Render connector lists resources, but does not apply Blueprints. The Render CLI validates a Blueprint; normal Blueprint creation uses the Dashboard. The live preview above was provisioned through the authenticated public API because the Dashboard automation was unavailable. The steps below are for a fresh environment or a deliberate adoption of the existing resources; do not apply them as a new Blueprint in the current staging environment.
 
 From the repository root (PowerShell 7):
 
@@ -70,7 +87,7 @@ render blueprints validate render.yaml --workspace tea-db8ouuc9v7es73dc3u7g --ou
 
 The schema check also rejects paid plans. Render's authenticated validation is still needed to check workspace conflicts and platform constraints.
 
-After the staging branch passes CI, open:
+For a fresh environment, after the staging branch passes CI, open:
 
 [Create the staging Blueprint](https://dashboard.render.com/blueprint/new?repo=https%3A%2F%2Fgithub.com%2FCapstone2026Team%2FMateryalPH-Capstone-Project)
 
@@ -115,7 +132,7 @@ For both static sites:
 
 ## 3. Generated URLs and cookie authentication
 
-Record the **actual** API, Vendor, Admin and Reverb URLs from Render. A name collision may append a suffix; the YAML's names are not proof of the assigned URLs.
+The generated API, Vendor, Admin and Reverb URLs are listed in the live preview table above. A name collision in another workspace may append a suffix; the YAML's names are not proof of an assigned URL.
 
 Both portals proxy `/api/v1/*` to the API before their `/* -> /index.html` SPA fallback. This keeps browser auth cookies on each portal's own hostname. Confirm the API destination in `render.yaml` matches the actual generated API URL, then sync that correction.
 
@@ -196,4 +213,4 @@ This is a debug preview, not a signed store release. Verify maps, Firebase, devi
 
 See the [deployment readiness record](staging-readiness.md) for the actual check results and blockers from this setup.
 
-The implementation report records which checks actually ran. Do not infer a passing remote CI run, authenticated Render validation, successful Blueprint sync or live deployment from this document. Provider secrets, repository protections and the upload limitation remain explicit gates.
+The [deployment readiness record](staging-readiness.md) records the checks and live smoke results actually observed. The CI gate has not passed, no Render Blueprint object is linked, authenticated user/provider acceptance remains pending, and scan-dependent uploads remain unavailable on this Free topology. This preview does not complete Phase 19 or represent production readiness.
