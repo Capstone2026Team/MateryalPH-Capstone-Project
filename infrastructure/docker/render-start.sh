@@ -63,7 +63,7 @@ case "$role" in
         esac
         mkdir -p /tmp/nginx
         php /app/infrastructure/prepare-nginx.php
-        sed -i "s/listen 10000;/listen ${PORT:-10000};/" /app/infrastructure/nginx.conf
+        sed "s/listen 10000;/listen ${PORT:-10000};/" /app/infrastructure/nginx.conf > /tmp/nginx/nginx.conf
         exec supervisord -c /app/infrastructure/supervisord.conf
         ;;
     worker)
