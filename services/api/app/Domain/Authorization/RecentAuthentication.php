@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Authorization;
 
+use App\Domain\Identity\AccountPassword;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\EmailOtpService;
@@ -11,11 +12,10 @@ use App\Domain\Identity\MfaChallengeService;
 use App\Domain\Identity\TotpService;
 use App\Models\AuthSession;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 
 final class RecentAuthentication
 {
-    public function __construct(private readonly MfaChallengeService $mfa, private readonly TotpService $totp, private readonly AuditRecorder $audit, private readonly EmailOtpService $otp) {}
+    public function __construct(private readonly MfaChallengeService $mfa, private readonly TotpService $totp, private readonly AuditRecorder $audit, private readonly EmailOtpService $otp, private readonly AccountPassword $passwords) {}
 
     public function session(Request $request): AuthSession
     {
@@ -41,7 +41,7 @@ final class RecentAuthentication
         $privileged = $this->mfa->requiredFor($user);
         $totpOnly = $password === null && $emailCode === null && $code !== null
             && $user->account_type !== 'BUYER' && $this->totp->hasConfirmedFactor($user);
-        $verified = $password !== null && Hash::check($password, $user->password);
+        $verified = $password !== null && $this->passwords->matches($password, $user->password);
         $method = $totpOnly ? 'TOTP' : 'PASSWORD';
         if ($emailCode !== null && $this->session($request)->reauthentication_email_otp_id !== null) {
             $otp = $this->otp->verifyForRequest($user->email, 'ACCOUNT_REAUTHENTICATION', $emailCode, $this->session($request)->reauthentication_email_otp_id);

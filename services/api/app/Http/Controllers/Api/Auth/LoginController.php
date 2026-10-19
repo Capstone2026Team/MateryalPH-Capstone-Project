@@ -63,6 +63,9 @@ final class LoginController extends Controller
         );
         // Provider verification can outlive an account suspension or password change.
         $user = $authenticate->recheck($user, $portal);
+        if ($authenticate->upgradePassword($user, (string) $input['password'])) {
+            $audit->record($request, 'PASSWORD_HASH_UPGRADED', true, $user);
+        }
         $attempts->clear($request, $email);
         $authenticate->markAuthenticated($user);
         if ($mfa->loginChallengeRequiredFor($user)) {

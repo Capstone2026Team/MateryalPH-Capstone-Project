@@ -5,15 +5,16 @@ declare(strict_types=1);
 namespace App\Domain\Identity;
 
 use App\Models\User;
-use Illuminate\Support\Facades\Hash;
 
 final class AuthenticateAccount
 {
+    public function __construct(private readonly AccountPassword $passwords) {}
+
     public function handle(string $email, string $password, string $requestedPortal): User
     {
         $user = User::query()->whereRaw('LOWER(email) = ?', [mb_strtolower(trim($email))])->first();
 
-        if ($user === null || ! Hash::check($password, $user->password)) {
+        if ($user === null || ! $this->passwords->matches($password, $user->password)) {
             throw new AuthenticationException('INVALID_CREDENTIALS', 'The email or password is incorrect.', 401);
         }
         $this->assertEligible($user, $requestedPortal);
@@ -30,6 +31,23 @@ final class AuthenticateAccount
         $this->assertEligible($current, $requestedPortal);
 
         return $current;
+    }
+
+    public function upgradePassword(User $user, #[\SensitiveParameter] string $password): bool
+    {
+        $original = $user->password;
+        $replacement = $this->passwords->replacementHash($password, $original);
+        if ($replacement === null) {
+            return false;
+        }
+        // A password reset during provider verification or hashing must never be overwritten.
+        $updated = User::query()->whereKey($user->getKey())->where('password', $original)->update(['password' => $replacement]);
+        if ($updated !== 1) {
+            throw new AuthenticationException('INVALID_CREDENTIALS', 'The email or password is incorrect.', 401);
+        }
+        $user->forceFill(['password' => $replacement])->syncOriginalAttribute('password');
+
+        return true;
     }
 
     private function assertEligible(User $user, string $requestedPortal): void

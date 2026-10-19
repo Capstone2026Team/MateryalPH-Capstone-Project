@@ -147,6 +147,20 @@ Configure external dashboards with the actual URLs:
 
 No custom domain is required.
 
+### Imported accounts and authenticator decryption
+
+A database copied from development carries encrypted authenticator secrets and key-bound hashes. A different staging `APP_KEY` cannot decrypt those secrets; the API logs `DecryptException: The MAC is invalid` and MFA returns the generic internal-error response. Keep the staging key stable. Do not copy the development key into Render or disable MFA.
+
+For an authorized import repair, decrypt only the affected authenticator records locally with their original key and re-encrypt the same plaintext with the existing staging key. Validate every record first, use one transaction with deterministic row locks and conditional updates, preserve enrollment/revocation/replay state, and append audit records containing no secrets or ciphertext. Verify staging decryption before committing. If external database access is necessary, temporarily allow only the operator's IP and restore the original allowlist afterward. Never print keys, setup secrets, recovery codes, connection strings or password hashes.
+
+On 2026-10-20, all **39 active imported authenticator records** were repaired this way and verified readable with the staging key. Their original secrets and replay state were preserved; 39 `MFA_IMPORTED_SECRET_REENCRYPTED` audit records were added. External database access was disabled again. Fresh authenticated browser sign-in still requires manual acceptance. Cancel any expired MFA attempt and sign in again using a fresh authenticator code.
+
+The imported database also has **45 Argon2i password hashes**. The login implementation accepts a correct legacy Argon2i password and upgrades its hash to the configured Argon2id format only after bot protection and current-account checks. Wrong passwords, pending bot challenges and concurrent password resets cannot trigger an upgrade. MFA remains required. This code must be deployed before password sign-in for these imported accounts works on an API still running the old verifier; new passwords continue to use Argon2id.
+
+Validation for this repair: 117 synthetic encryption assertions; 4 password unit tests with 14 assertions; 80 related isolated PostgreSQL API tests with 858 assertions, covering login, bot protection, MFA, recovery, invitations, account security and transport isolation. PHPStan, scoped Pint, OpenAPI validation, Compose configuration, the changed-file secret scan and whitespace checks passed. OpenAPI retained its eight unused-model recommendations. No schema migration, API payload or generated-client change was needed. Authenticated browser/device acceptance remains pending.
+
+Imported recovery codes and existing sessions are bound to the original application's key and cannot be migrated from their hashes. After signing in, regenerate recovery codes through **Settings → Security**, complete the required recent authentication, and save the newly issued set offline. Use a fresh sign-in instead of relying on imported sessions.
+
 ## 4. First startup and later deployments
 
 Free compute has no supported paid pre-deploy release step or shell. On **API startup only**, the entrypoint invokes the staging release script before starting the server/worker/scheduler. It:

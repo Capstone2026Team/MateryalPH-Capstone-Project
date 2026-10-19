@@ -16,7 +16,7 @@ use Illuminate\Validation\Rules\Password;
 
 final class AcceptVendorInvitation
 {
-    public function __construct(private readonly AuditRecorder $audit, private readonly EmailOtpService $otp) {}
+    public function __construct(private readonly AuditRecorder $audit, private readonly EmailOtpService $otp, private readonly AccountPassword $passwords) {}
 
     public function assertInvitationAvailable(string $token, string $email): void
     {
@@ -62,7 +62,7 @@ final class AcceptVendorInvitation
             }
             $user = User::query()->whereRaw('LOWER(email) = ?', [$email])->lockForUpdate()->first();
             if ($user !== null) {
-                if ($user->account_type !== 'VENDOR' || ! in_array($user->account_status, ['ACTIVE', 'PENDING_VERIFICATION'], true) || ! Hash::check($password, $user->password)
+                if ($user->account_type !== 'VENDOR' || ! in_array($user->account_status, ['ACTIVE', 'PENDING_VERIFICATION'], true) || ! $this->passwords->matches($password, $user->password)
                     || VendorMembership::query()->where('user_id', $user->getKey())->whereNull('deleted_at')->exists()) {
                     throw new AuthenticationException('VENDOR_INVITATION_INVALID', 'This invitation cannot be accepted with these details.', 422);
                 }
