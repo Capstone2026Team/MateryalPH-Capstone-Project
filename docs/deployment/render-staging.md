@@ -141,6 +141,8 @@ Free compute has no supported paid pre-deploy release step or shell. On **API st
 
 The worker uses `queue:work`, matching the current repository. Horizon is not installed by this deployment. The scheduler uses `schedule:work` while the API container is running. No paid worker/cron is provisioned.
 
+Free compute does not support a custom shutdown delay. The worker has a 20-second timeout, supervisor allows 25 seconds to stop, and Redis retries only after 120 seconds. Long jobs can fail/retry under these preview limits; do not use the preview for durable commercial processing.
+
 Initial Blueprint creation can start independent builds together. Later GitHub releases deploy API first (including startup migration), then Reverb, then the two static sites. For future schema changes use additive, backward-compatible migrations; a code rollback does not reverse database changes.
 
 ### Enable subsequent GitHub deployments

@@ -39,7 +39,7 @@ def main():
         if service.get("runtime") != "static":
             assert service["region"] == "singapore"
             assert service["plan"] == "free", "The user authorized Free plans only."
-            assert "disk" not in service and "preDeployCommand" not in service
+            assert not {"disk", "preDeployCommand", "maxShutdownDelaySeconds"}.intersection(service)
         if service["type"] != "keyvalue":
             assert service["branch"] == "staging" and service["autoDeployTrigger"] == "off"
         if service.get("runtime") == "static":

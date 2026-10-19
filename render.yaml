@@ -95,7 +95,6 @@ projects:
             dockerContext: .
             dockerCommand: api
             healthCheckPath: /up
-            maxShutdownDelaySeconds: 120
             envVars:
               - fromGroup: materyalph-staging-runtime
               - key: DB_URL
@@ -177,7 +176,6 @@ projects:
             dockerfilePath: ./infrastructure/docker/api.render.Dockerfile
             dockerContext: .
             dockerCommand: reverb
-            maxShutdownDelaySeconds: 120
             envVars:
               - fromGroup: materyalph-staging-runtime
               - key: REDIS_URL

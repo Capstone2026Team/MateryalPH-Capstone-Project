@@ -16,6 +16,7 @@ Source branch: `staging`. Initial deployment commit: `eeb90cfbbd20e845010f1d02d9
 | Check | Result |
 | --- | --- |
 | Render published JSON schema plus staging/budget assertions | Passed |
+| Authenticated Render CLI Blueprint validation | Passed; Render returned valid=true with the expected free resource plan after removing unsupported custom shutdown delays |
 | GitHub Actions actionlint | Passed |
 | JavaScript deployment/path-selector syntax | Passed |
 | Deployment PHP syntax and Pint formatting | Passed |
@@ -28,7 +29,7 @@ Source branch: `staging`. Initial deployment commit: `eeb90cfbbd20e845010f1d02d9
 | Image user, PHP-FPM and Nginx configuration | User `app`; both configurations passed |
 | Isolated Docker Compose configuration | Passed locally with the existing ignored test settings; CI now creates temporary test settings explicitly |
 | Deployment changes secret scan | No leaks |
-| Full repository history secret scan | Failed: Google Maps key in the tracked iOS example and history; current example replaced with a placeholder |
+| Full repository history secret scan | Passed: 37 commits, approximately 70 MB scanned. Owner confirmed the historical public Maps key's iOS-app restrictions; only its exact fingerprint is excluded, and the current example uses a placeholder. |
 
 No local backend, browser, device or provider acceptance tests were added or run for this deployment change.
 
@@ -44,16 +45,16 @@ No local backend, browser, device or provider acceptance tests were added or run
 - Generated-client drift check failed for `GeoDemandCellValue.ts`.
 - Backend and browser jobs ended canceled; they are not passing evidence.
 - Infrastructure stopped because Compose lacked TEST_DB_PASSWORD. The follow-up workflow creates an ephemeral ignored env file and removes it after validation.
-- History scan found one Google Maps key. The current example is cleaned; history remains gated pending classification/remediation. No history rewrite, credential rotation or broad allowlist was performed.
+- History scan found one Google Maps key. The owner subsequently confirmed it is a public client key restricted to the iOS app. The example is cleaned and only that historical fingerprint is excluded. No history rewrite, credential rotation or broad rule/file allowlist was performed.
 
 The initial deployment commit did not change application pages or existing application tests. Additional Vendor onboarding edits appeared in the shared workspace later and are outside the deployment commit.
 
 ## Outstanding inputs and gates
 
 1. Resolve the failing application/contract checks, then obtain a successful CI run. No deployment gate has been disabled to pass.
-2. Review the Google Maps key previously committed in `apps/buyer-mobile/ios/Flutter/MapsKeys.xcconfig.example`. Its value was never displayed. Confirm whether it is an intentionally public iOS-restricted key or revoke/replace it in Google Cloud. Historical findings require explicit review; no automatic history rewrite or rotation is authorized.
+2. Retain the confirmed iOS application restrictions on the historical public Maps key. Its value was never displayed. The current example remains a placeholder, and new keys remain subject to scanning.
 3. The active Git credential has push access but no repository admin/maintain permission. Staging/production environments and main branch protection were not present in the inspected settings. A repository administrator must configure the protections and deployment secrets documented in the runbook.
-4. Render MCP access works for the confirmed workspace, which had no services/datastores. The installed Render CLI v2.30.0 is not authenticated; authenticated Blueprint validation returned `run render login to authenticate`.
+4. Render MCP and CLI access work for the confirmed workspace. The installed Render CLI v2.30.0 authenticated successfully and Blueprint validation now passes. No cloud resources have been provisioned.
 5. Initial Blueprint application requires Render Dashboard access. Neither the connector nor CLI exposes Blueprint application. The browser automation surface failed to initialize, so no Dashboard action was performed.
 6. Enter separate staging provider credentials through Render/GitHub secret fields and verify the actual assigned URLs. Never reuse development/production credentials.
 

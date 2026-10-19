@@ -61,8 +61,8 @@ case "$role" in
         exec supervisord -c /app/infrastructure/supervisord.conf
         ;;
     worker)
-        # The 120-second Redis retry interval exceeds the 90-second execution limit.
-        exec php artisan queue:work redis --queue=default --sleep=2 --tries=3 --timeout=90 --memory=128 --no-interaction
+        # Finish within Free compute's default shutdown window; Redis retries after 120 seconds.
+        exec php artisan queue:work redis --queue=default --sleep=2 --tries=3 --timeout=20 --memory=128 --no-interaction
         ;;
     reverb)
         exec php artisan reverb:start --host=0.0.0.0 --port="${PORT:-10000}" --no-interaction
