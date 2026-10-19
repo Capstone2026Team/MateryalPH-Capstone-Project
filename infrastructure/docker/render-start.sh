@@ -42,9 +42,12 @@ case "$role" in
         exec php /app/infrastructure/staging-release.php
         ;;
     api|worker|reverb|scheduler)
-        php artisan config:cache --quiet
-        php artisan route:cache --quiet
-        php artisan event:cache --quiet
+        echo 'Render startup: caching configuration.'
+        php artisan config:cache
+        echo 'Render startup: caching routes.'
+        php artisan route:cache
+        echo 'Render startup: caching events.'
+        php artisan event:cache
         ;;
     *)
         exec "$role" "$@"
