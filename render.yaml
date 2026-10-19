@@ -93,10 +93,11 @@ projects:
             autoDeployTrigger: "off"
             dockerfilePath: ./infrastructure/docker/api.render.Dockerfile
             dockerContext: .
-            dockerCommand: "/bin/sh -c 'exec /usr/local/bin/render-start api'"
+            dockerCommand: /usr/local/bin/render-start
             healthCheckPath: /up
             envVars:
               - fromGroup: materyalph-staging-runtime
+              - {key: MATERYALPH_SERVICE_ROLE, value: api}
               - key: DB_URL
                 fromDatabase: {name: materyalph-staging-db, property: connectionString}
               - key: REDIS_URL
@@ -175,9 +176,10 @@ projects:
             autoDeployTrigger: "off"
             dockerfilePath: ./infrastructure/docker/api.render.Dockerfile
             dockerContext: .
-            dockerCommand: "/bin/sh -c 'exec /usr/local/bin/render-start reverb'"
+            dockerCommand: /usr/local/bin/render-start
             envVars:
               - fromGroup: materyalph-staging-runtime
+              - {key: MATERYALPH_SERVICE_ROLE, value: reverb}
               - key: REDIS_URL
                 fromService: {name: materyalph-staging-redis, type: keyvalue, property: connectionString}
               - key: FRONTEND_VENDOR_HOST

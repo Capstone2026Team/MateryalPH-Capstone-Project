@@ -29,8 +29,10 @@ if [ -n "${FRONTEND_VENDOR_HOST:-}" ] && [ -n "${FRONTEND_ADMIN_HOST:-}" ]; then
     export GOOGLE_OIDC_REDIRECT_URI="$FRONTEND_VENDOR_URL/api/v1/auth/google/callback"
 fi
 
-role="${1:-api}"
-shift || true
+role="${MATERYALPH_SERVICE_ROLE:-${1:-api}}"
+if [ "$#" -gt 0 ]; then
+    shift
+fi
 
 if [ "$role" = api ] && [ "${FREE_STAGING_PREVIEW:-false}" = true ]; then
     # Free compute has no pre-deploy command. Only this role releases before supervised jobs start.
