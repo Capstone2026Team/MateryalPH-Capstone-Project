@@ -10,6 +10,21 @@ The owner requested deployment repairs while keeping every existing Render plan 
 - The services were running different commits with automatic deployment disabled. The release procedure validates all four targets and deploys one explicit staging SHA, with API migrations before dependent services.
 - Six Vendor order tests retained older UI/permission expectations. Their assertions now cover current controls and omit Customer Service discount authority. Buyer formatting and the motion-token generator were aligned with the formatting gate without changing application behavior.
 
+## Live release and recovery
+
+The API, Reverb, Vendor and Admin services are all live on repair commit `04c9c28a49cdda4f94b22a975c7967f5cbccf05e`. Existing Free plans and disabled automatic deployments were preserved.
+
+| Service | Verified live deployment |
+| --- | --- |
+| API | `dep-dbbbuj8n74is73a1nqs0` |
+| Reverb | `dep-dbbc01jbc2fs73akppl0` |
+| Vendor | `dep-dbbc0ts9v7es73em4pf0` |
+| Admin | `dep-dbbc0v0m7kps73ee8d7g` |
+
+The migration was applied during guarded API startup. The maintenance transaction verified **120 source-encrypted values**, inserted **94 unique recovery entries**, reused 26 identical ciphertext entries, and modified **zero original source records**. A separate read-only check confirmed all 120 values are readable through staging-key recovery, all 39 authenticator records remain staging-readable, and no migrations remain pending. Four imported device tokens were excluded deliberately. The source key was never deployed. Temporary single-operator-IP database access was removed after each operation; external access is disabled again.
+
+Live public HTTP checks passed for health, unauthenticated-session denial, SPA login routes, secure host-only CSRF cookies, preserved POST requests, missing-CSRF rejection and exact-origin credentialed CORS. Both deployed JavaScript bundles contain the configured cold-start deadline. These checks did not sign in or send email. Recent live errors still confirm inaccessible storage metadata and failed-closed upload scanning, consistent with the integration blockers below.
+
 ## Checks actually run
 
 | Check | Result |
