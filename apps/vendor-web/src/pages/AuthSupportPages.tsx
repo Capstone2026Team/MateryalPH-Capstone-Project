@@ -1,4 +1,4 @@
-import { AuthenticatorCodeField, Button, Field, PhoneField, StatusMessage } from '@materyalph/web-ui'
+import { AuthenticatorCodeField, BotProtectionFields, Button, Field, PhoneField, StatusMessage } from '@materyalph/web-ui'
 import { Copy, Download, LogOut, ShieldCheck } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { type FormEvent, useEffect, useRef, useState } from 'react'
@@ -118,7 +118,7 @@ export function VendorMfaPage() {
     <Link className="auth-cancel" to="/login">Cancel and sign in again</Link>
   </VendorAuthShell>
 
-  return <VendorAuthShell centerTitle={mode === 'challenge'} title={mode === 'enrollment' ? 'Scan with your authenticator app' : 'Verify it is you'} description={mode === 'enrollment' ? 'Scan the code, then enter the current six-digit code from your authenticator app.' : 'Enter the current code from your authenticator app.'}>
+  return <VendorAuthShell title={mode === 'enrollment' ? 'Scan with your authenticator app' : 'Verify it is you'} description={mode === 'enrollment' ? 'Scan the code, then enter the current six-digit code from your authenticator app.' : 'Enter the current code from your authenticator app.'}>
     <form className="auth-form" onSubmit={submit}>
       {mode === 'enrollment' && enrollment && <div className="totp-setup">
         <ol className="auth-steps"><li>Open your authenticator and choose to add an account.</li><li>Scan this QR code or enter the manual key below.</li><li>Enter the current six-digit code to finish setup.</li></ol><div className="totp-qr"><QRCodeSVG value={enrollment.provisioningUri} size={208} level="M" marginSize={4} title="Authenticator setup QR code" role="img" /></div>
@@ -182,9 +182,11 @@ export function VendorForgotPasswordPage() {
       : <form className="auth-form" onSubmit={submit}>
           {message && <StatusMessage>{message}</StatusMessage>}
           <Field label="Email address" name="email" type="email" autoComplete="email" required />
-          <button className="accessible-fallback" type="button" aria-pressed={useEmailCheck} onClick={() => { captchaRef.current?.reset(); setUseEmailCheck((value) => !value) }}>{useEmailCheck ? 'Email security check selected' : 'Use an email security check instead'}</button>
-          {!useEmailCheck && <VendorRecaptchaCheckbox ref={captchaRef} action="vendor_password_recovery" disabled={busy} onTokenChange={setCaptchaToken} />}
-          <Button className="w-full" type="submit" disabled={busy}>{busy ? 'Requesting…' : 'Send recovery code'}</Button>
+          <BotProtectionFields disabled={busy} emailCheckSelected={useEmailCheck} onEmailCheckClick={() => { captchaRef.current?.reset(); setUseEmailCheck((value) => !value) }} checkbox={
+            !useEmailCheck && <VendorRecaptchaCheckbox ref={captchaRef} action="vendor_password_recovery" disabled={busy} onTokenChange={setCaptchaToken} />
+          }>
+            <Button className="w-full" type="submit" disabled={busy}>{busy ? 'Requesting…' : 'Send recovery code'}</Button>
+          </BotProtectionFields>
           <Link className="auth-cancel" to="/reset-password">I already have a code</Link>
           <Link className="auth-cancel" to="/login">Back to sign in</Link>
         </form>}

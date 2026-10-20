@@ -12,6 +12,7 @@ MateryalPH is a geolocation-based construction-material marketplace with separat
 - `packages/design-tokens` — canonical semantic design tokens and generated platform outputs.
 - `packages/web-ui` — shared accessible React primitives.
 - `packages/shared-config` — shared strict TypeScript configuration.
+- `.tmp/` — local database exports, Docker image archives, deployment artifacts, and PDF tooling; excluded from Git and Docker builds. Use this folder for local temporary artifacts.
 
 Product behavior is defined by `docs/workflows`, architecture by `docs/architecture/MateryalPH_Technical_System_Design.md`, and interface implementation by `docs/design/MateryalPH_UI_UX_Implementation_Planner.md`.
 
@@ -69,7 +70,7 @@ npm install
 npm run dev
 ```
 
-### Buyer application
+### Buyer application (local Run)
 
 ```powershell
 Set-Location apps/buyer-mobile
@@ -86,7 +87,7 @@ adb -s 110013341G000422 reverse tcp:8081 tcp:8081
 adb -s 110013341G000422 reverse --list
 ```
 
-### For Render Mobile Use
+### For Render Mobile Use (Internet Run using render deployed api backend)
 
 https://materyalph-staging-api.onrender.com/api/v1
 I checked the API—it returned HTTP 200.

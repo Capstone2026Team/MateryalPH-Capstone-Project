@@ -47,9 +47,7 @@ apps/buyer-mobile/.dart_tool/
 apps/buyer-mobile/build/
 
 # Local runtime data
-/.tmp/docker-images/
-/.tmp/database-exports/
-tmp/pdf-tools/
+/.tmp/
 services/api/phase15-*.log
 services/api/delivery-*.log
 packages/api-contract/**/delivery-*.log
@@ -79,6 +77,3 @@ services/api/.env.testing
 .impeccable/live/deferred-svelte-component-accepts.json
 .impeccable/live/*.png
 # impeccable-ignore-end
-# Local realtime count validation artifacts and pre-edit comparisons
-/.tmp/realtime-counts/
-/.tmp/staging-deployment/
