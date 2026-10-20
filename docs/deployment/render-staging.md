@@ -97,6 +97,8 @@ Render will prompt for `sync: false` values during initial creation. Enter secre
 
 ### Staging credentials
 
+For the current applied provider settings and the remaining private-storage, mail, scanner, webhook and browser-push steps, see [provider setup](provider-setup.md).
+
 Generate a new Passport pair, separate from development:
 
 ```powershell

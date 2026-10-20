@@ -48,7 +48,9 @@ The full API run first exhausted its 128 MB test-runner memory limit, then compl
 
 ## Required services and acceptance still outstanding
 
-No separate staging provider credential file was found. The cloud API lacks backend maps, private object storage, Cloudinary, mail, Xendit TEST and Firebase configuration. The local storage endpoint belongs to development MinIO, and local Gmail SMTP cannot provide delivery from Free Render compute. Development credentials must not be silently reused in staging.
+**Follow-up:** the owner subsequently asked to use the existing local provider credentials. Maps, Cloudinary, Xendit TEST and native Firebase were configured and the API redeployed. A later owner-created private Backblaze staging bucket and scoped key passed signed S3 and Laravel adapter checks. Brevo SMTP authentication also passed with mandatory TLS; the owner-confirmed sender and mail settings were saved in Render with a fresh historical-mail cutoff. See [current provider setup and remaining steps](provider-setup.md) for deployment evidence. The paragraph below records what was absent at the initial audit; historical file-object migration, mailbox delivery acceptance, scanning and browser-push setup remain outstanding.
+
+At the initial audit, no separate staging provider credential file was found, and the cloud API lacked backend maps, private object storage, Cloudinary, mail, Xendit TEST and Firebase configuration. The local storage endpoint belongs to development MinIO, and local Gmail SMTP cannot provide delivery from Free Render compute. Development credentials must not be silently reused in staging.
 
 Configure the actual staging services through cloud secret fields or an ignored staging file: `GOOGLE_MAPS_SERVER_API_KEY`; private-storage `AWS_*` settings; `CLOUDINARY_*`; a mail transport supported by Free compute; `XENDIT_SECRET_KEY` with a TEST credential and the configured webhook verification secret; and `FIREBASE_PROJECT_ID`/`FIREBASE_SERVICE_ACCOUNT_JSON_BASE64`. Use the exact names in [the staging setup guide](render-staging.md) and API `.env.example`.
 

@@ -51,9 +51,9 @@ export function EventTimeline({ label, events, formatDate, empty = 'No events ha
  * before → after change, requires a written reason, and surfaces a stale-version conflict instead of retrying.
  * Authorization is enforced by the API; this form only reflects it.
  */
-export function ReasonedDecisionForm({ title, target, version, before, after, submitLabel, variant = 'primary', minReason = 10, maxReason = 1000, busy = false, error, conflict, onReload, onSubmit, children }: {
+export function ReasonedDecisionForm({ title, target, version, before, after, submitLabel, variant = 'primary', minReason = 10, maxReason = 1000, busy = false, submitDisabled = false, error, conflict, onReload, onSubmit, children }: {
   title: string; target: string; version?: number | string | null; before?: ReactNode; after?: ReactNode; submitLabel: string; variant?: 'primary' | 'danger'
-  minReason?: number; maxReason?: number; busy?: boolean; error?: string | null; conflict?: string | null; onReload?: () => void; onSubmit: (reason: string) => void; children?: ReactNode
+  minReason?: number; maxReason?: number; busy?: boolean; submitDisabled?: boolean; error?: string | null; conflict?: string | null; onReload?: () => void; onSubmit: (reason: string) => void; children?: ReactNode
 }) {
   const [reason, setReason] = useState('')
   const [touched, setTouched] = useState(false)
@@ -63,7 +63,7 @@ export function ReasonedDecisionForm({ title, target, version, before, after, su
   const submit = (event: FormEvent) => {
     event.preventDefault()
     setTouched(true)
-    if (invalid || busy) return
+    if (invalid || busy || submitDisabled) return
     onSubmit(trimmed)
   }
   return <form onSubmit={submit} aria-labelledby={headingId} noValidate className="grid min-w-0 gap-4 rounded-surface border border-border-default bg-surface-primary p-4">
@@ -78,7 +78,7 @@ export function ReasonedDecisionForm({ title, target, version, before, after, su
     {children}
     <div className="grid gap-2">
       <label htmlFor={reasonId} className="text-sm font-semibold text-text-strong">Reason <span className="text-status-error" aria-hidden="true">*</span></label>
-      <textarea id={reasonId} value={reason} maxLength={maxReason} rows={3} required onBlur={() => setTouched(true)} onChange={event => setReason(event.target.value)}
+      <textarea id={reasonId} value={reason} maxLength={maxReason} rows={3} required disabled={busy} onBlur={() => setTouched(true)} onChange={event => setReason(event.target.value)}
         aria-invalid={touched && invalid} aria-describedby={touched && invalid ? errorId : hintId}
         className={`min-h-24 w-full min-w-0 rounded-control border bg-surface-primary px-3 py-2 text-base text-text-strong focus:border-focus-ring focus:ring-2 focus:ring-focus-ring/20 ${touched && invalid ? 'border-status-error' : 'border-border-default'}`} />
       {touched && invalid ? <span id={errorId} role="alert" className="text-sm text-status-error">Enter a reason of at least {minReason} characters.</span>
@@ -88,6 +88,6 @@ export function ReasonedDecisionForm({ title, target, version, before, after, su
       <span className="min-w-0 flex-1">{conflict}</span>{onReload && <Button variant="secondary" onClick={onReload}>Reload latest</Button>}
     </div>}
     {error && !conflict && <p role="alert" className="rounded-control border border-status-error/30 bg-red-50 px-4 py-3 text-sm text-red-900">{error}</p>}
-    <div className="flex justify-end"><Button type="submit" variant={variant} disabled={busy}>{busy ? 'Saving…' : submitLabel}</Button></div>
+    <div className="flex justify-end"><Button type="submit" variant={variant} disabled={busy || submitDisabled}>{busy ? 'Saving…' : submitLabel}</Button></div>
   </form>
 }

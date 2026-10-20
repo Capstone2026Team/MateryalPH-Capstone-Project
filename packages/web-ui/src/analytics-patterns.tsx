@@ -2,6 +2,7 @@ import { useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } 
 import { AlertTriangle, ArrowDownRight, ArrowUpRight, Award, BadgeCheck, Clock, EyeOff, Minus, ShieldCheck, Star, Tag, ThumbsUp, Timer, TrendingUp, Users } from 'lucide-react'
 import { chartLeftInset, chartMinimumWidth, chartTicks } from './chart-layout'
 import { useMeasuredWidth } from './geo-analytics-patterns'
+import { StatusBadge } from './portal-shell'
 
 /** One graph/table day. A null value is a gap (missing day, suppressed or no local observation) — never zero. */
 export type PricePoint = {
@@ -267,4 +268,33 @@ export function ScoreTile({ name, value, published, sample, minimum, window: win
     <p className="text-xs text-text-secondary">{windowText}{minimum ? ` · ${sample ?? 0} of ${minimum} needed` : ''}</p>
     {!published && <p className="text-xs text-text-secondary">{status}</p>}
   </div>
+}
+
+const SCORE_NAMES: Record<string, string> = { VPS: 'Vendor Performance Score', VCS: 'Vendor Community Score', MQS: 'Material Quality Score', OHS: 'Operational Health Score' }
+
+/** Snapshot values and eligibility come from the API; this component never calculates a score. */
+export function ScoreSummaryGrid({ scores }: { scores: { key: string; value?: string | null; published: boolean; sampleCount: number; minimumSample: number; window: string; statusText: string }[] }) {
+  return <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{scores.map(score => <li key={score.key} className="flex min-w-0 flex-col gap-3 rounded-surface border border-border-default bg-surface-primary p-5">
+    <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold text-text-strong">{score.key}</span><StatusBadge label={score.published ? 'Published' : 'Building track record'} tone={score.published ? 'success' : 'neutral'} /></div>
+    <p className="text-xs text-text-secondary">{SCORE_NAMES[score.key] ?? score.key}</p>
+    <p className="text-3xl font-semibold tabular-nums text-text-strong">{score.published && score.value != null ? <>{score.value}<span className="ml-1 text-sm font-normal text-text-secondary">/ 5</span></> : <span className="text-xl">Not published</span>}</p>
+    {score.minimumSample > 0 && <p className="text-sm text-text-secondary"><span className="font-semibold tabular-nums text-text-strong">{score.sampleCount}</span> eligible samples · {score.minimumSample} minimum</p>}
+    <p className="mt-auto text-xs leading-5 text-text-secondary">{score.window}</p>
+    {!score.published && <p className="border-t border-border-default pt-3 text-xs leading-5 text-text-secondary">{score.statusText}</p>}
+  </li>)}</ul>
+}
+
+/** Eligibility descriptions and scope are kept visible, including for unearned badges. */
+export function BadgeStatusList({ badges }: { badges: { code: string; name: string; description: string; status: string; scopes: { scopeLabel?: string | null }[] }[] }) {
+  if (!badges.length) return <p className="text-sm text-text-secondary">No badge information is available.</p>
+  return <ul className="grid gap-x-6 sm:grid-cols-2">{badges.map(badge => {
+    const Icon = BADGE_ICONS[badge.code] ?? Award
+    return <li key={badge.code} className="flex min-w-0 gap-3 border-b border-border-default py-4 last:border-b-0">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-control bg-surface-canvas"><Icon size={20} aria-hidden="true" className={badge.status === 'EARNED' ? 'text-action-primary' : 'text-text-secondary'} /></span>
+      <div className="min-w-0 space-y-2"><div className="flex flex-wrap items-center gap-2"><h3 className="text-sm font-semibold">{badge.name}</h3><StatusBadge label={badge.status === 'EARNED' ? 'Earned' : badge.status === 'SUPPRESSED' ? 'Suppressed' : 'Not earned'} tone={badge.status === 'EARNED' ? 'success' : badge.status === 'SUPPRESSED' ? 'warning' : 'neutral'} /></div>
+        <p className="text-xs leading-5 text-text-secondary">{badge.description}</p>
+        {badge.scopes.some(scope => scope.scopeLabel) && <p className="text-xs text-text-secondary">{badge.scopes.map(scope => scope.scopeLabel).filter(Boolean).join(' · ')}</p>}
+      </div>
+    </li>
+  })}</ul>
 }

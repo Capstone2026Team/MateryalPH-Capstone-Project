@@ -80,6 +80,7 @@ export {
   PriceTrendChart, PriceTrendTable, PriceTrendPanel, TrendSummary, AnalyticsNullState, SuppressionNotice, DatasetNotice, BadgeList, StarRatingDisplay, StarRatingInput, ScoreTile,
   formatAnalyticsDate, formatPhpDecimal, analyticsDay, type PricePoint, type TrendValue,
 } from './analytics-patterns'
+export { ScoreSummaryGrid, BadgeStatusList } from './analytics-patterns'
 
 export { SidePanel } from './side-panel'
 export { PortalResourceProvider, usePortalResource } from './portal-resources'
