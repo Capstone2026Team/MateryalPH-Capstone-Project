@@ -1,14 +1,15 @@
 # Staging provider setup
 
-## Free-only setup: storage and mail configured
+## Free-only setup: storage, mail and scanning configured
 
 The owner confirmed that only Render Free compute is available. The Backblaze account, private staging bucket and scoped application key have since been created and validated. Keep the current Render plans. Account setup and remaining steps are:
 
 1. **Backblaze B2 account and bucket: completed.** Keep billing disabled and stay within the [first 10 GB free storage allowance and download limits](https://www.backblaze.com/cloud-storage/pricing). Review [data caps and alerts](https://www.backblaze.com/docs/en/cloud-storage-data-caps-and-alerts); the free allowance is not unlimited storage or traffic. Existing imported objects still require a separate checked copy.
 2. **Brevo SMTP configuration: completed; delivery acceptance pending.** The owner confirmed sender readiness. The [Free plan includes transactional email and 300 sends per day](https://help.brevo.com/hc/en-us/articles/208589409-About-Brevo-s-pricing-plans). The SMTP relay uses port 2525 with mandatory TLS; no paid plan or add-on was selected.
-3. Save the bucket credentials and SMTP settings only in the ignored `services/api/.env.staging.providers` file. Leave the browser-push VAPID setting blank until it is obtained from the matching Firebase project. Do not paste keys or email verification codes into chat.
+3. **Bouncer Free scanning: configured and deployed.** Real clean-file, full 25 MiB and antivirus-rejection checks passed. The owner confirmed that a Vendor profile-picture upload saves; display remains unresolved. See [the upload repair evidence](render-free-uploads-2026-10-20.md).
+4. Save provider credentials only in the ignored `services/api/.env.staging.providers` file. Leave the browser-push VAPID setting blank until it is obtained from the matching Firebase project. Do not paste keys or email verification codes into chat.
 
-The owner created Brevo credentials and confirmed sender readiness. SMTP authentication passed, and the staging mail configuration is saved in Render. Render account access does not include other providers' sender-verification sessions, so sender verification is owner-confirmed rather than independently checked in Brevo's dashboard. Storage/mail setup does not remove the scanner blocker below.
+The owner created Brevo credentials and confirmed sender readiness. SMTP authentication passed, and the staging mail configuration is saved in Render. Render account access does not include other providers' sender-verification sessions, so sender verification is owner-confirmed rather than independently checked in Brevo's dashboard. The later Bouncer deployment below resolves scanner configuration separately from storage and mail.
 
 ### Brevo validation on 2026-10-20
 
@@ -34,7 +35,7 @@ An earlier credential check found that `services/api/.env` contained the bucket 
 - The valid key pair and public connection settings were transferred directly into the staging API's Render environment fields. `FILESYSTEM_DISK=s3`, `VENDOR_PRIVATE_DISK=s3` and path-style addressing remain enabled. The optional `AWS_URL` remains unset. Read-back matched the intended settings and preserved unrelated direct service variables. The complete configuration was also saved into the ignored staging provider input; no secret values were printed or committed.
 - Deployment `dep-dbbd47brjlhs73dr20q0` is live on the existing application commit, finished at `2026-10-20T02:30:51Z`. The connected Render tool confirmed the deployment status. No paid resource or plan change was made.
 
-These storage checks ran from the operator's machine, not an authenticated application journey on Render. Only synthetic connectivity objects were written; no customer files were read, migrated or published, no file records were created, and scanning was not bypassed. Historical file objects still need a checked source-to-staging copy before existing attachment access can be accepted. Uploads continue to fail closed while the scanner is unavailable.
+These storage checks ran from the operator's machine, not an authenticated application journey on Render. Only synthetic connectivity objects were written; no customer files were read, migrated or published, no file records were created, and scanning was not bypassed. Historical file objects still need a checked source-to-staging copy before existing attachment access can be accepted. Scanning was unavailable at storage activation; the later Bouncer deployment below supersedes that configuration blocker.
 
 The initial post-deploy application-log query found no `ERROR` entries after activation in its short observation window. The first shell-based health/CSRF/CORS/portal-asset rerun was blocked because automatic approval review hit a usage limit; a web-fetch attempt also could not access the URLs. These failed attempts were not counted as health passes. The later command `node .tmp/staging-deployment/probe-live-portals.mjs` passed during the Brevo follow-up above, closing that smoke-check gap. Live deployment status was independently verified through the Render connector and recorded in the ignored operator deployment file.
 
@@ -61,7 +62,7 @@ The subsequently connected Render plugin successfully listed the confirmed capst
 
 Render access does not grant access to Backblaze/Brevo, Firebase Console or Xendit Dashboard. The Render connection can apply credentials and deploy the application once the external resources exist; it does not provision a transactional mail account or an external S3 bucket. [Persistent disks require paid Render compute](https://render.com/docs/disks), and [Free compute blocks the local Gmail SMTP ports](https://render.com/docs/free). No paid resource, extra service, scan bypass, database access-rule change or placeholder success was introduced during this check. An optional read-only database sizing query through the plugin was unavailable; no database connectivity change was made for it.
 
-Plugin discovery found an official Firebase integration that may provide the remaining project access. Installation/connection has been offered but is not yet confirmed. No suitable storage or transactional-relay integration was confirmed from the directory results. Completing the remaining work still requires mailbox delivery acceptance, a compatible scanner service and the relevant provider-side access. These are external prerequisites, not additional Render permissions.
+Plugin discovery found an official Firebase integration that may provide the remaining project access. Installation/connection has been offered but is not yet confirmed. No suitable storage or transactional-relay integration was confirmed from the directory results. Mailbox delivery acceptance and relevant provider-side access remain separate from Render permissions. The subsequently configured scanner is recorded below.
 
 ## Private storage: create a reachable private bucket
 
@@ -86,20 +87,17 @@ The saved local Gmail app password is for SMTP on port 587. [Render Free blocks 
 3. Before enabling delivery, set `MAIL_DELIVERY_NOT_BEFORE` to the activation time in exact UTC `YYYY-MM-DDTHH:MM:SSZ` format. Preserve old records; do not replay imported mail or old security codes.
 4. Verify TLS/authentication without sending first, apply the settings to the API and redeploy. Actual delivery needs an explicitly requested test or a new user-initiated verification/invitation flow. SMTP authentication alone does not prove mailbox delivery.
 
-## Upload scanning: a running scanner is required
+## Upload scanning: Bouncer Free selected on 2026-10-20
 
-The current implementation invokes `clamscan` locally. It has no `SCANNER_API_KEY` or remote-scanner endpoint setting. The Free API has 512 MB, while [ClamAV's documented minimum is 3 GiB](https://docs.clamav.net/manual/Installing/Docker.html). Uploads therefore remain fail-closed.
+The owner selected an ongoing free scanner and explicitly approved lowering new review-video uploads to **25 MiB (26,214,400 bytes)**. This supersedes the former 100 MB ceiling; the [Buyer](../workflows/MateryalPH_Final_Buyer_Workflow.md) and [System](../workflows/MateryalPH_Final_System_Workflow.md) workflows record the decision. Existing photos/documents keep their lower purpose-specific limits, and historical media remains available under existing permissions.
 
-Keeping all Render plans Free requires an external adequately resourced scanner plus an implemented, reviewed adapter with authenticated TLS, limits, timeouts, freshness checks and fail-closed behavior. A running scanner host/provider and its access mechanism must be selected before that adapter can be completed. The alternative for the current local-binary implementation is sufficiently resourced API compute, which has not been approved or provisioned. Do not disable scanning or label unscanned files clean.
+[Bouncer Free](https://usebouncer.dev/docs/) provides 500 scans per account per month and 25 MiB files. Its v1 upload path stops around 4.5 MB, so the backend adapter uses v2's authenticated upload-target request, server-only HTTPS multipart upload and bounded result polling for every file. No client receives scanner credentials or signed upload fields. A result must be completed, clean, fresh, and match the complete file's SHA256 and size before existing storage/audit actions proceed. Provider errors, pending/failed scans, inconsistent results, quota exhaustion and unknown driver names fail closed.
 
-With no external scanner host available, hosted scanner plans were checked on 2026-10-20:
+Set only on the staging API: `SCANNER_DRIVER=bouncer`, `BOUNCER_API_KEY` and `SCANNER_TIMEOUT_SECONDS=50`. The key belongs in the ignored `services/api/.env.staging.providers` and Render's secret environment field. Local development defaults to the existing `clamscan` adapter with its seven-day signature freshness check. `RUN_FRESHCLAM=false` remains correct for the Free staging API; the external provider operates the scanner.
 
-| Candidate | Published allowance | Fit for the current workflows |
-| --- | --- | --- |
-| [Cloudmersive Free](https://cloudmersive.com/pricing-small-business) | 600 calls/month, one call/second, 3.5 MB maximum file size; evaluation plan without expiration | Does not cover permitted 10 MB photos/documents or 100 MB review videos. A new adapter and account would still be required. |
-| [AttachmentScanner](https://www.attachmentscanner.com/) | 14-day free trial; [API supports files up to 256 MB](https://www.attachmentscanner.com/docs/api.html) | The trial is not a continuing free service. No trial or paid subscription was started. |
+The owner created the Free account/key. Operator-side validation authenticated the Free tier and passed real scans of a harmless file, a full 25 MiB synthetic file, and rejection of the harmless EICAR antivirus test. No customer content was used. Deployment and authenticated upload acceptance are recorded in [the upload repair evidence](render-free-uploads-2026-10-20.md).
 
-No compatible ongoing free scanner was established by this check. Do not present the deployment as supporting all uploads under the current constraints. Preserve the approved [Buyer](../workflows/MateryalPH_Final_Buyer_Workflow.md) and [System](../workflows/MateryalPH_Final_System_Workflow.md) limits, including 100 MB review videos; do not split files to evade a provider's maximum, scan only a prefix, publish private documents to a public malware corpus, or treat provider errors/quota exhaustion as a clean result. Uploads remain blocked when scanning is unavailable. A suitable service or additional scanner capacity is still needed before upload-dependent features can be accepted.
+The monthly allowance resets on the first of the month UTC; requesting a scan consumes quota even if its direct upload subsequently fails. No automatic POST retries or paid upgrades are enabled. [Bouncer's privacy policy](https://usebouncer.dev/privacy/) permits temporary file retention for up to 24 hours and retains private scan metadata; its infrastructure is in Mumbai. The adapter sends generic filenames rather than original user filenames. Files are never submitted to a public malware corpus. Scanner quota/outages can still prevent new uploads.
 
 ## Complete provider-side acceptance
 

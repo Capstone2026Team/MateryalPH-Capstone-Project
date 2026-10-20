@@ -16,8 +16,8 @@ void main() {
       final client = _client((options, handler) {
         expect(options.path, '/buyers/account/photo');
         expect(options.method, 'POST');
-        expect(options.sendTimeout, const Duration(seconds: 30));
-        expect(options.receiveTimeout, const Duration(seconds: 45));
+        expect(options.sendTimeout, const Duration(seconds: 90));
+        expect(options.receiveTimeout, const Duration(seconds: 90));
         expect(options.headers['Authorization'], 'Bearer fixture-access');
         final form = options.data as FormData;
         expect(Map.fromEntries(form.fields), {'lock_version': '1'});

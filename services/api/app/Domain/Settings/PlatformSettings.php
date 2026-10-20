@@ -92,6 +92,14 @@ final class PlatformSettings
             $context = array_map(static fn (array $row): mixed => $row['value'], $decoded) + $defaults;
             foreach ($defaults as $settingKey => $default) {
                 $stored = $decoded[$settingKey] ?? null;
+                // Published history stays immutable. Lowering one hard ceiling must preserve other saved limits.
+                if ($settingKey === 'uploads.limits_kb' && is_array($stored['value'] ?? null)) {
+                    foreach (PlatformSettingRegistry::UPLOAD_CEILINGS_KB as $purpose => $ceiling) {
+                        if (is_int($stored['value'][$purpose] ?? null)) {
+                            $stored['value'][$purpose] = min($ceiling, $stored['value'][$purpose]);
+                        }
+                    }
+                }
                 $valid = $stored !== null && PlatformSettingRegistry::errors($settingKey, $stored['value'], $context) === [];
                 $this->loaded[$settingKey] = $valid ? $stored : ['value' => $default, 'version' => 0];
             }

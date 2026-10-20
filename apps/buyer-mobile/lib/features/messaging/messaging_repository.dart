@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import '../../core/api_guard.dart';
+import '../../core/file_upload_transport.dart';
 import '../../core/private_realtime.dart';
 
 abstract interface class MessagingRepository {
@@ -86,9 +87,7 @@ abstract interface class MessagingRepository {
   });
 }
 
-/// A chat upload answers only after the fail-closed malware scan, and a photo of up to 10 MB
-/// can take a while to send or fetch on mobile data. The generated client's three-second
-/// receive timeout reported these as offline even though the upload had been saved.
+/// Private attachment reads need enough time to fetch media; upload budgets are shared centrally.
 final class _ChatAttachmentTimeouts extends Interceptor {
   static final _attachments = RegExp(
     r'/conversations/[^/]+/attachments(/[^/]+)?$',
@@ -98,10 +97,7 @@ final class _ChatAttachmentTimeouts extends Interceptor {
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     final match = _attachments.firstMatch(options.path);
     if (match != null) {
-      if (options.method == 'POST' && match.group(1) == null) {
-        options.sendTimeout = const Duration(seconds: 60);
-        options.receiveTimeout = const Duration(seconds: 60);
-      } else if (options.method == 'GET') {
+      if (options.method == 'GET') {
         options.receiveTimeout = const Duration(seconds: 45);
       }
     }
@@ -120,6 +116,7 @@ final class ApiMessagingRepository implements MessagingRepository {
     )) {
       _client.dio.interceptors.add(_ChatAttachmentTimeouts());
     }
+    configureFileUploads(_client.dio);
   }
   final api.MateryalphApiClient _client;
   final ApiGuard _guard;

@@ -13,6 +13,7 @@ use App\Domain\Geography\RadiusPolicy;
 use App\Domain\Geography\RouteProvider;
 use App\Domain\Identity\TokenSessionService;
 use App\Domain\Operations\OutboxProcessor;
+use App\Domain\Settings\PlatformSettingRegistry;
 use App\Domain\Settings\PlatformSettings;
 use App\Domain\Vendors\AddressGeocoder;
 use App\Domain\Vendors\VendorFileScanner;
@@ -95,6 +96,23 @@ final class PhaseSixteenAdminOperationsTest extends TestCase
             $this->getJson($path.$separator.'from=2000-01-01&to=2000-01-01')->assertOk();
             $this->getJson($path.$separator.'from=2000-01-02&to=2000-01-01')->assertUnprocessable();
         }
+    }
+
+    public function test_lower_upload_ceiling_preserves_other_saved_limits_and_published_history(): void
+    {
+        $legacy = PlatformSettingRegistry::defaultValue('uploads.limits_kb');
+        $legacy['vendor_document'] = 1024;
+        $legacy['review_video'] = 102400;
+        DB::table('platform_settings')->where('key', 'uploads.limits_kb')->update(['value' => json_encode($legacy, JSON_THROW_ON_ERROR)]);
+        $persisted = (string) DB::table('platform_settings')->where('key', 'uploads.limits_kb')->value('value');
+        $history = DB::table('platform_setting_versions')->where('setting_key', 'uploads.limits_kb')->get()->toJson();
+        $settings = PlatformSettings::current();
+        $settings->forget();
+
+        self::assertSame(25600, $settings->uploadKb('review_video'));
+        self::assertSame(1024, $settings->uploadKb('vendor_document'));
+        self::assertSame($persisted, (string) DB::table('platform_settings')->where('key', 'uploads.limits_kb')->value('value'));
+        self::assertSame($history, DB::table('platform_setting_versions')->where('setting_key', 'uploads.limits_kb')->get()->toJson());
     }
 
     public function test_platform_settings_are_versioned_validated_wired_to_new_records_and_super_admin_only(): void

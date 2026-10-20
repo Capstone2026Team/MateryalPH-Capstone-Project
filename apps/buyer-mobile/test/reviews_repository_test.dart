@@ -23,7 +23,7 @@ Map<String, Object?> _envelope() => {
       'comment_max': 1000,
       'media_max': 3,
       'photo_max_bytes': 10485760,
-      'video_max_bytes': 104857600,
+      'video_max_bytes': 26214400,
       'blind_reveal': 'Hidden until reveal',
     },
     'display_name_options': [
@@ -229,7 +229,7 @@ void main() {
       expect(view.lines.single.review!.media.single.byteSize, 2000);
       expect(view.mediaMax, 3);
       expect(view.photoMaxBytes, 10485760);
-      expect(view.videoMaxBytes, 104857600);
+      expect(view.videoMaxBytes, 26214400);
     },
   );
 

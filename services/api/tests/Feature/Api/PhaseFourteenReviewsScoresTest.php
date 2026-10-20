@@ -109,7 +109,7 @@ final class PhaseFourteenReviewsScoresTest extends TestCase
         $this->get($media[0]['url'])->assertNotFound();
         $this->freeze($completed->addHours(24));
         $this->uploadReviewMedia($reviewId, [UploadedFile::fake()->image('late.png')])->assertConflict()->assertJsonPath('errors.0.code', 'REVIEW_LOCKED');
-        $this->getJson('/api/v1/buyers/orders/'.$orderId.'/reviews')->assertOk()->assertJsonPath('data.rules.photo_max_bytes', 10 * 1024 * 1024)->assertJsonPath('data.rules.video_max_bytes', 100 * 1024 * 1024);
+        $this->getJson('/api/v1/buyers/orders/'.$orderId.'/reviews')->assertOk()->assertJsonPath('data.rules.photo_max_bytes', 10 * 1024 * 1024)->assertJsonPath('data.rules.video_max_bytes', 25 * 1024 * 1024);
     }
 
     public function test_review_media_rejects_invalid_content_and_scanner_failure_without_changing_the_review(): void
@@ -122,7 +122,7 @@ final class PhaseFourteenReviewsScoresTest extends TestCase
         $this->submitBuyer($orderId, ['product_reviews' => [['order_line_id' => $line, 'rating' => 4]]])->assertCreated();
         $reviewId = (string) DB::table('reviews')->where('order_id', $orderId)->value('id');
         $this->uploadReviewMedia($reviewId, [UploadedFile::fake()->createWithContent('video.mp4', 'not a video')])->assertUnprocessable()->assertJsonPath('errors.0.code', 'FILE_VALIDATION_FAILED');
-        $this->uploadReviewMedia($reviewId, [UploadedFile::fake()->create('oversized.mp4', 102401, 'video/mp4')])->assertUnprocessable();
+        $this->uploadReviewMedia($reviewId, [UploadedFile::fake()->create('oversized.mp4', 25601, 'video/mp4')])->assertUnprocessable();
         $this->mediaScanner->shouldReceive('assertClean')->andThrow(new AuthenticationException('FILE_SCANNER_UNAVAILABLE', 'File scanning is unavailable. Try again later.', 503));
         $this->uploadReviewMedia($reviewId, [UploadedFile::fake()->createWithContent('video.mp4', (string) file_get_contents(base_path('tests/Fixtures/review-video.mp4')))])->assertStatus(503)->assertJsonPath('errors.0.code', 'FILE_SCANNER_UNAVAILABLE');
         self::assertSame(0, DB::table('review_media')->where('review_id', $reviewId)->count());

@@ -56,7 +56,7 @@ final class ReviewMediaFiles
         $photo = str_starts_with($mime, 'image/');
         $limit = $photo ? ReviewRules::photoMaxBytes() : ReviewRules::videoMaxBytes();
         if (($expected[strtolower($file->getClientOriginalExtension())] ?? null) !== $mime || (int) $file->getSize() < 1 || (int) $file->getSize() > $limit) {
-            throw new AuthenticationException('FILE_VALIDATION_FAILED', 'Use JPG/PNG up to 10 MB or MP4/MOV up to 100 MB.', 422);
+            throw new AuthenticationException('FILE_VALIDATION_FAILED', 'Use JPG/PNG up to 10 MB or MP4/MOV up to 25 MB.', 422);
         }
         if ($photo) {
             return $mime; // The existing photo store additionally decodes the image and validates its dimensions.

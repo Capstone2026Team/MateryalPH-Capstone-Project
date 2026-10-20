@@ -37,7 +37,11 @@ def main():
     (public / "index.php").write_text(
         "<?php\n"
         "$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);\n"
-        "if (preg_match('#^/slow/([12])$#', $path, $match)) {\n"
+        "if ($path === '/upload') {\n"
+        "    $result = [];\n"
+        "    foreach ($_FILES as $file) { $result[] = $file['error'] . ':' . $file['size']; }\n"
+        "    echo implode(',', $result);\n"
+        "} elseif (preg_match('#^/slow/([12])$#', $path, $match)) {\n"
         "    touch('/tmp/runtime-start-' . $match[1]);\n"
         "    sleep(6);\n"
         "    echo 'slow-ok';\n"
@@ -61,11 +65,51 @@ function request(string $path, string $method = 'GET'): array {
 function verify(bool $condition, string $message): void {
     if (!$condition) { throw new RuntimeException($message); }
 }
+function upload(array $sizes): array {
+    $boundary = 'materyalph-runtime-fixture';
+    $headers = [];
+    foreach ($sizes as $index => $size) {
+        $headers[] = '--'.$boundary."\r\nContent-Disposition: form-data; name=\"file$index\"; filename=\"fixture.bin\"\r\nContent-Type: application/octet-stream\r\n\r\n";
+    }
+    $end = '--'.$boundary."--\r\n";
+    $length = array_sum(array_map('strlen', $headers)) + array_sum($sizes) + count($sizes) * 2 + strlen($end);
+    $socket = fsockopen('127.0.0.1', 10000, $code, $message, 5);
+    verify(is_resource($socket), 'upload fixture could not connect');
+    stream_set_timeout($socket, 20);
+    fwrite($socket, "POST /upload HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\nContent-Type: multipart/form-data; boundary=$boundary\r\nContent-Length: $length\r\n\r\n");
+    foreach ($sizes as $index => $size) {
+        fwrite($socket, $headers[$index]);
+        while ($size > 0) {
+            $written = fwrite($socket, str_repeat('x', min(32768, $size)));
+            verify(is_int($written) && $written > 0, 'upload body was rejected before completion');
+            $size -= $written;
+        }
+        fwrite($socket, "\r\n");
+    }
+    fwrite($socket, $end);
+    $response = stream_get_contents($socket);
+    fclose($socket);
+    [$responseHeaders, $body] = explode("\r\n\r\n", $response, 2);
+    preg_match('/ (\d{3}) /', strtok($responseHeaders, "\r\n"), $match);
+    // Nginx uses chunked transfer for this fixture; retain the file result independently of framing.
+    return [(int) ($match[1] ?? 0), $body];
+}
 for ($attempt = 0; $attempt < 100; $attempt++) {
     if (request('/fast')[0] === 200) { break; }
     usleep(100000);
 }
 verify(request('/fast')[1] === 'fast-ok', 'ordinary PHP request failed');
+[$uploadStatus, $uploadBody] = upload([25 * 1024 * 1024]);
+verify($uploadStatus === 200 && str_contains($uploadBody, '0:26214400'), '25 MiB upload failed');
+[$batchStatus, $batchBody] = upload([20 * 1024 * 1024, 20 * 1024 * 1024]);
+verify($batchStatus === 200 && str_contains($batchBody, '0:20971520,0:20971520'), 'multipart request above 32 MiB failed');
+[$tooLargeStatus, $tooLargeBody] = upload([25 * 1024 * 1024 + 1]);
+verify($tooLargeStatus === 200 && str_contains($tooLargeBody, '1:0'), 'PHP did not reject the oversized file');
+$socket = fsockopen('127.0.0.1', 10000, $code, $message, 5);
+fwrite($socket, "POST /upload HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\nContent-Length: 84934656\r\n\r\n");
+$oversizedStatus = fgets($socket);
+fclose($socket);
+verify(str_contains($oversizedStatus, ' 413 '), 'Nginx did not reject a request above 80 MiB');
 $children = [];
 foreach ([1, 2] as $number) {
     $pid = pcntl_fork();
@@ -101,6 +145,10 @@ for ($attempt = 0; $attempt < 50; $attempt++) {
 verify($downStatus === 502, 'health check falsely succeeded after FPM stopped');
 echo json_encode([
     'ordinary_request_passed' => true,
+    'full_25_mib_upload_passed' => true,
+    'multipart_above_32_mib_passed' => true,
+    'php_file_limit_enforced' => true,
+    'nginx_request_limit_enforced' => true,
     'concurrent_request_workers' => 2,
     'health_while_workers_busy_passed' => true,
     'health_latency_ms' => round($duration * 1000, 1),
@@ -125,6 +173,7 @@ echo json_encode([
             "--cpus", "0.5", "--entrypoint", "/bin/sh",
             "--mount", f"type=bind,src={ROOT / 'infrastructure/docker/render-nginx.conf'},dst=/check/nginx.conf,readonly",
             "--mount", f"type=bind,src={ROOT / 'infrastructure/docker/render-php-fpm.conf'},dst=/usr/local/etc/php-fpm.d/zz-render.conf,readonly",
+            "--mount", f"type=bind,src={ROOT / 'infrastructure/docker/uploads.ini'},dst=/usr/local/etc/php/conf.d/uploads.ini,readonly",
             "--mount", f"type=bind,src={public},dst=/app/services/api/public,readonly",
             "--mount", f"type=bind,src={fixture},dst=/fixture,readonly",
             args.image, "-c",

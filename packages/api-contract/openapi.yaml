@@ -11644,7 +11644,7 @@ paths:
       "tags":
         - "Buyer Reviews"
       "description": "Up to three photos or videos on your Product Review while it can
-        still be edited. JPG/PNG up to 10 MB; MP4/MOV up to 100 MB. Content
+        still be edited. JPG/PNG up to 10 MB; MP4/MOV up to 25 MB. Content
         validated and scanned before private storage."
       "security":
         - "passportBearer": []
@@ -37977,6 +37977,7 @@ components:
           "type": "integer"
         "video_max_bytes":
           "type": "integer"
+          "maximum": 26214400
         "blind_reveal":
           "type": "string"
     "ReviewRatings":
@@ -38482,7 +38483,7 @@ components:
           "items":
             "type": "string"
             "format": "binary"
-          "description": "JPG/PNG up to 10 MB or MP4/MOV up to 100 MB, content-validated
+          "description": "JPG/PNG up to 10 MB or MP4/MOV up to 25 MB, content-validated
             and scanned fail-closed."
     "ReviewFlagRequest":
       "type": "object"
