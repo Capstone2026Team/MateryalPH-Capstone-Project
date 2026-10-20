@@ -169,6 +169,16 @@ Configure external dashboards with the actual URLs:
 
 No custom domain is required.
 
+### Deployment audit and imported data
+
+The 2026-10-20 audit found a missing `RECAPTCHA_GOOGLE_CLOUD_PROJECT_ID` despite both matching portal site keys and the Enterprise API key being present. The public project metadata was restored after both existing keys reached Google and correctly rejected a synthetic invalid token. Rebuild/redeploy the API after changing this server configuration; a visible browser checkbox alone does not prove server assessment is configured.
+
+The same audit found imported encrypted values outside the authenticator table. The additive `2026_10_20_000000_create_imported_encrypted_values` migration and [staging import recovery](../security/staging-import-recovery.md) preserve the original immutable data while restoring reads with the staging key. `IMPORTED_DATA_RECOVERY_ENABLED=true` is staging-only and is declared on the API service. Populate the recovery registry with the authorized local maintenance procedure after the migration exists. Do not copy the development encryption key to Render. Preserve canonical taxpayer grouping when importing tax identities.
+
+Both portal services use `VITE_API_READ_TIMEOUT_MS=90000` so a sleeping Free API has time to wake. Shared reads remain bounded, caller cancellation still works, and business mutations are never automatically replayed. Other environments retain the 30-second default; configuration accepts only 30–120 seconds. Rebuild the static sites after changing this build-time setting.
+
+The audit also confirmed absent staging credentials for backend maps, private object storage, Cloudinary, mail, Xendit TEST and native push. Local storage points to development MinIO and local mail uses Gmail SMTP; those values cannot provide working cloud storage or permitted mail delivery on Render Free. Keep private files private, mandatory MFA and provider checks enabled, and the scanner fail-closed. Do not call every feature operational until those integrations and authenticated user journeys have been accepted. Keep every existing Render plan Free unless the owner separately approves an upgrade.
+
 ### Imported accounts and authenticator decryption
 
 A database copied from development carries encrypted authenticator secrets and key-bound hashes. A different staging `APP_KEY` cannot decrypt those secrets; the API logs `DecryptException: The MAC is invalid` and MFA returns the generic internal-error response. Keep the staging key stable. Do not copy the development key into Render or disable MFA.

@@ -72,6 +72,7 @@ class BuyerDialog extends StatelessWidget {
   final Widget title;
   final Widget? content;
   final List<Widget> actions;
+
   /// False uses Material's compact action row and automatic narrow-width overflow.
   final bool fullWidthActions;
 

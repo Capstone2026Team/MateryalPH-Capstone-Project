@@ -103,6 +103,9 @@ return [
 
     'cipher' => 'AES-256-CBC',
 
+    // Explicit staging-only import recovery. Source encryption keys are never deployed.
+    'imported_data_recovery_enabled' => filter_var(env('IMPORTED_DATA_RECOVERY_ENABLED', false), FILTER_VALIDATE_BOOL),
+
     'key' => env('APP_KEY'),
 
     'previous_keys' => [

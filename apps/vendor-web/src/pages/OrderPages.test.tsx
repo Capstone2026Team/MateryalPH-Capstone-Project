@@ -172,7 +172,7 @@ test.each([
   openDetail()
   const information = await screen.findByRole('region', { name: 'Order information' })
   expect(within(information).getByRole('heading', { name: 'Order information' })).toBeInTheDocument()
-  expect(within(information).getByRole('link', { name: 'Order documents' })).toHaveAttribute('href', '/notifications?tab=reports&resource=order-1')
+  expect(within(information).getByRole('button', { name: 'Export PDF' })).toBeEnabled()
   expect(within(information).getByText('Maria Buyer')).toBeInTheDocument()
   expect(within(information).getByText('Oct 5, 2026, 9:00 AM (Asia/Manila)')).toBeInTheDocument()
   expect(within(information).getByText(fulfillmentLabel)).toBeInTheDocument()
@@ -319,7 +319,9 @@ test('customer service confirms the request as submitted: quantities are read-on
   await waitFor(() => expect(orders.confirmOrder).toHaveBeenCalledTimes(1))
   const [orderId, request] = vi.mocked(orders.confirmOrder).mock.calls[0]!
   expect(orderId).toBe('order-1')
-  expect(request).toMatchObject({ lockVersion: 3, lines: [{ orderLineId: 'line-1', confirmedQuantity: '10' }], vendorDiscountCentavos: 0 })
+  expect(request).toMatchObject({ lockVersion: 3, lines: [{ orderLineId: 'line-1', confirmedQuantity: '10' }] })
+  expect(request).not.toHaveProperty('discount')
+  expect(request).not.toHaveProperty('vendorDiscountCentavos')
   expect(request.pickup?.readyDate).toBeInstanceOf(Date)
   expect(request.delivery).toBeUndefined()
   expect(await screen.findByText(/Order confirmed and stock reserved/)).toBeInTheDocument()
@@ -341,9 +343,10 @@ test('a lower quantity becomes a revision for Buyer approval and a stock conflic
 test('an NRPC above zero needs a reason before it is sent', async () => {
   vi.mocked(orders.getOrder).mockResolvedValue(detail())
   openDetail()
-  fireEvent.click(await screen.findByRole('checkbox', { name: 'Propose an NRPC' }))
-  fireEvent.change(screen.getByLabelText('Hollow block 4" — NRPC (₱)'), { target: { value: '50.00' } })
-  expect(screen.getByText('NRPC total:').parentElement).toHaveTextContent('₱50.00')
+  fireEvent.click(await screen.findByRole('checkbox', { name: 'Include NRPC' }))
+  fireEvent.change(screen.getByLabelText('Add prepared material'), { target: { value: 'line-1' } })
+  fireEvent.change(screen.getByLabelText(/Preparation cost for Hollow block 4"/), { target: { value: '50.00' } })
+  expect(screen.getByText('NRPC total')).toHaveTextContent('₱50.00')
   fireEvent.click(screen.getByRole('button', { name: 'Confirm and send NRPC' }))
   expect(await screen.findByText('Describe the irreversible preparation in at least 10 characters.')).toBeInTheDocument()
   expect(orders.confirmOrder).not.toHaveBeenCalled()
@@ -439,7 +442,7 @@ test.each([
   if (entry === '/orders/order-1') {
     const information = screen.getByRole('region', { name: 'Order information' })
     expect(within(information).getByRole('button', { name: 'Message' })).toBeInTheDocument()
-    expect(within(information).getByRole('link', { name: 'Order documents' })).toBeInTheDocument()
+    expect(within(information).getByRole('button', { name: 'Export PDF' })).toBeEnabled()
     expect(screen.getAllByRole('button', { name: 'Message' })).toHaveLength(1)
   }
   expect(screen.queryByText('Open Fulfillment Messages')).not.toBeInTheDocument()

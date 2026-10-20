@@ -98,6 +98,7 @@ projects:
             envVars:
               - fromGroup: materyalph-staging-runtime
               - {key: MATERYALPH_SERVICE_ROLE, value: api}
+              - {key: IMPORTED_DATA_RECOVERY_ENABLED, value: "true"}
               - {key: FRONTEND_BUYER_REDIRECT_URI, value: "materyalph://auth/callback"}
               - key: DB_URL
                 fromDatabase: {name: materyalph-staging-db, property: connectionString}
@@ -200,6 +201,7 @@ projects:
               - {key: NODE_VERSION, value: "24"}
               - {key: VITE_APP_ENV, value: staging}
               - {key: VITE_API_BASE_URL, value: /api/v1}
+              - {key: VITE_API_READ_TIMEOUT_MS, value: "90000"}
               - {key: VITE_FIREBASE_PUSH_ENABLED, value: "false"}
               - {key: VITE_GOOGLE_MAPS_BROWSER_KEY, sync: false}
               - {key: VITE_RECAPTCHA_SITE_KEY, sync: false}
@@ -225,6 +227,7 @@ projects:
               - {key: NODE_VERSION, value: "24"}
               - {key: VITE_APP_ENV, value: staging}
               - {key: VITE_API_BASE_URL, value: /api/v1}
+              - {key: VITE_API_READ_TIMEOUT_MS, value: "90000"}
               - {key: VITE_FIREBASE_PUSH_ENABLED, value: "false"}
               - {key: VITE_GOOGLE_MAPS_BROWSER_KEY, sync: false}
               - {key: VITE_RECAPTCHA_SITE_KEY, sync: false}

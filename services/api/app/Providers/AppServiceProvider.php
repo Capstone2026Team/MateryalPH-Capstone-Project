@@ -27,6 +27,7 @@ use App\Infrastructure\Compliance\HttpComplianceRegisterSource;
 use App\Infrastructure\Compliance\RegisterComplianceReferenceProvider;
 use App\Infrastructure\Compliance\TesseractComplianceTextExtractor;
 use App\Infrastructure\Compliance\UnavailableComplianceTextExtractor;
+use App\Infrastructure\Encryption\ImportedValueEncrypter;
 use App\Infrastructure\Geography\ConfiguredGoogleMapsGeocoder;
 use App\Infrastructure\Geography\GooglePlacesProvider;
 use App\Infrastructure\Geography\GoogleRoutesProvider;
@@ -44,6 +45,7 @@ use Illuminate\Console\Events\ScheduledTaskFailed;
 use Illuminate\Console\Events\ScheduledTaskFinished;
 use Illuminate\Console\Events\ScheduledTaskSkipped;
 use Illuminate\Console\Events\ScheduledTaskStarting;
+use Illuminate\Encryption\Encrypter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
@@ -57,6 +59,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        if (config('app.imported_data_recovery_enabled') && $this->app->environment(['staging', 'testing'])) {
+            $this->app->extend('encrypter', fn (Encrypter $encrypter): Encrypter => (new ImportedValueEncrypter(
+                $encrypter->getKey(), (string) config('app.cipher'),
+            ))->previousKeys($encrypter->getPreviousKeys()));
+        }
         $this->app->bind(MailProvider::class, LaravelMailProvider::class);
         $this->app->singleton(PushGateway::class, fn () => config('notifications.push_driver') === 'fake' && ! app()->isProduction()
             ? new FakePushGateway : new FcmPushGateway);

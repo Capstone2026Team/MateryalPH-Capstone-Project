@@ -41,7 +41,7 @@ const dart = `// @generated from tokens.json — do not edit directly.\nabstract
 
 const dartMotion = Object.entries(tokens.motion ?? {})
   .map(([name, value]) => `  /// ${value.use}\n  static const Duration ${toDartName(name)} = Duration(milliseconds: ${value.durationMs});`)
-const motionDart = `// @generated from tokens.json — do not edit directly.\nabstract final class MateryalMotionTokens {\n${dartMotion.join('\n')}\n}\n`
+const motionDart = `// @generated from tokens.json — do not edit directly.\nabstract final class MateryalMotionTokens {\n${dartMotion.join('\n\n')}\n}\n`
 
 const outputs = [
   [resolve(packageRoot, 'web.css'), webCss],

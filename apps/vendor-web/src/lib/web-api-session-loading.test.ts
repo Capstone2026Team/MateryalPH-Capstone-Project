@@ -77,6 +77,34 @@ test('a JSON body that stalls after its headers also times out', async () => {
   await failed
 })
 
+test('a configured cold-start window waits for the server and still has a bounded deadline', async () => {
+  vi.useFakeTimers()
+  vi.stubEnv('VITE_API_READ_TIMEOUT_MS', '90000')
+  let signal: AbortSignal | undefined
+  const fetchMock = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+    signal = init?.signal ?? undefined
+    return new Promise<Response>(() => {})
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  const request = createWebApiConfiguration(base).fetchApi!(`${base}/health`)
+  const failed = expect(request).rejects.toThrow('taking too long')
+  await vi.advanceTimersByTimeAsync(60_000)
+  expect(signal?.aborted).toBe(false)
+  expect(fetchMock).toHaveBeenCalledTimes(1)
+  await vi.advanceTimersByTimeAsync(30_000)
+  await failed
+  expect(signal?.aborted).toBe(true)
+})
+
+test.each(['invalid', '0', '120001'])('an invalid read timeout %s keeps the safe default', async configured => {
+  vi.useFakeTimers()
+  vi.stubEnv('VITE_API_READ_TIMEOUT_MS', configured)
+  vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
+  const failed = expect(createWebApiConfiguration(base).fetchApi!(`${base}/health`)).rejects.toThrow('taking too long')
+  await vi.advanceTimersByTimeAsync(30_000)
+  await failed
+})
+
 test('caller cancellation remains effective', async () => {
   vi.useFakeTimers()
   const controller = new AbortController()

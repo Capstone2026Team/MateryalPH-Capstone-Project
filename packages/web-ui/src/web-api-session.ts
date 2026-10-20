@@ -16,6 +16,11 @@ const cooldowns = new Map<string, { until: number; response: Response }>()
 
 const READ_TIMEOUT_MS = 30_000
 
+function readTimeoutMs(): number {
+  const configured = Number(import.meta.env.VITE_API_READ_TIMEOUT_MS)
+  return Number.isInteger(configured) && configured >= READ_TIMEOUT_MS && configured <= 120_000 ? configured : READ_TIMEOUT_MS
+}
+
 class WebReadTimeoutError extends Error {
   constructor() {
     super('The server is taking too long to respond. Check your connection and try again.')
@@ -56,7 +61,7 @@ async function fetchWebRequest(basePath: string, input: RequestInfo | URL, init?
       const error = new WebReadTimeoutError()
       controller.abort(error)
       reject(error)
-    }, READ_TIMEOUT_MS)
+    }, readTimeoutMs())
   })
   try {
     return await Promise.race([fetch(requestInput, { ...init, signal }).then(async response => {
