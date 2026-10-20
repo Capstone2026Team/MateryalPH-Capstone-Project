@@ -21,6 +21,7 @@ use Database\Seeders\SystemFoundationSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Passport\AccessToken;
@@ -147,6 +148,55 @@ final class PhaseTwoAccountSecurityTest extends TestCase
         self::assertNull($user->refresh()->profile_photo_key);
         self::assertSame($version, (int) $user->lock_version);
         self::assertCount(0, Storage::disk('local')->allFiles('private/profile-photos'));
+    }
+
+    public function test_configured_remote_scanner_allows_only_a_matching_clean_photo_before_private_storage(): void
+    {
+        Storage::fake('local');
+        config(['materyalph.files.disk' => 'local', 'malware.driver' => 'bouncer', 'malware.bouncer_api_key' => 'test-only-scanner-key']);
+        [$user] = $this->buyer();
+        $photo = UploadedFile::fake()->image('portrait.png', 80, 120);
+        $id = 'scan_profile_test';
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://api.usebouncer.dev/v2/scan' => Http::response(['status' => 'success', 'data' => [
+                'scan_id' => $id, 'status' => 'pending', 'max_file_size' => 26214400,
+                'upload' => ['url' => 'https://bouncer-dev-uploads-test.s3.ap-south-1.amazonaws.com/', 'fields' => ['key' => 'uploads/'.$id.'/upload.png']],
+            ]], 201),
+            'https://bouncer-dev-uploads-test.s3.ap-south-1.amazonaws.com/' => Http::response('', 204),
+            'https://api.usebouncer.dev/v2/scan/'.$id => Http::response(['status' => 'success', 'data' => [
+                'scan_id' => $id, 'status' => 'completed', 'verdict' => 'clean', 'threats' => [],
+                'file' => ['size' => filesize($photo->getRealPath()), 'sha256' => hash_file('sha256', $photo->getRealPath())],
+                'scanned_at' => now()->toIso8601String(),
+            ]]),
+        ]);
+
+        $this->post('/api/v1/buyers/account/photo', ['photo' => $photo, 'lock_version' => $user->fresh()->lock_version])->assertOk();
+
+        Http::assertSentCount(3);
+        $bytes = Storage::disk('local')->get($user->refresh()->profile_photo_key);
+        self::assertSame([256, 256], array_slice(getimagesizefromstring($bytes), 0, 2));
+        $this->assertDatabaseHas('audit_logs', ['action' => 'PROFILE_PHOTO_UPDATED', 'actor_user_id' => $user->getKey()]);
+    }
+
+    public function test_remote_scanner_quota_or_unknown_driver_preserves_the_existing_profile(): void
+    {
+        Storage::fake('local');
+        config(['materyalph.files.disk' => 'local', 'malware.driver' => 'bouncer', 'malware.bouncer_api_key' => 'test-only-scanner-key']);
+        [$user] = $this->buyer();
+        $version = (int) $user->fresh()->lock_version;
+        Http::preventStrayRequests();
+        Http::fake(['api.usebouncer.dev/*' => Http::response(['status' => 'error'], 429)]);
+
+        foreach (['bouncer', 'unsupported'] as $driver) {
+            config(['malware.driver' => $driver]);
+            $this->post('/api/v1/buyers/account/photo', ['photo' => UploadedFile::fake()->image('portrait.png'), 'lock_version' => $version])
+                ->assertStatus(503)->assertJsonPath('errors.0.code', 'PHOTO_SCANNER_UNAVAILABLE');
+        }
+        self::assertNull($user->refresh()->profile_photo_key);
+        self::assertSame($version, (int) $user->lock_version);
+        self::assertSame([], Storage::disk('local')->allFiles());
+        Http::assertSentCount(1);
     }
 
     public function test_buyer_photo_requires_active_authenticated_session_and_an_unexpired_signature(): void

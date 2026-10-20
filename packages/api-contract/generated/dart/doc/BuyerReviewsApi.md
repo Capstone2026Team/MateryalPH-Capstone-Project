@@ -25,7 +25,7 @@ Method | HTTP request | Description
 
 
 
-Up to three photos or videos on your Product Review while it can still be edited. JPG/PNG up to 10 MB; MP4/MOV up to 100 MB. Content validated and scanned before private storage.
+Up to three photos or videos on your Product Review while it can still be edited. JPG/PNG up to 10 MB; MP4/MOV up to 25 MB. Content validated and scanned before private storage.
 
 ### Example
 ```dart
@@ -34,7 +34,7 @@ import 'package:materyalph_api_client/api.dart';
 final api = MateryalphApiClient().getBuyerReviewsApi();
 final String reviewId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
-final BuiltList<MultipartFile> files = /path/to/file.txt; // BuiltList<MultipartFile> | JPG/PNG up to 10 MB or MP4/MOV up to 100 MB, content-validated and scanned fail-closed.
+final BuiltList<MultipartFile> files = /path/to/file.txt; // BuiltList<MultipartFile> | JPG/PNG up to 10 MB or MP4/MOV up to 25 MB, content-validated and scanned fail-closed.
 
 try {
     final response = api.addBuyerReviewMedia(reviewId, idempotencyKey, files);
@@ -50,7 +50,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **reviewId** | **String**|  |
  **idempotencyKey** | **String**|  |
- **files** | [**BuiltList&lt;MultipartFile&gt;**](MultipartFile.md)| JPG/PNG up to 10 MB or MP4/MOV up to 100 MB, content-validated and scanned fail-closed. |
+ **files** | [**BuiltList&lt;MultipartFile&gt;**](MultipartFile.md)| JPG/PNG up to 10 MB or MP4/MOV up to 25 MB, content-validated and scanned fail-closed. |
 
 ### Return type
 

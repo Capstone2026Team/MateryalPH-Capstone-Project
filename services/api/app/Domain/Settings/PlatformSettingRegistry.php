@@ -18,7 +18,7 @@ final class PlatformSettingRegistry
 {
     /** Upper bounds that a setting may lower but never raise; they match the transport and storage limits in code. */
     public const UPLOAD_CEILINGS_KB = ['vendor_document' => 10240, 'store_media' => 20480, 'listing_image' => 5120, 'compliance_evidence' => 10240,
-        'case_evidence' => 10240, 'review_photo' => 10240, 'review_video' => 102400];
+        'case_evidence' => 10240, 'review_photo' => 10240, 'review_video' => 25600];
 
     public const UPLOAD_LABELS = ['vendor_document' => 'Vendor verification document', 'store_media' => 'Store and vehicle media', 'listing_image' => 'Listing image',
         'compliance_evidence' => 'PS/ICC compliance evidence', 'case_evidence' => 'Dispute, invoice and fulfillment evidence', 'review_photo' => 'Review photo', 'review_video' => 'Review video'];
@@ -92,7 +92,7 @@ final class PlatformSettingRegistry
                 'rule' => 'Whole number of distinct persons from 1 to 50. 1 shows every value; raise it before real Buyer data is shared beyond Admin staff.',
                 'applies_to' => 'Every geographic analytics response and export after the change.'],
             'uploads.limits_kb' => ['group' => 'Uploads', 'label' => 'Upload size limits', 'default' => ['vendor_document' => 10240, 'store_media' => 20480, 'listing_image' => 5120,
-                'compliance_evidence' => 10240, 'case_evidence' => 10240, 'review_photo' => 10240, 'review_video' => 102400],
+                'compliance_evidence' => 10240, 'case_evidence' => 10240, 'review_photo' => 10240, 'review_video' => 25600],
                 'description' => 'Maximum file size in KB per upload purpose. Content validation and malware scanning still apply.',
                 'rule' => 'Whole KB from 512 up to the approved ceiling for each purpose; a setting can lower a limit but never raise it above its ceiling.',
                 'applies_to' => 'Uploads after the change.'],

@@ -61,6 +61,8 @@ for (const [path, methods] of Object.entries(spec.paths)) {
 }
 assert.ok(!routes.some(route => /api\/v1\/vendor\/reviews\/\{[^}]+\}$/.test(route.uri) && route.method.includes('DELETE')), 'No Vendor review delete route')
 const s = spec.components.schemas
+assert.equal(s.ReviewWindowRules.properties.video_max_bytes.maximum, 25 * 1024 * 1024, 'Review rules document the owner-approved Free scanner ceiling')
+assert.match(s.ReviewMediaForm.properties.files.description, /MP4\/MOV up to 25 MB/, 'Review upload documentation matches the active video ceiling')
 const vendorReviewList = spec.paths['/vendor/reviews'].get
 const productFilter = vendorReviewList.parameters.find(parameter => parameter.name === 'listing_id')
 assert.ok(productFilter && productFilter.in === 'query' && productFilter.schema.format === 'uuid', 'Vendor review lists support an opaque product filter')

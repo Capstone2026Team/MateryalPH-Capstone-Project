@@ -63,7 +63,7 @@ class _ReviewMediaSectionState extends State<ReviewMediaSection> {
     _coverBytes = null;
     _coverFailed = false;
     _coverLoading = widget.compact && cover != null && !cover.video;
-    // Videos can be 100 MB: fetch them only when the Buyer opens the player.
+    // Fetch videos only when the Buyer opens the player.
     if (!_coverLoading) return;
     try {
       final bytes = await widget.repository.media(widget.reviewId, cover!);

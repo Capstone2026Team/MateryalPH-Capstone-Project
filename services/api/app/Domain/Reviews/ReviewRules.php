@@ -32,7 +32,7 @@ final class ReviewRules
 
     public const PHOTO_MAX_BYTES = 10 * 1024 * 1024;
 
-    public const VIDEO_MAX_BYTES = 100 * 1024 * 1024;
+    public const VIDEO_MAX_BYTES = 25 * 1024 * 1024;
 
     /** Buyer rates the Vendor. */
     public const VENDOR = 'VENDOR';

@@ -6,7 +6,7 @@ After a successful Confirm Receipt response reports `COMPLETED`, Order Details o
 
 Review displays the purchased order items, individual Product Quality ratings, and a separate Vendor rating for Service Quality and Delivery Speed or Processing Speed. The submission preview shows actual ratings, comments, public identity and selected attachments. Comments retain the workflow's 1,000-character limit; Information Accuracy from the old prototype is not a rating criterion.
 
-Each Product Review supports three attachments combined: JPG/PNG photos up to 10 MB each and MP4/MOV videos up to 100 MB each. Buyers can choose from their gallery, take a photo or record a video, preview and remove selections, and retry pending uploads after ratings have already saved. Every file has its own stable retry key. Existing attachments can be viewed and retired while editing is permitted. Android picker recovery associates a recovered file with the original order/line when Review is reopened.
+Each Product Review supports three attachments combined: JPG/PNG photos up to 10 MB each and MP4/MOV videos up to 25 MB each. Buyers can choose from their gallery, take a photo or record a video, preview and remove selections, and retry pending uploads after ratings have already saved. Every file has its own stable retry key. Existing attachments can be viewed and retired while editing is permitted. Android picker recovery associates a recovered file with the original order/line when Review is reopened.
 
 The API validates detected MIME, extension and size, decodes photos using the existing validator, probes video structure/streams with a bounded FFmpeg process restricted to local files, and scans all media fail-closed before private storage. Review ownership, correction eligibility, blind reveal, active-dispute withholding and moderation still control access. Every add/remove appends a revision and audit record; retired commercial evidence is retained. Replayed uploads no longer create orphan files. Public product reviews display their authorized media through the same Buyer repository.
 
@@ -20,7 +20,7 @@ The API validates detected MIME, extension and size, decodes photos using the ex
 - API: `services/api/app/Domain/Reviews/{ReviewMediaFiles,ReviewRules,ReviewService,ReviewPresenter,ReviewQueries}.php` and `app/Http/Controllers/Api/ReviewController.php`.
 - API acceptance: `services/api/tests/Feature/Api/PhaseFourteenReviewsScoresTest.php` and the tiny synthetic blue-video fixture `tests/Fixtures/review-video.mp4`.
 - Contract: `packages/api-contract/openapi.yaml`, `scripts/{generate-clients,check-trust-contract}.mjs`, regenerated TypeScript/Dart clients, and generated Dart serializers.
-- Runtime: `infrastructure/docker/{api.Dockerfile,uploads.ini}`. FFmpeg is included; PHP permits 100 MB per file and 305 MB per multipart request. Endpoint-specific validation remains enforced.
+- Runtime: `infrastructure/docker/{api.Dockerfile,uploads.ini}`. FFmpeg is included; PHP permits 25 MB per file and 80 MB per multipart request. Endpoint-specific validation remains enforced.
 - All four workflow documents record the revised review navigation/media behavior or audience handling.
 
 No migrations or credential/key names were added. The existing Phase 14 review migration is confirmed Ran (batch 30). The local development API was rebuilt with `docker compose up -d --no-deps --build api`; its database setup dependency was excluded. It is healthy, contains `/usr/bin/ffprobe`, and reports the new PHP upload limits. No deployment, commit, Git command or development data mutation was performed.
@@ -66,3 +66,6 @@ flutter run -d 110013341G000422 --dart-define-from-file=config/development.json
 Implementation references: Flutter's [image_picker documentation](https://pub.dev/packages/image_picker), [video_player documentation](https://pub.dev/packages/video_player), and [FFprobe documentation](https://ffmpeg.org/ffprobe.html).
 
 Suggested commit: `fix(buyer): open reviews after receipt and support captured review media`.
+
+
+**Owner decision — 2026-10-20: Free staging upload scanning.** New MP4/MOV review uploads are limited to 25 MB each (25 MiB = 26,214,400 bytes), with the existing maximum of three attachments combined. Photos keep their existing 10 MB limit. This supersedes the former 100 MB video ceiling to support the approved ongoing Free scanner plan. Existing uploaded media and immutable review/settings history remain available under their existing access rules. Scanning must complete cleanly before files become accessible; provider outages, pending/failed scans or exhausted quota must never be treated as clean.

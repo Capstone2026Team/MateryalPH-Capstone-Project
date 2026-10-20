@@ -283,7 +283,7 @@ class OrderReviewsView {
     this.counterpartRating,
     this.mediaMax = 3,
     this.photoMaxBytes = 10 * 1024 * 1024,
-    this.videoMaxBytes = 100 * 1024 * 1024,
+    this.videoMaxBytes = 25 * 1024 * 1024,
   });
 
   final String orderId;

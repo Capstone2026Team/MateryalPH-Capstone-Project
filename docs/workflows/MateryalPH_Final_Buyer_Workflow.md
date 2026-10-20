@@ -168,7 +168,7 @@ Order Details additionally displays the original included VAT/discount allocatio
 **Review**
 
 - **Design.** Verified-purchase Vendor and product rating forms are separate. The page shows eligibility, submission deadline, rating criteria, optional comment, media rules, and the privacy-safe public identity that will appear.
-- **Flow.** The Buyer rates the Vendor and applicable products, previews the submission, and confirms. A successful Confirm Receipt that returns `COMPLETED` opens Review automatically; rating remains optional and Back returns to Order Details. Each Product Review supports choosing or capturing JPG/PNG photos (up to 10 MB) and MP4/MOV videos (up to 100 MB), with up to three attachments combined. Preview/removal and retry preserve pending attachments; ratings already saved are not submitted again. A submitted review may be corrected within 24 hours. Report Review is available for content concerns.
+- **Flow.** The Buyer rates the Vendor and applicable products, previews the submission, and confirms. A successful Confirm Receipt that returns `COMPLETED` opens Review automatically; rating remains optional and Back returns to Order Details. Each Product Review supports choosing or capturing JPG/PNG photos (up to 10 MB) and MP4/MOV videos (up to 25 MB), with up to three attachments combined. Preview/removal and retry preserve pending attachments; ratings already saved are not submitted again. A submitted review may be corrected within 24 hours. Report Review is available for content concerns.
 - **Logic.** Only eligible completed lines may be reviewed once. Reviews remain hidden until both sides submit or the 14-day window ends. An active dispute may delay publication without deleting the draft.
 
 **Cancellation Request**
@@ -639,3 +639,6 @@ Complete coverage precedes FMS; reviewable, known-cost options precede options n
 ### Owner enhancement - 2026-10-19: Help Center support
 
 Help Center includes Contact Us and My Support Requests. Account identity is populated from authenticated server records; existing identity masking remains effective. Buyers may supply a concern category, subject, description, optional order/project/work-package/transaction reference and private supporting files. Submission displays a ticket number. Buyers read responses, status and history and send follow-ups in the same ticket, with notifications for Admin responses and status changes. This does not replace order disputes or Buyer-Vendor messaging.
+
+
+**Owner decision — 2026-10-20: Free staging upload scanning.** New MP4/MOV review uploads are limited to 25 MB each (25 MiB = 26,214,400 bytes), with the existing maximum of three attachments combined. Photos keep their existing 10 MB limit. This supersedes the former 100 MB video ceiling to support the approved ongoing Free scanner plan. Existing uploaded media and immutable review/settings history remain available under their existing access rules. Scanning must complete cleanly before files become accessible; provider outages, pending/failed scans or exhausted quota must never be treated as clean.

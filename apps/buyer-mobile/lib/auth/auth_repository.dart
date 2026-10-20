@@ -5,6 +5,7 @@ import 'package:built_value/json_object.dart';
 import 'package:dio/dio.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart';
 
+import '../core/file_upload_transport.dart';
 import 'token_store.dart';
 
 final class AuthRepository {
@@ -25,6 +26,7 @@ final class AuthRepository {
     )) {
       _client.dio.interceptors.insert(0, _ProfilePhotoRequests());
     }
+    configureFileUploads(_client.dio);
   }
 
   final TokenStore _tokenStore;
@@ -628,16 +630,12 @@ final class BuyerSessionExpired extends BuyerAuthException {
   const BuyerSessionExpired() : super('Your session expired. Sign in again.');
 }
 
-/// Photo processing can spend up to 30 seconds in the fail-closed malware scan.
-/// Give only these requests enough time; ordinary account reads keep their budget.
+/// Signed avatar reads keep their own budget; multipart mutations use the shared upload transport.
 final class _ProfilePhotoRequests extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     if (options.path == '/buyers/account/photo') {
-      if (options.method == 'POST') {
-        options.sendTimeout = const Duration(seconds: 30);
-        options.receiveTimeout = const Duration(seconds: 45);
-      } else if (options.method == 'GET') {
+      if (options.method == 'GET') {
         options.receiveTimeout = const Duration(seconds: 15);
       }
     }

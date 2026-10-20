@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Domain\Compliance\ComplianceReferenceProvider;
 use App\Domain\Compliance\ComplianceRegisterSource;
 use App\Domain\Compliance\ComplianceTextExtractor;
+use App\Domain\Files\FileMalwareScanner;
 use App\Domain\Finance\DemoWithholdingEvidenceAdapter;
 use App\Domain\Finance\WithholdingEvidenceAdapter;
 use App\Domain\Geography\PlacesProvider;
@@ -28,6 +29,9 @@ use App\Infrastructure\Compliance\RegisterComplianceReferenceProvider;
 use App\Infrastructure\Compliance\TesseractComplianceTextExtractor;
 use App\Infrastructure\Compliance\UnavailableComplianceTextExtractor;
 use App\Infrastructure\Encryption\ImportedValueEncrypter;
+use App\Infrastructure\Files\BouncerFileMalwareScanner;
+use App\Infrastructure\Files\ClamAvFileMalwareScanner;
+use App\Infrastructure\Files\UnavailableFileMalwareScanner;
 use App\Infrastructure\Geography\ConfiguredGoogleMapsGeocoder;
 use App\Infrastructure\Geography\GooglePlacesProvider;
 use App\Infrastructure\Geography\GoogleRoutesProvider;
@@ -65,6 +69,11 @@ class AppServiceProvider extends ServiceProvider
             ))->previousKeys($encrypter->getPreviousKeys()));
         }
         $this->app->bind(MailProvider::class, LaravelMailProvider::class);
+        $this->app->bind(FileMalwareScanner::class, fn ($app) => $app->make(match (config('malware.driver')) {
+            'clamscan' => ClamAvFileMalwareScanner::class,
+            'bouncer' => BouncerFileMalwareScanner::class,
+            default => UnavailableFileMalwareScanner::class,
+        }));
         $this->app->singleton(PushGateway::class, fn () => config('notifications.push_driver') === 'fake' && ! app()->isProduction()
             ? new FakePushGateway : new FcmPushGateway);
         $this->app->bind(OtpCodeGenerator::class, SecureOtpCodeGenerator::class);
