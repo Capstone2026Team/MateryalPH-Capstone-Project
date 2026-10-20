@@ -13,6 +13,64 @@ import 'order_components.dart' show DeadlineCountdown;
 /// Status is always text plus an icon; deadlines are a live countdown plus the exact Asia/Manila
 /// date and time; refunds are described only as returning to the original payment method.
 
+/// Matches the web complaint fields and attributes the saved text to its filing party.
+class DisputeComplaintDetails extends StatelessWidget {
+  const DisputeComplaintDetails({super.key, required this.detail});
+
+  final DisputeDetailView detail;
+
+  @override
+  Widget build(BuildContext context) {
+    final filer = detail.filedByParty == 'VENDOR' ? 'Vendor' : 'Buyer';
+    final description = detail.description;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _ComplaintField(
+          label: 'Issue',
+          value: disputeIssueLabel(detail.issueType),
+        ),
+        const SizedBox(height: 12),
+        _ComplaintField(
+          label: 'Requested remedy',
+          value:
+              '${disputeRemedyLabel(detail.requestedRemedy)}${detail.requestedAmountCentavos != null ? ' · ${formatPeso(detail.requestedAmountCentavos!)}' : ''}',
+        ),
+        const SizedBox(height: 12),
+        _ComplaintField(
+          label: "$filer's description of the problem",
+          value: description != null && description.trim().isNotEmpty
+              ? description
+              : 'No problem description was recorded.',
+        ),
+      ],
+    );
+  }
+}
+
+class _ComplaintField extends StatelessWidget {
+  const _ComplaintField({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label,
+        style: const TextStyle(
+          fontWeight: FontWeight.w600,
+          color: BuyerTheme.muted,
+        ),
+      ),
+      const SizedBox(height: 4),
+      Text(value),
+    ],
+  );
+}
+
 (IconData, Color, Color) _statusStyle(String status) => switch (status) {
   'RESOLVED' => (
     LucideIcons.circleCheck,

@@ -114,6 +114,7 @@ Import the ignored `.tmp/staging-deployment/passport.env` into the API's Render 
 | MAIL_HOST; MAIL_USERNAME; MAIL_PASSWORD; MAIL_FROM_ADDRESS | Staging mail on TLS port 2525; verify sender and delivery. Change MAIL_PORT only to another allowed supported port. |
 | RECAPTCHA_GOOGLE_CLOUD_PROJECT_ID; RECAPTCHA_ENTERPRISE_API_KEY; RECAPTCHA_VENDOR_WEB_SITE_KEY; RECAPTCHA_ADMIN_WEB_SITE_KEY | Separate staging keys, exact generated portal hostnames, existing authentication controls retained. |
 | GOOGLE_OIDC_CLIENT_ID; GOOGLE_OIDC_CLIENT_SECRET | Separate staging OAuth application. Callback below. Optional if Google sign-in is not used. |
+| FRONTEND_BUYER_REDIRECT_URI | Set to `materyalph://auth/callback` so the Buyer app receives the short-lived Google sign-in exchange code. This is the app deep link, not Google's OAuth redirect URI. |
 | GOOGLE_MAPS_SERVER_API_KEY | Backend-restricted key, separate from browser/mobile keys. |
 | XENDIT_SECRET_KEY; XENDIT_WEBHOOK_VERIFICATION_TOKEN | **TEST credentials only**. Keep XENDIT_MODE=TEST and LIVE_COMMERCE_ENABLED=false. |
 | FIREBASE_PROJECT_ID; FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 | Separate staging Firebase project for native push, if used. Web push remains off. |
@@ -129,6 +130,27 @@ For both static sites:
 - Set `VITE_GOOGLE_MAPS_BROWSER_KEY` to a browser-restricted key for that portal's exact hostname.
 - Never put APP_KEY, Passport private keys, provider secrets or service-account JSON in any `VITE_` variable.
 - Public Firebase web settings can be added later only after the existing web-push approval requirement is satisfied.
+
+### Google sign-in and reCAPTCHA for staging
+
+The screenshots show missing provider configuration, not a missing sign-in button implementation. The Vendor button calls the Laravel OAuth flow. The Admin portal intentionally has no Google sign-up: Admin accounts remain invitation-only and use password plus mandatory authenticator TOTP. reCAPTCHA protects Vendor and Admin web auth. Buyer mobile has no reCAPTCHA integration; risky Buyer email/password or recovery requests can use the backend email step-up proof.
+
+In Google Cloud, use a separate staging project:
+
+1. In **Google Auth Platform → Branding**, set the staging app name and support/developer contact. Set **Audience** to **External**, keep publishing status **Testing**, and add the Google accounts that will test sign-in. The current flow requests only `openid`, `email`, and `profile`.
+2. In **Google Auth Platform → Clients**, create one **Web application** OAuth client for the Laravel server-side Authorization Code with PKCE flow used by Vendor web and Buyer mobile.
+3. Add this exact **Authorized redirect URI** (no trailing slash):
+   `https://materyalph-staging-vendor.onrender.com/api/v1/auth/google/callback`
+   The API entrypoint derives it from the assigned Vendor hostname. If Render assigned a different hostname, use that hostname in both Google Cloud and Render's actual URL settings. This server-side flow does not need a JavaScript origin or separate Android/iOS OAuth clients.
+4. In the existing API service's Render Environment, set `GOOGLE_OIDC_CLIENT_ID` and `GOOGLE_OIDC_CLIENT_SECRET` from that Web client. Keep the secret only on the API. Also set `FRONTEND_BUYER_REDIRECT_URI=materyalph://auth/callback`. The current API service was provisioned directly and is not linked to a Blueprint, so enter this value in Render; `render.yaml` now declares it for a future Blueprint adoption. Restart/redeploy the API after changing these values. The Buyer app build must use the public staging API URL.
+5. For web CAPTCHA, enable **reCAPTCHA Enterprise API** in the same staging project. Create two separate **Web → Checkbox** keys and leave **Disable domain verification** turned off:
+   - Vendor key: `materyalph-staging-vendor.onrender.com`
+   - Admin key: `materyalph-staging-admin.onrender.com`
+   Enter only the hostname, without scheme, path, port, or wildcard. Separate keys keep each portal restricted to its own generated domain.
+6. Create a dedicated API key restricted to **reCAPTCHA Enterprise API**. In the API's Render Environment set `RECAPTCHA_GOOGLE_CLOUD_PROJECT_ID`, `RECAPTCHA_ENTERPRISE_API_KEY`, `RECAPTCHA_VENDOR_WEB_SITE_KEY`, and `RECAPTCHA_ADMIN_WEB_SITE_KEY`. The API entrypoint derives the exact allowed hostnames from the Render portal services. Keep the API key on the API only.
+7. On the Vendor and Admin static services, set each `VITE_RECAPTCHA_SITE_KEY` to its matching public site key. These are build-time values, so redeploy/rebuild both static sites after saving them. `RECAPTCHA_ENABLED=true` is already declared in the staging environment; leave it enabled so bot protection stays enforced.
+
+Google allows development/testing/staging OAuth apps to remain unverified, but Testing mode limits access to added test users and applies a 100-user cap. Render's shared `onrender.com` domain is not yours to verify; use a custom domain you control before publishing OAuth for production. Google currently lists up to 10,000 reCAPTCHA Essentials assessments per month per organization at no charge; check the project's current quota and billing tier before wider use.
 
 ## 3. Generated URLs and cookie authentication
 

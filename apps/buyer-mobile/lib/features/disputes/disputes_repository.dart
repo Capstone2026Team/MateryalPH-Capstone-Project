@@ -13,8 +13,8 @@ import 'dispute_models.dart';
 /// Buyer transaction disputes and the Vendor invoice copies of an order, through `/api/v1` only.
 /// Filing creates a Case ID and a dispute state — never a refund; only a concluded money decision
 /// creates a Dispute-Conclusion Refund, always to the original payment method. Every mutation
-/// carries an Idempotency-Key. The generated client repeats the `files` key, which the API reads as
-/// one part, so each submission carries at most one file.
+/// carries an Idempotency-Key. Multipart arrays use PHP bracketed keys; this form attaches one
+/// evidence file per submission, with more files available from the case later.
 abstract interface class DisputesRepository {
   Future<DisputeListPage> disputes({int page = 1});
 

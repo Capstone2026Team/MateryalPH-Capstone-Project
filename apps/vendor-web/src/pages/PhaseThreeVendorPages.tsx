@@ -280,6 +280,11 @@ export function VendorDashboardPage() {
   const verificationStatus = stringValue(record(snapshot.verification).status, 'NOT_STARTED')
   const setupStatus = stringValue(record(snapshot.setup).status, 'NOT_STARTED')
   const setupProgress = checklistProgress(setupSection)
+  const activationReady = booleanValue(readiness.ready)
+  const activationLabel = activationReady ? 'Ready for activation' : statusLabel(stringValue(activation.status, 'NOT_READY'))
+  const onboardingComplete = verificationStatus === 'APPROVED' && setupStatus === 'COMPLETED'
+  const finalBlockers = onboardingComplete ? arrayValue(readiness.blockers) : []
+  const agreementsRequired = finalBlockers.some(blocker => ['vendor_terms', 'vendor_code_of_conduct'].includes(stringValue(blocker.key)))
   const accountLabel = stringValue(org.storeName, stringValue(org.legalName, 'Vendor Owner'))
   if (!snapshot.permissions.includes('vendor.onboarding.submit')) {
     const copy = staffDashboardCopy(snapshot.permissions)
@@ -299,11 +304,12 @@ export function VendorDashboardPage() {
         </DashboardPanel></div>
       </div>} /></div></VendorShell>
 
-  return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/dashboard" accountLabel={accountLabel} accountStatus={`${statusLabel(stringValue(activation.status, 'NOT_READY'))} activation`}>
+  return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/dashboard" accountLabel={accountLabel} accountStatus={activationReady ? activationLabel : `${activationLabel} activation`}>
     <div className="phase3-page space-y-6">
-      <SharedPageHeader eyebrow="Limited-Access Vendor Dashboard" title={`Welcome back, ${accountLabel}.`} description={booleanValue(readiness.ready) ? 'Your store meets activation requirements. Request activation to open marketplace features.' : 'Review and complete the requirements for Store Activation below.'} status={<StatusBadge label={statusLabel(stringValue(activation.status, 'NOT_READY'))} tone="warning" />} />
+      <SharedPageHeader eyebrow="Limited-Access Vendor Dashboard" title={`Welcome back, ${accountLabel}.`} description={activationReady ? 'Your store meets activation requirements. Request activation to open marketplace features.' : onboardingComplete ? 'Your Store Verification is approved and Store Setup is complete. Finish the remaining activation requirements below.' : 'Review and complete the requirements for Store Activation below.'} status={<StatusBadge label={activationLabel} tone={activationReady ? 'success' : 'warning'} />} />
       {actionMessage && <StatusMessage tone={actionMessage.includes('recorded') ? 'success' : 'error'}>{actionMessage}</StatusMessage>}
-      {booleanValue(readiness.ready) && <Button className="w-fit" disabled={busy} onClick={() => void activate()}>{busy ? 'Recording…' : 'Request Store Activation'} <ArrowRight size={16} aria-hidden="true" /></Button>}
+      {activationReady && <Button className="w-fit" disabled={busy} onClick={() => void activate()}>{busy ? 'Recording…' : 'Request Store Activation'} <ArrowRight size={16} aria-hidden="true" /></Button>}
+      {!activationReady && finalBlockers.length > 0 && <section aria-label="Final activation steps"><StatusMessage><h2 className="font-semibold">Finish store activation</h2><ul className="mt-2 list-disc space-y-1 pl-5">{finalBlockers.map((blocker, index) => <li key={`${stringValue(blocker.key)}-${index}`}>{stringValue(blocker.reason)}</li>)}</ul>{agreementsRequired && <Link to="/settings#Agreements" className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-control border border-border-default bg-surface-primary px-4 font-semibold text-text-strong hover:bg-surface-canvas">Review required agreements<ArrowRight size={16} aria-hidden="true" /></Link>}</StatusMessage></section>}
       <div className="grid gap-5 lg:grid-cols-2">
         <div className="space-y-3"><Checklist title="Store Verification" section={verificationSection} /><p className="text-sm text-text-secondary">Review status: <strong className="text-text-strong">{statusLabel(verificationStatus)}</strong></p><Link className="inline-flex min-h-11 items-center font-semibold text-action-primary" to="/onboarding/verification">{verificationStatus === 'APPROVED' ? 'Review Store Verification' : 'Continue Store Verification / Review requirements'}</Link></div>
         <div className="space-y-3"><Checklist title="Store Setup" section={setupSection} /><p className="text-sm text-text-secondary">Setup status: <strong className="text-text-strong">{statusLabel(setupStatus)}</strong></p><Link className="inline-flex min-h-11 items-center font-semibold text-action-primary" to="/onboarding/setup">{setupStatus === 'COMPLETED' ? 'Review Store Setup' : setupProgress.total > 0 && setupProgress.complete === setupProgress.total ? 'Complete Store Setup' : 'Continue Store Setup'}</Link></div>

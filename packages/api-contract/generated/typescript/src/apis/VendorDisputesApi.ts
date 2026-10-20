@@ -218,7 +218,7 @@ export interface FileVendorDisputeRequest {
      */
     requestedAmountCentavos?: number;
     /**
-     *
+     * Selected order lines. Multipart clients send each UUID as an affected_line_ids[] part so the server receives an array. Buyers must select at least one line for every requested remedy.
      */
     affectedLineIds?: Array<string>;
     /**
@@ -226,7 +226,7 @@ export interface FileVendorDisputeRequest {
      */
     preferredContactChannel?: FileVendorDisputePreferredContactChannelEnum;
     /**
-     * Up to five JPG, PNG or PDF files, validated and scanned, stored privately.
+     * Up to five JPG, PNG or PDF files, validated and scanned, stored privately. Multipart clients send each upload as a files[] part.
      */
     files?: Array<Blob>;
 }
@@ -438,7 +438,7 @@ export class VendorDisputesApi extends runtime.BaseAPI {
 
         if (requestParameters['files'] != null) {
             requestParameters['files'].forEach((element) => {
-                formParams.append('files', element as any);
+                formParams.append('files[]', element as any);
             })
         }
 
@@ -539,7 +539,7 @@ export class VendorDisputesApi extends runtime.BaseAPI {
 
         if (requestParameters['files'] != null) {
             requestParameters['files'].forEach((element) => {
-                formParams.append('files', element as any);
+                formParams.append('files[]', element as any);
             })
         }
 
@@ -723,7 +723,7 @@ export class VendorDisputesApi extends runtime.BaseAPI {
 
         if (requestParameters['files'] != null) {
             requestParameters['files'].forEach((element) => {
-                formParams.append('files', element as any);
+                formParams.append('files[]', element as any);
             })
         }
 
@@ -1016,7 +1016,9 @@ export class VendorDisputesApi extends runtime.BaseAPI {
         }
 
         if (requestParameters['affectedLineIds'] != null) {
-            formParams.append('affected_line_ids', requestParameters['affectedLineIds']!.join(runtime.COLLECTION_FORMATS["csv"]));
+            requestParameters['affectedLineIds']!.forEach((element) => {
+                formParams.append('affected_line_ids[]', element);
+            });
         }
 
         if (requestParameters['preferredContactChannel'] != null) {
@@ -1025,7 +1027,7 @@ export class VendorDisputesApi extends runtime.BaseAPI {
 
         if (requestParameters['files'] != null) {
             requestParameters['files'].forEach((element) => {
-                formParams.append('files', element as any);
+                formParams.append('files[]', element as any);
             })
         }
 
@@ -1515,7 +1517,7 @@ export class VendorDisputesApi extends runtime.BaseAPI {
 
         if (requestParameters['files'] != null) {
             requestParameters['files'].forEach((element) => {
-                formParams.append('files', element as any);
+                formParams.append('files[]', element as any);
             })
         }
 
@@ -1676,7 +1678,7 @@ export class VendorDisputesApi extends runtime.BaseAPI {
 
         if (requestParameters['files'] != null) {
             requestParameters['files'].forEach((element) => {
-                formParams.append('files', element as any);
+                formParams.append('files[]', element as any);
             })
         }
 

@@ -151,9 +151,12 @@ class _BooleanConstSerializer<T> implements PrimitiveSerializer<T> {
 `;
         }
       }
-      // PHP requires bracketed multipart array keys. Limit this normalization to review media.
-      if (["lib/src/api/buyer_reviews_api.dart", "lib/src/api/support_api.dart"].includes(relativePath)) {
+      // PHP requires bracketed multipart array keys for both values and uploads.
+      if (["lib/src/api/buyer_reviews_api.dart", "lib/src/api/support_api.dart", "lib/src/api/buyer_disputes_api.dart", "lib/src/api/vendor_disputes_api.dart"].includes(relativePath)) {
         contents = contents.replaceAll("r'files': files.toList(),", "r'files[]': files.toList(),");
+      }
+      if (["lib/src/api/buyer_disputes_api.dart", "lib/src/api/vendor_disputes_api.dart"].includes(relativePath)) {
+        contents = contents.replaceAll("r'affected_line_ids': encodeFormParameter", "r'affected_line_ids[]': encodeFormParameter");
       }
       if (relativePath === "lib/src/api/vendor_fulfillment_api.dart") {
         contents = contents.replace("r'additional_photos': additionalPhotos.toList(),", "r'additional_photos[]': additionalPhotos.toList(),");
@@ -203,8 +206,14 @@ class _BooleanConstSerializer<T> implements PrimitiveSerializer<T> {
         return line;
       });
     }
-    if (["src/apis/BuyerReviewsApi.ts", "src/apis/SupportApi.ts"].includes(relativePath)) {
+    if (["src/apis/BuyerReviewsApi.ts", "src/apis/SupportApi.ts", "src/apis/BuyerDisputesApi.ts", "src/apis/VendorDisputesApi.ts"].includes(relativePath)) {
       contents = contents.replaceAll("formParams.append('files', element as any);", "formParams.append('files[]', element as any);");
+    }
+    if (["src/apis/BuyerDisputesApi.ts", "src/apis/VendorDisputesApi.ts"].includes(relativePath)) {
+      contents = contents.replaceAll(
+        "formParams.append('affected_line_ids', requestParameters['affectedLineIds']!.join(runtime.COLLECTION_FORMATS[\"csv\"]));",
+        "requestParameters['affectedLineIds']!.forEach((element) => {\n                formParams.append('affected_line_ids[]', element);\n            });",
+      );
     }
     if (relativePath === "src/apis/VendorFulfillmentApi.ts") {
       contents = contents.replace("formParams.append('additional_photos', element as any);", "formParams.append('additional_photos[]', element as any);");

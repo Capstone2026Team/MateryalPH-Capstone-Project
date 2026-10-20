@@ -136,6 +136,7 @@ void main() {
       find.widgetWithText(TextField, 'Describe the problem'),
       'The store sent 6-inch blocks instead of 4-inch.',
     );
+    await tester.tap(find.byType(CheckboxListTile));
     await tester.tap(find.text('File dispute'));
     await tester.pumpAndSettle();
     expect(find.text('You appear to be offline.'), findsOneWidget);
@@ -144,6 +145,98 @@ void main() {
     expect(repository.keys, hasLength(2));
     expect(repository.keys.toSet(), hasLength(1));
   });
+
+  testWidgets('return and refund requires an affected item before sending', (
+    tester,
+  ) async {
+    await _tall(tester);
+    final repository = FakeDisputesRepository()
+      ..eligible = eligibility()
+      ..detail = disputeDetail();
+    await tester.pumpWidget(
+      _app(FileDisputeScreen(orderId: 'order-1', repository: repository)),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('What went wrong?'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Defective or damaged').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Requested remedy'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Return and refund').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Describe the problem'),
+      'The steel bars arrived damaged and need returning.',
+    );
+    await tester.tap(find.text('File dispute'));
+    await tester.pumpAndSettle();
+    expect(find.text('Select at least one affected item.'), findsOneWidget);
+    expect(repository.filings, isEmpty);
+    await tester.tap(find.byType(CheckboxListTile));
+    await tester.pump();
+    expect(find.text('Select at least one affected item.'), findsNothing);
+    await tester.tap(find.text('File dispute'));
+    await tester.pumpAndSettle();
+    expect(repository.filings.single['requestedRemedy'], 'RETURN_AND_REFUND');
+    expect(repository.filings.single['lines'], ['line-1']);
+  });
+
+  testWidgets(
+    'API validation highlights fields and keeps the entered complaint',
+    (tester) async {
+      await _tall(tester);
+      final repository = FakeDisputesRepository()
+        ..eligible = eligibility()
+        ..failOnce = (call) => call == 'file'
+            ? const DiscoveryFailure(
+                DiscoveryFailureKind.validation,
+                'Review the highlighted fields and try again.',
+                details: {
+                  'description': ['Explain which items were damaged.'],
+                  'affected_line_ids.0': ['This order line is unavailable.'],
+                  'files.0': ['The evidence file is too large.'],
+                  'order_id': ['This order is unavailable.'],
+                },
+              )
+            : null;
+      await tester.pumpWidget(
+        _app(FileDisputeScreen(orderId: 'order-1', repository: repository)),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('What went wrong?'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Wrong item').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Requested remedy'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Replacement').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(CheckboxListTile));
+      const complaint = 'The steel bars arrived damaged and need returning.';
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Describe the problem'),
+        complaint,
+      );
+      await tester.tap(find.text('File dispute'));
+      await tester.pumpAndSettle();
+      final description = tester.widget<TextField>(
+        find.widgetWithText(TextField, 'Describe the problem'),
+      );
+      expect(
+        description.decoration!.errorText,
+        'Explain which items were damaged.',
+      );
+      expect(description.controller!.text, complaint);
+      expect(find.text('This order line is unavailable.'), findsOneWidget);
+      expect(find.text('The evidence file is too large.'), findsOneWidget);
+      expect(find.textContaining('This order is unavailable.'), findsOneWidget);
+      expect(
+        tester.widget<CheckboxListTile>(find.byType(CheckboxListTile)).value,
+        isTrue,
+      );
+    },
+  );
 
   testWidgets('ineligible orders explain why and show no form', (tester) async {
     final repository = FakeDisputesRepository()
@@ -201,6 +294,69 @@ void main() {
       expect(opened, ['cracked.jpg:3']);
     },
   );
+
+  for (final filedByParty in ['BUYER', 'VENDOR']) {
+    testWidgets(
+      'original complaint attributes the saved problem to $filedByParty',
+      (tester) async {
+        await _tall(tester);
+        final vendorFiled = filedByParty == 'VENDOR';
+        const description =
+            'The agreed materials were not received.\nPlease review the attached details.';
+        final repository = FakeDisputesRepository()
+          ..detail = disputeDetail(
+            filedByParty: filedByParty,
+            issueType: vendorFiled ? 'PICKUP_NO_SHOW' : 'DEFECTIVE',
+            requestedRemedy: vendorFiled ? 'WARNING_ONLY' : 'PARTIAL_REFUND',
+            requestedAmountCentavos: vendorFiled ? null : 150050,
+            description: description,
+          );
+        await tester.pumpWidget(
+          _app(
+            DisputeDetailScreen(
+              caseId: 'case-1',
+              repository: repository,
+              now: _now,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final complaint = find.byType(DisputeComplaintDetails);
+        expect(find.text('Original complaint'), findsOneWidget);
+        expect(find.text('Your complaint'), findsNothing);
+        for (final text in [
+          "${vendorFiled ? 'Vendor' : 'Buyer'}'s description of the problem",
+          description,
+          vendorFiled ? 'Pickup no-show' : 'Defective or damaged',
+          vendorFiled ? 'Warning only' : 'Partial refund · ₱1,500.50',
+        ]) {
+          expect(
+            find.descendant(of: complaint, matching: find.text(text)),
+            findsOneWidget,
+          );
+        }
+      },
+    );
+  }
+
+  testWidgets('an absent original description has an explicit empty state', (
+    tester,
+  ) async {
+    await _tall(tester);
+    final repository = FakeDisputesRepository()
+      ..detail = disputeDetail(description: null);
+    await tester.pumpWidget(
+      _app(
+        DisputeDetailScreen(
+          caseId: 'case-1',
+          repository: repository,
+          now: _now,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('No problem description was recorded.'), findsOneWidget);
+  });
 
   testWidgets('an expired evidence link reloads the case instead of fetching', (
     tester,

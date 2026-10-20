@@ -445,9 +445,9 @@ final String issueType = issueType_example; // String |
 final String requestedRemedy = requestedRemedy_example; // String |
 final String description = description_example; // String |
 final int requestedAmountCentavos = 56; // int | Required for PARTIAL_REFUND; at most the affected lines less earlier refunds.
-final BuiltList<String> affectedLineIds = ; // BuiltList<String> |
+final BuiltList<String> affectedLineIds = ; // BuiltList<String> | Selected order lines. Multipart clients send each UUID as an affected_line_ids[] part so the server receives an array. Buyers must select at least one line for every requested remedy.
 final String preferredContactChannel = preferredContactChannel_example; // String |
-final BuiltList<MultipartFile> files = /path/to/file.txt; // BuiltList<MultipartFile> | Up to five JPG, PNG or PDF files, validated and scanned, stored privately.
+final BuiltList<MultipartFile> files = /path/to/file.txt; // BuiltList<MultipartFile> | Up to five JPG, PNG or PDF files, validated and scanned, stored privately. Multipart clients send each upload as a files[] part.
 
 try {
     final response = api.fileVendorDispute(idempotencyKey, orderId, issueType, requestedRemedy, description, requestedAmountCentavos, affectedLineIds, preferredContactChannel, files);
@@ -467,9 +467,9 @@ Name | Type | Description  | Notes
  **requestedRemedy** | **String**|  |
  **description** | **String**|  |
  **requestedAmountCentavos** | **int**| Required for PARTIAL_REFUND; at most the affected lines less earlier refunds. | [optional]
- **affectedLineIds** | [**BuiltList&lt;String&gt;**](String.md)|  | [optional]
+ **affectedLineIds** | [**BuiltList&lt;String&gt;**](String.md)| Selected order lines. Multipart clients send each UUID as an affected_line_ids[] part so the server receives an array. Buyers must select at least one line for every requested remedy. | [optional]
  **preferredContactChannel** | **String**|  | [optional]
- **files** | [**BuiltList&lt;MultipartFile&gt;**](MultipartFile.md)| Up to five JPG, PNG or PDF files, validated and scanned, stored privately. | [optional]
+ **files** | [**BuiltList&lt;MultipartFile&gt;**](MultipartFile.md)| Up to five JPG, PNG or PDF files, validated and scanned, stored privately. Multipart clients send each upload as a files[] part. | [optional]
 
 ### Return type
 

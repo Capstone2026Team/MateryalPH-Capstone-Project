@@ -57,8 +57,9 @@ export function verificationChecklist<T extends ChecklistRequirement>(requiremen
 
 export const checklistLabel = (value: string) => value.replaceAll('_', ' ').toLowerCase().replace(/^./, character => character.toUpperCase())
 export function checklistReason(item: ChecklistRequirement): string | null {
-  if (!item.reason || /^Approval is required for /.test(item.reason)) return null
-  return item.reason
+  const reason = item.reason?.trim()
+  if (!reason || /^(none|null|n\/?a)$/i.test(reason) || /^Approval is required for /.test(reason)) return null
+  return reason
 }
 
 export function ChecklistPanel({ title, items, children, renderDetails, renderAction, compact = false, selectedKey }: {

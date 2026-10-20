@@ -128,6 +128,31 @@ test('a role without dispute access is denied and the case is never requested', 
   expect(api.getDispute).not.toHaveBeenCalled()
 })
 
+test.each(['BUYER', 'VENDOR'] as const)('original complaint clearly attributes the saved description to %s', async filedByParty => {
+  snapshot(['portal.disputes', 'disputes.respond'])
+  const vendorFiled = filedByParty === 'VENDOR'
+  const description = 'The agreed materials were not received.\nPlease review the attached details.'
+  const complaintDetail = detail({ filedByParty, description,
+    issueType: vendorFiled ? 'PICKUP_NO_SHOW' : 'DEFECTIVE', requestedRemedy: vendorFiled ? 'WARNING_ONLY' : 'PARTIAL_REFUND',
+    requestedAmountCentavos: 150050 })
+  if (vendorFiled) delete complaintDetail.requestedAmountCentavos
+  vi.mocked(api.getDispute).mockResolvedValue(complaintDetail)
+  openCase()
+  const complaint = await screen.findByRole('region', { name: 'Original complaint' })
+  expect(within(complaint).getByText(`${vendorFiled ? 'Vendor' : 'Buyer'}'s description of the problem`)).toBeInTheDocument()
+  expect(within(complaint).getByText(/The agreed materials/).textContent).toBe(description)
+  expect(within(complaint).getByText(vendorFiled ? 'Pickup no-show' : 'Defective or damaged')).toBeInTheDocument()
+  expect(within(complaint).getByText(vendorFiled ? 'Warning only' : 'Partial refund · ₱1,500.50')).toBeInTheDocument()
+})
+
+test('an absent original description has an explicit empty state', async () => {
+  snapshot(['portal.disputes'])
+  vi.mocked(api.getDispute).mockResolvedValue(detail({ description: '  ' }))
+  openCase()
+  const complaint = await screen.findByRole('region', { name: 'Original complaint' })
+  expect(within(complaint).getByText('No problem description was recorded.')).toBeInTheDocument()
+})
+
 test('staff cannot offer or accept a voluntary refund; that stays with the Owner', async () => {
   snapshot(['portal.disputes', 'disputes.respond'])
   vi.mocked(api.getDispute).mockResolvedValue(detail())

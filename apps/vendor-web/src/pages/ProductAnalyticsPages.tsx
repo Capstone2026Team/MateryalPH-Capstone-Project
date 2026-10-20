@@ -218,7 +218,6 @@ export function ProductAnalyticsDetail({ canViewReviews = false }: { canViewRevi
         ? <KpiCard label="Sales value" value={formatPesoCentavos(kpis.valueCentavos.value)} delta={{ changePercent: kpis.valueCentavos.changePercent, periodLabel }} icon={<Wallet size={16} aria-hidden="true" />} hint="Line value; fully refunded orders left out." />
         : <KpiCard label="Rank by orders" value={product.rankOrders ? `#${product.rankOrders}` : '—'} icon={<BarChart3 size={16} aria-hidden="true" />} hint={`Among ${formatCount(kpis.products)} published products.`} />}
     </dl>
-    <ProductReviewsSection listingId={product.listingId} canView={canViewReviews} />
     <ViewsTrend series={data.series} forecast={data.forecast.views} horizonDays={data.forecast.horizonDays} markers={markers} subject="this product"
       method={<>{definitions.views} {definitions.forecast} {definitions.unusual_days}{data.unusualDays.state !== 'OK' ? ' Unusual days need at least eight active days.' : ''}</>} />
     <div className="grid items-start gap-5 xl:grid-cols-2">
@@ -238,6 +237,7 @@ export function ProductAnalyticsDetail({ canViewReviews = false }: { canViewRevi
       <InsightList items={suggestionItems(data.suggestions)} empty="No suggestions for this product right now." />
     </InsightPanel>
     <p className="text-xs text-text-secondary">Analytics never changes your listing, price or ranking. Values are an internal operational view, not a tax invoice or accounting record.</p>
+    <ProductReviewsSection listingId={product.listingId} canView={canViewReviews} />
   </div>
 }
 

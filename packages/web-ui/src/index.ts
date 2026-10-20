@@ -73,7 +73,7 @@ export { PhysicalPaymentOptions } from './physical-payment-options'
 export { MilestoneStepper, RefundTimeline, RefundStatusBadge, CancellationAvailability, roleLabel } from './fulfillment-patterns'
 export { readSignedCaseFile } from './web-api-session'
 export {
-  DisputeStatusBadge, DisputeDeadlines, DisputeTimeline, SignedFileButton, OriginalPaymentMethodNotice, InvoiceRecordList, PlatformDocumentNotice,
+  DisputeStatusBadge, DisputeDeadlines, DisputeTimeline, DisputeComplaintDetails, SignedFileButton, OriginalPaymentMethodNotice, InvoiceRecordList, PlatformDocumentNotice,
   disputeIssueLabel, disputeRemedyLabel, disputeStateLabel, disputeEventLabel, disputeRoleLabel,
 } from './dispute-patterns'
 export {

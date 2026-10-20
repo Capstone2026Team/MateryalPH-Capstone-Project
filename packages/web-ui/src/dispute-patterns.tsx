@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   AlertTriangle, BadgeCheck, Ban, CircleDot, ClipboardList, FileText, Gavel, Handshake, Info, MessageSquare, Paperclip, RefreshCw, Scale, Send, ShieldAlert, Undo2, UserRoundCheck,
 } from 'lucide-react'
-import type { DisputeDeadline, DisputeTimelineEntry, InvoiceRecordView, PlatformDocumentRef } from '@materyalph/api-client-ts'
+import type { DisputeDeadline, DisputeDetail, DisputeTimelineEntry, InvoiceRecordView, PlatformDocumentRef } from '@materyalph/api-client-ts'
 import { Button } from './button'
 import { DeadlineCountdown, formatPesoCentavos } from './order-patterns'
 import { StatusBadge } from './portal-shell'
@@ -17,8 +17,8 @@ const CASE_STATES: Record<string, [string, Tone]> = {
   RESOLVED: ['Resolved', 'success'], CLOSED_INCONCLUSIVE: ['Closed — inconclusive', 'neutral'],
 }
 const ISSUES: Record<string, string> = {
-  WRONG_ITEM: 'Wrong item', DEFECTIVE: 'Defective item', INCOMPLETE_DELIVERY: 'Incomplete delivery', LATE_OR_MISSING: 'Late or missing fulfillment', MISLEADING_LISTING: 'Misleading listing',
-  PAYMENT: 'Payment issue', INVOICE: 'Invoice issue', OTHER_TRANSACTION: 'Other transaction issue', PHYSICAL_PAYMENT_NOT_RECEIVED: 'Cash payment not received', PICKUP_NO_SHOW: 'Pickup no-show',
+  WRONG_ITEM: 'Wrong item', DEFECTIVE: 'Defective or damaged', INCOMPLETE_DELIVERY: 'Incomplete delivery', LATE_OR_MISSING: 'Late or missing fulfillment', MISLEADING_LISTING: 'Misleading listing',
+  PAYMENT: 'Payment issue', INVOICE: 'Invoice issue', OTHER_TRANSACTION: 'Other transaction issue', PHYSICAL_PAYMENT_NOT_RECEIVED: 'Physical payment not received', PICKUP_NO_SHOW: 'Pickup no-show',
   ABUSIVE_COMMUNICATION: 'Abusive communication', FALSE_EVIDENCE: 'False evidence', INACCESSIBLE_DELIVERY_SITE: 'Inaccessible delivery site',
 }
 const REMEDIES: Record<string, string> = {
@@ -50,6 +50,20 @@ export const disputeRemedyLabel = (code: string): string => REMEDIES[code] ?? co
 export const disputeStateLabel = (code: string): string => CASE_STATES[code]?.[0] ?? code.toLowerCase().replaceAll('_', ' ')
 export const disputeEventLabel = (code: string): string => EVENTS[code] ?? code.toLowerCase().replaceAll('_', ' ')
 export const disputeRoleLabel = (role: string | null | undefined): string => (role ? ROLES[role] ?? role.toLowerCase().replaceAll('_', ' ') : '')
+
+/** The original filing text is read-only and attributed to the filing party, not the viewer. */
+export function DisputeComplaintDetails({ detail }: {
+  detail: Pick<DisputeDetail, 'filedByParty' | 'issueType' | 'requestedRemedy' | 'requestedAmountCentavos' | 'description'>
+}) {
+  const filer = detail.filedByParty === 'VENDOR' ? 'Vendor' : 'Buyer'
+  return <dl className="grid min-w-0 gap-3 text-sm sm:grid-cols-2">
+    <div className="min-w-0"><dt className="font-semibold text-text-secondary">Issue</dt><dd>{disputeIssueLabel(detail.issueType)}</dd></div>
+    <div className="min-w-0"><dt className="font-semibold text-text-secondary">Requested remedy</dt><dd>{disputeRemedyLabel(detail.requestedRemedy)}{detail.requestedAmountCentavos != null ? ` · ${formatPesoCentavos(detail.requestedAmountCentavos)}` : ''}</dd></div>
+    <div className="min-w-0 sm:col-span-2"><dt className="font-semibold text-text-secondary">{filer}'s description of the problem</dt>
+      <dd className="mt-1 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{detail.description?.trim() ? detail.description : 'No problem description was recorded.'}</dd>
+    </div>
+  </dl>
+}
 
 /** Case state as text plus icon; color only reinforces it. */
 export function DisputeStatusBadge({ status }: { status: string }) {

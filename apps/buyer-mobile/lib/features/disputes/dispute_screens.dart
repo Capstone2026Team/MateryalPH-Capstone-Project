@@ -12,6 +12,7 @@ import '../../design_system/components/invoice_request_form.dart';
 import '../../design_system/components/dispute_components.dart';
 import '../../design_system/components/fulfillment_components.dart'
     show RefundTimelineCard;
+import '../../design_system/components/form_validation.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
 import '../item_procurement/procurement_models.dart' show formatPeso;
@@ -499,6 +500,7 @@ class _FileDisputeScreenState extends State<FileDisputeScreen> {
   final _description = TextEditingController();
   EvidenceFile? _file;
   String? _error;
+  Map<String, Object?> _fieldErrors = {};
   bool _busy = false;
   String? _key;
 
@@ -529,25 +531,34 @@ class _FileDisputeScreenState extends State<FileDisputeScreen> {
     final file = await widget.picker();
     if (!mounted) return;
     if (file == null) return;
-    setState(() => _file = file);
+    setState(() {
+      _file = file;
+      _fieldErrors.removeWhere(
+        (field, _) => field == 'files' || field.startsWith('files.'),
+      );
+    });
   }
 
   Future<void> _submit() async {
     final partial = _remedy == 'PARTIAL_REFUND';
     final centavos = partial ? _pesoToCentavos(_amount.text) : null;
-    final problem = _issue == null
-        ? 'Choose what went wrong.'
-        : _remedy == null
-        ? 'Choose the remedy you are asking for.'
-        : partial && centavos == null
-        ? 'Enter the partial refund amount you are asking for.'
-        : partial && _lines.isEmpty
-        ? 'Select the affected items for a partial refund.'
-        : _description.text.trim().length < 20
-        ? 'Describe the problem in at least 20 characters.'
-        : null;
-    if (problem != null) {
-      setState(() => _error = problem);
+    final errors = <String, Object?>{
+      if (_issue == null) 'issue_type': 'Choose what went wrong.',
+      if (_remedy == null)
+        'requested_remedy': 'Choose the remedy you are asking for.',
+      if (partial && centavos == null)
+        'requested_amount_centavos':
+            'Enter the partial refund amount you are asking for.',
+      if (_lines.isEmpty)
+        'affected_line_ids': 'Select at least one affected item.',
+      if (_description.text.trim().length < 20)
+        'description': 'Describe the problem in at least 20 characters.',
+    };
+    if (errors.isNotEmpty) {
+      setState(() {
+        _fieldErrors = errors;
+        _error = 'Review the highlighted fields and try again.';
+      });
       return;
     }
     // A retried tap after a dropped connection reuses the same key, so only one case is filed.
@@ -555,6 +566,7 @@ class _FileDisputeScreenState extends State<FileDisputeScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _fieldErrors = {};
     });
     try {
       final created = await widget.repository.file(
@@ -571,7 +583,29 @@ class _FileDisputeScreenState extends State<FileDisputeScreen> {
       Navigator.of(context).pop(created);
     } on DiscoveryFailure catch (error) {
       if (error.kind != DiscoveryFailureKind.offline) _key = null;
-      if (mounted) setState(() => _error = error.message);
+      if (mounted) {
+        setState(() {
+          _error = error.message;
+          if (error.kind == DiscoveryFailureKind.validation) {
+            _fieldErrors = Map.of(error.details);
+            // Transport/context fields have no editable control on this form.
+            final otherErrors = error.details.keys
+                .where(
+                  (field) => !const {
+                    'issue_type',
+                    'requested_remedy',
+                    'requested_amount_centavos',
+                    'affected_line_ids',
+                    'description',
+                    'files',
+                  }.contains(field.split('.').first),
+                )
+                .map((field) => fieldErrorText(error.details, field))
+                .whereType<String>();
+            _error = [error.message, ...otherErrors].join('\n');
+          }
+        });
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -629,18 +663,31 @@ class _FileDisputeScreenState extends State<FileDisputeScreen> {
       DropdownButtonFormField<String>(
         initialValue: _issue,
         isExpanded: true,
-        decoration: const InputDecoration(labelText: 'What went wrong?'),
+        decoration: InputDecoration(
+          labelText: 'What went wrong?',
+          errorText: fieldErrorText(_fieldErrors, 'issue_type'),
+          errorMaxLines: 3,
+        ),
         items: [
           for (final code in eligibility.issueTypes)
             DropdownMenuItem(value: code, child: Text(disputeIssueLabel(code))),
         ],
-        onChanged: _busy ? null : (value) => setState(() => _issue = value),
+        onChanged: _busy
+            ? null
+            : (value) => setState(() {
+                _issue = value;
+                _fieldErrors.remove('issue_type');
+              }),
       ),
       const SizedBox(height: 14),
       DropdownButtonFormField<String>(
         initialValue: _remedy,
         isExpanded: true,
-        decoration: const InputDecoration(labelText: 'Requested remedy'),
+        decoration: InputDecoration(
+          labelText: 'Requested remedy',
+          errorText: fieldErrorText(_fieldErrors, 'requested_remedy'),
+          errorMaxLines: 3,
+        ),
         items: [
           for (final code in eligibility.requestedRemedies)
             DropdownMenuItem(
@@ -648,7 +695,13 @@ class _FileDisputeScreenState extends State<FileDisputeScreen> {
               child: Text(disputeRemedyLabel(code)),
             ),
         ],
-        onChanged: _busy ? null : (value) => setState(() => _remedy = value),
+        onChanged: _busy
+            ? null
+            : (value) => setState(() {
+                _remedy = value;
+                _fieldErrors.remove('requested_remedy');
+                _fieldErrors.remove('requested_amount_centavos');
+              }),
       ),
       if (_remedy == 'PARTIAL_REFUND') ...[
         const SizedBox(height: 14),
@@ -656,9 +709,16 @@ class _FileDisputeScreenState extends State<FileDisputeScreen> {
           controller: _amount,
           enabled: !_busy,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
+          onChanged: (_) =>
+              setState(() => _fieldErrors.remove('requested_amount_centavos')),
+          decoration: InputDecoration(
             labelText: 'Partial amount you are asking for (₱)',
             hintText: '0.00',
+            errorText: fieldErrorText(
+              _fieldErrors,
+              'requested_amount_centavos',
+            ),
+            errorMaxLines: 3,
           ),
         ),
       ],
@@ -678,17 +738,23 @@ class _FileDisputeScreenState extends State<FileDisputeScreen> {
             value: _lines.contains(line.orderLineId),
             onChanged: _busy
                 ? null
-                : (checked) => setState(
-                    () => checked == true
+                : (checked) => setState(() {
+                    checked == true
                         ? _lines.add(line.orderLineId)
-                        : _lines.remove(line.orderLineId),
-                  ),
+                        : _lines.remove(line.orderLineId);
+                    _fieldErrors.removeWhere(
+                      (field, _) =>
+                          field == 'affected_line_ids' ||
+                          field.startsWith('affected_line_ids.'),
+                    );
+                  }),
             title: Text(line.displayName),
             subtitle: Text(
               '${line.quantity} · ${formatPeso(line.lineTotalCentavos)}',
             ),
           ),
       ],
+      FormFieldError(fieldErrorText(_fieldErrors, 'affected_line_ids')),
       const SizedBox(height: 14),
       TextField(
         controller: _description,
@@ -696,17 +762,26 @@ class _FileDisputeScreenState extends State<FileDisputeScreen> {
         minLines: 4,
         maxLines: 8,
         maxLength: 4000,
-        decoration: const InputDecoration(
+        onChanged: (_) => setState(() => _fieldErrors.remove('description')),
+        decoration: InputDecoration(
           labelText: 'Describe the problem',
           alignLabelWithHint: true,
+          errorText: fieldErrorText(_fieldErrors, 'description'),
+          errorMaxLines: 3,
         ),
       ),
       const SizedBox(height: 4),
       _EvidenceField(
         file: _file,
         onPick: _busy ? () {} : _pick,
-        onClear: () => setState(() => _file = null),
+        onClear: () => setState(() {
+          _file = null;
+          _fieldErrors.removeWhere(
+            (field, _) => field == 'files' || field.startsWith('files.'),
+          );
+        }),
       ),
+      FormFieldError(fieldErrorText(_fieldErrors, 'files')),
       const SizedBox(height: 16),
       OriginalPaymentMethodCard(
         label: eligibility.methodLabel,
@@ -920,12 +995,12 @@ class _DisputeDetailScreenState extends State<DisputeDetailScreen> {
       const SizedBox(height: 10),
       ..._actions(detail),
       _Section(
-        title: 'Your complaint',
+        title: 'Original complaint',
         icon: LucideIcons.fileWarning,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (detail.description != null) Text(detail.description!),
+            DisputeComplaintDetails(detail: detail),
             for (final line in detail.affectedLines)
               Padding(
                 padding: const EdgeInsets.only(top: 6),

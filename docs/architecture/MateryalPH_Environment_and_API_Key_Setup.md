@@ -118,8 +118,8 @@ An environment variable is not automatically secret. Anything placed in a web or
 | Laravel `APP_KEY` | API only | Yes | Different in every environment |
 | Passport private signing key | API only | Yes | Never in a client or Git |
 | Passport public key | API services | No | Still environment-specific |
-| Google OAuth client secret | API only | Yes | Server exchange only |
-| Google OAuth client IDs | Clients/API | No | Restrict redirect URI/package/bundle |
+| Google OAuth Web client ID | API only for the current server-side code flow | No | Use a staging client separate from production |
+| Google OAuth client secret | API only | Yes | Server exchange only; never ship to a client |
 | Google Maps Android/iOS/browser key | Respective client | No | Separate key per platform and environment; restrict it |
 | Google Maps server key | API only | Yes | IP/API restricted where the platform permits |
 | Firebase service account | API only | Yes | Used only for server-to-FCM requests |
@@ -128,7 +128,7 @@ An environment variable is not automatically secret. Anything placed in a web or
 | S3 access key/secret | API only | Yes | Bucket-scoped, least privilege |
 | Sentry DSN | Each app | Usually public identifier | Separate project/environment; do not put auth token in clients |
 | Sentry auth token | CI only | Yes | Used only for release/source-map tasks |
-| reCAPTCHA Enterprise checkbox key | Vendor web only | No | Restrict to the approved Vendor hostname |
+| reCAPTCHA Enterprise checkbox site keys | Vendor and Admin web | No | Use separate keys restricted to each portal hostname |
 | reCAPTCHA Enterprise backend API key | API only | Yes | Restrict to `recaptchaenterprise.googleapis.com`; never expose to clients |
 
 ## 4. Backend `.env.example`
@@ -259,8 +259,8 @@ VITE_RECAPTCHA_SITE_KEY=
 VITE_SENTRY_DSN=
 ```
 
-Admin has no reCAPTCHA setting. Its environment contains the API, Reverb, and
-optional Sentry public values only.
+Admin's static build also uses `VITE_RECAPTCHA_SITE_KEY`; set it to the Admin
+web site's public key. The API has a separate Admin key and exact hostname.
 
 Never add Google OAuth client secrets, SMTP passwords, storage secrets, Passport private keys, or Firebase service-account JSON to a Vite variable.
 
@@ -383,15 +383,14 @@ Phase 6 cost and policy controls: the backend requests minimum field masks (Plac
 
 ### 8.3 Configure Google OpenID Connect
 
-1. Configure the OAuth consent/branding screen for the correct environment.
-2. Add only the minimum identity scopes: `openid`, `email`, and `profile`.
-3. Create a Web OAuth client for the Laravel server exchange.
-4. Add exact redirect URIs, for example Development `http://localhost:8080/api/v1/auth/google/callback` and the exact Staging/Production HTTPS callback.
-5. Create Android and iOS clients using their package/bundle and signing identity.
-6. Copy the Web client ID to `GOOGLE_OIDC_CLIENT_ID`.
-7. Copy the Web client secret to backend `GOOGLE_OIDC_CLIENT_SECRET` only.
-8. Copy platform client IDs to their public client configuration.
-9. Never use email as the permanent Google identity. The backend validates the ID token and stores `sub`.
+1. Use separate Google Cloud projects for Development, Staging, and Production.
+2. Configure the branding and consent screen for the environment. For Staging, use External audience in Testing mode and add test users.
+3. Add only the identity scopes `openid`, `email`, and `profile`.
+4. Create one Web OAuth client for Laravel's server-side Authorization Code with PKCE flow. Vendor web and Buyer mobile both start this backend flow; the current implementation does not use Android/iOS OAuth client IDs.
+5. Add the exact callback URI, for example Development `http://localhost:8080/api/v1/auth/google/callback` and the assigned Staging/Production HTTPS Vendor-host callback.
+6. Put the Web client ID in API `GOOGLE_OIDC_CLIENT_ID` and its secret in API `GOOGLE_OIDC_CLIENT_SECRET` only.
+7. Set API `FRONTEND_BUYER_REDIRECT_URI` to the Buyer app deep link `materyalph://auth/callback`. This is not registered as a Google redirect URI.
+8. Never use email as the permanent Google identity. The backend validates the ID token and stores `sub`.
 
 Google documents the server-side authorization-code exchange and ID-token validation in [OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect).
 
@@ -451,22 +450,24 @@ Generate separate random `REVERB_APP_KEY` and `REVERB_APP_SECRET` values per env
 
 reCAPTCHA Enterprise checkbox protection covers Vendor email registration,
 Vendor staff invitation acceptance, Vendor/Admin password login and recovery,
-and invitation-only Admin registration. Buyer-native and Google OIDC flows
-remain excluded. Admin email security checks do not replace mandatory TOTP.
+and invitation-only Admin registration. Buyer and Google OIDC flows remain
+excluded. Risky Buyer email/password or recovery actions can use the API's
+email step-up proof. Admin email security checks do not replace mandatory TOTP.
 
 ### reCAPTCHA
 
 1. Enable the reCAPTCHA Enterprise API in the selected Google Cloud project.
-2. Create a Development Enterprise checkbox key and restrict it to the Vendor
-   and Admin hostnames, or use a separate key for each portal.
+2. Create separate Staging Enterprise checkbox keys for Vendor and Admin, each
+   restricted to that portal's exact hostname. Use separate keys again for
+   Production.
 3. Create a separate backend API key restricted to
    `recaptchaenterprise.googleapis.com`. Development may be API-restricted only
    because Google does not support `localhost` as an IP application restriction.
 4. Put the backend API key only in `RECAPTCHA_ENTERPRISE_API_KEY`; never put it
    in a `VITE_` variable or Flutter configuration.
-5. Put only the public checkbox site key in each portal's `VITE_RECAPTCHA_SITE_KEY`. Buyer
-   mobile has no reCAPTCHA key or plugin. Android/iOS Google OIDC client IDs are
-   separate OIDC configuration and must remain separate.
+5. Put each public checkbox site key in its portal's `VITE_RECAPTCHA_SITE_KEY`
+   and matching API `RECAPTCHA_VENDOR_WEB_SITE_KEY` or
+   `RECAPTCHA_ADMIN_WEB_SITE_KEY`. Buyer mobile has no reCAPTCHA key or plugin.
 6. Set the project ID, site key, allowed web hostnames, and five-minute
    step-up TTL through the documented variables. Optional
    `RECAPTCHA_ADMIN_WEB_SITE_KEY` and `RECAPTCHA_ADMIN_WEB_ALLOWED_HOSTNAMES`

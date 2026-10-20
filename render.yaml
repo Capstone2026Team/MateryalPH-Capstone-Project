@@ -98,6 +98,7 @@ projects:
             envVars:
               - fromGroup: materyalph-staging-runtime
               - {key: MATERYALPH_SERVICE_ROLE, value: api}
+              - {key: FRONTEND_BUYER_REDIRECT_URI, value: "materyalph://auth/callback"}
               - key: DB_URL
                 fromDatabase: {name: materyalph-staging-db, property: connectionString}
               - key: REDIS_URL

@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Download, FileDown, Gavel, Handshake, Info, Paperclip, RefreshCw, Scale, Send, ShieldAlert, Upload } from 'lucide-react'
 import {
   ActiveFilters, ALL_DATES, Button, DateFilter, ConfirmDialog, DisputeDeadlines, DisputeStatusBadge, DisputeTimeline, FileSelectionReview, FormDialog, FilterTabs, Toolbar, InfoNote, EmptyState, PageHeader as SharedPageHeader, OriginalPaymentMethodNotice, Pagination, RefundTimeline, ResponsiveRecordList, StatusBadge, StatusMessage,
-  dateFilterLabel, disputeIssueLabel, disputeRemedyLabel, disputeRoleLabel, formatManilaDateTime, formatPesoCentavos, type RecordColumn,
+  DisputeComplaintDetails, dateFilterLabel, disputeIssueLabel, disputeRemedyLabel, disputeRoleLabel, formatManilaDateTime, formatPesoCentavos, type RecordColumn,
 } from '@materyalph/web-ui'
 import {
   addEvidence, answerClarification, answerProposal, appeal, disputeApiBasePath, downloadExport, escalate, fileDispute, getDispute, getEligibility, listDisputes, listExports, propose,
@@ -197,7 +197,7 @@ function BackLink() {
 function CaseFacts({ detail }: { detail: DisputeDetail }) {
   return <section aria-labelledby="facts-heading" className="grid gap-4 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5">
     <h2 id="facts-heading" className="text-lg font-semibold">Original complaint</h2>
-    {detail.description && <p className="whitespace-pre-line break-words">{detail.description}</p>}
+    <DisputeComplaintDetails detail={detail} />
     {detail.affectedLines.length > 0 && <div className="grid gap-2"><h3 className="text-sm font-semibold">Affected lines</h3><ul className="grid gap-1 text-sm">{detail.affectedLines.map(line => <li key={line.orderLineId} className="flex flex-wrap justify-between gap-x-3">
       <span>{line.displayName}{line.variantLabel ? ` · ${line.variantLabel}` : ''}</span><span className="tabular-nums text-text-secondary">{formatPesoCentavos(line.lineTotalCentavos)}</span></li>)}</ul></div>}
     <dl className="grid gap-x-6 gap-y-2 border-t border-border-default pt-3 text-sm sm:grid-cols-2">

@@ -4,7 +4,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Gavel, Info, RefreshCw, Scale, ShieldAlert, UserRoundCheck } from 'lucide-react'
 import {
   ALL_DATES, Button, ConfirmDialog, DateFilter, DisputeDeadlines, DisputeStatusBadge, DisputeTimeline, FilterChips, OriginalPaymentMethodNotice, RefundTimeline, StatusMessage, Toolbar,
-  disputeIssueLabel, disputeRemedyLabel, disputeRoleLabel, formatManilaDateTime, formatPesoCentavos,
+  DisputeComplaintDetails, disputeIssueLabel, disputeRemedyLabel, disputeRoleLabel, formatManilaDateTime, formatPesoCentavos,
 } from '@materyalph/web-ui'
 import {
   adminApiBasePath, assignToMe, confirmRemedy, decide, decideAppeal, escalateCase, getCase, listQueue, newKey, requestClarification,
@@ -91,7 +91,7 @@ export function AdminDisputeCasePage() {
       <div className="grid min-w-0 content-start gap-6">
         <section aria-labelledby="complaint-heading" className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5">
           <h2 id="complaint-heading" className="text-lg font-semibold">Original complaint</h2>
-          {detail.description && <p className="whitespace-pre-line break-words">{detail.description}</p>}
+          <DisputeComplaintDetails detail={detail} />
           {detail.affectedLines.length > 0 && <ul className="grid gap-1 text-sm">{detail.affectedLines.map(line => <li key={line.orderLineId} className="flex flex-wrap justify-between gap-x-3"><span>{line.displayName}</span>
             <span className="tabular-nums text-text-secondary">{formatPesoCentavos(line.lineTotalCentavos)} · {formatPesoCentavos(line.refundableCentavos)} still refundable</span></li>)}</ul>}
           {detail.originalPaymentMethod && <OriginalPaymentMethodNotice label={detail.originalPaymentMethod.label} notice={detail.originalPaymentMethod.notice} />}
