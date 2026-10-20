@@ -35,7 +35,10 @@ final class AccountController extends Controller
         abort_unless($user->profile_photo_key && $user->profile_photo_disk, 404);
         abort_unless($request->query('owner') === $user->public_id && (int) $request->query('version') === (int) $user->lock_version, 404);
 
-        return Storage::disk($user->profile_photo_disk)->response($user->profile_photo_key, 'profile.png', ['Content-Type' => 'image/png', 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff'], 'inline');
+        $disk = Storage::disk($user->profile_photo_disk);
+        abort_unless($disk->exists($user->profile_photo_key), 404);
+
+        return $disk->response($user->profile_photo_key, 'profile.png', ['Content-Type' => 'image/png', 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff'], 'inline');
     }
 
     public function profile(Request $request): JsonResponse

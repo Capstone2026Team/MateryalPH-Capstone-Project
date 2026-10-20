@@ -110,6 +110,23 @@ final class PhaseTwoAccountSecurityTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'PROFILE_PHOTO_UPDATED', 'actor_user_id' => $user->getKey()]);
     }
 
+    public function test_missing_imported_photo_returns_not_found_without_changing_the_profile(): void
+    {
+        Storage::fake('local');
+        [$user] = $this->buyer();
+        $key = 'private/profile-photos/imported-missing.png';
+        $user->forceFill(['profile_photo_key' => $key, 'profile_photo_disk' => 'local'])->save();
+        $user->refresh();
+        $version = (int) $user->lock_version;
+        $url = $this->getJson('/api/v1/buyers/account/profile')->assertOk()->json('data.avatar_url');
+
+        $this->getJson($url)->assertNotFound()->assertJsonPath('errors.0.code', 'HTTP_ERROR');
+
+        self::assertSame($key, $user->refresh()->profile_photo_key);
+        self::assertSame($version, (int) $user->lock_version);
+        self::assertSame([], Storage::disk('local')->allFiles());
+    }
+
     public function test_buyer_photo_rejects_invalid_files_and_scanner_failure_preserves_identity(): void
     {
         Storage::fake('local');
