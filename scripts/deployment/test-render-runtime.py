@@ -99,6 +99,7 @@ for ($attempt = 0; $attempt < 100; $attempt++) {
     usleep(100000);
 }
 verify(request('/fast')[1] === 'fast-ok', 'ordinary PHP request failed');
+verify(request('/api/v1/vendors/account/photo?signature=runtime-query-redaction-fixture')[0] === 200, 'rewritten diagnostic route failed');
 [$uploadStatus, $uploadBody] = upload([25 * 1024 * 1024]);
 verify($uploadStatus === 200 && str_contains($uploadBody, '0:26214400'), '25 MiB upload failed');
 [$batchStatus, $batchBody] = upload([20 * 1024 * 1024, 20 * 1024 * 1024]);
@@ -187,7 +188,14 @@ echo json_encode([
             # The fixture has no secrets, request data or provider access.
             logs = run("logs", "--tail", "30", name, check=False)
             raise RuntimeError(result.stdout + result.stderr + logs.stdout + logs.stderr)
-        print(json.dumps(json.loads(result.stdout)))
+        logs = run("logs", name, check=False)
+        log_text = logs.stdout + logs.stderr
+        assert "GET /api/v1/vendors/account/photo 200 " in log_text, "original route missing from access log"
+        assert "runtime-query-redaction-fixture" not in log_text, "query leaked into access log"
+        report = json.loads(result.stdout)
+        report["original_route_logged"] = True
+        report["query_string_redacted"] = True
+        print(json.dumps(report))
     finally:
         if started:
             run("rm", "-f", name)
