@@ -11,11 +11,12 @@ import {
 import { readableApiError } from '../lib/auth-api'
 import {
   correctRun, excludeSource, exportAdminAnalytics, getAdminAnalyticsDetail, getModeration, getScore, liftSuppression, listAdminAnalytics, listModeration, listRuns, listScores, listSources, moderate, revokeExclusion, suppressBadge,
-  type AdminAnalyticsFilters, type AdminMaterialsAnalyticsDetail, type AdminMaterialsAnalyticsList, type AdminScoreDetail, type AdminScoreRow, type AnalyticsRun, type AnalyticsSource, type ModerationAction, type ModerationDetail, type ModerationQueueRow, type ModerationState,
+  type AdminAnalyticsFilters, type AdminMaterialsAnalyticsDetail, type AdminMaterialsAnalyticsList, type AdminScoreDetail, type AdminScoreRow, type AnalyticsSource, type ModerationAction, type ModerationDetail, type ModerationQueueRow, type ModerationState,
 } from '../lib/trust-api'
 import { AdminShell, ErrorState, LoadingState, PageHeader } from './PhaseThreeAdminPages'
 import { Pager, Panel } from '../components/OperationsKit'
 import { numberValue, record, records, stringValue, statusLabel } from '../lib/admin-format'
+import { useAnalyticsResource } from '../lib/use-analytics-resource'
 
 const control = 'min-h-12 w-full min-w-0 rounded-control border border-border-default bg-surface-primary px-3 text-base font-normal'
 
@@ -79,8 +80,8 @@ function AdminFilters({ filters, onChange, areaLabel, window }: { filters: Admin
 export function MaterialsAnalyticsSection({ psgcCode, areaLabel }: { psgcCode: string | null; areaLabel: string }) {
   const [stored, setFilters] = useAdminFilters()
   const filters: AdminAnalyticsFilters = { ...stored, psgcCode: psgcCode ?? undefined }
-  const list = useLoad<AdminMaterialsAnalyticsList>(() => listAdminAnalytics(filters), [JSON.stringify(filters)])
-  const runs = useLoad<AnalyticsRun[]>(() => listRuns(), [])
+  const list = useAnalyticsResource(`materials-${JSON.stringify(filters)}`, () => listAdminAnalytics(filters))
+  const runs = useAnalyticsResource('material-runs', listRuns)
   const [exportError, setExportError] = useState<string | null>(null)
   const download = async () => {
     setExportError(null)
@@ -121,7 +122,7 @@ export function MaterialsAnalyticsSection({ psgcCode, areaLabel }: { psgcCode: s
 export function AdminMaterialPriceDetailsPage() {
   const { groupId = '' } = useParams()
   const [filters, setFilters] = useAdminFilters()
-  const detail = useLoad<AdminMaterialsAnalyticsDetail>(() => getAdminAnalyticsDetail(groupId, filters), [groupId, JSON.stringify(filters)])
+  const detail = useAnalyticsResource(`material-${groupId}-${JSON.stringify(filters)}`, () => getAdminAnalyticsDetail(groupId, filters))
   const back = new URLSearchParams({ view: 'materials', days: String(filters.presetDays ?? 30) })
   if (filters.startDate && filters.endDate) { back.set('priceFrom', filters.startDate); back.set('priceTo', filters.endDate) }
   if (filters.psgcCode) back.set('area', filters.psgcCode)

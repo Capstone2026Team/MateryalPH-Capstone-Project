@@ -11,8 +11,8 @@ use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Daily aggregate facts for Philippine Geographic Marketplace Analytics (TEST marketplace). Each run rebuilds the
- * derived projection idempotently inside one transaction under an advisory lock, then publishes a new revision; a
+ * Daily aggregate facts, refreshed every minute, for Philippine Geographic Marketplace Analytics (TEST marketplace).
+ * Each run rebuilds the derived projection idempotently inside one transaction under an advisory lock, then publishes a new revision; a
  * retry simply produces the next revision of the same facts. Facts carry PSGC codes, pseudonymous person keys and
  * integer centavos only: no coordinates, names, contact details or payment data ever enter them. Where an address has
  * no PSGC reference, an imported boundary may place its stored point inside PostgreSQL; the point itself never leaves
@@ -82,8 +82,8 @@ final class GeoFactsBuilder
 
     /**
      * Rebuilds only today's presence snapshot (active storefronts and registered Buyers by place) under the same lock as
-     * the daily run, so stores activated and Buyers registered after the 01:00 aggregation appear within minutes. Order,
-     * activity and response facts stay daily. Returns the rows written, or null before the first published run.
+     * the full run. Retained for manual presence recovery; recurring full runs refresh all fact families together.
+     * Returns the rows written, or null before the first published run.
      */
     public function refreshPresence(?CarbonImmutable $now = null): ?int
     {

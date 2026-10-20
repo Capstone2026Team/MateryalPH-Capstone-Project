@@ -33,8 +33,7 @@ export function AdminDashboardPage() {
     return () => { active = false }
   }, [insightsFailure])
   useAutomaticRefresh(load, { enabled: !busy, intervalMs: error ? 120_000 : 30_000 })
-  // Charts read daily aggregates, so a slower refresh is enough.
-  useAutomaticRefresh(reloadInsights, { enabled: !insightsBusy, intervalMs: 120_000 })
+  useAutomaticRefresh(reloadInsights, { enabled: !insightsBusy, intervalMs: insightsError ? 120_000 : 30_000 })
   const periodLabel = range.label === 'Custom range' ? `${range.from} – ${range.to}` : range.label.toLowerCase()
   /** Marketplace content when permitted and available; otherwise the reason, never an empty chart. */
   const market = (render: (marketplace: NonNullable<AdminDashboardInsights['marketplace']>) => ReactNode) => !insights ? null
@@ -46,7 +45,7 @@ export function AdminDashboardPage() {
     {summary && <>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-surface border border-border-default bg-surface-primary px-4 py-2">
         <div className="flex flex-wrap items-center gap-4"><DateFilter title="Marketplace activity dates" value={range} allowAllDates={false} allowOpenEnded={false} maxRangeDays={366} onChange={value => { setRange(value); setDays(value.label === 'Last 90 days' ? 90 : 30) }} /></div>
-        <p className="text-xs text-text-secondary">{insightsBusy && !insights ? 'Loading charts…' : insights?.marketplace?.dataset.lastAggregatedAt ? `Charts aggregated ${new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' }).format(insights.marketplace.dataset.lastAggregatedAt)} (Asia/Manila)` : 'Charts update after the daily aggregation.'}</p>
+        <p className="text-xs text-text-secondary">{insightsBusy && !insights ? 'Loading charts…' : insights?.marketplace?.dataset.lastAggregatedAt ? `Charts aggregated ${new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' }).format(insights.marketplace.dataset.lastAggregatedAt)} (Asia/Manila) · Updates automatically` : 'Charts update automatically after aggregation.'}</p>
       </div>
       {insightsError && <div className="flex flex-wrap items-center gap-3"><StatusMessage tone="error">{insightsError}{insights ? ' Showing the last successful charts.' : ''}</StatusMessage><Button variant="secondary" onClick={() => void reloadInsights()}>Retry charts</Button></div>}
       <SectionWorkspace dashboard sections={[{ label: 'Overview', content: <>

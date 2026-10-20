@@ -37,6 +37,12 @@ For a full feature presentation, continue through every numbered page section. S
 
 “Good day, everyone. Today, we will demonstrate MateryalPH, a construction-material procurement platform for the Philippines.
 
+the construction sector continues to lag behind, especially in material procurement, which remains fragmented and heavily reliant on traditional practices such as phone inquiries, personal supplier networks, and physical store visits (Dimaculangan, 2023; Cueto, 2022). This continued reliance on traditional and fragmented processes is influenced by the lack of a structured and digital approach to material sourcing. While platforms like Shopee and Lazada offer general retail options for SME contractors and suppliers, they are not optimized for construction materials.
+This means many local suppliers have limited opportunities to showcase their products, making it difficult for contractors to efficiently identify, compare, and source materials locally. These particularly affect small and medium enterprise contractors and independent builders, who often rely on manual procurement methods due to limited resources and supplier networks
+
+The time-sensitive nature of construction projects means that delays in sourcing materials can disrupt operations and cause financial losses for SMEs working on fixed-price contracts. This led to the development of MateryalPH, a specialized digital procurement solution for the construction sector, which aims to improve supplier visibility, accessibility, and efficiency in construction material procurement in the Philippine.
+
+
 “MateryalPH has three applications. Buyers use the mobile app to find suppliers, compare materials, plan project purchases, and track orders. Vendors use the web portal to manage products, inventory, quotations, and fulfillment. Administrators use a separate portal to review verification, resolve cases, and monitor platform activity.
 
 “We will follow a sample renovation project from finding materials to order fulfillment. All payments and financial documents shown in this presentation are demonstrations: DEMO — No real funds or BIR filing.”

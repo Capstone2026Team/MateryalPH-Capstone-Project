@@ -195,8 +195,9 @@ Artisan::command('analytics:aggregate-marketplace', function (): int {
 
     return $result['state'] === 'FAILED' ? 1 : 0;
 })->purpose('Rebuild the daily PSGC geographic analytics facts for the TEST marketplace (idempotent; a retry publishes the next revision)');
-// After the 00:10 price capture and 00:30 scores so the dashboard and snapshot health read the same day.
-Schedule::command('analytics:aggregate-marketplace')->dailyAt('01:00')->timezone('Asia/Manila')->withoutOverlapping()->onOneServer();
+// Keep the daily fact projection current as orders, refunds and human activity change.
+// Reads stay on the disclosure-controlled facts; the immutable material-price capture remains daily.
+Schedule::command('analytics:aggregate-marketplace')->everyMinute()->timezone('Asia/Manila')->withoutOverlapping()->onOneServer();
 
 Artisan::command('analytics:refresh-presence', function (): int {
     $rows = app(GeoFactsBuilder::class)->refreshPresence();
@@ -204,7 +205,7 @@ Artisan::command('analytics:refresh-presence', function (): int {
 
     return 0;
 })->purpose("Refresh today's storefront and registered-Buyer presence facts so new stores and Buyers appear without waiting for the daily run");
-Schedule::command('analytics:refresh-presence')->everyTenMinutes()->withoutOverlapping()->onOneServer();
+// The recurring full aggregation also refreshes presence; retain this command for manual recovery.
 
 Artisan::command('materyalph:enforcement-sweep', function (): void {
     $this->info('Temporary restrictions lifted at the end of their duration: '.app(EnforcementService::class)->sweep());

@@ -12,6 +12,7 @@ import { exportFilters, getGeoBoundaries, getGeoDashboard, getGeoDemand, type Ge
 import { apiProblem, newKey, problemText, requestExport } from '../lib/operations-api'
 import { AdminShell, ErrorState, LoadingState, PageHeader } from './PhaseThreeAdminPages'
 import { MaterialsAnalyticsSection } from './TrustPages'
+import { useAnalyticsResource } from '../lib/use-analytics-resource'
 
 const browserKey = import.meta.env.VITE_GOOGLE_MAPS_BROWSER_KEY?.trim() || undefined
 const iso = (date: Date) => date.toISOString().slice(0, 10)
@@ -90,7 +91,7 @@ function ActiveUsersKpi({ label, activity }: { label: string; activity: GeoActiv
 export function AdminGeoAnalyticsPage() {
   const [params] = useSearchParams()
   const [filters, setFilters] = useGeoFilters()
-  const dashboard = useLoad(() => getGeoDashboard(filters), [JSON.stringify(filters)])
+  const dashboard = useAnalyticsResource(`geo-${JSON.stringify(filters)}`, () => getGeoDashboard(filters))
   const boundaries = useLoad(() => getGeoBoundaries(filters.area), [filters.area])
   const [view, setView] = useState(params.get('view') === 'materials' ? 'materials' : 'trends')
   const data = dashboard.data
@@ -101,7 +102,7 @@ export function AdminGeoAnalyticsPage() {
     {data && <DatasetLine dashboard={data} />}
     <GeoFilterBar filters={filters} onApply={setFilters} dashboard={data} />
     {dashboard.error ? <ErrorState message={dashboard.error} onRetry={dashboard.retry} /> : !data ? <LoadingState /> : !data.dataset.available
-      ? <p className="rounded-surface border border-dashed border-border-default bg-surface-primary px-6 py-10 text-center text-sm text-text-secondary">The first daily aggregation has not run yet. It runs at 01:00 Asia/Manila, or can be re-run from Integration & Job Health.</p>
+      ? <p className="rounded-surface border border-dashed border-border-default bg-surface-primary px-6 py-10 text-center text-sm text-text-secondary">No aggregation has published yet. Marketplace facts refresh every minute while the scheduler is running, or can be re-run from Integration & Job Health.</p>
       : <>
         <KpiGrid dashboard={data} onSelectArea={code => setFilters({ area: code })} />
         <AreaExplorer dashboard={data} features={(boundaries.data?.features ?? []) as unknown as GeoFeature[]} missingCodes={boundaries.data?.missingCodes ?? []} onDrill={code => setFilters({ area: code })} />
@@ -121,7 +122,7 @@ export function AdminGeoAnalyticsPage() {
 function DatasetLine({ dashboard }: { dashboard: GeoDashboard }) {
   const dataset = dashboard.dataset
   return <p className="flex flex-wrap items-center gap-2 text-sm text-text-secondary">
-    <span>{dataset.throughDate ? `Facts through ${dataset.throughDate}` : 'No facts yet'}{dataset.lastAggregatedAt ? ` · aggregated ${manilaDateTime(dataset.lastAggregatedAt)}` : ''}{dataset.revision ? ` · revision ${dataset.revision}` : ''}</span>
+    <span>{dataset.throughDate ? `Facts through ${dataset.throughDate}` : 'No facts yet'}{dataset.lastAggregatedAt ? ` · aggregated ${manilaDateTime(dataset.lastAggregatedAt)}` : ''}{dataset.revision ? ` · revision ${dataset.revision}` : ''} · Updates automatically</span>
   </p>
 }
 
@@ -280,7 +281,7 @@ function TrendsSection({ dashboard }: { dashboard: GeoDashboard }) {
 function DemandSection({ filters }: { filters: GeoFilters }) {
   const [measure, setMeasure] = useState<'ORDER_COUNT' | 'QUANTITY' | 'VALUE'>('ORDER_COUNT')
   const effective = measure === 'QUANTITY' && !filters.materialId ? 'ORDER_COUNT' : measure
-  const demand = useLoad(() => getGeoDemand(filters, effective), [JSON.stringify(filters), effective])
+  const demand = useAnalyticsResource(`demand-${JSON.stringify(filters)}-${effective}`, () => getGeoDemand(filters, effective))
   const format = (value: number) => effective === 'VALUE' ? formatPesoCentavos(value) : count(value)
   return <section aria-labelledby="demand" className="grid gap-4">
     <div className="flex flex-wrap items-end justify-between gap-3">
