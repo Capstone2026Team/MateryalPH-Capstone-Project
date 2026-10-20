@@ -48,6 +48,7 @@ apps/buyer-mobile/build/
 
 # Local runtime data
 /.tmp/docker-images/
+/.tmp/database-exports/
 tmp/pdf-tools/
 services/api/phase15-*.log
 services/api/delivery-*.log

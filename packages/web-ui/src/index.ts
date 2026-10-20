@@ -107,6 +107,7 @@ export { DocumentExportButton, DocumentExportWorkspace, saveDocumentBlob, type D
 export { InsightPanel, RankedList, InsightList, SampleMeter, type RankedItem, type InsightItem, type InsightPriority } from './insight-patterns'
 export { AuthenticatorCodeField } from './authenticator-code-field'
 export { RecaptchaCheckbox, type RecaptchaCheckboxRef, type RecaptchaCheckboxProps } from './recaptcha-checkbox'
+export { BotProtectionFields } from './bot-protection-fields'
 export { EmailSecurityCheck } from './email-security-check'
 export { asBotStepUpRequired, BotStepUpRequired, useWebBotProtection, type RiskChallenge } from './web-bot-protection'
 export {

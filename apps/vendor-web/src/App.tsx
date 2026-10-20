@@ -2,7 +2,7 @@ import { VendorContactPage, VendorSupportRequestsPage, VendorSupportTicketPage, 
 import { VendorNotificationsPage } from './pages/NotificationPages'
 import { VendorPlaceholderPage } from './pages/PhaseThreeVendorPages'
 import { AcceptStaffInvitation } from './pages/AcceptStaffInvitation'
-import { Button, Field, PasswordField, PhoneField, StatusMessage, PortalIdentityProvider, PortalResourceProvider } from '@materyalph/web-ui'
+import { BotProtectionFields, Button, Field, PasswordField, PhoneField, StatusMessage, PortalIdentityProvider, PortalResourceProvider } from '@materyalph/web-ui'
 import { ArrowRight } from 'lucide-react'
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Link, Outlet, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
@@ -177,9 +177,11 @@ function LoginPage() {
             <Field label="Email address" name="email" type="email" autoComplete="email" required />
             <Field label="Password" name="password" type="password" autoComplete="current-password" required />
             <div className="form-row"><span>Your account, securely accessed.</span><Link to="/forgot-password">Forgot password?</Link></div>
-            <button className="accessible-fallback" type="button" aria-pressed={useEmailCheck} onClick={() => { captchaRef.current?.reset(); setUseEmailCheck((value) => !value) }}>{useEmailCheck ? 'Email security check selected' : 'Use an email security check instead'}</button>
-            {!useEmailCheck && <VendorRecaptchaCheckbox ref={captchaRef} action="vendor_login" disabled={busy} onTokenChange={setCaptchaToken} />}
-            <Button className="w-full" type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'} <ArrowRight aria-hidden="true" /></Button>
+            <BotProtectionFields disabled={busy} emailCheckSelected={useEmailCheck} onEmailCheckClick={() => { captchaRef.current?.reset(); setUseEmailCheck((value) => !value) }} checkbox={
+              !useEmailCheck && <VendorRecaptchaCheckbox ref={captchaRef} action="vendor_login" disabled={busy} onTokenChange={setCaptchaToken} />
+            }>
+              <Button className="w-full" type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'} <ArrowRight aria-hidden="true" /></Button>
+            </BotProtectionFields>
             <p className="auth-switch">New to MateryalPH? <Link to="/register">Register your store</Link></p>
           </form>}
     </VendorAuthShell>
@@ -290,9 +292,11 @@ function RegisterPage() {
               <label className="consent"><input aria-describedby={fieldError('privacy_accepted') ? 'privacy_accepted-error' : undefined} aria-invalid={fieldError('privacy_accepted') ? true : undefined} id="privacy_accepted" name="privacy_accepted" type="checkbox" onChange={() => clearFieldErrors('privacy_accepted')} required /><span>I acknowledge the separate <Link to="/legal/privacy-notice" target="_blank" rel="noopener noreferrer" aria-label="Privacy Notice (opens in a new tab)">Privacy Notice</Link>.</span></label>
               {fieldError('privacy_accepted') && <p className="text-sm text-status-error" id="privacy_accepted-error" role="alert">{fieldError('privacy_accepted')}</p>}
             </div>
-            <button className="accessible-fallback" type="button" aria-pressed={useEmailCheck} onClick={() => { captchaRef.current?.reset(); clearFieldErrors('bot_protection', 'bot_protection.recaptcha_token'); setUseEmailCheck((value) => !value) }}>{useEmailCheck ? 'Email security check selected' : 'Use an email security check instead'}</button>
-            {!useEmailCheck && <VendorRecaptchaCheckbox ref={captchaRef} action="vendor_register" disabled={busy} id="vendor-registration-captcha" validationError={captchaErrors.join(' ')} onTokenChange={(token) => { setCaptchaToken(token); if (token) clearFieldErrors('bot_protection', 'bot_protection.recaptcha_token') }} />}
-            <Button className="w-full" type="submit" disabled={busy}>{busy ? 'Creating account…' : 'Create Owner account'} <ArrowRight aria-hidden="true" /></Button>
+            <BotProtectionFields disabled={busy} emailCheckSelected={useEmailCheck} onEmailCheckClick={() => { captchaRef.current?.reset(); clearFieldErrors('bot_protection', 'bot_protection.recaptcha_token'); setUseEmailCheck((value) => !value) }} checkbox={
+              !useEmailCheck && <VendorRecaptchaCheckbox ref={captchaRef} action="vendor_register" disabled={busy} id="vendor-registration-captcha" validationError={captchaErrors.join(' ')} onTokenChange={(token) => { setCaptchaToken(token); if (token) clearFieldErrors('bot_protection', 'bot_protection.recaptcha_token') }} />
+            }>
+              <Button className="w-full" type="submit" disabled={busy}>{busy ? 'Creating account…' : 'Create Owner account'} <ArrowRight aria-hidden="true" /></Button>
+            </BotProtectionFields>
             <p className="auth-switch">Already registered? <Link to="/login">Sign in</Link></p>
           </form>}
     </VendorAuthShell>

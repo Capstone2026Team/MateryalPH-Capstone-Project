@@ -118,7 +118,7 @@ export function VendorMfaPage() {
     <Link className="auth-cancel" to="/login">Cancel and sign in again</Link>
   </VendorAuthShell>
 
-  return <VendorAuthShell title={mode === 'enrollment' ? 'Scan with your authenticator app' : 'Verify it is you'} description={mode === 'enrollment' ? 'Scan the code, then enter the current six-digit code from your authenticator app.' : 'Enter the current code from your authenticator app.'}>
+  return <VendorAuthShell centerTitle={mode === 'challenge'} title={mode === 'enrollment' ? 'Scan with your authenticator app' : 'Verify it is you'} description={mode === 'enrollment' ? 'Scan the code, then enter the current six-digit code from your authenticator app.' : 'Enter the current code from your authenticator app.'}>
     <form className="auth-form" onSubmit={submit}>
       {mode === 'enrollment' && enrollment && <div className="totp-setup">
         <ol className="auth-steps"><li>Open your authenticator and choose to add an account.</li><li>Scan this QR code or enter the manual key below.</li><li>Enter the current six-digit code to finish setup.</li></ol><div className="totp-qr"><QRCodeSVG value={enrollment.provisioningUri} size={208} level="M" marginSize={4} title="Authenticator setup QR code" role="img" /></div>
