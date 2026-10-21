@@ -21,6 +21,8 @@ final class LaravelMailProvider implements MailProvider
 
         try {
             Mail::to($recipient)->send($mail);
+        } catch (MailDeliveryException $failure) {
+            throw $failure;
         } catch (Throwable $failure) {
             // Do not chain SMTP exceptions: their messages/debug transcripts can contain secrets.
             $code = $failure instanceof TransportExceptionInterface
@@ -34,6 +36,11 @@ final class LaravelMailProvider implements MailProvider
     private function assertConfigured(): void
     {
         if (app()->environment('testing') && config('mail.default') === 'array') {
+            return;
+        }
+        if (config('mail.default') === 'gmail_api') {
+            GmailApiTransport::assertConfigured();
+
             return;
         }
         /** @var array<string, mixed> $smtp */

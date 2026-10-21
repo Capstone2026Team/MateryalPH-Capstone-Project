@@ -1,0 +1,14 @@
+{
+  "APP_ENV": "staging",
+  "API_BASE_URL": "https://REPLACE-API-HOST.up.railway.app/api/v1",
+  "GOOGLE_OIDC_CLIENT_ID": "",
+  "GOOGLE_OIDC_SERVER_CLIENT_ID": "",
+  "MAPS_CLIENT_CONFIGURED": false,
+  "FIREBASE_PUSH_ENABLED": false,
+  "FIREBASE_API_KEY": "",
+  "FIREBASE_APP_ID": "",
+  "FIREBASE_MESSAGING_SENDER_ID": "",
+  "FIREBASE_PROJECT_ID": "",
+  "FIREBASE_IOS_BUNDLE_ID": "",
+  "SENTRY_DSN": ""
+}

@@ -5,7 +5,7 @@
 **Canonical timezone:** Asia/Manila for business deadlines; UTC for stored timestamps  
 **Architecture:** Modular monolith  
 **Repository:** Existing early-stage monorepo; approved migration to standardized `apps/*`, `services/*`, and `packages/*` paths  
-**Reference deployment:** Managed services on Render, Singapore region  
+**Reference staging target:** Railway Hobby backend in Singapore and Vercel Hobby portals, per [ADR 0002](../adr/0002-railway-vercel-staging.md); Render retained during acceptance
 
 ## 1. Confirmed Decisions
 
@@ -27,7 +27,7 @@ The fixed application stack is:
 | Cache and queues | Redis-compatible managed key-value service | Cache, rate limiting, queueing, locks, and short-lived state |
 | Real time | Laravel Reverb | Authorized conversations, quotation updates, order milestones, and notifications |
 | Local development | Docker Compose | Reproducible PostgreSQL, Redis, Mailpit, and S3-compatible object storage |
-| CI/CD | GitHub Actions and Render Blueprint | Tests, security gates, staging deployment, and controlled production deployment |
+| CI/CD | GitHub Actions, Railway role configurations and Vercel compiled artifacts | Tests, security gates and controlled staging release; retained Render fallback |
 
 Laravel 13 is pinned with Composer's `^13.0` constraint and PHP 8.4 is the reference runtime. Laravel 13 supports PHP 8.3 through 8.5 and receives security fixes through 17 March 2028; minor and patch updates may be applied after automated tests pass, while a future major upgrade requires an Architecture Decision Record and explicit approval. See the official [Laravel 13 release and support policy](https://laravel.com/docs/13.x/releases).
 
@@ -89,7 +89,7 @@ flowchart TB
     Api --> Providers["Xendit · Google · Firebase · Email"]
 ```
 
-The reference Render environment contains:
+The [Railway/Vercel staging runbook](../deployment/railway-vercel-staging.md) defines the current six-service backend, continuous scheduler and two portal projects. The retained Render reference is documented below for acceptance fallback:
 
 | Resource | Runtime | Scaling rule |
 | --- | --- | --- |

@@ -1,0 +1,61 @@
+FROM php:8.4-fpm-alpine
+
+RUN apk upgrade --no-cache \
+    && apk add --no-cache \
+        autoconf \
+        g++ \
+        icu-dev \
+        clamav \
+        clamav-libunrar \
+        ffmpeg \
+        libpng-dev \
+        libjpeg-turbo-dev \
+        libwebp-dev \
+        libzip-dev \
+        linux-headers \
+        make \
+        nginx \
+        oniguruma-dev \
+        libpq-dev \
+        supervisor \
+        tesseract-ocr \
+        tesseract-ocr-data-eng \
+        tini \
+    && docker-php-ext-configure gd --with-jpeg --with-webp \
+    && docker-php-ext-install bcmath gd intl mbstring opcache pcntl pdo_pgsql zip \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && apk del autoconf g++ linux-headers make
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY infrastructure/docker/uploads.ini /usr/local/etc/php/conf.d/uploads.ini
+
+WORKDIR /app/services/api
+
+COPY services/api/composer.json services/api/composer.lock ./
+RUN composer install --no-dev --no-interaction --no-progress --prefer-dist --no-scripts --no-autoloader
+
+COPY services/api ./
+COPY infrastructure/docker/staging-start.sh /usr/local/bin/staging-start
+COPY infrastructure/docker/staging-supervisord.conf /app/infrastructure/staging-supervisord.conf
+COPY scripts/deployment/staging-transfer.php /app/scripts/deployment/staging-transfer.php
+COPY infrastructure/docker/staging-release.php /app/infrastructure/staging-release.php
+COPY infrastructure/docker/prepare-render-nginx.php /app/infrastructure/prepare-nginx.php
+COPY infrastructure/docker/render-nginx.conf /app/infrastructure/nginx.conf
+COPY infrastructure/docker/render-freshclam.conf /app/infrastructure/freshclam.conf
+COPY infrastructure/docker/render-php-fpm.conf /usr/local/etc/php-fpm.d/zz-render.conf
+
+RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache /var/lib/clamav /tmp/nginx /app/.tmp \
+    && composer dump-autoload --no-dev --optimize --no-scripts \
+    && php artisan package:discover --ansi \
+    && adduser -D -u 10001 app \
+    && chmod +x /usr/local/bin/staging-start \
+    && chown -R app:app storage bootstrap/cache /var/lib/clamav /tmp/nginx /app/.tmp /app/infrastructure/nginx.conf
+
+USER app
+
+ENV PORT=8080
+ENV RUN_FRESHCLAM=true
+
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["/usr/local/bin/staging-start", "api"]

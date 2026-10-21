@@ -39,6 +39,7 @@ use App\Infrastructure\Geography\PsgcCloudProvider;
 use App\Infrastructure\Identity\GoogleRecaptchaEnterpriseGateway;
 use App\Infrastructure\Notifications\FakePushGateway;
 use App\Infrastructure\Notifications\FcmPushGateway;
+use App\Infrastructure\Notifications\GmailApiTransport;
 use App\Infrastructure\Notifications\LaravelMailProvider;
 use App\Infrastructure\Payments\ConfiguredXenditAccountVerificationGateway;
 use App\Infrastructure\Payments\FakePaymentGateway;
@@ -52,6 +53,7 @@ use Illuminate\Console\Events\ScheduledTaskStarting;
 use Illuminate\Encryption\Encrypter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Passport\Passport;
@@ -102,6 +104,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Mail::extend('gmail_api', fn (): GmailApiTransport => new GmailApiTransport);
         require base_path('routes/channels.php');
         // Integration and Job Health: every scheduled task records its start, outcome and duration (no output or payload).
         Event::listen(ScheduledTaskStarting::class, [ScheduledTaskRecorder::class, 'starting']);

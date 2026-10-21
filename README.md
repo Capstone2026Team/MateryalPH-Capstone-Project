@@ -87,10 +87,31 @@ adb -s 110013341G000422 reverse tcp:8081 tcp:8081
 adb -s 110013341G000422 reverse --list
 ```
 
-### For Render Mobile Use (Internet Run using render deployed api backend)
+### Railway + Vercel hosted staging
+
+The staging migration uses Railway Hobby for the API, jobs, Reverb, PostgreSQL and
+Redis, and Vercel Hobby for the Vendor/Admin portals. See the
+[deployment runbook](docs/deployment/railway-vercel-staging.md) and
+[cost worksheet](docs/deployment/railway-cost-worksheet.md).
+
+Buyer connects directly to Railway. Copy
+`apps/buyer-mobile/config/staging.example.json` to the ignored `config/staging.json`
+in that app, configure the assigned Railway API address and public client settings,
+then run from the repository root:
+
+```powershell
+./scripts/deployment/build-buyer-staging.ps1
+# To run on a connected device instead:
+./scripts/deployment/build-buyer-staging.ps1 -Run -Device 110013341G000422
+```
+
+The phone needs internet; no `adb reverse`, tunnel or shared Wi-Fi is required.
+Use the existing Render setup until the migration acceptance checks pass.
+
+### Retained Render preview (legacy acceptance fallback)
 
 https://materyalph-staging-api.onrender.com/api/v1
-I checked the API—it returned HTTP 200.
+Check the retained Render API's current health before using this fallback.
 From your project root, run:
 
 ```powershell

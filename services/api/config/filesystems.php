@@ -1,6 +1,6 @@
 <?php
 
-return [
+$filesystems = [
 
     /*
     |--------------------------------------------------------------------------
@@ -74,3 +74,18 @@ return [
     ],
 
 ];
+
+// Imported records keep their original disk names and object keys. Both aliases
+// remain private and are enabled only for the explicitly configured staging import.
+if (env('APP_ENV') === 'staging' && filter_var(env('STAGING_LEGACY_FILES_ON_S3', false), FILTER_VALIDATE_BOOL)) {
+    foreach (['local', 'public'] as $legacyDisk) {
+        $filesystems['disks'][$legacyDisk] = array_merge($filesystems['disks']['s3'], [
+            'root' => 'imports/'.$legacyDisk,
+            'url' => null,
+            'visibility' => 'private',
+            'options' => ['ServerSideEncryption' => 'AES256'],
+        ]);
+    }
+}
+
+return $filesystems;

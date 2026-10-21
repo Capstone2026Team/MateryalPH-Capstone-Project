@@ -1,6 +1,6 @@
 name: quality gates
 
-# Deployments are managed through Render; this workflow runs quality checks only.
+# Staging releases remain disabled until the protected environment is configured.
 on:
   pull_request:
   push:
@@ -517,6 +517,9 @@ jobs:
           python-version: '3.13'
       - run: python -m pip install -r tools/deployment/requirements.txt
       - run: python tools/deployment/validate_configuration.py
+      - run: python tools/deployment/validate_railway.py --online
+      - run: node --test scripts/deployment/staging-deployment.test.mjs
+      - run: sh -n infrastructure/docker/staging-start.sh && sh -n infrastructure/docker/redis-start.sh
       - run: node --check scripts/deployment/deploy-render-staging.mjs && node --check scripts/ci/changed-paths.mjs
       - name: Validate the isolated Compose file with ephemeral CI settings
         shell: bash
@@ -525,11 +528,22 @@ jobs:
           trap 'rm -f services/api/.env.testing' EXIT
           node -e 'require("node:fs").writeFileSync("services/api/.env.testing", `TEST_DB_PASSWORD=${require("node:crypto").randomBytes(32).toString("hex")}\n`)'
           docker compose --env-file services/api/.env.testing -f compose.test.yaml config --quiet
-      - run: docker build --pull -f infrastructure/docker/api.render.Dockerfile -t materyalph-api:${{ github.sha }} .
+      - run: docker build --pull -f infrastructure/docker/api.staging.Dockerfile -t materyalph-api:${{ github.sha }} .
+      - run: docker build --pull -f infrastructure/docker/postgres.railway.Dockerfile -t materyalph-postgres:${{ github.sha }} .
+      - run: docker build --pull -f infrastructure/docker/redis.railway.Dockerfile -t materyalph-redis:${{ github.sha }} .
+      - name: Exercise synthetic import, TLS, role privileges and Redis configuration
+        run: |
+          docker tag materyalph-api:${{ github.sha }} materyalph-api:railway-review
+          docker tag materyalph-postgres:${{ github.sha }} materyalph-postgres:railway-review
+          docker tag materyalph-redis:${{ github.sha }} materyalph-redis:railway-review
+          python scripts/deployment/test-staging-runtime.py
       - name: Check the non-root runtime and server configuration
         run: |
           test "$(docker image inspect materyalph-api:${{ github.sha }} --format '{{.Config.User}}')" = app
           docker run --rm --env FRONTEND_VENDOR_HOST=vendor.example.test --env FRONTEND_ADMIN_HOST=admin.example.test --entrypoint /bin/sh materyalph-api:${{ github.sha }} -c 'php /app/infrastructure/prepare-nginx.php && php-fpm -t && nginx -e /dev/null -t -c /app/infrastructure/nginx.conf'
+          if docker run --rm --env APP_ENV=staging --env XENDIT_MODE=TEST --env LIVE_COMMERCE_ENABLED=false materyalph-api:${{ github.sha }} /usr/local/bin/staging-start release; then
+            echo 'Unapproved release unexpectedly succeeded'; exit 1
+          fi
       - uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: materyalph-api:${{ github.sha }}
@@ -549,3 +563,47 @@ jobs:
           CHECK_RESULTS: ${{ toJSON(needs) }}
         run: |
           node -e 'const checks=JSON.parse(process.env.CHECK_RESULTS); for (const [name,check] of Object.entries(checks)) { if (!["success","skipped"].includes(check.result)) { console.error(`${name}: ${check.result}`); process.exitCode=1 } }'
+
+  staging-release:
+    name: Deploy Railway and publish compiled Vercel portals
+    needs: ci-success
+    if: github.ref == 'refs/heads/staging' && github.event_name != 'pull_request' && vars.RAILWAY_STAGING_CONFIGURED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    environment: staging
+    concurrency:
+      group: railway-vercel-staging-release
+      cancel-in-progress: false
+    env:
+      DEPLOY_COMMIT: ${{ github.sha }}
+      RAILWAY_PROJECT_ID: ${{ vars.RAILWAY_PROJECT_ID }}
+      RAILWAY_ENVIRONMENT_ID: ${{ vars.RAILWAY_ENVIRONMENT_ID }}
+      RAILWAY_STAGING_SERVICE_IDS: ${{ vars.RAILWAY_STAGING_SERVICE_IDS }}
+      RAILWAY_API_ORIGIN: ${{ vars.RAILWAY_API_ORIGIN }}
+      PORTAL_DEPLOY_OWNER: ${{ vars.PORTAL_DEPLOY_OWNER }}
+      PORTAL_RELEASE_DIRECTORY: ${{ github.workspace }}/.tmp/portal-release
+      VITE_API_BASE_URL: /api/v1
+      RAILWAY_CLI_VERSION: ${{ vars.RAILWAY_CLI_VERSION }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+      - name: Install the reviewed Railway CLI version
+        run: |
+          [[ "$RAILWAY_CLI_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          npm install --global "@railway/cli@$RAILWAY_CLI_VERSION"
+      - run: sh scripts/deployment/build-portal.sh vendor-web
+      - run: sh scripts/deployment/build-portal.sh admin-web
+      - run: node scripts/deployment/prepare-portals.mjs
+      - name: Deploy only the four application roles
+        run: node scripts/deployment/deploy-railway-staging.mjs
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_STAGING_TOKEN }}
+      - name: Publish tested artifacts to the private personal deployment repository
+        run: node scripts/deployment/publish-portals.mjs
+        env:
+          PORTAL_PUBLISH_TOKEN: ${{ secrets.PORTAL_PUBLISH_TOKEN }}

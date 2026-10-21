@@ -45,7 +45,7 @@ if (is_string($bootstrapEmail) && $bootstrapEmail !== ''
     // Setting the optional variable explicitly requests the existing audited invitation flow.
     // No token, address or provider payload is returned in release logs.
     if ($kernel->call('materyalph:bootstrap-admin', ['email' => $bootstrapEmail, '--no-interaction' => true]) !== 0) {
-        fwrite(STDERR, "Initial admin invitation failed. Check the bootstrap address in Render.\n");
+        fwrite(STDERR, "Initial admin invitation failed. Check the staging bootstrap configuration.\n");
         exit(1);
     }
     fwrite(STDOUT, "The one-time staging admin invitation was queued.\n");
