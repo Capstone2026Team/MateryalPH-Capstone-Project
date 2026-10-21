@@ -519,6 +519,7 @@ jobs:
       - run: python tools/deployment/validate_configuration.py
       - run: python tools/deployment/validate_railway.py --online
       - run: node --test scripts/deployment/staging-deployment.test.mjs
+      - run: sh -n infrastructure/docker/install-phpredis.sh && sh scripts/deployment/test-phpredis-installer.sh
       - run: sh -n infrastructure/docker/staging-start.sh && sh -n infrastructure/docker/redis-start.sh
       - run: node --check scripts/deployment/deploy-render-staging.mjs && node --check scripts/ci/changed-paths.mjs
       - name: Validate the isolated Compose file with ephemeral CI settings

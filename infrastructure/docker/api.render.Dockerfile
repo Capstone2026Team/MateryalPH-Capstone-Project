@@ -3,6 +3,7 @@ FROM php:8.4-fpm-alpine
 RUN apk upgrade --no-cache \
     && apk add --no-cache \
         autoconf \
+        curl \
         g++ \
         icu-dev \
         clamav \
@@ -22,9 +23,10 @@ RUN apk upgrade --no-cache \
         tesseract-ocr-data-eng \
         tini \
     && docker-php-ext-configure gd --with-jpeg --with-webp \
-    && docker-php-ext-install bcmath gd intl mbstring opcache pcntl pdo_pgsql zip \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
+    && docker-php-ext-install bcmath gd intl mbstring opcache pcntl pdo_pgsql zip
+
+COPY infrastructure/docker/install-phpredis.sh /usr/local/bin/install-phpredis
+RUN sh /usr/local/bin/install-phpredis \
     && apk del autoconf g++ linux-headers make
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
