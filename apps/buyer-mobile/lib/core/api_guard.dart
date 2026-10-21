@@ -64,6 +64,17 @@ final class ApiGuard {
       }
     }
     if (status == null) {
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.sendTimeout ||
+          error.type == DioExceptionType.receiveTimeout) {
+        // Retain the transport-failure kind: mutation retries must reuse their
+        // idempotency key when the server outcome is unknown.
+        return const DiscoveryFailure(
+          DiscoveryFailureKind.offline,
+          'The request timed out while waiting for the server. Please retry.',
+          code: 'REQUEST_TIMEOUT',
+        );
+      }
       return const DiscoveryFailure(
         DiscoveryFailureKind.offline,
         'You appear to be offline. Check your connection and retry.',

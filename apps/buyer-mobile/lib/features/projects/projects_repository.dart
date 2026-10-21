@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import '../../core/api_guard.dart';
 import '../../design_system/components/peso_amount_field.dart';
@@ -16,14 +17,17 @@ final class ProjectsRepository {
   ProjectsRepository({
     required api.MateryalphApiClient client,
     required Future<void> Function() onSessionExpired,
-  }) : _client = client,
-       _guard = ApiGuard(onSessionExpired);
+  }) : this.withGuard(client: client, guard: ApiGuard(onSessionExpired));
 
   ProjectsRepository.withGuard({
     required api.MateryalphApiClient client,
     required ApiGuard guard,
   }) : _client = client,
-       _guard = guard;
+       _guard = guard {
+    if (!_client.dio.interceptors.any((item) => item is _ProjectTimeouts)) {
+      _client.dio.interceptors.insert(0, _ProjectTimeouts());
+    }
+  }
 
   final api.MateryalphApiClient _client;
   final ApiGuard _guard;
@@ -546,6 +550,23 @@ final class ProjectsRepository {
 List<ProjectData> specificationSelections(Map<String, String> selections) => [
   for (final e in selections.entries) {'line_id': e.key, 'option_id': e.value},
 ];
+
+/// Hosted Project scans and arrangement pricing can exceed the generated
+/// client's three-second response budget. Keep the allowance in this domain;
+/// multipart requests retain the shared upload transport's scanner budgets.
+final class _ProjectTimeouts extends Interceptor {
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    if ((options.path == '/buyers/projects' ||
+            options.path.startsWith('/buyers/projects/') ||
+            options.path.startsWith('/buyers/work-packages/')) &&
+        options.data is! FormData) {
+      options.connectTimeout = const Duration(seconds: 30);
+      options.receiveTimeout = const Duration(seconds: 60);
+    }
+    handler.next(options);
+  }
+}
 
 ProjectData projectObject(Object? value) =>
     value is Map ? Map<String, Object?>.from(value) : <String, Object?>{};
