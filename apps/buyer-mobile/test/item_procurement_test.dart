@@ -378,6 +378,20 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('You are offline'), findsOneWidget);
         expect(find.text('Retry'), findsOneWidget);
+
+        repository.searchFailure = const DiscoveryFailure(
+          DiscoveryFailureKind.timeout,
+          'The request timed out while waiting for the server. Please retry.',
+        );
+        await h.explore.retrySearch();
+        await tester.pumpAndSettle();
+        expect(find.text('You are offline'), findsNothing);
+        expect(find.text('Results could not load'), findsOneWidget);
+        expect(
+          tester.widget<StateMessage>(find.byType(StateMessage)).kind,
+          StateKind.error,
+        );
+        expect(find.text('Retry'), findsOneWidget);
       },
     );
   });

@@ -189,7 +189,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       }
     } on DiscoveryFailure catch (error) {
       if (!mounted || !_navigation.isCurrent(stamp)) return;
-      if (error.kind != DiscoveryFailureKind.offline) _decisionKey = null;
+      if (!error.isTransportFailure) _decisionKey = null;
       if (mounted) setState(() => _notice = error.message);
       if (error.kind == DiscoveryFailureKind.conflict) await _load();
     } finally {

@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/buyer_transport.dart';
 import '../design_system/components/buyer_overlays.dart'
     show showBuyerBottomSheet;
 import '../design_system/components/discovery_controls.dart' show ScoreBadge;
@@ -24,7 +25,9 @@ class BuyerStoreRepository {
               'API_BASE_URL',
               defaultValue: 'http://10.0.2.2:8080/api/v1',
             ),
-          );
+          ) {
+    configureBuyerTransport(_client.dio);
+  }
 
   final MateryalphApiClient _client;
 

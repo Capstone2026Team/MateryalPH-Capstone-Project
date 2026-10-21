@@ -5,7 +5,7 @@ import 'package:built_value/json_object.dart';
 import 'package:dio/dio.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart';
 
-import '../core/file_upload_transport.dart';
+import '../core/buyer_transport.dart';
 import 'token_store.dart';
 
 final class AuthRepository {
@@ -26,7 +26,7 @@ final class AuthRepository {
     )) {
       _client.dio.interceptors.insert(0, _BuyerAccountRequests());
     }
-    configureFileUploads(_client.dio);
+    configureBuyerTransport(_client.dio);
   }
 
   final TokenStore _tokenStore;

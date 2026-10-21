@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 
 /// File mutations wait for validation, the bounded scanner call and private storage.
-/// Ordinary JSON requests keep the generated client's existing timeouts.
+/// Ordinary JSON requests keep the configured API timeouts.
 void configureFileUploads(Dio dio) {
   if (!dio.interceptors.any((item) => item is _FileUploadTimeouts)) {
     dio.interceptors.insert(0, _FileUploadTimeouts());

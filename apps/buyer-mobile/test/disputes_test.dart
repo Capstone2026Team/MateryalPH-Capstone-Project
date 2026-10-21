@@ -107,44 +107,46 @@ void main() {
     },
   );
 
-  testWidgets('an offline filing retry reuses the same idempotency key', (
-    tester,
-  ) async {
-    await _tall(tester);
-    final repository = FakeDisputesRepository()
-      ..eligible = eligibility()
-      ..detail = disputeDetail()
-      ..failOnce = (call) => call == 'file'
-          ? const DiscoveryFailure(
-              DiscoveryFailureKind.offline,
-              'You appear to be offline.',
-            )
-          : null;
-    await tester.pumpWidget(
-      _app(FileDisputeScreen(orderId: 'order-1', repository: repository)),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('What went wrong?'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Wrong item').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Requested remedy'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Replacement').last);
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Describe the problem'),
-      'The store sent 6-inch blocks instead of 4-inch.',
-    );
-    await tester.tap(find.byType(CheckboxListTile));
-    await tester.tap(find.text('File dispute'));
-    await tester.pumpAndSettle();
-    expect(find.text('You appear to be offline.'), findsOneWidget);
-    await tester.tap(find.text('File dispute'));
-    await tester.pumpAndSettle();
-    expect(repository.keys, hasLength(2));
-    expect(repository.keys.toSet(), hasLength(1));
-  });
+  for (final kind in [
+    DiscoveryFailureKind.offline,
+    DiscoveryFailureKind.timeout,
+  ]) {
+    testWidgets('a $kind filing retry reuses the same idempotency key', (
+      tester,
+    ) async {
+      await _tall(tester);
+      final repository = FakeDisputesRepository()
+        ..eligible = eligibility()
+        ..detail = disputeDetail()
+        ..failOnce = (call) => call == 'file'
+            ? DiscoveryFailure(kind, 'The request did not finish.')
+            : null;
+      await tester.pumpWidget(
+        _app(FileDisputeScreen(orderId: 'order-1', repository: repository)),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('What went wrong?'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Wrong item').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Requested remedy'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Replacement').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Describe the problem'),
+        'The store sent 6-inch blocks instead of 4-inch.',
+      );
+      await tester.tap(find.byType(CheckboxListTile));
+      await tester.tap(find.text('File dispute'));
+      await tester.pumpAndSettle();
+      expect(find.text('The request did not finish.'), findsOneWidget);
+      await tester.tap(find.text('File dispute'));
+      await tester.pumpAndSettle();
+      expect(repository.keys, hasLength(2));
+      expect(repository.keys.toSet(), hasLength(1));
+    });
+  }
 
   testWidgets('return and refund requires an affected item before sending', (
     tester,

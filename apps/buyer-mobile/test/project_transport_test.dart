@@ -64,7 +64,7 @@ void main() {
   });
 
   test(
-    'both repository entry points cover Project requests only, once',
+    'both repository entry points use the shared hosted API policy once',
     () async {
       final client = api.MateryalphApiClient(
         basePathOverride: 'https://api.example.test/api/v1',
@@ -109,8 +109,8 @@ void main() {
       );
 
       await client.dio.get<void>('/buyers/orders');
-      expect(requests.last.receiveTimeout, const Duration(seconds: 3));
-      expect(requests.last.connectTimeout, const Duration(seconds: 5));
+      expect(requests.last.receiveTimeout, const Duration(seconds: 60));
+      expect(requests.last.connectTimeout, const Duration(seconds: 30));
 
       await client.dio.post<void>(
         '/buyers/work-packages/import-preview',

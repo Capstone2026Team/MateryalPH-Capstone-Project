@@ -67,10 +67,9 @@ final class ApiGuard {
       if (error.type == DioExceptionType.connectionTimeout ||
           error.type == DioExceptionType.sendTimeout ||
           error.type == DioExceptionType.receiveTimeout) {
-        // Retain the transport-failure kind: mutation retries must reuse their
-        // idempotency key when the server outcome is unknown.
+        // A timeout is distinct from offline; both retain mutation retry keys.
         return const DiscoveryFailure(
-          DiscoveryFailureKind.offline,
+          DiscoveryFailureKind.timeout,
           'The request timed out while waiting for the server. Please retry.',
           code: 'REQUEST_TIMEOUT',
         );

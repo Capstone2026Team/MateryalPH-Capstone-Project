@@ -23,8 +23,12 @@ void main() {
                 .having((e) => e.code, 'code', 'REQUEST_TIMEOUT')
                 .having((e) => e.message, 'message', contains('timed out'))
                 .having((e) => e.message, 'message', isNot(contains('offline')))
-                // Existing callers retain idempotency keys for this kind.
-                .having((e) => e.kind, 'kind', DiscoveryFailureKind.offline),
+                .having((e) => e.kind, 'kind', DiscoveryFailureKind.timeout)
+                .having(
+                  (e) => e.isTransportFailure,
+                  'retain retry key',
+                  isTrue,
+                ),
           ),
         );
         expect(expired, isFalse);

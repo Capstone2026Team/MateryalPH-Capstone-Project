@@ -938,7 +938,7 @@ class _MessagingScreenState extends State<MessagingScreen>
       );
     } on DiscoveryFailure catch (error) {
       // A dropped response can follow a saved upload; the thread is the source of truth.
-      if (error.kind != DiscoveryFailureKind.offline) rethrow;
+      if (!error.isTransportFailure) rethrow;
       final thread = await widget.repository.conversation(
         widget.conversationId!,
       );

@@ -212,6 +212,34 @@ final class PhaseSevenItemProcurementTest extends TestCase
 
     // ── Search, SRS and Best Price ─────────────────────────────────────────────────────────────────
 
+    public function test_catalog_delivery_checks_are_batched_for_multiple_vendors_and_listings(): void
+    {
+        for ($index = 0; $index < 3; $index++) {
+            [$store, $owner] = $this->activeStore('Catalog Performance '.$index, false);
+            $this->placeStore($store->id, 1000 + $index * 100);
+            $this->signInStoreMember($owner);
+            $this->listing('PERF-'.$index.'-A');
+            $this->listing('PERF-'.$index.'-B');
+        }
+        $this->buyer();
+        DB::enableQueryLog();
+        DB::flushQueryLog();
+        try {
+            $result = $this->searchListings()->assertOk()->assertJsonCount(6, 'data');
+            $queries = DB::getQueryLog();
+        } finally {
+            DB::disableQueryLog();
+            DB::flushQueryLog();
+        }
+        $deliveryQueries = array_filter($queries, static fn (array $query): bool => str_contains($query['query'], 'from "store_profiles" as "delivery_profile"')
+            && ! str_contains($query['query'], 'from "listing_variants"'));
+        self::assertCount(1, $deliveryQueries, 'Catalog must batch current delivery eligibility. Total SQL queries: '.count($queries));
+        foreach ($result->json('data') as $card) {
+            self::assertSame('NOT_OFFERED', $card['fulfillment']['delivery']);
+            self::assertTrue($card['fulfillment']['pickup_available']);
+        }
+    }
+
     public function test_best_deal_srs_is_explainable_best_price_normalizes_packs_and_requires_available_stock(): void
     {
         [$a, $ownerA] = $this->activeStore('Alpha Blocks', false);

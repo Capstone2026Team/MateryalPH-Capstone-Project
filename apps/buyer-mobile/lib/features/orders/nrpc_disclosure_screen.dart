@@ -75,7 +75,7 @@ class _NrpcDisclosureScreenState extends State<NrpcDisclosureScreen> {
       final updated = await action(key);
       if (mounted) Navigator.of(context).pop(updated);
     } on DiscoveryFailure catch (error) {
-      if (error.kind != DiscoveryFailureKind.offline) _key = null;
+      if (!error.isTransportFailure) _key = null;
       if (mounted) setState(() => _error = error.message);
     } finally {
       if (mounted) setState(() => _busy = false);

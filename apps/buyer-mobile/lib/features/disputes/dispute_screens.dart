@@ -582,7 +582,7 @@ class _FileDisputeScreenState extends State<FileDisputeScreen> {
       if (!mounted) return;
       Navigator.of(context).pop(created);
     } on DiscoveryFailure catch (error) {
-      if (error.kind != DiscoveryFailureKind.offline) _key = null;
+      if (!error.isTransportFailure) _key = null;
       if (mounted) {
         setState(() {
           _error = error.message;
@@ -898,7 +898,7 @@ class _DisputeDetailScreenState extends State<DisputeDetailScreen> {
       }
       return true;
     } on DiscoveryFailure catch (error) {
-      if (error.kind != DiscoveryFailureKind.offline) _key = null;
+      if (!error.isTransportFailure) _key = null;
       if (mounted) setState(() => _notice = error.message);
       if (error.kind == DiscoveryFailureKind.conflict) await _load();
       return false;
@@ -1897,7 +1897,7 @@ class _OrderInvoicesScreenState extends State<OrderInvoicesScreen> {
         });
       }
     } on DiscoveryFailure catch (error) {
-      if (error.kind != DiscoveryFailureKind.offline) _key = null;
+      if (!error.isTransportFailure) _key = null;
       if (mounted) setState(() => _notice = error.message);
     } finally {
       if (mounted) setState(() => _busy = false);

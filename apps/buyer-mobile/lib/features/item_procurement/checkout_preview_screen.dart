@@ -375,7 +375,7 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
       );
     } on DiscoveryFailure catch (error) {
       // Keep the key only when the outcome is unknown (offline), so a retry replays safely.
-      if (error.kind != DiscoveryFailureKind.offline) _submitKey = null;
+      if (!error.isTransportFailure) _submitKey = null;
       if (!mounted) return;
       setState(() => _submitError = error.message);
       if (error.code == 'BUDGET_OVERRIDE_REQUIRED') {

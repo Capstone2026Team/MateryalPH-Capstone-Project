@@ -295,7 +295,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       );
     } on DiscoveryFailure catch (error) {
       if (!mounted) return;
-      if (error.kind != DiscoveryFailureKind.offline &&
+      if (!error.isTransportFailure &&
           error.kind != DiscoveryFailureKind.provider) {
         // Only an unconfirmed network attempt may reuse its key; any server decision ends it.
         _pendingAddKey = null;
