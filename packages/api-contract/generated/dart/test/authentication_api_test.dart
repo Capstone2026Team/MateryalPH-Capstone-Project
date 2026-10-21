@@ -112,6 +112,8 @@ void main() {
       // TODO
     });
 
+    // Creates a new Buyer account requiring email verification and current agreement acceptance. An email held by a DELETED Buyer may be reused; that account's login email is pseudonymized, external sign-in links removed and old email codes invalidated in the same transaction. The deleted account and its history remain separate. Other existing accounts retain ACCOUNT_ALREADY_EXISTS protection.
+    //
     //Future<RegistrationEnvelope> registerBuyerMobile(BuyerMobileRegisterRequest buyerMobileRegisterRequest) async
     test('test registerBuyerMobile', () async {
       // TODO
@@ -159,6 +161,8 @@ void main() {
       // TODO
     });
 
+    // Starts Buyer Google authentication. SIGN_UP may create a fresh Buyer account using a previously deleted Buyer's Google identity or email, with current agreement acceptance. The deleted account's login identifiers are released transactionally and its history is retained. SIGN_IN never restores or replaces a deleted account.
+    //
     //Future<SuccessEnvelope> startBuyerMobileGoogleOidc(BuyerMobileGoogleOidcStartRequest buyerMobileGoogleOidcStartRequest) async
     test('test startBuyerMobileGoogleOidc', () async {
       // TODO

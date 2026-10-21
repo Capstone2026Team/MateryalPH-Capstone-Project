@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature\Api;
 
 use App\Domain\Identity\AuthenticationException;
+use App\Domain\Identity\GoogleOidcResult;
 use App\Domain\Identity\GoogleOidcService;
+use App\Models\ExternalIdentity;
 use App\Models\User;
 use Database\Seeders\SystemFoundationSeeder;
 use Firebase\JWT\JWT;
@@ -13,6 +15,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 final class GoogleOidcValidationTest extends TestCase
@@ -187,6 +190,99 @@ final class GoogleOidcValidationTest extends TestCase
             'code' => 'authorization-code',
         ]))->assertUnauthorized()
             ->assertJsonPath('errors.0.code', 'OIDC_EXCHANGE_FAILED');
+    }
+
+    #[DataProvider('deletedGoogleAccounts')]
+    public function test_google_signup_releases_a_deleted_buyer_without_restoring_the_old_account(bool $linked, bool $changedEmail): void
+    {
+        $this->seed(SystemFoundationSeeder::class);
+        $buyer = $this->deletedBuyer('deleted-google@example.test', $linked);
+        $email = $changedEmail ? 'changed-google@example.test' : $buyer->email;
+
+        $result = $this->completeBuyerGoogle($email, 'SIGN_UP');
+
+        self::assertNotSame($buyer->id, $result->user->id);
+        self::assertSame('BUYER', $result->user->account_type);
+        self::assertSame('ACTIVE', $result->user->account_status);
+        self::assertNotNull($result->user->email_verified_at);
+        self::assertSame('DELETED', $buyer->refresh()->account_status);
+        self::assertStringEndsWith('@accounts.materyalph.invalid', $buyer->email);
+        $this->assertDatabaseMissing('external_identities', ['user_id' => $buyer->id]);
+        $this->assertDatabaseHas('external_identities', ['user_id' => $result->user->id, 'provider_subject' => 'google-subject', 'email_at_link' => $email]);
+        $this->assertDatabaseHas('buyer_profiles', ['user_id' => $result->user->id]);
+        self::assertSame(2, DB::table('agreement_acceptances')->where('user_id', $result->user->id)->count());
+        $this->assertDatabaseCount('email_otps', 0);
+        $service = app(GoogleOidcService::class);
+        self::assertSame($result->user->id, $service->consumeMobileExchangeCode($service->issueMobileExchangeCode($result))->user->id);
+    }
+
+    /** @return array<string, array{bool, bool}> */
+    public static function deletedGoogleAccounts(): array
+    {
+        return ['linked Google account' => [true, false], 'unlinked Gmail address' => [false, false], 'Google email changed' => [true, true]];
+    }
+
+    public function test_google_signin_cannot_restore_or_release_a_deleted_buyer(): void
+    {
+        $buyer = $this->deletedBuyer('deleted-google@example.test', true);
+        try {
+            $this->completeBuyerGoogle($buyer->email, 'SIGN_IN');
+            self::fail('Deleted accounts require a fresh registration.');
+        } catch (AuthenticationException $error) {
+            self::assertSame('PORTAL_ACCESS_DENIED', $error->errorCode);
+        }
+        self::assertSame('DELETED', $buyer->refresh()->account_status);
+        self::assertSame('deleted-google@example.test', $buyer->email);
+        $this->assertDatabaseHas('external_identities', ['user_id' => $buyer->id, 'provider_subject' => 'google-subject']);
+        $this->assertDatabaseCount('users', 1);
+    }
+
+    public function test_failed_google_registration_rolls_back_deleted_identity_release(): void
+    {
+        $this->seed(SystemFoundationSeeder::class);
+        $buyer = $this->deletedBuyer('deleted-google@example.test', true);
+        $this->configureOidc();
+        config()->set('app.buyer_redirect_uri', 'materyalph://auth/callback');
+        $terms = collect($this->getJson('/api/v1/agreements/current')->json('data'))->firstWhere('code', 'TERMS_OF_SERVICE');
+        $service = app(GoogleOidcService::class);
+        $url = $service->authorizationUrl('BUYER', 'MOBILE', true, true, 'SIGN_UP', '+639171234567', 'INDIVIDUAL', null, null, $terms['id'], $terms['content_hash']);
+        $flow = $this->flowFromAuthorizationUrl($url);
+        parse_str((string) parse_url($url, PHP_URL_QUERY), $query);
+        $this->fakeGoogleIdentity($flow['nonce'], $buyer->email);
+        DB::table('agreement_versions')->where('id', $terms['id'])->update(['retired_at' => now()]);
+        try {
+            $service->complete($query['state'], 'authorization-code');
+            self::fail('Stale consent must reject the entire registration.');
+        } catch (AuthenticationException $error) {
+            self::assertSame('AGREEMENT_VERSION_CONFLICT', $error->errorCode);
+        }
+        self::assertSame('deleted-google@example.test', $buyer->refresh()->email);
+        self::assertSame('DELETED', $buyer->account_status);
+        $this->assertDatabaseHas('external_identities', ['user_id' => $buyer->id, 'provider_subject' => 'google-subject']);
+        $this->assertDatabaseCount('users', 1);
+    }
+
+    private function deletedBuyer(string $email, bool $linked): User
+    {
+        $buyer = User::factory()->create(['email' => $email, 'account_type' => 'BUYER', 'account_status' => 'DELETED', 'account_deleted_at' => now()]);
+        if ($linked) {
+            ExternalIdentity::query()->create(['user_id' => $buyer->id, 'provider' => 'GOOGLE', 'provider_subject' => 'google-subject', 'email_at_link' => $email, 'linked_at' => now()]);
+        }
+
+        return $buyer;
+    }
+
+    private function completeBuyerGoogle(string $email, string $mode): GoogleOidcResult
+    {
+        $this->configureOidc();
+        config()->set('app.buyer_redirect_uri', 'materyalph://auth/callback');
+        $terms = $mode === 'SIGN_UP' ? collect($this->getJson('/api/v1/agreements/current')->json('data'))->firstWhere('code', 'TERMS_OF_SERVICE') : null;
+        $url = app(GoogleOidcService::class)->authorizationUrl('BUYER', 'MOBILE', true, true, $mode, '+639171234567', 'INDIVIDUAL', null, null, $terms['id'] ?? null, $terms['content_hash'] ?? null);
+        $flow = $this->flowFromAuthorizationUrl($url);
+        parse_str((string) parse_url($url, PHP_URL_QUERY), $query);
+        $this->fakeGoogleIdentity($flow['nonce'], $email);
+
+        return app(GoogleOidcService::class)->complete($query['state'], 'authorization-code');
     }
 
     private function base64Url(string $value): string

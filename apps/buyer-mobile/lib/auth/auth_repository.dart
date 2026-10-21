@@ -22,9 +22,9 @@ final class AuthRepository {
              ),
            ) {
     if (!_client.dio.interceptors.any(
-      (item) => item is _ProfilePhotoRequests,
+      (item) => item is _BuyerAccountRequests,
     )) {
-      _client.dio.interceptors.insert(0, _ProfilePhotoRequests());
+      _client.dio.interceptors.insert(0, _BuyerAccountRequests());
     }
     configureFileUploads(_client.dio);
   }
@@ -630,14 +630,16 @@ final class BuyerSessionExpired extends BuyerAuthException {
   const BuyerSessionExpired() : super('Your session expired. Sign in again.');
 }
 
-/// Signed avatar reads keep their own budget; multipart mutations use the shared upload transport.
-final class _ProfilePhotoRequests extends Interceptor {
+/// Account reads allow hosted cold starts; multipart mutations use the shared upload transport.
+final class _BuyerAccountRequests extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    if (options.path == '/buyers/account/photo') {
-      if (options.method == 'GET') {
-        options.receiveTimeout = const Duration(seconds: 15);
-      }
+    if (options.method == 'GET' &&
+        options.path.startsWith('/buyers/account/')) {
+      options.connectTimeout = const Duration(seconds: 30);
+      options.receiveTimeout = options.path == '/buyers/account/photo'
+          ? const Duration(seconds: 15)
+          : const Duration(seconds: 60);
     }
     handler.next(options);
   }

@@ -104,3 +104,10 @@ cookie, signed URL or customer image was extracted, and no speculative code chan
 was applied. Integrate the release branch
 into the configured staging branch before a later branch-based deployment, so
 that it retains this repair. Rebuild the Buyer app to include its timeout change.
+
+**Follow-up — 22 October 2026:** the remaining account-photo display issue was
+traced to proxy parsing and missing imported local photo files. The live Render
+configuration was repaired, 36 existing photos were recovered into private
+storage with checksums and audit records, and the Buyer account-read budget was
+extended. See [the profile repair evidence](render-profile-repair-2026-10-22.md)
+for exact verification and manual acceptance remaining.

@@ -200,11 +200,12 @@ void main() {
     );
   }
 
-  test('ordinary account reads keep the original timeout', () async {
+  test('account profile reads allow a hosted cold start', () async {
     final repository = _repository(
       _client((options, handler) {
         expect(options.path, '/buyers/account/profile');
-        expect(options.receiveTimeout, const Duration(seconds: 3));
+        expect(options.connectTimeout, const Duration(seconds: 30));
+        expect(options.receiveTimeout, const Duration(seconds: 60));
         handler.resolve(
           Response<dynamic>(
             requestOptions: options,

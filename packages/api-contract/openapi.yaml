@@ -1660,7 +1660,9 @@ paths:
         refund is open. The account becomes DELETED (final), every session, push
         device and authenticator is revoked and an IN_APP DELETION privacy
         request is opened. Orders, payments, disputes, reviews and audit records
-        are retained and later minimized, never deleted.
+        are retained and later minimized, never deleted. The same email or Google
+        identity may subsequently register a separate Buyer account; the deleted
+        account and its history are never restored.
       requestBody:
         required: true
         content:
@@ -2027,6 +2029,12 @@ paths:
     post:
       operationId: registerBuyerMobile
       tags: [ Authentication ]
+      description: Creates a new Buyer account requiring email verification and
+        current agreement acceptance. An email held by a DELETED Buyer may be
+        reused; that account's login email is pseudonymized, external sign-in
+        links removed and old email codes invalidated in the same transaction.
+        The deleted account and its history remain separate. Other existing
+        accounts retain ACCOUNT_ALREADY_EXISTS protection.
       requestBody:
         required: true
         content:
@@ -2198,6 +2206,11 @@ paths:
     post:
       operationId: startBuyerMobileGoogleOidc
       tags: [ Authentication ]
+      description: Starts Buyer Google authentication. SIGN_UP may create a fresh
+        Buyer account using a previously deleted Buyer's Google identity or email,
+        with current agreement acceptance. The deleted account's login identifiers
+        are released transactionally and its history is retained. SIGN_IN never
+        restores or replaces a deleted account.
       requestBody:
         required: true
         content:

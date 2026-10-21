@@ -6,6 +6,8 @@ namespace Tests\Feature\Api;
 
 use App\Domain\Geography\PlacesProvider;
 use App\Domain\Geography\RouteProvider;
+use App\Domain\Identity\EmailOtpService;
+use App\Domain\Identity\OtpCodeGenerator;
 use App\Domain\Identity\TokenSessionService;
 use App\Domain\Identity\TotpService;
 use App\Domain\Vendors\AddressGeocoder;
@@ -99,6 +101,48 @@ final class BuyerAccountDeletionTest extends TestCase
         $this->getJson('/api/v1/buyers/account/deletion')->assertOk()->assertJsonPath('data.can_delete', true);
         $this->postJson('/api/v1/buyers/account/deletion', ['confirmation' => 'DELETE'])->assertOk();
         self::assertNotNull(DB::table('orders')->where('id', $orderId)->value('id'), 'Order history is never deleted.');
+    }
+
+    public function test_deleted_buyer_can_register_the_same_email_as_a_separate_verified_account(): void
+    {
+        config(['materyalph.bot_protection.enabled' => false]);
+        $buyer = $this->buyer();
+        $email = $buyer->email;
+        $profileId = DB::table('buyer_profiles')->where('user_id', $buyer->id)->value('id');
+        DB::table('external_identities')->insert(['id' => (string) Str::uuid7(), 'user_id' => $buyer->id,
+            'provider' => 'GOOGLE', 'provider_subject' => 'deleted-google-buyer', 'email_at_link' => $email,
+            'linked_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+        $this->mock(OtpCodeGenerator::class)->shouldReceive('sixDigits')->andReturn('654321', '123456');
+        $oldOtp = app(EmailOtpService::class)->issue($email, 'PASSWORD_RESET', $buyer);
+        $this->reauthenticate($buyer);
+        $this->postJson('/api/v1/buyers/account/deletion', ['confirmation' => 'DELETE'])->assertOk();
+
+        $terms = collect($this->getJson('/api/v1/agreements/current')->assertOk()->json('data'))->firstWhere('code', 'TERMS_OF_SERVICE');
+        $payload = ['full_name' => 'New Buyer', 'email' => ' '.strtoupper($email).' ', 'mobile_e164' => '+639171234567',
+            'password' => 'StrongPassword123', 'password_confirmation' => 'StrongPassword123', 'buyer_type' => 'INDIVIDUAL',
+            'terms_accepted' => true, 'privacy_accepted' => true, 'terms_version_id' => $terms['id'], 'terms_content_hash' => $terms['content_hash']];
+        $this->postJson('/api/v1/mobile/auth/register', $payload)->assertCreated()->assertJsonPath('data.verification_required', true);
+
+        $newBuyer = User::query()->where('email', $email)->sole();
+        self::assertNotSame($buyer->id, $newBuyer->id);
+        self::assertNotSame($buyer->public_id, $newBuyer->public_id);
+        self::assertSame('PENDING_VERIFICATION', $newBuyer->account_status);
+        self::assertNull($newBuyer->email_verified_at);
+        self::assertSame('DELETED', $buyer->refresh()->account_status);
+        self::assertStringEndsWith('@accounts.materyalph.invalid', $buyer->email);
+        self::assertNotNull($oldOtp->refresh()->invalidated_at);
+        $this->assertDatabaseMissing('external_identities', ['user_id' => $buyer->id]);
+        $this->assertDatabaseHas('buyer_profiles', ['id' => $profileId, 'user_id' => $buyer->id]);
+        $this->assertDatabaseHas('privacy_requests', ['user_id' => $buyer->id, 'request_type' => 'DELETION']);
+        self::assertNotSame($profileId, DB::table('buyer_profiles')->where('user_id', $newBuyer->id)->value('id'));
+        self::assertSame(0, AuthSession::query()->where('user_id', $buyer->id)->whereNull('revoked_at')->count());
+
+        $this->postJson('/api/v1/mobile/auth/password/reset', ['email' => $email, 'code' => '654321',
+            'password' => 'DifferentPassword123', 'password_confirmation' => 'DifferentPassword123'])->assertUnprocessable();
+        $this->postJson('/api/v1/mobile/auth/verify-email', ['email' => $email, 'code' => '123456'])->assertOk();
+        $this->postJson('/api/v1/mobile/auth/login', ['email' => $email, 'password' => 'StrongPassword123'])->assertOk();
+        self::assertSame('DELETED', $buyer->refresh()->account_status);
+        self::assertSame('ACTIVE', $newBuyer->refresh()->account_status);
     }
 
     public function test_deleted_status_requires_its_deletion_timestamp(): void

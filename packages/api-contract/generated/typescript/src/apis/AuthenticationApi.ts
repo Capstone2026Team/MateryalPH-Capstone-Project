@@ -1267,6 +1267,7 @@ export class AuthenticationApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates a new Buyer account requiring email verification and current agreement acceptance. An email held by a DELETED Buyer may be reused; that account\'s login email is pseudonymized, external sign-in links removed and old email codes invalidated in the same transaction. The deleted account and its history remain separate. Other existing accounts retain ACCOUNT_ALREADY_EXISTS protection.
      */
     async registerBuyerMobileRaw(requestParameters: RegisterBuyerMobileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RegistrationEnvelope>> {
         const requestOptions = await this.registerBuyerMobileRequestOpts(requestParameters);
@@ -1276,6 +1277,7 @@ export class AuthenticationApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates a new Buyer account requiring email verification and current agreement acceptance. An email held by a DELETED Buyer may be reused; that account\'s login email is pseudonymized, external sign-in links removed and old email codes invalidated in the same transaction. The deleted account and its history remain separate. Other existing accounts retain ACCOUNT_ALREADY_EXISTS protection.
      */
     async registerBuyerMobile(requestParameters: RegisterBuyerMobileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RegistrationEnvelope> {
         const response = await this.registerBuyerMobileRaw(requestParameters, initOverrides);
@@ -1706,6 +1708,7 @@ export class AuthenticationApi extends runtime.BaseAPI {
     }
 
     /**
+     * Starts Buyer Google authentication. SIGN_UP may create a fresh Buyer account using a previously deleted Buyer\'s Google identity or email, with current agreement acceptance. The deleted account\'s login identifiers are released transactionally and its history is retained. SIGN_IN never restores or replaces a deleted account.
      */
     async startBuyerMobileGoogleOidcRaw(requestParameters: StartBuyerMobileGoogleOidcRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SuccessEnvelope>> {
         const requestOptions = await this.startBuyerMobileGoogleOidcRequestOpts(requestParameters);
@@ -1715,6 +1718,7 @@ export class AuthenticationApi extends runtime.BaseAPI {
     }
 
     /**
+     * Starts Buyer Google authentication. SIGN_UP may create a fresh Buyer account using a previously deleted Buyer\'s Google identity or email, with current agreement acceptance. The deleted account\'s login identifiers are released transactionally and its history is retained. SIGN_IN never restores or replaces a deleted account.
      */
     async startBuyerMobileGoogleOidc(requestParameters: StartBuyerMobileGoogleOidcRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SuccessEnvelope> {
         const response = await this.startBuyerMobileGoogleOidcRaw(requestParameters, initOverrides);

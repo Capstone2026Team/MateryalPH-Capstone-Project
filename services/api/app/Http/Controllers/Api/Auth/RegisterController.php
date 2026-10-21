@@ -27,7 +27,7 @@ final class RegisterController extends Controller
         $transport = AuthTransport::fromRequest($request);
         $portal = $transport === AuthTransport::MOBILE ? 'BUYER' : 'VENDOR';
         $input['account_type'] = $portal;
-        $register->assertEmailAvailable((string) $input['email']);
+        $register->assertEmailAvailable((string) $input['email'], $portal);
         $usedProof = $botProtection->guard(
             $request,
             (string) $input['email'],
