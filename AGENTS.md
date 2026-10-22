@@ -20,7 +20,7 @@ Every client calls `/api/v1`; none touches PostgreSQL, Redis, private storage or
 
 Laravel `^13.0`, PHP 8.4, Composer 2 · PostgreSQL 16 + PostGIS/`pg_trgm`/`pgcrypto` · Redis-compatible cache/queues + Horizon · Passport · Reverb · React 19 + strict TS + Vite 8 + Tailwind on semantic tokens · Flutter/Dart · OpenAPI 3.1 with generated TS+Dart clients · Docker Compose · GitHub Actions + Render. Changing any of these needs an approved ADR and user confirmation. Laravel minor/patch only after full test and security gates pass; major needs a new ADR.
 
-Approved staging hosting exception: [ADR 0002](docs/adr/0002-railway-vercel-staging.md) selects Railway Hobby and Vercel Hobby. Retain Render during acceptance; paid provisioning follows the cost worksheet approval.
+Staging hosting uses the existing Render deployment. Follow [the Render runbook](docs/deployment/render-staging.md); paid provisioning requires separate user approval.
 
 ## Security
 

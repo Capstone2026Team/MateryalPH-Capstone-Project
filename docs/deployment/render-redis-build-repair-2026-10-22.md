@@ -24,8 +24,8 @@ verifies the pinned SHA256 before extracting or compiling, installs through the
 official PHP image's extension helper, and requires the loaded extension version
 to equal 6.3.0. No PECL download or channel lookup is needed.
 
-The shared installer is used by `api.render.Dockerfile`, `api.staging.Dockerfile`
-and `api.Dockerfile`, which all had the same unpinned PECL download step. Redis
+The shared installer is used by `api.render.Dockerfile` and `api.Dockerfile`,
+which both had the same unpinned PECL download step. Redis
 installation is a separate layer after the built-in PHP extensions, preserving
 that expensive build cache across installer changes or download failures.
 
@@ -43,7 +43,7 @@ provider configuration, secret, hosting plan or staging data changes are require
 
 Completed checks:
 
-- Render, Railway staging and development image builds: all three passed.
+- Render and development image builds: passed.
 - Render image: PHP 8.4.27, loaded Redis 6.3.0, runtime user `app`, PHP-FPM
   configuration and Nginx configuration: passed.
 - Network-isolated Render runtime regression at 512 MiB and 0.5 CPU: passed.
@@ -51,7 +51,6 @@ Completed checks:
   while they were busy, HEAD `/up` passed, and stopped FPM produced HTTP 502.
   The 25 MiB file, multipart request above 32 MiB, file/request limit enforcement,
   original-route logging and query-string redaction checks also passed.
-- Deployment-script tests: 8 passed, 0 failed.
 - Installer failure checks: both cases passed in a network-isolated container.
 - Installer/test shell syntax, Compose configuration and CI YAML parsing: passed.
 - Source secret scan and changed-file whitespace: passed.
@@ -62,7 +61,6 @@ Reproduce the production build and runtime regression from the repository root:
 docker build --pull -f infrastructure/docker/api.render.Dockerfile -t materyalph-api:redis-build-fix .
 python scripts/deployment/test-render-runtime.py --image materyalph-api:redis-build-fix
 sh scripts/deployment/test-phpredis-installer.sh
-node --test scripts/deployment/staging-deployment.test.mjs
 ```
 
 The full application suites and authenticated browser/device/provider acceptance

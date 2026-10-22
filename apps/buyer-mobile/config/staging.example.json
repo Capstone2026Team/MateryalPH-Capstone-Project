@@ -1,6 +1,6 @@
 {
   "APP_ENV": "staging",
-  "API_BASE_URL": "https://REPLACE-API-HOST.up.railway.app/api/v1",
+  "API_BASE_URL": "https://REPLACE-API-HOST.onrender.com/api/v1",
   "GOOGLE_OIDC_CLIENT_ID": "",
   "GOOGLE_OIDC_SERVER_CLIENT_ID": "",
   "MAPS_CLIENT_CONFIGURED": false,

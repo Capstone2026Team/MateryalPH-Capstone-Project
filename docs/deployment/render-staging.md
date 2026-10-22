@@ -26,7 +26,7 @@ These resources are already provisioned in the confirmed workspace. Do not apply
 
 All four services are live on source commit `3ef276d230d1c5ed37fb5933ea6015848fe49ad6`; each has automatic deployment turned off. The Free Postgres instance (`dpg-dbb2t561egvs73clqop0-a`) expires on **2026-11-18 14:52 UTC** (22:52 Asia/Manila). Free Key Value (`red-dbb2t68n74is73c2juvg`) is volatile on restart.
 
-The `render.yaml` passed Render's current schema and Free-plan checks. The resources were created with Render's authenticated public API fallback; no Render Blueprint object is linked to them yet. Before a future Blueprint sync, adopt the existing resources in the Dashboard rather than creating duplicates. This one-time preview was approved while the documented CI failures remain; the automatic GitHub deployment gate is unchanged.
+The `render.yaml` passed Render's schema and Free-plan checks during provisioning. The resources were created with Render's authenticated public API fallback; no Render Blueprint object is linked to them yet. Before a future Blueprint sync, adopt the existing resources in the Dashboard rather than creating duplicates. This one-time preview was approved while the documented CI failures remain; GitHub Actions currently runs CI checks only.
 
 For this API-provisioned preview, `FRONTEND_VENDOR_HOST` and `FRONTEND_ADMIN_HOST` are set to the assigned generated hostnames. `render.yaml` declares the equivalent `fromService` references for a future Blueprint adoption. If an assigned hostname changes before adoption, update and redeploy the API host variables and both portal API rewrite destinations.
 
@@ -55,9 +55,9 @@ The workflow at `.github/workflows/ci.yml` provides:
 - Existing PHP/PostgreSQL, OpenAPI/client drift, portal and Flutter gates.
 - Secret and dependency audits, Blueprint schema/budget checks, container build/configuration and vulnerability scan.
 - One aggregate required status: **All required checks passed**.
-- A serialized deployment job that deploys the exact passing SHA, validates workspace/repository/branch/Free plans, waits for live deploys, then checks HTTP, proxy routing, secure host-only CSRF cookies and CSRF rejection.
+- No deployment job. Render deployments are performed separately after the required checks pass. The retained `scripts/deployment/deploy-render-staging.mjs` helper validates targets, deploys the exact selected SHA in order, and runs HTTP smoke checks when explicitly invoked.
 
-Keep automatic Render service deployments off. They would bypass the ordered GitHub deployment job. Keep Blueprint automatic sync off after initial creation; review infrastructure edits separately.
+Keep automatic Render service deployments off so releases remain an explicit operator action after CI passes. Keep Blueprint automatic sync off after initial creation; review infrastructure edits separately.
 
 The deployment change adds the required S3 Flysystem adapter and patches Symfony HTTP Foundation. The OpenAPI tooling lockfile also takes compatible security updates and pins get-uri's basic-ftp dependency to 6.2.3, because upstream still requests vulnerable 5.x. The Java generator remains pinned to 7.25.0. The FTP override rejects separate transfer hosts by default; the repository's generator downloads use HTTPS. See [the upstream advisory](https://github.com/advisories/GHSA-c475-qrg2-pj4r) and [v6 behavior](https://github.com/patrickjuchli/basic-ftp/releases/tag/v6.0.0).
 
@@ -66,9 +66,9 @@ A repository administrator must configure:
 1. GitHub environments **staging** and **production**, with deployment branch rules limited to their intended branches. Production has no deploy job in this change.
 2. A reviewer and no self-approval for production; configure staging approval according to the team's policy. Restrict who can change environment secrets.
 3. Branch protection/rulesets requiring pull-request review and **All required checks passed**. Do not bypass a failed gate.
-4. Environment secrets/variables below. A collaborator with push access might not have permission to configure protections.
+4. Store deployment credentials in the operator's protected environment when using the manual helper below. A collaborator with push access might not have permission to configure protections.
 
-Do not set the repository variable `RENDER_STAGING_CONFIGURED=true` until the resources, protected environment, secrets and initial checks are ready.
+GitHub Actions has no deployment enablement variable; passing CI does not trigger a Render deployment.
 
 ## 2. Validate and create the Blueprint
 
@@ -208,17 +208,16 @@ The worker uses `queue:work`, matching the current repository. Horizon is not in
 
 Free compute does not support a custom shutdown delay. The worker has a 20-second timeout, supervisor allows 25 seconds to stop, and Redis retries only after 120 seconds. Long jobs can fail/retry under these preview limits; do not use the preview for durable commercial processing.
 
-Initial Blueprint creation can start independent builds together. Later GitHub releases deploy API first (including startup migration), then Reverb, then the two static sites. For future schema changes use additive, backward-compatible migrations; a code rollback does not reverse database changes.
+Initial Blueprint creation can start independent builds together. For later releases, deploy API first (including startup migration), then Reverb, then the two static sites. The retained manual helper follows this order. For future schema changes use additive, backward-compatible migrations; a code rollback does not reverse database changes.
 
-### Enable subsequent GitHub deployments
+### Manual Render deployments after CI
 
-In GitHub's protected **staging** environment, add secret:
+Review the required CI results for the exact commit before deploying through Render's Dashboard or the retained helper. The helper reads these environment variables:
 
-- `RENDER_STAGING_API_KEY`: staging-scoped automation credential, entered through GitHub's secret UI.
-
-Add environment variables:
-
-- `RENDER_STAGING_WORKSPACE_ID=tea-db8ouuc9v7es73dc3u7g`
+- `RENDER_API_KEY`: staging automation credential, loaded only from a protected environment; never paste it into chat or commit it.
+- `DEPLOY_COMMIT`: exact passing 40-character source commit SHA.
+- `DEPLOY_REPOSITORY=Capstone2026Team/MateryalPH-Capstone-Project`
+- `RENDER_WORKSPACE_ID=tea-db8ouuc9v7es73dc3u7g`
 - `RENDER_STAGING_SERVICE_IDS`: JSON mapping `api`, `reverb`, `vendor`, `admin` to their actual Render service IDs.
 - `STAGING_API_URL`, `STAGING_VENDOR_URL`, `STAGING_ADMIN_URL`: actual plain HTTPS origins, with no path or query.
 
@@ -228,13 +227,17 @@ Example structure only (replace every ID):
 {"api":"srv-REPLACE","reverb":"srv-REPLACE","vendor":"srv-REPLACE","admin":"srv-REPLACE"}
 ```
 
-Finally set repository variable `RENDER_STAGING_CONFIGURED=true`. It is a repository variable because the deployment job's condition is evaluated before environment variables are loaded.
+Once these settings are loaded securely, run from the repository root:
 
-Merge approved changes into staging, or dispatch **quality gates** on staging. Keep Render auto-deploys off. Never send a deploy-hook URL or automation key through chat.
+```powershell
+node scripts/deployment/deploy-render-staging.mjs
+```
+
+The helper performs a deployment when invoked; it does not query GitHub's CI results. Keep Render auto-deploys off and verify the selected commit passed CI before running it. Never send a deploy-hook URL or automation key through chat.
 
 ## 5. Acceptance and rollback
 
-CI HTTP smoke checks cover health, unauthenticated-session denial, SPA login routing, same-origin proxy responses, secure host-only CSRF cookies, preserved POST requests and missing-CSRF rejection. They do not sign in, test payments or prove private storage, mail or device behavior.
+The manual deployment helper's HTTP smoke checks cover health, unauthenticated-session denial, SPA login routing, same-origin proxy responses, secure host-only CSRF cookies, preserved POST requests and missing-CSRF rejection. They do not sign in, test payments or prove private storage, mail or device behavior.
 
 Before calling staging functional, manually verify:
 

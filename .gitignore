@@ -48,7 +48,6 @@ apps/buyer-mobile/build/
 
 # Local runtime data
 /.tmp/
-/.railway/
 **/__pycache__/
 services/api/phase15-*.log
 services/api/delivery-*.log

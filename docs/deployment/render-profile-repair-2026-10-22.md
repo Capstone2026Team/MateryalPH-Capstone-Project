@@ -1,6 +1,6 @@
-# Render backup profile-photo repair — 22 October 2026
+# Render profile-photo repair — 22 October 2026
 
-Render remains available alongside the pending Railway/Vercel deployment work.
+Render remains the staging deployment target.
 The API configuration repair is live in deployment `dep-dbcf84ektt5c73f8of40`,
 finished at `2026-10-21T17:19:46Z`, using the existing successful build of commit
 `14d5c98a339a333d18309cbb60f794f26312300d`. No source was pushed or merged.
