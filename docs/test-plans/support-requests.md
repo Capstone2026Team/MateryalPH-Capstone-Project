@@ -24,13 +24,18 @@ Guest links have 256 random bits, are hashed in the database, expire after 24 ho
 
 Apply the new migration using the normal approved migration procedure: `php artisan migrate --path=database/migrations/2026_10_28_000000_create_support_requests.php` from `services/api`. The new migration was applied independently to the development API after confirming it was the only pending migration. No earlier migration was rerun.
 
-Reuse existing `FRONTEND_VENDOR_URL` (HTTPS for guest email links), `COOKIE_SECURE=true`, private file disk, scanner, mail transport and worker/outbox configuration. No new provider credentials or realtime infrastructure. Restart the existing local worker after updating the code (`docker compose restart horizon`); its long-running PHP process must load the new outbox handler. This restart remains a local runtime step because the automatic approval service could not complete later command reviews. Keep `MAIL_DELIVERY_NOT_BEFORE` activation behavior. Authenticated notifications use current authorization before dispatch. Guest access mail uses the same queued sealed outbox and sanitized mail provider, with bounded retries.
+Reuse existing `FRONTEND_VENDOR_URL` (HTTPS for hosted guest email links), `COOKIE_SECURE=true`, private file disk, scanner, mail transport and worker/outbox configuration. No new provider credentials or realtime infrastructure. Restart the existing local worker after updating the code (`docker compose restart horizon`); its long-running PHP process must load the new code. Keep `MAIL_DELIVERY_NOT_BEFORE` activation behavior. Authenticated notifications use current authorization before dispatch. Guest access mail uses the same queued sealed outbox and sanitized mail provider, with bounded retries.
+
+Admin replies queue email updates for the ticket's Buyer or Vendor account through the existing notification delivery records; guests receive a fresh single-use support access link. Authenticated support emails use support-specific navigation instructions. Reply text and attachments remain in the private ticket. Replaying the same reply idempotency key does not create another notification or guest link.
+
+In `local` and `development` environments only, guest email links also accept HTTP on exactly `localhost`, `127.0.0.1` or `[::1]` so the local Vendor portal can open them. Remote HTTP, embedded URL credentials and HTTP in Staging/Production remain rejected. Keep HTTPS for all hosted environments. No change is made to guest-link expiry, cookie security, mail activation cutoff or current-account authorization checks.
 
 No arbitrary new retention duration is introduced. Support history uses the `SUPPORT_HISTORY` file class and append-only records; the administration must include this data in its established retention and privacy review. The on-form notice explains purpose, access, retention, data minimization and access/correction requests. Privacy design follows the [NPC publication of RA 10173, Section 11](https://privacy.gov.ph/data-privacy-act-/) on purpose, proportionality and retention. This implementation does not constitute a legal compliance certification.
 
 ## Automated checks
 
 - API: `php artisan test --compact --filter=SupportRequestsTest` in guarded `api-test`: creation, idempotency, authoritative identity, ownership, role denial, replies, state/version checks, assignment, guest links/cookies, validation, rate limiting, private files/scanner failures and append-only constraints.
+- Support email regression: process queued Admin reply notifications for Buyer and Vendor accounts, verify the exact recipient and support template, repeated-job/reply deduplication and access revocation. Process guest reply mail, verify fresh private links, expired-link suppression, and the environment/loopback URL restrictions.
 - API regression: NotificationInboxTest, PhaseFifteenNotificationsTest and OutboxDeliveryTest in the same isolated stack, serially.
 - Contract: `npm run validate` and `npm run test:support-contract` from `packages/api-contract`, after generating/building clients.
 - Web component checks: `npm run test -- --run src/pages/SupportPages.test.tsx` from both `apps/vendor-web` and `apps/admin-web`; both portals also run lint/typecheck/build. Admin status tabs preserve applied search/category/user-type/date filters, reset pagination, keep unfinished filter drafts and ignore late responses from a previously selected status. The same shared tabs support keyboard navigation.
@@ -40,6 +45,12 @@ No arbitrary new retention duration is introduced. Support history uses the `SUP
 ## Manual acceptance
 
 Submit a guest request from desktop and a narrow screen; verify email receipt, expired/single-use access, follow-up, attachment viewing and a fresh-link request. Confirm a different email/ticket or expired session cannot read anything. With a Vendor and Buyer account, submit, refresh, reply, reopen a resolved case, view notifications and inspect protected attachments. As Support Staff, exercise search/category/type/date/status filters, assignment/unassignment, stale-version conflict, close and reopen. Confirm an unrelated Admin role is denied. Verify keyboard flow, screen-reader labels, mobile text scaling, loading, offline, validation and retry states. Real mailbox delivery, real scanner readiness, browser layouts and physical-device file selection require runtime acceptance.
+
+## Verification record - 2026-10-22 support email repair
+
+- Isolated `SupportRequestsTest`: 25 passed, 163 assertions. NotificationInboxTest, PhaseFifteenNotificationsTest and OutboxDeliveryTest: 20 passed, 139 assertions.
+- Pint, full production-path PHPStan, support contract checks (10 operations / 26 audience-scoped routes), Compose configuration, changed-file secret scan and diff whitespace checks passed.
+- Local worker reloaded. The latest already-queued Admin reply email for the reported guest ticket was processed successfully through the configured Gmail SMTP transport. No historical batch replay or mail activation cutoff change was performed. Inbox receipt and email-link click-through remain manual acceptance checks.
 
 ## Verification record - 2026-10-19
 

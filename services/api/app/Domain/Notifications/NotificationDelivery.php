@@ -8,6 +8,7 @@ use App\Mail\AccountSecurityMail;
 use App\Mail\FinanceNoticeMail;
 use App\Mail\OrderNoticeMail;
 use App\Mail\ProductComplianceNoticeMail;
+use App\Mail\SupportNoticeMail;
 use App\Mail\VendorInventoryNoticeMail;
 use App\Mail\VendorOnboardingNoticeMail;
 use App\Models\User;
@@ -40,7 +41,7 @@ final class NotificationDelivery
                         $state = 'SKIPPED';
                     } elseif ($delivery->channel === 'EMAIL') {
                         $recipient = $delivery->sealed_recipient === null ? $user->email : Crypt::decryptString($delivery->sealed_recipient);
-                        $mail = match ($delivery->template) {
+                        $mail = $notice->category === 'SUPPORT' ? new SupportNoticeMail($notice->title, $notice->body, $user->account_type) : match ($delivery->template) {
                             'FINANCE_NOTICE' => new FinanceNoticeMail($notice->title, $notice->body),
                             'VENDOR_ONBOARDING_NOTICE' => new VendorOnboardingNoticeMail($notice->body),
                             'ACCOUNT_SECURITY_NOTICE' => new AccountSecurityMail($notice->body),

@@ -12,8 +12,11 @@ use App\Domain\Operations\OutboxProcessor;
 use App\Domain\Support\SupportGuestAccess;
 use App\Domain\Vendors\VendorFileScanner;
 use App\Mail\SupportAccessMail;
+use App\Mail\SupportNoticeMail;
 use App\Models\AuthSession;
 use App\Models\User;
+use App\Models\VendorMembership;
+use App\Models\VendorOrganization;
 use Database\Seeders\SystemFoundationSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,10 +24,12 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Mail\Mailable;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Passport\AccessToken;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 final class SupportRequestsTest extends TestCase
@@ -229,6 +234,139 @@ final class SupportRequestsTest extends TestCase
         $this->travel(25)->hours();
         app(OutboxProcessor::class)->process($next->id);
         self::assertSame(1, $delivered, 'Expired links must not be delivered.');
+    }
+
+    /** @return array<string, array{string, string}> */
+    public static function authenticatedSupportRecipients(): array
+    {
+        return ['buyer' => ['BUYER', 'buyers'], 'vendor' => ['VENDOR', 'vendors']];
+    }
+
+    #[DataProvider('authenticatedSupportRecipients')]
+    public function test_admin_reply_emails_the_authenticated_requester_once(string $accountType, string $portal): void
+    {
+        Mail::fake();
+        config()->set('mail.delivery_not_before', null);
+        config()->set('app.vendor_frontend_url', 'https://vendor.example.test');
+        $user = User::factory()->create(['account_type' => $accountType]);
+        if ($accountType === 'VENDOR') {
+            $organization = VendorOrganization::query()->create(['legal_name' => 'Support test vendor', 'store_name' => 'Support test store', 'account_status' => 'ACTIVE']);
+            VendorMembership::query()->create(['vendor_organization_id' => $organization->id, 'user_id' => $user->id, 'role' => 'OWNER', 'status' => 'ACTIVE']);
+            DB::table('totp_factors')->insert(['id' => (string) Str::uuid7(), 'user_id' => $user->id, 'encrypted_secret' => Crypt::encryptString(bin2hex(random_bytes(20))), 'confirmed_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+        }
+        $this->signIn($user);
+        $id = $this->withHeader('Idempotency-Key', (string) Str::uuid7())->postJson('/api/v1/support/'.$portal.'/tickets', $this->input())->assertCreated()->json('data.id');
+        $this->signIn($this->admin('ADMIN_SUPPORT'));
+        $key = (string) Str::uuid7();
+        $reply = ['message' => 'Private response that belongs only in the ticket.'];
+        $this->withHeader('Idempotency-Key', $key)->postJson('/api/v1/support/admin/tickets/'.$id.'/entries', $reply)->assertCreated();
+        $this->postJson('/api/v1/support/admin/tickets/'.$id.'/entries', $reply)->assertCreated();
+        $notice = DB::table('notifications')->where('user_id', $user->id)->where('resource_id', $id)->first();
+        self::assertNotNull($notice);
+        self::assertSame(1, DB::table('notifications')->where('user_id', $user->id)->where('resource_id', $id)->count());
+        $processor = app(OutboxProcessor::class);
+        $processor->process((string) DB::table('outbox_events')->where('event_type', 'NOTIFICATION_READY')->where('aggregate_id', $notice->id)->value('id'));
+        $delivery = DB::table('notification_deliveries')->where('notification_id', $notice->id)->where('channel', 'EMAIL')->first();
+        self::assertNotNull($delivery);
+        $eventId = (string) DB::table('outbox_events')->where('event_type', 'NOTIFICATION_DELIVERY')->where('aggregate_id', $delivery->id)->value('id');
+        $processor->process($eventId);
+        $processor->process($eventId);
+        Mail::assertSent(SupportNoticeMail::class, function (SupportNoticeMail $mail) use ($user, $accountType, $reply, $notice): bool {
+            $rendered = $mail->render();
+            self::assertStringContainsString('My Support Requests', $rendered);
+            self::assertStringNotContainsString($reply['message'], $rendered);
+            self::assertStringNotContainsString('Open the order', $rendered);
+            if ($accountType === 'VENDOR') {
+                self::assertStringContainsString('https://vendor.example.test/notifications?notice='.$notice->id, $rendered);
+            } else {
+                self::assertStringContainsString('Profile → Help Center', $rendered);
+            }
+
+            return $mail->hasTo($user->email) && $mail->accountType === $accountType;
+        });
+        Mail::assertSentCount(1);
+        $this->assertDatabaseHas('notification_deliveries', ['id' => $delivery->id, 'state' => 'SENT', 'attempt_count' => 1]);
+    }
+
+    public function test_admin_reply_emails_a_guest_a_fresh_private_link_once(): void
+    {
+        Mail::fake();
+        $this->mock(MailProvider::class)->shouldReceive('send')->once()->andReturnUsing(function (string $recipient, Mailable $mail): void {
+            Mail::to($recipient)->send($mail);
+        });
+        config()->set('mail.delivery_not_before', null);
+        config()->set('app.vendor_frontend_url', 'http://localhost:5173');
+        $id = $this->withHeader('Idempotency-Key', (string) Str::uuid7())->postJson('/api/v1/support/guest/tickets', $this->input())->assertCreated()->json('data.id');
+        $this->signIn($this->admin('ADMIN_SUPPORT'));
+        $key = (string) Str::uuid7();
+        $reply = ['message' => 'Private response that belongs only in the ticket.'];
+        $this->withHeader('Idempotency-Key', $key)->postJson('/api/v1/support/admin/tickets/'.$id.'/entries', $reply)->assertCreated();
+        $this->postJson('/api/v1/support/admin/tickets/'.$id.'/entries', $reply)->assertCreated();
+        self::assertSame(2, DB::table('outbox_events')->where('event_type', 'SUPPORT_GUEST_EMAIL')->where('aggregate_id', $id)->count());
+        $event = DB::table('outbox_events')->where('event_type', 'SUPPORT_GUEST_EMAIL')->where('aggregate_id', $id)->orderByDesc('id')->first();
+        $this->app->instance('env', 'development');
+        $processor = app(OutboxProcessor::class);
+        $processor->process($event->id);
+        $processor->process($event->id);
+        Mail::assertSent(SupportAccessMail::class, function (SupportAccessMail $mail) use ($reply): bool {
+            self::assertStringNotContainsString($reply['message'], $mail->render());
+
+            return $mail->hasTo('support-guest@example.com') && str_starts_with($mail->accessUrl, 'http://localhost:5173/contact/access#token=');
+        });
+        Mail::assertSentCount(1);
+        self::assertNotNull(DB::table('outbox_events')->where('id', $event->id)->value('processed_at'));
+    }
+
+    public function test_support_email_is_not_sent_after_requester_access_is_revoked(): void
+    {
+        Mail::fake();
+        $user = User::factory()->create();
+        $this->signIn($user);
+        $id = $this->createBuyerTicket();
+        $this->signIn($this->admin('ADMIN_SUPPORT'));
+        $this->withHeader('Idempotency-Key', (string) Str::uuid7())->postJson('/api/v1/support/admin/tickets/'.$id.'/entries', ['message' => 'We have an update.'])->assertCreated();
+        $noticeId = DB::table('notifications')->where('user_id', $user->id)->where('resource_id', $id)->value('id');
+        $processor = app(OutboxProcessor::class);
+        $processor->process((string) DB::table('outbox_events')->where('event_type', 'NOTIFICATION_READY')->where('aggregate_id', $noticeId)->value('id'));
+        $deliveryId = DB::table('notification_deliveries')->where('notification_id', $noticeId)->where('channel', 'EMAIL')->value('id');
+        $user->update(['account_status' => 'SUSPENDED']);
+        $processor->process((string) DB::table('outbox_events')->where('event_type', 'NOTIFICATION_DELIVERY')->where('aggregate_id', $deliveryId)->value('id'));
+        Mail::assertNothingSent();
+        $this->assertDatabaseHas('notification_deliveries', ['id' => $deliveryId, 'state' => 'REVOKED']);
+    }
+
+    /** @return array<string, array{string, string, bool}> */
+    public static function guestMailFrontendUrls(): array
+    {
+        return [
+            'development localhost' => ['development', 'http://localhost:5173', true],
+            'local IPv4 loopback' => ['local', 'http://127.0.0.1:5173', true],
+            'development IPv6 loopback' => ['development', 'http://[::1]:5173', true],
+            'production HTTPS' => ['production', 'https://vendor.example.test', true],
+            'production HTTP denied' => ['production', 'http://localhost:5173', false],
+            'staging HTTP denied' => ['staging', 'http://localhost:5173', false],
+            'remote HTTP denied' => ['development', 'http://vendor.example.test', false],
+            'localhost suffix denied' => ['development', 'http://localhost.example.test', false],
+            'embedded credentials denied' => ['development', 'http://example-user@localhost:5173', false],
+        ];
+    }
+
+    #[DataProvider('guestMailFrontendUrls')]
+    public function test_guest_email_requires_https_except_for_development_loopback(string $environment, string $url, bool $allowed): void
+    {
+        config()->set('app.vendor_frontend_url', $url);
+        config()->set('mail.delivery_not_before', null);
+        $id = $this->withHeader('Idempotency-Key', (string) Str::uuid7())->postJson('/api/v1/support/guest/tickets', $this->input())->assertCreated()->json('data.id');
+        $event = DB::table('outbox_events')->where('event_type', 'SUPPORT_GUEST_EMAIL')->where('aggregate_id', $id)->first();
+        $envelope = json_decode($event->payload, true, flags: JSON_THROW_ON_ERROR);
+        $payload = json_decode(Crypt::decryptString($envelope['sealed_payload']), true, flags: JSON_THROW_ON_ERROR);
+        $this->app->instance('env', $environment);
+        $this->mock(MailProvider::class)->shouldReceive('send')->times($allowed ? 1 : 0);
+        if (! $allowed) {
+            $this->expectException(AuthenticationException::class);
+            $this->expectExceptionMessage('A secure Vendor frontend URL is required');
+        }
+        app(SupportGuestAccess::class)->deliver($payload['credential_id'], $payload['token'], (string) $event->created_at);
     }
 
     /** @param array<string, mixed> $extra
