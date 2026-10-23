@@ -12,6 +12,12 @@ use RuntimeException;
 
 final class SystemFoundationSeeder extends Seeder
 {
+    /**
+     * Fixed start of the version-1 commission and DEMO tax rules. A seed-time date would move with every reseed,
+     * rewriting when an approved version took effect; existing versions are therefore never updated here.
+     */
+    private const FOUNDATION_EFFECTIVE_FROM = '2026-01-01 00:00:00+08:00';
+
     public function run(): void
     {
         $this->agreements();
@@ -96,18 +102,21 @@ final class SystemFoundationSeeder extends Seeder
     private function financePolicies(): void
     {
         foreach (['TEST', 'DEMO'] as $environment) {
-            DB::table('fee_policy_versions')->updateOrInsert(
-                ['environment' => $environment, 'code' => 'MONTHLY_VENDOR_COMMISSION', 'version' => 1],
-                [
-                    'id' => DB::table('fee_policy_versions')->where('environment', $environment)->where('code', 'MONTHLY_VENDOR_COMMISSION')->where('version', 1)->value('id') ?? (string) Str::uuid7(),
-                    'commission_basis_points' => 200,
-                    'basis' => 'MATERIALS_AFTER_DISCOUNT_EXCLUDING_VAT',
-                    'cadence' => 'MONTHLY',
-                    'effective_from' => now()->startOfDay(),
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ],
-            );
+            if (DB::table('fee_policy_versions')->where('environment', $environment)->where('code', 'MONTHLY_VENDOR_COMMISSION')->where('version', 1)->exists()) {
+                continue;
+            }
+            DB::table('fee_policy_versions')->insert([
+                'id' => (string) Str::uuid7(),
+                'environment' => $environment,
+                'code' => 'MONTHLY_VENDOR_COMMISSION',
+                'version' => 1,
+                'commission_basis_points' => 200,
+                'basis' => 'MATERIALS_AFTER_DISCOUNT_EXCLUDING_VAT',
+                'cadence' => 'MONTHLY',
+                'effective_from' => self::FOUNDATION_EFFECTIVE_FROM,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
         }
     }
 
@@ -127,18 +136,21 @@ final class SystemFoundationSeeder extends Seeder
             ['DEMO_PLATFORM_WITHHOLDER', ['responsibility' => 'PLATFORM', 'rate_basis_points' => 50, 'label' => 'DEMO platform withholding scenario']],
             ['DEMO_PROVIDER_WITHHOLDER', ['responsibility' => 'PROVIDER', 'rate_basis_points' => 50, 'label' => 'DEMO provider withholding scenario']],
         ] as [$code, $rules]) {
-            DB::table('tax_rule_versions')->updateOrInsert(
-                ['environment' => 'DEMO', 'code' => $code, 'version' => 1],
-                [
-                    'id' => DB::table('tax_rule_versions')->where('environment', 'DEMO')->where('code', $code)->where('version', 1)->value('id') ?? (string) Str::uuid7(),
-                    'source_type' => 'APPROVED_FIXTURE',
-                    'source_reference' => 'MateryalPH Phase 3 DEMO fixture',
-                    'rules' => json_encode($rules, JSON_THROW_ON_ERROR),
-                    'effective_from' => now()->startOfDay(),
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ],
-            );
+            if (DB::table('tax_rule_versions')->where('environment', 'DEMO')->where('code', $code)->where('version', 1)->exists()) {
+                continue;
+            }
+            DB::table('tax_rule_versions')->insert([
+                'id' => (string) Str::uuid7(),
+                'environment' => 'DEMO',
+                'code' => $code,
+                'version' => 1,
+                'source_type' => 'APPROVED_FIXTURE',
+                'source_reference' => 'MateryalPH Phase 3 DEMO fixture',
+                'rules' => json_encode($rules, JSON_THROW_ON_ERROR),
+                'effective_from' => self::FOUNDATION_EFFECTIVE_FROM,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
         }
     }
 }
