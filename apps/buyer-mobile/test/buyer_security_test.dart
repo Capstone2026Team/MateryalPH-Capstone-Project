@@ -391,7 +391,7 @@ void main() {
           (
             200,
             {
-              'reference': 'PR-2026-ABC123',
+              'reference': 'AD-2026-019A0000-0000-7000-8000-000000000001',
               'deleted_at': '2026-10-13T00:00:00Z',
               'sign_in_required': true,
             },
@@ -442,7 +442,10 @@ void main() {
       );
       await tester.tap(find.widgetWithText(FilledButton, 'Verify'));
       await tester.pumpAndSettle();
-      expect(find.textContaining('PR-2026-ABC123'), findsOneWidget);
+      expect(
+        find.textContaining('AD-2026-019A0000-0000-7000-8000-000000000001'),
+        findsOneWidget,
+      );
       expect(
         api.bodies['POST /buyers/account/deletion'],
         containsPair('confirmation', 'DELETE'),

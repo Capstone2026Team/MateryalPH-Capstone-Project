@@ -7,7 +7,7 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(BuyerAccountDeletionResult, () {
-    // Privacy request reference for follow-up with support.
+    // Account-deletion reference recorded in the audit trail for follow-up with support.
     // String reference
     test('to test the property `reference`', () async {
       // TODO

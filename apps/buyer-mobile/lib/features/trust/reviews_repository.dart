@@ -5,6 +5,7 @@ import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 
 import '../../core/api_guard.dart';
+import '../../core/file_upload_transport.dart';
 import 'trust_models.dart';
 
 /// Verified-purchase reviews for the Buyer's own completed orders, public listing reviews and Report
@@ -61,7 +62,9 @@ final class ApiReviewsRepository implements ReviewsRepository {
     required api.MateryalphApiClient client,
     required ApiGuard guard,
   }) : _client = client,
-       _api = guard;
+       _api = guard {
+    configureFileUploads(client.dio);
+  }
 
   final api.MateryalphApiClient _client;
   final ApiGuard _api;
@@ -326,7 +329,7 @@ final class ApiReviewsRepository implements ReviewsRepository {
         orderId: data.orderId,
         mediaMax: data.rules.mediaMax,
         photoMaxBytes: data.rules.photoMaxBytes ?? 10 * 1024 * 1024,
-        videoMaxBytes: data.rules.videoMaxBytes ?? 100 * 1024 * 1024,
+        videoMaxBytes: data.rules.videoMaxBytes ?? 25 * 1024 * 1024,
         orderReference: data.orderReference,
         state: data.state.name,
         closesAtLabel: data.closesAtLabel,

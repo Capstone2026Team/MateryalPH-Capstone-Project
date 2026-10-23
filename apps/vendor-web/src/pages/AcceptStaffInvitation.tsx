@@ -1,5 +1,5 @@
 import type { VendorInvitationAcceptance } from '@materyalph/api-client-ts'
-import { Button, Field, PasswordField, StatusMessage } from '@materyalph/web-ui'
+import { BotProtectionFields, Button, Field, PasswordField, StatusMessage } from '@materyalph/web-ui'
 import { ArrowRight } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -117,11 +117,11 @@ export function AcceptStaffInvitation() {
         <Field label="Full name" name="name" autoComplete="name" maxLength={160} error={fieldErrors.name ?? ''} onChange={() => clearFieldErrors('name')} required />
         <PasswordField label="Password" name="password" autoComplete="new-password" minLength={14} note="Already have a Vendor account? Enter your current password instead. The requirements below apply to new accounts." error={fieldErrors.password ?? ''} onChange={() => clearFieldErrors('password')} required />
         <Field label="Confirm password" name="confirmation" type="password" autoComplete="new-password" error={fieldErrors.confirmation ?? ''} onChange={() => clearFieldErrors('confirmation')} required />
-        <div className="grid gap-3 border-t border-border-default pt-5">
-          {!useEmailCheck && <VendorRecaptchaCheckbox ref={captchaRef} action="vendor_invitation_accept" disabled={busy} id="vendor-invitation-captcha" validationError={fieldErrors.bot ?? ''} onTokenChange={value => { setCaptchaToken(value); if (value) clearFieldErrors('bot') }} />}
-          <button className="accessible-fallback" type="button" disabled={busy} aria-pressed={useEmailCheck} onClick={() => { captchaRef.current?.reset(); clearFieldErrors('bot'); setUseEmailCheck(value => !value) }}>{useEmailCheck ? 'Use the security checkbox instead' : 'Use an email security check instead'}</button>
+        <BotProtectionFields disabled={busy} emailCheckSelected={useEmailCheck} onEmailCheckClick={() => { captchaRef.current?.reset(); clearFieldErrors('bot'); setUseEmailCheck(value => !value) }} checkbox={
+          !useEmailCheck && <VendorRecaptchaCheckbox ref={captchaRef} action="vendor_invitation_accept" disabled={busy} id="vendor-invitation-captcha" validationError={fieldErrors.bot ?? ''} onTokenChange={value => { setCaptchaToken(value); if (value) clearFieldErrors('bot') }} />
+        }>
           <Button className="w-full" type="submit" disabled={busy}>{busy ? 'Accepting…' : 'Accept invitation'}</Button>
-        </div>
+        </BotProtectionFields>
         <p className="text-sm leading-relaxed text-text-secondary">Privileged roles require authenticator enrollment after signing in.</p>
       </form>
     </> : <StatusMessage tone="error">Open the complete invitation link from your email.</StatusMessage>}

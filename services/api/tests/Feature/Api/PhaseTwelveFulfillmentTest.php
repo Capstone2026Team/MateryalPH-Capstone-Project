@@ -305,6 +305,13 @@ final class PhaseTwelveFulfillmentTest extends TestCase
         $this->deliverWebhook($failedLater, 'wh-refund-3')->assertOk();
         self::assertSame('REFUNDED', (string) DB::table('refunds')->where('id', $refund->id)->value('state'), 'A refunded instruction is final.');
         self::assertSame(1, DB::table('refund_events')->where('refund_id', $refund->id)->where('state', 'REFUNDED')->count());
+        $this->signInAdmin($this->admin('ADMIN_SUPERADMIN'));
+        $kpis = $this->getJson('/api/v1/admin/finance/kpis')->assertOk()->json('data');
+        $market = collect($kpis['commerce'])->pluck('value_centavos', 'key');
+        self::assertSame([(int) $payment->total_centavos, 0, (int) $payment->total_centavos, 0], [$market['cancellation_refunds'], $market['dispute_refunds'], $market['buyer_refunds'], $market['pending_buyer_refunds']]);
+        self::assertSame($market['buyer_payments'] - $market['buyer_refunds'], $market['net_buyer_payments']);
+        self::assertSame(0, $market['refunded_gmv'], 'A cancelled order counts once, as cancelled value, never also as refunded value.');
+        self::assertSame($market['buyer_refunds'], array_sum(array_column($kpis['trend'], 'buyer_refunds_centavos')));
         $this->signInBuyer($paidBuyer);
         $this->getJson('/api/v1/buyers/orders/'.$paid)->assertOk()->assertJsonPath('data.refund_timeline.refunds.0.display_state', 'PROCESSED');
 
@@ -578,6 +585,12 @@ final class PhaseTwelveFulfillmentTest extends TestCase
         $this->getJson('/api/v1/admin/order-operations/summary')->assertOk()->assertJsonPath('data.refunds_total', 1)->assertJsonPath('data.refunds_failed', 1)
             ->assertJsonPath('data.reimbursements_total', 0);
         $this->getJson('/api/v1/admin/order-operations/refunds?state=REFUND_FAILED')->assertOk()->assertJsonPath('data.0.id', $refund)->assertJsonPath('data.0.can_retry', true);
+        $this->signInAdmin($this->admin('ADMIN_SUPERADMIN'));
+        $kpis = $this->getJson('/api/v1/admin/finance/kpis')->assertOk()->json('data');
+        $market = collect($kpis['commerce'])->pluck('value_centavos', 'key');
+        self::assertSame([(int) DB::table('refunds')->where('id', $refund)->value('amount_centavos'), 0, 1], [$market['pending_buyer_refunds'], $market['buyer_refunds'], $kpis['counts']['pending_buyer_refunds']],
+            'A failed refund is still owed to the Buyer and is never counted as returned.');
+        $this->signInAdmin($operations);
         $this->postJson('/api/v1/admin/order-operations/refunds/'.$refund.'/retry', [], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
         self::assertSame(['REFUND_PENDING', 2], [(string) DB::table('refunds')->where('id', $refund)->value('state'), (int) DB::table('refunds')->where('id', $refund)->value('attempt_number')]);
 
@@ -634,8 +647,12 @@ final class PhaseTwelveFulfillmentTest extends TestCase
     {
         [$store, $owner, $listing] = $this->pickupStore($name, [['price' => 100000, 'qty' => '50']]);
         [$buyer, $orderId] = $this->pickupOrder($store, $listing, [['variant' => 0, 'quantity' => '10']]);
+        // Build the historical NRPC record through the allowed physical proposal path.
+        DB::table('orders')->where('id', $orderId)->update(['payment_method' => 'IN_STORE']);
         $line = $this->vendorOrder($owner, $orderId)['lines'][0]['id'];
         $this->confirmOrder($owner, $orderId, [], ['nrpc' => ['amount_centavos' => 100000, 'reason' => 'Custom cutting to the Buyer drawings', 'lines' => [['order_line_id' => $line, 'principal_centavos' => 100000]]]])->assertOk();
+        // Existing online NRPC orders retain the old full-payment cancellation rules.
+        DB::table('orders')->where('id', $orderId)->update(['payment_method' => 'ONLINE']);
         $detail = $this->buyerOrder($buyer, $orderId);
         $this->postJson('/api/v1/buyers/orders/'.$orderId.'/nrpc/accept', ['snapshot_version' => 2, 'nrpc_id' => $detail['nrpc']['id'], 'terms_version_id' => $detail['nrpc']['terms']['id'], 'acknowledged' => true],
             ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
@@ -696,6 +713,113 @@ final class PhaseTwelveFulfillmentTest extends TestCase
         self::assertSame('CONFIRMED', $this->orderState($orderId));
 
         return [$store, $owner, $buyer, $orderId, $vehicle];
+    }
+
+    /** @return array{0: VendorOrganization, 1: User, 2: User, 3: string, 4: string} a confirmed Cash on Delivery Site Delivery order */
+    private function codDelivery(string $name): array
+    {
+        [$store, $owner] = $this->activeStore($name, false, true);
+        $this->signInStoreMember($owner);
+        $this->putJson('/api/v1/vendor/finance/physical-payments', ['lock_version' => 0, 'cod_enabled' => true, 'in_store_enabled' => false])->assertOk();
+        $listing = $this->orderListing('COD'.Str::upper(Str::random(3)), [['price' => 1800, 'qty' => '50']]);
+        $vehicle = $this->addVehicle($store->id);
+        DB::table('delivery_service_areas')->where('vendor_organization_id', $store->id)->update(['maximum_distance_km' => 10]);
+        $this->placeStore($store->id, 1000);
+        $buyer = $this->buyer();
+        $site = $this->savedLocation($buyer, 'Project site', 0, 0, 'PROJECT_SITE', true);
+        $gate = $this->savedLocation($buyer, 'North gate', 1500, 0);
+        $this->addToCart($listing, '10', 'DELIVERY');
+        $lock = (int) $this->getJson('/api/v1/buyers/cart')->json('data.lock_version');
+        $this->putJson('/api/v1/buyers/cart/destination', ['lock_version' => $lock, 'intended_location_id' => $site, 'heavy_vehicle_restriction' => 'YES', 'alternate_drop_off_location_id' => $gate, 'access_instructions' => 'Forklift at the north gate.'])->assertOk();
+        $lock = (int) $this->getJson('/api/v1/buyers/cart')->json('data.lock_version');
+        $orderId = (string) $this->postJson('/api/v1/buyers/checkouts', ['cart_lock_version' => $lock, 'vendor_ids' => [$store->id], 'payment_methods' => [$store->id => 'CASH_ON_DELIVERY']], ['Idempotency-Key' => (string) Str::uuid7()])
+            ->assertCreated()->json('data.orders.0.id');
+        $this->confirmOrder($owner, $orderId, [], ['delivery' => ['vehicles' => [['vehicle_id' => $vehicle, 'number_of_vehicles' => 1, 'total_vehicle_trips' => 1]], 'final_fee_centavos' => 60500,
+            'fulfillment_date' => CarbonImmutable::now('Asia/Manila')->addDays(2)->toDateString(), 'arrangement' => 'One box-truck trip to the north gate.', 'access_confirmed' => true, 'heavy_vehicle_access_confirmed' => true]])->assertOk();
+        $this->signInBuyer($buyer);
+        $this->postJson('/api/v1/buyers/orders/'.$orderId.'/revision/approve', ['snapshot_version' => 2], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
+        self::assertSame('CONFIRMED', $this->orderState($orderId));
+
+        return [$store, $owner, $buyer, $orderId, $vehicle];
+    }
+
+    public function test_cod_delivery_cash_reported_by_fulfillment_staff_counts_only_after_an_authorized_confirmation(): void
+    {
+        [$store, $owner, , $orderId] = $this->codDelivery('Cash delivery');
+        $staff = $this->teamMember($store, 'FULFILLMENT');
+        $storeStaff = $this->teamMember($store, 'STORE_STAFF');
+        $owed = (int) DB::table('physical_payment_records')->where('order_id', $orderId)->where('record_kind', 'OBLIGATION_OPENED')->value('remaining_obligation_centavos');
+        self::assertGreaterThan(0, $owed);
+        $this->milestone($owner, $orderId, 'PROCESSING')->assertOk();
+        $this->assign($staff, $owner, $orderId)->assertOk();
+        $this->milestone($staff, $orderId, 'OUT_FOR_DELIVERY', ['vehicle_index' => '0', 'trip_number' => '1'])->assertOk();
+
+        $photo = ['file' => UploadedFile::fake()->image('delivery.png')];
+        $this->milestone($staff, $orderId, 'DELIVERED', ['receiver_name' => 'Site Receiver'], files: $photo)->assertStatus(422)->assertJsonPath('errors.0.code', 'PROOF_REQUIRED');
+        $this->milestone($staff, $orderId, 'DELIVERED', ['receiver_name' => 'Site Receiver', 'cash_received_centavos' => (string) ($owed + 1)], files: ['file' => UploadedFile::fake()->image('delivery.png')])->assertStatus(422);
+        self::assertSame('OUT_FOR_DELIVERY', $this->orderState($orderId));
+        $this->milestone($staff, $orderId, 'DELIVERED', ['receiver_name' => 'Site Receiver', 'cash_received_centavos' => (string) $owed], files: ['file' => UploadedFile::fake()->image('delivery.png')])->assertOk();
+        self::assertSame(0, DB::table('physical_payment_records')->where('order_id', $orderId)->where('record_kind', 'COLLECTION')->count(), 'Fulfillment Staff never mark cash collected themselves.');
+        $owner->refresh();
+        self::assertTrue(DB::table('notifications')->where('user_id', $owner->id)->where('title', 'like', 'Confirm cash received%')->exists());
+
+        $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/vendor/orders/'.$orderId)->assertOk()->assertJsonPath('data.payment.physical.handover_cash.confirmable_centavos', $owed)
+            ->assertJsonPath('data.payment.physical.handover_cash.has_photo', true);
+        $earnings = $this->getJson('/api/v1/vendor/finance/earnings')->assertOk()->json('data');
+        self::assertSame([0, $owed, 1], [$earnings['physical_collections_centavos'], $earnings['breakdown']['physical']['unrecorded_centavos'], $earnings['breakdown']['physical']['unrecorded_orders']]);
+        $row = $this->getJson('/api/v1/vendor/finance/transactions?tab=PAYMENTS')->assertOk()->json('data.0');
+        self::assertSame(['PHYSICAL', 'CASH_ON_DELIVERY', 'PHYSICAL_TO_RECORD', $owed, 0, 0], [$row['kind'], $row['purpose'], $row['status'], $row['gross_centavos'], $row['buyer_processing_fee_centavos'], $row['net_collected_centavos']]);
+        self::assertSame($orderId, $row['order_id'], 'Each row links to its order.');
+        $this->getJson('/api/v1/vendor/finance/transactions?tab=PAYMENTS&status=PHYSICAL_TO_RECORD')->assertOk()->assertJsonCount(1, 'data');
+        $this->getJson('/api/v1/vendor/finance/transactions?tab=PAYMENTS&status=PAID')->assertOk()->assertJsonCount(0, 'data');
+
+        $confirm = fn (string $key) => $this->post('/api/v1/vendor/orders/'.$orderId.'/physical-payments/handover-confirmation', [], ['Idempotency-Key' => $key, 'Accept' => 'application/json']);
+        $this->signInStoreMember($staff);
+        $confirm((string) Str::uuid7())->assertForbidden();
+        $this->signInStoreMember($storeStaff);
+        $key = (string) Str::uuid7();
+        $confirm($key)->assertCreated()->assertJsonPath('data.state', 'PHYSICAL_PAYMENT_RECORDED')->assertJsonPath('data.remaining_centavos', 0)->assertJsonPath('data.handover_cash', null);
+        $confirm($key)->assertCreated();
+        $confirm((string) Str::uuid7())->assertStatus(409);
+        $collection = DB::table('physical_payment_records')->where('order_id', $orderId)->where('record_kind', 'COLLECTION')->sole();
+        self::assertSame([$owed, (int) $storeStaff->id, 'STORE_STAFF'], [(int) $collection->amount_centavos, (int) $collection->recorded_by_user_id, $collection->recorded_role]);
+        self::assertSame((string) DB::table('fulfillment_proofs')->where('order_id', $orderId)->where('event_type', 'DELIVERED')->value('photo_file_id'), (string) $collection->evidence_file_id, 'The delivery photo is the cash evidence.');
+
+        $this->signInStoreMember($owner);
+        $earnings = $this->getJson('/api/v1/vendor/finance/earnings')->assertOk()->json('data');
+        self::assertSame([$owed, $owed, 0, 0, 1], [$earnings['physical_collections_centavos'], $earnings['breakdown']['physical']['cash_on_delivery_centavos'], $earnings['breakdown']['physical']['in_store_centavos'],
+            $earnings['breakdown']['physical']['unrecorded_centavos'], $earnings['breakdown']['physical']['records']]);
+        $row = $this->getJson('/api/v1/vendor/finance/transactions?tab=PAYMENTS')->assertOk()->json('data.0');
+        self::assertSame(['PHYSICAL_COLLECTED', $owed, $owed, 0], [$row['status'], $row['collected_centavos'], $row['net_collected_centavos'], $row['remaining_centavos']]);
+        self::assertSame(0, DB::table('payments')->where('order_id', $orderId)->count(), 'Direct cash never becomes an online payment.');
+    }
+
+    public function test_in_store_cash_received_at_pickup_is_recorded_at_once_by_an_authorized_member(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Cash pickup', [['price' => 100000, 'qty' => '50']]);
+        $this->signInStoreMember($owner);
+        $this->putJson('/api/v1/vendor/finance/physical-payments', ['lock_version' => 0, 'cod_enabled' => false, 'in_store_enabled' => true])->assertOk();
+        $buyer = $this->buyer();
+        $this->addToCart($listing, '10');
+        $lock = (int) $this->getJson('/api/v1/buyers/cart')->json('data.lock_version');
+        $orderId = (string) $this->postJson('/api/v1/buyers/checkouts', ['cart_lock_version' => $lock, 'vendor_ids' => [$store->id], 'payment_methods' => [$store->id => 'IN_STORE']], ['Idempotency-Key' => (string) Str::uuid7()])
+            ->assertCreated()->json('data.orders.0.id');
+        $this->confirmOrder($owner, $orderId)->assertOk();
+        $this->milestone($owner, $orderId, 'PROCESSING')->assertOk();
+        $this->milestone($owner, $orderId, 'READY_FOR_PICKUP')->assertOk();
+
+        $handover = ['handover_confirmed' => '1', 'receiver_name' => 'Ana Buyer', 'receiver_kind' => 'BUYER', 'cash_received_centavos' => '400000'];
+        $this->milestone($owner, $orderId, 'PICKED_UP', $handover)->assertStatus(422)->assertJsonPath('errors.0.code', 'PROOF_REQUIRED');
+        $this->milestone($owner, $orderId, 'PICKED_UP', $handover, files: ['file' => UploadedFile::fake()->image('handover.png')])->assertOk()
+            ->assertJsonPath('data.payment.physical.state', 'PARTIALLY_RECORDED')->assertJsonPath('data.payment.physical.remaining_centavos', 600000)->assertJsonPath('data.payment.physical.handover_cash', null);
+        $collection = DB::table('physical_payment_records')->where('order_id', $orderId)->where('record_kind', 'COLLECTION')->sole();
+        self::assertSame([400000, 'IN_STORE', (int) $owner->id], [(int) $collection->amount_centavos, $collection->method, (int) $collection->recorded_by_user_id]);
+
+        $earnings = $this->getJson('/api/v1/vendor/finance/earnings')->assertOk()->json('data');
+        self::assertSame([400000, 400000, 600000], [$earnings['physical_collections_centavos'], $earnings['breakdown']['physical']['in_store_centavos'], $earnings['breakdown']['physical']['unrecorded_centavos']]);
+        $row = $this->getJson('/api/v1/vendor/finance/transactions?tab=PAYMENTS&status=PHYSICAL_PARTIAL')->assertOk()->json('data.0');
+        self::assertSame(['IN_STORE_PAYMENT', 1000000, 400000, 600000], [$row['purpose'], $row['gross_centavos'], $row['collected_centavos'], $row['remaining_centavos']]);
     }
 
     public function test_delivery_dispatch_requires_current_assignment_and_vehicle_and_preserves_existing_obligations(): void

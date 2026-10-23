@@ -59,7 +59,7 @@ export interface AddBuyerReviewMediaRequest {
      */
     idempotencyKey: string;
     /**
-     * JPG/PNG up to 10 MB or MP4/MOV up to 100 MB, content-validated and scanned fail-closed.
+     * JPG/PNG up to 10 MB or MP4/MOV up to 25 MB, content-validated and scanned fail-closed.
      */
     files: Array<Blob>;
 }
@@ -246,7 +246,7 @@ export class BuyerReviewsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Up to three photos or videos on your Product Review while it can still be edited. JPG/PNG up to 10 MB; MP4/MOV up to 100 MB. Content validated and scanned before private storage.
+     * Up to three photos or videos on your Product Review while it can still be edited. JPG/PNG up to 10 MB; MP4/MOV up to 25 MB. Content validated and scanned before private storage.
      */
     async addBuyerReviewMediaRaw(requestParameters: AddBuyerReviewMediaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<BuyerOrderReviewsEnvelope>> {
         const requestOptions = await this.addBuyerReviewMediaRequestOpts(requestParameters);
@@ -256,7 +256,7 @@ export class BuyerReviewsApi extends runtime.BaseAPI {
     }
 
     /**
-     * Up to three photos or videos on your Product Review while it can still be edited. JPG/PNG up to 10 MB; MP4/MOV up to 100 MB. Content validated and scanned before private storage.
+     * Up to three photos or videos on your Product Review while it can still be edited. JPG/PNG up to 10 MB; MP4/MOV up to 25 MB. Content validated and scanned before private storage.
      */
     async addBuyerReviewMedia(requestParameters: AddBuyerReviewMediaRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<BuyerOrderReviewsEnvelope> {
         const response = await this.addBuyerReviewMediaRaw(requestParameters, initOverrides);

@@ -28,7 +28,7 @@ export interface VendorOrderPermissions {
      */
     canRevise: boolean;
     /**
-     *
+     * True only for authorized roles on COD or In-Store Payment orders awaiting Vendor confirmation.
      */
     canSetNrpc: boolean;
     /**

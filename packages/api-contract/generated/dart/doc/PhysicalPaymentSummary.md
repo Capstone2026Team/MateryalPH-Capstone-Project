@@ -13,6 +13,7 @@ Name | Type | Description | Notes
 **state** | **String** |  |
 **remainingCentavos** | **int** |  | [optional]
 **onlineBalanceApproved** | **bool** |  |
+**handoverCash** | [**PhysicalHandoverCash**](PhysicalHandoverCash.md) |  | [optional]
 **records** | [**BuiltList&lt;PhysicalPaymentRecord&gt;**](PhysicalPaymentRecord.md) |  |
 **notice** | **String** |  |
 

@@ -84,7 +84,7 @@ class BuyerDisputesApi {
     try {
       _bodyData = FormData.fromMap(<String, dynamic>{
         if (description != null) r'description': encodeFormParameter(_serializers, description, const FullType(String)),
-        r'files': files.toList(),
+        r'files[]': files.toList(),
       });
 
     } catch(error, stackTrace) {
@@ -196,7 +196,7 @@ class BuyerDisputesApi {
     try {
       _bodyData = FormData.fromMap(<String, dynamic>{
         r'response': encodeFormParameter(_serializers, response, const FullType(String)),
-        if (files != null) r'files': files.toList(),
+        if (files != null) r'files[]': files.toList(),
       });
 
     } catch(error, stackTrace) {
@@ -417,7 +417,7 @@ class BuyerDisputesApi {
       _bodyData = FormData.fromMap(<String, dynamic>{
         r'grounds': encodeFormParameter(_serializers, grounds, const FullType(String)),
         r'statement': encodeFormParameter(_serializers, statement, const FullType(String)),
-        if (files != null) r'files': files.toList(),
+        if (files != null) r'files[]': files.toList(),
       });
 
     } catch(error, stackTrace) {
@@ -775,9 +775,9 @@ class BuyerDisputesApi {
   /// * [requestedRemedy]
   /// * [description]
   /// * [requestedAmountCentavos] - Required for PARTIAL_REFUND; at most the affected lines less earlier refunds.
-  /// * [affectedLineIds]
+  /// * [affectedLineIds] - Selected order lines. Multipart clients send each UUID as an affected_line_ids[] part so the server receives an array. Buyers must select at least one line for every requested remedy.
   /// * [preferredContactChannel]
-  /// * [files] - Up to five JPG, PNG or PDF files, validated and scanned, stored privately.
+  /// * [files] - Up to five JPG, PNG or PDF files, validated and scanned, stored privately. Multipart clients send each upload as a files[] part.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -834,9 +834,9 @@ class BuyerDisputesApi {
         r'requested_remedy': encodeFormParameter(_serializers, requestedRemedy, const FullType(String)),
         if (requestedAmountCentavos != null) r'requested_amount_centavos': encodeFormParameter(_serializers, requestedAmountCentavos, const FullType(int)),
         r'description': encodeFormParameter(_serializers, description, const FullType(String)),
-        if (affectedLineIds != null) r'affected_line_ids': encodeFormParameter(_serializers, affectedLineIds, const FullType(BuiltList, [FullType(String)])),
+        if (affectedLineIds != null) r'affected_line_ids[]': encodeFormParameter(_serializers, affectedLineIds, const FullType(BuiltList, [FullType(String)])),
         if (preferredContactChannel != null) r'preferred_contact_channel': encodeFormParameter(_serializers, preferredContactChannel, const FullType(String)),
-        if (files != null) r'files': files.toList(),
+        if (files != null) r'files[]': files.toList(),
       });
 
     } catch(error, stackTrace) {
@@ -1482,7 +1482,7 @@ class BuyerDisputesApi {
         r'position': encodeFormParameter(_serializers, position, const FullType(String)),
         r'body': encodeFormParameter(_serializers, body, const FullType(String)),
         if (amountCentavos != null) r'amount_centavos': encodeFormParameter(_serializers, amountCentavos, const FullType(int)),
-        if (files != null) r'files': files.toList(),
+        if (files != null) r'files[]': files.toList(),
       });
 
     } catch(error, stackTrace) {

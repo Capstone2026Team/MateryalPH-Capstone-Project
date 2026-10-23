@@ -245,42 +245,47 @@ void main() {
     },
   );
 
-  testWidgets(
-    'an offline start keeps the same idempotency key so a retry cannot open a second attempt',
-    (tester) async {
-      await tester.binding.setSurfaceSize(const Size(390, 1000));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-      final repository = FakeOrdersRepository()
-        ..options = optionsView()
-        ..attempt = attemptView();
-      await tester.pumpWidget(
-        _app(
-          OrderPaymentScreen(
-            orderId: 'order-1',
-            repository: repository,
-            launcher: (_) async => true,
+  for (final kind in [
+    DiscoveryFailureKind.offline,
+    DiscoveryFailureKind.timeout,
+  ]) {
+    testWidgets(
+      'a $kind start keeps the same idempotency key so a retry cannot open a second attempt',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(390, 1000));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final repository = FakeOrdersRepository()
+          ..options = optionsView()
+          ..attempt = attemptView();
+        await tester.pumpWidget(
+          _app(
+            OrderPaymentScreen(
+              orderId: 'order-1',
+              repository: repository,
+              launcher: (_) async => true,
+            ),
           ),
-        ),
-      );
-      await tester.pump();
+        );
+        await tester.pump();
 
-      repository.failure = const DiscoveryFailure(
-        DiscoveryFailureKind.offline,
-        'You appear to be offline.',
-      );
-      await tester.tap(find.text('Pay ₱10,264.41 — TEST'));
-      await tester.pump();
-      expect(find.text('Payment did not start'), findsOneWidget);
+        repository.failure = DiscoveryFailure(
+          kind,
+          'The request did not finish.',
+        );
+        await tester.tap(find.text('Pay ₱10,264.41 — TEST'));
+        await tester.pump();
+        expect(find.text('Payment did not start'), findsOneWidget);
 
-      repository.failure = null;
-      await tester.tap(find.text('Pay ₱10,264.41 — TEST'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
+        repository.failure = null;
+        await tester.tap(find.text('Pay ₱10,264.41 — TEST'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
 
-      expect(repository.keys, hasLength(2));
-      expect(repository.keys.toSet(), hasLength(1));
-    },
-  );
+        expect(repository.keys, hasLength(2));
+        expect(repository.keys.toSet(), hasLength(1));
+      },
+    );
+  }
 
   testWidgets(
     'the pending screen confirms only after the server reports PAID, including on app resume',

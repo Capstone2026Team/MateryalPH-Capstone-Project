@@ -76,4 +76,17 @@ for (const name of ['InvoiceRecordView', 'VendorOrderInvoices', 'DisputeDetail',
 assert.ok(s.OrderDetail.properties.available_actions.items.enum.includes('FILE_DISPUTE') && s.OrderDetail.properties.available_actions.items.enum.includes('REQUEST_INVOICE'))
 assert.ok(s.OrderDetail.properties.dispute && s.OrderDetail.properties.invoice && s.VendorOrderPermissions.properties.can_upload_invoice)
 assert.match(spec.info.version, /phase\.(1[3-9]|20)$/)
+// PHP must receive arrays even when only one line or upload is selected.
+for (const audience of ['buyer', 'vendor']) {
+  const dart = readFileSync(new URL(`../generated/dart/lib/src/api/${audience}_disputes_api.dart`, import.meta.url), 'utf8')
+  const tsAudience = audience === 'buyer' ? 'Buyer' : 'Vendor'
+  const ts = readFileSync(new URL(`../generated/typescript/src/apis/${tsAudience}DisputesApi.ts`, import.meta.url), 'utf8')
+  assert.match(dart, /r'affected_line_ids\[\]': encodeFormParameter/, `${audience} line IDs use PHP array parts`)
+  assert.doesNotMatch(dart, /r'files': files\.toList\(\)/, `${audience} evidence uses PHP array parts`)
+  assert.match(dart, /r'files\[\]': files\.toList\(\)/)
+  assert.match(ts, /formParams\.append\('affected_line_ids\[\]', element\)/)
+  assert.doesNotMatch(ts, /formParams\.append\('affected_line_ids',/)
+  assert.doesNotMatch(ts, /formParams\.append\('files',/)
+  assert.match(ts, /formParams\.append\('files\[\]',/)
+}
 console.log(`Disputes contract passed: ${expected.size} operations, transports, signed links, idempotency, enums and no refund destination`)

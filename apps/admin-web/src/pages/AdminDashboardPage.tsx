@@ -1,4 +1,4 @@
-import { DashboardHeader, DashboardPanel, DateFilter, MetricCard, Pagination, SectionWorkspace, StatusBadge, dateFilterPreset, useAutomaticRefresh, usePortalResource } from '@materyalph/web-ui'
+import { DashboardHeader, DashboardPanel, DateFilter, InfoNote, MetricCard, Pagination, SectionWorkspace, StatusBadge, dateFilterPreset, useAutomaticRefresh, usePortalResource } from '@materyalph/web-ui'
 import { ArrowRight, ClipboardCheck, Store, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
@@ -7,7 +7,7 @@ import { Button, StatusMessage, createWebApiConfiguration } from '@materyalph/we
 import { AdminShell } from './PhaseThreeAdminPages'
 import { readableVerificationError } from '../lib/vendor-verification-api'
 import { getAdminDashboardInsights, type AdminDashboardInsights, type InsightsPeriod } from '../lib/dashboard-insights-api'
-import { ActivityPanel, AreaSegmentsPanel, CaseRatesPanel, CategoryInsights, GmvTrendPanel, MarketplaceKpis, MarketplaceUnavailable, OrderVolumePanel, QueueLoadChart, VendorHealthPanel } from './AdminDashboardInsights'
+import { ActiveUsersPanel, AreaSegmentsPanel, CaseRatesPanel, CategoryInsights, GmvTrendPanel, MarketplaceKpis, MarketplaceUnavailable, OrderVolumePanel, QueueLoadChart, UserActivityKpis, VendorHealthPanel } from './AdminDashboardInsights'
 
 const api = new AdminVendorVerificationApi(createWebApiConfiguration(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1', { refreshSession: true }))
 const loadDashboard = async () => (await api.getAdminDashboard()).data
@@ -33,23 +33,19 @@ export function AdminDashboardPage() {
     return () => { active = false }
   }, [insightsFailure])
   useAutomaticRefresh(load, { enabled: !busy, intervalMs: error ? 120_000 : 30_000 })
-  // Charts read daily aggregates, so a slower refresh is enough.
-  useAutomaticRefresh(reloadInsights, { enabled: !insightsBusy, intervalMs: 120_000 })
+  useAutomaticRefresh(reloadInsights, { enabled: !insightsBusy, intervalMs: insightsError ? 120_000 : 30_000 })
   const periodLabel = range.label === 'Custom range' ? `${range.from} – ${range.to}` : range.label.toLowerCase()
   /** Marketplace content when permitted and available; otherwise the reason, never an empty chart. */
   const market = (render: (marketplace: NonNullable<AdminDashboardInsights['marketplace']>) => ReactNode) => !insights ? null
     : insights.marketplace ? render(insights.marketplace) : <MarketplaceUnavailable allowed={insights.access.marketplace} reason={insights.marketplaceUnavailableReason} />
-  return <AdminShell activeHref="/dashboard"><div className="space-y-5">
-    <DashboardHeader eyebrow="Platform overview" description="A clear view of marketplace activity and the reviews that need your attention." status={<StatusBadge label="Admin workspace" />} />
+  const chartsNote = insightsBusy && !insights ? 'Loading charts…' : insights?.marketplace?.dataset.lastAggregatedAt ? `Charts aggregated ${new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' }).format(insights.marketplace.dataset.lastAggregatedAt)} (Asia/Manila) · Updates automatically` : 'Charts update automatically after aggregation.'
+  return <AdminShell activeHref="/dashboard"><div className="space-y-4">
+    <DashboardHeader eyebrow="Platform overview" description="A clear view of marketplace activity and the reviews that need your attention." status={<StatusBadge label="Admin workspace" />} actions={summary ? <p className="text-xs text-text-secondary">{chartsNote}</p> : undefined} />
     {error && <StatusMessage tone="error">{error}{summary && ' Showing the last successful update.'}</StatusMessage>}
     {busy && !summary && <p role="status">Loading platform metrics…</p>}
     {summary && <>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-surface border border-border-default bg-surface-primary px-4 py-2">
-        <div className="flex flex-wrap items-center gap-4"><DateFilter title="Marketplace activity dates" value={range} allowAllDates={false} allowOpenEnded={false} maxRangeDays={366} onChange={value => { setRange(value); setDays(value.label === 'Last 90 days' ? 90 : 30) }} /></div>
-        <p className="text-xs text-text-secondary">{insightsBusy && !insights ? 'Loading charts…' : insights?.marketplace?.dataset.lastAggregatedAt ? `Charts aggregated ${new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' }).format(insights.marketplace.dataset.lastAggregatedAt)} (Asia/Manila)` : 'Charts update after the daily aggregation.'}</p>
-      </div>
       {insightsError && <div className="flex flex-wrap items-center gap-3"><StatusMessage tone="error">{insightsError}{insights ? ' Showing the last successful charts.' : ''}</StatusMessage><Button variant="secondary" onClick={() => void reloadInsights()}>Retry charts</Button></div>}
-      <SectionWorkspace dashboard sections={[{ label: 'Overview', content: <>
+      <SectionWorkspace dashboard actions={<DateFilter title="Marketplace activity dates" value={range} allowAllDates={false} allowOpenEnded={false} maxRangeDays={366} onChange={value => { setRange(value); setDays(value.label === 'Last 90 days' ? 90 : 30) }} />} sections={[{ label: 'Overview', content: <>
         <p className="text-xs text-text-secondary">Current platform counts within your Admin permissions.</p>
         <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[
           { label: 'Active Tier 2 Vendors', value: summary.activeVendors, description: 'Active account and activated store.', icon: Store },
@@ -68,11 +64,18 @@ export function AdminDashboardPage() {
           ['Active Buyers', summary.activeBuyers],
           ...(summary.canViewAudit ? [['Recorded audit events', summary.auditEvents]] : []),
         ].map(([label, value]) => <div key={String(label)} className="flex items-center justify-between gap-4 py-3 first:pt-0"><dt className="text-xs text-text-secondary">{label}</dt><dd className="text-sm font-semibold tabular-nums">{value === null ? 'Outside your role scope' : Number(value).toLocaleString('en-PH')}</dd></div>)}</dl>{summary.canViewAudit && <Link to="/audit" className="mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-action-primary">View audit log<ArrowRight size={16} aria-hidden="true" /></Link>}</DashboardPanel></div>
-      </> }, { label: 'Vendor Activity', content: <><QueueList queues={summary.queues} groups={['Vendor Management']} title="Vendor queues" empty="Vendor verification queues are outside your role scope." /><dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"><MetricCard label="Active Tier 2 Vendors" value={summary.activeVendors ?? '—'} description={summary.activeVendors === null ? 'Outside your role scope.' : 'Active account and activated store.'} /><MetricCard label="Non-active Vendor stores" value={summary.inactiveVendors ?? '—'} description={summary.inactiveVendors === null ? 'Outside your role scope.' : 'Includes stores completing onboarding.'} /><MetricCard label="Pending business-document reviews" value={summary.pendingDocumentReviews ?? '—'} description={summary.pendingDocumentReviews === null ? 'Outside your role scope.' : 'Submitted documents awaiting review.'} accent /></dl><DashboardPanel title="Vendor verification" description="Review submitted evidence and store requirements.">{summary.pendingDocumentReviews !== null ? <Link to="/vendor-verification" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-action-primary">Open Vendor Management<ArrowRight size={16} aria-hidden="true" /></Link> : <p className="text-sm text-text-secondary">Outside your role scope.</p>}</DashboardPanel>{insights?.vendorHealth && <VendorHealthPanel health={insights.vendorHealth} />}{market(marketplace => <><AreaSegmentsPanel marketplace={marketplace} /><ActivityPanel marketplace={marketplace} audience="vendor" /></>)}</> },
+      </> }, { label: 'User Activity', content: <>
+        <UserActivityKpis activeBuyers={summary.activeBuyers} activeVendors={summary.activeVendors} inactiveVendors={summary.inactiveVendors} marketplace={insights?.marketplace ?? null} />
+        {market(marketplace => <ActiveUsersPanel marketplace={marketplace} />)}
+        {market(marketplace => <AreaSegmentsPanel marketplace={marketplace} />)}
+        {insights?.vendorHealth && <VendorHealthPanel health={insights.vendorHealth} />}
+        <QueueList queues={summary.queues} groups={['Vendor Management']} title="Vendor queues" empty="Vendor verification queues are outside your role scope." />
+        {summary.pendingDocumentReviews !== null && <Link to="/vendor-verification" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-action-primary">Open Vendor Management<ArrowRight size={16} aria-hidden="true" /></Link>}
+      </> },
       { label: 'Compliance & Moderation', content: <><QueueLoadChart queues={summary.queues} groups={['Compliance and quality', 'Account enforcement']} /><QueueList queues={summary.queues} groups={['Compliance and quality', 'Account enforcement']} empty="No compliance, moderation or enforcement queues are in your role scope." /></> },
       { label: 'Disputes & Appeals', content: <>{market(marketplace => <CaseRatesPanel marketplace={marketplace} />)}<QueueList queues={summary.queues} groups={['Disputes and appeals']} empty="Dispute and appeal queues are outside your role scope." /></> },
       { label: 'Transactions & Finance', content: <>{market(marketplace => <><MarketplaceKpis marketplace={marketplace} periodLabel={periodLabel} /><OrderVolumePanel marketplace={marketplace} /><CategoryInsights marketplace={marketplace} /></>)}<QueueList queues={summary.queues} groups={['Finance', 'Payments and refunds']} empty="Finance, payment and refund queues are outside your role scope." /></> },
-      { label: 'Platform Health', content: <>{market(marketplace => <ActivityPanel marketplace={marketplace} audience="both" />)}<QueueList queues={summary.queues} groups={['Platform']} empty="Privacy and job-health queues are outside your role scope." />{summary.canViewAudit && <DashboardPanel title="Recent platform activity"><AdminAuditPage embedded /></DashboardPanel>}</> }]} />
+      { label: 'Audit Logs & Tracking', content: <>{summary.canViewAudit ? <DashboardPanel title="Recent platform activity"><AdminAuditPage embedded /></DashboardPanel> : <InfoNote>Audit logs are outside your role scope.</InfoNote>}</> }]} />
       <p className="border-t border-border-default pt-4 text-xs text-text-secondary">Updated {new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' }).format(summary.generatedAt)} (Asia/Manila) · Updates automatically</p>
     </>}
 

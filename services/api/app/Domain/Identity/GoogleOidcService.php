@@ -122,18 +122,24 @@ final class GoogleOidcService
                 ->where('provider_subject', $claims['sub'])
                 ->first();
             if ($identity !== null) {
-                $user = User::query()->findOrFail($identity->user_id);
-                if ($user->account_type !== $portal || $user->account_status !== 'ACTIVE') {
-                    throw new AuthenticationException('PORTAL_ACCESS_DENIED', 'This account cannot sign in to the selected portal.', 403);
-                }
-                if (mb_strtolower($user->email) === $email && $user->email_verified_at === null) {
-                    $user->forceFill(['email_verified_at' => now()])->save();
-                }
+                $user = User::query()->lockForUpdate()->findOrFail($identity->user_id);
+                $released = $portal === 'BUYER' && $flow['mode'] === 'SIGN_UP' && app(ReleaseDeletedBuyerIdentity::class)->release($user);
+                if (! $released) {
+                    if ($user->account_type !== $portal || $user->account_status !== 'ACTIVE') {
+                        throw new AuthenticationException('PORTAL_ACCESS_DENIED', 'This account cannot sign in to the selected portal.', 403);
+                    }
+                    if (mb_strtolower($user->email) === $email && $user->email_verified_at === null) {
+                        $user->forceFill(['email_verified_at' => now()])->save();
+                    }
 
-                return $user;
+                    return $user;
+                }
             }
 
-            $user = User::query()->whereRaw('LOWER(email) = ?', [$email])->first();
+            $user = User::query()->whereRaw('LOWER(email) = ?', [$email])->lockForUpdate()->first();
+            if ($user !== null && $portal === 'BUYER' && $flow['mode'] === 'SIGN_UP' && app(ReleaseDeletedBuyerIdentity::class)->release($user)) {
+                $user = null;
+            }
             if ($user === null) {
                 if ($flow['mode'] !== 'SIGN_UP') {
                     throw new AuthenticationException('ACCOUNT_NOT_FOUND', 'No MateryalPH account is linked to this Google identity.', 404);

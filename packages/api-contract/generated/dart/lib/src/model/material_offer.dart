@@ -4,6 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/listing_image.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -25,6 +26,7 @@ part 'material_offer.g.dart';
 /// * [availability]
 /// * [distanceMeters]
 /// * [priceAsOf]
+/// * [image] - First public photo of this listing, or null.
 @BuiltValue()
 abstract class MaterialOffer implements Built<MaterialOffer, MaterialOfferBuilder> {
   @BuiltValueField(wireName: r'vendor_id')
@@ -66,6 +68,10 @@ abstract class MaterialOffer implements Built<MaterialOffer, MaterialOfferBuilde
 
   @BuiltValueField(wireName: r'price_as_of')
   DateTime get priceAsOf;
+
+  /// First public photo of this listing, or null.
+  @BuiltValueField(wireName: r'image')
+  ListingImage? get image;
 
   MaterialOffer._();
 
@@ -157,6 +163,13 @@ class _$MaterialOfferSerializer implements PrimitiveSerializer<MaterialOffer> {
       object.priceAsOf,
       specifiedType: const FullType(DateTime),
     );
+    if (object.image != null) {
+      yield r'image';
+      yield serializers.serialize(
+        object.image,
+        specifiedType: const FullType.nullable(ListingImage),
+      );
+    }
   }
 
   @override
@@ -271,6 +284,14 @@ class _$MaterialOfferSerializer implements PrimitiveSerializer<MaterialOffer> {
             specifiedType: const FullType(DateTime),
           ) as DateTime;
           result.priceAsOf = valueDes;
+          break;
+        case r'image':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ListingImage),
+          ) as ListingImage?;
+          if (valueDes == null) continue;
+          result.image.replace(valueDes);
           break;
         default:
           unhandled.add(key);

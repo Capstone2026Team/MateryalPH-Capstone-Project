@@ -7,6 +7,7 @@ import 'package:materyalph_api_client/src/model/analytics_category_ref.dart';
 import 'package:materyalph_api_client/src/model/vendor_own_offer.dart';
 import 'package:materyalph_api_client/src/model/vendor_analytics_row.dart';
 import 'package:materyalph_api_client/src/model/comparable_specification.dart';
+import 'package:materyalph_api_client/src/model/listing_image.dart';
 import 'package:materyalph_api_client/src/model/analytics_unit.dart';
 import 'package:materyalph_api_client/src/model/vendor_analytics_point.dart';
 import 'package:materyalph_api_client/src/model/analytics_trend.dart';
@@ -31,6 +32,7 @@ part 'vendor_materials_analytics_detail_group.g.dart';
 /// * [trend]
 /// * [currentCompetitors]
 /// * [ownOffer]
+/// * [image] - The Vendor's own listing photo for this variant, or null. A competitor photo is never returned (MAT-05).
 /// * [description]
 @BuiltValue()
 abstract class VendorMaterialsAnalyticsDetailGroup implements VendorAnalyticsRow, Built<VendorMaterialsAnalyticsDetailGroup, VendorMaterialsAnalyticsDetailGroupBuilder> {
@@ -60,28 +62,13 @@ class _$VendorMaterialsAnalyticsDetailGroupSerializer implements PrimitiveSerial
     VendorMaterialsAnalyticsDetailGroup object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    if (object.ownOffer != null) {
-      yield r'own_offer';
+    if (object.image != null) {
+      yield r'image';
       yield serializers.serialize(
-        object.ownOffer,
-        specifiedType: const FullType.nullable(VendorOwnOffer),
+        object.image,
+        specifiedType: const FullType.nullable(ListingImage),
       );
     }
-    yield r'end_point';
-    yield serializers.serialize(
-      object.endPoint,
-      specifiedType: const FullType(VendorAnalyticsPoint),
-    );
-    yield r'unit';
-    yield serializers.serialize(
-      object.unit,
-      specifiedType: const FullType(AnalyticsUnit),
-    );
-    yield r'material';
-    yield serializers.serialize(
-      object.material,
-      specifiedType: const FullType(AnalyticsMaterialRef),
-    );
     yield r'trend';
     yield serializers.serialize(
       object.trend,
@@ -114,15 +101,37 @@ class _$VendorMaterialsAnalyticsDetailGroupSerializer implements PrimitiveSerial
       object.specification,
       specifiedType: const FullType(ComparableSpecification),
     );
-    yield r'category';
-    yield serializers.serialize(
-      object.category,
-      specifiedType: const FullType(AnalyticsCategoryRef),
-    );
     yield r'current_competitors';
     yield serializers.serialize(
       object.currentCompetitors,
       specifiedType: const FullType(VendorCurrentCompetitors),
+    );
+    if (object.ownOffer != null) {
+      yield r'own_offer';
+      yield serializers.serialize(
+        object.ownOffer,
+        specifiedType: const FullType.nullable(VendorOwnOffer),
+      );
+    }
+    yield r'end_point';
+    yield serializers.serialize(
+      object.endPoint,
+      specifiedType: const FullType(VendorAnalyticsPoint),
+    );
+    yield r'unit';
+    yield serializers.serialize(
+      object.unit,
+      specifiedType: const FullType(AnalyticsUnit),
+    );
+    yield r'material';
+    yield serializers.serialize(
+      object.material,
+      specifiedType: const FullType(AnalyticsMaterialRef),
+    );
+    yield r'category';
+    yield serializers.serialize(
+      object.category,
+      specifiedType: const FullType(AnalyticsCategoryRef),
     );
   }
 
@@ -147,34 +156,13 @@ class _$VendorMaterialsAnalyticsDetailGroupSerializer implements PrimitiveSerial
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
-        case r'own_offer':
+        case r'image':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType.nullable(VendorOwnOffer),
-          ) as VendorOwnOffer?;
+            specifiedType: const FullType.nullable(ListingImage),
+          ) as ListingImage?;
           if (valueDes == null) continue;
-          result.ownOffer.replace(valueDes);
-          break;
-        case r'end_point':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(VendorAnalyticsPoint),
-          ) as VendorAnalyticsPoint;
-          result.endPoint.replace(valueDes);
-          break;
-        case r'unit':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(AnalyticsUnit),
-          ) as AnalyticsUnit;
-          result.unit.replace(valueDes);
-          break;
-        case r'material':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(AnalyticsMaterialRef),
-          ) as AnalyticsMaterialRef;
-          result.material.replace(valueDes);
+          result.image.replace(valueDes);
           break;
         case r'trend':
           final valueDes = serializers.deserialize(
@@ -219,19 +207,48 @@ class _$VendorMaterialsAnalyticsDetailGroupSerializer implements PrimitiveSerial
           ) as ComparableSpecification;
           result.specification.replace(valueDes);
           break;
-        case r'category':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(AnalyticsCategoryRef),
-          ) as AnalyticsCategoryRef;
-          result.category.replace(valueDes);
-          break;
         case r'current_competitors':
           final valueDes = serializers.deserialize(
             value,
             specifiedType: const FullType(VendorCurrentCompetitors),
           ) as VendorCurrentCompetitors;
           result.currentCompetitors.replace(valueDes);
+          break;
+        case r'own_offer':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(VendorOwnOffer),
+          ) as VendorOwnOffer?;
+          if (valueDes == null) continue;
+          result.ownOffer.replace(valueDes);
+          break;
+        case r'end_point':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(VendorAnalyticsPoint),
+          ) as VendorAnalyticsPoint;
+          result.endPoint.replace(valueDes);
+          break;
+        case r'unit':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(AnalyticsUnit),
+          ) as AnalyticsUnit;
+          result.unit.replace(valueDes);
+          break;
+        case r'material':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(AnalyticsMaterialRef),
+          ) as AnalyticsMaterialRef;
+          result.material.replace(valueDes);
+          break;
+        case r'category':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(AnalyticsCategoryRef),
+          ) as AnalyticsCategoryRef;
+          result.category.replace(valueDes);
           break;
         default:
           unhandled.add(key);

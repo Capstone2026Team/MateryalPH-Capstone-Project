@@ -1,4 +1,4 @@
-import { Button, EmailSecurityCheck, RecaptchaCheckbox, type WebBotAction, type useWebBotProtection } from '@materyalph/web-ui'
+import { BotProtectionFields, EmailSecurityCheck, RecaptchaCheckbox, type WebBotAction, type useWebBotProtection } from '@materyalph/web-ui'
 import { readableApiError, resendRiskChallenge, verifyRiskChallenge } from '../lib/auth-api'
 import type { ReactNode } from 'react'
 
@@ -9,11 +9,11 @@ export function AdminSecurityFields({ action, check, children }: {
   check: SecurityCheck
   children: ReactNode
 }) {
-  return <>
+  return <BotProtectionFields disabled={check.busy} submitEmailCheck checkbox={
     <RecaptchaCheckbox ref={check.checkboxRef} siteKey={import.meta.env.VITE_RECAPTCHA_SITE_KEY} action={action} disabled={check.busy} onTokenChange={check.setToken} />
+  }>
     {children}
-    <Button className="w-full" variant="quiet" disabled={check.busy} type="submit" data-email-check="true">Use email security check instead</Button>
-  </>
+  </BotProtectionFields>
 }
 
 export function AdminEmailSecurityCheck({ check }: { check: SecurityCheck }) {

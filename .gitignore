@@ -12,6 +12,8 @@
 # Flutter environment and signing
 apps/buyer-mobile/config/development.json
 apps/buyer-mobile/config/staging.json
+apps/buyer-mobile/config/hostinger.json
+apps/buyer-mobile/config/deployments.json
 apps/buyer-mobile/config/production.json
 apps/buyer-mobile/android/secrets.properties
 apps/buyer-mobile/android/key.properties
@@ -47,7 +49,8 @@ apps/buyer-mobile/.dart_tool/
 apps/buyer-mobile/build/
 
 # Local runtime data
-tmp/pdf-tools/
+/.tmp/
+**/__pycache__/
 services/api/phase15-*.log
 services/api/delivery-*.log
 packages/api-contract/**/delivery-*.log
@@ -77,5 +80,3 @@ services/api/.env.testing
 .impeccable/live/deferred-svelte-component-accepts.json
 .impeccable/live/*.png
 # impeccable-ignore-end
-# Local realtime count validation artifacts and pre-edit comparisons
-/.tmp/realtime-counts/

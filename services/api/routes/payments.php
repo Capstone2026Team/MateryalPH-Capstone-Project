@@ -36,6 +36,7 @@ Route::prefix('vendor')->middleware([
     Route::get('/finance/payments/{paymentId}', [VendorFinanceController::class, 'payment'])->whereUuid('paymentId');
     Route::post('/finance/payments/{paymentId}/refresh', [VendorFinanceController::class, 'refreshPayment'])->whereUuid('paymentId');
     Route::post('/orders/{orderId}/physical-payments', [VendorFinanceController::class, 'recordPhysical'])->whereUuid('orderId');
+    Route::post('/orders/{orderId}/physical-payments/handover-confirmation', [VendorFinanceController::class, 'confirmHandoverCash'])->whereUuid('orderId');
     Route::post('/orders/{orderId}/online-balance/approve', [VendorFinanceController::class, 'approveOnlineBalance'])->whereUuid('orderId');
 });
 

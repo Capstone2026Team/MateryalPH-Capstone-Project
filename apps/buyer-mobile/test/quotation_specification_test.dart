@@ -8,6 +8,8 @@ import 'package:materyalph/features/projects/vendor_quotation_screen.dart';
 import 'package:materyalph/features/projects/vendor_selection_screen.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 
+import 'quotation_fulfillment_choice_test.dart' show checkout, packageView;
+
 const packageId = '01995000-0000-7000-8000-0000000000a1';
 const lineId = '01995000-0000-7000-8000-0000000000b1';
 const candidateId = '01995000-0000-7000-8000-0000000000c1';
@@ -43,6 +45,7 @@ Map<String, Object?> allocation(String variant, String mm, int price) => {
   'brand': 'BrandCo',
   'matched_quantity': '30.0000',
   'unit_price_centavos': price,
+  'amount_centavos': price * 30,
   'offered_specifications': [spec(mm)],
 };
 
@@ -113,6 +116,11 @@ Map<String, Object?> candidate({bool chosen = false}) => {
   'label': 'System-compiled estimate — advisory',
   'current_quotation_state': 'NO_INQUIRY',
   'fulfillment': fulfillmentFor(chosen ? 66000 : 45000),
+  'draft_groups': <Object?>[],
+  'payment_methods': [
+    {'method': 'ONLINE', 'available': true},
+    {'method': 'IN_STORE', 'available': false},
+  ],
 };
 
 const estimate = {
@@ -145,6 +153,8 @@ ProjectsRepository repository(List<RequestOptions> requests) =>
                   ? candidate(chosen: true)
                   : path.endsWith('/selection')
                   ? {'id': '01995000-0000-7000-8000-0000000000d9'}
+                  : path.endsWith('/work-packages/$packageId')
+                  ? packageView(method: 'PICKUP')
                   : null;
               if (data == null) {
                 handler.reject(
@@ -231,28 +241,19 @@ void main() {
       ]);
       expect(find.text('₱660.00'), findsWidgets);
       expect(find.text('Change specification (2)'), findsOneWidget);
-      expect(
-        find.text('30 PC × ₱22.00 · BrandCo · Sold by BuildSphere'),
-        findsOneWidget,
-      );
+      expect(find.text('30 PC · BuildSphere'), findsOneWidget);
+      expect(find.text('₱22.00 / PC · ₱660.00'), findsOneWidget);
 
       // The supplied product opens its Product Details on the quoted variant.
       await tester.tap(find.text('Hollow block · 150 mm'));
       await tester.pumpAndSettle();
       expect(opened, [(listingId, thick)]);
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Select this Vendor'));
-      // The Note field's blinking cursor never settles; pump through the dialog.
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.tap(find.widgetWithText(FilledButton, 'Select Vendor'));
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.pump(const Duration(milliseconds: 400));
-      final select = requests.lastWhere(
-        (r) => r.uri.path.endsWith('/selection'),
-      );
+      final select = await checkout(tester, requests);
       expect((select.data as Map)['selections'], [
         {'line_id': lineId, 'option_id': 'bbbbbbbbbbbbbbbb'},
       ]);
+      await tester.tap(find.text('View primary request'));
       expect(order, '01995000-0000-7000-8000-0000000000d9');
       expect(tester.takeException(), isNull);
     },

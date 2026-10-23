@@ -43,6 +43,18 @@ export interface CommissionTrendPoint {
      * Posted fee revenue net of credits and fee VAT, less platform commission payment processing expense. Can be negative in a refund period.
      */
     netEarningsCentavos: number;
+    /**
+     * Gross merchandise value of orders confirmed in the period (Vendor money, never platform revenue).
+     */
+    gmvCentavos: number;
+    /**
+     * Verified online Buyer payments plus recorded Cash on Delivery and In-Store cash, received by Vendors.
+     */
+    buyerPaymentsCentavos: number;
+    /**
+     * Confirmed online refunds and cash reimbursements to Buyers.
+     */
+    buyerRefundsCentavos: number;
 }
 
 /**
@@ -55,6 +67,9 @@ export function instanceOfCommissionTrendPoint(value: object): value is Commissi
     if ((!('collectedCentavos' in (value as Record<string, any>)) && !('collected_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['collectedCentavos'] === undefined && (value as Record<string, any>)['collected_centavos'] === undefined)) return false;
     if ((!('refundedCentavos' in (value as Record<string, any>)) && !('refunded_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['refundedCentavos'] === undefined && (value as Record<string, any>)['refunded_centavos'] === undefined)) return false;
     if ((!('netEarningsCentavos' in (value as Record<string, any>)) && !('net_earnings_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['netEarningsCentavos'] === undefined && (value as Record<string, any>)['net_earnings_centavos'] === undefined)) return false;
+    if ((!('gmvCentavos' in (value as Record<string, any>)) && !('gmv_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['gmvCentavos'] === undefined && (value as Record<string, any>)['gmv_centavos'] === undefined)) return false;
+    if ((!('buyerPaymentsCentavos' in (value as Record<string, any>)) && !('buyer_payments_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['buyerPaymentsCentavos'] === undefined && (value as Record<string, any>)['buyer_payments_centavos'] === undefined)) return false;
+    if ((!('buyerRefundsCentavos' in (value as Record<string, any>)) && !('buyer_refunds_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['buyerRefundsCentavos'] === undefined && (value as Record<string, any>)['buyer_refunds_centavos'] === undefined)) return false;
     return true;
 }
 
@@ -74,6 +89,9 @@ export function CommissionTrendPointFromJSONTyped(json: any, ignoreDiscriminator
         'collectedCentavos': json['collected_centavos'],
         'refundedCentavos': json['refunded_centavos'],
         'netEarningsCentavos': json['net_earnings_centavos'],
+        'gmvCentavos': json['gmv_centavos'],
+        'buyerPaymentsCentavos': json['buyer_payments_centavos'],
+        'buyerRefundsCentavos': json['buyer_refunds_centavos'],
     };
 }
 
@@ -94,6 +112,9 @@ export function CommissionTrendPointToJSONTyped(value?: CommissionTrendPoint | n
         'collected_centavos': value['collectedCentavos'],
         'refunded_centavos': value['refundedCentavos'],
         'net_earnings_centavos': value['netEarningsCentavos'],
+        'gmv_centavos': value['gmvCentavos'],
+        'buyer_payments_centavos': value['buyerPaymentsCentavos'],
+        'buyer_refunds_centavos': value['buyerRefundsCentavos'],
     };
 }
 

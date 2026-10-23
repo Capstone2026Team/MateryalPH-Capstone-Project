@@ -22,6 +22,7 @@ final class BuyerMaterialsAnalyticsSerializer extends MaterialsAnalyticsSerializ
             'end_point' => $this->point($row['end']),
             'trend' => $this->trend($row['trend'], $row['start']['date'], $row['end']['date']),
             'current' => ['vendor_count' => $row['current']['vendors'], 'listing_count' => $row['current']['listings'], 'status' => $row['current']['vendors'] > 0 ? 'AVAILABLE' : 'NO_CURRENT_OFFERS'],
+            'image' => $row['image'],
         ];
     }
 

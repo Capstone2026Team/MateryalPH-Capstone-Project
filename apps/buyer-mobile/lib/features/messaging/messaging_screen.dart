@@ -938,7 +938,7 @@ class _MessagingScreenState extends State<MessagingScreen>
       );
     } on DiscoveryFailure catch (error) {
       // A dropped response can follow a saved upload; the thread is the source of truth.
-      if (error.kind != DiscoveryFailureKind.offline) rethrow;
+      if (!error.isTransportFailure) rethrow;
       final thread = await widget.repository.conversation(
         widget.conversationId!,
       );
@@ -1368,6 +1368,45 @@ class _MessagingScreenState extends State<MessagingScreen>
 
     return Column(
       children: [
+        if (d.conversation.contextType.name == 'PROJECT_BASED')
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: WorkPackageAttachment(
+              compact: true,
+              original: projectObject(
+                projectObject(
+                  jsonDecode(
+                    jsonEncode(
+                      d.conversation.lockedReference
+                          .map((k, v) => MapEntry(k, v?.value))
+                          .toMap(),
+                    ),
+                  ),
+                )['work_package'],
+              ),
+              proposed: d.quotations.versions.isEmpty
+                  ? projectObject(
+                      jsonDecode(
+                        jsonEncode(
+                          d
+                              .conversation
+                              .lockedReference['working_duplicate']
+                              ?.value,
+                        ),
+                      ),
+                    )
+                  : projectObject(
+                      jsonDecode(
+                        jsonEncode(
+                          api.standardSerializers.serializeWith(
+                            api.ChatQuotationContent.serializer,
+                            d.quotations.versions.first.content,
+                          ),
+                        ),
+                      ),
+                    ),
+            ),
+          ),
         Expanded(
           // Reversed so the thread opens on its newest message: offset 0 is the bottom,
           // whatever height the earlier content turns out to have once it is laid out.
@@ -1376,41 +1415,6 @@ class _MessagingScreenState extends State<MessagingScreen>
             reverse: true,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             children: <Widget>[
-              if (d.conversation.contextType.name == 'PROJECT_BASED')
-                WorkPackageAttachment(
-                  original: projectObject(
-                    projectObject(
-                      jsonDecode(
-                        jsonEncode(
-                          d.conversation.lockedReference
-                              .map((k, v) => MapEntry(k, v?.value))
-                              .toMap(),
-                        ),
-                      ),
-                    )['work_package'],
-                  ),
-                  proposed: d.quotations.versions.isEmpty
-                      ? projectObject(
-                          jsonDecode(
-                            jsonEncode(
-                              d
-                                  .conversation
-                                  .lockedReference['working_duplicate']
-                                  ?.value,
-                            ),
-                          ),
-                        )
-                      : projectObject(
-                          jsonDecode(
-                            jsonEncode(
-                              api.standardSerializers.serializeWith(
-                                api.ChatQuotationContent.serializer,
-                                d.quotations.versions.first.content,
-                              ),
-                            ),
-                          ),
-                        ),
-                ),
               if (d.conversation.handler != null)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),

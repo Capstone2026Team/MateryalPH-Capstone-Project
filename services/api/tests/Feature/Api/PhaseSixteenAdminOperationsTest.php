@@ -12,7 +12,9 @@ use App\Domain\Geography\PlacesProvider;
 use App\Domain\Geography\RadiusPolicy;
 use App\Domain\Geography\RouteProvider;
 use App\Domain\Identity\TokenSessionService;
+use App\Domain\Notifications\NotificationPolicy;
 use App\Domain\Operations\OutboxProcessor;
+use App\Domain\Settings\PlatformSettingRegistry;
 use App\Domain\Settings\PlatformSettings;
 use App\Domain\Vendors\AddressGeocoder;
 use App\Domain\Vendors\VendorFileScanner;
@@ -79,7 +81,7 @@ final class PhaseSixteenAdminOperationsTest extends TestCase
     public function test_admin_dated_queues_validate_the_range_and_query_their_timestamp_fields(): void
     {
         $this->signInAdmin($this->admin('ADMIN_SUPERADMIN'));
-        $paths = ['/api/v1/admin/enforcement', '/api/v1/admin/privacy-requests', '/api/v1/admin/integrations/failures',
+        $paths = ['/api/v1/admin/enforcement', '/api/v1/admin/integrations/failures',
             '/api/v1/admin/integrations/failures?kind=JOBS', '/api/v1/admin/budget-overrides', '/api/v1/admin/finance/kpis',
             '/api/v1/admin/finance/remittances', '/api/v1/admin/finance/evidence', '/api/v1/admin/finance/tax-adjustments',
             '/api/v1/admin/finance/payments', '/api/v1/admin/finance/review-items', '/api/v1/admin/finance/statements',
@@ -95,6 +97,23 @@ final class PhaseSixteenAdminOperationsTest extends TestCase
             $this->getJson($path.$separator.'from=2000-01-01&to=2000-01-01')->assertOk();
             $this->getJson($path.$separator.'from=2000-01-02&to=2000-01-01')->assertUnprocessable();
         }
+    }
+
+    public function test_lower_upload_ceiling_preserves_other_saved_limits_and_published_history(): void
+    {
+        $legacy = PlatformSettingRegistry::defaultValue('uploads.limits_kb');
+        $legacy['vendor_document'] = 1024;
+        $legacy['review_video'] = 102400;
+        DB::table('platform_settings')->where('key', 'uploads.limits_kb')->update(['value' => json_encode($legacy, JSON_THROW_ON_ERROR)]);
+        $persisted = (string) DB::table('platform_settings')->where('key', 'uploads.limits_kb')->value('value');
+        $history = DB::table('platform_setting_versions')->where('setting_key', 'uploads.limits_kb')->get()->toJson();
+        $settings = PlatformSettings::current();
+        $settings->forget();
+
+        self::assertSame(25600, $settings->uploadKb('review_video'));
+        self::assertSame(1024, $settings->uploadKb('vendor_document'));
+        self::assertSame($persisted, (string) DB::table('platform_settings')->where('key', 'uploads.limits_kb')->value('value'));
+        self::assertSame($history, DB::table('platform_setting_versions')->where('setting_key', 'uploads.limits_kb')->get()->toJson());
     }
 
     public function test_platform_settings_are_versioned_validated_wired_to_new_records_and_super_admin_only(): void
@@ -257,47 +276,54 @@ final class PhaseSixteenAdminOperationsTest extends TestCase
         self::assertTrue(DB::table('notifications')->where('user_id', $buyer->id)->where('category', 'SUSPENSION')->where('title', 'Suspension applied')->exists());
     }
 
-    public function test_privacy_requests_are_handler_scoped_identity_verified_and_final_once_closed(): void
+    public function test_retired_privacy_endpoints_permissions_notifications_and_navigation_are_unavailable(): void
     {
-        $subject = $this->buyer();
-        $super = $this->admin('ADMIN_SUPERADMIN');
-        $handler = $this->admin('ADMIN_USER_MANAGEMENT');
-        $other = $this->admin('ADMIN_USER_MANAGEMENT');
-        $this->signInAdmin($super);
-        $intake = ['subject_email' => $subject->email, 'request_type' => 'ACCESS', 'intake_channel' => 'DPO_EMAIL',
-            'received_on' => CarbonImmutable::now('Asia/Manila')->toDateString(), 'scope' => 'Copy of order and profile data held about the requester.', 'note' => 'Received at the DPO mailbox.'];
-        $intakeKey = (string) Str::uuid7();
-        $created = $this->keyedPost('/api/v1/admin/privacy-requests', $intake, $intakeKey)->assertCreated()->assertJsonPath('data.state', 'RECEIVED')->json('data');
-        // A retried intake with the same key replays the original request instead of recording a duplicate.
-        $this->keyedPost('/api/v1/admin/privacy-requests', $intake, $intakeKey)->assertOk()->assertJsonPath('data.id', $created['id']);
-        self::assertSame(1, DB::table('privacy_requests')->count());
-        $this->keyedPost('/api/v1/admin/privacy-requests', ['request_type' => 'DELETION'] + $intake, $intakeKey)->assertStatus(409)->assertJsonPath('errors.0.code', 'IDEMPOTENCY_CONFLICT');
-        $this->postJson('/api/v1/admin/privacy-requests', $intake)->assertStatus(422)->assertJsonPath('errors.0.code', 'IDEMPOTENCY_KEY_REQUIRED');
-        self::assertStringNotContainsString($subject->email, (string) json_encode($created), 'Only a masked email is shown.');
-        $this->postJson('/api/v1/admin/privacy-requests/'.$created['id'].'/assign', ['lock_version' => $created['lock_version'], 'handler_user_id' => $handler->id, 'note' => 'Assigned to User Management.'])
-            ->assertOk()->assertJsonPath('data.handler_user_id', $handler->id);
+        $admin = $this->admin('ADMIN_SUPERADMIN');
+        $this->signInAdmin($admin);
+        $id = (string) Str::uuid7();
+        $this->getJson('/api/v1/admin/privacy-requests')->assertNotFound();
+        $this->postJson('/api/v1/admin/privacy-requests', [], $this->key())->assertNotFound();
+        $this->getJson('/api/v1/admin/privacy-requests/'.$id)->assertNotFound();
+        foreach (['assign', 'verify', 'start', 'complete', 'reject', 'withdraw'] as $command) {
+            $this->postJson('/api/v1/admin/privacy-requests/'.$id.'/'.$command, [])->assertNotFound();
+        }
+        self::assertSame(0, DB::table('permissions')->whereIn('code', ['privacy.manage', 'privacy.handle'])->count());
+        $notice = (object) ['user_id' => $admin->id, 'category' => 'ADMIN_OPERATIONS', 'resource_type' => 'PRIVACY_REQUEST', 'resource_id' => $id];
+        self::assertFalse(app(NotificationPolicy::class)->allows($admin, $notice));
+    }
 
-        $this->signInAdmin($other);
-        $this->getJson('/api/v1/admin/privacy-requests')->assertOk()->assertJsonCount(0, 'data')->assertJsonPath('meta.scope', 'ASSIGNED');
-        $this->getJson('/api/v1/admin/privacy-requests/'.$created['id'])->assertNotFound();
-        $this->signInAdmin($this->admin('ADMIN_SUPPORT'));
-        $this->getJson('/api/v1/admin/privacy-requests')->assertForbidden();
-
-        $this->signInAdmin($handler);
-        $detail = $this->getJson('/api/v1/admin/privacy-requests/'.$created['id'])->assertOk()->assertJsonPath('data.allowed_actions', ['VERIFY', 'REJECT', 'WITHDRAW'])->json('data');
-        self::assertTrue(DB::table('audit_logs')->where('action', 'PRIVACY_REQUEST_VIEWED')->where('resource_id', $created['id'])->exists(), 'Personal-data access is itself logged.');
-        $this->postJson('/api/v1/admin/privacy-requests/'.$created['id'].'/start', ['lock_version' => $detail['lock_version'], 'note' => 'Starting before verification.'])->assertStatus(409);
-        $this->postJson('/api/v1/admin/privacy-requests/'.$created['id'].'/verify', ['lock_version' => $detail['lock_version'] + 4, 'verification_method' => 'REGISTERED_EMAIL_CONFIRMATION', 'note' => 'Confirmed.'])
-            ->assertStatus(409)->assertJsonPath('errors.0.code', 'PRIVACY_REQUEST_VERSION_CONFLICT');
-        $verified = $this->postJson('/api/v1/admin/privacy-requests/'.$created['id'].'/verify', ['lock_version' => $detail['lock_version'], 'verification_method' => 'REGISTERED_EMAIL_CONFIRMATION',
-            'note' => 'Requester confirmed from the registered email address.'])->assertOk()->assertJsonPath('data.state', 'IDENTITY_VERIFIED')->json('data');
-        $started = $this->postJson('/api/v1/admin/privacy-requests/'.$created['id'].'/start', ['lock_version' => $verified['lock_version'], 'note' => 'Compiling the account data.'])->assertOk()->json('data');
-        $closed = $this->postJson('/api/v1/admin/privacy-requests/'.$created['id'].'/complete', ['lock_version' => $started['lock_version'], 'note' => 'Account and order summary sent through the DPO channel.',
-            'legal_exception' => 'Financial records retained under the tax retention period.'])->assertOk()->assertJsonPath('data.state', 'COMPLETED')->json('data');
-        self::assertSame([], $closed['allowed_actions']);
-        $this->postJson('/api/v1/admin/privacy-requests/'.$created['id'].'/withdraw', ['lock_version' => $closed['lock_version'], 'note' => 'Too late.'])->assertStatus(409);
-        $this->assertThrows(static fn () => DB::transaction(static fn () => DB::table('privacy_requests')->where('id', $created['id'])->update(['state' => 'IN_PROGRESS', 'completed_at' => null])), QueryException::class);
-        self::assertSame(['RECEIVED', 'ASSIGNED', 'IDENTITY_VERIFIED', 'IN_PROGRESS', 'COMPLETED'], DB::table('privacy_request_events')->where('privacy_request_id', $created['id'])->orderBy('occurred_at')->orderBy('id')->pluck('event')->all());
+    public function test_privacy_retirement_migration_removes_all_grants_and_preserves_existing_history(): void
+    {
+        $admin = $this->admin('ADMIN_SUPERADMIN');
+        $id = (string) Str::uuid7();
+        DB::table('privacy_requests')->insert([
+            'id' => $id, 'user_id' => $admin->id, 'request_type' => 'ACCESS', 'state' => 'RECEIVED',
+            'reference' => 'PR-2026-LEGACY', 'subject_account_type' => 'ADMIN', 'intake_channel' => 'DPO_EMAIL',
+            'received_at' => now(), 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        DB::table('privacy_request_events')->insert([
+            'id' => (string) Str::uuid7(), 'privacy_request_id' => $id, 'event' => 'RECEIVED',
+            'from_state' => null, 'to_state' => 'RECEIVED', 'note' => 'Retained historical intake.',
+            'actor_user_id' => $admin->id, 'actor_role' => 'ADMIN_SUPERADMIN',
+            'correlation_id' => (string) Str::uuid7(), 'occurred_at' => now(),
+        ]);
+        $requests = DB::table('privacy_requests')->get()->toJson();
+        $events = DB::table('privacy_request_events')->get()->toJson();
+        $unrelatedGrants = DB::table('role_permissions')->orderBy('id')->get()->toJson();
+        foreach (['privacy.manage', 'privacy.handle'] as $code) {
+            $permissionId = (string) Str::uuid7();
+            DB::table('permissions')->insert(['id' => $permissionId, 'code' => $code, 'description' => 'Legacy permission', 'created_at' => now(), 'updated_at' => now()]);
+            foreach (DB::table('platform_roles')->pluck('id') as $roleId) {
+                DB::table('role_permissions')->insert(['id' => (string) Str::uuid7(), 'platform_role_id' => $roleId, 'permission_id' => $permissionId, 'created_at' => now(), 'updated_at' => now()]);
+            }
+        }
+        $migration = require database_path('migrations/2026_10_29_000000_retire_privacy_request_permissions.php');
+        $migration->up();
+        $migration->up();
+        self::assertSame(0, DB::table('permissions')->whereIn('code', ['privacy.manage', 'privacy.handle'])->count());
+        self::assertSame($unrelatedGrants, DB::table('role_permissions')->orderBy('id')->get()->toJson());
+        self::assertSame($requests, DB::table('privacy_requests')->get()->toJson());
+        self::assertSame($events, DB::table('privacy_request_events')->get()->toJson());
     }
 
     public function test_audit_search_is_append_only_and_opening_sensitive_detail_is_itself_audited(): void
@@ -474,7 +500,9 @@ final class PhaseSixteenAdminOperationsTest extends TestCase
         self::assertSame($accumulatorBefore, DB::table('vendor_withholding_accumulators')->where('organization_id', $store->id)->value('g_accumulated_centavos'), 'Refunds never restore FIN-04A relief.');
 
         $kpis = $this->getJson('/api/v1/admin/finance/kpis')->assertOk()->json('data');
-        self::assertSame(['gross_gmv', 'net_gmv'], array_column($kpis['commerce'], 'key'), 'GMV is reported apart from CWT, commission, revenue, cash and receivables.');
+        self::assertSame(['gross_gmv', 'cancelled_gmv', 'refunded_gmv', 'net_gmv', 'online_payments', 'buyer_processing_fees', 'cash_on_delivery', 'in_store', 'buyer_payments',
+            'cancellation_refunds', 'dispute_refunds', 'other_refunds', 'cash_reimbursements', 'buyer_refunds', 'pending_buyer_refunds', 'net_buyer_payments'], array_column($kpis['commerce'], 'key'));
+        self::assertSame([], array_intersect(array_column($kpis['commerce'], 'key'), array_column($kpis['finance'], 'key')), 'Marketplace money is reported apart from CWT, commission, revenue, platform cash and receivables.');
         self::assertContains('assessed_cwt', array_column($kpis['finance'], 'key'));
         $this->getJson('/api/v1/admin/finance/remittances')->assertOk()->assertJsonPath('data.0.order_reference', (string) DB::table('orders')->where('id', $orderId)->value('reference'));
         $this->signInAdmin($this->admin('ADMIN_USER_MANAGEMENT'));
@@ -492,17 +520,18 @@ final class PhaseSixteenAdminOperationsTest extends TestCase
     {
         $this->deadLetter('NOTIFICATION_READY');
         $expectations = [
-            'ADMIN_SUPERADMIN' => ['vendor_verification', 'enforcement', 'privacy', 'jobs', 'finance_reviews', 'disputes'],
-            'ADMIN_USER_MANAGEMENT' => ['enforcement', 'review_moderation', 'privacy'],
+            'ADMIN_SUPERADMIN' => ['vendor_verification', 'enforcement', 'jobs', 'finance_reviews', 'disputes'],
+            'ADMIN_USER_MANAGEMENT' => ['enforcement', 'review_moderation'],
             'ADMIN_ORDER_DISPUTE' => ['disputes', 'appeals', 'enforcement', 'refund_failures', 'invoices'],
             'ADMIN_VENDOR_VERIFICATION' => ['vendor_verification', 'vendor_activation', 'document_expiry'],
             'ADMIN_SUPPORT' => [],
         ];
         $forbidden = ['ADMIN_USER_MANAGEMENT' => ['jobs', 'finance_reviews', 'vendor_verification'], 'ADMIN_ORDER_DISPUTE' => ['privacy', 'jobs', 'finance_reviews'],
-            'ADMIN_VENDOR_VERIFICATION' => ['enforcement', 'privacy', 'disputes', 'jobs'], 'ADMIN_SUPPORT' => ['enforcement', 'privacy', 'jobs', 'disputes', 'vendor_verification']];
+            'ADMIN_VENDOR_VERIFICATION' => ['enforcement', 'privacy', 'disputes', 'jobs'], 'ADMIN_SUPPORT' => ['enforcement', 'jobs', 'disputes', 'vendor_verification']];
         foreach ($expectations as $role => $expected) {
             $this->signInAdmin($this->admin($role));
             $keys = array_column($this->getJson('/api/v1/admin/dashboard')->assertOk()->json('data.queues'), 'key');
+            self::assertNotContains('privacy', $keys, $role.' has no retired privacy queue');
             foreach ($expected as $key) {
                 self::assertContains($key, $keys, $role.' sees '.$key);
             }

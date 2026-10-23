@@ -117,7 +117,7 @@ class _OrderPaymentScreenState extends State<OrderPaymentScreen> {
         return;
       }
       // Keep the key only when the outcome is unknown, so a retry replays the same attempt.
-      if (error.kind != DiscoveryFailureKind.offline) _key = null;
+      if (!error.isTransportFailure) _key = null;
       if (mounted) setState(() => _error = error.message);
       if (error.kind == DiscoveryFailureKind.conflict) await _load();
     } finally {

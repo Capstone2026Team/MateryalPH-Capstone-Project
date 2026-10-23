@@ -99,13 +99,13 @@ final class MaterialsAnalyticsController extends Controller
     {
         $input = $this->input($request, 'viewAdmin', [...self::COMMON, 'psgc_code', 'psgc_version_id']);
 
-        return ApiResponse::success($this->assembler->list($this->adminRequest($input), $input['cursor'] ?? null, (int) ($input['per_page'] ?? MaterialsAnalyticsService::PER_PAGE)));
+        return ApiResponse::success($this->assembler->list($this->adminRequest($request, $input), $input['cursor'] ?? null, (int) ($input['per_page'] ?? MaterialsAnalyticsService::PER_PAGE)));
     }
 
     public function adminDetail(Request $request, string $groupId): JsonResponse
     {
         $input = $this->input($request, 'viewAdmin', ['preset_days', 'start_date', 'end_date', 'psgc_code', 'psgc_version_id']);
-        $detail = $this->assembler->detail($this->adminRequest($input), self::uuid($groupId));
+        $detail = $this->assembler->detail($this->adminRequest($request, $input), self::uuid($groupId));
         $detail['can_inspect_sources'] = $this->policy->inspectSources($request->user());
 
         return ApiResponse::success($detail);
@@ -139,7 +139,7 @@ final class MaterialsAnalyticsController extends Controller
     public function adminExport(Request $request): StreamedResponse
     {
         $input = $this->input($request, 'exportAdmin', ['preset_days', 'start_date', 'end_date', 'psgc_code', 'psgc_version_id', 'category_id', 'q']);
-        $analytics = $this->adminRequest($input);
+        $analytics = $this->adminRequest($request, $input);
 
         return $this->csv('materials-analytics-aggregates', ['Material', 'Comparable variant', 'Unit', 'Start date', 'Start average (PHP)', 'Start Vendors', 'End date', 'End average (PHP)', 'End Vendors',
             'Change %', 'Direction', 'Participants changed', 'Current Vendors', 'Current listings', 'Dataset'],
@@ -204,12 +204,12 @@ final class MaterialsAnalyticsController extends Controller
     }
 
     /** @param array<string, mixed> $input */
-    private function adminRequest(array $input): AnalyticsRequest
+    private function adminRequest(Request $request, array $input): AnalyticsRequest
     {
         $scope = $this->scopes->forAdmin($input['psgc_code'] ?? null, $input['psgc_version_id'] ?? null);
         $dataset = AnalyticsDataset::active();
 
-        return new AnalyticsRequest('ADMIN', $scope, null, $dataset, AnalyticsWindow::resolve($input, $dataset), self::filters($input));
+        return new AnalyticsRequest('ADMIN', $scope, null, $dataset, AnalyticsWindow::resolve($input, $dataset), self::filters($input), $this->policy->inspectSources($request->user()));
     }
 
     /**

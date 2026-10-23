@@ -361,7 +361,7 @@ final class MarketplaceSearchService
                 'vendor' => ['id' => $vendor['id'], 'name' => $vendor['public_store_name'], 'logo_url' => $vendor['logo_url'], 'score_label' => $vendor['score_label'], 'vacation_mode' => $vendor['vacation_mode'], 'badges' => $vendor['badges']],
                 'fulfillment' => [
                     'pickup_available' => in_array($row->fulfillment_method, ['SELF_PICKUP', 'BOTH'], true),
-                    'delivery' => ! app(VendorDeliveryEligibility::class)->available((string) $row->organization_id) || $row->delivery_max_km === null || ! in_array($row->fulfillment_method, ['VENDOR_DELIVERY', 'BOTH'], true) ? 'NOT_OFFERED' : ($offer['distance'] <= (int) $row->delivery_max_km * 1000 ? 'WITHIN_STATED_AREA' : 'OUTSIDE_STATED_AREA'),
+                    'delivery' => $row->delivery_max_km === null || ! in_array($vendor['fulfillment_method'], ['VENDOR_DELIVERY', 'BOTH'], true) ? 'NOT_OFFERED' : ($offer['distance'] <= (int) $row->delivery_max_km * 1000 ? 'WITHIN_STATED_AREA' : 'OUTSIDE_STATED_AREA'),
                     'basis' => 'STRAIGHT_LINE_ADVISORY',
                 ],
                 'ranking' => ['srs' => SearchRelevanceScore::round($offer['srs'], 2), 'components' => SearchRelevanceScore::explain($offer['components'], $weights, $offer['basis'])],

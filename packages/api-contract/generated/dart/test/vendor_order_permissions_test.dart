@@ -17,6 +17,7 @@ void main() {
       // TODO
     });
 
+    // True only for authorized roles on COD or In-Store Payment orders awaiting Vendor confirmation.
     // bool canSetNrpc
     test('to test the property `canSetNrpc`', () async {
       // TODO

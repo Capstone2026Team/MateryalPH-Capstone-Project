@@ -18,7 +18,9 @@ use App\Domain\Vendors\VendorFileScanner;
 use App\Models\AuthSession;
 use App\Models\User;
 use App\Models\VendorOrganization;
+use Carbon\CarbonImmutable;
 use Database\Seeders\SystemFoundationSeeder;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -78,6 +80,16 @@ final class PhaseSixteenGeoAnalyticsTest extends TestCase
         $this->confirmedOrder($far, $farOwner, $farListing);
         // The store later moves outside every boundary: facts use the current verified address, which is unresolved.
         $this->placeStore($far->id, 60000, 0);
+        // This fixture exercises boundary placement, so exclude the shared fixture's recognizable Quezon City name.
+        foreach ([$qc, $manila, $far] as $store) {
+            $address = DB::table('vendor_addresses')->where('vendor_organization_id', $store->id)->first();
+            self::assertNotNull($address);
+            $versionId = (string) Str::uuid7();
+            DB::statement('INSERT INTO vendor_address_versions (id, vendor_address_id, version, street, barangay, city_municipality, province, formatted_address, country_code, latitude, longitude, source, location, created_at)
+                SELECT ?, vendor_address_id, version + 1, street, ?, ?, ?, formatted_address, country_code, latitude, longitude, source, location, now()
+                FROM vendor_address_versions WHERE id = ?', [$versionId, 'Unmapped test barangay', 'Unmapped test locality', 'Unmapped test province', $address->current_version_id]);
+            DB::table('vendor_addresses')->where('id', $address->id)->update(['current_version_id' => $versionId, 'updated_at' => now()]);
+        }
 
         $run = app(GeoFactsBuilder::class)->build('COMMAND');
         self::assertSame('PUBLISHED', $run['state']);
@@ -217,6 +229,66 @@ final class PhaseSixteenGeoAnalyticsTest extends TestCase
         $changed = $this->boundaryFile(['1381300000' => [[120.9, 14.6], [120.96, 14.6], [120.96, 14.66], [120.9, 14.66], [120.9, 14.6]], '9999999999' => [[1, 1], [2, 1], [2, 2], [1, 1]]]);
         $result = app(BoundaryImporter::class)->import($changed, 'Test boundaries, corrected', null, 'psgc', true);
         self::assertSame([1, 1, ['9999999999']], [$result['matched'], $result['replaced'], $result['unmatched']]);
+    }
+
+    public function test_recurring_aggregation_updates_both_admin_views_after_new_orders_and_cancellations(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-10-20 01:00:00', 'Asia/Manila'));
+        [$store, $owner, $listing] = $this->pickupStore('Current Activity Store', [['price' => 100000, 'qty' => '100']], 1000);
+        $this->confirmedOrder($store, $owner, $listing);
+        $this->artisan('analytics:aggregate-marketplace')->assertSuccessful();
+        $first = DB::table('analytics_geo_runs')->where('state', 'PUBLISHED')->where('environment', 'TEST')->first();
+        self::assertNotNull($first);
+
+        // Later activity must reach the same day's facts without waiting for the next morning.
+        $this->travelTo(CarbonImmutable::parse('2026-10-20 15:42:00', 'Asia/Manila'));
+        $this->confirmedOrder($store, $owner, $listing);
+        $gross = (int) DB::table('orders')->sum('commercial_total_centavos');
+        $cancelled = DB::table('orders')->orderBy('created_at')->first();
+        self::assertNotNull($cancelled);
+        DB::table('orders')->where('id', $cancelled->id)->update(['order_state' => 'CANCELLED']);
+
+        $this->signInStoreMember($owner);
+        $vendor = $this->getJson('/api/v1/vendor/dashboard/insights?days=30')->assertOk()->json('data.orders.kpis');
+        self::assertSame($gross, $vendor['gross_sales_centavos']['value']);
+        self::assertSame(2, $vendor['order_volume']['value']);
+
+        $this->artisan('analytics:aggregate-marketplace')->assertSuccessful();
+        $this->signInAdmin($this->admin('ADMIN_SUPERADMIN'));
+        $this->setK(1);
+        $geo = $this->getJson('/api/v1/admin/geo-analytics?dataset=TEST')->assertOk();
+        $insights = $this->getJson('/api/v1/admin/dashboard/insights?dataset=TEST&days=30')->assertOk();
+        foreach ([[$geo, 'data'], [$insights, 'data.marketplace']] as [$response, $path]) {
+            $response->assertJsonPath($path.'.kpis.order_volume.value', 2)
+                ->assertJsonPath($path.'.kpis.gross_gmv_centavos.value', $gross)
+                ->assertJsonPath($path.'.kpis.net_gmv_centavos.value', $gross - (int) $cancelled->commercial_total_centavos)
+                ->assertJsonPath($path.'.dataset.through_date', '2026-10-20')
+                ->assertJsonPath($path.'.dataset.revision', (int) $first->revision + 1);
+            $this->assertNoCoordinates($response->getContent());
+        }
+        self::assertSame($geo->json('data.kpis'), $insights->json('data.marketplace.kpis'));
+        self::assertSame(1, DB::table('analytics_geo_runs')->where('environment', 'TEST')->where('state', 'PUBLISHED')->count());
+        self::assertSame('SUPERSEDED', DB::table('analytics_geo_runs')->where('id', $first->id)->value('state'));
+        self::assertSame(2, DB::table('analytics_order_facts')->where('environment', 'TEST')->count(), 'Rebuilds never double-count orders.');
+
+        $this->setK(3);
+        $this->getJson('/api/v1/admin/geo-analytics')->assertOk()->assertJsonPath('data.kpis.gross_gmv_centavos.value', null);
+        $this->getJson('/api/v1/admin/dashboard/insights')->assertOk()->assertJsonPath('data.marketplace.kpis.gross_gmv_centavos.value', null);
+    }
+
+    public function test_marketplace_refresh_is_due_during_the_day_and_material_price_history_stays_daily(): void
+    {
+        $this->artisan('schedule:list')->assertSuccessful();
+        $events = collect(app(Schedule::class)->events());
+        $marketplace = $events->first(static fn ($event): bool => str_contains($event->command ?? '', 'analytics:aggregate-marketplace'));
+        $prices = $events->first(static fn ($event): bool => str_contains($event->command ?? '', 'analytics:capture-material-prices'));
+        self::assertNotNull($marketplace);
+        self::assertSame('* * * * *', $marketplace->expression);
+        self::assertTrue($marketplace->withoutOverlapping);
+        self::assertTrue($marketplace->onOneServer);
+        self::assertNotNull($prices);
+        self::assertSame('10 0 * * *', $prices->expression);
+        self::assertSame('Asia/Manila', $prices->timezone);
     }
 
     private function confirmedOrder(VendorOrganization $store, User $owner, string $listing): User

@@ -10,6 +10,8 @@ import 'package:materyalph/design_system/theme.dart';
 import 'package:materyalph/features/orders/order_details_screen.dart';
 import 'package:materyalph/features/orders/order_models.dart';
 import 'package:materyalph/features/orders/orders_repository.dart';
+import 'package:materyalph/features/trust/order_reviews_screen.dart';
+import 'package:materyalph/features/trust/trust_models.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 
 import 'orders_fakes.dart';
@@ -228,6 +230,21 @@ void main() {
         fulfillment: 'DELIVERY',
         fulfillmentView: _delivered(readOnly: true),
       );
+      repository.reviews.order = const OrderReviewsView(
+        orderId: 'order-1',
+        orderReference: 'ORD-1',
+        state: 'OPEN',
+        closesAtLabel: 'Oct 18, 2026 10:00 AM (Asia/Manila)',
+        revealed: false,
+        withheldForDispute: false,
+        blindRevealText:
+            'Ratings stay hidden until both parties submit or the 14-day window ends.',
+        speedLabel: 'Delivery Speed',
+        displayOptions: [(choice: 'VERIFIED_BUYER', preview: 'Verified Buyer')],
+        vendorRating: null,
+        canSubmitVendorRating: true,
+        lines: [],
+      );
       await tester.tap(find.text('Confirm receipt'));
       await tester.pumpAndSettle();
       expect(find.text('Confirm you received this order?'), findsOneWidget);
@@ -237,9 +254,18 @@ void main() {
       await tester.pumpAndSettle();
       expect(repository.calls, contains('confirmReceipt'));
       expect(repository.keys, hasLength(1));
+      // A completed order opens its ratings next; going back shows the order.
+      expect(find.byType(OrderReviewsScreen), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
       expect(
         find.text('Receipt confirmed. Your order is completed.'),
         findsOneWidget,
+      );
+      await tester.scrollUntilVisible(
+        find.text('View Fulfillment Messages (read-only)'),
+        300,
+        scrollable: find.byType(Scrollable).first,
       );
       expect(
         find.text('View Fulfillment Messages (read-only)'),
@@ -294,17 +320,26 @@ void main() {
 
       await tester.tap(find.text('Report a problem'));
       await tester.pumpAndSettle();
+      // The sheet scrolls; its submit button sits below the form.
+      await tester.ensureVisible(find.text('Send report'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Send report'));
       await tester.pump();
       expect(find.text('Choose what went wrong.'), findsOneWidget);
+      await tester.ensureVisible(find.text('Damaged item'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Damaged item'));
       await tester.enterText(
         find.widgetWithText(TextField, 'What happened?'),
         'Three blocks arrived cracked.',
       );
+      await tester.ensureVisible(find.text('Add a photo (optional)'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Add a photo (optional)'));
       await tester.pumpAndSettle();
       expect(find.textContaining('cracked.jpg'), findsOneWidget);
+      await tester.ensureVisible(find.text('Send report'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Send report'));
       await tester.pumpAndSettle();
 
@@ -364,11 +399,22 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('₱10,264.41'), findsOneWidget);
+      // The sheet scrolls; its actions sit below the refund plan.
+      await tester.ensureVisible(
+        find.widgetWithText(FilledButton, 'Cancel order'),
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(FilledButton, 'Cancel order'));
       await tester.pump();
       expect(find.text('Choose a cancellation reason.'), findsOneWidget);
+      await tester.ensureVisible(find.text('Other'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Other'));
       await tester.pump();
+      await tester.ensureVisible(
+        find.widgetWithText(FilledButton, 'Cancel order'),
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(FilledButton, 'Cancel order'));
       await tester.pump();
       expect(
@@ -379,6 +425,10 @@ void main() {
         find.widgetWithText(TextField, 'Explain your reason (required)'),
         'Site work postponed',
       );
+      await tester.ensureVisible(
+        find.widgetWithText(FilledButton, 'Cancel order'),
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(FilledButton, 'Cancel order'));
       await tester.pumpAndSettle();
 

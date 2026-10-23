@@ -2,7 +2,7 @@ import { CountBadge } from './count-badge'
 import { RateLimitNotice } from './rate-limit-notice'
 import { PortalAccountMenu } from './portal-account-menu'
 import { useEffect, useState, type MouseEvent, type ReactNode } from 'react'
-import { Bell, Circle, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
+import { Bell, Circle, Menu, PanelLeftClose, PanelLeftOpen, Star, X } from 'lucide-react'
 import type { PortalIdentity } from './portal-identity'
 import './portal-shell.css'
 import './portal-patterns.css'
@@ -10,6 +10,8 @@ import './portal-patterns.css'
 /** `child` indents an item under the preceding one when it belongs to that destination, such as a Users list under its management area. */
 export type PortalNavItem = { label: string; href: string; icon?: ReactNode; disabled?: boolean; child?: boolean; updateCount?: number; updateCountLabel?: string }
 export type PortalNavSection = { label: string; items: PortalNavItem[] }
+/** A published score out of 5 (`value`), or the unpublished state's text when `value` is null. */
+export type PortalAccountScore = { name: string; value: string | null; unpublishedLabel: string }
 
 export function PortalShell({
   portalLabel,
@@ -19,6 +21,7 @@ export function PortalShell({
   accountLabel,
   accountStatus,
   accountAvatarUrl,
+  accountScore,
   children,
   headerActions,
   notificationUnreadCount = 0,
@@ -38,6 +41,7 @@ export function PortalShell({
   accountLabel: string
   accountStatus?: string
   accountAvatarUrl?: string | null
+  accountScore?: PortalAccountScore | null
   children: ReactNode
   headerActions?: ReactNode
   notificationUnreadCount?: number
@@ -59,6 +63,7 @@ export function PortalShell({
   const storeIdentity = !isAdmin && profile?.role === 'OWNER'
   const footerName = storeIdentity ? profile.organizationName || accountLabel : profile?.fullName || accountLabel
   const footerStatus = isAdmin ? profile?.role.replaceAll('_', ' ') || accountStatus : accountStatus
+  const scoreText = accountScore ? (accountScore.value ? `${accountScore.name} ${accountScore.value} out of 5` : `${accountScore.name}: ${accountScore.unpublishedLabel}`) : null
   const initials = footerName.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase()
   useEffect(() => { setAvatarFailed(false) }, [accountAvatarUrl])
   function showTooltip(element: HTMLElement, label: string) {
@@ -128,12 +133,20 @@ export function PortalShell({
               </div>
             </section>)}
           </nav>
-          <div className="portal-sidebar-footer">
-            <a className="portal-footer-account" href={isAdmin ? '/workspace#Profile' : '/settings#Profile'} aria-label={`Account profile: ${footerName}${footerStatus ? `, ${footerStatus}` : ''}`} onClick={event => follow(event, isAdmin ? '/workspace#Profile' : '/settings#Profile')} onMouseEnter={event => showTooltip(event.currentTarget, footerName)} onMouseLeave={() => setTooltip(null)} onBlur={() => setTooltip(null)}>
+          {/* Admin identity (name, photo) lives in the top-bar account menu; the sidebar only names the signed-in role. */}
+          {isAdmin && footerStatus && <div className="portal-sidebar-footer is-role-only">
+            <p className="portal-footer-status">{footerStatus}</p>
+          </div>}
+          {!isAdmin && <div className="portal-sidebar-footer">
+            <div className="portal-footer-account" role="group" aria-label={`Account profile: ${footerName}${footerStatus ? `, ${footerStatus}` : ''}${scoreText ? `, ${scoreText}` : ''}`} onMouseEnter={event => showTooltip(event.currentTarget, footerName)} onMouseLeave={() => setTooltip(null)}>
               <span className="portal-footer-avatar" aria-hidden="true">{accountAvatarUrl && !avatarFailed ? <img src={accountAvatarUrl} alt="" onError={() => setAvatarFailed(true)} /> : initials || '…'}</span>
-              <span className="portal-footer-details"><span className="portal-footer-name">{footerName}</span>{footerStatus && <span className="portal-footer-status">{footerStatus}</span>}</span>
-            </a>
-          </div>
+              <span className="portal-footer-details">
+                <span className="portal-footer-name">{footerName}</span>
+                {accountScore && <span className="portal-footer-score" title={scoreText ?? undefined}><Star size={13} aria-hidden="true" className={accountScore.value ? 'is-published' : undefined} />{accountScore.value ? <><strong>{accountScore.value}</strong><span>{accountScore.name}</span></> : <span>{accountScore.unpublishedLabel}</span>}</span>}
+                {footerStatus && <span className="portal-footer-status">{footerStatus}</span>}
+              </span>
+            </div>
+          </div>}
         </div>
       </aside>
       {collapsed && tooltip && <span className="portal-nav-tooltip" role="tooltip" style={{ top: tooltip.top, left: tooltip.left }}>{tooltip.label}</span>}

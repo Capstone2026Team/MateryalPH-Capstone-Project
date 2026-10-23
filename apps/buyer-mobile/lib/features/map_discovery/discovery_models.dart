@@ -492,6 +492,7 @@ class FavoriteSupplierView {
 
 enum DiscoveryFailureKind {
   offline,
+  timeout,
   provider,
   sessionExpired,
   forbidden,
@@ -514,6 +515,11 @@ class DiscoveryFailure implements Exception {
   final String message;
   final String? code;
   final Map<String, Object?> details;
+
+  /// The server outcome is unknown, so retries reuse the mutation's key.
+  bool get isTransportFailure =>
+      kind == DiscoveryFailureKind.offline ||
+      kind == DiscoveryFailureKind.timeout;
 
   @override
   String toString() => 'DiscoveryFailure($kind, $code)';

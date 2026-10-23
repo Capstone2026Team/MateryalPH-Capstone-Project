@@ -74,10 +74,10 @@ void main() {
       final form = adapter.requests.single.data as FormData;
       expect(form.files.single.key, 'files[]');
       expect(
-        form.fields,
-        contains(const MapEntry('reference', 'order-reference')),
+        Map.fromEntries(form.fields),
+        containsPair('reference', 'order-reference'),
       );
-      expect(form.fields, contains(const MapEntry('user_type', 'BUYER')));
+      expect(Map.fromEntries(form.fields), containsPair('user_type', 'BUYER'));
     },
   );
 

@@ -165,9 +165,9 @@ test('setup previews media and switches every operational section without page o
       await expect(page.getByRole('radio', { name: 'No', exact: true })).toBeVisible()
       await expect(page.getByRole('group', { name: 'Services Capability' })).toBeVisible()
       await expect(page.getByRole('textbox', { name: 'Vehicle Name' })).toHaveCount(0)
-      await page.getByRole('radio', { name: 'Self-Pickup', exact: true }).check()
+      await page.getByRole('radio', { name: 'Self-Pickup Only', exact: true }).check()
       await expect(page.getByRole('region', { name: 'Delivery Configuration' })).toHaveCount(0)
-      await page.getByRole('radio', { name: 'Vendor Delivery', exact: true }).check()
+      await page.getByRole('radio', { name: 'Vendor Delivery Only', exact: true }).check()
       await expect(page.getByRole('spinbutton', { name: 'Delivery radius (km)' })).toHaveCount(0)
       await expect(page.getByRole('spinbutton', { name: 'Vehicle maximum distance (km)' })).toHaveCount(0)
       await page.getByRole('combobox', { name: 'Vehicle Category' }).selectOption('TRUCK')
@@ -175,12 +175,19 @@ test('setup previews media and switches every operational section without page o
       await page.getByRole('combobox', { name: 'Vehicle Type' }).selectOption('FLATBED_TRUCK')
       await expect(page.getByRole('textbox', { name: 'Vehicle Name' })).toBeVisible()
       await page.getByRole('textbox', { name: 'Vehicle Name' }).fill('Store truck')
-      const categoryBox = await page.getByRole('combobox', { name: 'Vehicle Category' }).boundingBox()
-      const typeBox = await page.getByRole('combobox', { name: 'Vehicle Type' }).boundingBox()
-      const brandBox = await page.getByRole('textbox', { name: 'Vehicle Brand' }).boundingBox()
       const selectImage = page.getByRole('button', { name: 'Select image', exact: true })
       await expect(selectImage).toBeVisible()
-      const imageBox = await selectImage.boundingBox()
+      // Measure every box in one frame, in page coordinates, so scrolling after the fill cannot skew the comparison.
+      const handles = await Promise.all([
+        page.getByRole('combobox', { name: 'Vehicle Category' }),
+        page.getByRole('combobox', { name: 'Vehicle Type' }),
+        page.getByRole('textbox', { name: 'Vehicle Brand' }),
+        selectImage,
+      ].map(locator => locator.elementHandle()))
+      const [categoryBox, typeBox, brandBox, imageBox] = await page.evaluate(elements => elements.map(element => {
+        const box = element!.getBoundingClientRect()
+        return { x: box.x + scrollX, y: box.y + scrollY, width: box.width, height: box.height }
+      }), handles)
       expect(typeBox!.y).toBeGreaterThan(categoryBox!.y + categoryBox!.height)
       expect(Math.abs(typeBox!.x - categoryBox!.x)).toBeLessThan(2)
       if (page.viewportSize()!.width >= 768) expect(imageBox!.x).toBeGreaterThan(categoryBox!.x + categoryBox!.width)
@@ -202,9 +209,9 @@ test('setup previews media and switches every operational section without page o
       await expect(page.getByText(/Image preview unavailable/)).toHaveCount(0)
       await page.screenshot({ path: testInfo.outputPath('delivery-calculator-preview.png'), fullPage: true })
 
-      await page.getByRole('radio', { name: 'Self-Pickup', exact: true }).check()
+      await page.getByRole('radio', { name: 'Self-Pickup Only', exact: true }).check()
       await expect(page.getByRole('textbox', { name: 'Vehicle Name' })).toHaveCount(0)
-      await page.getByRole('radio', { name: 'Both', exact: true }).check()
+      await page.getByRole('radio', { name: 'Both (Self-Pickup & Vendor Delivery)', exact: true }).check()
       await expect(page.getByRole('textbox', { name: 'Vehicle Name' })).toHaveValue('Store truck')
       await page.getByRole('combobox', { name: 'Vehicle Type' }).selectOption('CONCRETE_MIXER')
       await expect(page.getByRole('spinbutton', { name: 'Mixer Capacity (m³)' })).toBeVisible()
@@ -245,9 +252,8 @@ async function assertStepperFits(page: Page, area: string, count: number) {
     expect(new Set(geometry.rows.map(row => row.top)).size).toBe(1)
     expect(new Set(geometry.rows.map(row => row.height)).size).toBe(1)
   }
-  const areas = page.getByRole('navigation', { name: 'Onboarding area' })
-  await expect(areas.getByRole('link')).toHaveCount(2)
-  await expect(areas.getByRole('link', { name: new RegExp(area) })).toHaveAttribute('aria-current', 'page')
+  // The page names its area; the former Onboarding area tabs were removed (2026-10-19).
+  await expect(page.getByRole('heading', { name: area, exact: true }).first()).toBeVisible()
 }
 
 
@@ -272,7 +278,11 @@ test('Business Information email lifecycle, validation, guards and evidence stay
   await page.route('**/api/v1/vendors/onboarding/files/private-cross-vendor', async route => route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ errors: [{ code: 'FORBIDDEN', message: 'This evidence is unavailable to your account.' }] }) }))
   await page.goto('/onboarding/verification')
   await page.getByRole('button', { name: 'View submitted document' }).click()
-  await expect(page.getByText('Preview could not be opened. Try again.')).toBeVisible()
+  // The server's reason is shown for evidence another account owns.
+  await expect(page.getByRole('alert').filter({ hasText: 'This evidence is unavailable to your account.' }).first()).toBeVisible()
+  // A forbidden response is treated as access denial: private snapshots clear, then Try again reloads the form.
+  await page.getByRole('button', { name: 'Try again' }).click()
+  await expect(page.getByLabel('Relationship to the business')).toBeVisible()
   for (const role of ['EMPLOYEE', 'ACCOUNTANT', 'AUTHORIZED_REPRESENTATIVE', 'OFFICER']) {
     await page.getByLabel('Relationship to the business').selectOption(role)
     await expect(page.getByRole('checkbox', { name: 'Use accepted registration evidence for this officer' })).toHaveCount(role === 'OFFICER' ? 1 : 0)
@@ -312,12 +322,15 @@ test('Business Information email lifecycle, validation, guards and evidence stay
   await page.getByRole('button', { name: 'Finish Later' }).click()
   const stale = page.getByText('This draft changed in another session. Reload the latest version before saving again. Your unsaved edits are still on this page.')
   await expect(stale).toBeVisible()
-  expect(drafts[0]).toMatchObject({ lock_version: 9, draft_lock_version: 3 })
-  expect(JSON.parse(String(drafts[0]!.form_state))).toMatchObject({ tin: ['123-456-789-000'] })
+  // Autosave may send earlier drafts; Finish Later sends the latest one.
+  expect(drafts.at(-1)).toMatchObject({ lock_version: 9, draft_lock_version: 3 })
+  expect(JSON.parse(String(drafts.at(-1)!.form_state))).toMatchObject({ tin: ['123-456-789-000'] })
   conflict = 'STALE_VERSION'
+  // Autosave may already have retried; Finish Later still sends exactly one more save.
+  const saves = drafts.length
   await page.getByRole('button', { name: 'Finish Later' }).click()
   await expect(stale).toBeVisible()
-  await expect.poll(() => drafts.length).toBe(2)
+  await expect.poll(() => drafts.length).toBe(saves + 1)
   await assertStepperFits(page, 'Store Verification', 4)
   const evidence = resolve('../../docs/design/evidence/phase-3b-business-information')
   mkdirSync(evidence, { recursive: true })
@@ -409,7 +422,7 @@ test('pending evidence stays in its card without resizing tax columns and can be
 test('commission panel is above Privacy with explicit scroll-gated acceptance and absent from setup', async ({ page }, testInfo) => {
   await page.goto('/onboarding/verification')
   await page.getByRole('button', { name: '4 Privacy, Review and Submit' }).click()
-  const commission = page.getByRole('region', { name: '2% Commission Terms', exact: true })
+  const commission = page.getByRole('region', { name: 'Commission Terms', exact: true })
   await expect(commission).toBeVisible()
   const privacy = page.getByRole('heading', { name: 'Privacy Notice', exact: true })
   expect((await commission.boundingBox())!.y).toBeLessThan((await privacy.boundingBox())!.y)
@@ -427,7 +440,7 @@ test('commission panel is above Privacy with explicit scroll-gated acceptance an
   await page.screenshot({ path: testInfo.outputPath('commission-panel.png'), fullPage: true })
   await page.goto('/onboarding/setup')
   await expect(page.getByRole('navigation', { name: 'Store Setup steps' }).getByRole('button')).toHaveCount(6)
-  await expect(page.getByRole('heading', { name: '2% Commission Terms', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Commission Terms', exact: true })).toHaveCount(0)
 })
 
 
@@ -444,7 +457,7 @@ test('Xendit panel connects inline and preserves connection on reload', async ({
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('xendit-connection.png'), fullPage: true })
   await page.getByRole('button', { name: 'Next', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Team Accounts', exact: true })).toBeVisible()
+  await expect(page.locator('#onboarding-section-title')).toHaveText('Team Accounts')
   await page.reload()
   await page.getByRole('button', { name: '3 Xendit TEST Connection' }).click()
   await expect(panel.getByText('Xendit — Connected', { exact: true })).toBeVisible()

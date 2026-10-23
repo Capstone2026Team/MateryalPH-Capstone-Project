@@ -5,6 +5,7 @@ import 'package:built_value/json_object.dart';
 import 'package:dio/dio.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart';
 
+import '../core/buyer_transport.dart';
 import 'token_store.dart';
 
 final class AuthRepository {
@@ -21,10 +22,11 @@ final class AuthRepository {
              ),
            ) {
     if (!_client.dio.interceptors.any(
-      (item) => item is _ProfilePhotoRequests,
+      (item) => item is _BuyerAccountRequests,
     )) {
-      _client.dio.interceptors.insert(0, _ProfilePhotoRequests());
+      _client.dio.interceptors.insert(0, _BuyerAccountRequests());
     }
+    configureBuyerTransport(_client.dio);
   }
 
   final TokenStore _tokenStore;
@@ -628,18 +630,16 @@ final class BuyerSessionExpired extends BuyerAuthException {
   const BuyerSessionExpired() : super('Your session expired. Sign in again.');
 }
 
-/// Photo processing can spend up to 30 seconds in the fail-closed malware scan.
-/// Give only these requests enough time; ordinary account reads keep their budget.
-final class _ProfilePhotoRequests extends Interceptor {
+/// Account reads allow hosted cold starts; multipart mutations use the shared upload transport.
+final class _BuyerAccountRequests extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    if (options.path == '/buyers/account/photo') {
-      if (options.method == 'POST') {
-        options.sendTimeout = const Duration(seconds: 30);
-        options.receiveTimeout = const Duration(seconds: 45);
-      } else if (options.method == 'GET') {
-        options.receiveTimeout = const Duration(seconds: 15);
-      }
+    if (options.method == 'GET' &&
+        options.path.startsWith('/buyers/account/')) {
+      options.connectTimeout = const Duration(seconds: 30);
+      options.receiveTimeout = options.path == '/buyers/account/photo'
+          ? const Duration(seconds: 15)
+          : const Duration(seconds: 60);
     }
     handler.next(options);
   }

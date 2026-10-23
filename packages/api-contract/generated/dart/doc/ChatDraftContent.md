@@ -16,7 +16,7 @@ Name | Type | Description | Notes
 **vendorDiscountCentavos** | **int** | Legacy fixed materials discount. Omit when discount is supplied. | [optional]
 **discount** | [**ChatQuotationDiscount**](ChatQuotationDiscount.md) |  | [optional]
 **delivery** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  | [optional]
-**nrpc** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  | [optional]
+**nrpc** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) | Historical drafts only. Omit when saving; new quotation NRPC is prohibited. | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

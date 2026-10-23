@@ -62,6 +62,13 @@ import {
     AnalyticsMaterialRefToJSON,
     AnalyticsMaterialRefToJSONTyped,
 } from './AnalyticsMaterialRef';
+import type { ListingImage } from './ListingImage';
+import {
+    ListingImageFromJSON,
+    ListingImageFromJSONTyped,
+    ListingImageToJSON,
+    ListingImageToJSONTyped,
+} from './ListingImage';
 
 /**
  *
@@ -110,6 +117,10 @@ export interface AdminMaterialsAnalyticsDetailGroup {
      */
     current: AnalyticsCurrentCounts;
     /**
+     * Photo of the cheapest current in-scope offer that has one, present only with materials_analytics.inspect_sources and null otherwise. Never its listing or store identity.
+     */
+    image?: ListingImage;
+    /**
      *
      */
     description?: string;
@@ -152,6 +163,7 @@ export function AdminMaterialsAnalyticsDetailGroupFromJSONTyped(json: any, ignor
         'endPoint': AdminAnalyticsPointFromJSON(json['end_point']),
         'trend': AnalyticsTrendFromJSON(json['trend']),
         'current': AnalyticsCurrentCountsFromJSON(json['current']),
+        'image': json['image'] == null ? undefined : ListingImageFromJSON(json['image']),
         'description': json['description'] == null ? undefined : json['description'],
     };
 }
@@ -177,6 +189,7 @@ export function AdminMaterialsAnalyticsDetailGroupToJSONTyped(value?: AdminMater
         'end_point': AdminAnalyticsPointToJSON(value['endPoint']),
         'trend': AnalyticsTrendToJSON(value['trend']),
         'current': AnalyticsCurrentCountsToJSON(value['current']),
+        'image': ListingImageToJSON(value['image']),
         'description': value['description'],
     };
 }

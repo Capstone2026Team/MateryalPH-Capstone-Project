@@ -1,9 +1,43 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { expect, test, vi } from 'vitest'
-import { PageHeader, SupportClient, SupportRequestList } from '@materyalph/web-ui'
+import { PageHeader, SupportClient, SupportConversation, SupportRequestList } from '@materyalph/web-ui'
 import { parseDate } from '@materyalph/api-client-ts'
 
 const empty = { data: [], meta: { nextCursor: null }, errors: [] }
+
+test('ticket management and conversation keep independent submissions and preserve version checks', async () => {
+  const client = new SupportClient('/api/v1', 'admin')
+  const ticket = { id: 'support-ticket', ticketNumber: 'SUP-EXAMPLE', subject: 'Help with an order', fullName: 'Demo Requester', email: 'requester@example.com', userType: 'GUEST' as const, category: 'ORDER_CONCERN' as const, status: 'OPEN' as const, reference: null, referenceType: null, assignedAdminId: null, assignedAdminName: null, lockVersion: 4, createdAt: new Date('2026-10-22T04:00:00Z'), updatedAt: new Date('2026-10-22T04:00:00Z') }
+  vi.spyOn(client, 'ticket').mockResolvedValue({ data: ticket, meta: {}, errors: [] })
+  vi.spyOn(client, 'entries').mockResolvedValue({ ...empty, data: [{ id: 'entry', kind: 'MESSAGE', actorName: 'Demo Requester', actorRole: 'GUEST', body: 'Please help me find my order.', details: {}, attachments: [], createdAt: ticket.createdAt }] })
+  vi.spyOn(client, 'handlers').mockResolvedValue({ ...empty, data: [{ id: 'support-admin', name: 'Support Administrator' }] })
+  const update = vi.spyOn(client, 'update').mockResolvedValue({ data: { id: ticket.id }, meta: {}, errors: [] })
+  const reply = vi.spyOn(client, 'reply').mockResolvedValue({ data: { id: 'reply' }, meta: {}, errors: [] })
+  render(<SupportConversation client={client} ticketId={ticket.id} admin navigation={<a href="/support">Back to Support Requests</a>} />)
+
+  expect(await screen.findByRole('heading', { level: 1, name: ticket.subject })).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Back to Support Requests' })).toBeInTheDocument()
+  const conversation = screen.getByRole('region', { name: 'Support conversation' })
+  const management = screen.getByRole('form', { name: 'Manage request' })
+  await within(management).findByRole('option', { name: 'Support Administrator' })
+  expect(within(conversation).getByText('Please help me find my order.')).toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'Requester details' })).getByText(ticket.email)).toBeInTheDocument()
+
+  fireEvent.change(within(conversation).getByRole('textbox', { name: 'Response to the user' }), { target: { value: 'We are checking your order.' } })
+  fireEvent.change(within(management).getByRole('combobox', { name: 'Status' }), { target: { value: 'IN_PROGRESS' } })
+  fireEvent.change(within(management).getByRole('combobox', { name: 'Assigned administrator' }), { target: { value: 'support-admin' } })
+  fireEvent.change(within(management).getByRole('textbox', { name: /Reason for update/ }), { target: { value: 'Assigned for investigation.' } })
+  fireEvent.submit(management)
+  await waitFor(() => expect(update).toHaveBeenCalledWith(ticket.id, { lockVersion: 4, reason: 'Assigned for investigation.', status: 'IN_PROGRESS', assignedAdminId: 'support-admin' }, expect.any(String)))
+  expect(reply).not.toHaveBeenCalled()
+  expect(within(conversation).getByRole('textbox', { name: 'Response to the user' })).toHaveValue('We are checking your order.')
+
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Send reply' })).toBeEnabled())
+  fireEvent.submit(within(conversation).getByRole('button', { name: 'Send reply' }).closest('form')!)
+  await waitFor(() => expect(reply).toHaveBeenCalledWith(ticket.id, 'We are checking your order.', [], expect.any(String)))
+  expect(await screen.findByText('Your reply was sent.')).toBeInTheDocument()
+  expect(update).toHaveBeenCalledTimes(1)
+})
 
 test('support status tabs preserve applied filters, reset pagination and stay selected when filters are applied', async () => {
   const client = new SupportClient('/api/v1', 'admin')

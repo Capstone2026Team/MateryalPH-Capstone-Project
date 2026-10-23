@@ -8,7 +8,13 @@ describe('Project Work Package attachment', () => {
     expect(screen.getByRole('region',{name:'Buyer original'})).toHaveTextContent('Blocks')
     expect(screen.getByRole('region',{name:'Vendor working duplicate / proposal'})).toHaveTextContent('Proposed blocks')
     expect(screen.getByText(/Project site remains the discovery origin/)).toHaveTextContent('Alternative vehicle drop-off')
-    expect(screen.getByRole('button',{name:/Phase 15/})).toBeDisabled()
+    expect(screen.queryByRole('button',{name:/Phase 15/})).not.toBeInTheDocument()
+  })
+  it('shows order actions without an empty proposal column', () => {
+    render(<WorkPackageAttachment reference={{version: 1, work_package: {name: 'Foundation', fulfillment_method: 'BOTH', lines: []}}} actions={<button>Export PDF</button>} />)
+    expect(screen.getByRole('button', {name: 'Export PDF'})).toBeEnabled()
+    expect(screen.getByText('Pickup or site delivery')).toBeInTheDocument()
+    expect(screen.queryByRole('region', {name: 'Vendor working duplicate / proposal'})).not.toBeInTheDocument()
   })
   it('does not show a Project attachment for Item-Based conversations', () => {
     const {container}=render(<WorkPackageAttachment reference={{lines:[]}} />)

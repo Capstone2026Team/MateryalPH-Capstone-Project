@@ -1,6 +1,7 @@
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 
 import '../../core/api_guard.dart';
+import '../../core/buyer_transport.dart';
 import '../map_discovery/discovery_models.dart';
 import 'procurement_models.dart';
 
@@ -90,7 +91,9 @@ final class ApiProcurementRepository implements ProcurementRepository {
     required api.MateryalphApiClient client,
     required Future<void> Function() onSessionExpired,
   }) : _client = client,
-       _api = ApiGuard(onSessionExpired);
+       _api = ApiGuard(onSessionExpired) {
+    configureBuyerTransport(_client.dio);
+  }
 
   final api.MateryalphApiClient _client;
   final ApiGuard _api;

@@ -152,7 +152,7 @@ test('Store Profile is separate and logo returns to the authenticated dashboard'
   fireEvent.click(await screen.findByRole('link', { name: 'Store Profile' }))
   expect(await screen.findByRole('heading', { level: 1, name: 'Test Supply' })).toBeVisible()
   fireEvent.click(screen.getByRole('link', { name: /MateryalPH VENDOR PORTAL/ }))
-  expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeVisible()
+  expect(await screen.findByRole('heading', { name: /^Welcome back/, level: 1 })).toBeVisible()
   expect(screen.queryByText('Personal account settings')).not.toBeInTheDocument()
 })
 
@@ -176,7 +176,7 @@ test('leaving unchanged verification sends no draft mutation or redundant snapsh
 test('Vendor sidebar uses the uploaded store logo and falls back to initials if it fails', async () => {
   snapshot.setup = { ...snapshot.setup, media: [{ id: 'logo-media', kind: 'LOGO', file_id: 'logo-file', status: 'READY' }] }
   open('/dashboard')
-  const footer = await screen.findByRole('link', { name: /Account profile:/ })
+  const footer = await screen.findByRole('group', { name: /Account profile:/ })
   await waitFor(() => expect(footer.querySelector('.portal-footer-avatar img')).toHaveAttribute('src', 'https://example.test/private/logo-file'))
   expect(api.getVendorPrivateFileUrl).toHaveBeenCalledWith('logo-file')
   fireEvent.error(footer.querySelector('.portal-footer-avatar img')!)
@@ -217,7 +217,7 @@ test('active Inventory Staff enter their focused workspace while the Owner retai
   employee.unmount()
   snapshot.permissions = ['vendor.onboarding.submit', 'vendor.onboarding.manage']
   open('/dashboard')
-  expect(await screen.findByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
+  expect(await screen.findByRole('heading', { name: /^Welcome back/, level: 1 })).toBeVisible()
   expect(await screen.findByRole('tab', { name: 'Sales & Revenue' })).toBeVisible()
 })
 
@@ -285,9 +285,27 @@ test('ready store can still request activation from the limited dashboard', asyn
   snapshot.activation = { ...snapshot.activation, readiness: { ready: true, blockers: [], status: 'READY', ruleVersion: 'phase3a.v1' } }
   vi.spyOn(api, 'activateVendorStore').mockImplementation(async () => ({ ...snapshot, activation: { ...snapshot.activation, status: 'ACTIVE' } }))
   open('/dashboard')
+  await screen.findByRole('button', { name: 'Request Store Activation' })
+  expect(screen.getAllByText('Ready for activation').length).toBeGreaterThan(0)
+  expect(screen.queryByText('Not Ready')).not.toBeInTheDocument()
   fireEvent.click(await screen.findByRole('button', { name: 'Request Store Activation' }))
   await waitFor(() => expect(api.activateVendorStore).toHaveBeenCalledOnce())
-  expect(await screen.findByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
+  await waitFor(() => expect(screen.queryByText('Limited-Access Vendor Dashboard')).not.toBeInTheDocument())
+  expect(screen.getByRole('heading', { name: /^Welcome back/, level: 1 })).toBeVisible()
+})
+
+test('approved verification and completed setup expose the remaining agreement and its review route', async () => {
+  snapshot.verification = { ...snapshot.verification, status: 'APPROVED' }
+  snapshot.setup = { ...snapshot.setup, status: 'COMPLETED' }
+  snapshot.activation = { ...snapshot.activation, readiness: { ready: false, status: 'NOT_READY', ruleVersion: 'phase3a.v1', blockers: [{ key: 'vendor_code_of_conduct', condition: 1, reason: 'Accept the current Vendor Code of Conduct.' }] } }
+  open('/dashboard')
+  const remaining = await screen.findByRole('region', { name: 'Final activation steps' })
+  expect(within(remaining).getByText('Accept the current Vendor Code of Conduct.')).toBeVisible()
+  expect(within(remaining).getByRole('link', { name: 'Review required agreements' })).toHaveAttribute('href', '/settings#Agreements')
+  expect(screen.getByText(/Your Store Verification is approved and Store Setup is complete/)).toBeVisible()
+  expect(screen.queryByRole('button', { name: 'Request Store Activation' })).not.toBeInTheDocument()
+  fireEvent.click(within(remaining).getByRole('link', { name: 'Review required agreements' }))
+  expect(await screen.findByRole('heading', { name: 'Personal account settings' })).toBeVisible()
 })
 
 test('saved progress completes the address step while keeping Admin review separate', async () => {

@@ -61,6 +61,8 @@ for (const [path, methods] of Object.entries(spec.paths)) {
 }
 assert.ok(!routes.some(route => /api\/v1\/vendor\/reviews\/\{[^}]+\}$/.test(route.uri) && route.method.includes('DELETE')), 'No Vendor review delete route')
 const s = spec.components.schemas
+assert.equal(s.ReviewWindowRules.properties.video_max_bytes.maximum, 25 * 1024 * 1024, 'Review rules document the owner-approved Free scanner ceiling')
+assert.match(s.ReviewMediaForm.properties.files.description, /MP4\/MOV up to 25 MB/, 'Review upload documentation matches the active video ceiling')
 const vendorReviewList = spec.paths['/vendor/reviews'].get
 const productFilter = vendorReviewList.parameters.find(parameter => parameter.name === 'listing_id')
 assert.ok(productFilter && productFilter.in === 'query' && productFilter.schema.format === 'uuid', 'Vendor review lists support an opaque product filter')
@@ -113,6 +115,12 @@ assert.ok(!Object.keys(spec.paths).some(path => /^\/vendor\/materials-analytics\
 for (const name of ['VendorAnalyticsRow', 'VendorMaterialsAnalyticsDetail', 'StorePerformance']) {
   for (const field of Object.keys(s[name].properties ?? {})) assert.ok(!/commission|withholding|earning|payout|taxpayer|remittance|fee_statement|transaction/i.test(field), `${name}.${field} must not expose protected finance`)
 }
+// Row photos are a bare ListingImage {url, alt_text}: never a listing, store or price of the source (MAT-05).
+for (const name of ['BuyerAnalyticsRow', 'VendorAnalyticsRow', 'AdminAnalyticsRow', 'MaterialOffer']) {
+  assert.deepEqual(s[name].properties.image.oneOf, [{ $ref: '#/components/schemas/ListingImage' }, { type: 'null' }], `${name}.image is a nullable ListingImage object`)
+  assert.ok(!(s[name].required ?? []).includes('image'), `${name}.image is optional for older clients`)
+}
+assert.deepEqual(Object.keys(s.ListingImage.properties).sort(), ['alt_text', 'url'], 'A row photo carries no source identity')
 assert.equal(s.BuyerMaterialsAnalyticsRequest.additionalProperties, false, 'Undocumented analytics filters are refused')
 assert.deepEqual(s.AnalyticsWindow.properties.max_days, { type: 'integer' })
 assert.ok(JSON.stringify(s.AnalyticsTrend.properties.reason).includes('INSUFFICIENT_COMPETITOR_DATA'), 'Null trends carry their reason')

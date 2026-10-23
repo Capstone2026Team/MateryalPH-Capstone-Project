@@ -366,7 +366,8 @@ void main() {
       expect(
         find.text('Message'),
         findsNothing,
-        reason: 'Message is an icon in the header, not a button in the page body.',
+        reason:
+            'Message is an icon in the header, not a button in the page body.',
       );
       await tester.tap(find.byTooltip('Message Sample Store'));
       await tester.tap(find.byTooltip('Show Sample Store on the Map'));
@@ -395,50 +396,53 @@ void main() {
     expect(find.byTooltip('Show Sample Store on the Map'), findsNothing);
   });
 
-  testWidgets('the public phone number opens Call or Send SMS outside the app', (
-    tester,
-  ) async {
-    final opened = <Uri>[];
-    var canOpen = true;
-    await tester.pumpWidget(
-      MaterialApp(
-        home: BuyerPublicStoreProfileScreen(
-          storeId: 'store-1',
-          repository: _StoreRepository(),
-          openExternal: (uri) async {
-            opened.add(uri);
-            return canOpen;
-          },
+  testWidgets(
+    'the public phone number opens Call or Send SMS outside the app',
+    (tester) async {
+      final opened = <Uri>[];
+      var canOpen = true;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BuyerPublicStoreProfileScreen(
+            storeId: 'store-1',
+            repository: _StoreRepository(),
+            openExternal: (uri) async {
+              opened.add(uri);
+              return canOpen;
+            },
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Store Profile'));
-    await tester.pumpAndSettle();
-
-    Future<void> choose(String action) async {
-      await tester.ensureVisible(find.text('(0917) 123-4567'));
+      );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('(0917) 123-4567'));
+      await tester.tap(find.text('Store Profile'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(action));
-      await tester.pumpAndSettle();
-    }
 
-    await choose('Call');
-    await choose('Send SMS');
-    expect(opened.map((uri) => uri.toString()), [
-      'tel:09171234567',
-      'sms:09171234567',
-    ]);
+      Future<void> choose(String action) async {
+        await tester.ensureVisible(find.text('(0917) 123-4567'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('(0917) 123-4567'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(action));
+        await tester.pumpAndSettle();
+      }
 
-    canOpen = false;
-    await choose('Call');
-    expect(
-      find.text('This device cannot place calls. The number is (0917) 123-4567.'),
-      findsOneWidget,
-    );
-  });
+      await choose('Call');
+      await choose('Send SMS');
+      expect(opened.map((uri) => uri.toString()), [
+        'tel:09171234567',
+        'sms:09171234567',
+      ]);
+
+      canOpen = false;
+      await choose('Call');
+      expect(
+        find.text(
+          'This device cannot place calls. The number is (0917) 123-4567.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('Products tab asks for a location when none is chosen', (
     tester,

@@ -21,7 +21,7 @@ part 'vendor_order_confirm_request.g.dart';
 /// * [lines]
 /// * [vendorDiscountCentavos] - Legacy fixed materials discount. Omit when discount is supplied.
 /// * [discount]
-/// * [nrpc]
+/// * [nrpc] - Available only for COD or In-Store Payment orders awaiting Vendor confirmation.
 /// * [pickup]
 /// * [delivery]
 @BuiltValue()
@@ -40,6 +40,7 @@ abstract class VendorOrderConfirmRequest implements Built<VendorOrderConfirmRequ
   @BuiltValueField(wireName: r'discount')
   ChatQuotationDiscount? get discount;
 
+  /// Available only for COD or In-Store Payment orders awaiting Vendor confirmation.
   @BuiltValueField(wireName: r'nrpc')
   NrpcProposal? get nrpc;
 

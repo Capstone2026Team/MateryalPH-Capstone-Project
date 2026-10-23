@@ -189,7 +189,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       }
     } on DiscoveryFailure catch (error) {
       if (!mounted || !_navigation.isCurrent(stamp)) return;
-      if (error.kind != DiscoveryFailureKind.offline) _decisionKey = null;
+      if (!error.isTransportFailure) _decisionKey = null;
       if (mounted) setState(() => _notice = error.message);
       if (error.kind == DiscoveryFailureKind.conflict) await _load();
     } finally {
@@ -259,7 +259,8 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         context,
         'Order details',
         actions: [
-          if (NotificationScope.of(context) != null)
+          if (_order?.projectContext == null &&
+              NotificationScope.of(context) != null)
             BuyerDocumentExportButton(
               repository: NotificationScope.of(context)!,
               resourceId: widget.orderId,
@@ -693,6 +694,19 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
           WorkPackageAttachment(
             original: projectObject(order.projectContext!['work_package']),
             version: order.projectContext!['version'],
+            actions: NotificationScope.of(context) == null
+                ? null
+                : BuyerDocumentExportButton(
+                    label: 'Export order PDF',
+                    repository: NotificationScope.of(context)!,
+                    resourceId: widget.orderId,
+                    types: [
+                      export_api.DocumentExportInputTypeEnum.PURCHASE_ORDER,
+                      export_api
+                          .DocumentExportInputTypeEnum
+                          .PAYMENT_CONFIRMATION,
+                    ],
+                  ),
           ),
           ProjectBudgetCard(
             budget: projectObject(order.projectContext!['budget']),

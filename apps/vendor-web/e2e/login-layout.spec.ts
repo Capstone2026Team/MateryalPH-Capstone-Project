@@ -27,7 +27,7 @@ for (const portal of ['vendor', 'admin']) {
     if (portal === 'vendor') {
       await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeVisible()
       await page.getByRole('button', { name: 'Use an email security check instead' }).click()
-      await expect(page.getByRole('button', { name: 'Email security check selected' })).toHaveAttribute('aria-pressed', 'true')
+      await expect(page.getByRole('button', { name: 'Use the security checkbox instead' })).toHaveAttribute('aria-pressed', 'true')
     } else {
       await expect(page.getByRole('link', { name: /register/i })).toHaveCount(0)
     }

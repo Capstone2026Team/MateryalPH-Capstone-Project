@@ -342,6 +342,9 @@ final class PhaseEightOrdersTest extends TestCase
         $this->travelTo(Carbon::parse('2026-10-05 01:00:00', 'UTC'));
         [$store, $owner, $listing] = $this->pickupStore('Response Window');
         [$buyer, $orderId] = $this->pickupOrder($store, $listing);
+        if ($nrpc) {
+            DB::table('orders')->where('id', $orderId)->update(['payment_method' => 'IN_STORE']);
+        }
         $this->travel(3)->hours();
         $revisionAt = CarbonImmutable::now();
         $line = $this->vendorOrder($owner, $orderId)['lines'][0]['id'];
@@ -405,6 +408,14 @@ final class PhaseEightOrdersTest extends TestCase
     {
         [$store, $owner, $listing] = $this->pickupStore('Cut Hardware', [['price' => 2500, 'qty' => '40']]);
         [$buyer, $orderId] = $this->pickupOrder($store, $listing, [['variant' => 0, 'quantity' => '10']]);
+        self::assertFalse($this->vendorOrder($owner, $orderId)['permissions']['can_set_nrpc']);
+        $onlineLine = $this->vendorOrder($owner, $orderId)['lines'][0]['id'];
+        $this->confirmOrder($owner, $orderId, [], ['nrpc' => ['amount_centavos' => 1000, 'reason' => 'Custom preparation for the order', 'lines' => [['order_line_id' => $onlineLine, 'principal_centavos' => 1000]]]])->assertUnprocessable()
+            ->assertJsonPath('errors.0.code', 'VALIDATION_FAILED')->assertJsonPath('errors.0.message', 'NRPC is available only for COD or In-Store Payment orders awaiting Vendor confirmation.');
+        self::assertSame(['AWAITING_VENDOR_CONFIRMATION', 0, 0], [$this->vendorOrder($owner, $orderId)['states'][0]['state'], DB::table('inventory_holds')->count(), DB::table('nrpc_records')->where('order_id', $orderId)->count()],
+            'A refused online NRPC confirms nothing, reserves nothing and records no NRPC.');
+        DB::table('orders')->where('id', $orderId)->update(['payment_method' => 'IN_STORE']);
+        self::assertTrue($this->vendorOrder($owner, $orderId)['permissions']['can_set_nrpc']);
         $service = $this->teamMember($store, 'CUSTOMER_SERVICE');
         $line = $this->vendorOrder($owner, $orderId)['lines'][0]['id'];
         $nrpc = static fn (int $amount, int $principal): array => ['nrpc' => ['amount_centavos' => $amount, 'reason' => 'Custom cutting to the Buyer drawings', 'lines' => [['order_line_id' => $line, 'principal_centavos' => $principal]]]];
@@ -454,6 +465,7 @@ final class PhaseEightOrdersTest extends TestCase
     {
         [$store, $owner, $listing] = $this->pickupStore('Mix Hardware');
         [$buyer, $orderId] = $this->pickupOrder($store, $listing);
+        DB::table('orders')->where('id', $orderId)->update(['payment_method' => 'IN_STORE']);
         $line = $this->vendorOrder($owner, $orderId)['lines'][0]['id'];
         $this->confirmOrder($owner, $orderId, [], ['nrpc' => ['amount_centavos' => 1000, 'reason' => 'Special mixing batch for this order', 'lines' => [['order_line_id' => $line, 'principal_centavos' => 1000]]]])->assertOk();
         $nrpcId = $this->buyerOrder($buyer, $orderId)['nrpc']['id'];

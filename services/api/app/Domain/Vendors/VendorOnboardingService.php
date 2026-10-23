@@ -8,6 +8,7 @@ use App\Domain\Agreements\AccountAgreements;
 use App\Domain\Authorization\AccountAccess;
 use App\Domain\Catalog\MarketplaceDiscoverability;
 use App\Domain\Catalog\RentalServicePolicy;
+use App\Domain\Finance\TaxpayerIdentityHash;
 use App\Domain\Finance\WithholdingThresholdService;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
@@ -1579,14 +1580,14 @@ final class VendorOnboardingService
         if ($key === '' && ($current === null || (isset($tax['tin']) && str_starts_with($previousKey, 'TEST|')))) {
             $key = 'TEST|'.(isset($tax['tin']) ? substr(str_replace('-', '', $tax['tin']), 0, 9) : $organizationId);
         }
-        $keyHash = $key === '' ? (string) ($current->taxpayer_key_hash ?? '') : hash_hmac('sha256', $key, (string) config('app.key'));
+        $keyHash = $key === '' ? (string) ($current->taxpayer_key_hash ?? '') : TaxpayerIdentityHash::taxpayerKey($key);
         $tin = trim((string) ($tax['tin'] ?? ''));
         if ($tin !== '' && preg_match('/^(?:[0-9]{12,14}|[0-9]{3}-[0-9]{3}-[0-9]{3}-[0-9]{3,5})$/D', $tin) !== 1) {
             throw new AuthenticationException('TIN_INVALID', 'Enter your 9-digit TIN followed by a 3- to 5-digit branch code.', 422);
         }
         $tinDigits = str_replace('-', '', $tin);
         $coreTin = substr($tinDigits, 0, 9);
-        $tinHash = $tin === '' ? (string) ($current->tin_hash ?? '') : hash_hmac('sha256', $coreTin, (string) config('app.key'));
+        $tinHash = $tin === '' ? (string) ($current->tin_hash ?? '') : TaxpayerIdentityHash::tin($coreTin);
         $tinEncrypted = $tin === '' ? ($current->tin_encrypted ?? null) : Crypt::encryptString($tinDigits);
         $combinedTin = $tin === '' ? (empty($tinEncrypted) ? '' : Crypt::decryptString($tinEncrypted)) : $tinDigits;
         $birCorReference = trim((string) ($tax['bir_cor_reference'] ?? ($current->bir_cor_reference ?? '')));

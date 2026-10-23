@@ -9,8 +9,7 @@ import { VendorCommissionPage, VendorEarningsPage, VendorFinancePage, VendorStat
 
 vi.mock('../lib/onboarding-api', async original => ({ ...await original<typeof import('../lib/onboarding-api')>(), getVendorOnboarding: vi.fn(), getVendorPrivateFileUrl: vi.fn(), acceptVendorCommission: vi.fn() }))
 vi.mock('../lib/finance-api', async original => ({ ...await original<typeof import('../lib/finance-api')>(), getFinanceOverview: vi.fn(), updatePhysicalPayments: vi.fn(), listTransactions: vi.fn(),
-  getStatement: vi.fn(), payStatement: vi.fn(), refreshFeePayment: vi.fn(), getEarnings: vi.fn(), exportTransactions: vi.fn(), revealTin: vi.fn(), getCommissionMonitoring: vi.fn(),
-  getFinanceReviews: vi.fn(async () => ({ label: 'DEMO — No real funds or BIR filing', statements: [], taxAdjustments: [], evidence: [], openReviews: [] })) }))
+  getStatement: vi.fn(), payStatement: vi.fn(), refreshFeePayment: vi.fn(), getEarnings: vi.fn(), exportTransactions: vi.fn(), revealTin: vi.fn(), getCommissionMonitoring: vi.fn() }))
 
 function snapshot(permissions: string[]): Awaited<ReturnType<typeof onboarding.getVendorOnboarding>> {
   return ({ stepCompletion: [], lockVersion: 1, requirements: [], drafts: [], organization: { store_name: 'Test Supply' }, welcomeRequired: false, permissions, verification: {}, setup: { status: 'COMPLETED' }, activation: { status: 'ACTIVE', readiness: { ready: true, blockers: [], status: 'READY', ruleVersion: 'test' } }, sections: {} }) as unknown as Awaited<ReturnType<typeof onboarding.getVendorOnboarding>>
@@ -49,6 +48,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(onboarding.getVendorOnboarding).mockResolvedValue(snapshot(['portal.orders', 'portal.wallet', 'portal.earnings', 'finance.view', 'finance.pay', 'payments.configure']))
   vi.mocked(onboarding.getVendorPrivateFileUrl).mockResolvedValue({ url: 'https://example.test/logo', expiresAt: new Date() })
+  vi.mocked(finance.getEarnings).mockResolvedValue(earnings())
   vi.mocked(finance.getCommissionMonitoring).mockResolvedValue({ hasMore: false, monitoring: {
     currentPolicy: { id: 'policy-1', version: 1, commissionBasisPoints: 200, rateLabel: '2.00%', effectiveFrom: new Date('2026-10-19T00:00:00Z'), status: 'CURRENT' }, termsAccepted: true,
     summary: { estimatedCentavos: 0, earnedCentavos: 0, creditedCentavos: 0, netEarnedCentavos: 0, unbilledCentavos: 0, draftCentavos: 0, outstandingCentavos: 0, overdueCentavos: 0, collectedCentavos: 0, refundedCentavos: 0, netCollectedCentavos: 0 }, assessments: [],
@@ -139,11 +139,12 @@ test('failed popup loading offers a retry while keeping commission monitoring op
 })
 
 test('overview groups payment and tax sections and retains finance statuses and notices', async () => {
+  vi.mocked(onboarding.getVendorOnboarding).mockResolvedValue(snapshot(['portal.wallet']))
   vi.mocked(finance.getFinanceOverview).mockResolvedValue(overview())
   at('/finance', <VendorFinancePage />)
   expect(await screen.findByRole('heading', { name: 'Finance overview', level: 1 })).toBeInTheDocument()
   const sections = within(screen.getByRole('tablist', { name: 'Workspace sections' }))
-  expect(sections.getAllByRole('tab').map(tab => tab.textContent)).toEqual(['Xendit & payment channels', 'Gross-remittance threshold', 'Finance reviews'])
+  expect(sections.getAllByRole('tab').map(tab => tab.textContent)).toEqual(['Xendit & payment channels', 'Gross-remittance threshold'])
   expect(screen.getByRole('heading', { name: 'Xendit connection', level: 2 })).toBeInTheDocument()
   expect(screen.getByRole('heading', { name: 'Online payment channels', level: 2 })).toBeInTheDocument()
   expect(screen.getByText('Connected — TEST')).toBeInTheDocument()
@@ -151,12 +152,13 @@ test('overview groups payment and tax sections and retains finance statuses and 
   expect(screen.queryByRole('heading', { name: 'Refund capability' })).not.toBeInTheDocument()
   expect(screen.queryByRole('heading', { name: 'Vendor Tax Profile summary' })).not.toBeInTheDocument()
   fireEvent.keyDown(sections.getByRole('tab', { name: 'Xendit & payment channels' }), { key: 'ArrowRight' })
-  for (const name of ['Vendor Tax Profile summary', 'Withholding arrangement', 'Commission Terms']) {
+  for (const name of ['Vendor Tax Profile summary', 'Withholding arrangement']) {
     expect(screen.getByRole('heading', { name, level: 2 })).toBeInTheDocument()
   }
   expect(sections.getByRole('tab', { name: 'Gross-remittance threshold' })).toHaveAttribute('aria-selected', 'true')
   expect(screen.queryByText('Production assignment unconfirmed')).not.toBeInTheDocument()
-  expect(screen.getByText('Accepted · version 1')).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: 'Commission Terms' })).not.toBeInTheDocument()
+  expect(screen.queryByText('Accepted · version 1')).not.toBeInTheDocument()
   expect(screen.queryByRole('heading', { name: 'Xendit connection' })).not.toBeInTheDocument()
   expect(screen.queryByRole('heading', { name: 'Online payment channels' })).not.toBeInTheDocument()
   const thresholdHeading = screen.getByRole('heading', { name: 'Gross-remittance threshold — taxable year 2026' })
@@ -169,7 +171,7 @@ test('overview groups payment and tax sections and retains finance statuses and 
   expect(screen.queryByText('DEMO — simulated tax and settlement figures.')).not.toBeInTheDocument()
   expect(screen.getByText(/Cannot be turned off/)).toBeInTheDocument()
   expect(finance.getFinanceOverview).toHaveBeenCalledTimes(1)
-  expect(finance.getFinanceReviews).not.toHaveBeenCalled()
+  expect(finance.getEarnings).not.toHaveBeenCalled()
 })
 
 test('the TIN stays masked until the Owner shows it, is fetched on each show and is discarded when hidden', async () => {
@@ -234,11 +236,21 @@ test('transaction history switches tabs, shows a specific empty state and never 
     ? { items: [{ id: 'p1', reference: 'ORD-1', purpose: 'FULL_ORDER_PAYMENT', status: 'PAID', gross_centavos: 1026441, buyer_processing_fee_centavos: 26441, evidence_origin: 'SIMULATED', at: '2026-10-02T02:30:00Z' }], hasMore: false, total: 1 }
     : { items: [], hasMore: false, total: 0 })
   at('/finance/transactions', <VendorTransactionHistoryPage />)
+  expect(await screen.findByRole('heading', { name: 'Transactions', level: 1 })).toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: 'Transactions' })).toBeInTheDocument()
+  expect(screen.queryByRole('tab', { name: /Refunds and adjustments/ })).not.toBeInTheDocument()
+  expect(screen.getByText('Use your authorized Xendit dashboard for balances and money withdrawals.')).toBeInTheDocument()
+  expect(screen.queryByText(/Read-only records/)).not.toBeInTheDocument()
+  // Dates, status and exports share one toolbar card, as on Finance overview.
+  const toolbar = screen.getByRole('button', { name: 'All dates' }).closest('div') as HTMLElement
+  expect(within(toolbar).getByRole('button', { name: 'Export PDF' })).toBeInTheDocument()
+  expect(within(toolbar).getByRole('button', { name: 'Export CSV' })).toBeInTheDocument()
   const table = await screen.findByRole('table')
   expect(within(table).getByText('Paid — verified by provider')).toBeInTheDocument()
   expect(within(table).getByText('₱10,264.41')).toBeInTheDocument()
-  fireEvent.click(screen.getByRole('tab', { name: /Physical receipts/ }))
-  expect(await screen.findByText(/No Cash on Delivery or In-Store records yet/)).toBeInTheDocument()
+  expect(screen.queryByRole('tab', { name: /Physical receipts/ })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('tab', { name: /Remittances and CWT/ }))
+  expect(await screen.findByText(/No simulated remittance assessments yet/)).toBeInTheDocument()
   expect(screen.queryByText(/balance:/i)).not.toBeInTheDocument()
 })
 
@@ -247,15 +259,15 @@ test('transaction date changes reset pagination and CSV exports keep the selecte
   HTMLDialogElement.prototype.close = function () { this.open = false }
   vi.mocked(finance.listTransactions).mockResolvedValue({ items: [{ id: 'refund-1', reference: 'ORD-1', amount_centavos: 100, state: 'PENDING', at: '2026-10-09T00:00:00Z' }], hasMore: false, total: 1 })
   vi.mocked(finance.exportTransactions).mockRejectedValue(new Error('Export offline'))
-  at('/finance/transactions?tab=REFUNDS&page=3', <VendorTransactionHistoryPage />, '/finance/transactions')
+  at('/finance/transactions?tab=STATEMENTS&page=3', <VendorTransactionHistoryPage />, '/finance/transactions')
   await screen.findByRole('table')
-  expect(finance.listTransactions).toHaveBeenLastCalledWith('REFUNDS', 3, {})
+  expect(finance.listTransactions).toHaveBeenLastCalledWith('STATEMENTS', 3, {})
   fireEvent.click(screen.getByRole('button', { name: 'All dates' }))
   fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-10-01' } })
   fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
-  await waitFor(() => expect(finance.listTransactions).toHaveBeenLastCalledWith('REFUNDS', 1, { from: '2026-10-01' }))
+  await waitFor(() => expect(finance.listTransactions).toHaveBeenLastCalledWith('STATEMENTS', 1, { from: '2026-10-01' }))
   fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }))
-  await waitFor(() => expect(finance.exportTransactions).toHaveBeenCalledWith('REFUNDS', { from: '2026-10-01' }))
+  await waitFor(() => expect(finance.exportTransactions).toHaveBeenCalledWith('STATEMENTS', { from: '2026-10-01' }))
 })
 
 test('the Tax documents tab appears only once a certificate exists', async () => {
@@ -279,8 +291,8 @@ test('the Payments status dropdown filters on the server, resets pagination, rid
   expect(screen.getByRole('button', { name: /Failed — not charged/ })).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }))
   await waitFor(() => expect(finance.exportTransactions).toHaveBeenCalledWith('PAYMENTS', { status: 'FAILED' }))
-  fireEvent.click(screen.getByRole('tab', { name: /Refunds and adjustments/ }))
-  await waitFor(() => expect(finance.listTransactions).toHaveBeenLastCalledWith('REFUNDS', 1, {}))
+  fireEvent.click(screen.getByRole('tab', { name: /Remittances and CWT/ }))
+  await waitFor(() => expect(finance.listTransactions).toHaveBeenLastCalledWith('REMITTANCES', 1, {}))
   expect(screen.queryByRole('combobox', { name: 'Status' })).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('tab', { name: /^Payments/ }))
   await waitFor(() => expect(finance.listTransactions).toHaveBeenLastCalledWith('PAYMENTS', 1, {}))
@@ -303,6 +315,26 @@ test.each([
   const cells = within(within(table).getAllByRole('row')[1]!).getAllByRole('cell')
   expect(cells[3]).toHaveTextContent('₱100.00')
   expect(cells[6]).toHaveTextContent(net)
+})
+
+test('Payments lists Cash on Delivery and In-Store orders beside online payments, with what is still owed', async () => {
+  vi.mocked(finance.listTransactions).mockResolvedValue({ items: [
+    { id: 'o1', kind: 'PHYSICAL', order_id: 'order-cod', reference: 'ORD-COD', purpose: 'CASH_ON_DELIVERY', status: 'PHYSICAL_TO_RECORD', refund_state: 'NOT_REQUESTED', gross_centavos: 2905250, buyer_processing_fee_centavos: 0,
+      refunded_centavos: 0, net_collected_centavos: 0, collected_centavos: 0, remaining_centavos: 2905250, channel: 'CASH_ON_DELIVERY', evidence_origin: 'VENDOR_RECORD', at: '2026-10-20T02:30:00Z' },
+    { id: 'o2', kind: 'PHYSICAL', reference: 'ORD-STORE', purpose: 'IN_STORE_PAYMENT', status: 'PHYSICAL_COLLECTED', refund_state: 'NOT_REQUESTED', gross_centavos: 100000, buyer_processing_fee_centavos: 0,
+      refunded_centavos: 0, net_collected_centavos: 100000, collected_centavos: 100000, remaining_centavos: 0, channel: 'IN_STORE', evidence_origin: 'VENDOR_RECORD', at: '2026-10-19T02:30:00Z' },
+    { id: 'p1', kind: 'ONLINE', order_id: 'order-online', reference: 'ORD-ONLINE', purpose: 'FULL_ORDER_PAYMENT', status: 'PAID', refund_state: 'NOT_REQUESTED', gross_centavos: 29305, buyer_processing_fee_centavos: 755,
+      refunded_centavos: 0, net_collected_centavos: 29305, evidence_origin: 'XENDIT_TEST', at: '2026-10-18T02:30:00Z' },
+  ], hasMore: false, total: 3 })
+  at('/finance/transactions', <VendorTransactionHistoryPage />)
+  const rows = within(await screen.findByRole('table')).getAllByRole('row')
+  expect(screen.getByRole('link', { name: 'ORD-COD' })).toHaveAttribute('href', '/orders/order-cod')
+  expect(screen.getByRole('link', { name: 'ORD-ONLINE' })).toHaveAttribute('href', '/orders/order-online')
+  expect(rows[1]).toHaveTextContent('CASH ON DELIVERY'); expect(rows[1]).toHaveTextContent('Handed over — cash not recorded'); expect(rows[1]).toHaveTextContent('₱29,052.50 still owed'); expect(rows[1]).toHaveTextContent('COD · VENDOR RECORD')
+  expect(rows[2]).toHaveTextContent('Collected — Vendor record'); expect(rows[2]).toHaveTextContent('IN-STORE · VENDOR RECORD'); expect(rows[2]).not.toHaveTextContent('still owed')
+  expect(rows[3]).toHaveTextContent('Paid — verified by provider')
+  fireEvent.change(screen.getByRole('combobox', { name: 'Status' }), { target: { value: 'PHYSICAL_TO_RECORD' } })
+  await waitFor(() => expect(finance.listTransactions).toHaveBeenLastCalledWith('PAYMENTS', 1, { status: 'PHYSICAL_TO_RECORD' }))
 })
 
 test.each([
@@ -347,7 +379,7 @@ function earnings(trend: Partial<EarningsData['trend']> = {}): EarningsData {
     onlineCollectionsCentavos: 1000000, onlineRefundsCentavos: 0, buyerProcessingFeesCentavos: 26441, physicalCollectionsCentavos: 0, providerChargesCentavos: 26441, simulatedCwtCentavos: 5000,
     estimatedRemittanceCashCentavos: 995000, remittanceCollectionsCentavos: 1026441, remittanceRefundsCentavos: 0, earnedCommissionCentavos: 0, estimatedCommissionCentavos: 20000, unpaidStatementsCentavos: 0,
     breakdown: { sales: { orders: 2, materialsBeforeDiscountCentavos: 950000, vendorDiscountsCentavos: 50000, materialsAfterDiscountCentavos: 900000, deliveryCentavos: 100000 },
-      online: { payments: 1, principalPaidCentavos: 1000000, refundedPrincipalCentavos: 0 }, physical: { records: 0, cashOnDeliveryCentavos: 0, inStoreCentavos: 0 } },
+      online: { payments: 1, principalPaidCentavos: 1000000, refundedPrincipalCentavos: 0 }, physical: { records: 0, cashOnDeliveryCentavos: 0, inStoreCentavos: 0, unrecordedCentavos: 0, unrecordedOrders: 0 } },
     products: { total: 2, truncated: false, items: [
       { listingId: 'l1', name: 'Portland Cement 40kg', category: 'Cement', sku: 'CEM-40', orders: 2, valueCentavos: 600000, vatCentavos: 64286 },
       { listingId: 'l2', name: 'Deformed Steel Bar 10mm', category: 'Steel', sku: null, orders: 1, valueCentavos: 300000, vatCentavos: 32143 }] },
@@ -360,12 +392,12 @@ function earnings(trend: Partial<EarningsData['trend']> = {}): EarningsData {
   }
 }
 
-test('earnings is a separate owner module with a TEST-only notice and charts each figure over time', async () => {
+test('earnings is a separate owner module without a notice banner and charts each figure over time', async () => {
   vi.mocked(finance.getEarnings).mockResolvedValue(earnings())
   at('/finance/earnings', <VendorEarningsPage />)
   expect(await screen.findByRole('heading', { name: 'Earnings', level: 1 })).toBeInTheDocument()
   expect(screen.queryByText('TEST dataset — DEMO figures')).not.toBeInTheDocument()
-  expect(screen.getByText(/Demo aggregates are TEST-only/)).toBeInTheDocument()
+  expect(screen.queryByText(/Demo aggregates are TEST-only/)).not.toBeInTheDocument()
   expect(screen.getAllByText('₱9,950.00').length).toBeGreaterThan(0)
   for (const name of ['Sales and collections', 'Estimated remittance cash', 'Deductions and commission', 'Deductions and fees']) expect(screen.getByRole('region', { name })).toBeInTheDocument()
   expect(screen.getByRole('img', { name: /Commercial sales and collections: Commercial sales and Online collections and Physical collections over 3 periods/ })).toBeInTheDocument()
@@ -380,7 +412,7 @@ test('earnings is a separate owner module with a TEST-only notice and charts eac
 test('every Earnings card shows the lines that add up to its number', async () => {
   vi.mocked(finance.getEarnings).mockResolvedValue({ ...earnings(), includedVatCentavos: 96429,
     breakdown: { sales: { orders: 2, materialsBeforeDiscountCentavos: 950000, vendorDiscountsCentavos: 50000, materialsAfterDiscountCentavos: 900000, deliveryCentavos: 100000 },
-      online: { payments: 3, principalPaidCentavos: 1300000, refundedPrincipalCentavos: 300000 }, physical: { records: 2, cashOnDeliveryCentavos: 40000, inStoreCentavos: 25000 } },
+      online: { payments: 3, principalPaidCentavos: 1300000, refundedPrincipalCentavos: 300000 }, physical: { records: 2, cashOnDeliveryCentavos: 40000, inStoreCentavos: 25000, unrecordedCentavos: 2905250, unrecordedOrders: 1 } },
     physicalCollectionsCentavos: 65000 })
   at('/finance/earnings', <VendorEarningsPage />)
   const sales = within(await screen.findByRole('table', { name: 'Commercial sales calculation' }))
@@ -397,6 +429,9 @@ test('every Earnings card shows the lines that add up to its number', async () =
   expect(physical.getByRole('row', { name: /^Cash on Delivery/ })).toHaveTextContent('₱400.00')
   expect(physical.getByRole('row', { name: /^In-Store Payment/ })).toHaveTextContent('₱250.00')
   expect(physical.getByRole('row', { name: /^Physical collections \(2 receipts\)/ })).toHaveTextContent('₱650.00')
+  // Cash still owed on handed-over orders is shown beside the recorded total, never added to it.
+  expect(screen.getByText(/on 1 delivered or picked-up order is not recorded yet and not counted/)).toHaveTextContent('₱29,052.50')
+  expect(screen.getByRole('link', { name: 'Review cash to record' })).toHaveAttribute('href', '/finance/transactions?tab=PAYMENTS&status=PHYSICAL_TO_RECORD')
 })
 
 test('earnings lists the sales value of each product and ranks the top sellers like Product analytics', async () => {
@@ -527,20 +562,29 @@ test('threshold explains the recorded gross basis and the cash difference with d
   expect(screen.getByText(/Earnings reflects later confirmed refunds/)).toBeInTheDocument()
 })
 
-test('the Owner sees finance review status without reviewer notes or taxpayer identifiers', async () => {
+test('Finance overview opens on Earnings, lists no Finance reviews section and has no separate sidebar link', async () => {
+  vi.mocked(finance.getFinanceOverview).mockResolvedValue(overview())
+  vi.mocked(finance.getEarnings).mockResolvedValue(earnings())
+  at('/finance', <VendorFinancePage />)
+  const earningsTab = await screen.findByRole('tab', { name: 'Earnings' })
+  expect(within(screen.getByRole('tablist', { name: 'Workspace sections' })).getAllByRole('tab').map(tab => tab.textContent)).toEqual(['Earnings', 'Xendit & payment channels', 'Gross-remittance threshold'])
+  expect(earningsTab).toHaveAttribute('aria-selected', 'true')
+  expect(screen.queryByRole('tab', { name: 'Finance reviews' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: /^Earnings$/ })).not.toBeInTheDocument()
+  expect(screen.queryByText('MateryalPH holds no wallet or balance for your store.')).not.toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: 'Earnings', level: 2 })).toBeInTheDocument()
+  await waitFor(() => expect(finance.getEarnings).toHaveBeenCalledTimes(1))
+  expect(screen.getByRole('button', { name: 'Export PDF' })).toBeEnabled()
+  expect(screen.getByRole('button', { name: /^Earnings dates|All dates/ })).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: 'Xendit connection' })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('tab', { name: 'Xendit & payment channels' }))
+  expect(await screen.findByRole('heading', { name: 'Xendit connection', level: 2 })).toBeInTheDocument()
+})
+test('Finance overview does not request Earnings without its permission', async () => {
   vi.mocked(onboarding.getVendorOnboarding).mockResolvedValue(snapshot(['portal.wallet']))
   vi.mocked(finance.getFinanceOverview).mockResolvedValue(overview())
-  vi.mocked(finance.getFinanceReviews).mockResolvedValue({ label: 'DEMO — No real funds or BIR filing',
-    statements: [{ id: 's1', reference: 'FS-2026-09-0001', period_start: '2026-09-01', period_end: '2026-09-30', due_on: '2026-10-05', state: 'ISSUED', outstanding_centavos: 12000, overdue: true, approved: true }],
-    taxAdjustments: [{ id: 'a1', kind: 'THRESHOLD_CROSSING', state: 'UNDER_REVIEW', order_reference: 'ORD-1', amount_centavos: 2500 }],
-    evidence: [{ id: 'e1', evidence_type: 'SWORN_DECLARATION', review_state: 'PENDING', taxable_year: 2026 }],
-    openReviews: [{ id: 'r1', kind: 'STATEMENT_OVERDUE', label: 'Statement overdue', createdAt: new Date() }] })
   at('/finance', <VendorFinancePage />)
-  fireEvent.click(await screen.findByRole('tab', { name: 'Finance reviews' }))
-  const section = (await screen.findByRole('heading', { name: 'Finance reviews' })).closest('section') as HTMLElement
-  expect(await within(section).findByText('FS-2026-09-0001')).toBeInTheDocument()
-  expect(within(section).getByText('Overdue since 2026-10-05')).toBeInTheDocument()
-  expect(within(section).getByText('Statement overdue')).toBeInTheDocument()
-  expect(within(section).getByText('Under Review')).toBeInTheDocument()
-  expect(within(section).queryByText(/TIN|taxpayer/i)).not.toBeInTheDocument()
+  await screen.findByRole('heading', { name: 'Finance overview', level: 1 })
+  expect(screen.queryByRole('tab', { name: 'Earnings' })).not.toBeInTheDocument()
+  expect(finance.getEarnings).not.toHaveBeenCalled()
 })

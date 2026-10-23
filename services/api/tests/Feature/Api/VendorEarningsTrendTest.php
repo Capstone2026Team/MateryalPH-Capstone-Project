@@ -44,6 +44,9 @@ final class VendorEarningsTrendTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // Seed effective policies at the same instant as the simulated orders.
+        CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 10, 20, 10, 0, 0, 'Asia/Manila'));
+        Carbon::setTestNow(CarbonImmutable::now());
         $this->seed(SystemFoundationSeeder::class);
         config()->set('materyalph.files.disk', 'local');
         config()->set('services.cloudinary.cloud_name', '');
@@ -54,8 +57,6 @@ final class VendorEarningsTrendTest extends TestCase
         $this->app->instance(RouteProvider::class, new FakeRouteProvider);
         $this->app->instance(AddressGeocoder::class, new FakeAddressGeocoder);
         $this->fakePayments();
-        CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 10, 20, 10, 0, 0, 'Asia/Manila'));
-        Carbon::setTestNow(CarbonImmutable::now());
     }
 
     protected function tearDown(): void
@@ -214,7 +215,13 @@ final class VendorEarningsTrendTest extends TestCase
         [$store, $owner, $listing] = $this->pickupStore('Partial Refund Reporting', [['price' => 100000, 'qty' => '50']]);
         [$buyer, $orderId] = $this->pickupOrder($store, $listing, [['variant' => 0, 'quantity' => '10']]);
         $line = $this->vendorOrder($owner, $orderId)['lines'][0]['id'];
-        $this->confirmOrder($owner, $orderId, [], ['nrpc' => ['amount_centavos' => 100000, 'reason' => 'Custom cutting to the Buyer drawings', 'lines' => [['order_line_id' => $line, 'principal_centavos' => 100000]]]])->assertOk();
+        $nrpc = ['nrpc' => ['amount_centavos' => 100000, 'reason' => 'Custom cutting to the Buyer drawings', 'lines' => [['order_line_id' => $line, 'principal_centavos' => 100000]]]];
+        $this->confirmOrder($owner, $orderId, [], $nrpc)->assertUnprocessable()->assertJsonPath('errors.0.message', 'NRPC is available only for COD or In-Store Payment orders awaiting Vendor confirmation.');
+        // New NRPC is proposed only on COD or In-Store orders. Build the record through that path, then restore the
+        // online payment method: online NRPC orders accepted before the 2026-10-23 rule still report their refunds.
+        DB::table('orders')->where('id', $orderId)->update(['payment_method' => 'IN_STORE']);
+        $this->confirmOrder($owner, $orderId, [], $nrpc)->assertOk();
+        DB::table('orders')->where('id', $orderId)->update(['payment_method' => 'ONLINE']);
         $detail = $this->buyerOrder($buyer, $orderId);
         $this->postJson('/api/v1/buyers/orders/'.$orderId.'/nrpc/accept', ['snapshot_version' => 2, 'nrpc_id' => $detail['nrpc']['id'], 'terms_version_id' => $detail['nrpc']['terms']['id'], 'acknowledged' => true], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
         $payment = $this->startPayment($buyer, $orderId);

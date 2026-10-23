@@ -32,7 +32,7 @@ final class AdminDashboardService
             'audit_events' => $audit ? DB::table('audit_logs')->count() : null,
             'can_view_audit' => $audit,
             // Role-specific work queues; each appears only with its own permission (Phase 16 operations home).
-            'queues' => app(OperationsQueueService::class)->queues($scope['permissions'] ?? [], (int) $request->user()?->getKey()),
+            'queues' => app(OperationsQueueService::class)->queues($scope['permissions'] ?? []),
         ];
     }
 

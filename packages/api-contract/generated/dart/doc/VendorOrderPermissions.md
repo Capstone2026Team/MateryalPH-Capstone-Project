@@ -10,7 +10,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **canConfirm** | **bool** |  |
 **canRevise** | **bool** |  |
-**canSetNrpc** | **bool** |  |
+**canSetNrpc** | **bool** | True only for authorized roles on COD or In-Store Payment orders awaiting Vendor confirmation. |
 **canConfirmDelivery** | **bool** |  |
 **canDecline** | **bool** |  |
 **canViewInventory** | **bool** |  |

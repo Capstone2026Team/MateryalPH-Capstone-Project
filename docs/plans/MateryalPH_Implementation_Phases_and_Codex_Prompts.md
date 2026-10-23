@@ -1459,7 +1459,7 @@ Add these acceptance checks to the existing phase suite: Test preserved case/his
 
 Implement MAT Admin lists, details and charts inside the existing geographic section, with source inspection only for materials_analytics.inspect_sources and a recorded reason. Nation, region, province, city and municipality filters use PSGC; do not impose a national 50 km circle. Mark transaction-only filters inapplicable to price panels. Add FIN-10 queues and scoped screens for evidence, remittance reconciliation, fee approval and payment status, overdue debt, tax adjustments, sample report readiness and the FIN-04A threshold-review and unresolved-overlap queues. Use two distinct named finance users for required preparation and review. Display gross and net GMV independently from CWT, commissions, platform revenue, collected cash and receivables. Add materials snapshot health and labelled demo datasets. No Admin rate or edit control may bypass source or effective-date review or the LIVE gates.
 
-Read the Admin Workflow closely. Implement role-specific queues for Vendor documents and activation, product compliance, disputes, appeals and remedies, Buyer and Vendor enforcement, review moderation, invoices, privacy requests, payment and refund monitoring, and failed jobs. Every decision requires the documented authorization, reason, before and after state, actor, correlation identifier and notification. Never expose integration secrets, balances, withdrawal controls or audit-edit actions.
+Read the Admin Workflow closely. Implement role-specific queues for Vendor documents and activation, product compliance, disputes, appeals and remedies, Buyer and Vendor enforcement, review moderation, invoices, payment and refund monitoring, and failed jobs. Every decision requires the documented authorization, reason, before and after state, actor, correlation identifier and notification. Never expose integration secrets, balances, withdrawal controls or audit-edit actions.
 
 Implement versioned Platform Settings for only the approved non-secret defaults with validation, including SRS and FMS totals, showing the current version, the validation rule and the previous value per field. Do not add an NRPC cap or editable VPS weights.
 
@@ -1489,7 +1489,7 @@ Exercise provider timeout/replay/duplicate prevention, cross-Vendor association 
 - Threat model and data-flow review.
 - Secure headers and CSP, CORS and CSRF, cookie flags, mobile certificate and network configuration, rate-limit tuning and account-abuse defenses.
 - Secret scan, dependency scan, SAST, container scan, upload-malware gate and log-redaction tests.
-- Privacy-request workflow, retention classes, legal hold, minimization, export authorization and deletion or anonymization jobs subject to approved policy.
+- Privacy inquiries through existing Support Requests or DPO channels, retention classes, legal hold, minimization, export authorization and deletion or anonymization jobs subject to approved policy.
 - WCAG 2.2 AA audit for all pages.
 - Database and query profiling, indexes, caching rules, N+1 elimination, pagination and provider quotas.
 - Sentry or equivalent error monitoring with personal-data filtering.
@@ -1527,7 +1527,7 @@ Add threat-focused tests for FIN-10, FIN-04A and MAT-05 with authenticated audie
 
 Begin with a concrete threat model and data-flow review for authentication, authorization, documents, locations, conversations, inventory, checkout, Xendit, refunds, disputes, Admin exports and analytics. Test deny-by-default policies and cross-tenant isolation. Harden cookies, CSRF, CORS, CSP and headers, rate limits, account-enumeration defenses, session rotation and reuse detection, webhook replay protection, file validation and malware state, signed URLs and log redaction. Add secret, dependency, SAST and container scans.
 
-Implement the approved privacy-request states, retention classes, legal holds, minimization, authorized exports and auditable deletion or anonymization actions without deleting records that must legally or operationally remain. Do not invent legal retention periods; expose them as reviewed policy configuration with safe defaults marked non-production until approved.
+Use existing Support Requests or DPO channels for privacy inquiries; implement retention classes, legal holds, minimization, authorized exports and auditable deletion or anonymization actions without deleting records that must legally or operationally remain. Do not invent legal retention periods; expose them as reviewed policy configuration with safe defaults marked non-production until approved.
 
 Audit every critical page against WCAG 2.2 AA: labels, errors, keyboard and focus, screen-reader semantics, contrast, reflow, target size, timers, map alternative and non-color statuses. Apply remediation at the shared-component level in packages/web-ui and the Flutter design system rather than page by page, and record each finding with its surface, WCAG criterion, fix location and regression test. Use Flutter semantics, widget and golden tests, device testing and native accessibility inspection for Buyer; do not claim a web detector proves native Flutter accessibility.
 

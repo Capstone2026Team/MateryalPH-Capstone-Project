@@ -22,7 +22,7 @@ test('Project original and Vendor duplicate remain readable at the 1024px breakp
   await expect(attachment).toBeVisible()
   await expect(attachment.getByText('Original masonry blocks', { exact: true })).toBeVisible()
   await expect(attachment.getByText('Proposed masonry blocks', { exact: true })).toBeVisible()
-  await expect(attachment.getByRole('button', { name: 'Work Package PDF · Phase 15' })).toBeDisabled()
+  await expect(attachment.getByRole('button', { name: /Phase 15/ })).toHaveCount(0)
   const original = await attachment.getByRole('region', { name: 'Buyer original' }).boundingBox()
   const proposed = await attachment.getByRole('region', { name: 'Vendor working duplicate / proposal' }).boundingBox()
   expect(original).not.toBeNull()

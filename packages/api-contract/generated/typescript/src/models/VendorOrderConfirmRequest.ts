@@ -73,7 +73,7 @@ export interface VendorOrderConfirmRequest {
      */
     discount?: ChatQuotationDiscount;
     /**
-     *
+     * Available only for COD or In-Store Payment orders awaiting Vendor confirmation.
      */
     nrpc?: NrpcProposal | null;
     /**

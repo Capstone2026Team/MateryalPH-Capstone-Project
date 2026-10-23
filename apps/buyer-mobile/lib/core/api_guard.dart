@@ -64,6 +64,16 @@ final class ApiGuard {
       }
     }
     if (status == null) {
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.sendTimeout ||
+          error.type == DioExceptionType.receiveTimeout) {
+        // A timeout is distinct from offline; both retain mutation retry keys.
+        return const DiscoveryFailure(
+          DiscoveryFailureKind.timeout,
+          'The request timed out while waiting for the server. Please retry.',
+          code: 'REQUEST_TIMEOUT',
+        );
+      }
       return const DiscoveryFailure(
         DiscoveryFailureKind.offline,
         'You appear to be offline. Check your connection and retry.',

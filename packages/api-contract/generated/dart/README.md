@@ -172,10 +172,6 @@ Class | Method | HTTP request | Description
 [*AdminPlatformSettingsApi*](doc/AdminPlatformSettingsApi.md) | [**listPlatformSettingHistory**](doc/AdminPlatformSettingsApi.md#listplatformsettinghistory) | **GET** /admin/platform-settings/{key}/history |
 [*AdminPlatformSettingsApi*](doc/AdminPlatformSettingsApi.md) | [**listPlatformSettings**](doc/AdminPlatformSettingsApi.md#listplatformsettings) | **GET** /admin/platform-settings |
 [*AdminPlatformSettingsApi*](doc/AdminPlatformSettingsApi.md) | [**updatePlatformSetting**](doc/AdminPlatformSettingsApi.md#updateplatformsetting) | **PUT** /admin/platform-settings/{key} |
-[*AdminPrivacyRequestsApi*](doc/AdminPrivacyRequestsApi.md) | [**getPrivacyRequest**](doc/AdminPrivacyRequestsApi.md#getprivacyrequest) | **GET** /admin/privacy-requests/{requestId} |
-[*AdminPrivacyRequestsApi*](doc/AdminPrivacyRequestsApi.md) | [**listPrivacyRequests**](doc/AdminPrivacyRequestsApi.md#listprivacyrequests) | **GET** /admin/privacy-requests |
-[*AdminPrivacyRequestsApi*](doc/AdminPrivacyRequestsApi.md) | [**recordPrivacyRequest**](doc/AdminPrivacyRequestsApi.md#recordprivacyrequest) | **POST** /admin/privacy-requests |
-[*AdminPrivacyRequestsApi*](doc/AdminPrivacyRequestsApi.md) | [**transitionPrivacyRequest**](doc/AdminPrivacyRequestsApi.md#transitionprivacyrequest) | **POST** /admin/privacy-requests/{requestId}/{command} |
 [*AdminProductComplianceApi*](doc/AdminProductComplianceApi.md) | [**activateComplianceRegister**](doc/AdminProductComplianceApi.md#activatecomplianceregister) | **POST** /admin/product-compliance/registers/{registerId}/activate |
 [*AdminProductComplianceApi*](doc/AdminProductComplianceApi.md) | [**createComparableGroup**](doc/AdminProductComplianceApi.md#createcomparablegroup) | **POST** /admin/taxonomy/comparable-groups |
 [*AdminProductComplianceApi*](doc/AdminProductComplianceApi.md) | [**decideProductCompliance**](doc/AdminProductComplianceApi.md#decideproductcompliance) | **POST** /admin/product-compliance/{submissionId}/decision |
@@ -481,6 +477,7 @@ Class | Method | HTTP request | Description
 [*VendorDisputesApi*](doc/VendorDisputesApi.md) | [**respondVendorDispute**](doc/VendorDisputesApi.md#respondvendordispute) | **POST** /vendor/disputes/{caseId}/respond |
 [*VendorDisputesApi*](doc/VendorDisputesApi.md) | [**sendVendorDisputeMessage**](doc/VendorDisputesApi.md#sendvendordisputemessage) | **POST** /vendor/disputes/{caseId}/messages |
 [*VendorFinanceApi*](doc/VendorFinanceApi.md) | [**approveVendorOnlineBalance**](doc/VendorFinanceApi.md#approvevendoronlinebalance) | **POST** /vendor/orders/{orderId}/online-balance/approve |
+[*VendorFinanceApi*](doc/VendorFinanceApi.md) | [**confirmVendorHandoverCash**](doc/VendorFinanceApi.md#confirmvendorhandovercash) | **POST** /vendor/orders/{orderId}/physical-payments/handover-confirmation |
 [*VendorFinanceApi*](doc/VendorFinanceApi.md) | [**exportVendorTransactions**](doc/VendorFinanceApi.md#exportvendortransactions) | **GET** /vendor/finance/transactions/export |
 [*VendorFinanceApi*](doc/VendorFinanceApi.md) | [**getVendorCommissionMonitoring**](doc/VendorFinanceApi.md#getvendorcommissionmonitoring) | **GET** /vendor/finance/commissions |
 [*VendorFinanceApi*](doc/VendorFinanceApi.md) | [**getVendorEarnings**](doc/VendorFinanceApi.md#getvendorearnings) | **GET** /vendor/finance/earnings |
@@ -1085,6 +1082,7 @@ Class | Method | HTTP request | Description
  - [FinanceKpiEnvelope](doc/FinanceKpiEnvelope.md)
  - [FinanceKpis](doc/FinanceKpis.md)
  - [FinanceKpisPeriod](doc/FinanceKpisPeriod.md)
+ - [FinancePaymentMethod](doc/FinancePaymentMethod.md)
  - [FinanceReviewItem](doc/FinanceReviewItem.md)
  - [FinanceReviewItemListEnvelope](doc/FinanceReviewItemListEnvelope.md)
  - [FinanceTransactionListEnvelope](doc/FinanceTransactionListEnvelope.md)
@@ -1338,6 +1336,7 @@ Class | Method | HTTP request | Description
  - [PaymentWebhookAck](doc/PaymentWebhookAck.md)
  - [PaymentWebhookAckEnvelope](doc/PaymentWebhookAckEnvelope.md)
  - [PaymentWebhookPayload](doc/PaymentWebhookPayload.md)
+ - [PhysicalHandoverCash](doc/PhysicalHandoverCash.md)
  - [PhysicalPaymentRecord](doc/PhysicalPaymentRecord.md)
  - [PhysicalPaymentSettings](doc/PhysicalPaymentSettings.md)
  - [PhysicalPaymentSettingsEnvelope](doc/PhysicalPaymentSettingsEnvelope.md)
@@ -1357,14 +1356,6 @@ Class | Method | HTTP request | Description
  - [PrepareTaxPackage201Response](doc/PrepareTaxPackage201Response.md)
  - [PriceHistoryEntry](doc/PriceHistoryEntry.md)
  - [PriceHistoryEnvelope](doc/PriceHistoryEnvelope.md)
- - [PrivacyHandler](doc/PrivacyHandler.md)
- - [PrivacyRequestCreateRequest](doc/PrivacyRequestCreateRequest.md)
- - [PrivacyRequestDetail](doc/PrivacyRequestDetail.md)
- - [PrivacyRequestDetailEnvelope](doc/PrivacyRequestDetailEnvelope.md)
- - [PrivacyRequestEvent](doc/PrivacyRequestEvent.md)
- - [PrivacyRequestListEnvelope](doc/PrivacyRequestListEnvelope.md)
- - [PrivacyRequestSummary](doc/PrivacyRequestSummary.md)
- - [PrivacyTransitionRequest](doc/PrivacyTransitionRequest.md)
  - [ProblemResolveRequest](doc/ProblemResolveRequest.md)
  - [ProblemResponseRequest](doc/ProblemResponseRequest.md)
  - [ProcessingFee](doc/ProcessingFee.md)

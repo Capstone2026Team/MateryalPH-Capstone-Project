@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:materyalph_api_client/src/model/analytics_category_ref.dart';
 import 'package:materyalph_api_client/src/model/comparable_specification.dart';
+import 'package:materyalph_api_client/src/model/listing_image.dart';
 import 'package:materyalph_api_client/src/model/buyer_analytics_row.dart';
 import 'package:materyalph_api_client/src/model/analytics_current_counts.dart';
 import 'package:materyalph_api_client/src/model/analytics_unit.dart';
@@ -29,6 +30,7 @@ part 'buyer_materials_analytics_detail_group.g.dart';
 /// * [endPoint]
 /// * [trend]
 /// * [current]
+/// * [image] - Photo of the cheapest current in-scope offer that has one, so the row is recognizable. Only the public URL and alt text; never its listing, store or price.
 /// * [description]
 @BuiltValue()
 abstract class BuyerMaterialsAnalyticsDetailGroup implements BuyerAnalyticsRow, Built<BuyerMaterialsAnalyticsDetailGroup, BuyerMaterialsAnalyticsDetailGroupBuilder> {
@@ -63,6 +65,13 @@ class _$BuyerMaterialsAnalyticsDetailGroupSerializer implements PrimitiveSeriali
       object.endPoint,
       specifiedType: const FullType(BuyerAnalyticsPoint),
     );
+    if (object.image != null) {
+      yield r'image';
+      yield serializers.serialize(
+        object.image,
+        specifiedType: const FullType.nullable(ListingImage),
+      );
+    }
     yield r'unit';
     yield serializers.serialize(
       object.unit,
@@ -144,6 +153,14 @@ class _$BuyerMaterialsAnalyticsDetailGroupSerializer implements PrimitiveSeriali
             specifiedType: const FullType(BuyerAnalyticsPoint),
           ) as BuyerAnalyticsPoint;
           result.endPoint.replace(valueDes);
+          break;
+        case r'image':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ListingImage),
+          ) as ListingImage?;
+          if (valueDes == null) continue;
+          result.image.replace(valueDes);
           break;
         case r'unit':
           final valueDes = serializers.deserialize(

@@ -16,6 +16,7 @@ Name | Type
 `endPoint` | [AdminAnalyticsPoint](AdminAnalyticsPoint.md)
 `trend` | [AnalyticsTrend](AnalyticsTrend.md)
 `current` | [AnalyticsCurrentCounts](AnalyticsCurrentCounts.md)
+`image` | [ListingImage](ListingImage.md)
 
 ## Example
 
@@ -34,6 +35,7 @@ const example = {
   "endPoint": null,
   "trend": null,
   "current": null,
+  "image": null,
 } satisfies AdminAnalyticsRow
 
 console.log(example)

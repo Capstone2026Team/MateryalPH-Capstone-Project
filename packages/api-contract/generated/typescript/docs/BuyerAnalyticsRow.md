@@ -16,6 +16,7 @@ Name | Type
 `endPoint` | [BuyerAnalyticsPoint](BuyerAnalyticsPoint.md)
 `trend` | [AnalyticsTrend](AnalyticsTrend.md)
 `current` | [AnalyticsCurrentCounts](AnalyticsCurrentCounts.md)
+`image` | [ListingImage](ListingImage.md)
 
 ## Example
 
@@ -34,6 +35,7 @@ const example = {
   "endPoint": null,
   "trend": null,
   "current": null,
+  "image": null,
 } satisfies BuyerAnalyticsRow
 
 console.log(example)

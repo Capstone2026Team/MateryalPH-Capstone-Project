@@ -23,7 +23,7 @@ part 'chat_draft_content.g.dart';
 /// * [vendorDiscountCentavos] - Legacy fixed materials discount. Omit when discount is supplied.
 /// * [discount]
 /// * [delivery]
-/// * [nrpc]
+/// * [nrpc] - Historical drafts only. Omit when saving; new quotation NRPC is prohibited.
 @BuiltValue()
 abstract class ChatDraftContent implements Built<ChatDraftContent, ChatDraftContentBuilder> {
   @BuiltValueField(wireName: r'lines')
@@ -56,6 +56,8 @@ abstract class ChatDraftContent implements Built<ChatDraftContent, ChatDraftCont
   @BuiltValueField(wireName: r'delivery')
   BuiltMap<String, JsonObject?>? get delivery;
 
+  /// Historical drafts only. Omit when saving; new quotation NRPC is prohibited.
+  @Deprecated('nrpc has been deprecated')
   @BuiltValueField(wireName: r'nrpc')
   BuiltMap<String, JsonObject?>? get nrpc;
 

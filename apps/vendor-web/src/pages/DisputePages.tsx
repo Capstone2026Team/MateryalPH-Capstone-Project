@@ -1,15 +1,15 @@
 import { useNavigationRefresh } from '@materyalph/web-ui'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Download, FileDown, Gavel, Handshake, Info, Paperclip, RefreshCw, Scale, Send, ShieldAlert, Upload } from 'lucide-react'
+import { ArrowLeft, FileDown, Gavel, Handshake, Info, Paperclip, RefreshCw, Scale, Send, ShieldAlert, Upload } from 'lucide-react'
 import {
   ActiveFilters, ALL_DATES, Button, DateFilter, ConfirmDialog, DisputeDeadlines, DisputeStatusBadge, DisputeTimeline, FileSelectionReview, FormDialog, FilterTabs, Toolbar, InfoNote, EmptyState, PageHeader as SharedPageHeader, OriginalPaymentMethodNotice, Pagination, RefundTimeline, ResponsiveRecordList, StatusBadge, StatusMessage,
-  dateFilterLabel, disputeIssueLabel, disputeRemedyLabel, disputeRoleLabel, formatManilaDateTime, formatPesoCentavos, type RecordColumn,
+  DisputeComplaintDetails, dateFilterLabel, disputeIssueLabel, disputeRemedyLabel, disputeRoleLabel, formatManilaDateTime, formatPesoCentavos, type RecordColumn,
 } from '@materyalph/web-ui'
 import {
   addEvidence, answerClarification, answerProposal, appeal, disputeApiBasePath, downloadExport, escalate, fileDispute, getDispute, getEligibility, listDisputes, listExports, propose,
   recordReplacement, requestExport, respond, sendMessage,
-  type DisputeDetail, type DisputeEligibility, type DisputeExport, type DisputeGroup, type DisputeListMeta, type DisputeSummary,
+  type DisputeDetail, type DisputeEligibility, type DisputeGroup, type DisputeListMeta, type DisputeSummary,
 } from '../lib/disputes-api'
 import { readableOrderError, pesoInputToCentavos } from '../lib/orders-api'
 import { newIdempotencyKey } from '../lib/onboarding-api'
@@ -21,7 +21,7 @@ import { dateRangeFromParams, dateRangePatch } from '../lib/date-filters'
 const control = 'min-h-12 w-full min-w-0 rounded-control border border-border-default bg-surface-primary px-3 text-base font-normal'
 const GROUPS: { value: DisputeGroup; label: string }[] = [
   { value: 'ACTIVE', label: 'Active' }, { value: 'NEEDS_RESPONSE', label: 'Needs your response' }, { value: 'ADMIN_REVIEW', label: 'Admin review' },
-  { value: 'DECIDED', label: 'Remedy in progress' }, { value: 'CONCLUDED', label: 'Concluded' }, { value: 'ALL', label: 'All' },
+  { value: 'DECIDED', label: 'Remedy in progress' }, { value: 'CONCLUDED', label: 'Concluded' },
 ]
 const POSITIONS: Record<string, string> = {
   ACCEPT_REQUEST: 'Accept the requested remedy', OFFER_REPLACEMENT: 'Offer a replacement', OFFER_REFUND: 'Offer a refund (Owner only)', REJECT_WITH_EVIDENCE: 'Reject, with evidence',
@@ -54,6 +54,7 @@ function DisputesWorkspace({ canExport }: { canExport: boolean }) {
   const q = params.get('q') ?? ''
   const range = dateRangeFromParams(params)
   const page = Math.max(1, Number(params.get('page') ?? '1') || 1)
+  const caseExport = useCaseExport(group)
   const [query, setQuery] = useState(q)
   useEffect(() => { setQuery(q) }, [q])
   const [rows, setRows] = useState<DisputeSummary[] | null>(null)
@@ -82,7 +83,9 @@ function DisputesWorkspace({ canExport }: { canExport: boolean }) {
     { key: 'action', header: 'Action', cell: row => <Link to={`/disputes/${row.id}`} className="inline-flex min-h-11 items-center justify-center rounded-control border border-border-default bg-surface-primary px-4 text-sm font-semibold hover:bg-surface-canvas">Open case</Link> },
   ]
   return <div className="grid min-w-0 gap-6">
-    <PageHeader eyebrow="Store Operations" title="Disputes & Appeals" description="Track cases, respond to requests and follow agreed or decided remedies." />
+    <PageHeader eyebrow="Store Operations" title="Disputes & Appeals" description="Track cases, respond to requests and follow agreed or decided remedies."
+      actions={canExport ? <Button variant="secondary" disabled={caseExport.busy} title="Exports every case in the selected status group as a CSV of case headers" onClick={() => void caseExport.run()}><FileDown size={16} aria-hidden="true" />{caseExport.busy ? 'Preparing…' : 'Export'}</Button> : undefined} />
+    {caseExport.message && <StatusMessage tone={caseExport.message.tone}>{caseExport.message.text}</StatusMessage>}
     <InfoNote>Respond within 48 hours, agree a remedy within 72 hours, answer MateryalPH's clarification requests and follow decided remedies. Filing a case never creates a refund; refunds return only to the Buyer's original payment method.</InfoNote>
     <FilterTabs label="Filter cases" value={group} onChange={value => update({ group: value })} chips={GROUPS.map(item => ({ value: item.value, label: item.label, count: meta?.counts?.[item.value] }))} />
     <Toolbar searchFirst filters={<DateFilter title="Case filing dates" value={range} onChange={next => update(dateRangePatch(next))} />} search={{ label: 'Search by Case ID or Order ID', placeholder: 'Case ID or Order ID', value: query, onChange: setQuery, maxLength: 120, onSubmit: event => { event.preventDefault(); update({ q: query.trim() }) } }} />
@@ -92,11 +95,10 @@ function DisputesWorkspace({ canExport }: { canExport: boolean }) {
     ]} onClear={() => { setQuery(''); update({ q: '', ...dateRangePatch(ALL_DATES) }) }} />
     {error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} />
       : rows === null ? <div className="grid gap-3" aria-busy="true" aria-label="Loading cases">{[0, 1, 2].map(index => <div key={index} className="h-20 animate-pulse rounded-surface bg-surface-canvas motion-reduce:animate-none" />)}</div>
-        : rows.length === 0 ? <EmptyState icon={<Scale size={24} aria-hidden="true" />} message={q || range.from || range.to ? 'No cases match these filters.' : 'No cases in this view.'} action={<Button variant="secondary" onClick={() => { setQuery(''); update({ group: 'ALL', q: '', ...dateRangePatch(ALL_DATES) }) }}>View all cases</Button>} />
+        : rows.length === 0 ? <EmptyState icon={<Scale size={24} aria-hidden="true" />} message={q || range.from || range.to ? 'No cases match these filters.' : 'No cases in this view.'} action={q || range.from || range.to ? <Button variant="secondary" onClick={() => { setQuery(''); update({ q: '', ...dateRangePatch(ALL_DATES) }) }}>Clear filters</Button> : undefined} />
           : <div className="grid gap-3"><ResponsiveRecordList caption="Cases" rows={rows} columns={columns} rowKey={row => row.id} cardTitle={row => <CaseIdentity row={row} />} cardAction={row => <Link to={`/disputes/${row.id}`} className="inline-flex min-h-11 items-center font-semibold text-action-primary">Open case</Link>} />
             {meta && meta.total !== undefined && meta.perPage !== undefined && meta.total > meta.perPage && <Pagination page={page} total={meta.total} hasMore={Boolean(meta.hasMore)} busy={rows === null} onChange={next => update({ page: String(next) })} />}
           </div>}
-    {canExport && <ExportsPanel group={group} />}
   </div>
 }
 
@@ -108,24 +110,34 @@ function CaseIdentity({ row }: { row: DisputeSummary }) {
   </span>
 }
 
-function ExportsPanel({ group }: { group: DisputeGroup }) {
-  const [exports, setExports] = useState<DisputeExport[] | null>(null)
-  const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
+const EXPORT_POLL_MS = 1500
+const EXPORT_POLL_ATTEMPTS = 20
+
+/**
+ * One Export click: the server builds the CSV in the background (audited, access re-checked when built and downloaded),
+ * so the request is polled until that export is ready and then saved. The export covers every case in the selected
+ * status group across all dates and search terms; it holds case headers only.
+ */
+function useCaseExport(group: DisputeGroup) {
   const [busy, setBusy] = useState(false)
-  const load = useCallback(() => { listExports().then(setExports).catch(async cause => setMessage({ tone: 'error', text: await readableOrderError(cause) })) }, [])
-  useEffect(() => { load() }, [load])
-  return <section aria-labelledby="exports-heading" className="grid gap-3 border-t border-border-default pt-5">
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div><h2 id="exports-heading" className="text-base font-semibold">Case exports</h2><p className="text-sm text-text-secondary">Exports include every case in the selected status group, across all dates and search terms. A CSV of case headers only — no evidence, contacts or protected finance. Access is checked again when the file is built and downloaded.</p></div>
-      <Button variant="secondary" disabled={busy} onClick={() => void (async () => { setBusy(true); setMessage(null); try { await requestExport(group); setMessage({ tone: 'success', text: 'Export requested. It appears below when ready.' }); load() } catch (cause) { setMessage({ tone: 'error', text: await readableOrderError(cause) }) } finally { setBusy(false) } })()}>
-        <FileDown size={16} aria-hidden="true" />{busy ? 'Requesting…' : 'Export these cases'}</Button>
-    </div>
-    {message && <StatusMessage tone={message.tone}>{message.text}</StatusMessage>}
-    {exports && exports.length > 0 && <ul className="grid divide-y divide-border-default rounded-surface border border-border-default bg-surface-primary text-sm">{exports.map(item => <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-2">
-      <span>{formatManilaDateTime(item.requestedAt)} · {item.state === 'READY' ? `${item.rowCount ?? 0} cases` : item.state === 'REVOKED' ? 'Revoked — access changed' : item.state.toLowerCase()}</span>
-      {item.state === 'READY' && <Button variant="quiet" onClick={() => void downloadExport(item.id).catch(async cause => setMessage({ tone: 'error', text: await readableOrderError(cause) }))}><Download size={15} aria-hidden="true" />Download CSV</Button>}
-    </li>)}</ul>}
-  </section>
+  const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
+  const mounted = useRef(true)
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
+  const run = useCallback(async () => {
+    setBusy(true); setMessage(null)
+    try {
+      const requested = await requestExport(group)
+      for (let attempt = 0; attempt < EXPORT_POLL_ATTEMPTS && mounted.current; attempt++) {
+        const current = (await listExports()).find(item => item.id === requested.id)
+        if (current?.state === 'READY') { await downloadExport(current.id); if (mounted.current) setMessage({ tone: 'success', text: 'Export downloaded.' }); return }
+        if (current && current.state !== 'QUEUED') { setMessage({ tone: 'error', text: current.state === 'REVOKED' ? 'The export was revoked because your access changed.' : 'The export could not be completed. Try again.' }); return }
+        await new Promise(resolve => setTimeout(resolve, EXPORT_POLL_MS))
+      }
+      if (mounted.current) setMessage({ tone: 'error', text: 'The export is taking longer than expected. Try again in a moment.' })
+    } catch (cause) { const text = await readableOrderError(cause); if (mounted.current) setMessage({ tone: 'error', text }) }
+    finally { if (mounted.current) setBusy(false) }
+  }, [group])
+  return { busy, message, run }
 }
 
 // ── Detail ──────────────────────────────────────────────────────────────────────────────────────────
@@ -197,7 +209,7 @@ function BackLink() {
 function CaseFacts({ detail }: { detail: DisputeDetail }) {
   return <section aria-labelledby="facts-heading" className="grid gap-4 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5">
     <h2 id="facts-heading" className="text-lg font-semibold">Original complaint</h2>
-    {detail.description && <p className="whitespace-pre-line break-words">{detail.description}</p>}
+    <DisputeComplaintDetails detail={detail} />
     {detail.affectedLines.length > 0 && <div className="grid gap-2"><h3 className="text-sm font-semibold">Affected lines</h3><ul className="grid gap-1 text-sm">{detail.affectedLines.map(line => <li key={line.orderLineId} className="flex flex-wrap justify-between gap-x-3">
       <span>{line.displayName}{line.variantLabel ? ` · ${line.variantLabel}` : ''}</span><span className="tabular-nums text-text-secondary">{formatPesoCentavos(line.lineTotalCentavos)}</span></li>)}</ul></div>}
     <dl className="grid gap-x-6 gap-y-2 border-t border-border-default pt-3 text-sm sm:grid-cols-2">

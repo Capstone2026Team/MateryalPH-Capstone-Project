@@ -58,7 +58,8 @@ assert.deepEqual([...breakdown.required].sort(), ['online', 'physical', 'sales']
 const breakdownFields = {
   sales: ['delivery_centavos', 'materials_after_discount_centavos', 'materials_before_discount_centavos', 'orders', 'vendor_discounts_centavos'],
   online: ['payments', 'principal_paid_centavos', 'refunded_principal_centavos'],
-  physical: ['cash_on_delivery_centavos', 'in_store_centavos', 'records'],
+  // unrecorded_* is cash still owed on handed-over orders; never part of the recorded total.
+  physical: ['cash_on_delivery_centavos', 'in_store_centavos', 'records', 'unrecorded_centavos', 'unrecorded_orders'],
 }
 for (const [group, fields] of Object.entries(breakdownFields)) {
   assert.deepEqual([...breakdown.properties[group].required].sort(), fields, `${group} breakdown fields`)

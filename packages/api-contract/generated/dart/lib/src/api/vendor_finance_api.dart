@@ -120,12 +120,125 @@ class VendorFinanceApi {
     );
   }
 
+  /// confirmVendorHandoverCash
+  /// Owner, Store Manager or Store Staff (payments.record_physical) confirm the cash Fulfillment Staff reported at Delivered or Picked up. Records one COLLECTION for the reported amount capped at the outstanding balance, with the handover photo (or the attached receipt) as evidence and the handover time as the received time. Once per handover; 409 HANDOVER_CASH_NOT_PENDING or PHYSICAL_PAYMENT_NOT_OPEN when nothing waits.
+  ///
+  /// Parameters:
+  /// * [orderId]
+  /// * [idempotencyKey]
+  /// * [file] - Optional receipt (JPG, PNG, WebP or PDF up to 10 MB). Required only when the handover has no photo; otherwise the handover photo is the evidence.
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [PhysicalPaymentSummaryEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<PhysicalPaymentSummaryEnvelope>> confirmVendorHandoverCash({
+    required String orderId,
+    required String idempotencyKey,
+    MultipartFile? file,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendor/orders/{orderId}/physical-payments/handover-confirmation'.replaceAll('{' r'orderId' '}', encodeQueryParameter(_serializers, orderId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        r'Idempotency-Key': idempotencyKey,
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'multipart/form-data',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      _bodyData = FormData.fromMap(<String, dynamic>{
+        if (file != null) r'file': file,
+      });
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    PhysicalPaymentSummaryEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(PhysicalPaymentSummaryEnvelope),
+      ) as PhysicalPaymentSummaryEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<PhysicalPaymentSummaryEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
   /// exportVendorTransactions
   /// Owner-only audited CSV export: Internal Operational Report — Not a Tax Invoice.
   ///
   /// Parameters:
   /// * [tab]
-  /// * [status] - Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled.
+  /// * [status] - Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. PHYSICAL_* values select Cash on Delivery / In-Store obligations: COLLECTED (nothing remains), PARTIAL (part recorded), TO_RECORD (delivered or picked up, no cash recorded yet), AWAITING (before handover), RELEASED (cancelled unpaid).
   /// * [from] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound.
   /// * [to] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -670,7 +783,7 @@ class VendorFinanceApi {
   /// Parameters:
   /// * [tab]
   /// * [page]
-  /// * [status] - Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled.
+  /// * [status] - Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. PHYSICAL_* values select Cash on Delivery / In-Store obligations: COLLECTED (nothing remains), PARTIAL (part recorded), TO_RECORD (delivered or picked up, no cash recorded yet), AWAITING (before handover), RELEASED (cancelled unpaid).
   /// * [from] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end.
   /// * [to] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation

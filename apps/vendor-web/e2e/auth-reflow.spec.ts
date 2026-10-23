@@ -27,10 +27,6 @@ for (const surface of surfaces) {
       const focused = page.locator(':focus')
       await expect(focused).toBeVisible()
       expect(await focused.evaluate((element) => getComputedStyle(element).outlineStyle)).not.toBe('none')
-      if (surface.portal === 'Admin') {
-        await expect(page.locator('script[src*="recaptcha"]')).toHaveCount(0)
-        await expect(page.getByText('Use an email security check instead')).toHaveCount(0)
-      }
     })
   }
 }

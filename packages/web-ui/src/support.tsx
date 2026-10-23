@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { ChevronRight, History, MessageSquareText, RefreshCw, Search, Send, ShieldCheck, UserRound } from 'lucide-react'
 import { SupportApi, ResponseError, parseDate, type SupportPortal, type SupportTicket, type SupportEntry, type SupportReceipt, type SupportCategory, type SupportUserType, type SupportStatus, type SupportReferenceType, type SupportUpdate, type SupportHandler } from '@materyalph/api-client-ts'
 import { Button } from './button'
 import { Field, FormErrors } from './field'
@@ -14,6 +14,10 @@ import { createWebApiConfiguration, webRequestErrorMessage } from './web-api-ses
 export const SUPPORT_CATEGORIES: readonly SupportCategory[] = ['GENERAL_INQUIRY', 'TECHNICAL_ISSUE', 'ACCOUNT_CONCERN', 'VERIFICATION_ISSUE', 'PAYMENT_CONCERN', 'ORDER_CONCERN', 'COMPLAINT', 'FEEDBACK_SUGGESTION', 'OTHER']
 export const SUPPORT_STATUSES: readonly SupportStatus[] = ['OPEN', 'IN_PROGRESS', 'WAITING_FOR_USER', 'RESOLVED', 'CLOSED']
 export const SUPPORT_TYPES: readonly SupportUserType[] = ['BUYER', 'VENDOR', 'GUEST']
+function SupportStatusBadge({ status }: { status: SupportStatus }) {
+  const tone = status === 'RESOLVED' ? 'success' : status === 'IN_PROGRESS' ? 'info' : status === 'WAITING_FOR_USER' ? 'warning' : 'neutral'
+  return <StatusBadge label={supportLabel(status)} tone={tone} />
+}
 export const SUPPORT_PRIVACY = 'MateryalPH uses your contact details, messages and attachments to investigate and respond to your concern. Only you and authorized administrators can access the ticket. Records are retained under platform retention and legal obligations. Share only relevant information. Never send passwords, one-time codes or full payment credentials. You may request access or correction through support.'
 export function supportLabel(value: string): string {
   if (value === 'FEEDBACK_SUGGESTION') return 'Feedback / Suggestion'
@@ -141,29 +145,45 @@ export function SupportRequestList({ client, onOpen, admin = false, renderHeader
     setTickets([])
     setCursor(null)
   }
-  const refreshAction = <Button variant="secondary" disabled={busy} onClick={() => void load()}>{renderHeader && <RefreshCw size={16} aria-hidden="true" />}Refresh requests</Button>
-  return <>{renderHeader?.(refreshAction)}<div className="grid gap-5">
-    {admin && <FilterTabs label="Support request status" value={filters.status ?? 'ALL'} onChange={changeStatus} chips={[{ value: 'ALL', label: 'All requests' }, ...SUPPORT_STATUSES.map(value => ({ value, label: supportLabel(value) }))]} />}
+  const refreshAction = <Button variant="secondary" disabled={busy} onClick={() => void load()}><RefreshCw size={16} aria-hidden="true" />Refresh requests</Button>
+  return <>{renderHeader?.(refreshAction)}<div className="grid min-w-0 gap-5">
+    {admin && <FilterTabs appearance="tabs" label="Support request status" value={filters.status ?? 'ALL'} onChange={changeStatus} chips={[{ value: 'ALL', label: 'All requests' }, ...SUPPORT_STATUSES.map(value => ({ value, label: supportLabel(value) }))]} />}
     {admin && <FilterPanel label="Support request filters"><div className="col-span-full grid gap-4">
-      <form id={filtersId} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" onSubmit={event => { event.preventDefault(); setFilters({ ...draft }); setTickets([]); setCursor(null) }}>
-        <Field label="Search requests" name="support-search" placeholder="Ticket, name, email or subject" value={draft.q ?? ''} maxLength={160} onChange={event => setDraft({ ...draft, q: event.target.value })} />
+      <form id={filtersId} className="grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_auto]" onSubmit={event => { event.preventDefault(); setFilters({ ...draft }); setTickets([]); setCursor(null) }}>
+        <Field label="Search requests" name="support-search" startAdornment={<Search size={16} />} placeholder="Ticket, name, email or subject" value={draft.q ?? ''} maxLength={160} onChange={event => setDraft({ ...draft, q: event.target.value })} />
         <Select label="Category" name="filter-category" value={draft.category ?? ''} onChange={value => setDraft({ ...draft, category: value ? value as SupportCategory : undefined })}><option value="">All categories</option>{SUPPORT_CATEGORIES.map(value => <option value={value} key={value}>{supportLabel(value)}</option>)}</Select>
         <Select label="User type" name="filter-type" value={draft.userType ?? ''} onChange={value => setDraft({ ...draft, userType: value ? value as SupportUserType : undefined })}><option value="">All user types</option>{SUPPORT_TYPES.map(value => <option value={value} key={value}>{supportLabel(value)}</option>)}</Select>
+        <Button type="submit" disabled={busy}>Apply filters</Button>
       </form>
-      <div className="flex flex-wrap items-center gap-3"><DateFilter title="Request received dates" value={range} onChange={changeDates} /><Button type="submit" form={filtersId} disabled={busy}>Apply filters</Button></div>
+      <div className="flex flex-wrap items-center gap-3 border-t border-border-default pt-4"><span className="text-sm text-text-secondary">Received</span><DateFilter title="Request received dates" value={range} onChange={changeDates} /></div>
     </div></FilterPanel>}
     {!renderHeader && <div>{refreshAction}</div>}
     {error && <StatusMessage tone="error">{error}<Button variant="secondary" onClick={() => void load()}>Retry</Button></StatusMessage>}
     {busy && <StatusMessage>Loading support requests…</StatusMessage>}
     {!busy && !error && tickets.length === 0 && <EmptyState icon={false} message="No support requests found." />}
-    <ul className="divide-y divide-border-default">{tickets.map(ticket => <li key={ticket.id}><button type="button" onClick={() => onOpen(ticket.id)} className="grid min-h-11 w-full gap-2 py-5 text-left hover:bg-surface-canvas focus-visible:ring-2 focus-visible:ring-focus-ring"><div className="flex flex-wrap items-center justify-between gap-2"><span className="font-semibold">{ticket.subject}</span><StatusBadge label={supportLabel(ticket.status)} tone={ticket.status === 'RESOLVED' ? 'success' : 'neutral'} /></div><p className="text-sm text-text-secondary">{ticket.ticketNumber} · {supportLabel(ticket.category)} · {formatSupportDate(ticket.createdAt)}</p>{admin && <p className="break-all text-sm">{ticket.fullName} · {ticket.email} · {supportLabel(ticket.userType)}</p>}</button></li>)}</ul>
+    {tickets.length > 0 && <section aria-label="Support requests" className={admin ? 'min-w-0 overflow-hidden rounded-surface border border-border-default bg-surface-primary' : 'min-w-0'}>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-default px-5 py-4">
+        <h2 className="flex items-center gap-2 text-base font-semibold"><MessageSquareText size={18} aria-hidden="true" />Requests <span className="font-normal text-text-secondary">({tickets.length}{cursor ? '+' : ''})</span></h2>
+        <p className="text-xs text-text-secondary">Newest first</p>
+      </div>
+      {admin && <div aria-hidden="true" className="hidden grid-cols-[minmax(0,1.5fr)_minmax(0,1.1fr)_9rem_11rem_1rem] gap-4 border-b border-border-default bg-surface-canvas px-5 py-3 text-xs font-semibold text-text-secondary xl:grid"><span>Request</span><span>Requested by</span><span>Status</span><span>Received</span><span /></div>}
+      <ul className="divide-y divide-border-default">{tickets.map(ticket => <li key={ticket.id}>
+        <button type="button" onClick={() => onOpen(ticket.id)} className={`grid min-h-11 w-full min-w-0 items-center gap-4 px-5 py-5 text-left transition-colors hover:bg-surface-canvas focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus-ring motion-reduce:transition-none sm:grid-cols-[minmax(0,1fr)_auto] ${admin ? 'xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1.1fr)_9rem_11rem_1rem]' : ''}`}>
+          <span className="grid min-w-0 gap-1.5"><span className="break-words font-semibold text-text-strong">{ticket.subject}</span><span className="break-all font-mono text-xs text-text-secondary">{ticket.ticketNumber}</span><span className="text-sm text-text-secondary">{supportLabel(ticket.category)}</span></span>
+          {admin && <span className="grid min-w-0 gap-1 text-sm"><span className="break-words font-medium">{ticket.fullName}</span><span className="break-all text-text-secondary">{ticket.email}</span><span className="text-xs text-text-secondary">{supportLabel(ticket.userType)}</span></span>}
+          <span className="justify-self-start"><SupportStatusBadge status={ticket.status} /></span>
+          <span className="grid gap-1 text-sm text-text-secondary"><span className="text-xs xl:sr-only">Received</span><time dateTime={ticket.createdAt.toISOString()}>{formatSupportDate(ticket.createdAt)}</time></span>
+          {admin && <ChevronRight size={18} aria-hidden="true" className="hidden text-text-secondary xl:block" />}
+        </button>
+      </li>)}</ul>
+    </section>}
     {cursor && <Button variant="secondary" disabled={busy} onClick={() => void load(cursor)}>Load more requests</Button>}
   </div></>
 }
 
 function formatSupportDate(date: Date) { return new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' }).format(date) }
 
-export function SupportConversation({ client, ticketId, admin = false }: { client: SupportClient; ticketId: string; admin?: boolean }) {
+export function SupportConversation({ client, ticketId, admin = false, navigation }: { client: SupportClient; ticketId: string; admin?: boolean; navigation?: ReactNode }) {
   const [ticket, setTicket] = useState<SupportTicket | null>(null)
   const [entries, setEntries] = useState<SupportEntry[]>([])
   const [cursor, setCursor] = useState<string | null>(null)
@@ -199,19 +219,65 @@ export function SupportConversation({ client, ticketId, admin = false }: { clien
     catch (error) { if (accessLost(error)) { setTicket(null); setEntries([]) }; setError(localError(error) ?? (await supportFailure(error)).message) }
     finally { sendingRef.current = false; setSending(false) }
   }
-  return <div className="grid gap-6">
-    <div><Button variant="secondary" disabled={busy || sending} onClick={() => void load()}>Refresh conversation</Button></div>
+  const Heading = admin ? 'h1' : 'h2'
+  return <div className="grid min-w-0 gap-5">
+    <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">{navigation}<Button className="ml-auto" variant="secondary" disabled={busy || sending} onClick={() => void load()}><RefreshCw size={16} aria-hidden="true" />Refresh conversation</Button></div>
     {busy && <StatusMessage>Loading support conversation…</StatusMessage>}
     {error && <StatusMessage tone="error">{error}</StatusMessage>}{success && <StatusMessage tone="success">{success}</StatusMessage>}
-    {ticket && <><header className="grid gap-2 border-b border-border-default pb-5"><p className="text-sm font-semibold text-action-primary">{ticket.ticketNumber}</p><h2 className="text-2xl font-semibold">{ticket.subject}</h2><div><StatusBadge label={supportLabel(ticket.status)} tone={ticket.status === 'RESOLVED' ? 'success' : 'neutral'} /></div><p className="text-sm text-text-secondary">{supportLabel(ticket.category)} · Submitted {formatSupportDate(ticket.createdAt)}</p>{admin && <p className="break-words text-sm">{ticket.fullName} · {ticket.email} · {supportLabel(ticket.userType)}</p>}{ticket.reference && <p className="break-all text-sm">{supportLabel(ticket.referenceType ?? 'Reference')}: {ticket.reference}</p>}<p className="text-sm">Assigned to {ticket.assignedAdminName ?? 'Unassigned'}</p></header>
-      {admin && <SupportManagement client={client} ticket={ticket} onSaved={load} />}
-      <section aria-label="Support conversation" className="grid gap-4">{cursor && <Button disabled={busy} variant="secondary" onClick={() => void earlier()}>Load earlier history</Button>}{entries.map(entry => <article key={entry.id} className="min-w-0 border-b border-border-default pb-5"><div className="flex flex-wrap justify-between gap-2 text-sm"><span className="font-semibold">{entry.actorName} · {supportLabel(entry.actorRole)}</span><time dateTime={entry.createdAt.toISOString()} className="text-text-secondary">{formatSupportDate(entry.createdAt)}</time></div>{entry.kind !== 'MESSAGE' && <p className="mt-2 text-sm font-semibold">{entry.kind === 'STATUS_CHANGED' ? `${supportLabel(entry.details.fromStatus ?? '')} → ${supportLabel(entry.details.toStatus ?? '')}` : `${entry.details.previousHandler ?? 'Unassigned'} → ${entry.details.newHandler ?? 'Unassigned'}`}</p>}<p className="mt-3 whitespace-pre-wrap break-words leading-7">{entry.body}</p><div className="mt-2 flex flex-wrap gap-2">{entry.attachments.map(file => <PrivateEvidenceButton key={file.id} apiBasePath={client.basePath} loadUrl={async () => ({ url: client.attachmentUrl(ticketId, file.id) })}>{file.originalName} ({Math.ceil(file.byteSize / 1024)} KB)</PrivateEvidenceButton>)}</div></article>)}</section>
-      {ticket.status === 'CLOSED' ? <StatusMessage>This request is closed. An administrator must reopen it before another reply. You can submit a new request if you need further assistance.</StatusMessage> : <form onSubmit={reply} onChange={() => { key.current = crypto.randomUUID() }} aria-busy={sending} className="grid gap-4"><label className="grid gap-2 text-sm font-semibold">{admin ? 'Response to the user' : 'Your follow-up message'}<textarea className={`${control} min-h-32`} name="message" required minLength={3} maxLength={10000} disabled={sending} /></label><fieldset disabled={sending}><AttachmentField /></fieldset><Button className="w-fit" type="submit" disabled={sending || busy}>{sending ? 'Sending reply…' : 'Send reply'}</Button></form>}
+    {ticket && <>
+      <header className={`grid min-w-0 gap-5 ${admin ? 'rounded-surface border border-border-default bg-surface-primary p-5 sm:p-6' : 'border-b border-border-default pb-5'}`}>
+        <div className="flex min-w-0 flex-wrap items-start justify-between gap-4">
+          <div className="grid min-w-0 flex-1 gap-2"><p className="break-all font-mono text-xs font-semibold text-action-primary">{ticket.ticketNumber}</p><Heading className="break-words text-h1 tracking-tight text-text-strong">{ticket.subject}</Heading></div>
+          <SupportStatusBadge status={ticket.status} />
+        </div>
+        <dl className="flex min-w-0 flex-wrap gap-x-8 gap-y-4 border-t border-border-default pt-4 text-sm">
+          <div className="grid gap-1"><dt className="text-xs text-text-secondary">Category</dt><dd className="font-medium">{supportLabel(ticket.category)}</dd></div>
+          <div className="grid gap-1"><dt className="text-xs text-text-secondary">Submitted</dt><dd><time dateTime={ticket.createdAt.toISOString()}>{formatSupportDate(ticket.createdAt)}</time></dd></div>
+          <div className="grid min-w-0 gap-1"><dt className="text-xs text-text-secondary">Assigned to</dt><dd className="break-words">{ticket.assignedAdminName ?? 'Unassigned'}</dd></div>
+          {ticket.reference && <div className="grid min-w-0 gap-1"><dt className="text-xs text-text-secondary">{supportLabel(ticket.referenceType ?? 'Reference')}</dt><dd className="break-all">{ticket.reference}</dd></div>}
+        </dl>
+      </header>
+      <div className={`grid min-w-0 items-start gap-5 ${admin ? 'xl:grid-cols-[minmax(0,1fr)_22rem]' : ''}`}>
+        <section aria-label="Support conversation" className={`min-w-0 ${admin ? 'overflow-hidden rounded-surface border border-border-default bg-surface-primary' : ''}`}>
+          <div className="flex items-start gap-3 border-b border-border-default p-5">
+            <MessageSquareText size={20} aria-hidden="true" className="mt-1 shrink-0 text-text-secondary" />
+            <div><h2 className="text-lg font-semibold">Conversation</h2><p className="mt-1 text-sm text-text-secondary">Messages and request history, in chronological order.</p></div>
+          </div>
+          {cursor && <div className="border-b border-border-default p-4 text-center"><Button disabled={busy} variant="secondary" onClick={() => void earlier()}>Load earlier history</Button></div>}
+          {entries.length === 0 && !busy && <p className="p-5 text-sm text-text-secondary">No conversation history to display.</p>}
+          {entries.map(entry => <article key={entry.id} className={`min-w-0 border-b border-border-default p-5 ${entry.kind !== 'MESSAGE' ? 'bg-surface-canvas' : ''}`}>
+            <div className="flex items-start gap-3">
+              <span className="grid size-9 shrink-0 place-items-center rounded-full border border-border-default bg-surface-primary text-text-secondary">{entry.kind === 'MESSAGE' ? <UserRound size={16} aria-hidden="true" /> : <History size={16} aria-hidden="true" />}</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 text-sm"><div className="min-w-0"><span className="break-words font-semibold">{entry.actorName}</span><span className="ml-2 text-xs text-text-secondary">{supportLabel(entry.actorRole)}</span></div><time dateTime={entry.createdAt.toISOString()} className="text-xs leading-5 text-text-secondary">{formatSupportDate(entry.createdAt)}</time></div>
+                {entry.kind !== 'MESSAGE' && <p className="mt-2 break-words text-sm font-semibold">{entry.kind === 'STATUS_CHANGED' ? `${supportLabel(entry.details.fromStatus ?? '')} → ${supportLabel(entry.details.toStatus ?? '')}` : `${entry.details.previousHandler ?? 'Unassigned'} → ${entry.details.newHandler ?? 'Unassigned'}`}</p>}
+                <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7">{entry.body}</p>
+                {entry.attachments.length > 0 && <div className="mt-3 flex min-w-0 flex-wrap gap-2 [&_button]:max-w-full [&_button]:break-all">{entry.attachments.map(file => <PrivateEvidenceButton key={file.id} apiBasePath={client.basePath} loadUrl={async () => ({ url: client.attachmentUrl(ticketId, file.id) })}>{file.originalName} ({Math.ceil(file.byteSize / 1024)} KB)</PrivateEvidenceButton>)}</div>}
+              </div>
+            </div>
+          </article>)}
+          <div className="p-5">
+            {ticket.status === 'CLOSED' ? <StatusMessage>This request is closed. An administrator must reopen it before another reply. You can submit a new request if you need further assistance.</StatusMessage> : <form onSubmit={reply} onChange={() => { key.current = crypto.randomUUID() }} aria-busy={sending} className="grid gap-4">
+              <label className="grid gap-2 text-sm font-semibold">{admin ? 'Response to the user' : 'Your follow-up message'}<textarea className={`${control} min-h-36 resize-y`} name="message" placeholder={admin ? 'Write a response to help resolve this request…' : 'Add more details about your concern…'} required minLength={3} maxLength={10000} disabled={sending} /></label>
+              <fieldset disabled={sending} className="min-w-0"><AttachmentField /></fieldset>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-default pt-4"><p className="flex items-center gap-2 text-xs text-text-secondary"><ShieldCheck size={15} aria-hidden="true" />Visible only to the requester and authorized administrators.</p><Button className="w-full sm:w-auto" type="submit" disabled={sending || busy}><Send size={16} aria-hidden="true" />{sending ? 'Sending reply…' : 'Send reply'}</Button></div>
+            </form>}
+          </div>
+        </section>
+        {admin && <aside aria-label="Request details and management" className="grid min-w-0 rounded-surface border border-border-default bg-surface-primary">
+          <section aria-label="Requester details" className="grid min-w-0 gap-4 border-b border-border-default p-5">
+            <h2 className="flex items-center gap-2 text-base font-semibold"><UserRound size={18} aria-hidden="true" />Requester</h2>
+            <dl className="grid min-w-0 gap-3 text-sm"><div><dt className="text-xs text-text-secondary">Name</dt><dd className="mt-1 break-words font-medium">{ticket.fullName}</dd></div><div><dt className="text-xs text-text-secondary">Email address</dt><dd className="mt-1 break-all">{ticket.email}</dd></div><div><dt className="text-xs text-text-secondary">User type</dt><dd className="mt-1">{supportLabel(ticket.userType)}</dd></div></dl>
+          </section>
+          <SupportManagement client={client} ticket={ticket} onSaved={load} />
+        </aside>}
+      </div>
     </>}
   </div>
 }
 
 function SupportManagement({ client, ticket, onSaved }: { client: SupportClient; ticket: SupportTicket; onSaved: () => Promise<void> }) {
+  const reasonId = useId()
   const [handlers, setHandlers] = useState<SupportHandler[]>([])
   const [cursor, setCursor] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -231,10 +297,14 @@ function SupportManagement({ client, ticket, onSaved }: { client: SupportClient;
     try { const page = await client.handlers(cursor); setHandlers(old => [...old, ...page.data]); setCursor(page.meta.nextCursor) }
     catch (error) { setError((await supportFailure(error)).message) }
   }
-  return <form key={ticket.lockVersion} onSubmit={submit} onChange={() => { key.current = crypto.randomUUID() }} className="grid gap-4 border-b border-border-default pb-5" aria-busy={busy}>
-    <h3 className="text-lg font-semibold">Manage request</h3>{error && <StatusMessage tone="error">{error}</StatusMessage>}
-    <fieldset disabled={busy} className="grid gap-4 sm:grid-cols-2"><label className="grid gap-2 text-sm font-semibold">Status<select name="status" defaultValue={ticket.status} className={control}>{SUPPORT_STATUSES.map(value => <option key={value} value={value}>{supportLabel(value)}</option>)}</select></label><label className="grid gap-2 text-sm font-semibold">Assigned administrator<select name="assigned_admin_id" defaultValue={ticket.assignedAdminId ?? ''} className={control}><option value="">Unassigned</option>{ticket.assignedAdminId && !handlers.some(handler => handler.id === ticket.assignedAdminId) && <option value={ticket.assignedAdminId}>{ticket.assignedAdminName}</option>}{handlers.map(handler => <option key={handler.id} value={handler.id}>{handler.name}</option>)}</select></label><Field label="Reason for update" name="reason" required minLength={3} maxLength={2000} hint="Recorded in the ticket history and visible to its user." /></fieldset>
-    {cursor && <Button type="button" variant="secondary" onClick={() => void moreHandlers()}>Load more administrators</Button>}<Button type="submit" className="w-fit" disabled={busy}>{busy ? 'Saving update…' : 'Save status / assignment'}</Button>
+  return <form key={ticket.lockVersion} onSubmit={submit} onChange={() => { key.current = crypto.randomUUID() }} className="grid min-w-0 gap-4 p-5" aria-label="Manage request" aria-busy={busy}>
+    <div><h2 className="text-base font-semibold">Manage request</h2><p className="mt-1 text-sm leading-6 text-text-secondary">Update the status or assign an administrator.</p></div>{error && <StatusMessage tone="error">{error}</StatusMessage>}
+    <fieldset disabled={busy} className="grid min-w-0 gap-4">
+      <label className="grid min-w-0 gap-2 text-sm font-semibold">Status<select name="status" defaultValue={ticket.status} className={control}>{SUPPORT_STATUSES.map(value => <option key={value} value={value}>{supportLabel(value)}</option>)}</select></label>
+      <label className="grid min-w-0 gap-2 text-sm font-semibold">Assigned administrator<select name="assigned_admin_id" defaultValue={ticket.assignedAdminId ?? ''} className={control}><option value="">Unassigned</option>{ticket.assignedAdminId && !handlers.some(handler => handler.id === ticket.assignedAdminId) && <option value={ticket.assignedAdminId}>{ticket.assignedAdminName}</option>}{handlers.map(handler => <option key={handler.id} value={handler.id}>{handler.name}</option>)}</select></label>
+      <div className="grid gap-2"><label htmlFor={reasonId} className="text-sm font-semibold">Reason for update <span className="text-status-error" aria-hidden="true">*</span></label><textarea id={reasonId} name="reason" required minLength={3} maxLength={2000} rows={3} className={`${control} resize-y`} aria-describedby={`${reasonId}-hint`} /><p id={`${reasonId}-hint`} className="text-xs leading-5 text-text-secondary">Recorded in the ticket history and visible to its user.</p></div>
+    </fieldset>
+    {cursor && <Button type="button" variant="secondary" onClick={() => void moreHandlers()}>Load more administrators</Button>}<Button type="submit" className="w-full" disabled={busy}>{busy ? 'Saving update…' : 'Save status / assignment'}</Button>
   </form>
 }
 

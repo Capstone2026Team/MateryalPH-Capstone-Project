@@ -13,6 +13,14 @@
  */
 
 import { mapValues, parseDate, parseDateTime, serializeDate, serializeDateTime } from '../runtime';
+import type { ListingImage } from './ListingImage';
+import {
+    ListingImageFromJSON,
+    ListingImageFromJSONTyped,
+    ListingImageToJSON,
+    ListingImageToJSONTyped,
+} from './ListingImage';
+
 /**
  * Buyer-only current public offer; opens the existing Product Details. Never exact stock.
  * @export
@@ -71,6 +79,10 @@ export interface MaterialOffer {
      *
      */
     priceAsOf: Date;
+    /**
+     * First public photo of this listing, or null.
+     */
+    image?: ListingImage | null;
 }
 
 
@@ -127,6 +139,7 @@ export function MaterialOfferFromJSONTyped(json: any, ignoreDiscriminator: boole
         'availability': json['availability'],
         'distanceMeters': json['distance_meters'],
         'priceAsOf': (json['price_as_of'] == null ? json['price_as_of'] : parseDateTime(json['price_as_of'])),
+        'image': json['image'] === undefined ? undefined : json['image'] === null ? null : ListingImageFromJSON(json['image']),
     };
 }
 
@@ -154,6 +167,7 @@ export function MaterialOfferToJSONTyped(value?: MaterialOffer | null, ignoreDis
         'availability': value['availability'],
         'distance_meters': value['distanceMeters'],
         'price_as_of': value['priceAsOf'] == null ? value['priceAsOf'] : serializeDateTime(value['priceAsOf']),
+        'image': ListingImageToJSON(value['image']),
     };
 }
 

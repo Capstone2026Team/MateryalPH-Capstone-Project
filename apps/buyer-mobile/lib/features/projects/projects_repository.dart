@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import '../../core/api_guard.dart';
+import '../../core/buyer_transport.dart';
 import '../../design_system/components/peso_amount_field.dart';
 import '../map_discovery/discovery_repository.dart';
 
@@ -16,14 +17,15 @@ final class ProjectsRepository {
   ProjectsRepository({
     required api.MateryalphApiClient client,
     required Future<void> Function() onSessionExpired,
-  }) : _client = client,
-       _guard = ApiGuard(onSessionExpired);
+  }) : this.withGuard(client: client, guard: ApiGuard(onSessionExpired));
 
   ProjectsRepository.withGuard({
     required api.MateryalphApiClient client,
     required ApiGuard guard,
   }) : _client = client,
-       _guard = guard;
+       _guard = guard {
+    configureBuyerTransport(_client.dio);
+  }
 
   final api.MateryalphApiClient _client;
   final ApiGuard _guard;

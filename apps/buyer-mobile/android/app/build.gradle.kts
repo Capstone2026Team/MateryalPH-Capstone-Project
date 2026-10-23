@@ -24,6 +24,17 @@ val mapsAndroidApiKey: String = secretProperties.getProperty("MAPS_ANDROID_API_K
     ?: System.getenv("MAPS_ANDROID_API_KEY")
     ?: ""
 
+val releaseProperties = Properties().apply {
+    val propertiesFile = rootProject.file("key.properties")
+    if (propertiesFile.exists()) propertiesFile.inputStream().use { load(it) }
+}
+val releaseRequested = gradle.startParameter.taskNames.any { it.contains("release", ignoreCase = true) }
+fun signingValue(name: String): String = releaseProperties.getProperty(name)
+    ?: throw GradleException("Configure protected Android signing: $name")
+fun signingPassword(name: String): String = System.getenv(signingValue(name))
+    ?.takeIf { it.isNotBlank() }
+    ?: throw GradleException("Supply the protected Android signing environment variable for $name")
+
 android {
     namespace = "ph.materyal.buyer"
     compileSdk = flutter.compileSdkVersion
@@ -50,9 +61,19 @@ android {
         manifestPlaceholders["mapsAndroidApiKey"] = mapsAndroidApiKey
     }
 
+    signingConfigs {
+        if (releaseRequested) {
+            create("protectedRelease") {
+                storeFile = file(signingValue("storeFile"))
+                keyAlias = signingValue("keyAlias")
+                storePassword = signingPassword("storePasswordEnv")
+                keyPassword = signingPassword("keyPasswordEnv")
+            }
+        }
+    }
     buildTypes {
         release {
-            // Release signing is injected by the protected CI/release configuration.
+            if (releaseRequested) signingConfig = signingConfigs.getByName("protectedRelease")
         }
     }
 }

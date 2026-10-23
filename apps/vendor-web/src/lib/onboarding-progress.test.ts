@@ -23,3 +23,13 @@ test('the generated client preserves saved completion separately from review sta
   expect(VendorOnboardingStepToJSON(step)).toMatchObject(wire)
   expect(VendorOnboardingStepFromJSON({ ...wire, progress_status: undefined }).progressStatus).toBeUndefined()
 })
+
+test('checklist summaries omit empty review placeholders and preserve actual correction reasons', () => {
+  const items = verificationChecklist([
+    { key: 'business_type', label: 'Business type', level: 'REQUIRED', status: 'APPROVED', reason: 'None' },
+    { key: 'business_information', label: 'Business information', level: 'REQUIRED', status: 'APPROVED', reason: ' none ' },
+    { key: 'legal_identity', label: 'Legal identity', level: 'REQUIRED', status: 'APPROVED', reason: 'null' },
+    { key: 'tax_profile', label: 'Tax profile', level: 'REQUIRED', status: 'CHANGES_REQUIRED', reason: 'Upload clearer BIR evidence.' },
+  ])
+  expect(items[0]?.reason).toBe('Tax profile: Upload clearer BIR evidence.')
+})

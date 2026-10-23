@@ -144,6 +144,42 @@ final class PhaseThirteenDisputesTest extends TestCase
         self::assertNotNull($store);
     }
 
+    public function test_detail_decisions_are_lists_while_summaries_keep_counts_for_every_audience(): void
+    {
+        [$store, $owner, $buyer, $orderId] = $this->paidPickup('Decision History Store');
+        $this->toPickedUp($owner, $orderId);
+        $fulfillment = $this->teamMember($store, 'FULFILLMENT');
+        DB::table('order_fulfillment_assignments')->insert(['id' => (string) Str::uuid7(), 'order_id' => $orderId, 'user_id' => $fulfillment->id, 'assigned_by_user_id' => $owner->id,
+            'created_at' => now(), 'updated_at' => now()]);
+        $caseId = (string) $this->fileCase($buyer, $orderId)->assertCreated()->assertJsonPath('data.decisions', [])->json('data.id');
+        $admin = $this->admin('ADMIN_ORDER_DISPUTE');
+
+        foreach ([0, 1] as $count) {
+            $this->signInBuyer($buyer);
+            $buyerDetail = $this->getJson('/api/v1/buyers/disputes/'.$caseId)->assertOk()->assertJsonCount($count, 'data.decisions')->json('data.decisions');
+            $this->getJson('/api/v1/buyers/disputes')->assertOk()->assertJsonPath('data.0.decisions', $count);
+            $this->signInStoreMember($owner);
+            $this->getJson('/api/v1/vendor/disputes/'.$caseId)->assertOk()->assertJsonPath('data.decisions', $buyerDetail);
+            $this->getJson('/api/v1/vendor/disputes')->assertOk()->assertJsonPath('data.0.decisions', $count);
+            $this->signInStoreMember($fulfillment);
+            $this->getJson('/api/v1/vendor/disputes/'.$caseId)->assertOk()->assertJsonPath('data.limited_view', true)->assertJsonPath('data.decisions', [])->assertJsonPath('data.description', null);
+            $this->signInAdmin($admin);
+            $this->getJson('/api/v1/admin/disputes/'.$caseId)->assertOk()->assertJsonCount($count, 'data.decisions')->assertJsonPath('data.decisions.0.id', $buyerDetail[0]['id'] ?? null);
+            $this->getJson('/api/v1/admin/disputes?status=ALL')->assertOk()->assertJsonPath('data.0.decisions', $count);
+
+            if ($count === 0) {
+                $this->travel(49)->hours();
+                app(DisputeAdminService::class)->sweep();
+                $this->signInAdmin($admin);
+                $this->postJson('/api/v1/admin/disputes/'.$caseId.'/decision', [
+                    'outcome' => 'DISMISSED', 'reason' => 'The submitted evidence does not establish a defect in the supplied materials.',
+                    'enforceable' => false, 'conflict_check_confirmed' => true,
+                    'lock_version' => (int) DB::table('dispute_cases')->where('id', $caseId)->value('lock_version'),
+                ], $this->key())->assertOk()->assertJsonCount(1, 'data.decisions')->assertJsonPath('data.decisions.0.outcome', 'DISMISSED');
+            }
+        }
+    }
+
     // ── Mutual resolution and the Dispute-Conclusion Refund ─────────────────────────────────────────
 
     public function test_agreed_partial_refund_creates_one_linked_dispute_refund_and_the_case_resolves_only_after_the_provider(): void
@@ -468,6 +504,10 @@ final class PhaseThirteenDisputesTest extends TestCase
 
     public function test_invoice_records_are_available_before_completion_with_narrow_upload_scope_reconciliation_requests_and_audited_downloads(): void
     {
+        // Manila is on the next calendar date while the application stores time in UTC.
+        $now = CarbonImmutable::now('UTC')->setTime(18, 0);
+        CarbonImmutable::setTestNow($now);
+        Carbon::setTestNow($now);
         [$store, $owner, $buyer, $orderId] = $this->paidPickup('Invoice Store');
         DB::table('vendor_organizations')->where('id', $store->id)->update(['legal_business_name' => 'Invoice Store Trading Corp.']);
         $staff = $this->teamMember($store, 'STORE_STAFF');
@@ -501,6 +541,8 @@ final class PhaseThirteenDisputesTest extends TestCase
         $this->signInStoreMember($inventory);
         $this->getJson('/api/v1/vendor/orders/'.$orderId.'/invoices')->assertForbidden();
         $this->signInStoreMember($staff);
+        $this->post('/api/v1/vendor/orders/'.$orderId.'/invoices', ['issued_on' => CarbonImmutable::now('Asia/Manila')->addDay()->toDateString(), 'file' => $this->validPdf()] + $upload,
+            $this->key() + ['Accept' => 'application/json'])->assertUnprocessable()->assertJsonPath('errors.0.details.issued_on.0', fn (string $message): bool => $message !== '');
         $this->post('/api/v1/vendor/orders/'.$orderId.'/invoices', ['issuer_name' => 'Somebody Else Inc', 'file' => $this->validPdf()] + $upload, $this->key() + ['Accept' => 'application/json'])->assertStatus(422)->assertJsonPath('errors.0.code', 'INVOICE_ISSUER_MISMATCH');
         $this->post('/api/v1/vendor/orders/'.$orderId.'/invoices', ['invoice_type' => 'PLATFORM_SERVICE_INVOICE'] + $upload, $this->key() + ['Accept' => 'application/json'])->assertStatus(422);
         $pdf = $this->validPdf();

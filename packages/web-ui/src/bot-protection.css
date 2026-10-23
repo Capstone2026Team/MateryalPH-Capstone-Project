@@ -1,3 +1,5 @@
+.bot-protection-fields { display: grid; min-width: 0; gap: .75rem; }
+.bot-protection-fields > button { min-height: 3rem; }
 .recaptcha-checkbox { display: grid; min-width: 0; justify-items: center; gap: .5rem; }
 .recaptcha-checkbox[aria-disabled="true"] { opacity: .7; pointer-events: none; }
 .recaptcha-checkbox > div { max-width: 100%; overflow: hidden; }

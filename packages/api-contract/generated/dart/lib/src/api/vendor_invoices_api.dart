@@ -429,7 +429,7 @@ class VendorInvoicesApi {
   /// * [invoiceType]
   /// * [issuerName] - Must equal the registered business name.
   /// * [invoiceNumber]
-  /// * [issuedOn]
+  /// * [issuedOn] - Invoice calendar date; must not be later than today in Asia/Manila.
   /// * [amountCentavos]
   /// * [sourceSystem]
   /// * [invoicingMethod]

@@ -1,6 +1,12 @@
-# Platform accounting and Vendor commission monitoring
+# Platform Finance and Vendor commission monitoring
 
-Implemented 2026-10-19 under the owner-approved FIN-03 update.
+Implemented 2026-10-19 under the owner-approved FIN-03 update. Renamed Platform Finance on 2026-10-24 (Admin workflow owner decision of that date).
+
+## 2026-10-24 Platform Finance overview
+
+- API: `PlatformMoneyFlow` reads confirmed orders, verified Buyer payments, recorded cash, confirmed refunds and cash reimbursements live; `FinanceOperationsService::kpis` returns them in `commerce`, adds `payment_methods`, the `gmv_centavos`/`buyer_payments_centavos`/`buyer_refunds_centavos` trend fields and the `open_work_items`, `overdue_statements`, `confirmed_orders`, `online_payments`, `cash_records` and `pending_buyer_refunds` counts. GMV no longer reads the rebuilt `analytics_order_facts` snapshot.
+- Feature tests (`PhaseElevenFinanceFlowsTest`, `PhaseTwelveFulfillmentTest`, `PhaseSixteenAdminOperationsTest`): NRPC assurance plus online balance count GMV once; Admin Buyer payments equal the Vendor Earnings online collections plus Buyer fees and physical collections for the same records; payment methods add up to the received total; a confirmed cancellation refund is cancelled value, never refunded value too; a failed refund is in progress, never returned; Buyer payments never become platform-held funds; marketplace and platform keys never overlap.
+- Contract: `check-admin-finance-contract.mjs`. Component tests: `FinancePages.test.tsx`. Layout evidence: `apps/vendor-web/e2e/admin-finance-layout.spec.ts` at all eight viewports, screenshots in `docs/design/evidence/admin-finance/`.
 
 ## Result
 

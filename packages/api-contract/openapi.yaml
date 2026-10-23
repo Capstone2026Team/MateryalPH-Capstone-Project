@@ -26,7 +26,6 @@ tags:
   - name: Admin Budget Overrides
   - name: Admin Integration Health
   - name: Admin Audit Log
-  - name: Admin Privacy Requests
   - name: Admin Enforcement
   - name: Admin User Directory
   - name: Admin Platform Settings
@@ -1658,9 +1657,11 @@ paths:
         and the typed confirmation phrase. Refused with 409
         ACCOUNT_DELETION_BLOCKED (details.blockers) while an order, dispute or
         refund is open. The account becomes DELETED (final), every session, push
-        device and authenticator is revoked and an IN_APP DELETION privacy
-        request is opened. Orders, payments, disputes, reviews and audit records
-        are retained and later minimized, never deleted.
+        device and authenticator is revoked. An account-deletion reference is
+        recorded in the existing audit trail without opening a privacy case. Orders, payments, disputes, reviews and audit records
+        are retained and later minimized, never deleted. The same email or Google
+        identity may subsequently register a separate Buyer account; the deleted
+        account and its history are never restored.
       requestBody:
         required: true
         content:
@@ -2027,6 +2028,12 @@ paths:
     post:
       operationId: registerBuyerMobile
       tags: [ Authentication ]
+      description: Creates a new Buyer account requiring email verification and
+        current agreement acceptance. An email held by a DELETED Buyer may be
+        reused; that account's login email is pseudonymized, external sign-in
+        links removed and old email codes invalidated in the same transaction.
+        The deleted account and its history remain separate. Other existing
+        accounts retain ACCOUNT_ALREADY_EXISTS protection.
       requestBody:
         required: true
         content:
@@ -2198,6 +2205,11 @@ paths:
     post:
       operationId: startBuyerMobileGoogleOidc
       tags: [ Authentication ]
+      description: Starts Buyer Google authentication. SIGN_UP may create a fresh
+        Buyer account using a previously deleted Buyer's Google identity or email,
+        with current agreement acceptance. The deleted account's login identifiers
+        are released transactionally and its history is retained. SIGN_IN never
+        restores or replaces a deleted account.
       requestBody:
         required: true
         content:
@@ -10389,208 +10401,6 @@ paths:
         "403": { $ref: "#/components/responses/ErrorResponse" }
         "404": { $ref: "#/components/responses/ErrorResponse" }
         "422": { $ref: "#/components/responses/ErrorResponse" }
-  "/admin/privacy-requests":
-    "get":
-      "operationId": "listPrivacyRequests"
-      "tags":
-        - "Admin Privacy Requests"
-      "description": "privacy.manage sees every request; privacy.handle sees only
-        requests assigned to you."
-      "security":
-        - "accessCookie": []
-          "webCsrf": []
-      "parameters":
-        - "name": "state"
-          "in": "query"
-          "schema":
-            "type": "string"
-            "enum":
-              - "RECEIVED"
-              - "IDENTITY_VERIFIED"
-              - "IN_PROGRESS"
-              - "COMPLETED"
-              - "REJECTED"
-              - "WITHDRAWN"
-        - "name": "request_type"
-          "in": "query"
-          "schema":
-            "type": "string"
-            "enum":
-              - "ACCESS"
-              - "CORRECTION"
-              - "OBJECTION"
-              - "DELETION"
-              - "RESTRICTION"
-              - "PORTABILITY"
-              - "OTHER"
-        - "name": "handler"
-          "in": "query"
-          "schema":
-            "type": "string"
-            "enum":
-              - "UNASSIGNED"
-        - "name": "page"
-          "in": "query"
-          "schema":
-            "type": "integer"
-            "minimum": 1
-            "maximum": 1000
-        - {
-            name: from,
-            in: query,
-            required: false,
-            description: 'Inclusive Asia/Manila calendar date; omit to leave this boundary
-              unrestricted. Request received_at.',
-            schema: { type: string, format: date }
-          }
-        - {
-            name: to,
-            in: query,
-            required: false,
-            description: 'Inclusive Asia/Manila calendar date; omit to leave this boundary
-              unrestricted. Request received_at.',
-            schema: { type: string, format: date }
-          }
-      "responses":
-        "200":
-          "description": "Authorized result."
-          "content":
-            "application/json":
-              "schema":
-                "$ref": "#/components/schemas/PrivacyRequestListEnvelope"
-        "401":
-          "$ref": "#/components/responses/ErrorResponse"
-        "403":
-          "$ref": "#/components/responses/ErrorResponse"
-        "422":
-          "$ref": "#/components/responses/ErrorResponse"
-    "post":
-      "operationId": "recordPrivacyRequest"
-      "tags":
-        - "Admin Privacy Requests"
-      "description": "privacy.manage. Record a request received through an official channel."
-      "security":
-        - "accessCookie": []
-          "webCsrf": []
-      "parameters":
-        - "name": "Idempotency-Key"
-          "in": "header"
-          "required": true
-          "schema":
-            "type": "string"
-            "format": "uuid"
-      "requestBody":
-        "required": true
-        "content":
-          "application/json":
-            "schema":
-              "$ref": "#/components/schemas/PrivacyRequestCreateRequest"
-      "responses":
-        "200":
-          "description": "Idempotent replay of the original result."
-          "content":
-            "application/json":
-              "schema":
-                "$ref": "#/components/schemas/PrivacyRequestDetailEnvelope"
-        "201":
-          "description": "Authorized result."
-          "content":
-            "application/json":
-              "schema":
-                "$ref": "#/components/schemas/PrivacyRequestDetailEnvelope"
-        "401":
-          "$ref": "#/components/responses/ErrorResponse"
-        "403":
-          "$ref": "#/components/responses/ErrorResponse"
-        "404":
-          "$ref": "#/components/responses/ErrorResponse"
-        "409":
-          "$ref": "#/components/responses/ErrorResponse"
-        "422":
-          "$ref": "#/components/responses/ErrorResponse"
-  "/admin/privacy-requests/{requestId}":
-    "get":
-      "operationId": "getPrivacyRequest"
-      "tags":
-        - "Admin Privacy Requests"
-      "description": "Assigned handler or privacy.manage; each opening is audited.
-        Unassigned handlers receive 404."
-      "security":
-        - "accessCookie": []
-          "webCsrf": []
-      "parameters":
-        - "name": "requestId"
-          "in": "path"
-          "required": true
-          "schema":
-            "type": "string"
-            "format": "uuid"
-      "responses":
-        "200":
-          "description": "Authorized result."
-          "content":
-            "application/json":
-              "schema":
-                "$ref": "#/components/schemas/PrivacyRequestDetailEnvelope"
-        "401":
-          "$ref": "#/components/responses/ErrorResponse"
-        "403":
-          "$ref": "#/components/responses/ErrorResponse"
-        "404":
-          "$ref": "#/components/responses/ErrorResponse"
-  "/admin/privacy-requests/{requestId}/{command}":
-    "post":
-      "operationId": "transitionPrivacyRequest"
-      "tags":
-        - "Admin Privacy Requests"
-      "description": "Assign (privacy.manage), verify identity, start, complete,
-        reject or withdraw with the current lock_version; closed requests are
-        final."
-      "security":
-        - "accessCookie": []
-          "webCsrf": []
-      "parameters":
-        - "name": "requestId"
-          "in": "path"
-          "required": true
-          "schema":
-            "type": "string"
-            "format": "uuid"
-        - "name": "command"
-          "in": "path"
-          "required": true
-          "schema":
-            "type": "string"
-            "enum":
-              - "assign"
-              - "verify"
-              - "start"
-              - "complete"
-              - "reject"
-              - "withdraw"
-      "requestBody":
-        "required": true
-        "content":
-          "application/json":
-            "schema":
-              "$ref": "#/components/schemas/PrivacyTransitionRequest"
-      "responses":
-        "200":
-          "description": "Authorized result."
-          "content":
-            "application/json":
-              "schema":
-                "$ref": "#/components/schemas/PrivacyRequestDetailEnvelope"
-        "401":
-          "$ref": "#/components/responses/ErrorResponse"
-        "403":
-          "$ref": "#/components/responses/ErrorResponse"
-        "404":
-          "$ref": "#/components/responses/ErrorResponse"
-        "409":
-          "$ref": "#/components/responses/ErrorResponse"
-        "422":
-          "$ref": "#/components/responses/ErrorResponse"
   "/admin/audit-log":
     "get":
       "operationId": "searchAuditLog"
@@ -11644,7 +11454,7 @@ paths:
       "tags":
         - "Buyer Reviews"
       "description": "Up to three photos or videos on your Product Review while it can
-        still be edited. JPG/PNG up to 10 MB; MP4/MOV up to 100 MB. Content
+        still be edited. JPG/PNG up to 10 MB; MP4/MOV up to 25 MB. Content
         validated and scanned before private storage."
       "security":
         - "passportBearer": []
@@ -18006,6 +17816,56 @@ paths:
           "$ref": "#/components/responses/ErrorResponse"
         "503":
           "$ref": "#/components/responses/ErrorResponse"
+  "/vendor/orders/{orderId}/physical-payments/handover-confirmation":
+    "post":
+      "operationId": "confirmVendorHandoverCash"
+      "tags":
+        - "Vendor Finance"
+      "description": "Owner, Store Manager or Store Staff (payments.record_physical)
+        confirm the cash Fulfillment Staff reported at Delivered or Picked up. Records
+        one COLLECTION for the reported amount capped at the outstanding balance,
+        with the handover photo (or the attached receipt) as evidence and the
+        handover time as the received time. Once per handover; 409
+        HANDOVER_CASH_NOT_PENDING or PHYSICAL_PAYMENT_NOT_OPEN when nothing waits."
+      "security":
+        - "accessCookie": []
+          "webCsrf": []
+      "parameters":
+        - "name": "orderId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+        - "name": "Idempotency-Key"
+          "in": "header"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": false
+        "content":
+          "multipart/form-data":
+            "schema":
+              "$ref": "#/components/schemas/PhysicalHandoverConfirmationForm"
+      "responses":
+        "201":
+          "description": "Recorded, or an idempotent replay."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/PhysicalPaymentSummaryEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
   "/vendor/orders/{orderId}/online-balance/approve":
     "post":
       "operationId": "approveVendorOnlineBalance"
@@ -22554,8 +22414,6 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "422":
           $ref: "#/components/responses/ErrorResponse"
-        "429":
-          $ref: "#/components/responses/ErrorResponse"
         "503":
           $ref: "#/components/responses/ErrorResponse"
       description: Active eligible support administrators; support.view required.
@@ -22655,7 +22513,10 @@ components:
       description: 'Payments tab only; ignored by every other tab. Each value matches
         the status badge a Payments row shows. PAID has no refund activity;
         LATE_CAPTURE covers every late-captured payment awaiting or after its
-        refund; PENDING is any attempt not yet settled.'
+        refund; PENDING is any attempt not yet settled. PHYSICAL_* values select
+        Cash on Delivery / In-Store obligations: COLLECTED (nothing remains),
+        PARTIAL (part recorded), TO_RECORD (delivered or picked up, no cash
+        recorded yet), AWAITING (before handover), RELEASED (cancelled unpaid).'
       schema:
         type: string
         enum:
@@ -22668,6 +22529,11 @@ components:
           - FAILED
           - EXPIRED
           - LATE_CAPTURE
+          - PHYSICAL_COLLECTED
+          - PHYSICAL_PARTIAL
+          - PHYSICAL_TO_RECORD
+          - PHYSICAL_AWAITING
+          - PHYSICAL_RELEASED
   responses:
     GoogleCallbackErrorResponse:
       description: Safe callback failure; HTML for browser navigation and the
@@ -23828,6 +23694,8 @@ components:
           type: object
           additionalProperties: true
         nrpc:
+          deprecated: true
+          description: Historical drafts only. Omit when saving; new quotation NRPC is prohibited.
           type: object
           additionalProperties: true
     ChatDraftSave:
@@ -26901,7 +26769,7 @@ components:
         reference:
           {
             type: string,
-            description: 'Privacy request reference for follow-up with support.'
+            description: 'Account-deletion reference recorded in the audit trail for follow-up with support.'
           }
         deleted_at: { type: string, format: date-time }
         sign_in_required: { type: boolean }
@@ -32151,7 +32019,7 @@ components:
       properties:
         can_confirm: { type: boolean }
         can_revise: { type: boolean }
-        can_set_nrpc: { type: boolean }
+        can_set_nrpc: { type: boolean, description: True only for authorized roles on COD or In-Store Payment orders awaiting Vendor confirmation. }
         can_confirm_delivery: { type: boolean }
         can_decline: { type: boolean }
         can_view_inventory: { type: boolean }
@@ -32459,7 +32327,7 @@ components:
             description: 'Legacy fixed materials discount. Omit when discount is supplied.'
           }
         discount: { $ref: '#/components/schemas/ChatQuotationDiscount' }
-        nrpc: { oneOf: [ { $ref: "#/components/schemas/NrpcProposal" }, { type: 'null' } ] }
+        nrpc: { description: Available only for COD or In-Store Payment orders awaiting Vendor confirmation., oneOf: [ { $ref: "#/components/schemas/NrpcProposal" }, { type: 'null' } ] }
         pickup:
           {
             oneOf: [ { $ref: "#/components/schemas/PickupConfirmation" }, { type: 'null' } ]
@@ -35185,250 +35053,6 @@ components:
           "type": "string"
           "minLength": 10
           "maxLength": 2000
-    "PrivacyRequestSummary":
-      "type": "object"
-      "required":
-        - "id"
-        - "reference"
-        - "request_type"
-        - "state"
-        - "subject_account_type"
-        - "subject_display"
-        - "identity_verified"
-        - "lock_version"
-      "properties":
-        "id":
-          "type": "string"
-          "format": "uuid"
-        "reference":
-          "type": "string"
-        "request_type":
-          "type": "string"
-          "enum":
-            - "ACCESS"
-            - "CORRECTION"
-            - "OBJECTION"
-            - "DELETION"
-            - "RESTRICTION"
-            - "PORTABILITY"
-            - "OTHER"
-        "state":
-          "type": "string"
-          "enum":
-            - "RECEIVED"
-            - "IDENTITY_VERIFIED"
-            - "IN_PROGRESS"
-            - "COMPLETED"
-            - "REJECTED"
-            - "WITHDRAWN"
-        "subject_account_type":
-          "type": "string"
-        "subject_display":
-          "type": "string"
-        "intake_channel":
-          "type":
-            - "string"
-            - "null"
-        "received_at":
-          "type":
-            - "string"
-            - "null"
-          "format": "date-time"
-        "target_date":
-          "type":
-            - "string"
-            - "null"
-          "format": "date"
-        "handler":
-          "type":
-            - "string"
-            - "null"
-        "handler_user_id":
-          "type":
-            - "integer"
-            - "null"
-        "identity_verified":
-          "type": "boolean"
-        "lock_version":
-          "type": "integer"
-        "created_at":
-          "type":
-            - "string"
-            - "null"
-          "format": "date-time"
-    "PrivacyRequestEvent":
-      "type": "object"
-      "required":
-        - "event"
-        - "to_state"
-        - "note"
-        - "actor"
-        - "actor_role"
-        - "correlation_id"
-        - "occurred_at"
-      "properties":
-        "event":
-          "type": "string"
-        "from_state":
-          "type":
-            - "string"
-            - "null"
-        "to_state":
-          "type": "string"
-        "note":
-          "type": "string"
-        "actor":
-          "type": "string"
-        "actor_role":
-          "type": "string"
-        "correlation_id":
-          "type": "string"
-        "occurred_at":
-          "type": "string"
-          "format": "date-time"
-    "PrivacyHandler":
-      "type": "object"
-      "required":
-        - "user_id"
-        - "name"
-        - "role"
-      "properties":
-        "user_id":
-          "type": "integer"
-        "name":
-          "type": "string"
-        "role":
-          "type": "string"
-    "PrivacyRequestDetail":
-      "allOf":
-        - "$ref": "#/components/schemas/PrivacyRequestSummary"
-        - "type": "object"
-          "required":
-            - "subject_masked_email"
-            - "events"
-            - "allowed_actions"
-            - "handlers"
-          "properties":
-            "scope":
-              "type":
-                - "string"
-                - "null"
-            "response_summary":
-              "type":
-                - "string"
-                - "null"
-            "legal_exception":
-              "type":
-                - "string"
-                - "null"
-            "identity_verification_method":
-              "type":
-                - "string"
-                - "null"
-            "identity_verified_at":
-              "type":
-                - "string"
-                - "null"
-              "format": "date-time"
-            "subject_masked_email":
-              "type": "string"
-            "completed_at":
-              "type":
-                - "string"
-                - "null"
-              "format": "date-time"
-            "events":
-              "type": "array"
-              "items":
-                "$ref": "#/components/schemas/PrivacyRequestEvent"
-            "allowed_actions":
-              "type": "array"
-              "items":
-                "type": "string"
-                "enum":
-                  - "ASSIGN"
-                  - "VERIFY"
-                  - "START"
-                  - "COMPLETE"
-                  - "REJECT"
-                  - "WITHDRAW"
-            "handlers":
-              "type": "array"
-              "items":
-                "$ref": "#/components/schemas/PrivacyHandler"
-    "PrivacyRequestCreateRequest":
-      "type": "object"
-      "required":
-        - "subject_email"
-        - "request_type"
-        - "intake_channel"
-        - "received_on"
-        - "scope"
-        - "note"
-      "properties":
-        "subject_email":
-          "type": "string"
-          "format": "email"
-        "request_type":
-          "type": "string"
-          "enum":
-            - "ACCESS"
-            - "CORRECTION"
-            - "OBJECTION"
-            - "DELETION"
-            - "RESTRICTION"
-            - "PORTABILITY"
-            - "OTHER"
-        "intake_channel":
-          "type": "string"
-          "enum":
-            - "DPO_EMAIL"
-            - "SUPPORT_CASE"
-            - "WRITTEN_LETTER"
-            - "IN_APP"
-        "received_on":
-          "type": "string"
-          "format": "date"
-        "scope":
-          "type": "string"
-          "minLength": 10
-          "maxLength": 4000
-        "note":
-          "type": "string"
-          "minLength": 3
-          "maxLength": 2000
-    "PrivacyTransitionRequest":
-      "type": "object"
-      "required":
-        - "lock_version"
-        - "note"
-      "properties":
-        "lock_version":
-          "type": "integer"
-          "minimum": 1
-        "note":
-          "type": "string"
-          "minLength": 3
-          "maxLength": 4000
-        "handler_user_id":
-          "type": "integer"
-        "target_date":
-          "type":
-            - "string"
-            - "null"
-          "format": "date"
-        "verification_method":
-          "type": "string"
-          "enum":
-            - "REGISTERED_EMAIL_CONFIRMATION"
-            - "SIGNED_IN_ACCOUNT_CONFIRMATION"
-            - "GOVERNMENT_ID_SIGHTED"
-            - "AUTHORIZED_REPRESENTATIVE_DOCUMENT_SIGHTED"
-        "legal_exception":
-          "type":
-            - "string"
-            - "null"
-          "maxLength": 2000
     "AuditEvent":
       "type": "object"
       "required":
@@ -36430,6 +36054,14 @@ components:
           "type": "object"
           "additionalProperties":
             "type": "integer"
+        "payment_methods":
+          "type": "array"
+          "maxItems": 32
+          "description": "Buyer payments received per method in the period: verified
+            online captures per Xendit channel, then recorded Cash on Delivery and
+            In-Store cash. Largest first; methods without activity are omitted."
+          "items":
+            "$ref": "#/components/schemas/FinancePaymentMethod"
         "trend":
           "type": "array"
           "maxItems": 120
@@ -36451,7 +36083,10 @@ components:
           "credits_centavos",
           "collected_centavos",
           "refunded_centavos",
-          "net_earnings_centavos"
+          "net_earnings_centavos",
+          "gmv_centavos",
+          "buyer_payments_centavos",
+          "buyer_refunds_centavos"
         ]
       "properties":
         "period":
@@ -36471,6 +36106,50 @@ components:
               commission payment processing expense. Can be negative in a refund
               period."
           }
+        "gmv_centavos":
+          {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Gross merchandise value of orders confirmed in the period (Vendor money, never platform revenue)."
+          }
+        "buyer_payments_centavos":
+          {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Verified online Buyer payments plus recorded Cash on Delivery and In-Store cash, received by Vendors."
+          }
+        "buyer_refunds_centavos":
+          {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Confirmed online refunds and cash reimbursements to Buyers."
+          }
+    "FinancePaymentMethod":
+      "type": "object"
+      "required":
+        - "method"
+        - "label"
+        - "kind"
+        - "payments"
+        - "amount_centavos"
+      "properties":
+        "method":
+          "type": "string"
+          "description": "Xendit channel code, CASH_ON_DELIVERY or IN_STORE."
+        "label":
+          "type": "string"
+        "kind":
+          "type": "string"
+          "enum":
+            - "ONLINE"
+            - "PHYSICAL"
+        "payments":
+          "type": "integer"
+          "minimum": 0
+          "description": "Verified captures, or recorded cash collections."
+        "amount_centavos":
+          "type": "integer"
+          "minimum": 0
     "RemittanceQueueRow":
       "type": "object"
       "required":
@@ -37604,40 +37283,6 @@ components:
         data: { type: array, items: { $ref: "#/components/schemas/DirectoryListing" } }
         meta: { $ref: "#/components/schemas/DirectoryPageMeta" }
         errors: { type: array, items: { $ref: "#/components/schemas/ApiError" } }
-    "PrivacyRequestListEnvelope":
-      "type": "object"
-      "required":
-        - "data"
-        - "meta"
-        - "errors"
-      "properties":
-        "data":
-          "type": "array"
-          "items":
-            "$ref": "#/components/schemas/PrivacyRequestSummary"
-        "meta":
-          "type": "object"
-          "additionalProperties": true
-        "errors":
-          "type": "array"
-          "items":
-            "$ref": "#/components/schemas/ApiError"
-    "PrivacyRequestDetailEnvelope":
-      "type": "object"
-      "required":
-        - "data"
-        - "meta"
-        - "errors"
-      "properties":
-        "data":
-          "$ref": "#/components/schemas/PrivacyRequestDetail"
-        "meta":
-          "type": "object"
-          "additionalProperties": true
-        "errors":
-          "type": "array"
-          "items":
-            "$ref": "#/components/schemas/ApiError"
     "AuditEventListEnvelope":
       "type": "object"
       "required":
@@ -37977,6 +37622,7 @@ components:
           "type": "integer"
         "video_max_bytes":
           "type": "integer"
+          "maximum": 26214400
         "blind_reveal":
           "type": "string"
     "ReviewRatings":
@@ -38482,7 +38128,7 @@ components:
           "items":
             "type": "string"
             "format": "binary"
-          "description": "JPG/PNG up to 10 MB or MP4/MOV up to 100 MB, content-validated
+          "description": "JPG/PNG up to 10 MB or MP4/MOV up to 25 MB, content-validated
             and scanned fail-closed."
     "ReviewFlagRequest":
       "type": "object"
@@ -39519,6 +39165,13 @@ components:
           "$ref": "#/components/schemas/AnalyticsTrend"
         "current":
           "$ref": "#/components/schemas/AnalyticsCurrentCounts"
+        "image":
+          "oneOf":
+            - "$ref": "#/components/schemas/ListingImage"
+            - "type": "null"
+          "description": "Photo of the cheapest current in-scope offer that has one,
+            so the row is recognizable. Only the public URL and alt text; never its
+            listing, store or price."
     "VendorAnalyticsRow":
       "type": "object"
       "required":
@@ -39558,6 +39211,12 @@ components:
           "oneOf":
             - "$ref": "#/components/schemas/VendorOwnOffer"
             - "type": "null"
+        "image":
+          "oneOf":
+            - "$ref": "#/components/schemas/ListingImage"
+            - "type": "null"
+          "description": "The Vendor's own listing photo for this variant, or null. A
+            competitor photo is never returned (MAT-05)."
     "AdminAnalyticsRow":
       "type": "object"
       "required":
@@ -39593,6 +39252,13 @@ components:
           "$ref": "#/components/schemas/AnalyticsTrend"
         "current":
           "$ref": "#/components/schemas/AnalyticsCurrentCounts"
+        "image":
+          "oneOf":
+            - "$ref": "#/components/schemas/ListingImage"
+            - "type": "null"
+          "description": "Photo of the cheapest current in-scope offer that has one,
+            present only with materials_analytics.inspect_sources and null otherwise.
+            Never its listing or store identity."
     "ComparableVariant":
       "type": "object"
       "required":
@@ -39995,6 +39661,11 @@ components:
         "price_as_of":
           "type": "string"
           "format": "date-time"
+        "image":
+          "oneOf":
+            - "$ref": "#/components/schemas/ListingImage"
+            - "type": "null"
+          "description": "First public photo of this listing, or null."
       "description": "Buyer-only current public offer; opens the existing Product
         Details. Never exact stock."
     "AnalyticsSource":
@@ -41654,6 +41325,9 @@ components:
           "maxLength": 4000
         "affected_line_ids":
           "type": "array"
+          "description": "Selected order lines. Multipart clients send each UUID as an
+            affected_line_ids[] part so the server receives an array. Buyers must
+            select at least one line for every requested remedy."
           "items":
             "type": "string"
             "format": "uuid"
@@ -41669,7 +41343,7 @@ components:
             "type": "string"
             "format": "binary"
           "description": "Up to five JPG, PNG or PDF files, validated and scanned, stored
-            privately."
+            privately. Multipart clients send each upload as a files[] part."
       "description": "The structured Refund/Dispute Request Form. It has no
         refund-destination field; any destination key is refused with 422
         REFUND_DESTINATION_NOT_ACCEPTED."
@@ -42674,6 +42348,7 @@ components:
         "issued_on":
           "type": "string"
           "format": "date"
+          "description": "Invoice calendar date; must not be later than today in Asia/Manila."
         "amount_centavos":
           "type": "integer"
           "minimum": 0
@@ -43869,10 +43544,22 @@ components:
         note:
           type: string
           maxLength: 500
+        cash_received_centavos:
+          type: integer
+          minimum: 0
+          description: "Required on DELIVERED / PICKED_UP of a Cash on Delivery or
+            In-Store order with an outstanding balance: the cash the Buyer handed over,
+            0 to the outstanding balance (422 PROOF_REQUIRED otherwise). Cash above
+            zero needs the handover photo as its evidence. A member holding
+            payments.record_physical records it as a collection at once; a
+            Fulfillment Staff report waits for confirmation
+            (POST /vendor/orders/{orderId}/physical-payments/handover-confirmation).
+            Ignored for online orders."
         file:
           type: string
           format: binary
-          description: "Delivery photo (required for DELIVERED): JPG or PNG up to 10 MB,
+          description: "Delivery photo (required for DELIVERED; required for PICKED_UP
+            when cash_received_centavos is above zero): JPG or PNG up to 10 MB,
             scanned fail-closed, stored privately."
         signature:
           type: string
@@ -44630,12 +44317,55 @@ components:
           "nullable": true
         "online_balance_approved":
           "type": "boolean"
+        "handover_cash":
+          "$ref": "#/components/schemas/PhysicalHandoverCash"
         "records":
           "type": "array"
           "items":
             "$ref": "#/components/schemas/PhysicalPaymentRecord"
         "notice":
           "type": "string"
+    "PhysicalHandoverCash":
+      "type": "object"
+      "nullable": true
+      "description": "Vendor views only. Cash the Buyer handed over at Delivered or Picked
+        up, reported by a member who may not record cash (Fulfillment Staff), still
+        waiting for an Owner, Store Manager or Store Staff confirmation. Null when
+        nothing waits or for the Buyer."
+      "required":
+        - "reported_centavos"
+        - "confirmable_centavos"
+        - "milestone"
+        - "reported_at"
+        - "has_photo"
+      "properties":
+        "reported_centavos":
+          "type": "integer"
+          "minimum": 1
+        "confirmable_centavos":
+          "type": "integer"
+          "minimum": 0
+          "description": "The reported amount capped at the outstanding balance."
+        "milestone":
+          "type": "string"
+          "enum":
+            - "DELIVERED"
+            - "PICKED_UP"
+        "reported_at":
+          "type": "string"
+          "format": "date-time"
+        "has_photo":
+          "type": "boolean"
+          "description": "False means confirming needs an attached receipt."
+    "PhysicalHandoverConfirmationForm":
+      "type": "object"
+      "properties":
+        "file":
+          "type": "string"
+          "format": "binary"
+          "description": "Optional receipt (JPG, PNG, WebP or PDF up to 10 MB). Required
+            only when the handover has no photo; otherwise the handover photo is
+            the evidence."
     "PhysicalPaymentSettings":
       "type": "object"
       "required":
@@ -45238,6 +44968,8 @@ components:
             - "records"
             - "cash_on_delivery_centavos"
             - "in_store_centavos"
+            - "unrecorded_centavos"
+            - "unrecorded_orders"
           "properties":
             "records":
               "type": "integer"
@@ -45246,6 +44978,16 @@ components:
               "type": "integer"
               "minimum": 0
             "in_store_centavos":
+              "type": "integer"
+              "minimum": 0
+            "unrecorded_centavos":
+              "type": "integer"
+              "minimum": 0
+              "description": "Not a collection and not part of physical_collections_centavos:
+                the cash still owed on Cash on Delivery and In-Store orders already
+                delivered or picked up, for the same orders and dates as commercial
+                sales. It falls as the Vendor records or confirms the cash."
+            "unrecorded_orders":
               "type": "integer"
               "minimum": 0
     "VendorEarningsProducts":
@@ -46017,7 +45759,14 @@ components:
             "$ref": "#/components/schemas/ApiError"
     "FinanceTransactionListEnvelope":
       "type": "object"
-      "description": "Owner-only paginated transaction rows. PAYMENTS rows preserve
+      "description": "Owner-only paginated transaction rows. PAYMENTS lists online
+        payment attempts (kind ONLINE) and Cash on Delivery / In-Store obligations
+        (kind PHYSICAL, one per order) together, newest first. A PHYSICAL row has
+        purpose CASH_ON_DELIVERY or IN_STORE_PAYMENT, a PHYSICAL_* status, gross =
+        the cash owed at opening, no Buyer fee, collected_centavos = cash recorded,
+        refunded_centavos = confirmed cash reimbursements, remaining_centavos and
+        evidence_origin VENDOR_RECORD; an online balance credit appears as its own
+        ONLINE row. ONLINE rows preserve
         the original payment status and gross/Buyer-fee amounts and additionally
         return refund_state (NOT_REQUESTED, REFUND_PENDING, REFUND_FAILED,
         PARTIALLY_REFUNDED or REFUNDED), refunded_centavos (confirmed refunds

@@ -3,8 +3,13 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../features/projects/projects_repository.dart';
 import '../../features/projects/work_package_material_widgets.dart';
 import '../theme.dart';
+import 'buyer_overlays.dart';
 
-const _fulfillment = {'PICKUP': 'Pickup', 'DELIVERY': 'Site delivery'};
+const _fulfillment = {
+  'PICKUP': 'Pickup',
+  'DELIVERY': 'Site delivery',
+  'BOTH': 'Pickup or site delivery',
+};
 const _payment = {
   'ONLINE': 'Online payment',
   'CASH_ON_DELIVERY': 'Cash on delivery',
@@ -17,19 +22,80 @@ class WorkPackageAttachment extends StatelessWidget {
     super.key,
     required this.original,
     this.proposed,
+    this.actions,
     this.version,
     this.locked = true,
     this.title,
     this.showPaymentMethod = true,
+    this.compact = false,
   });
   final ProjectData original;
+  final Widget? actions;
   final ProjectData? proposed;
   final Object? version;
   final bool locked;
   final bool showPaymentMethod;
 
+  /// Shows a tappable attachment summary and opens the full copies in a popup.
+  final bool compact;
+
   /// Replaces the default "Locked Buyer original" heading, e.g. on the package screen where there is only one copy.
   final String? title;
+
+  Widget _preview(BuildContext context) {
+    final name = projectText(original['name']);
+    final count = projectRows(original['lines']).length;
+    final hasProposal = proposed != null && proposed!.isNotEmpty;
+    return Material(
+      color: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: BuyerTheme.border),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        leading: const Icon(LucideIcons.paperclip, color: BuyerTheme.action),
+        title: Text(
+          name.isEmpty ? 'Work Package attachment' : name,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        subtitle: Text(
+          '$count ${count == 1 ? 'material' : 'materials'} · Tap to view\n'
+          '${locked ? 'Locked Buyer original' : 'Editable Buyer draft'}'
+          '${hasProposal ? ' · Vendor proposal' : ''}',
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: BuyerTheme.muted),
+        ),
+        trailing: const Icon(LucideIcons.chevronRight, size: 20),
+        onTap: () async {
+          await showDialog<void>(
+            context: context,
+            builder: (context) => BuyerContentDialog(
+              title: 'Work Package attachment',
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: WorkPackageAttachment(
+                  original: original,
+                  proposed: proposed,
+                  actions: actions,
+                  version: version,
+                  locked: locked,
+                  title: title,
+                  showPaymentMethod: showPaymentMethod,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 
   Widget _copy(
     BuildContext context,
@@ -66,6 +132,10 @@ class WorkPackageAttachment extends StatelessWidget {
               ),
             ],
           ),
+          if (identical(value, original) && actions != null) ...[
+            const SizedBox(height: 12),
+            actions!,
+          ],
           if (value['name'] != null) ...[
             const SizedBox(height: 8),
             Text(
@@ -108,38 +178,40 @@ class WorkPackageAttachment extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      final left = _copy(
-        context,
-        title ??
-            '${locked ? 'Locked Buyer original' : 'Editable Buyer draft'}${version == null ? '' : ' · version $version'}',
-        title != null
-            ? LucideIcons.clipboardList
-            : locked
-            ? LucideIcons.lock
-            : LucideIcons.pencilLine,
-        original,
-      );
-      if (proposed == null) return left;
-      final right = _copy(
-        context,
-        'Vendor proposal',
-        LucideIcons.store,
-        proposed!,
-      );
-      return constraints.maxWidth >= 1024
-          ? Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: left),
-                const SizedBox(width: 12),
-                Expanded(child: right),
-              ],
-            )
-          : Column(children: [left, right]);
-    },
-  );
+  Widget build(BuildContext context) => compact
+      ? _preview(context)
+      : LayoutBuilder(
+          builder: (context, constraints) {
+            final left = _copy(
+              context,
+              title ??
+                  '${locked ? 'Locked Buyer original' : 'Editable Buyer draft'}${version == null ? '' : ' · version $version'}',
+              title != null
+                  ? LucideIcons.clipboardList
+                  : locked
+                  ? LucideIcons.lock
+                  : LucideIcons.pencilLine,
+              original,
+            );
+            if (proposed == null || proposed!.isEmpty) return left;
+            final right = _copy(
+              context,
+              'Vendor proposal',
+              LucideIcons.store,
+              proposed!,
+            );
+            return constraints.maxWidth >= 1024
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: left),
+                      const SizedBox(width: 12),
+                      Expanded(child: right),
+                    ],
+                  )
+                : Column(children: [left, right]);
+          },
+        );
 }
 
 class _Chip extends StatelessWidget {

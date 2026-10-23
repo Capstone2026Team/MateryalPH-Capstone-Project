@@ -5,7 +5,7 @@
 **Canonical timezone:** Asia/Manila for business deadlines; UTC for stored timestamps  
 **Architecture:** Modular monolith  
 **Repository:** Existing early-stage monorepo; approved migration to standardized `apps/*`, `services/*`, and `packages/*` paths  
-**Reference deployment:** Managed services on Render, Singapore region  
+**Reference staging target:** Existing Render deployment in Singapore, per [the Render runbook](../deployment/render-staging.md)
 
 ## 1. Confirmed Decisions
 
@@ -27,7 +27,7 @@ The fixed application stack is:
 | Cache and queues | Redis-compatible managed key-value service | Cache, rate limiting, queueing, locks, and short-lived state |
 | Real time | Laravel Reverb | Authorized conversations, quotation updates, order milestones, and notifications |
 | Local development | Docker Compose | Reproducible PostgreSQL, Redis, Mailpit, and S3-compatible object storage |
-| CI/CD | GitHub Actions and Render Blueprint | Tests, security gates, staging deployment, and controlled production deployment |
+| CI/CD | GitHub Actions and Render | Tests, security gates and reviewed Render deployments |
 
 Laravel 13 is pinned with Composer's `^13.0` constraint and PHP 8.4 is the reference runtime. Laravel 13 supports PHP 8.3 through 8.5 and receives security fixes through 17 March 2028; minor and patch updates may be applied after automated tests pass, while a future major upgrade requires an Architecture Decision Record and explicit approval. See the official [Laravel 13 release and support policy](https://laravel.com/docs/13.x/releases).
 
@@ -89,7 +89,7 @@ flowchart TB
     Api --> Providers["Xendit · Google · Firebase · Email"]
 ```
 
-The reference Render environment contains:
+The [Render staging runbook](../deployment/render-staging.md) and root `render.yaml` define the current Free staging topology: the API container also runs the queue worker and scheduler, with separate Reverb, Vendor and Admin services, managed PostgreSQL and Key Value. Dedicated workers and cron services in the reference topology below require separately approved paid resources:
 
 | Resource | Runtime | Scaling rule |
 | --- | --- | --- |
@@ -252,8 +252,10 @@ The Phase 1 schema creates the complete baseline below. Later phases may add add
 | Disputes | `dispute_cases`, `dispute_parties`, `dispute_evidence`, `dispute_responses`, `dispute_clarifications`, `dispute_decisions`, `dispute_appeals`, `dispute_remedies` |
 | Reviews and scores | `reviews`, `review_media`, `review_moderation`, `metric_events`, `score_snapshots`, `badge_definitions`, `vendor_badge_history` |
 | Geography | `psgc_versions`, `psgc_areas`, `psgc_boundaries`, `directory_suppliers`, `place_cache_entries`, `route_cache_entries` |
-| Operations | `notifications`, `notification_deliveries`, `notification_preferences`, `files`, `webhook_events`, `idempotency_records`, `outbox_events`, `audit_logs`, `privacy_requests`, `data_exports`, `platform_settings` |
+| Operations | `notifications`, `notification_deliveries`, `notification_preferences`, `files`, `webhook_events`, `idempotency_records`, `outbox_events`, `audit_logs`, `data_exports`, `platform_settings` |
 | Analytics | `analytics_daily_facts`, `analytics_geography_facts`, `analytics_category_facts`, `analytics_active_user_facts`, `analytics_refresh_runs`, `price_observations` |
+
+> Owner correction (2026-10-23): Privacy Requests is retired across the portal, API and clients. Existing `privacy_requests` and `privacy_request_events` tables remain as retained historical records under their original guards; they have no active feature routes or writers. Buyer deletion records its reference in the existing audit trail. Migration `2026_10_29_000000_retire_privacy_request_permissions.php` removes the former permission grants. Existing Support Requests and DPO contact channels remain available for privacy inquiries.
 
 **Financial and Materials Analytics schema extension.** On a new database these are part of the Phase 1 baseline; on an already migrated repository introduce additive migrations and backfill only evidenced data. Never reset the database or rewrite applied migrations to adopt this revision. API names with hyphens map to snake_case tables; reuse `physical_payment_records`, `listing_price_versions`, `price_observations` and `analytics_refresh_runs` rather than creating synonyms.
 
@@ -406,7 +408,7 @@ Use `SELECT ... FOR UPDATE`, deterministic row ordering, database constraints, a
 | --- | --- |
 | `/auth` | register, verify email, login, refresh, logout, Google callback/exchange, recover, TOTP, sessions |
 | `/agreements` | current documents, acceptances, required reacceptance |
-| `/buyers` | profile, locations, preferences, favorites, privacy requests |
+| `/buyers` | profile, locations, preferences, favorites, account deletion |
 | `/vendors` | public store, onboarding, contacts, documents, activation, team, payment connection |
 | `/taxonomy` | categories, materials, aliases, units, technical fields, Admin changes |
 | `/listings` | create, edit, variants, media, price versions, publication, search |
@@ -926,6 +928,8 @@ VPS = VCS 50% + OHS 50%
 Buyer overrides for Item-Based and Project-Based procurement are stored separately, must total 100%, cannot be all zero, and can be reset to platform defaults.
 
 Analytics are generated from transactional events into daily aggregate facts. Dashboard requests never calculate every metric from raw orders synchronously. Geography uses versioned PSGC codes and boundaries. Small cells are suppressed or generalized according to a configured privacy rule. Exact Buyer coordinates are not exposed by aggregate-map permission.
+
+The 2026-10-21 Admin freshness correction refreshes the shared geographic fact projection every minute with the existing overlap/single-server controls and transactional publication. Daily buckets and metric formulas are unchanged. Visible Admin analytics poll every 30 seconds using the shared resource/automatic-refresh primitives. Materials price history retains its separate immutable daily capture; polling refreshes current counts and the latest published history. A running scheduler is required; free staging sleep pauses aggregation until the API wakes.
 
 **Materials Analytics implementation contract.** MAT-01–MAT-07 in the System Workflow define all source, scope, comparability, eligibility, daily capture, formulas and audience rules; Buyer and Vendor documents define page flows. Implement them in one Analytics domain, preserving independent GMV, earnings, trust scores and demand calculations. Market averages never become order prices, tax bases or automatic listing updates.
 

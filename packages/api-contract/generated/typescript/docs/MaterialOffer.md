@@ -20,6 +20,7 @@ Name | Type
 `availability` | string
 `distanceMeters` | number
 `priceAsOf` | Date
+`image` | [ListingImage](ListingImage.md)
 
 ## Example
 
@@ -41,6 +42,7 @@ const example = {
   "availability": null,
   "distanceMeters": null,
   "priceAsOf": null,
+  "image": null,
 } satisfies MaterialOffer
 
 console.log(example)

@@ -8,7 +8,6 @@ use App\Domain\Enforcement\EnforcementService;
 use App\Domain\Operations\AdminAccess;
 use App\Domain\Operations\AuditSearchService;
 use App\Domain\Operations\JobHealthService;
-use App\Domain\Privacy\PrivacyRequestService;
 use App\Domain\Settings\PlatformSettingService;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
@@ -20,7 +19,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 /**
- * Phase 16 Admin operations: Platform Settings, enforcement, privacy requests, audit search, Integration and Job
+ * Phase 16 Admin operations: Platform Settings, enforcement, audit search, Integration and Job
  * Health and the Budget Override Audit Log. Each action validates transport and hands one use case to its domain
  * service, which authorizes the Admin permission again. No route edits or deletes an audit entry, reveals a secret,
  * shows a balance or moves money.
@@ -106,41 +105,6 @@ final class AdminOperationsController extends Controller
         $input = $request->validate(['lock_version' => ['required', 'integer', 'min:1'], 'reason' => ['required', 'string', 'min:10', 'max:2000']]);
 
         return ApiResponse::success($enforcement->lift($request, $actionId, (int) $input['lock_version'], $input['reason']));
-    }
-
-    public function privacyQueue(Request $request, PrivacyRequestService $privacy): JsonResponse
-    {
-        $filters = $request->validate(['state' => ['sometimes', Rule::in(['RECEIVED', 'IDENTITY_VERIFIED', 'IN_PROGRESS', 'COMPLETED', 'REJECTED', 'WITHDRAWN'])],
-            'request_type' => ['sometimes', Rule::in(PrivacyRequestService::TYPES)], 'handler' => ['sometimes', Rule::in(['UNASSIGNED'])], 'page' => ['sometimes', 'integer', 'between:1,1000']] + PortalDateRange::rules($request));
-        $result = $privacy->queue($request, $filters);
-
-        return ApiResponse::success($result['items'], $result['meta']);
-    }
-
-    public function privacyDetail(Request $request, string $requestId, PrivacyRequestService $privacy): JsonResponse
-    {
-        return ApiResponse::success($privacy->detail($request, $requestId));
-    }
-
-    public function recordPrivacyRequest(Request $request, PrivacyRequestService $privacy, AdminAccess $access): JsonResponse
-    {
-        $input = $request->validate(['subject_email' => ['required', 'email:rfc', 'max:254'], 'request_type' => ['required', Rule::in(PrivacyRequestService::TYPES)],
-            'intake_channel' => ['required', Rule::in(PrivacyRequestService::CHANNELS)], 'received_on' => ['required', 'date_format:Y-m-d'],
-            'scope' => ['required', 'string', 'min:10', 'max:4000'], 'note' => ['required', 'string', 'min:3', 'max:2000']]);
-
-        $outcome = $access->idempotent($request, 'ADMIN_PRIVACY_RECORD', fn (): array => $privacy->create($request, $input));
-
-        return ApiResponse::success($outcome['result'], status: $outcome['replayed'] ? 200 : 201);
-    }
-
-    public function privacyTransition(Request $request, string $requestId, string $command, PrivacyRequestService $privacy): JsonResponse
-    {
-        $input = $request->validate(['lock_version' => ['required', 'integer', 'min:1'], 'note' => ['required', 'string', 'min:3', 'max:4000'],
-            'handler_user_id' => [Rule::requiredIf($command === 'assign'), 'integer'], 'target_date' => ['sometimes', 'nullable', 'date_format:Y-m-d'],
-            'verification_method' => [Rule::requiredIf($command === 'verify'), Rule::in(PrivacyRequestService::VERIFICATION_METHODS)],
-            'legal_exception' => ['sometimes', 'nullable', 'string', 'max:2000']]);
-
-        return ApiResponse::success($privacy->transition($request, $requestId, $command, $input));
     }
 
     public function audit(Request $request, AuditSearchService $audit): JsonResponse

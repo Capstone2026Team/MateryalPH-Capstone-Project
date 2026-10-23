@@ -6,6 +6,8 @@ namespace Tests\Feature\Api;
 
 use App\Domain\Geography\PlacesProvider;
 use App\Domain\Geography\RouteProvider;
+use App\Domain\Identity\EmailOtpService;
+use App\Domain\Identity\OtpCodeGenerator;
 use App\Domain\Identity\TokenSessionService;
 use App\Domain\Identity\TotpService;
 use App\Domain\Vendors\AddressGeocoder;
@@ -26,7 +28,7 @@ use Tests\Support\FakePlacesProvider;
 use Tests\Support\FakeRouteProvider;
 use Tests\TestCase;
 
-/** Buyer self-service deletion: retained-record preview, open-obligation blockers, deactivation and the privacy case. */
+/** Buyer self-service deletion: retained-record preview, open-obligation blockers, deactivation and its audit reference. */
 final class BuyerAccountDeletionTest extends TestCase
 {
     use CreatesDiscoveryFixtures;
@@ -49,7 +51,7 @@ final class BuyerAccountDeletionTest extends TestCase
         $this->fakePayments();
     }
 
-    public function test_deletion_deactivates_revokes_and_opens_a_privacy_case_without_removing_history(): void
+    public function test_deletion_deactivates_revokes_and_audits_without_creating_a_privacy_case_or_removing_history(): void
     {
         $buyer = $this->buyer();
         $other = app(TokenSessionService::class)->start($buyer, 'MOBILE', null, null, null);
@@ -66,7 +68,7 @@ final class BuyerAccountDeletionTest extends TestCase
 
         $reference = $this->postJson('/api/v1/buyers/account/deletion', ['confirmation' => 'DELETE'])->assertOk()
             ->assertJsonPath('data.sign_in_required', true)->json('data.reference');
-        self::assertMatchesRegularExpression('/^PR-\d{4}-[0-9A-F]{6}$/', $reference);
+        self::assertMatchesRegularExpression('/^AD-\d{4}-[0-9A-F-]{36}$/', $reference);
         $buyer->refresh();
         self::assertSame('DELETED', $buyer->account_status);
         self::assertNotNull($buyer->account_deleted_at);
@@ -74,8 +76,10 @@ final class BuyerAccountDeletionTest extends TestCase
         self::assertNotNull(AuthSession::query()->findOrFail($other->sessionId)->revoked_at);
         self::assertSame(0, DB::table('notification_devices')->where('user_id', $buyer->id)->whereNull('revoked_at')->count());
         self::assertNotNull(DB::table('totp_factors')->where('user_id', $buyer->id)->value('revoked_at'));
-        $this->assertDatabaseHas('privacy_requests', ['user_id' => $buyer->id, 'reference' => $reference, 'request_type' => 'DELETION', 'state' => 'RECEIVED', 'intake_channel' => 'IN_APP']);
-        $this->assertDatabaseHas('privacy_request_events', ['actor_user_id' => $buyer->id, 'event' => 'RECEIVED', 'actor_role' => 'BUYER']);
+        $this->assertDatabaseMissing('privacy_requests', ['user_id' => $buyer->id]);
+        $this->assertDatabaseMissing('privacy_request_events', ['actor_user_id' => $buyer->id]);
+        $audit = DB::table('audit_logs')->where('action', 'ACCOUNT_DELETED')->where('actor_user_id', $buyer->id)->first();
+        self::assertSame($reference, json_decode($audit->after, true, flags: JSON_THROW_ON_ERROR)['deletion_reference']);
         $this->assertDatabaseHas('audit_logs', ['action' => 'ACCOUNT_DELETED', 'actor_user_id' => $buyer->id]);
         // History is retained: the Buyer profile row still exists.
         self::assertNotNull(DB::table('buyer_profiles')->where('user_id', $buyer->id)->value('id'));
@@ -99,6 +103,48 @@ final class BuyerAccountDeletionTest extends TestCase
         $this->getJson('/api/v1/buyers/account/deletion')->assertOk()->assertJsonPath('data.can_delete', true);
         $this->postJson('/api/v1/buyers/account/deletion', ['confirmation' => 'DELETE'])->assertOk();
         self::assertNotNull(DB::table('orders')->where('id', $orderId)->value('id'), 'Order history is never deleted.');
+    }
+
+    public function test_deleted_buyer_can_register_the_same_email_as_a_separate_verified_account(): void
+    {
+        config(['materyalph.bot_protection.enabled' => false]);
+        $buyer = $this->buyer();
+        $email = $buyer->email;
+        $profileId = DB::table('buyer_profiles')->where('user_id', $buyer->id)->value('id');
+        DB::table('external_identities')->insert(['id' => (string) Str::uuid7(), 'user_id' => $buyer->id,
+            'provider' => 'GOOGLE', 'provider_subject' => 'deleted-google-buyer', 'email_at_link' => $email,
+            'linked_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+        $this->mock(OtpCodeGenerator::class)->shouldReceive('sixDigits')->andReturn('654321', '123456');
+        $oldOtp = app(EmailOtpService::class)->issue($email, 'PASSWORD_RESET', $buyer);
+        $this->reauthenticate($buyer);
+        $this->postJson('/api/v1/buyers/account/deletion', ['confirmation' => 'DELETE'])->assertOk();
+
+        $terms = collect($this->getJson('/api/v1/agreements/current')->assertOk()->json('data'))->firstWhere('code', 'TERMS_OF_SERVICE');
+        $payload = ['full_name' => 'New Buyer', 'email' => ' '.strtoupper($email).' ', 'mobile_e164' => '+639171234567',
+            'password' => 'StrongPassword123', 'password_confirmation' => 'StrongPassword123', 'buyer_type' => 'INDIVIDUAL',
+            'terms_accepted' => true, 'privacy_accepted' => true, 'terms_version_id' => $terms['id'], 'terms_content_hash' => $terms['content_hash']];
+        $this->postJson('/api/v1/mobile/auth/register', $payload)->assertCreated()->assertJsonPath('data.verification_required', true);
+
+        $newBuyer = User::query()->where('email', $email)->sole();
+        self::assertNotSame($buyer->id, $newBuyer->id);
+        self::assertNotSame($buyer->public_id, $newBuyer->public_id);
+        self::assertSame('PENDING_VERIFICATION', $newBuyer->account_status);
+        self::assertNull($newBuyer->email_verified_at);
+        self::assertSame('DELETED', $buyer->refresh()->account_status);
+        self::assertStringEndsWith('@accounts.materyalph.invalid', $buyer->email);
+        self::assertNotNull($oldOtp->refresh()->invalidated_at);
+        $this->assertDatabaseMissing('external_identities', ['user_id' => $buyer->id]);
+        $this->assertDatabaseHas('buyer_profiles', ['id' => $profileId, 'user_id' => $buyer->id]);
+        $this->assertDatabaseMissing('privacy_requests', ['user_id' => $buyer->id]);
+        self::assertNotSame($profileId, DB::table('buyer_profiles')->where('user_id', $newBuyer->id)->value('id'));
+        self::assertSame(0, AuthSession::query()->where('user_id', $buyer->id)->whereNull('revoked_at')->count());
+
+        $this->postJson('/api/v1/mobile/auth/password/reset', ['email' => $email, 'code' => '654321',
+            'password' => 'DifferentPassword123', 'password_confirmation' => 'DifferentPassword123'])->assertUnprocessable();
+        $this->postJson('/api/v1/mobile/auth/verify-email', ['email' => $email, 'code' => '123456'])->assertOk();
+        $this->postJson('/api/v1/mobile/auth/login', ['email' => $email, 'password' => 'StrongPassword123'])->assertOk();
+        self::assertSame('DELETED', $buyer->refresh()->account_status);
+        self::assertSame('ACTIVE', $newBuyer->refresh()->account_status);
     }
 
     public function test_deleted_status_requires_its_deletion_timestamp(): void

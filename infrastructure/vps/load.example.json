@@ -1,0 +1,9 @@
+{
+  "origin": "https://materyalph26-api.duckdns.org",
+  "syntheticDataConfirmed": false,
+  "actors": [
+    { "role": "buyer", "headers": {}, "requests": ["/buyers/listings/search"] },
+    { "role": "vendor", "headers": {}, "requests": ["/vendor/orders", "/vendor/catalog/listings"] },
+    { "role": "admin", "headers": {}, "requests": ["/admin/dashboard"] }
+  ]
+}

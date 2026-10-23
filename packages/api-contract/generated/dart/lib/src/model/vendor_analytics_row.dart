@@ -6,6 +6,7 @@
 import 'package:materyalph_api_client/src/model/analytics_category_ref.dart';
 import 'package:materyalph_api_client/src/model/vendor_own_offer.dart';
 import 'package:materyalph_api_client/src/model/comparable_specification.dart';
+import 'package:materyalph_api_client/src/model/listing_image.dart';
 import 'package:materyalph_api_client/src/model/analytics_unit.dart';
 import 'package:materyalph_api_client/src/model/vendor_analytics_point.dart';
 import 'package:materyalph_api_client/src/model/analytics_trend.dart';
@@ -30,6 +31,7 @@ part 'vendor_analytics_row.g.dart';
 /// * [trend]
 /// * [currentCompetitors]
 /// * [ownOffer]
+/// * [image] - The Vendor's own listing photo for this variant, or null. A competitor photo is never returned (MAT-05).
 @BuiltValue(instantiable: false)
 abstract class VendorAnalyticsRow  {
   @BuiltValueField(wireName: r'group_id')
@@ -64,6 +66,10 @@ abstract class VendorAnalyticsRow  {
 
   @BuiltValueField(wireName: r'own_offer')
   VendorOwnOffer? get ownOffer;
+
+  /// The Vendor's own listing photo for this variant, or null. A competitor photo is never returned (MAT-05).
+  @BuiltValueField(wireName: r'image')
+  ListingImage? get image;
 
   @BuiltValueSerializer(custom: true)
   static Serializer<VendorAnalyticsRow> get serializer => _$VendorAnalyticsRowSerializer();
@@ -136,6 +142,13 @@ class _$VendorAnalyticsRowSerializer implements PrimitiveSerializer<VendorAnalyt
       yield serializers.serialize(
         object.ownOffer,
         specifiedType: const FullType.nullable(VendorOwnOffer),
+      );
+    }
+    if (object.image != null) {
+      yield r'image';
+      yield serializers.serialize(
+        object.image,
+        specifiedType: const FullType.nullable(ListingImage),
       );
     }
   }
@@ -279,6 +292,14 @@ class _$$VendorAnalyticsRowSerializer implements PrimitiveSerializer<$VendorAnal
           ) as VendorOwnOffer?;
           if (valueDes == null) continue;
           result.ownOffer.replace(valueDes);
+          break;
+        case r'image':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ListingImage),
+          ) as ListingImage?;
+          if (valueDes == null) continue;
+          result.image.replace(valueDes);
           break;
         default:
           unhandled.add(key);

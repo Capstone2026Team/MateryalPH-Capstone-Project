@@ -1,14 +1,14 @@
 import { DocumentExportButton } from '@materyalph/web-ui'
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Banknote, ClipboardCheck, CreditCard, Download, ExternalLink, Landmark, Percent, ReceiptText, RefreshCw, ShieldAlert, ShieldCheck, Wallet } from 'lucide-react'
+import { ArrowLeft, Banknote, CreditCard, Download, ExternalLink, Landmark, ReceiptText, RefreshCw, ShieldAlert, ShieldCheck, Wallet } from 'lucide-react'
 import {
-  ActiveFilters, ALL_DATES, BarList, Button, ChartDataTable, CommissionRateSummary, DashboardPanel, DataTable, DateFilter, DemoLabel, FilterTabs, FinanceDetails, FinanceSection, FormDialog, KpiCard, MethodNote, Pagination, PaymentAttemptBadge, PaymentChannelList, ShareBar,
+  ActiveFilters, ALL_DATES, BarList, Button, ChartDataTable, CommissionRateSummary, ControlBar, DashboardPanel, DataTable, DateFilter, DemoLabel, FilterTabs, FinanceDetails, FinanceSection, FormDialog, KpiCard, MethodNote, Pagination, PaymentAttemptBadge, PaymentChannelList, ShareBar,
   RankedList, RevealableValue, StatusBadge, StatusMessage, StatCards, InfoNote, EmptyState, SectionWorkspace, ThresholdPanel, Toolbar, TrendLineChart,
   analyticsDay, dateFilterLabel, formatChartDay, formatChartMonth, formatCompactCentavos, formatCount, formatManilaDateTime, formatPesoCentavos, type DateFilterRange, type TrendSeries, type VizColor,
 } from '@materyalph/web-ui'
 import {
-  channelRows, exportTransactions, getCommissionMonitoring, getEarnings, getFinanceOverview, getFinanceReviews, getStatement, listTransactions, payStatement, readableFinanceError, refreshFeePayment, revealTin, section,
+  channelRows, exportTransactions, getCommissionMonitoring, getEarnings, getFinanceOverview, getStatement, listTransactions, payStatement, readableFinanceError, refreshFeePayment, revealTin, section,
   thresholdData, type FeeStatementDetail, type FinanceRow, type FinanceTab, type PaymentAttempt, type PaymentStatusFilter, type VendorEarnings, type VendorEarningsTrendPoint,
 } from '../lib/finance-api'
 import { pesoInputToCentavos } from '../lib/orders-api'
@@ -38,14 +38,14 @@ function OwnerOnly() {
   return <div className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-6" role="alert">
     <div className="flex items-start gap-3"><ShieldAlert className="mt-0.5 shrink-0 text-action-primary" size={20} aria-hidden="true" />
       <div><PageHeader eyebrow="Finance" title="Store-wide finance is Owner-only" description="Access depends on your assigned role." />
-        <p className="mt-1 text-sm text-text-secondary">Earnings, Transaction History, withholding and commission statements and finance exports are available to the Vendor Owner. Order-specific payment status stays visible on each order you can work on.</p></div></div>
+        <p className="mt-1 text-sm text-text-secondary">Earnings, Transactions, withholding and commission statements and finance exports are available to the Vendor Owner. Order-specific payment status stays visible on each order you can work on.</p></div></div>
     <Link className="text-sm font-semibold text-action-primary underline" to="/orders">Go to Orders</Link>
   </div>
 }
 
 function FinanceTabs({ current }: { current: 'overview' | 'transactions' | 'commissions' }) {
   const navigate = useNavigate()
-  return <FilterTabs appearance="tabs" label="Finance sections" value={current} chips={[{ value: 'overview', label: 'Finance overview' }, { value: 'commissions', label: 'Commission monitoring' }, { value: 'transactions', label: 'Transaction History' }]} onChange={value => navigate(value === 'overview' ? '/finance' : `/finance/${value}`)} />
+  return <FilterTabs appearance="tabs" label="Finance sections" value={current} chips={[{ value: 'overview', label: 'Finance overview' }, { value: 'commissions', label: 'Commission monitoring' }, { value: 'transactions', label: 'Transactions' }]} onChange={value => navigate(value === 'overview' ? '/finance' : `/finance/${value}`)} />
 }
 
 function useLoader<T>(load: () => Promise<T>, key?: string) {
@@ -67,36 +67,39 @@ function useLoader<T>(load: () => Promise<T>, key?: string) {
 // ── Finance overview ────────────────────────────────────────────────────────────────────────────
 
 export function VendorFinancePage() {
-  return <FinanceGate activeHref="/finance" permission="portal.wallet">{() => <FinanceOverview />}</FinanceGate>
+  return <FinanceGate activeHref="/finance" permission="portal.wallet">{snapshot => <FinanceOverview canViewEarnings={snapshot.permissions.includes('portal.earnings')} />}</FinanceGate>
 }
 
-function FinanceOverview() {
+/** The setup sections sit in one card; Earnings draws its own cards, so it gets none (no card inside a card). */
+const settingsPanel = 'min-w-0 rounded-surface border border-border-default bg-surface-primary p-5 sm:p-6 xl:p-8'
+
+function FinanceOverview({ canViewEarnings }: { canViewEarnings: boolean }) {
   const { data, error, reload } = useLoader(getFinanceOverview)
   const [xenditDemoOpen, setXenditDemoOpen] = useState(false)
+  const earningsDates = useEarningsDates()
   if (error) return <div className="grid gap-4"><ErrorState message={error} onRetry={reload} /></div>
   if (!data) return <LoadingState label="Loading finance overview…" />
   const connection = section(data.xenditConnection)
   const tax = section(data.taxProfile)
   const declaration = section(tax.declaration)
   const arrangement = section(data.withholdingArrangement)
-  const terms = section(data.commissionTerms)
   const online = section(data.onlineChannels)
-  const statements = section(data.statements)
   const threshold = thresholdData(data.threshold)
   const mandatory = data.notices.filter(notice => notice.mandatory)
   const tin = tax.tin_masked ? <RevealableValue masked={String(tax.tin_masked)} label="TIN" reveal={revealTin} readError={readableFinanceError} /> : 'Not provided'
 
-  return <div className="grid min-w-0 gap-6">
-    <PageHeader eyebrow="Finance" title="Finance overview" description="Manage your TEST connection, tax profile, withholding and commission terms." actions={<Link className="inline-flex min-h-11 items-center gap-2 rounded-control border border-border-default bg-surface-primary px-4 text-sm font-semibold text-action-primary" to="/finance/commissions"><Percent size={16} aria-hidden="true" />Monitor commission fees</Link>} />
+  return <div className="grid min-w-0 gap-4">
+    <PageHeader compact eyebrow="Finance" title="Finance overview" description="Review earnings and manage your TEST connection, tax profile, withholding and commission terms." />
     <FinanceTabs current="overview" />
-    <InfoNote>MateryalPH holds no wallet or balance for your store.</InfoNote>
     {mandatory.length > 0 && <section aria-labelledby="notices-heading" className="grid gap-2">
       <h2 id="notices-heading" className="text-base font-semibold">Required finance notices</h2>
       <ul className="grid gap-2">{mandatory.slice(0, 3).map(notice => <li key={notice.id} className="rounded-control border border-red-300 bg-red-50 p-3 text-sm text-red-900"><p className="font-semibold">{notice.title}</p><p className="mt-1">{notice.body}</p><p className="mt-1 text-xs">{formatManilaDateTime(notice.createdAt)} · Cannot be turned off</p></li>)}</ul>
     </section>}
     <div className="min-w-0">
-      <SectionWorkspace appearance="chips" contentClassName="min-w-0 rounded-surface border border-border-default bg-surface-primary p-5 sm:p-6 xl:p-8" sections={[
-        { label: 'Xendit & payment channels', content: <div className="grid min-w-0 gap-6 xl:gap-8">
+      <SectionWorkspace appearance="chips" sections={[
+        // Earnings opens first: it is what the Owner reviews most, and the setup sections below change rarely.
+        ...(canViewEarnings ? [{ label: 'Earnings', actions: <>{earningsDates.dates}{earningsDates.exportButton}</>, content: <Earnings embedded controls={earningsDates} /> }] : []),
+        { label: 'Xendit & payment channels', content: <div className={`${settingsPanel} grid min-w-0 gap-6 xl:gap-8`}>
           <FinanceSection id="xendit" layout="split" title="Xendit connection" icon={<Landmark size={20} />} description={String(connection.note ?? '')}
             badge={<StatusBadge label={String(connection.label ?? 'Not connected')} tone={connection.status === 'CONNECTED_TEST' ? 'success' : 'warning'} />}>
             <FinanceDetails appearance="rows" items={[
@@ -111,7 +114,7 @@ function FinanceOverview() {
             <PaymentChannelList layout="columns" caption="Configured online channels" channels={channelRows(online.channels)} />
           </FinanceSection>
         </div> },
-        { label: 'Gross-remittance threshold', content: <div className="grid min-w-0 gap-6 xl:gap-8">
+        { label: 'Gross-remittance threshold', content: <div className={`${settingsPanel} grid min-w-0 gap-6 xl:gap-8`}>
           {threshold ? <ThresholdPanel data={threshold} layout="overview" showDemoLabel={false} /> : <StatusMessage tone="info">The threshold panel appears once your tax profile is complete.</StatusMessage>}
           <FinanceSection id="tax" layout="split" title="Vendor Tax Profile summary" icon={<ReceiptText size={20} />} description="Collected once in Store Verification. Corrections create a new version and never rewrite posted records.">
             {tax.available ? <FinanceDetails appearance="rows" items={[
@@ -124,15 +127,7 @@ function FinanceOverview() {
           <FinanceSection id="arrangement" layout="split" title="Withholding arrangement" icon={<ShieldCheck size={20} />}>
             <FinanceDetails appearance="rows" items={[['Rate', String(arrangement.rate_label ?? '—')]]} />
           </FinanceSection>
-          <FinanceSection id="terms" layout="split" title="Commission Terms" icon={<Percent size={20} />} description={String(terms.note ?? '')} badge={<StatusBadge label={terms.accepted ? `Accepted · version ${String(terms.version ?? '')}` : 'Not accepted'} tone={terms.accepted ? 'success' : 'warning'} />}>
-            <FinanceDetails appearance="rows" items={[['Rate', String(terms.rate_label ?? '') || '—'], ['Accepted', formatManilaDateTime(terms.accepted_at as string | null)]]} />
-            {Number(statements.outstanding_centavos ?? 0) > 0 && <div className="flex flex-wrap items-center justify-between gap-4 rounded-control bg-surface-canvas p-4">
-              <div className="min-w-0"><p className="text-xs font-semibold text-text-secondary">Outstanding statements</p><p className="mt-1 text-xl font-semibold tabular-nums text-text-strong">{formatPesoCentavos(Number(statements.outstanding_centavos))}</p>{Boolean(statements.next_due_on) && <p className="mt-1 text-xs text-text-secondary">Next due {String(statements.next_due_on)}</p>}</div>
-              <Link className="inline-flex min-h-11 items-center gap-2 rounded-control border border-border-default bg-surface-primary px-4 text-sm font-semibold text-action-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" to="/finance/transactions?tab=STATEMENTS"><ReceiptText size={16} aria-hidden="true" />View statements</Link>
-            </div>}
-          </FinanceSection>
         </div> },
-        { label: 'Finance reviews', content: <FinanceReviewsSection /> },
       ]} />
     </div>
     {xenditDemoOpen && <FormDialog open title="Xendit account demo" description="Demo shortcut · Xendit TEST mode" size="small" onClose={() => setXenditDemoOpen(false)}
@@ -153,7 +148,7 @@ function CommissionMonitoring({ onSnapshotSaved }: { onSnapshotSaved: (snapshot:
   const data = result.data?.monitoring
   const total = data?.summary
   return <div className="grid min-w-0 gap-6">
-    <PageHeader eyebrow="Finance" title="Commission monitoring" description="Track your store's commission fees from accepted order to monthly statement and payment." actions={<Button variant="outline" onClick={result.reload}><RefreshCw size={16} aria-hidden="true" />Refresh</Button>} />
+    <PageHeader compact eyebrow="Finance" title="Commission monitoring" description="Track your store's commission fees from accepted order to monthly statement and payment." actions={<Button variant="outline" onClick={result.reload}><RefreshCw size={16} aria-hidden="true" />Refresh</Button>} />
     <FinanceTabs current="commissions" />
     {result.error ? <ErrorState message={result.error} onRetry={result.reload} /> : !data || !total ? <LoadingState label="Loading commission monitoring…" /> : <>
       {!data.termsAccepted && <StatusMessage tone="info">Review and accept the current Commission Terms before new transactions use this rate. Existing orders keep their saved rate.</StatusMessage>}
@@ -198,39 +193,14 @@ function CommissionTermsDialog({ onClose, onSaved }: { onClose: () => void; onSa
   </FormDialog>
 }
 
-// ── Finance review status (FIN-10) ─────────────────────────────────────────────────────────────
-
-function FinanceReviewsSection() {
-  const { data, error, reload } = useLoader(getFinanceReviews)
-  const text = (value: unknown) => String(value ?? '').replaceAll('_', ' ').toLowerCase().replace(/(^|\s)\S/g, letter => letter.toUpperCase())
-  return <FinanceSection id="reviews" title="Finance reviews" icon={<ClipboardCheck size={20} />} description="Where your statements, tax adjustments and tax evidence stand with the MateryalPH finance team. Corrections post new entries; nothing you filed is edited." badge={data ? <DemoLabel>{data.label}</DemoLabel> : undefined}>
-    {error ? <ErrorState message={error} onRetry={reload} /> : !data ? <LoadingState label="Loading finance reviews…" /> : <div className="grid gap-6">
-      {data.openReviews.length > 0 && <ul className="grid gap-2" aria-label="Open finance reviews">{data.openReviews.map(item => <li key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900"><span className="font-semibold">{item.label}</span><span>Opened {formatManilaDateTime(item.createdAt)}</span></li>)}</ul>}
-      <div className="min-w-0 overflow-x-auto rounded-control border border-border-default focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" tabIndex={0} role="region" aria-label="Commission statement records"><table className="w-full min-w-[40rem] text-left text-sm"><caption className="border-b border-border-default px-4 py-4 text-left text-base font-semibold text-text-strong">Commission statements</caption>
-        <thead className="bg-surface-canvas text-xs text-text-secondary"><tr>{['Statement', 'Period', 'Approval', 'Outstanding', 'Payment status'].map(head => <th key={head} scope="col" className="px-4 py-3 font-semibold">{head}</th>)}</tr></thead>
-        <tbody className="divide-y divide-border-default">{data.statements.length === 0 ? <tr><td colSpan={5} className="px-4 py-6 text-text-secondary">No issued statements yet.</td></tr> : data.statements.map(row => <tr key={String(row.id)} className="align-top">
-          <td className="px-4 py-4 font-semibold text-text-strong">{String(row.reference ?? '—')}</td><td className="px-4 py-4 text-text-secondary">{String(row.period_start)} – {String(row.period_end)}</td>
-          <td className="px-4 py-4">{row.approved ? 'Approved and issued' : 'Awaiting approval'}</td><td className="px-4 py-4 font-semibold tabular-nums text-text-strong">{formatPesoCentavos(Number(row.outstanding_centavos ?? 0))}</td>
-          <td className="px-4 py-4"><StatusBadge label={row.overdue ? `Overdue since ${String(row.due_on)}` : text(row.state)} tone={row.overdue ? 'error' : row.state === 'PAID' ? 'success' : 'warning'} /></td></tr>)}</tbody></table></div>
-      <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
-        <section aria-labelledby="adjustments-heading" className="grid content-start gap-3 border-t border-border-default pt-5"><h3 id="adjustments-heading" className="text-base font-semibold text-text-strong">Tax adjustments</h3>
-          {data.taxAdjustments.length === 0 ? <p className="rounded-control bg-surface-canvas p-4 text-sm text-text-secondary">No tax adjustments.</p> : <ul className="divide-y divide-border-default">{data.taxAdjustments.map(row => <li key={String(row.id)} className="flex min-w-0 flex-wrap items-start justify-between gap-3 py-3 text-sm">
-            <span className="grid min-w-0 gap-1"><span className="font-semibold text-text-strong">{text(row.kind)}</span><span className="text-text-secondary [overflow-wrap:anywhere]">{String(row.order_reference)} · {formatPesoCentavos(Number(row.amount_centavos ?? 0))}</span></span><StatusBadge label={text(row.state)} tone={row.state === 'POSTED' ? 'success' : row.state === 'REJECTED' ? 'error' : 'warning'} /></li>)}</ul>}</section>
-        <section aria-labelledby="evidence-heading" className="grid content-start gap-3 border-t border-border-default pt-5"><h3 id="evidence-heading" className="text-base font-semibold text-text-strong">Tax evidence</h3>
-          {data.evidence.length === 0 ? <p className="rounded-control bg-surface-canvas p-4 text-sm text-text-secondary">No tax evidence submitted.</p> : <ul className="divide-y divide-border-default">{data.evidence.map(row => <li key={String(row.id)} className="flex min-w-0 flex-wrap items-start justify-between gap-3 py-3 text-sm">
-            <span className="grid min-w-0 gap-1"><span className="font-semibold text-text-strong">{text(row.evidence_type)}</span>{Boolean(row.taxable_year) && <span className="text-xs text-text-secondary">Taxable year {String(row.taxable_year)}</span>}</span><StatusBadge label={text(row.review_state)} tone={row.review_state === 'APPROVED' ? 'success' : row.review_state === 'REJECTED' ? 'error' : 'warning'} /></li>)}</ul>}</section>
-      </div>
-    </div>}
-  </FinanceSection>
-}
-// ── Transaction History ─────────────────────────────────────────────────────────────────────────
+// ── Transactions ─────────────────────────────────────────────────────────────────────────
 
 const TABS: { value: FinanceTab; label: string }[] = [
-  { value: 'PAYMENTS', label: 'Payments' }, { value: 'PHYSICAL', label: 'Physical receipts' }, { value: 'REMITTANCES', label: 'Remittances and CWT' },
-  { value: 'STATEMENTS', label: 'Commission statements' }, { value: 'REFUNDS', label: 'Refunds and adjustments' }, { value: 'TAX_DOCUMENTS', label: 'Tax documents' },
+  { value: 'PAYMENTS', label: 'Payments' }, { value: 'REMITTANCES', label: 'Remittances and CWT' },
+  { value: 'STATEMENTS', label: 'Commission statements' }, { value: 'TAX_DOCUMENTS', label: 'Tax documents' },
 ]
 const EMPTY: Record<FinanceTab, string> = {
-  PAYMENTS: 'No online payments yet. Verified Buyer payments appear here.', PHYSICAL: 'No Cash on Delivery or In-Store records yet.',
+  PAYMENTS: 'No payments yet. Online payments and Cash on Delivery or In-Store orders appear here.', PHYSICAL: 'No Cash on Delivery or In-Store records yet.',
   REMITTANCES: 'No simulated remittance assessments yet. They appear after verified collections.', STATEMENTS: 'No issued commission statements yet. Statements are drafted on the first of each month.',
   REFUNDS: 'No refunds or adjustments.', TAX_DOCUMENTS: 'No tax documents. Sample certificates are watermarked and never official.',
 }
@@ -240,6 +210,9 @@ const PAYMENT_STATUSES: { value: PaymentStatusFilter; label: string }[] = [
   { value: 'PAID', label: 'Paid — verified by provider' }, { value: 'PAID_REFUNDED', label: 'Paid — refunded' }, { value: 'PAID_PARTIALLY_REFUNDED', label: 'Paid — partially refunded' },
   { value: 'PAID_REFUND_PENDING', label: 'Paid — refund pending' }, { value: 'PAID_REFUND_FAILED', label: 'Paid — refund failed' }, { value: 'PENDING', label: 'Pending verification' },
   { value: 'FAILED', label: 'Failed — not charged' }, { value: 'EXPIRED', label: 'Expired — not charged' }, { value: 'LATE_CAPTURE', label: 'Late capture' },
+  { value: 'PHYSICAL_COLLECTED', label: 'Cash — collected (Vendor record)' }, { value: 'PHYSICAL_PARTIAL', label: 'Cash — partially collected' },
+  { value: 'PHYSICAL_TO_RECORD', label: 'Cash — handed over, not recorded' }, { value: 'PHYSICAL_AWAITING', label: 'Cash — awaiting delivery or pickup' },
+  { value: 'PHYSICAL_RELEASED', label: 'Cash — not collected, order cancelled' },
 ]
 
 export function VendorTransactionHistoryPage() {
@@ -290,25 +263,25 @@ function TransactionHistory() {
     } catch (cause) { setError(await readableFinanceError(cause)) }
     finally { setExporting(false) }
   }
-  return <div className="grid min-w-0 gap-6">
-    <PageHeader eyebrow="Finance" title="Transaction History" description="Review payments, receipts, simulated remittances, statements, refunds and tax documents."
-      actions={<><DocumentExportButton basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} audience="vendor" types={['TRANSACTION_HISTORY']} filters={{ tab, ...filters }} title="Transaction History" /><Button variant="secondary" disabled={exporting || !rows || rows.length === 0} onClick={() => void download()}><Download size={16} aria-hidden="true" />{exporting ? 'Preparing…' : 'Export CSV'}</Button></>} />
-    <InfoNote>Read-only records; this page shows no balance and moves no money. Internal Operational Report — Not a Tax Invoice. Use your authorized Xendit dashboard for balances and withdrawals.</InfoNote>
+  return <div className="grid min-w-0 gap-4">
+    <PageHeader compact eyebrow="Finance" title="Transactions" description="Review payments, simulated remittances, commission statements and tax documents." />
     <FinanceTabs current="transactions" />
-    <FilterTabs label="Transaction type" chips={tabs} value={tab} onChange={value => update({ tab: value, status: '' })} />
-    <Toolbar filters={<>
-      <DateFilter title={tab === 'STATEMENTS' ? 'Statement issue dates' : tab === 'TAX_DOCUMENTS' ? 'Tax period end dates' : tab === 'REFUNDS' ? 'Refund creation dates' : 'Transaction dates'} value={range} onChange={next => update(dateRangePatch(next))} />
+    <ControlBar tabs={<FilterTabs label="Transaction type" chips={tabs} value={tab} onChange={value => update({ tab: value, status: '' })} />} actions={<>
+      <DateFilter title={tab === 'STATEMENTS' ? 'Statement issue dates' : tab === 'TAX_DOCUMENTS' ? 'Tax period end dates' : 'Transaction dates'} value={range} onChange={next => update(dateRangePatch(next))} />
       {tab === 'PAYMENTS' && <label className="flex min-w-0 items-center gap-2 text-sm font-semibold">Status
         <select className="min-h-11 min-w-0 max-w-full rounded-control border border-border-default bg-surface-primary px-3 text-sm font-normal" value={status?.value ?? ''} onChange={event => update({ status: event.target.value })}>
           <option value="">All statuses</option>
           {PAYMENT_STATUSES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
         </select>
       </label>}
+      <DocumentExportButton basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} audience="vendor" types={['TRANSACTION_HISTORY']} filters={{ tab, ...filters }} title="Transactions" />
+      <Button variant="secondary" disabled={exporting || !rows || rows.length === 0} onClick={() => void download()}><Download size={16} aria-hidden="true" />{exporting ? 'Preparing…' : 'Export CSV'}</Button>
     </>} />
     <ActiveFilters filters={[
       ...(range.from || range.to ? [{ key: 'dates', label: dateFilterLabel(range), onRemove: () => update(dateRangePatch(ALL_DATES)) }] : []),
       ...(status ? [{ key: 'status', label: status.label, onRemove: () => update({ status: '' }) }] : []),
     ]} onClear={() => update({ ...dateRangePatch(ALL_DATES), status: '' })} />
+    <InfoNote>Use your authorized Xendit dashboard for balances and money withdrawals.</InfoNote>
     {error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} />
       : rows === null ? <LoadingState label="Loading records…" />
         : rows.length === 0 ? <EmptyState icon={<Wallet size={24} aria-hidden="true" />} message={EMPTY[tab]} action={<Button variant="secondary" onClick={() => setAttempt(value => value + 1)}>Retry</Button>} />
@@ -320,21 +293,24 @@ function TransactionHistory() {
 type Column = { header: string; cell: (row: FinanceRow) => ReactNode; numeric?: boolean }
 const money = (key: string): Column['cell'] => row => <span className="tabular-nums">{row[key] === null || row[key] === undefined ? '—' : formatPesoCentavos(Number(row[key]))}</span>
 const text = (key: string): Column['cell'] => row => String(row[key] ?? '—').replaceAll('_', ' ')
+/** The order reference, opening the order when the record belongs to one. */
+const orderLink: Column['cell'] = row => row.order_id ? <Link className="break-all font-semibold text-action-primary underline underline-offset-4" to={`/orders/${String(row.order_id)}`}>{String(row.reference)}</Link> : text('reference')(row)
 
 const COLUMNS: Record<FinanceTab, Column[]> = {
-  PAYMENTS: [{ header: 'Order', cell: text('reference') }, { header: 'Purpose', cell: text('purpose') }, { header: 'Status', cell: row => <PaymentAttemptBadge status={String(row.status)} refundStatus={String(row.refund_state ?? 'NOT_REQUESTED')} /> },
+  PAYMENTS: [{ header: 'Order', cell: orderLink }, { header: 'Purpose', cell: text('purpose') }, { header: 'Status', cell: row => <PaymentAttemptBadge status={String(row.status)} refundStatus={String(row.refund_state ?? 'NOT_REQUESTED')} /> },
     { header: 'Gross', cell: money('gross_centavos'), numeric: true }, { header: 'Buyer fee', cell: money('buyer_processing_fee_centavos'), numeric: true },
-    { header: 'Refunded', cell: money('refunded_centavos'), numeric: true }, { header: 'Net collected', cell: money('net_collected_centavos'), numeric: true },
-    { header: 'Origin', cell: text('evidence_origin') }, { header: 'Date', cell: row => formatManilaDateTime(row.at as string) }],
-  PHYSICAL: [{ header: 'Order', cell: text('reference') }, { header: 'Record', cell: text('kind') }, { header: 'Amount', cell: money('amount_centavos'), numeric: true }, { header: 'Remaining', cell: money('remaining_centavos'), numeric: true },
+    { header: 'Refunded', cell: money('refunded_centavos'), numeric: true }, { header: 'Net collected', cell: row => <>{money('net_collected_centavos')(row)}
+      {row.kind === 'PHYSICAL' && Number(row.remaining_centavos) > 0 && <span className="block text-xs text-text-secondary">{formatPesoCentavos(Number(row.remaining_centavos))} still owed</span>}</>, numeric: true },
+    { header: 'Origin', cell: row => row.kind === 'PHYSICAL' ? `${row.channel === 'IN_STORE' ? 'IN-STORE' : 'COD'} · VENDOR RECORD` : text('evidence_origin')(row) }, { header: 'Date', cell: row => formatManilaDateTime(row.at as string) }],
+  PHYSICAL: [{ header: 'Order', cell: orderLink }, { header: 'Record', cell: text('kind') }, { header: 'Amount', cell: money('amount_centavos'), numeric: true }, { header: 'Remaining', cell: money('remaining_centavos'), numeric: true },
     { header: 'Source', cell: text('evidence_origin') }, { header: 'Buyer acknowledged', cell: row => row.buyer_acknowledged ? 'Yes' : 'No' }, { header: 'Date', cell: row => formatManilaDateTime(row.at as string) }],
-  REMITTANCES: [{ header: 'Order', cell: text('reference') }, { header: 'Collected (C)', cell: money('collected_centavos'), numeric: true }, { header: 'Charge (P)', cell: money('provider_charge_centavos'), numeric: true },
+  REMITTANCES: [{ header: 'Order', cell: orderLink }, { header: 'Collected (C)', cell: money('collected_centavos'), numeric: true }, { header: 'Charge (P)', cell: money('provider_charge_centavos'), numeric: true },
     { header: 'Base (G)', cell: money('gross_basis_centavos'), numeric: true }, { header: 'CWT (W)', cell: money('withheld_centavos'), numeric: true }, { header: 'Expected cash', cell: money('expected_cash_centavos'), numeric: true },
     { header: 'Threshold status', cell: row => row.calculation_state === 'VOIDED' ? 'Voided — fully refunded' : text('threshold_status_after')(row) }, { header: 'Evidence', cell: row => `${String(row.deduction_evidence_state ?? '').replaceAll('_', ' ')} · DEMO` }],
   STATEMENTS: [{ header: 'Statement', cell: row => <Link className="font-semibold text-action-primary underline" to={`/finance/statements/${String(row.id)}`}>{String(row.reference)}</Link> },
     { header: 'Period', cell: row => `${String(row.period_start)} – ${String(row.period_end)}` }, { header: 'State', cell: row => `${String(row.state).replaceAll('_', ' ')}${row.overdue ? ' · overdue' : ''}` },
     { header: 'Charges', cell: money('charges_centavos'), numeric: true }, { header: 'Credits', cell: money('credits_centavos'), numeric: true }, { header: 'Outstanding', cell: money('outstanding_centavos'), numeric: true }, { header: 'Due', cell: text('due_on') }],
-  REFUNDS: [{ header: 'Order', cell: text('reference') }, { header: 'Trigger', cell: text('trigger') }, { header: 'Amount', cell: money('amount_centavos'), numeric: true }, { header: 'State', cell: text('state') }, { header: 'Date', cell: row => formatManilaDateTime(row.at as string) }],
+  REFUNDS: [{ header: 'Order', cell: orderLink }, { header: 'Trigger', cell: text('trigger') }, { header: 'Amount', cell: money('amount_centavos'), numeric: true }, { header: 'State', cell: text('state') }, { header: 'Date', cell: row => formatManilaDateTime(row.at as string) }],
   TAX_DOCUMENTS: [{ header: 'Type', cell: text('certificate_type') }, { header: 'Issuer', cell: text('issuer') }, { header: 'Period', cell: row => `${String(row.period_start)} – ${String(row.period_end)}` }, { header: 'Tax', cell: money('tax_centavos'), numeric: true }, { header: 'Verification', cell: text('verification_state') }],
 }
 
@@ -456,20 +432,30 @@ function BackToStatements() {
 // ── Earnings ────────────────────────────────────────────────────────────────────────────────────
 
 export function VendorEarningsPage() {
-  return <FinanceGate activeHref="/finance/earnings" permission="portal.earnings">{() => <Earnings />}</FinanceGate>
+  return <FinanceGate activeHref="/finance" permission="portal.earnings">{() => <Earnings />}</FinanceGate>
 }
 
-function Earnings() {
+/** The Earnings date range lives in the URL; Finance overview reads it to place the controls beside the section chips. */
+function useEarningsDates() {
   const [params, setParams] = useSearchParams()
   const range = dateRangeFromParams(params)
-  const { data, error, reload } = useLoader<VendorEarnings>(() => getEarnings({ ...(range.from ? { from: range.from } : {}), ...(range.to ? { to: range.to } : {}) }), `${range.from}|${range.to}`)
   const changeDates = (nextRange: DateFilterRange) => setParams(current => { const next = new URLSearchParams(current); for (const [key, value] of Object.entries(dateRangePatch(nextRange))) { if (value) next.set(key, value); else next.delete(key) } return next }, { replace: true })
+  const exportButton = <DocumentExportButton basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} audience="vendor" types={['EARNINGS']} filters={{ ...(range.from ? { from: range.from } : {}), ...(range.to ? { to: range.to } : {}) }} title="Earnings" />
+  const dates = <DateFilter title="Earnings dates" value={range} onChange={changeDates} />
+  return { range, changeDates, exportButton, dates }
+}
+
+function Earnings({ embedded = false, controls }: { embedded?: boolean; controls?: ReturnType<typeof useEarningsDates> }) {
+  const own = useEarningsDates()
+  const { range, changeDates, exportButton, dates } = controls ?? own
+  const { data, error, reload } = useLoader<VendorEarnings>(() => getEarnings({ ...(range.from ? { from: range.from } : {}), ...(range.to ? { to: range.to } : {}) }), `${range.from}|${range.to}`)
   return <div className="grid min-w-0 gap-6">
-    <PageHeader eyebrow="Analytics" title="Earnings" description="Review sales, collections, deductions and commission." actions={<DocumentExportButton basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} audience="vendor" types={['EARNINGS']} filters={{ ...(range.from ? { from: range.from } : {}), ...(range.to ? { to: range.to } : {}) }} title="Earnings" />} />
-    <Toolbar filters={<DateFilter title="Earnings dates" value={range} onChange={changeDates} />} />
+    {embedded
+      // Inside Finance overview the section chip already names this view and its dates and export sit in the chip row.
+      ? <h2 className="sr-only">Earnings</h2>
+      : <><div className="flex flex-wrap items-start justify-between gap-4"><PageHeader eyebrow="Finance" title="Earnings" description="Review sales, collections, deductions and commission." />{exportButton}</div><Toolbar filters={dates} /></>}
     <ActiveFilters filters={range.from || range.to ? [{ key: 'dates', label: dateFilterLabel(range), onRemove: () => changeDates(ALL_DATES) }] : []} onClear={() => changeDates(ALL_DATES)} />
     {error ? <ErrorState message={error} onRetry={reload} /> : !data ? <LoadingState label="Loading earnings…" /> : <>
-    <InfoNote>{data.demo ? `Demo aggregates are TEST-only. ${data.notice}` : data.notice}</InfoNote>
     <EarningsAnalytics data={data} compare={Boolean(range.from)} />
     <div className="flex flex-wrap items-center gap-3 rounded-surface border border-border-default bg-surface-primary p-4 text-sm">
       <ReceiptText size={18} className="text-action-primary" aria-hidden="true" />
@@ -527,7 +513,8 @@ function EarningsAnalytics({ data, compare }: { data: VendorEarnings; compare: b
           { key: 'refunds', label: 'Confirmed refunds of that principal', amount: minus(online.refundedPrincipalCentavos) },
           { key: 'total', label: 'Online collections', amount: formatPesoCentavos(data.onlineCollectionsCentavos), total: true },
         ] }} />
-      <KpiCard label="Physical collections" value={formatPesoCentavos(data.physicalCollectionsCentavos)} delta={delta('physicalCollectionsCentavos')} sparkline={values('physicalCollectionsCentavos')} icon={<Banknote size={16} aria-hidden="true" />} hint="Your recorded COD / In-Store receipts"
+      <KpiCard label="Physical collections" value={formatPesoCentavos(data.physicalCollectionsCentavos)} delta={delta('physicalCollectionsCentavos')} sparkline={values('physicalCollectionsCentavos')} icon={<Banknote size={16} aria-hidden="true" />}
+        hint={physical.unrecordedCentavos > 0 ? <>Your recorded COD / In-Store receipts. <strong className="font-semibold text-text-strong">{formatPesoCentavos(physical.unrecordedCentavos)}</strong> on {formatCount(physical.unrecordedOrders)} delivered or picked-up {physical.unrecordedOrders === 1 ? 'order is' : 'orders are'} not recorded yet and not counted. <Link className="font-semibold text-action-primary underline underline-offset-2" to="/finance/transactions?tab=PAYMENTS&status=PHYSICAL_TO_RECORD">Review cash to record</Link></> : 'Your recorded COD / In-Store receipts'}
         breakdown={{ caption: 'Physical collections calculation', rows: [
           { key: 'cod', label: 'Cash on Delivery', amount: formatPesoCentavos(physical.cashOnDeliveryCentavos) },
           { key: 'store', label: 'In-Store Payment', amount: formatPesoCentavos(physical.inStoreCentavos) },
@@ -588,10 +575,10 @@ function EarningsAnalytics({ data, compare }: { data: VendorEarnings; compare: b
             ['Commercial sales', 'Materials after vendor discounts (VAT included) plus delivery, for orders accepted in the selected dates. Cancelled orders and orders whose payment was fully refunded are left out, so refunded money never counts as sold. The Dashboard’s Gross sales is different: it is counted before returns and refunds, so it can be higher.'],
             ['Product sales value', 'The materials part of commercial sales, split by product. Delivery belongs to no product, so the products plus delivery equal commercial sales.'],
             ['Online collections', 'Verified online principal less the principal of confirmed refunds, by original payment date. Buyer processing fees are shown separately and are never store revenue.'],
-            ['Physical collections', 'Cash on Delivery and In-Store receipts you recorded, counted on the date recorded.'],
+            ['Physical collections', 'Cash on Delivery and In-Store receipts recorded by your store, counted on the date received. Cash entered at delivery or pickup by the Owner, Store Manager or Store Staff counts at once; cash reported by Fulfillment Staff counts once one of them confirms it. Cash still owed on delivered or picked-up orders is shown on the card but never counted.'],
           ].map(([term, text]) => <div key={term} className="grid gap-1"><dt className="font-semibold text-text-strong">{term}</dt><dd className="leading-6 text-text-secondary">{text}</dd></div>)}
         </dl>
-        <p className="text-sm leading-6 text-text-secondary">These amounts use remittances assessed in the selected dates (Asia/Manila). Fully refunded payments appear in both collections and refunds, cancelling out; confirmed partial refunds are deducted once. Pending or failed refunds remain counted. Physical receipts and monthly commission statements are separate.</p>
+        <p className="text-sm leading-6 text-text-secondary">These amounts use remittances assessed in the selected dates (Asia/Manila). Fully refunded payments appear in both collections and refunds, cancelling out; confirmed partial refunds are deducted once. Pending or failed refunds remain counted. Cash on Delivery and In-Store orders are listed under Payments, and monthly commission statements are separate.</p>
         <MethodNote>Why this can differ from your Xendit balance: estimated remittance cash is worked out when a payment is verified, before Xendit settles it, so it includes payments still pending there. It also deducts the 0.5% creditable withholding ({formatPesoCentavos(data.simulatedCwtCentavos)} in this period), which Xendit does not take from your balance. Provider fees can differ by a centavo or two from the rounded amounts Xendit posts.</MethodNote>
         <MethodNote label="Refunds, dates and commission">Refunded money is not counted as paid. Online collections and Buyer processing fees exclude their confirmed refunded portions (confirmed online refunds in this period: {formatPesoCentavos(data.onlineRefundsCentavos)}, including refunded Buyer fees); pending or failed refunds remain counted. Estimated remittance cash is collected − refunds − provider charge − CWT for each collection, and a collection that was fully refunded adds no provider charge, CWT or cash. Collections and refunds use the original payment date, and remittance cash uses the assessment date. Physical collections count when recorded, and commission when earned. Cash receipts do not equal taxable income.</MethodNote>
       </div>

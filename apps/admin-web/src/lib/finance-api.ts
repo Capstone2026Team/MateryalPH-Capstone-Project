@@ -4,14 +4,13 @@ import {
   type CommissionPolicy,
   type CommissionPolicies,
   type CommissionPolicyPublishRequest,
+  type FinanceKpi,
   type FinanceKpis,
   type RemittanceQueueRow,
-  type TaxAdjustment,
-  type TaxAdjustmentPrepareRequestCertificateImpactEnum,
-  type ListTaxAdjustmentsStateEnum,
   type TaxEvidenceRow,
   type ChannelFeeVersion,
   type FinanceReviewItem,
+  type ListAdminPaymentsPurposeEnum,
   type ListAdminPaymentsStateEnum,
   type ListFeeStatementsStateEnum,
   type ListWithholdingAccumulatorsStatusEnum,
@@ -21,7 +20,7 @@ import {
 import { createWebApiConfiguration } from '@materyalph/web-ui'
 import { dateQuery, type CalendarRange, type JsonRecord } from './admin-format'
 
-export type { ChannelFeeVersion, FinanceKpis, FinanceReviewItem, RemittanceQueueRow, TaxAdjustment, TaxAdjustmentPrepareRequestCertificateImpactEnum as CertificateImpact, TaxEvidenceRow, WithholdingAccumulatorDetail, WithholdingAccumulatorView }
+export type { ChannelFeeVersion, FinanceKpi, FinanceKpis,FinanceReviewItem, RemittanceQueueRow, TaxEvidenceRow, WithholdingAccumulatorDetail, WithholdingAccumulatorView }
 export type Page<T> = { items: T[]; hasMore: boolean; total: number }
 export type { CommissionPolicy, CommissionPolicies, CommissionPolicyPublishRequest }
 
@@ -42,8 +41,8 @@ export async function publishCommissionPolicy(input: CommissionPolicyPublishRequ
   return (await financeApi().publishCommissionPolicy({ commissionPolicyPublishRequest: input, idempotencyKey })).data
 }
 
-export async function listPayments(page: number, state?: string, range?: CalendarRange): Promise<Page<JsonRecord>> {
-  const response = await financeApi().listAdminPayments({ page, ...(state ? { state: state as ListAdminPaymentsStateEnum } : {}), ...dateQuery(range) })
+export async function listPayments(page: number, state?: string, range?: CalendarRange, purpose?: string): Promise<Page<JsonRecord>> {
+  const response = await financeApi().listAdminPayments({ page, ...(state ? { state: state as ListAdminPaymentsStateEnum } : {}), ...(purpose ? { purpose: purpose as ListAdminPaymentsPurposeEnum } : {}), ...dateQuery(range) })
   return pageOf(response.data as JsonRecord[], response.meta)
 }
 
@@ -102,24 +101,6 @@ export async function financeKpis(from: string, to: string): Promise<FinanceKpis
 export async function remittanceQueue(page: number, reconciliationState?: string, range?: CalendarRange): Promise<Page<RemittanceQueueRow>> {
   const response = await operationsApi().listRemittanceQueue({ page, ...(reconciliationState ? { reconciliationState: reconciliationState as never } : {}), ...dateQuery(range) })
   return pageOf(response.data, response.meta)
-}
-
-// FIN-07 tax adjustments: a preparer proposes, a different finance user approves or rejects, then an approved one is posted.
-export async function listTaxAdjustments(page: number, state?: string, range?: CalendarRange): Promise<Page<TaxAdjustment>> {
-  const response = await operationsApi().listTaxAdjustments({ page, ...(state ? { state: state as ListTaxAdjustmentsStateEnum } : {}), ...dateQuery(range) })
-  return pageOf(response.data, response.meta)
-}
-
-export async function prepareTaxAdjustment(adjustmentId: string, correctedWithheldCentavos: number, reason: string, certificateImpact: TaxAdjustmentPrepareRequestCertificateImpactEnum, evidenceReference: string): Promise<TaxAdjustment> {
-  return (await operationsApi().prepareTaxAdjustment({ adjustmentId, taxAdjustmentPrepareRequest: { correctedWithheldCentavos, reason, certificateImpact, ...(evidenceReference ? { evidenceReference } : {}) } })).data
-}
-
-export async function reviewTaxAdjustment(adjustmentId: string, decision: 'APPROVED' | 'REJECTED', reason: string): Promise<TaxAdjustment> {
-  return (await operationsApi().reviewTaxAdjustment({ adjustmentId, taxAdjustmentReviewRequest: { decision, reason } })).data
-}
-
-export async function postTaxAdjustment(adjustmentId: string): Promise<TaxAdjustment> {
-  return (await operationsApi().postTaxAdjustment({ adjustmentId })).data
 }
 
 export async function taxEvidenceQueue(page: number, reviewState?: string, range?: CalendarRange): Promise<Page<TaxEvidenceRow>> {

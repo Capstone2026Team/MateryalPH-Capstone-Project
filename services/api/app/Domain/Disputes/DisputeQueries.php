@@ -200,8 +200,8 @@ final class DisputeQueries
         ];
         $timeline = $this->timeline($case, $audience, $limited);
         if ($limited) {
-            return $base + ['timeline' => $timeline, 'proposals' => [], 'clarifications' => [], 'decisions' => [], 'appeal' => null, 'remedies' => [], 'refunds' => [],
-                'available_actions' => in_array($case->status, DisputeRules::ACTIVE, true) ? ['ADD_FULFILLMENT_EVIDENCE'] : [], 'limited_view' => true];
+            return array_replace($base, ['timeline' => $timeline, 'proposals' => [], 'clarifications' => [], 'decisions' => [], 'appeal' => null, 'remedies' => [], 'refunds' => [],
+                'available_actions' => in_array($case->status, DisputeRules::ACTIVE, true) ? ['ADD_FULFILLMENT_EVIDENCE'] : [], 'limited_view' => true]);
         }
         $party = $audience === 'ADMIN' ? null : $audience;
         $decisions = DB::table('dispute_decisions')->where('dispute_case_id', $case->id)->orderBy('version')->get();
@@ -212,7 +212,8 @@ final class DisputeQueries
         $proposals = DB::table('dispute_resolution_proposals')->where('dispute_case_id', $case->id)->orderBy('created_at')->get();
         $clarifications = DB::table('dispute_clarifications')->where('dispute_case_id', $case->id)->whereNotNull('requested_party')->orderBy('created_at')->get();
 
-        $detail = $base + [
+        // Detail fields replace summary fields: decisions is a list here, a count in queues.
+        $detail = array_replace($base, [
             'timeline' => $timeline,
             'proposals' => $proposals->map(fn (object $row): array => ['id' => (string) $row->id, 'proposed_by_party' => (string) $row->proposed_by_party, 'remedy' => (string) $row->remedy,
                 'amount_centavos' => $row->amount_centavos === null ? null : (int) $row->amount_centavos, 'terms' => (string) $row->terms, 'state' => (string) $row->state,
@@ -242,7 +243,7 @@ final class DisputeQueries
             'refunds' => array_values(array_filter($refundTimeline['refunds'], static fn (array $refund): bool => in_array($refund['id'], $caseRefundIds, true))),
             'reimbursements' => array_values(array_filter($refundTimeline['reimbursements'], static fn (array $row): bool => DB::table('physical_reimbursements')->where('id', $row['id'])->whereNotNull('dispute_decision_id')->exists())),
             'limited_view' => false,
-        ];
+        ]);
         $detail['available_actions'] = $this->actions($case, $audience, $scope, $detail);
         if ($audience === 'ADMIN') {
             $detail['admin'] = $this->adminContext($case, $order, $scope, $decisions);

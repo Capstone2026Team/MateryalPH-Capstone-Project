@@ -39,7 +39,7 @@ final class GeoAnalyticsService
         'response_time' => 'From an inquiry, Work Package request, order request or counter-offer becoming available to the Vendor until the first human Vendor reply or quotation publication. Automated messages and auto-accept never count; auto-accepted requests are excluded. Attributed to the Vendor business address. Mean, median and 90th percentile over answered requests.',
         'active_users' => 'Distinct Buyers who submitted an order, accepted or countered a quotation or offer, or confirmed or reported fulfillment; distinct Vendor users who published or revised a quotation, manually decided or revised an order, recorded fulfillment or cancelled. App opens, page views, automated jobs and auto-accept never count. DAU: the end date; WAU: 7 days; MAU: 30 days ending on the end date.',
         'demand' => 'Confirmed order lines attributed to the Project site, delivery site or pickup store. Order count counts orders containing the category or material; value sums line payable amounts; quantity uses the material canonical unit and only lines with an approved unit conversion. Not an official government market statistic.',
-        'timezone' => 'Dates use Asia/Manila. Facts are rebuilt daily from the transactional records; the last aggregation time is shown.',
+        'timezone' => 'Dates use Asia/Manila. Daily facts are refreshed every minute from the transactional records while the scheduler runs; the last aggregation time is shown.',
     ];
 
     public function __construct(private readonly AdminAccess $access, private readonly PsgcHierarchy $psgc) {}

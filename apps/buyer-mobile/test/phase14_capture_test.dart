@@ -6,6 +6,7 @@ import 'package:materyalph/features/map_discovery/discovery_models.dart';
 import 'package:materyalph/features/trust/materials_analytics_screen.dart';
 import 'package:materyalph/features/trust/order_reviews_screen.dart';
 import 'package:materyalph/features/trust/trust_models.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'trust_fakes.dart';
 
@@ -13,6 +14,8 @@ import 'trust_fakes.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async {
+    // The rating screen restores unsent media from device storage.
+    SharedPreferences.setMockInitialValues({});
     for (final font in {
       'MaterialIcons': 'fonts/MaterialIcons-Regular.otf',
       'Inter': 'assets/fonts/Inter-Variable.ttf',

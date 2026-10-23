@@ -310,9 +310,10 @@ class FakeOrdersRepository implements OrdersRepository {
     return _answer('buyAgain:$orderId', buyAgainResult!);
   }
 
+  /// Like the server, a decided order is what later reloads return.
   OrderDetailView _decide(String action, String key) {
     keys.add(key);
-    return onDecision?.call(action) ?? detail!;
+    return detail = onDecision?.call(action) ?? detail!;
   }
 
   @override

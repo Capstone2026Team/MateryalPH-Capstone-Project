@@ -28,7 +28,7 @@ for (const [path, uriPath] of Object.entries(OPERATIONS)) {
   assert.ok(route, `Missing Laravel route GET ${uri}`)
   const has = (...names) => names.some(name => route.middleware.includes(name))
   assert.ok(has('auth:api', 'Illuminate\\Auth\\Middleware\\Authenticate:api') && has('account.access:VENDOR', 'App\\Http\\Middleware\\RequireAccountAccess:VENDOR'), `${uri} must authorize the Vendor`)
-  assert.ok(has('App\\Http\\Middleware\\SetAuthTransport:WEB') && has('App\\Http\\Middleware\\AuthenticateFromCookie'), `${uri} uses the web cookie transport`)
+  assert.ok(has('auth.transport:WEB', 'App\\Http\\Middleware\\SetAuthTransport:WEB') && has('auth.cookie', 'App\\Http\\Middleware\\AuthenticateFromCookie'), `${uri} uses the web cookie transport`)
   assert.deepEqual(operation.security, [{ accessCookie: [], webCsrf: [] }])
   assert.ok(operation.responses['401'] && operation.responses['403'] && operation.responses['422'])
   assert.ok((operation.parameters ?? []).every(p => !/latitude|longitude|radius|buyer|store_id|vendor_id|organization/i.test(p.name)), `${path} offers no point, radius or identity filter`)

@@ -274,7 +274,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
       return result;
     } on DiscoveryFailure catch (error) {
       if (!mounted || !_navigation.isCurrent(stamp)) return null;
-      if (error.kind != DiscoveryFailureKind.offline) _retryKeys.remove(scope);
+      if (!error.isTransportFailure) _retryKeys.remove(scope);
       _notify(error.message);
       return null;
     } finally {

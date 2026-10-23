@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:materyalph/design_system/components/invoice_request_form.dart';
 import 'package:materyalph/design_system/components/procurement_components.dart';
 import 'package:materyalph/design_system/theme.dart';
 import 'package:materyalph/features/item_procurement/cart_controller.dart';
@@ -378,6 +379,20 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('You are offline'), findsOneWidget);
         expect(find.text('Retry'), findsOneWidget);
+
+        repository.searchFailure = const DiscoveryFailure(
+          DiscoveryFailureKind.timeout,
+          'The request timed out while waiting for the server. Please retry.',
+        );
+        await h.explore.retrySearch();
+        await tester.pumpAndSettle();
+        expect(find.text('You are offline'), findsNothing);
+        expect(find.text('Results could not load'), findsOneWidget);
+        expect(
+          tester.widget<StateMessage>(find.byType(StateMessage)).kind,
+          StateKind.error,
+        );
+        expect(find.text('Retry'), findsOneWidget);
       },
     );
   });
@@ -510,8 +525,17 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byType(ProductFinalizationSheet), findsOneWidget);
         expect(repository.addKeys, isEmpty);
+        // The sheet scrolls; reach each control before tapping it.
+        await tester.ensureVisible(
+          find.widgetWithText(FilterPill, 'Self-Pickup').last,
+        );
+        await tester.pumpAndSettle();
         await tester.tap(find.widgetWithText(FilterPill, 'Self-Pickup').last);
         await tester.pump();
+        await tester.ensureVisible(
+          find.widgetWithText(FilledButton, 'Checkout'),
+        );
+        await tester.pumpAndSettle();
         await tester.tap(find.widgetWithText(FilledButton, 'Checkout'));
         await tester.pumpAndSettle();
         expect(repository.addKeys, hasLength(1));
@@ -683,14 +707,12 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.text('Request E-Invoice'));
         await tester.pumpAndSettle();
-        expect(
-          find.text('Design preview — nothing is saved or sent'),
-          findsOneWidget,
-        );
+        // The billing form is only kept for checkout; it needs consent first.
+        expect(find.byType(InvoiceRequestFormScreen), findsOneWidget);
         expect(
           tester
               .widget<FilledButton>(
-                find.widgetWithText(FilledButton, 'Submit Request'),
+                find.widgetWithText(FilledButton, 'Use these invoice details'),
               )
               .onPressed,
           isNull,
@@ -801,7 +823,7 @@ void main() {
           find.text('The Vendor will review this delivery manually'),
           findsOneWidget,
         );
-        expect(find.text('Pending Vendor review'), findsOneWidget);
+        expect(find.text('Estimate unavailable'), findsOneWidget);
         expect(find.textContaining('Estimated delivery'), findsNothing);
 
         repository.preview = previewFixture(deliveryStatus: 'BLOCKED');
@@ -858,9 +880,17 @@ void main() {
         await tester.tap(find.widgetWithText(FilledButton, 'Add to Cart').last);
         await tester.pumpAndSettle();
         expect(find.byType(ProductFinalizationSheet), findsOneWidget);
+        await tester.ensureVisible(
+          find.widgetWithText(FilledButton, 'Add to Cart').last,
+        );
+        await tester.pumpAndSettle();
         await tester.tap(find.widgetWithText(FilledButton, 'Add to Cart').last);
         await tester.pumpAndSettle();
         repository.addFailure = null;
+        await tester.ensureVisible(
+          find.widgetWithText(FilledButton, 'Add to Cart').last,
+        );
+        await tester.pumpAndSettle();
         await tester.tap(find.widgetWithText(FilledButton, 'Add to Cart').last);
         await tester.pumpAndSettle();
         expect(repository.addKeys, hasLength(2));

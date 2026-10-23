@@ -55,7 +55,12 @@ final class SupportGuestAccess
             return;
         }
         $base = rtrim((string) config('app.vendor_frontend_url'), '/');
-        if ($base === '' || ! str_starts_with($base, 'https://')) {
+        $scheme = parse_url($base, PHP_URL_SCHEME);
+        $host = parse_url($base, PHP_URL_HOST);
+        $developmentLoopback = app()->environment(['local', 'development']) && $scheme === 'http'
+            && in_array($host, ['localhost', '127.0.0.1', '[::1]'], true);
+        if (! is_string($host) || $host === '' || ($scheme !== 'https' && ! $developmentLoopback)
+            || parse_url($base, PHP_URL_USER) !== null || parse_url($base, PHP_URL_PASS) !== null) {
             throw new AuthenticationException('SUPPORT_EMAIL_CONFIGURATION', 'A secure Vendor frontend URL is required for support email delivery.', 503);
         }
         app(MailProvider::class)->send((string) $ticket->email, new SupportAccessMail((string) $ticket->ticket_number, $base.'/contact/access#token='.$token));

@@ -19,7 +19,7 @@ final class OperationsQueueService
      * @param  list<string>  $permissions
      * @return list<array<string, mixed>>
      */
-    public function queues(array $permissions, int $userId): array
+    public function queues(array $permissions): array
     {
         $has = static fn (string $permission): bool => in_array($permission, $permissions, true);
         $queues = [];
@@ -66,10 +66,6 @@ final class OperationsQueueService
         if ($has('invoices.view')) {
             $add('invoices', 'Overdue invoice requests', 'Finance', DB::table('invoice_requests')->whereIn('state', ['REQUESTED', 'RETURNED_FOR_CORRECTION'])->where('service_target_at', '<', now())->count(),
                 DB::table('invoice_requests')->whereIn('state', ['REQUESTED', 'RETURNED_FOR_CORRECTION'])->where('service_target_at', '<', now())->min('created_at'), '/invoices', 'Buyer invoice requests past the service target.');
-        }
-        if ($has('privacy.manage') || $has('privacy.handle')) {
-            $open = DB::table('privacy_requests')->whereNotIn('state', ['COMPLETED', 'REJECTED', 'WITHDRAWN'])->when(! $has('privacy.manage'), fn ($q) => $q->where('handler_user_id', $userId));
-            $add('privacy', $has('privacy.manage') ? 'Open privacy requests' : 'Privacy requests assigned to you', 'Platform', (clone $open)->count(), (clone $open)->min('received_at'), '/privacy', 'Verified data-subject requests being handled.');
         }
         if ($has('orders.operations.view')) {
             $failed = DB::table('refunds')->where('state', 'REFUND_FAILED');

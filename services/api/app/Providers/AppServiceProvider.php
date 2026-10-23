@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Domain\Compliance\ComplianceReferenceProvider;
 use App\Domain\Compliance\ComplianceRegisterSource;
 use App\Domain\Compliance\ComplianceTextExtractor;
+use App\Domain\Files\FileMalwareScanner;
 use App\Domain\Finance\DemoWithholdingEvidenceAdapter;
 use App\Domain\Finance\WithholdingEvidenceAdapter;
 use App\Domain\Geography\PlacesProvider;
@@ -27,6 +28,10 @@ use App\Infrastructure\Compliance\HttpComplianceRegisterSource;
 use App\Infrastructure\Compliance\RegisterComplianceReferenceProvider;
 use App\Infrastructure\Compliance\TesseractComplianceTextExtractor;
 use App\Infrastructure\Compliance\UnavailableComplianceTextExtractor;
+use App\Infrastructure\Encryption\ImportedValueEncrypter;
+use App\Infrastructure\Files\BouncerFileMalwareScanner;
+use App\Infrastructure\Files\ClamAvFileMalwareScanner;
+use App\Infrastructure\Files\UnavailableFileMalwareScanner;
 use App\Infrastructure\Geography\ConfiguredGoogleMapsGeocoder;
 use App\Infrastructure\Geography\GooglePlacesProvider;
 use App\Infrastructure\Geography\GoogleRoutesProvider;
@@ -34,6 +39,7 @@ use App\Infrastructure\Geography\PsgcCloudProvider;
 use App\Infrastructure\Identity\GoogleRecaptchaEnterpriseGateway;
 use App\Infrastructure\Notifications\FakePushGateway;
 use App\Infrastructure\Notifications\FcmPushGateway;
+use App\Infrastructure\Notifications\GmailApiTransport;
 use App\Infrastructure\Notifications\LaravelMailProvider;
 use App\Infrastructure\Payments\ConfiguredXenditAccountVerificationGateway;
 use App\Infrastructure\Payments\FakePaymentGateway;
@@ -44,8 +50,10 @@ use Illuminate\Console\Events\ScheduledTaskFailed;
 use Illuminate\Console\Events\ScheduledTaskFinished;
 use Illuminate\Console\Events\ScheduledTaskSkipped;
 use Illuminate\Console\Events\ScheduledTaskStarting;
+use Illuminate\Encryption\Encrypter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Passport\Passport;
@@ -57,7 +65,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        if (config('app.imported_data_recovery_enabled') && $this->app->environment(['staging', 'testing'])) {
+            $this->app->extend('encrypter', fn (Encrypter $encrypter): Encrypter => (new ImportedValueEncrypter(
+                $encrypter->getKey(), (string) config('app.cipher'),
+            ))->previousKeys($encrypter->getPreviousKeys()));
+        }
         $this->app->bind(MailProvider::class, LaravelMailProvider::class);
+        $this->app->bind(FileMalwareScanner::class, fn ($app) => $app->make(match (config('malware.driver')) {
+            'clamscan' => ClamAvFileMalwareScanner::class,
+            'bouncer' => BouncerFileMalwareScanner::class,
+            default => UnavailableFileMalwareScanner::class,
+        }));
         $this->app->singleton(PushGateway::class, fn () => config('notifications.push_driver') === 'fake' && ! app()->isProduction()
             ? new FakePushGateway : new FcmPushGateway);
         $this->app->bind(OtpCodeGenerator::class, SecureOtpCodeGenerator::class);
@@ -86,6 +104,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Mail::extend('gmail_api', fn (): GmailApiTransport => new GmailApiTransport);
         require base_path('routes/channels.php');
         // Integration and Job Health: every scheduled task records its start, outcome and duration (no output or payload).
         Event::listen(ScheduledTaskStarting::class, [ScheduledTaskRecorder::class, 'starting']);

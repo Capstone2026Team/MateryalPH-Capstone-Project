@@ -54,6 +54,7 @@ class ProductFinalizationSheet extends StatefulWidget {
   chooseDropOff;
   final ListingDetailView Function() detail;
   final String variantId;
+
   /// Decimal quantity text; ready-mixed concrete is a volume in m³.
   final String quantity;
   final String? fulfillment;
@@ -162,7 +163,9 @@ class _ProductFinalizationSheetState extends State<ProductFinalizationSheet> {
     final price = quantity == null
         ? null
         : variant?.priceForQuantity(num.parse(quantity));
-    final materials = price == null ? null : lineAmountCentavos(quantity!, price);
+    final materials = price == null
+        ? null
+        : lineAmountCentavos(quantity!, price);
     final readyMixed = detail.readyMixed;
     final estimate = _fulfillment == 'DELIVERY' ? _delivery?.estimate : null;
     return PopScope(
@@ -415,7 +418,10 @@ class _ProductFinalizationSheetState extends State<ProductFinalizationSheet> {
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Text(
                       readyMixed.notice,
-                      style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: BuyerTheme.muted,
+                      ),
                     ),
                   ),
                 if (_fulfillment == 'DELIVERY') ...[

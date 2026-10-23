@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
+use App\Models\User;
 use Database\Seeders\SystemFoundationSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 final class BuyerRegistrationTermsTest extends TestCase
@@ -64,5 +66,23 @@ final class BuyerRegistrationTermsTest extends TestCase
         self::assertNull(collect($rows)->firstWhere('id', $payload['terms_version_id'])['content']);
         $this->postJson('/api/v1/mobile/auth/register', [...$payload, 'terms_content_hash' => str_repeat('0', 64)])->assertStatus(503);
         $this->assertDatabaseMissing('users', ['email' => $payload['email']]);
+    }
+
+    #[DataProvider('reservedAccounts')]
+    public function test_registration_never_releases_active_or_enforced_accounts(string $accountType, string $status): void
+    {
+        $payload = $this->payload();
+        $existing = User::factory()->create(['email' => $payload['email'], 'account_type' => $accountType, 'account_status' => $status]);
+        $this->postJson('/api/v1/mobile/auth/register', $payload)->assertConflict()->assertJsonPath('errors.0.code', 'ACCOUNT_ALREADY_EXISTS');
+        self::assertSame($payload['email'], $existing->refresh()->email);
+        self::assertSame($status, $existing->account_status);
+    }
+
+    /** @return array<string, array{string, string}> */
+    public static function reservedAccounts(): array
+    {
+        return ['active Buyer' => ['BUYER', 'ACTIVE'], 'suspended Buyer' => ['BUYER', 'SUSPENDED'],
+            'banned Buyer' => ['BUYER', 'DEACTIVATED'], 'pending Buyer' => ['BUYER', 'PENDING_VERIFICATION'],
+            'Vendor' => ['VENDOR', 'ACTIVE'], 'Admin' => ['ADMIN', 'ACTIVE']];
     }
 }

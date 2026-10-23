@@ -660,11 +660,11 @@ async function example() {
     description: 'description_example',
     // number | Required for PARTIAL_REFUND; at most the affected lines less earlier refunds. (optional)
     requestedAmountCentavos: 56,
-    // Array<string> (optional)
+    // Array<string> | Selected order lines. Multipart clients send each UUID as an affected_line_ids[] part so the server receives an array. Buyers must select at least one line for every requested remedy. (optional)
     affectedLineIds: ...,
     // string (optional)
     preferredContactChannel: 'preferredContactChannel_example',
-    // Array<Blob> | Up to five JPG, PNG or PDF files, validated and scanned, stored privately. (optional)
+    // Array<Blob> | Up to five JPG, PNG or PDF files, validated and scanned, stored privately. Multipart clients send each upload as a files[] part. (optional)
     files: [new Blob(['example file content'], { type: 'application/octet-stream' })],
   } satisfies FileVendorDisputeRequest;
 
@@ -691,9 +691,9 @@ example().catch(console.error);
 | **requestedRemedy** | `REPLACEMENT`, `FULL_REFUND`, `PARTIAL_REFUND`, `RETURN_AND_REFUND`, `INVOICE_CORRECTION`, `PAYMENT_OF_BALANCE`, `WARNING_ONLY`, `OTHER` |  | [Defaults to `undefined`] [Enum: REPLACEMENT, FULL_REFUND, PARTIAL_REFUND, RETURN_AND_REFUND, INVOICE_CORRECTION, PAYMENT_OF_BALANCE, WARNING_ONLY, OTHER] |
 | **description** | `string` |  | [Defaults to `undefined`] |
 | **requestedAmountCentavos** | `number` | Required for PARTIAL_REFUND; at most the affected lines less earlier refunds. | [Optional] [Defaults to `undefined`] |
-| **affectedLineIds** | `Array<string>` |  | [Optional] |
+| **affectedLineIds** | `Array<string>` | Selected order lines. Multipart clients send each UUID as an affected_line_ids[] part so the server receives an array. Buyers must select at least one line for every requested remedy. | [Optional] |
 | **preferredContactChannel** | `IN_APP`, `EMAIL` |  | [Optional] [Defaults to `undefined`] [Enum: IN_APP, EMAIL] |
-| **files** | `Array<Blob>` | Up to five JPG, PNG or PDF files, validated and scanned, stored privately. | [Optional] |
+| **files** | `Array<Blob>` | Up to five JPG, PNG or PDF files, validated and scanned, stored privately. Multipart clients send each upload as a files[] part. | [Optional] |
 
 ### Return type
 

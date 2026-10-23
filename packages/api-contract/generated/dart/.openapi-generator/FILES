@@ -95,7 +95,6 @@ doc/AdminOrderOperationsSummary.md
 doc/AdminOrderOperationsSummaryEnvelope.md
 doc/AdminPaymentListEnvelope.md
 doc/AdminPlatformSettingsApi.md
-doc/AdminPrivacyRequestsApi.md
 doc/AdminProductComplianceApi.md
 doc/AdminRefundListEnvelope.md
 doc/AdminRefundRow.md
@@ -540,6 +539,7 @@ doc/FinanceKpi.md
 doc/FinanceKpiEnvelope.md
 doc/FinanceKpis.md
 doc/FinanceKpisPeriod.md
+doc/FinancePaymentMethod.md
 doc/FinanceReviewItem.md
 doc/FinanceReviewItemListEnvelope.md
 doc/FinanceTransactionListEnvelope.md
@@ -796,6 +796,7 @@ doc/PaymentWebhookAck.md
 doc/PaymentWebhookAckEnvelope.md
 doc/PaymentWebhookPayload.md
 doc/PaymentWebhooksApi.md
+doc/PhysicalHandoverCash.md
 doc/PhysicalPaymentRecord.md
 doc/PhysicalPaymentSettings.md
 doc/PhysicalPaymentSettingsEnvelope.md
@@ -815,14 +816,6 @@ doc/PlatformSettingVersion.md
 doc/PrepareTaxPackage201Response.md
 doc/PriceHistoryEntry.md
 doc/PriceHistoryEnvelope.md
-doc/PrivacyHandler.md
-doc/PrivacyRequestCreateRequest.md
-doc/PrivacyRequestDetail.md
-doc/PrivacyRequestDetailEnvelope.md
-doc/PrivacyRequestEvent.md
-doc/PrivacyRequestListEnvelope.md
-doc/PrivacyRequestSummary.md
-doc/PrivacyTransitionRequest.md
 doc/ProblemResolveRequest.md
 doc/ProblemResponseRequest.md
 doc/ProcessingFee.md
@@ -1270,7 +1263,6 @@ lib/src/api/admin_invoices_api.dart
 lib/src/api/admin_materials_analytics_api.dart
 lib/src/api/admin_order_operations_api.dart
 lib/src/api/admin_platform_settings_api.dart
-lib/src/api/admin_privacy_requests_api.dart
 lib/src/api/admin_product_compliance_api.dart
 lib/src/api/admin_review_moderation_api.dart
 lib/src/api/admin_score_monitoring_api.dart
@@ -1825,6 +1817,7 @@ lib/src/model/finance_kpi.dart
 lib/src/model/finance_kpi_envelope.dart
 lib/src/model/finance_kpis.dart
 lib/src/model/finance_kpis_period.dart
+lib/src/model/finance_payment_method.dart
 lib/src/model/finance_review_item.dart
 lib/src/model/finance_review_item_list_envelope.dart
 lib/src/model/finance_transaction_list_envelope.dart
@@ -2078,6 +2071,7 @@ lib/src/model/payment_options_envelope.dart
 lib/src/model/payment_webhook_ack.dart
 lib/src/model/payment_webhook_ack_envelope.dart
 lib/src/model/payment_webhook_payload.dart
+lib/src/model/physical_handover_cash.dart
 lib/src/model/physical_payment_record.dart
 lib/src/model/physical_payment_settings.dart
 lib/src/model/physical_payment_settings_envelope.dart
@@ -2097,14 +2091,6 @@ lib/src/model/platform_setting_version.dart
 lib/src/model/prepare_tax_package201_response.dart
 lib/src/model/price_history_entry.dart
 lib/src/model/price_history_envelope.dart
-lib/src/model/privacy_handler.dart
-lib/src/model/privacy_request_create_request.dart
-lib/src/model/privacy_request_detail.dart
-lib/src/model/privacy_request_detail_envelope.dart
-lib/src/model/privacy_request_event.dart
-lib/src/model/privacy_request_list_envelope.dart
-lib/src/model/privacy_request_summary.dart
-lib/src/model/privacy_transition_request.dart
 lib/src/model/problem_resolve_request.dart
 lib/src/model/problem_response_request.dart
 lib/src/model/processing_fee.dart
@@ -2611,7 +2597,6 @@ test/admin_order_operations_summary_envelope_test.dart
 test/admin_order_operations_summary_test.dart
 test/admin_payment_list_envelope_test.dart
 test/admin_platform_settings_api_test.dart
-test/admin_privacy_requests_api_test.dart
 test/admin_product_compliance_api_test.dart
 test/admin_refund_list_envelope_test.dart
 test/admin_refund_row_test.dart
@@ -3056,6 +3041,7 @@ test/finance_kpi_envelope_test.dart
 test/finance_kpi_test.dart
 test/finance_kpis_period_test.dart
 test/finance_kpis_test.dart
+test/finance_payment_method_test.dart
 test/finance_review_item_list_envelope_test.dart
 test/finance_review_item_test.dart
 test/finance_transaction_list_envelope_test.dart
@@ -3312,6 +3298,7 @@ test/payment_webhook_ack_envelope_test.dart
 test/payment_webhook_ack_test.dart
 test/payment_webhook_payload_test.dart
 test/payment_webhooks_api_test.dart
+test/physical_handover_cash_test.dart
 test/physical_payment_record_test.dart
 test/physical_payment_settings_envelope_test.dart
 test/physical_payment_settings_test.dart
@@ -3331,14 +3318,6 @@ test/platform_setting_version_test.dart
 test/prepare_tax_package201_response_test.dart
 test/price_history_entry_test.dart
 test/price_history_envelope_test.dart
-test/privacy_handler_test.dart
-test/privacy_request_create_request_test.dart
-test/privacy_request_detail_envelope_test.dart
-test/privacy_request_detail_test.dart
-test/privacy_request_event_test.dart
-test/privacy_request_list_envelope_test.dart
-test/privacy_request_summary_test.dart
-test/privacy_transition_request_test.dart
 test/problem_resolve_request_test.dart
 test/problem_response_request_test.dart
 test/processing_fee_amount_test.dart

@@ -4,10 +4,10 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import * as api from '../lib/disputes-api'
 import type { DisputeDetail, DisputeEligibility, VendorOrderInvoices } from '../lib/disputes-api'
 import { useOnboardingSnapshot } from '../lib/vendor-status'
-import { FileDisputeDialog, VendorDisputeDetailPage } from './DisputePages'
+import { FileDisputeDialog, VendorDisputeDetailPage, VendorDisputesPage } from './DisputePages'
 import { OrderInvoicePanel } from './InvoicePages'
 
-vi.mock('../lib/disputes-api', async original => ({ ...await original<typeof import('../lib/disputes-api')>(), getDispute: vi.fn(), getEligibility: vi.fn(), fileDispute: vi.fn(), respond: vi.fn(), getOrderInvoices: vi.fn(), uploadInvoice: vi.fn() }))
+vi.mock('../lib/disputes-api', async original => ({ ...await original<typeof import('../lib/disputes-api')>(), getDispute: vi.fn(), getEligibility: vi.fn(), fileDispute: vi.fn(), respond: vi.fn(), getOrderInvoices: vi.fn(), uploadInvoice: vi.fn(), listDisputes: vi.fn(), requestExport: vi.fn(), listExports: vi.fn(), downloadExport: vi.fn() }))
 vi.mock('../lib/vendor-status', () => ({ useOnboardingSnapshot: vi.fn() }))
 vi.mock('../lib/catalog-access', async original => ({ ...await original<typeof import('../lib/catalog-access')>(), storeName: () => 'Test Supply' }))
 vi.mock('./PhaseThreeVendorPages', async original => ({ ...await original<typeof import('./PhaseThreeVendorPages')>(), VendorShell: ({ children }: { children: React.ReactNode }) => <main>{children}</main> }))
@@ -57,6 +57,41 @@ const openFiling = (onClose = vi.fn()) => render(<MemoryRouter initialEntries={[
   <Route path="/orders/:orderId" element={<FileDisputeDialog orderId="order-1" onClose={onClose} />} />
   <Route path="/disputes/:caseId" element={<h1>Created case</h1>} />
 </Routes></MemoryRouter>)
+
+const openQueue = () => render(<MemoryRouter initialEntries={['/disputes?group=CONCLUDED']}><Routes><Route path="/disputes" element={<VendorDisputesPage />} /></Routes></MemoryRouter>)
+const queue = { items: [], meta: { counts: {}, total: 0, perPage: 20, hasMore: false } } as unknown as Awaited<ReturnType<typeof api.listDisputes>>
+const exportRow = (state: string) => ({ id: 'export-1', state, requestedAt: now, rowCount: 3 }) as unknown as Awaited<ReturnType<typeof api.requestExport>>
+
+test('one Export click requests the selected status group, waits until it is ready and downloads it', async () => {
+  snapshot(['portal.disputes', 'disputes.export'])
+  vi.mocked(api.listDisputes).mockResolvedValue(queue)
+  vi.mocked(api.requestExport).mockResolvedValue(exportRow('QUEUED'))
+  vi.mocked(api.listExports).mockResolvedValueOnce([exportRow('QUEUED')]).mockResolvedValue([exportRow('READY')])
+  vi.mocked(api.downloadExport).mockResolvedValue(undefined)
+  openQueue()
+  expect(screen.queryByText('Case exports')).not.toBeInTheDocument()
+  fireEvent.click(await screen.findByRole('button', { name: 'Export' }))
+  expect(await screen.findByRole('button', { name: 'Preparing…' })).toBeDisabled()
+  await waitFor(() => expect(api.downloadExport).toHaveBeenCalledWith('export-1'), { timeout: 5000 })
+  expect(api.requestExport).toHaveBeenCalledExactlyOnceWith('CONCLUDED')
+  expect(await screen.findByText('Export downloaded.')).toBeInTheDocument()
+})
+
+test('a revoked export says why and a role without export access has no Export button', async () => {
+  snapshot(['portal.disputes', 'disputes.export'])
+  vi.mocked(api.listDisputes).mockResolvedValue(queue)
+  vi.mocked(api.requestExport).mockResolvedValue(exportRow('QUEUED'))
+  vi.mocked(api.listExports).mockResolvedValue([exportRow('REVOKED')])
+  const view = openQueue()
+  fireEvent.click(await screen.findByRole('button', { name: 'Export' }))
+  expect(await screen.findByText('The export was revoked because your access changed.')).toBeInTheDocument()
+  expect(api.downloadExport).not.toHaveBeenCalled()
+  view.unmount()
+  snapshot(['portal.disputes'])
+  openQueue()
+  await screen.findByText('No cases in this view.')
+  expect(screen.queryByRole('button', { name: 'Export' })).not.toBeInTheDocument()
+})
 
 test('the filing popup reviews local evidence, removes a file, and submits only the remaining evidence', async () => {
   vi.mocked(api.getEligibility).mockResolvedValue(eligibility())
@@ -126,6 +161,31 @@ test('a role without dispute access is denied and the case is never requested', 
   openCase()
   expect(screen.getByText(/not available to your role/)).toBeInTheDocument()
   expect(api.getDispute).not.toHaveBeenCalled()
+})
+
+test.each(['BUYER', 'VENDOR'] as const)('original complaint clearly attributes the saved description to %s', async filedByParty => {
+  snapshot(['portal.disputes', 'disputes.respond'])
+  const vendorFiled = filedByParty === 'VENDOR'
+  const description = 'The agreed materials were not received.\nPlease review the attached details.'
+  const complaintDetail = detail({ filedByParty, description,
+    issueType: vendorFiled ? 'PICKUP_NO_SHOW' : 'DEFECTIVE', requestedRemedy: vendorFiled ? 'WARNING_ONLY' : 'PARTIAL_REFUND',
+    requestedAmountCentavos: 150050 })
+  if (vendorFiled) delete complaintDetail.requestedAmountCentavos
+  vi.mocked(api.getDispute).mockResolvedValue(complaintDetail)
+  openCase()
+  const complaint = await screen.findByRole('region', { name: 'Original complaint' })
+  expect(within(complaint).getByText(`${vendorFiled ? 'Vendor' : 'Buyer'}'s description of the problem`)).toBeInTheDocument()
+  expect(within(complaint).getByText(/The agreed materials/).textContent).toBe(description)
+  expect(within(complaint).getByText(vendorFiled ? 'Pickup no-show' : 'Defective or damaged')).toBeInTheDocument()
+  expect(within(complaint).getByText(vendorFiled ? 'Warning only' : 'Partial refund · ₱1,500.50')).toBeInTheDocument()
+})
+
+test('an absent original description has an explicit empty state', async () => {
+  snapshot(['portal.disputes'])
+  vi.mocked(api.getDispute).mockResolvedValue(detail({ description: '  ' }))
+  openCase()
+  const complaint = await screen.findByRole('region', { name: 'Original complaint' })
+  expect(within(complaint).getByText('No problem description was recorded.')).toBeInTheDocument()
 })
 
 test('staff cannot offer or accept a voluntary refund; that stays with the Owner', async () => {

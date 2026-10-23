@@ -1,22 +1,55 @@
 name: quality gates
 
+# CI only. Operators deploy accepted commits to Hostinger or the Render fallback.
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, staging]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
+env:
+  # Match the SDK recorded by the Buyer project's .metadata revision.
+  FLUTTER_VERSION: '3.47.3'
+  DART_VERSION: '3.13.3'
+
 concurrency:
-  group: phase-one-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/staging' }}
 
 jobs:
+  changes:
+    name: Select affected checks
+    runs-on: ubuntu-24.04
+    outputs:
+      backend: ${{ steps.paths.outputs.backend }}
+      contract: ${{ steps.paths.outputs.contract }}
+      web: ${{ steps.paths.outputs.web }}
+      mobile: ${{ steps.paths.outputs.mobile }}
+      infrastructure: ${{ steps.paths.outputs.infrastructure }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+      - id: paths
+        run: node scripts/ci/changed-paths.mjs
+
   backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     name: Laravel, PostgreSQL, and schema evidence
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
+    runs-on: ubuntu-24.04
+    # The full suite alone takes about 23 minutes on a hosted runner.
+    timeout-minutes: 45
     services:
       postgres:
         image: postgis/postgis:16-3.5
@@ -58,26 +91,35 @@ jobs:
       QUEUE_CONNECTION: sync
       SESSION_DRIVER: array
       MAIL_MAILER: array
+      REDIS_URL: redis://127.0.0.1:6379
       FINANCE_MODE: TEST
       WITHHOLDING_SCENARIO: NONE
       PLATFORM_TAX_PROFILE: NON_VAT
       LIVE_COMMERCE_ENABLED: false
       MATERIALS_ANALYTICS_ENABLED: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
 
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: mbstring, pdo_pgsql, sodium
+          extensions: bcmath, gd, intl, mbstring, pcntl, pdo_pgsql, redis, sodium, zip
           coverage: none
 
       - name: Cache Composer packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6.1.0
         with:
           path: ~/.composer/cache/files
           key: composer-${{ runner.os }}-${{ hashFiles('services/api/composer.lock') }}
           restore-keys: composer-${{ runner.os }}-
+
+      # Review videos are validated with ffprobe, which the API images install with ffmpeg.
+      - name: Install video validation tools
+        working-directory: .
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends ffmpeg
+          ffprobe -version | head -n 1
 
       - name: Install PHP dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
@@ -102,31 +144,38 @@ jobs:
       - name: Run backend tests
         run: php artisan test
 
-      - uses: actions/setup-node@v4
+      - name: Verify recovery archive integrity guards
+        run: php ../../scripts/deployment/test-vps-transfer.php
+
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version: '24'
 
       - name: Check API contracts against Laravel routes
         run: |
           npm ci --prefix ../../packages/api-contract
+          # Several route checks import the generated TypeScript client build.
+          npm ci --prefix ../../packages/api-contract/generated/typescript
+          npm run build --prefix ../../packages/api-contract/generated/typescript
           php artisan route:list --json --path=api/v1 > /tmp/materyalph-routes.json
           trap 'rm -f /tmp/materyalph-routes.json' EXIT
           cd ../../packages/api-contract
-          npm run test:account-contract -- /tmp/materyalph-routes.json
-          npm run test:vendor-contract -- /tmp/materyalph-routes.json
-          npm run test:catalog-contract -- /tmp/materyalph-routes.json
-          npm run test:inventory-contract -- /tmp/materyalph-routes.json
-          npm run test:geography-contract -- /tmp/materyalph-routes.json
-          npm run test:procurement-contract -- /tmp/materyalph-routes.json
-          npm run test:orders-contract -- /tmp/materyalph-routes.json
-          npm run test:messaging-contract -- /tmp/materyalph-routes.json
-          npm run test:projects-contract -- /tmp/materyalph-routes.json
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          import { spawnSync } from 'node:child_process';
+          const { scripts } = JSON.parse(readFileSync('package.json', 'utf8'));
+          for (const [name, command] of Object.entries(scripts)) {
+            if (!/^test:.*-contract$/.test(name) || !command.startsWith('node ')) continue;
+            const result = spawnSync('npm', ['run', name, '--', '/tmp/materyalph-routes.json'], { stdio: 'inherit' });
+            if (result.error || result.status !== 0) process.exitCode = 1;
+          }
+          NODE
 
       - name: Generate schema-derived architecture evidence
         run: php artisan materyalph:schema-document
 
       - name: Upload schema documentation evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: schema-documentation-${{ github.sha }}
           path: |
@@ -135,26 +184,28 @@ jobs:
           if-no-files-found: error
 
   contract:
+    needs: changes
+    if: needs.changes.outputs.contract == 'true'
     name: OpenAPI and generated clients
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version: '24'
           cache: npm
           cache-dependency-path: packages/api-contract/package-lock.json
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6.1.0
         with:
           distribution: temurin
           java-version: '21'
 
       - uses: dart-lang/setup-dart@v1
         with:
-          sdk: stable
+          sdk: ${{ env.DART_VERSION }}
 
       - name: Install contract tooling
         working-directory: packages/api-contract
@@ -179,21 +230,75 @@ jobs:
           dart run build_runner build
           dart analyze --no-fatal-warnings
 
+      - name: Run current Dart contract checks
+        working-directory: packages/api-contract
+        run: |
+          dart pub get
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          import { spawnSync } from 'node:child_process';
+          const { scripts } = JSON.parse(readFileSync('package.json', 'utf8'));
+          for (const [name, command] of Object.entries(scripts)) {
+            if (!/^test:.*-contract$/.test(name) || !command.startsWith('dart ')) continue;
+            const result = spawnSync('npm', ['run', name], { stdio: 'inherit' });
+            if (result.error || result.status !== 0) process.exitCode = 1;
+          }
+          NODE
+
       - name: Reject generated-client drift
-        run: git diff --exit-code -- packages/api-contract/generated
+        run: |
+          node --input-type=module <<'NODE'
+          import { execFileSync } from 'node:child_process';
+          import { existsSync, readFileSync } from 'node:fs';
+
+          // OpenAPI Generator can reorder independent primitive-union guards
+          // across JVMs. Compare their canonical order without changing files.
+          function canonical(contents, path) {
+            const text = contents.replaceAll('\r\n', '\n');
+            if (!path.endsWith('.ts')) return text;
+            const groups = /(?:^    if \(typeof (?:json|value) === '(?:string|number|boolean)'\) \{\n        return (?:json|value);\n    \}\n){2,}/gm;
+            return text.replace(groups, group => {
+              const guards = [...group.matchAll(/^    if \(typeof (json|value) === '(string|number|boolean)'\) \{\n        return \1;\n    \}\n/gm)];
+              if (guards.map(guard => guard[0]).join('') !== group
+                || new Set(guards.map(guard => guard[1])).size !== 1
+                || new Set(guards.map(guard => guard[2])).size !== guards.length) return group;
+              return guards.map(guard => guard[0]).sort().join('');
+            });
+          }
+
+          const root = 'packages/api-contract/generated';
+          const paths = args => execFileSync('git', args, { encoding: 'utf8' }).split('\0').filter(Boolean);
+          const changed = paths(['diff', '--name-only', '-z', '--', root]);
+          const added = paths(['ls-files', '--others', '--exclude-standard', '-z', '--', root]);
+          let failed = false;
+          for (const path of [...new Set([...changed, ...added])]) {
+            if (!added.includes(path) && existsSync(path)) {
+              const committed = execFileSync('git', ['show', `HEAD:${path}`], { encoding: 'utf8' });
+              if (canonical(committed, path) === canonical(readFileSync(path, 'utf8'), path)) continue;
+            }
+            console.error(`Generated-client drift: ${path}`);
+            failed = true;
+          }
+          if (failed) {
+            console.error('Regenerate and commit the API clients, including Dart serializers.');
+            process.exitCode = 1;
+          }
+          NODE
 
   web:
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
     name: ${{ matrix.portal }} portal
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         portal: [vendor-web, admin-web]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version: '24'
           cache: npm
@@ -213,25 +318,46 @@ jobs:
         run: npm ci
 
       - name: Install portal dependencies
+        id: portal_dependencies
         working-directory: apps/${{ matrix.portal }}
         run: npm ci
 
-      - name: Run portal gates
+      - name: Lint portal
         working-directory: apps/${{ matrix.portal }}
-        run: |
-          npm run lint
-          npm run typecheck
-          npm run test -- --run
-          npm run build
+        run: npm run lint
+
+      - name: Typecheck portal
+        if: ${{ !cancelled() && steps.portal_dependencies.outcome == 'success' }}
+        working-directory: apps/${{ matrix.portal }}
+        run: npm run typecheck
+
+      - name: Test portal
+        if: ${{ !cancelled() && steps.portal_dependencies.outcome == 'success' }}
+        working-directory: apps/${{ matrix.portal }}
+        run: npm run test -- --run
+
+      - name: Build portal
+        if: ${{ !cancelled() && steps.portal_dependencies.outcome == 'success' }}
+        working-directory: apps/${{ matrix.portal }}
+        run: npm run build
 
   vendor-browser:
-    name: Vendor and Admin responsive browser QA
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    name: Vendor and Admin responsive browser QA (${{ matrix.shard }}/4)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      # Public placeholder so the interactive-map specs exercise their stubbed Maps API; never a real key.
+      VITE_GOOGLE_MAPS_BROWSER_KEY: e2e-synthetic-maps-key # gitleaks:allow
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version: '24'
           cache: npm
@@ -239,6 +365,7 @@ jobs:
             packages/api-contract/generated/typescript/package-lock.json
             packages/web-ui/package-lock.json
             apps/vendor-web/package-lock.json
+            apps/admin-web/package-lock.json
 
       - name: Build generated TypeScript client
         working-directory: packages/api-contract/generated/typescript
@@ -268,28 +395,32 @@ jobs:
         working-directory: apps/vendor-web
         run: |
           npm run build
-          npm run test:e2e
+          npm run test:e2e -- --shard=${{ matrix.shard }}/4
 
       - name: Upload browser evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
-          name: vendor-browser-${{ github.sha }}
+          name: vendor-browser-${{ matrix.shard }}-${{ github.sha }}
           path: |
             apps/vendor-web/playwright-report
             apps/vendor-web/test-results
           if-no-files-found: ignore
 
   buyer-mobile:
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
     name: Flutter Buyer app
-    runs-on: ubuntu-latest
+    # The committed screenshot baselines are produced in the Windows workspace.
+    runs-on: windows-2025
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
 
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
 
       - name: Build generated Dart serializers
@@ -299,28 +430,36 @@ jobs:
           dart run build_runner build
 
       - name: Install Buyer dependencies
+        id: buyer_dependencies
         working-directory: apps/buyer-mobile
         run: flutter pub get
 
       - name: Check Dart formatting
         run: dart format --output=none --set-exit-if-changed apps/buyer-mobile/lib apps/buyer-mobile/test
 
-      - name: Analyze and test Buyer app
+      - name: Analyze Buyer app
+        if: ${{ !cancelled() && steps.buyer_dependencies.outcome == 'success' }}
         working-directory: apps/buyer-mobile
-        run: |
-          flutter analyze
-          flutter test
+        run: flutter analyze
+
+      - name: Test Buyer app
+        if: ${{ !cancelled() && steps.buyer_dependencies.outcome == 'success' }}
+        working-directory: apps/buyer-mobile
+        run: flutter test
 
   buyer-ios:
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
     name: Flutter Buyer iOS simulator build
-    runs-on: macos-latest
+    runs-on: macos-15
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
 
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
 
       - name: Build generated Dart serializers
@@ -329,21 +468,135 @@ jobs:
           dart pub get
           dart run build_runner build
 
-      - name: Install, test, and build Buyer iOS
+      - name: Install Buyer iOS dependencies
         working-directory: apps/buyer-mobile
-        run: |
-          flutter pub get
-          flutter test
-          flutter build ios --simulator --no-codesign
+        run: flutter pub get
+
+      # The full test suite runs in buyer-mobile; this job proves the iOS build.
+      - name: Build Buyer iOS simulator
+        working-directory: apps/buyer-mobile
+        run: flutter build ios --simulator --no-codesign
 
   repository-safety:
     name: Tokens and secret scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
-      - uses: gitleaks/gitleaks-action@v2
+      - name: Install the open-source secret scanner
+        working-directory: ${{ runner.temp }}
+        run: |
+          curl --fail --silent --show-error --location https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz --output gitleaks_8.30.1_linux_x64.tar.gz
+          curl --fail --silent --show-error --location https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_checksums.txt --output gitleaks_8.30.1_checksums.txt
+          sha256sum --check --ignore-missing gitleaks_8.30.1_checksums.txt
+          tar -xzf gitleaks_8.30.1_linux_x64.tar.gz gitleaks
+      - name: Scan the repository history with redacted findings
+        run: |
+          if ! "$RUNNER_TEMP/gitleaks" git --log-opts='--no-textconv --no-ext-diff' --redact --no-banner --report-format json --report-path "$RUNNER_TEMP/gitleaks.json"; then
+            node -e 'for (const item of JSON.parse(require("node:fs").readFileSync(`${process.env.RUNNER_TEMP}/gitleaks.json`, "utf8"))) console.error(JSON.stringify({rule:item.RuleID,file:item.File,line:item.StartLine,fingerprint:item.Fingerprint}))'
+            exit 1
+          fi
+
+  dependency-audit:
+    name: PHP and JavaScript dependency audits
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+      - run: composer audit --locked --no-interaction
+        working-directory: services/api
+      - name: Audit every JavaScript lockfile
+        run: |
+          for directory in packages/api-contract packages/api-contract/generated/typescript packages/web-ui apps/vendor-web apps/admin-web; do
+            npm audit --prefix "$directory" --audit-level=high
+          done
+
+  infrastructure:
+    name: Staging configuration and container
+    needs: changes
+    if: needs.changes.outputs.infrastructure == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -r tools/deployment/requirements.txt
+      - run: python tools/deployment/validate_configuration.py
+      - run: python tools/deployment/validate_vps.py
+      - run: mkdir -p .tmp && python scripts/deployment/test-vps-compose.py
+      - run: python scripts/deployment/test-vps-database.py
+      - run: node --test scripts/deployment/vps-deployment.test.mjs
+      - run: python scripts/deployment/test-vps-host.py
+      - run: bash -n scripts/deployment/vpsctl.sh && sh -n infrastructure/vps/init-database.sh
+      - run: bash -n scripts/deployment/bootstrap-vps.sh && sh -n infrastructure/vps/postgres-entrypoint.sh
+      - run: python -m py_compile scripts/deployment/vps-host.py scripts/deployment/package-vps.py scripts/deployment/export-vps-source.py
+      - run: python -m py_compile scripts/deployment/prepare-vps-environment.py
+      - run: sh -n infrastructure/docker/install-phpredis.sh && sh scripts/deployment/test-phpredis-installer.sh
+      - run: sh -n infrastructure/docker/render-start.sh && sh -n scripts/deployment/build-portal.sh
+      - run: node --check scripts/deployment/deploy-render-staging.mjs && node --check scripts/ci/changed-paths.mjs
+      - name: Validate the isolated Compose file with ephemeral CI settings
+        shell: bash
+        run: |
+          test ! -e services/api/.env.testing
+          trap 'rm -f services/api/.env.testing' EXIT
+          node -e 'require("node:fs").writeFileSync("services/api/.env.testing", `TEST_DB_PASSWORD=${require("node:crypto").randomBytes(32).toString("hex")}\n`)'
+          docker compose --env-file services/api/.env.testing -f compose.test.yaml config --quiet
+      - run: docker build --pull -f infrastructure/docker/api.render.Dockerfile -t materyalph-api:${{ github.sha }} .
+      - name: Build both VPS portals off-server
+        run: docker build --pull -f infrastructure/docker/portals.vps.Dockerfile --build-arg VENDOR_RECAPTCHA_SITE_KEY=public-ci-vendor --build-arg ADMIN_RECAPTCHA_SITE_KEY=public-ci-admin --build-arg GOOGLE_MAPS_BROWSER_KEY=public-ci-maps -t materyalph-edge:${{ github.sha }} .
+      - name: Validate the Caddy edge image
+        run: docker run --rm --network none -e API_HOST=api.example.test -e VENDOR_HOST=vendor.example.test -e ADMIN_HOST=admin.example.test -e REVERB_HOST=ws.example.test materyalph-edge:${{ github.sha }} caddy adapt --config /etc/caddy/Caddyfile --validate > /dev/null
+      - name: Exercise the isolated Render HTTP runtime
+        run: python scripts/deployment/test-render-runtime.py --image materyalph-api:${{ github.sha }}
+      - name: Exercise VPS concurrency and maintenance fencing
+        run: python scripts/deployment/test-render-runtime.py --image materyalph-api:${{ github.sha }} --vps
+      - name: Check the non-root runtime and server configuration
+        run: |
+          test "$(docker image inspect materyalph-api:${{ github.sha }} --format '{{.Config.User}}')" = app
+          docker run --rm --env FRONTEND_VENDOR_HOST=vendor.example.test --env FRONTEND_ADMIN_HOST=admin.example.test --entrypoint /bin/sh materyalph-api:${{ github.sha }} -c 'php /app/infrastructure/prepare-nginx.php && php-fpm -t && nginx -e /dev/null -t -c /app/infrastructure/nginx.conf'
+          docker run --rm --entrypoint php-fpm materyalph-api:${{ github.sha }} -t -y /app/infrastructure/vps-php-fpm.conf
+          docker run --rm --entrypoint php materyalph-api:${{ github.sha }} -l /app/infrastructure/vps-transfer.php
+          if docker run --rm --network none --env APP_ENV=production --env XENDIT_MODE=TEST --env LIVE_COMMERCE_ENABLED=false materyalph-api:${{ github.sha }} /usr/local/bin/render-start release; then
+            echo 'Non-staging release unexpectedly succeeded'; exit 1
+          fi
+      - name: Scan the API image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: materyalph-api:${{ github.sha }}
+          format: table
+          exit-code: '1'
+          severity: HIGH,CRITICAL
+          hide-progress: true
+      - name: Scan the VPS edge image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: materyalph-edge:${{ github.sha }}
+          format: table
+          exit-code: '1'
+          severity: HIGH,CRITICAL
+          hide-progress: true
+
+  ci-success:
+    name: All required checks passed
+    if: always()
+    needs: [changes, backend, contract, web, vendor-browser, buyer-mobile, buyer-ios, repository-safety, dependency-audit, infrastructure]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Reject failures and canceled checks
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHECK_RESULTS: ${{ toJSON(needs) }}
+        run: |
+          node -e 'const checks=JSON.parse(process.env.CHECK_RESULTS); for (const [name,check] of Object.entries(checks)) { if (!["success","skipped"].includes(check.result)) { console.error(`${name}: ${check.result}`); process.exitCode=1 } }'

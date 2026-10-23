@@ -17,6 +17,7 @@ return [
     'default' => env('MAIL_MAILER', 'smtp'),
 
     'delivery_not_before' => env('MAIL_DELIVERY_NOT_BEFORE'),
+    'outbox_delivery_not_before' => env('OUTBOX_DELIVERY_NOT_BEFORE'),
 
     /*
     |--------------------------------------------------------------------------
@@ -37,6 +38,11 @@ return [
     */
 
     'mailers' => [
+
+        'gmail_api' => [
+            'transport' => 'gmail_api',
+            'timeout' => (int) env('MAIL_TIMEOUT_SECONDS', 10),
+        ],
 
         'smtp' => [
             'transport' => 'smtp',

@@ -19,7 +19,7 @@ Generated guidance and design-review tools must not change roles, states, timers
 
 - Buyers use the Flutter mobile app for map-first discovery, Item-Based and Project-Based procurement, messages, quotations, orders, payments, fulfillment, disputes, reviews, and reports.
 - Vendor Owners and fixed-role Vendor staff use the Vendor portal for onboarding, verified storefront operations, listings, inventory, quotations, orders, fulfillment, compliance, staff, disputes, and reporting.
-- Administrators use the Admin portal for invitation-only, least-privilege verification, moderation, disputes, enforcement, configuration, monitoring, analytics, privacy requests, and append-only audit review.
+- Administrators use the Admin portal for invitation-only, least-privilege verification, moderation, disputes, enforcement, configuration, monitoring, analytics, and append-only audit review.
 
 ## Core product rules
 

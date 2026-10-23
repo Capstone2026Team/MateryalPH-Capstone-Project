@@ -1259,6 +1259,24 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         $this->patchJson('/api/v1/vendors/onboarding/setup', ['organization_lock_version' => $version, 'description' => 'Stale update'])->assertConflict();
     }
 
+    public function test_approved_and_completed_store_can_review_missing_code_of_conduct_then_activate(): void
+    {
+        [$organization, $owner] = $this->activationReadyFixture(acceptCodeOfConduct: false);
+        $versionId = DB::table('agreement_versions as v')->join('agreement_documents as d', 'd.id', '=', 'v.agreement_document_id')
+            ->where('d.code', 'VENDOR_CODE_OF_CONDUCT')->whereNull('v.retired_at')->where('v.effective_at', '<=', now())->orderByDesc('v.version')->value('v.id');
+        $this->getJson('/api/v1/vendors/onboarding')->assertOk()
+            ->assertJsonPath('data.verification.status', 'APPROVED')->assertJsonPath('data.setup.status', 'COMPLETED')
+            ->assertJsonPath('data.activation.readiness.ready', false)->assertJsonPath('data.activation.readiness.blockers.0.key', 'vendor_code_of_conduct');
+        $agreement = collect($this->getJson('/api/v1/vendors/account/agreements')->assertOk()->json('data'))->firstWhere('code', 'VENDOR_CODE_OF_CONDUCT');
+        self::assertTrue($agreement['content_available']);
+        self::assertNull($agreement['accepted_at']);
+        $this->postJson('/api/v1/vendors/account/agreements', ['version_ids' => [$versionId]])->assertOk();
+        $this->assertDatabaseHas('agreement_acceptances', ['user_id' => $owner->id, 'vendor_organization_id' => $organization->id, 'agreement_version_id' => $versionId, 'source' => 'ACCOUNT_SETTINGS']);
+        $this->getJson('/api/v1/vendors/onboarding')->assertOk()->assertJsonPath('data.activation.readiness.ready', true);
+        $this->postJson('/api/v1/vendors/onboarding/activation', [], ['Idempotency-Key' => (string) Str::uuid7()])
+            ->assertStatus(202)->assertJsonPath('data.activation.status', 'ACTIVE');
+    }
+
     public function test_each_of_the_ten_activation_conditions_individually_blocks_readiness(): void
     {
         [$organization, $owner] = $this->activationReadyFixture();
@@ -1467,7 +1485,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
     }
 
     /** @return array{VendorOrganization, User} */
-    private function activationReadyFixture(): array
+    private function activationReadyFixture(bool $acceptCodeOfConduct = true): array
     {
         [$organization, $owner] = $this->vendorFixture('OWNER', null, false, ['business_type' => 'SOLE_PROPRIETORSHIP', 'store_email' => 'ready@example.test', 'store_email_verified_at' => now()]);
         $this->signInVendor($owner);
@@ -1493,6 +1511,9 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         DB::table('vendor_payment_accounts')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organization->id, 'environment' => 'TEST', 'provider_associated_at' => now(), 'connection_status' => 'CONNECTED_TEST', 'provider_status' => 'LIVE', 'provider_account_id' => 'acct_test_ready', 'capabilities' => json_encode(['account_verification' => true]), 'created_at' => now(), 'updated_at' => now()]);
         DB::table('store_profiles')->where('id', $profileId)->update(['status' => 'COMPLETED']);
         foreach (['TERMS_OF_SERVICE', 'VENDOR_CODE_OF_CONDUCT', 'VENDOR_COMMISSION_TEST'] as $code) {
+            if ($code === 'VENDOR_CODE_OF_CONDUCT' && ! $acceptCodeOfConduct) {
+                continue;
+            }
             $version = DB::table('agreement_versions as v')->join('agreement_documents as d', 'd.id', '=', 'v.agreement_document_id')->where('d.code', $code)->whereNull('v.retired_at')->orderByDesc('v.version')->value('v.id');
             DB::table('agreement_acceptances')->insert(['id' => (string) Str::uuid7(), 'user_id' => $owner->id, 'vendor_organization_id' => $organization->id, 'agreement_version_id' => $version, 'source' => 'VENDOR_ONBOARDING', 'accepted_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
         }
@@ -1500,7 +1521,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         DB::table('privacy_acknowledgments')->insert(['id' => (string) Str::uuid7(), 'user_id' => $owner->id, 'vendor_organization_id' => $organization->id, 'agreement_version_id' => $privacyVersion, 'acknowledged_at' => now()]);
 
         $readiness = app(StoreActivationGate::class)->evaluate($organization->id);
-        self::assertTrue($readiness['ready'], json_encode($readiness['blockers']));
+        self::assertSame($acceptCodeOfConduct, $readiness['ready'], json_encode($readiness['blockers']));
 
         return [$organization->refresh(), $owner];
     }

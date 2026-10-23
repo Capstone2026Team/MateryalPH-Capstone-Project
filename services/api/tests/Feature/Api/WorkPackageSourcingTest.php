@@ -131,7 +131,7 @@ final class WorkPackageSourcingTest extends TestCase
         self::assertSame([$near->id, $cheap->id], $order('?sort=RATING&direction=ASC'));
     }
 
-    public function test_the_scan_lists_only_vendors_that_offer_the_package_payment_method(): void
+    public function test_the_scan_keeps_vendor_payment_choices_for_the_buyer_to_select(): void
     {
         [$near, $cheap] = $this->scenario();
         $this->buyer();
@@ -139,10 +139,15 @@ final class WorkPackageSourcingTest extends TestCase
         DB::table('vendor_payment_settings')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $near->id, 'cod_enabled' => false,
             'in_store_enabled' => true, 'lock_version' => 1, 'created_at' => now(), 'updated_at' => now()]);
         [$w] = $this->package('IN_STORE');
-        $items = $this->getJson('/api/v1/buyers/work-packages/'.$w['id'].'/estimates')->assertOk()->assertJsonPath('data.total', 1)->json('data.items');
-        self::assertSame([$near->id], array_column($items, 'vendor_id'));
-        self::assertSame('IN_STORE', $items[0]['payment_method']);
-        self::assertNotSame($cheap->id, $items[0]['vendor_id']);
+        $items = $this->getJson('/api/v1/buyers/work-packages/'.$w['id'].'/estimates')->assertOk()->assertJsonPath('data.total', 2)->json('data.items');
+        self::assertEqualsCanonicalizing([$near->id, $cheap->id], array_column($items, 'vendor_id'));
+        $byVendor = collect($items)->keyBy('vendor_id');
+        $available = static fn (array $item): array => array_column(array_values(array_filter($item['payment_methods'], static fn (array $method): bool => $method['available'])), 'method');
+        self::assertSame(['ONLINE', 'IN_STORE'], $available($byVendor[$near->id]));
+        self::assertSame(['ONLINE'], $available($byVendor[$cheap->id]));
+        $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/selection', [
+            'lock_version' => $w['lock_version'], 'candidate_id' => $byVendor[$cheap->id]['id'], 'payment_method' => 'IN_STORE',
+        ], $this->key())->assertUnprocessable()->assertJsonPath('errors.0.code', 'PAYMENT_METHOD_UNAVAILABLE');
     }
 
     public function test_recommendations_and_tagged_adds_use_the_locked_site_when_the_saved_location_is_archived(): void
@@ -258,6 +263,16 @@ final class WorkPackageSourcingTest extends TestCase
         $url = '/api/v1/buyers/work-packages/'.$w['id'];
         $lines = DB::table('work_package_lines')->where('work_package_version_id', $w['current_version_id'])->orderBy('line_number')->pluck('id')->all();
         $card = static fn (array $items, string $vendor): array => collect($items)->firstWhere('vendor_id', $vendor);
+        $items = $this->getJson($url.'/estimates')->assertOk()->json('data.items');
+
+        // Exercise the manual separate-purchase path after explicitly removing the
+        // newer automatic exact-match suggestion. Removal is a saved Buyer choice.
+        $compared = $card($items, $partial->id);
+        $automatic = collect($compared['fulfillment']['separate_items'])->firstWhere('stage', 'DRAFT');
+        self::assertNotNull($automatic);
+        $this->deleteJson($url.'/candidates/'.$compared['id'].'/draft-items/'.$lines[0].'/'.$automatic['variant_id'], [
+            'lock_version' => $w['lock_version'],
+        ], $this->key())->assertOk();
         $items = $this->getJson($url.'/estimates')->assertOk()->json('data.items');
 
         // The Vendor with 6 of 10 is partial, not "missing": 4 remain. The unlisted line is unfulfilled for everyone.

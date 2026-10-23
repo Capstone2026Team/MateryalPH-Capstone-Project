@@ -166,10 +166,6 @@ All URIs are relative to */api/v1*
 *AdminPlatformSettingsApi* | [**listPlatformSettingHistory**](docs/AdminPlatformSettingsApi.md#listplatformsettinghistory) | **GET** /admin/platform-settings/{key}/history |
 *AdminPlatformSettingsApi* | [**listPlatformSettings**](docs/AdminPlatformSettingsApi.md#listplatformsettings) | **GET** /admin/platform-settings |
 *AdminPlatformSettingsApi* | [**updatePlatformSetting**](docs/AdminPlatformSettingsApi.md#updateplatformsetting) | **PUT** /admin/platform-settings/{key} |
-*AdminPrivacyRequestsApi* | [**getPrivacyRequest**](docs/AdminPrivacyRequestsApi.md#getprivacyrequest) | **GET** /admin/privacy-requests/{requestId} |
-*AdminPrivacyRequestsApi* | [**listPrivacyRequests**](docs/AdminPrivacyRequestsApi.md#listprivacyrequests) | **GET** /admin/privacy-requests |
-*AdminPrivacyRequestsApi* | [**recordPrivacyRequest**](docs/AdminPrivacyRequestsApi.md#recordprivacyrequest) | **POST** /admin/privacy-requests |
-*AdminPrivacyRequestsApi* | [**transitionPrivacyRequest**](docs/AdminPrivacyRequestsApi.md#transitionprivacyrequest) | **POST** /admin/privacy-requests/{requestId}/{command} |
 *AdminProductComplianceApi* | [**activateComplianceRegister**](docs/AdminProductComplianceApi.md#activatecomplianceregister) | **POST** /admin/product-compliance/registers/{registerId}/activate |
 *AdminProductComplianceApi* | [**createComparableGroup**](docs/AdminProductComplianceApi.md#createcomparablegroup) | **POST** /admin/taxonomy/comparable-groups |
 *AdminProductComplianceApi* | [**decideProductCompliance**](docs/AdminProductComplianceApi.md#decideproductcompliance) | **POST** /admin/product-compliance/{submissionId}/decision |
@@ -475,6 +471,7 @@ All URIs are relative to */api/v1*
 *VendorDisputesApi* | [**respondVendorDispute**](docs/VendorDisputesApi.md#respondvendordispute) | **POST** /vendor/disputes/{caseId}/respond |
 *VendorDisputesApi* | [**sendVendorDisputeMessage**](docs/VendorDisputesApi.md#sendvendordisputemessage) | **POST** /vendor/disputes/{caseId}/messages |
 *VendorFinanceApi* | [**approveVendorOnlineBalance**](docs/VendorFinanceApi.md#approvevendoronlinebalance) | **POST** /vendor/orders/{orderId}/online-balance/approve |
+*VendorFinanceApi* | [**confirmVendorHandoverCash**](docs/VendorFinanceApi.md#confirmvendorhandovercash) | **POST** /vendor/orders/{orderId}/physical-payments/handover-confirmation |
 *VendorFinanceApi* | [**exportVendorTransactions**](docs/VendorFinanceApi.md#exportvendortransactions) | **GET** /vendor/finance/transactions/export |
 *VendorFinanceApi* | [**getVendorCommissionMonitoring**](docs/VendorFinanceApi.md#getvendorcommissionmonitoring) | **GET** /vendor/finance/commissions |
 *VendorFinanceApi* | [**getVendorEarnings**](docs/VendorFinanceApi.md#getvendorearnings) | **GET** /vendor/finance/earnings |
@@ -1079,6 +1076,7 @@ All URIs are relative to */api/v1*
 - [FinanceKpiEnvelope](docs/FinanceKpiEnvelope.md)
 - [FinanceKpis](docs/FinanceKpis.md)
 - [FinanceKpisPeriod](docs/FinanceKpisPeriod.md)
+- [FinancePaymentMethod](docs/FinancePaymentMethod.md)
 - [FinanceReviewItem](docs/FinanceReviewItem.md)
 - [FinanceReviewItemListEnvelope](docs/FinanceReviewItemListEnvelope.md)
 - [FinanceTransactionListEnvelope](docs/FinanceTransactionListEnvelope.md)
@@ -1332,6 +1330,7 @@ All URIs are relative to */api/v1*
 - [PaymentWebhookAck](docs/PaymentWebhookAck.md)
 - [PaymentWebhookAckEnvelope](docs/PaymentWebhookAckEnvelope.md)
 - [PaymentWebhookPayload](docs/PaymentWebhookPayload.md)
+- [PhysicalHandoverCash](docs/PhysicalHandoverCash.md)
 - [PhysicalPaymentRecord](docs/PhysicalPaymentRecord.md)
 - [PhysicalPaymentSettings](docs/PhysicalPaymentSettings.md)
 - [PhysicalPaymentSettingsEnvelope](docs/PhysicalPaymentSettingsEnvelope.md)
@@ -1351,14 +1350,6 @@ All URIs are relative to */api/v1*
 - [PrepareTaxPackage201Response](docs/PrepareTaxPackage201Response.md)
 - [PriceHistoryEntry](docs/PriceHistoryEntry.md)
 - [PriceHistoryEnvelope](docs/PriceHistoryEnvelope.md)
-- [PrivacyHandler](docs/PrivacyHandler.md)
-- [PrivacyRequestCreateRequest](docs/PrivacyRequestCreateRequest.md)
-- [PrivacyRequestDetail](docs/PrivacyRequestDetail.md)
-- [PrivacyRequestDetailEnvelope](docs/PrivacyRequestDetailEnvelope.md)
-- [PrivacyRequestEvent](docs/PrivacyRequestEvent.md)
-- [PrivacyRequestListEnvelope](docs/PrivacyRequestListEnvelope.md)
-- [PrivacyRequestSummary](docs/PrivacyRequestSummary.md)
-- [PrivacyTransitionRequest](docs/PrivacyTransitionRequest.md)
 - [ProblemResolveRequest](docs/ProblemResolveRequest.md)
 - [ProblemResponseRequest](docs/ProblemResponseRequest.md)
 - [ProcessingFee](docs/ProcessingFee.md)

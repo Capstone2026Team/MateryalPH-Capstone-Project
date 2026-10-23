@@ -60,12 +60,19 @@ class ComparableGroupView {
     required this.trend,
     required this.currentVendors,
     required this.currentListings,
+    this.categoryCode = '',
+    this.imageUrl,
   });
 
   final String groupId;
   final String displayName;
   final String materialName;
   final String categoryName;
+  final String categoryCode;
+
+  /// One public listing photo so the variant is recognizable (MAT-05: for a Buyer, the cheapest current offer
+  /// that has one), or null.
+  final String? imageUrl;
   final String unitName;
   final List<String> specification;
   final AnalyticsPointView startPoint;
@@ -143,6 +150,7 @@ class MaterialOfferView {
     required this.taxLabel,
     required this.availability,
     required this.distanceMeters,
+    this.imageUrl,
   });
 
   final String vendorId;
@@ -155,6 +163,9 @@ class MaterialOfferView {
   final String taxLabel;
   final String availability;
   final int distanceMeters;
+
+  /// The listing's first public photo, or null.
+  final String? imageUrl;
 }
 
 /// The analytics window the Buyer chose: a 7/30/90-day preset or an explicit custom range.
@@ -283,7 +294,7 @@ class OrderReviewsView {
     this.counterpartRating,
     this.mediaMax = 3,
     this.photoMaxBytes = 10 * 1024 * 1024,
-    this.videoMaxBytes = 100 * 1024 * 1024,
+    this.videoMaxBytes = 25 * 1024 * 1024,
   });
 
   final String orderId;

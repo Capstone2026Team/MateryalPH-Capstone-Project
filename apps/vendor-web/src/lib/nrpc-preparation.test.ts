@@ -81,14 +81,14 @@ test('materials discounts reduce NRPC eligibility while delivery discounts leave
   expect(quotationDiscountPreview({ ...quote, fulfillmentMethod: 'DELIVERY', delivery: { final_fee_centavos: 60500 }, discount: { scope: 'DELIVERY', percent: '20' } })).toMatchObject({ valid: true, linePayableCentavos: { a: 6800 }, total: 55200 })
 })
 
-test('the same peso preparation values serialize through the existing order and quotation contracts', () => {
+test('order preparation serializes while quotation saves remove legacy NRPC', () => {
   const amount = parsePesoInput('1,234.50')
   expect(amount).toBe(123450)
   const assessment = nrpcPreparationAssessment([{ id: 'a', name: 'Steel', payableCentavos: 200000 }], { reason, allocations: { a: amount } }, limits)
   expect(assessment.valid).toBe(true)
   const order: VendorOrderConfirmRequest = { lockVersion: 1, lines: [{ orderLineId: 'a', confirmedQuantity: '1' }], nrpc: { amountCentavos: assessment.totalCentavos!, reason, lines: [{ orderLineId: 'a', principalCentavos: amount! }] } }
   expect(VendorOrderConfirmRequestToJSON(order)).toMatchObject({ nrpc: { amount_centavos: 123450, reason, lines: [{ order_line_id: 'a', principal_centavos: 123450 }] } })
-  expect(ChatDraftContentToJSON(quotationDraftForSave({ ...quote, nrpc: { amount_centavos: assessment.totalCentavos, reason, allocations: { a: amount } } }))).toMatchObject({ nrpc: { amount_centavos: 123450, reason, allocations: { a: 123450 } } })
+  expect(ChatDraftContentToJSON(quotationDraftForSave({ ...quote, nrpc: { amount_centavos: assessment.totalCentavos, reason, allocations: { a: amount } } }))).toHaveProperty('nrpc', undefined)
 })
 
 test('NRPC designates part of the materials value and does not increase the quotation total', () => {

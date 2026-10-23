@@ -4,7 +4,10 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../design_system/components/buyer_app_bar.dart';
 import '../../design_system/components/price_trend_chart.dart';
 import '../../design_system/components/procurement_components.dart';
+import '../../design_system/components/product_summary_row.dart'
+    show ProductThumbnail;
 import '../../design_system/theme.dart';
+import '../item_procurement/explore_screen.dart' show categoryIcon;
 import '../item_procurement/procurement_models.dart' show formatManilaTimestamp;
 import '../map_discovery/discovery_models.dart';
 import 'analytics_repository.dart';
@@ -50,6 +53,10 @@ class _MaterialsAnalyticsScreenState extends State<MaterialsAnalyticsScreen> {
   bool _loading = true;
   bool _loadingMore = false;
   int _request = 0;
+
+  /// Categories the Buyer opened or closed against the default; kept across period changes and
+  /// Load more, reset by a new search.
+  final Set<String> _toggled = {};
 
   @override
   void initState() {
@@ -139,6 +146,7 @@ class _MaterialsAnalyticsScreenState extends State<MaterialsAnalyticsScreen> {
 
   void _submitSearch(String value) {
     _query = value.trim();
+    _toggled.clear();
     _load();
   }
 
@@ -160,12 +168,27 @@ class _MaterialsAnalyticsScreenState extends State<MaterialsAnalyticsScreen> {
     ),
   );
 
+  /// Collapsed by default so the list reads as categories first; open by default while searching
+  /// or when only one category is shown.
+  bool _isOpen(_Category category, bool openByDefault) =>
+      openByDefault != _toggled.contains(category.name);
+
+  void _toggle(_Category category) => setState(() {
+    if (!_toggled.remove(category.name)) _toggled.add(category.name);
+  });
+
+  void _setAll(List<_Category> categories, bool openByDefault, bool open) =>
+      setState(() {
+        for (final category in categories) {
+          if (_isOpen(category, openByDefault) != open) _toggle(category);
+        }
+      });
+
   @override
   Widget build(BuildContext context) {
-    final groups = <String, List<ComparableGroupView>>{};
-    for (final item in _items) {
-      groups.putIfAbsent(item.categoryName, () => []).add(item);
-    }
+    final categories = _byCategory(_items);
+    final openByDefault = _query.isNotEmpty || categories.length == 1;
+    final allOpen = categories.every((c) => _isOpen(c, openByDefault));
     final envelope = _page?.envelope;
     return Scaffold(
       backgroundColor: Colors.white,
@@ -229,14 +252,23 @@ class _MaterialsAnalyticsScreenState extends State<MaterialsAnalyticsScreen> {
                   onAction: _query.isEmpty ? null : _clearSearch,
                 )
               else ...[
-                for (final entry in groups.entries) ...[
-                  _CategoryHeading(name: entry.key, count: entry.value.length),
-                  for (final item in entry.value)
-                    _AnalyticsRow(item: item, onOpen: () => _openDetails(item)),
-                ],
+                _CategoriesHeading(
+                  count: categories.length,
+                  allOpen: allOpen,
+                  onToggleAll: categories.length < 2
+                      ? null
+                      : () => _setAll(categories, openByDefault, !allOpen),
+                ),
+                for (final category in categories)
+                  _CategorySection(
+                    category: category,
+                    expanded: _isOpen(category, openByDefault),
+                    onToggle: () => _toggle(category),
+                    onOpen: _openDetails,
+                  ),
                 if (_page?.nextCursor != null)
                   Padding(
-                    padding: const EdgeInsets.only(top: 4),
+                    padding: const EdgeInsets.only(top: 12),
                     child: OutlinedButton(
                       onPressed: _loadingMore ? null : () => _load(more: true),
                       child: Text(_loadingMore ? 'Loading…' : 'Load more'),
@@ -337,39 +369,6 @@ class _ScopeCard extends StatelessWidget {
   );
 }
 
-class _CategoryHeading extends StatelessWidget {
-  const _CategoryHeading({required this.name, required this.count});
-
-  final String name;
-  final int count;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: 20, bottom: 10),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Expanded(
-          child: Semantics(
-            header: true,
-            child: Text(
-              name,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          '$count variant${count == 1 ? '' : 's'}',
-          style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
-        ),
-      ],
-    ),
-  );
-}
-
 /// What the numbers are: dataset, capture timing and the not-a-quotation explanation.
 class _DatasetBand extends StatelessWidget {
   const _DatasetBand({required this.envelope});
@@ -434,10 +433,258 @@ class _DatasetBand extends StatelessWidget {
   );
 }
 
-/// One comparable variant: name and unit, the latest average with its date, the trend, and how
-/// many sellers offer it now. The whole card opens Material Price Details.
-class _AnalyticsRow extends StatelessWidget {
-  const _AnalyticsRow({required this.item, required this.onOpen});
+/// One category of the loaded rows, with its variants grouped by material in server order.
+class _Category {
+  _Category(this.name, this.code);
+
+  final String name;
+  final String code;
+  final Map<String, List<ComparableGroupView>> materials = {};
+
+  Iterable<ComparableGroupView> get variants =>
+      materials.values.expand((r) => r);
+}
+
+List<_Category> _byCategory(List<ComparableGroupView> items) {
+  final categories = <String, _Category>{};
+  for (final item in items) {
+    categories
+        .putIfAbsent(
+          item.categoryName,
+          () => _Category(item.categoryName, item.categoryCode),
+        )
+        .materials
+        .putIfAbsent(item.materialName, () => [])
+        .add(item);
+  }
+  return categories.values.toList(growable: false);
+}
+
+/// The variant part of a display name once its material heading is shown above it:
+/// "THHN building wire · Phelps Dodge · 2.0 mm" under "THHN building wire" → "Phelps Dodge · 2.0 mm".
+String _variantLabel(ComparableGroupView item) {
+  final prefix = '${item.materialName} · '.toLowerCase();
+  final name = item.displayName;
+  return name.toLowerCase().startsWith(prefix) && name.length > prefix.length
+      ? name.substring(prefix.length)
+      : name;
+}
+
+String _plural(int count, String noun) =>
+    '$count $noun${count == 1 ? '' : 's'}';
+
+class _CategoriesHeading extends StatelessWidget {
+  const _CategoriesHeading({
+    required this.count,
+    required this.allOpen,
+    required this.onToggleAll,
+  });
+
+  final int count;
+  final bool allOpen;
+  final VoidCallback? onToggleAll;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 16),
+    child: Row(
+      children: [
+        Expanded(
+          child: Semantics(
+            header: true,
+            child: Text(
+              count == 1 ? '1 category' : '$count categories',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ),
+        if (onToggleAll != null)
+          TextButton(
+            onPressed: onToggleAll,
+            style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+            child: Text(allOpen ? 'Collapse all' : 'Expand all'),
+          ),
+      ],
+    ),
+  );
+}
+
+/// A collapsible category card: icon, name and counts; open, its variants grouped by material.
+class _CategorySection extends StatelessWidget {
+  const _CategorySection({
+    required this.category,
+    required this.expanded,
+    required this.onToggle,
+    required this.onOpen,
+  });
+
+  final _Category category;
+  final bool expanded;
+  final VoidCallback onToggle;
+  final ValueChanged<ComparableGroupView> onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final variants = category.variants.toList(growable: false);
+    final offering = variants.where((v) => v.currentVendors > 0).length;
+    final summary = [
+      _plural(variants.length, 'variant'),
+      _plural(category.materials.length, 'material'),
+      if (offering > 0) '$offering with current offers',
+    ].join(' · ');
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Material(
+        color: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: BuyerTheme.border),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            MergeSemantics(
+              child: Semantics(
+                button: true,
+                expanded: expanded,
+                child: InkWell(
+                  onTap: onToggle,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 64),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
+                      child: Row(
+                        children: [
+                          ExcludeSemantics(
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: BuyerTheme.canvas,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                categoryIcon(category.code),
+                                size: 20,
+                                color: BuyerTheme.action,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  category.name,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                    color: BuyerTheme.ink,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  summary,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: BuyerTheme.muted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ExcludeSemantics(
+                            child: AnimatedRotation(
+                              turns: expanded ? 0.5 : 0,
+                              duration: const Duration(milliseconds: 200),
+                              child: const Icon(
+                                LucideIcons.chevronDown,
+                                size: 22,
+                                color: BuyerTheme.muted,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              alignment: Alignment.topCenter,
+              child: expanded
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (final entry in category.materials.entries) ...[
+                          _MaterialStrip(
+                            name: entry.key,
+                            count: entry.value.length,
+                          ),
+                          for (final (index, item) in entry.value.indexed) ...[
+                            if (index > 0) const Divider(height: 1, indent: 14),
+                            _VariantRow(item: item, onOpen: () => onOpen(item)),
+                          ],
+                        ],
+                      ],
+                    )
+                  : const SizedBox(width: double.infinity),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MaterialStrip extends StatelessWidget {
+  const _MaterialStrip({required this.name, required this.count});
+
+  final String name;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    color: BuyerTheme.canvas,
+    padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+    child: Row(
+      children: [
+        Expanded(
+          child: Semantics(
+            header: true,
+            child: Text(
+              name,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: BuyerTheme.ink,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          _plural(count, 'variant'),
+          style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
+        ),
+      ],
+    ),
+  );
+}
+
+/// One comparable variant inside its material: a photo (or the category icon), the label, the latest
+/// average per canonical unit with its date, the trend and current sellers. The row opens Material
+/// Price Details.
+class _VariantRow extends StatelessWidget {
+  const _VariantRow({required this.item, required this.onOpen});
 
   final ComparableGroupView item;
   final VoidCallback onOpen;
@@ -445,151 +692,108 @@ class _AnalyticsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final end = item.endPoint;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Semantics(
-        button: true,
-        hint: 'View details',
-        child: Material(
-          color: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: BuyerTheme.border),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onOpen,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 14, 10, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.displayName,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: BuyerTheme.ink,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${item.materialName} · PHP per ${item.unitName}',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: BuyerTheme.muted,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const ExcludeSemantics(
-                        child: Icon(
-                          LucideIcons.chevronRight,
-                          size: 20,
-                          color: BuyerTheme.muted,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 16,
-                    runSpacing: 10,
-                    crossAxisAlignment: WrapCrossAlignment.end,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            end.hasValue ? pesoDecimal(end.average) : '—',
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: BuyerTheme.ink,
-                            ),
-                          ),
-                          Text(
-                            end.hasValue
-                                ? 'Average on ${analyticsDayLabel(end.date, year: true)}'
-                                : (end.label ??
-                                      'No average on ${analyticsDayLabel(end.date, year: true)}'),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: BuyerTheme.muted,
-                            ),
-                          ),
-                          if (end.status == 'LIMITED_DATA')
-                            const Text(
-                              'Limited Local Data — 1 seller',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: BuyerTheme.muted,
-                              ),
-                            ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: BuyerTheme.canvas,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: TrendText(trend: item.trend, compact: true),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  const Divider(height: 1),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Icon(
-                        LucideIcons.store,
-                        size: 16,
-                        color: item.currentVendors > 0
-                            ? BuyerTheme.successStrong
-                            : BuyerTheme.muted,
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          item.currentVendors > 0
-                              ? '${item.currentVendors} seller${item.currentVendors == 1 ? '' : 's'} offering now'
-                              : 'No Current Offers',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: item.currentVendors > 0
-                                ? BuyerTheme.ink
-                                : BuyerTheme.muted,
-                          ),
-                        ),
-                      ),
-                      const Text(
-                        'View details',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: BuyerTheme.action,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+    final offering = item.currentVendors > 0;
+    const muted = TextStyle(fontSize: 12, color: BuyerTheme.muted);
+    return Semantics(
+      button: true,
+      hint: 'View details',
+      child: InkWell(
+        onTap: onOpen,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ExcludeSemantics(
+                child: ProductThumbnail(
+                  url: item.imageUrl,
+                  fallbackIcon: categoryIcon(item.categoryCode),
+                ),
               ),
-            ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _variantLabel(item),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: BuyerTheme.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.end,
+                      children: [
+                        Text(
+                          end.hasValue ? pesoDecimal(end.average) : '—',
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            color: BuyerTheme.ink,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 2),
+                          child: Text('per ${item.unitName}', style: muted),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      end.hasValue
+                          ? 'Average on ${analyticsDayLabel(end.date, year: true)}'
+                          : (end.label ??
+                                'No average on ${analyticsDayLabel(end.date, year: true)}'),
+                      style: muted,
+                    ),
+                    if (end.status == 'LIMITED_DATA')
+                      const Text('Limited Local Data — 1 seller', style: muted),
+                    const SizedBox(height: 6),
+                    TrendText(trend: item.trend, compact: true),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(
+                          LucideIcons.store,
+                          size: 14,
+                          color: offering
+                              ? BuyerTheme.successStrong
+                              : BuyerTheme.muted,
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            offering
+                                ? '${_plural(item.currentVendors, 'seller')} offering now'
+                                : 'No Current Offers',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: offering
+                                  ? BuyerTheme.ink
+                                  : BuyerTheme.muted,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const ExcludeSemantics(
+                child: Padding(
+                  padding: EdgeInsets.only(left: 2, top: 2),
+                  child: Icon(
+                    LucideIcons.chevronRight,
+                    size: 18,
+                    color: BuyerTheme.muted,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -696,22 +900,42 @@ class _MaterialPriceDetailsScreenState
             : ListView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                 children: [
-                  Semantics(
-                    header: true,
-                    child: Text(
-                      detail.group.displayName,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ExcludeSemantics(
+                        child: ProductThumbnail(
+                          url: detail.group.imageUrl,
+                          size: 72,
+                          fallbackIcon: categoryIcon(detail.group.categoryCode),
+                        ),
                       ),
-                    ),
-                  ),
-                  Text(
-                    '${detail.group.categoryName} · ${detail.group.materialName}',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: BuyerTheme.muted,
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Semantics(
+                              header: true,
+                              child: Text(
+                                detail.group.displayName,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '${detail.group.categoryName} · ${detail.group.materialName}',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: BuyerTheme.muted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                   if (detail.description != null) ...[
                     const SizedBox(height: 8),
@@ -827,6 +1051,14 @@ class _MaterialPriceDetailsScreenState
                             ),
                             child: Row(
                               children: [
+                                ProductThumbnail(
+                                  url: offer.imageUrl,
+                                  size: 48,
+                                  fallbackIcon: categoryIcon(
+                                    detail.group.categoryCode,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:

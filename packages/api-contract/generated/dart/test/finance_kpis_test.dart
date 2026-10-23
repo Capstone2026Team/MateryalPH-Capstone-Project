@@ -37,6 +37,12 @@ void main() {
       // TODO
     });
 
+    // Buyer payments received per method in the period: verified online captures per Xendit channel, then recorded Cash on Delivery and In-Store cash. Largest first; methods without activity are omitted.
+    // BuiltList<FinancePaymentMethod> paymentMethods
+    test('to test the property `paymentMethods`', () async {
+      // TODO
+    });
+
     // BuiltList<CommissionTrendPoint> trend
     test('to test the property `trend`', () async {
       // TODO

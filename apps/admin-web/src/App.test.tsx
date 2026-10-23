@@ -149,7 +149,7 @@ test('Admin email security check retries with cookie proof and retains the MFA r
   render(<App />)
   await screen.findByRole('button', { name: /sign in securely/i })
   fillLogin()
-  fireEvent.click(screen.getByRole('button', { name: 'Use email security check instead' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Use an email security check instead' }))
   const code = await screen.findByLabelText(/Risk-verification code/)
   fireEvent.change(code, { target: { value: '123456' } })
   fireEvent.click(screen.getByRole('button', { name: 'Verify and continue' }))

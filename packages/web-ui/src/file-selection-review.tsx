@@ -9,7 +9,7 @@ export function FileSelectionReview({ files, onRemove, disabled = false }: {
   if (!files.length) return null
   return <div className="grid min-w-0 gap-3">
     <p className="text-sm font-semibold" role="status">Selected files ({files.length}) · review before submitting</p>
-    <ul aria-label="Selected evidence files" className="grid min-w-0 gap-3 sm:grid-cols-2">
+    <ul aria-label="Selected evidence files" className={`grid min-w-0 gap-3 ${files.length > 1 ? 'sm:grid-cols-2' : ''}`}>
       {files.map((file, index) => <li key={`${file.name}-${file.size}-${file.lastModified}-${index}`} className="min-w-0 rounded-control border border-border-default bg-surface-primary p-3">
         <SelectedFile file={file} disabled={disabled} onRemove={() => onRemove(index)} />
       </li>)}
@@ -21,7 +21,7 @@ export function FileSelectionReview({ files, onRemove, disabled = false }: {
 function SelectedFile({ file, onRemove, disabled }: { file: File; onRemove: () => void; disabled: boolean }) {
   const [preview, setPreview] = useState<{ file: File; url: string } | null>(null)
   const [failed, setFailed] = useState(false)
-  const image = ['image/jpeg', 'image/png'].includes(file.type)
+  const image = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type)
   const supported = image || file.type === 'application/pdf'
   useEffect(() => {
     setFailed(false)

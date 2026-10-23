@@ -26,14 +26,16 @@ export { PasswordField, passwordRequirements, type PasswordFieldProps, type Pass
 export { MoneyField } from './money-field'
 export { FileSelectionField } from './file-selection-field'
 export { FileSelectionReview } from './file-selection-review'
+export { EvidenceFilePicker } from './evidence-file-picker'
 export { StatusMessage } from './status-message'
 export { PhoneField, type PhoneFieldProps } from './phone-field'
 export { PortalBrand } from './portal-brand'
 export { LoginLayout } from './login-layout'
+export { AuthLayout } from './auth-layout'
 export { AccountWorkspace } from './account-workspace'
 export { PortalAccountMenu } from './portal-account-menu'
 export { PortalIdentityProvider } from './portal-identity'
-export { PortalShell, ProgressBar, StatusBadge, type PortalNavItem, type PortalNavSection } from './portal-shell'
+export { PortalShell, ProgressBar, StatusBadge, type PortalAccountScore, type PortalNavItem, type PortalNavSection } from './portal-shell'
 export { rateLimitMessage, clearWebSessionTransport, createWebApiConfiguration, getWebCsrfToken, webRequestErrorMessage, readReviewMediaFile } from './web-api-session'
 export { OnboardingFlow, OnboardingStepContent, type StepSection } from './onboarding-flow'
 export { ResponsiveRecordList, RowGroup, MediaUploadField, RowErrorTable, ReviewWorkspace, SummaryTiles, FilterChips, type RecordColumn, type MediaItem, type RowErrorRecord, type SummaryTile, type FilterChip } from './catalog-patterns'
@@ -73,13 +75,14 @@ export { PhysicalPaymentOptions } from './physical-payment-options'
 export { MilestoneStepper, RefundTimeline, RefundStatusBadge, CancellationAvailability, roleLabel } from './fulfillment-patterns'
 export { readSignedCaseFile } from './web-api-session'
 export {
-  DisputeStatusBadge, DisputeDeadlines, DisputeTimeline, SignedFileButton, OriginalPaymentMethodNotice, InvoiceRecordList, PlatformDocumentNotice,
+  DisputeStatusBadge, DisputeDeadlines, DisputeTimeline, DisputeComplaintDetails, SignedFileButton, OriginalPaymentMethodNotice, InvoiceRecordList, PlatformDocumentNotice,
   disputeIssueLabel, disputeRemedyLabel, disputeStateLabel, disputeEventLabel, disputeRoleLabel,
 } from './dispute-patterns'
 export {
   PriceTrendChart, PriceTrendTable, PriceTrendPanel, TrendSummary, AnalyticsNullState, SuppressionNotice, DatasetNotice, BadgeList, StarRatingDisplay, StarRatingInput, ScoreTile,
   formatAnalyticsDate, formatPhpDecimal, analyticsDay, type PricePoint, type TrendValue,
 } from './analytics-patterns'
+export { ScoreSummaryGrid, BadgeStatusList } from './analytics-patterns'
 
 export { SidePanel } from './side-panel'
 export { PortalResourceProvider, usePortalResource } from './portal-resources'
@@ -87,7 +90,7 @@ export { PortalResourceProvider, usePortalResource } from './portal-resources'
 export { VendorTeamMembers, type TeamMemberQuery } from './vendor-team-members'
 
 export { AccountVerificationDialog, useAccountVerification, type RequestAccountVerification } from './account-verification-dialog'
-export { RowActionMenu, ActiveFilters, PortalPagePatterns, PageHeader, StatCard, StatCards, FilterTabs, Toolbar, InfoNote, EmptyState } from './page-patterns'
+export { RowActionMenu, ActiveFilters, PortalPagePatterns, PageHeader, StatCard, StatCards, FilterTabs, Toolbar, ControlBar, InfoNote, EmptyState } from './page-patterns'
 export { loadGoogleMaps } from './google-maps'
 export { DeliveryRouteMap, decodeDeliveryPolyline } from './delivery-route-map'
 export { FulfillmentAssignmentCard, fulfillmentDestinationLabel, fulfillmentScheduledDate } from './fulfillment-assignment-card'
@@ -106,6 +109,7 @@ export { DocumentExportButton, DocumentExportWorkspace, saveDocumentBlob, type D
 export { InsightPanel, RankedList, InsightList, SampleMeter, type RankedItem, type InsightItem, type InsightPriority } from './insight-patterns'
 export { AuthenticatorCodeField } from './authenticator-code-field'
 export { RecaptchaCheckbox, type RecaptchaCheckboxRef, type RecaptchaCheckboxProps } from './recaptcha-checkbox'
+export { BotProtectionFields } from './bot-protection-fields'
 export { EmailSecurityCheck } from './email-security-check'
 export { asBotStepUpRequired, BotStepUpRequired, useWebBotProtection, type RiskChallenge } from './web-bot-protection'
 export {
@@ -123,3 +127,4 @@ export { deliveryPlanVehicleOptions } from './delivery-plan-options'
 export { QuotationDeliveryArrangement } from './quotation-delivery-arrangement'
 export { NrpcPreparationEditor } from './nrpc-preparation-editor'
 export { nrpcPreparationAssessment, orderNrpcMaterialPreview, orderMaterialAmountLines, type NrpcPreparedMaterial, type NrpcPreparationValue } from './nrpc-preparation'
+export { MaterialThumbnail, categoryIcon } from './material-thumbnail'

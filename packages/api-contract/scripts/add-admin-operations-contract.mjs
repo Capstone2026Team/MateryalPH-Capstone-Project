@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import YAML from 'yaml';
 
-// Phase 16 contract: Admin operations (versioned Platform Settings, Buyer/Vendor enforcement, privacy requests,
+// Phase 16 contract: Admin operations (versioned Platform Settings, Buyer/Vendor enforcement,
 // append-only audit search, Integration and Job Health, Budget Override log), Philippine geographic analytics (PSGC
 // drill-down, suppression, boundaries), FIN-10 finance queues and tax adjustments, the Vendor Owner finance review
 // status, and additive extensions of the Phase 3E verification queue/case and the operations home. No operation
@@ -34,10 +34,6 @@ const percent = nullable({ type: 'string', pattern: '^\\d{1,3}\\.\\d{2}$' });
 const ENFORCEMENT_ACTIONS = ['WARNING', 'TEMPORARY_RESTRICTION', 'SUSPENSION', 'PERMANENT_BAN'];
 const ENFORCEMENT_STATES = ['EFFECTIVE', 'REFERRED', 'APPLIED', 'LIFTED', 'DECLINED'];
 const PLANS = ['CONTINUE', 'MONITORED_FULFILLMENT', 'CANCELLATION_REVIEW', 'REPLACEMENT', 'REFUND', 'NO_OPEN_ORDERS'];
-const PRIVACY_TYPES = ['ACCESS', 'CORRECTION', 'OBJECTION', 'DELETION', 'RESTRICTION', 'PORTABILITY', 'OTHER'];
-const PRIVACY_STATES = ['RECEIVED', 'IDENTITY_VERIFIED', 'IN_PROGRESS', 'COMPLETED', 'REJECTED', 'WITHDRAWN'];
-const PRIVACY_CHANNELS = ['DPO_EMAIL', 'SUPPORT_CASE', 'WRITTEN_LETTER', 'IN_APP'];
-const VERIFICATION_METHODS = ['REGISTERED_EMAIL_CONFIRMATION', 'SIGNED_IN_ACCOUNT_CONFIRMATION', 'GOVERNMENT_ID_SIGHTED', 'AUTHORIZED_REPRESENTATIVE_DOCUMENT_SIGHTED'];
 const ORDER_STATES = ['CONFIRMED', 'PROCESSING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'PICKED_UP', 'COMPLETED', 'DISPUTED', 'CANCELLATION_REQUESTED', 'CANCELLED'];
 const BLOCKER_CATEGORIES = ['ACCOUNT', 'TERMS', 'AUTHORITY', 'TAX', 'MEDIA', 'HOURS', 'SETUP', 'DELIVERY', 'PROVIDER_CAPABILITY', 'HOLD', 'VERIFICATION'];
 const TAX_ADJUSTMENT_STATES = ['ADJUSTMENT_REQUIRED', 'UNDER_REVIEW', 'APPROVED', 'POSTED', 'REJECTED'];
@@ -73,17 +69,6 @@ const schemas = {
   EnforcementApplyRequest: { type: 'object', required: ['continuation_plan', 'lock_version', 'reason'], properties: { continuation_plan: enumOf(...PLANS), continuation_note: nullable({ ...str, maxLength: 2000 }),
     lock_version: { type: 'integer', minimum: 1 }, reason: { ...str, minLength: 10, maxLength: 2000 } } },
   ReasonedVersionRequest: { type: 'object', required: ['lock_version', 'reason'], properties: { lock_version: { type: 'integer', minimum: 1 }, reason: { ...str, minLength: 10, maxLength: 2000 } } },
-  PrivacyRequestSummary: obj({ id: uuid, reference: str, request_type: enumOf(...PRIVACY_TYPES), state: enumOf(...PRIVACY_STATES), subject_account_type: str, subject_display: str,
-    intake_channel: nullable(str), received_at: nullable(dt), target_date: nullable(date), handler: nullable(str), handler_user_id: nullable(int), identity_verified: bool, lock_version: int, created_at: nullable(dt) }),
-  PrivacyRequestEvent: obj({ event: str, from_state: nullable(str), to_state: str, note: str, actor: str, actor_role: str, correlation_id: str, occurred_at: dt }),
-  PrivacyHandler: obj({ user_id: int, name: str, role: str }),
-  PrivacyRequestDetail: { allOf: [ref('PrivacyRequestSummary'), obj({ scope: nullable(str), response_summary: nullable(str), legal_exception: nullable(str), identity_verification_method: nullable(str),
-    identity_verified_at: nullable(dt), subject_masked_email: str, completed_at: nullable(dt), events: arr(ref('PrivacyRequestEvent')),
-    allowed_actions: arr(enumOf('ASSIGN', 'VERIFY', 'START', 'COMPLETE', 'REJECT', 'WITHDRAW')), handlers: arr(ref('PrivacyHandler')) })] },
-  PrivacyRequestCreateRequest: { type: 'object', required: ['subject_email', 'request_type', 'intake_channel', 'received_on', 'scope', 'note'], properties: { subject_email: { ...str, format: 'email' },
-    request_type: enumOf(...PRIVACY_TYPES), intake_channel: enumOf(...PRIVACY_CHANNELS), received_on: date, scope: { ...str, minLength: 10, maxLength: 4000 }, note: { ...str, minLength: 3, maxLength: 2000 } } },
-  PrivacyTransitionRequest: { type: 'object', required: ['lock_version', 'note'], properties: { lock_version: { type: 'integer', minimum: 1 }, note: { ...str, minLength: 3, maxLength: 4000 },
-    handler_user_id: int, target_date: nullable(date), verification_method: enumOf(...VERIFICATION_METHODS), legal_exception: nullable({ ...str, maxLength: 2000 }) } },
   AuditEvent: obj({ id: uuid, created_at: dt, actor: str, actor_role: nullable(str), action: str, resource_type: str, resource_id: nullable(uuid), organization: nullable(str), organization_id: nullable(uuid),
     succeeded: bool, reason: nullable(str), correlation_id: str, has_detail: bool }),
   AuditEventDetail: { allOf: [ref('AuditEvent'), obj({ before: nullable(any), after: nullable(any), redaction_note: str })] },
@@ -158,8 +143,6 @@ envelope('EnforcementListEnvelope', arr(ref('EnforcementSummary')));
 envelope('EnforcementDetailEnvelope', ref('EnforcementDetail'));
 envelope('EnforcementSubjectMatchListEnvelope', arr(ref('EnforcementSubjectMatch')));
 envelope('EnforcementSubjectEnvelope', { allOf: [ref('SubjectReview'), obj({ sanctions: arr(ref('EnforcementSummary')) })] });
-envelope('PrivacyRequestListEnvelope', arr(ref('PrivacyRequestSummary')));
-envelope('PrivacyRequestDetailEnvelope', ref('PrivacyRequestDetail'));
 envelope('AuditEventListEnvelope', arr(ref('AuditEvent')), ref('AuditSearchMeta'));
 envelope('AuditEventDetailEnvelope', ref('AuditEventDetail'));
 envelope('AuditActionListEnvelope', arr(str));
@@ -213,13 +196,6 @@ op('/admin/enforcement/{actionId}', 'get', 'getEnforcementAction', EN, 'enforcem
 op('/admin/enforcement/{actionId}/apply', 'post', 'applyEnforcementAction', EN, 'enforcement.apply (ban: enforcement.ban plus recent re-authentication). Apply a referred sanction; 409 on a stale lock_version.', { response: 'EnforcementDetailEnvelope', request: 'EnforcementApplyRequest' });
 op('/admin/enforcement/{actionId}/decline', 'post', 'declineEnforcementAction', EN, 'enforcement.apply. Decline a referred sanction with a reason.', { response: 'EnforcementDetailEnvelope', request: 'ReasonedVersionRequest' });
 op('/admin/enforcement/{actionId}/lift', 'post', 'liftEnforcementAction', EN, 'enforcement.apply (ban: enforcement.ban plus recent re-authentication). Lift an applied sanction; a store returns to READY or NOT_READY, never ACTIVE.', { response: 'EnforcementDetailEnvelope', request: 'ReasonedVersionRequest' });
-
-const PR = 'Admin Privacy Requests';
-op('/admin/privacy-requests', 'get', 'listPrivacyRequests', PR, 'privacy.manage sees every request; privacy.handle sees only requests assigned to you.',
-  { response: 'PrivacyRequestListEnvelope', codes: [401, 403, 422], query: [q('state', enumOf(...PRIVACY_STATES)), q('request_type', enumOf(...PRIVACY_TYPES)), q('handler', enumOf('UNASSIGNED')), page] });
-op('/admin/privacy-requests', 'post', 'recordPrivacyRequest', PR, 'privacy.manage. Record a request received through an official channel.', { response: 'PrivacyRequestDetailEnvelope', request: 'PrivacyRequestCreateRequest', keyed: true, created: true });
-op('/admin/privacy-requests/{requestId}', 'get', 'getPrivacyRequest', PR, 'Assigned handler or privacy.manage; each opening is audited. Unassigned handlers receive 404.', { response: 'PrivacyRequestDetailEnvelope', codes: [401, 403, 404] });
-op('/admin/privacy-requests/{requestId}/{command}', 'post', 'transitionPrivacyRequest', PR, 'Assign (privacy.manage), verify identity, start, complete, reject or withdraw with the current lock_version; closed requests are final.', { response: 'PrivacyRequestDetailEnvelope', request: 'PrivacyTransitionRequest' });
 
 const AU = 'Admin Audit Log';
 op('/admin/audit-log', 'get', 'searchAuditLog', AU, 'audit.view. Append-only safe projection filterable by actor, role, action, resource, organization, result, date, correlation ID and reason; cursor paginated.',

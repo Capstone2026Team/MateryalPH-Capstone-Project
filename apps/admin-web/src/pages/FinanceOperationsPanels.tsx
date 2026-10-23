@@ -1,121 +1,220 @@
 import {
-  ALL_DATES, Button, ChartDataTable, DashboardPanel, DateFilter, FilterChips, KpiCard, MethodNote, StatusBadge, StatusMessage, Toolbar, TrendLineChart,
+  ALL_DATES, BarList, Button, ChartDataTable, ControlBar, DashboardPanel, DateFilter, FilterChips, KpiCard, MethodNote, ShareBar, StatusBadge, Toolbar, TrendLineChart,
   analyticsDay, formatChartDay, formatChartMonth, formatCompactCentavos, formatPesoCentavos,
 } from '@materyalph/web-ui'
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Banknote, Landmark, Percent, ReceiptText } from 'lucide-react'
-import { Paged, Panel, Table } from '../components/OperationsKit'
-import { financeKpis, listTaxAdjustments, postTaxAdjustment, prepareTaxAdjustment, remittanceQueue, reviewTaxAdjustment, taxEvidenceQueue, type CertificateImpact, type FinanceKpis, type TaxAdjustment } from '../lib/finance-api'
-import { readableVerificationError } from '../lib/vendor-verification-api'
+import { Banknote, Landmark, Percent, ReceiptText, ShoppingCart, Store, Undo2, Wallet } from 'lucide-react'
+import { Paged, Table } from '../components/OperationsKit'
+import { financeKpis, remittanceQueue, type FinanceKpi, type FinanceKpis } from '../lib/finance-api'
 import { label as humanize, useLoad, usePaged } from '../lib/operations-hooks'
 import { ErrorState, LoadingState } from './PhaseThreeAdminPages'
 
-const iso = (date: Date) => analyticsDay(date) ?? 'Not recorded'
-
-/** Commerce (GMV) and finance amounts are kept in separate groups and are never summed together; only finance figures appear here. */
+/**
+ * Platform Finance overview. Platform money (commission earned, its cash and its debt) and marketplace money (order
+ * value, Buyer payments and refunds, which belong to Vendors and Buyers) are separate groups and never summed together.
+ */
 export function FinanceKpiPanel() {
   const [range, setRange] = useState(ALL_DATES)
   const kpis = useLoad(() => financeKpis(range.from, range.to), [range.from, range.to])
-  return <section aria-labelledby="kpi-heading" className="grid min-w-0 gap-5">
-    <div className="flex flex-wrap items-end justify-between gap-3"><div className="min-w-0"><h2 id="kpi-heading" className="text-lg font-semibold">Platform earnings analytics</h2>{kpis.data && <p className="mt-1 text-sm text-text-secondary">{kpis.data.scenario}</p>}</div>
-      <DateFilter title="Transaction dates" value={range} onChange={setRange} /></div>
-    {kpis.error ? <ErrorState message={kpis.error} onRetry={kpis.retry} /> : !kpis.data ? <LoadingState /> : <PlatformEarnings data={kpis.data} />}
+  return <section aria-label="Platform finance figures" className="grid min-w-0 gap-4">
+    <ControlBar tabs={<h2 id="platform-money-heading" className="text-base font-semibold text-text-strong">Platform earnings and funds</h2>}
+      actions={<DateFilter title="Transaction dates" value={range} onChange={setRange} />} />
+    {kpis.error ? <ErrorState message={kpis.error} onRetry={kpis.retry} /> : !kpis.data ? <LoadingState /> : <FinanceOverview data={kpis.data} />}
   </section>
 }
 
 const minus = (centavos: number) => formatPesoCentavos(centavos === 0 ? 0 : -centavos)
+const plural = (count: number, word: string) => `${count.toLocaleString('en-PH')} ${word}${count === 1 ? '' : 's'}`
 
-/** Headline cards with their calculation, then the same figures over time and as a composition, then the remaining records. */
-function PlatformEarnings({ data }: { data: FinanceKpis }) {
-  const figure = (key: string) => data.finance.find(item => item.key === key)?.valueCentavos ?? 0
+function figureOf(items: FinanceKpi[]) {
+  return (key: string) => items.find(item => item.key === key)?.valueCentavos ?? 0
+}
+
+function GroupHeading({ id, title, description }: { id: string; title: string; description?: string }) {
+  return <div className="min-w-0 border-b border-border-default pb-2"><h2 id={id} className="text-base font-semibold text-text-strong">{title}</h2>{description && <p className="mt-0.5 text-sm text-text-secondary">{description}</p>}</div>
+}
+
+/** Action strip, the platform group with its chart, the marketplace group with its charts, then supporting records. */
+function FinanceOverview({ data }: { data: FinanceKpis }) {
+  const finance = figureOf(data.finance)
+  const market = figureOf(data.commerce)
+  const count = (key: string) => data.counts[key] ?? 0
   const points = data.trend ?? []
   const monthly = data.trendGranularity !== 'DAY'
   const unit = monthly ? 'month' : 'day'
   const dates = points.map(point => analyticsDay(point.period) ?? '')
   const formatLabel = monthly ? formatChartMonth : formatChartDay
   const rows = dates.map(formatLabel)
-  const netCommission = points.map(point => point.earnedCentavos - point.creditsCentavos)
-  const netCollected = points.map(point => point.collectedCentavos - point.refundedCentavos)
-  const earnedNet = figure('net_commission')
-  const receivables = figure('receivables')
-  const overdue = figure('overdue')
   const chartValue = (value: number) => formatCompactCentavos(Math.round(value))
   const column = (header: string, values: number[]) => ({ key: header, header, values: values.map(value => formatPesoCentavos(value)) })
+  const receivables = finance('receivables')
+  const overdue = finance('overdue')
+  const pendingRefunds = market('pending_buyer_refunds')
+  const otherRefunds = market('other_refunds')
   return <>
-    <p className="-mt-2 text-xs text-text-secondary">{points.length === 0 ? 'No commission activity is recorded for these dates.'
-      : `Charted by ${unit} · ${formatLabel(dates[0] ?? '')}${points.length > 1 ? ` – ${formatLabel(dates.at(-1) ?? '')}` : ''} (Asia/Manila)`}</p>
-    <Readiness counts={data.counts} />
-    <dl aria-label="Platform earnings summary" className="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
-      <KpiCard label="Net platform earnings" value={formatPesoCentavos(figure('net_platform_earnings'))} icon={<Landmark size={16} aria-hidden="true" />} accent
-        sparkline={points.map(point => Math.max(0, point.netEarningsCentavos))} hint="Commission revenue after credits and fee VAT, less processing costs."
-        collapsibleBreakdown breakdown={{ caption: 'Net platform earnings calculation', rows: [
-          { key: 'revenue', label: 'Commission revenue, excluding VAT', amount: formatPesoCentavos(figure('platform_revenue')) },
-          { key: 'processing', label: 'Platform processing costs', amount: minus(figure('processing_expense')) },
-          { key: 'total', label: 'Net platform earnings', amount: formatPesoCentavos(figure('net_platform_earnings')), total: true },
-        ] }} />
-      <KpiCard label="Net commission earned" value={formatPesoCentavos(earnedNet)} icon={<Percent size={16} aria-hidden="true" />}
-        sparkline={netCommission.map(value => Math.max(0, value))} hint="Saved order rates on completed materials, excluding VAT, after approved credits."
-        collapsibleBreakdown breakdown={{ caption: 'Net commission earned calculation', rows: [
-          { key: 'earned', label: 'Total commission earned', amount: formatPesoCentavos(figure('earned_commission')) },
-          { key: 'credits', label: 'Approved commission credits', amount: minus(figure('fee_credits')) },
-          { key: 'total', label: 'Net commission earned', amount: formatPesoCentavos(earnedNet), total: true },
-        ] }} />
-      <KpiCard label="Net collected commissions" value={formatPesoCentavos(figure('net_collected'))} icon={<Banknote size={16} aria-hidden="true" />}
-        sparkline={netCollected.map(value => Math.max(0, value))} hint="Cash received for commission bills, by collection date."
-        collapsibleBreakdown breakdown={{ caption: 'Net collected commissions calculation', rows: [
-          { key: 'collected', label: 'Collected commissions', amount: formatPesoCentavos(figure('collected')) },
-          { key: 'refunded', label: 'Refunded commissions', amount: minus(figure('refunded_commissions')) },
-          { key: 'total', label: 'Net collected commissions', amount: formatPesoCentavos(figure('net_collected')), total: true },
-        ] }} />
-      <KpiCard label="Outstanding receivables" value={formatPesoCentavos(receivables)} icon={<ReceiptText size={16} aria-hidden="true" />}
-        hint={`Pending commissions of ${formatPesoCentavos(figure('pending_commissions'))} also include unbilled earnings and draft bills.`}
-        collapsibleBreakdown breakdown={{ caption: 'Outstanding receivables calculation', rows: [
-          { key: 'current', label: 'Issued, not yet due', amount: formatPesoCentavos(Math.max(0, receivables - overdue)) },
-          { key: 'overdue', label: 'Overdue', amount: formatPesoCentavos(overdue) },
-          { key: 'total', label: 'Outstanding receivables', amount: formatPesoCentavos(receivables), total: true },
-        ] }} />
-    </dl>
+    {points.length === 0 && <p className="text-sm text-text-secondary">No financial activity is recorded for these dates.</p>}
+    <FinanceAttention counts={data.counts} />
 
-    <div className="grid gap-5">
-      <DashboardPanel title="Commission earned and collected" description={`Commission earned each ${unit}, with the cash collected, approved credits and confirmed refunds.`}>
+    <section aria-labelledby="platform-money-heading" className="grid min-w-0 gap-4">
+      <dl aria-label="Platform earnings and funds" className="grid gap-4 md:grid-cols-2">
+        <KpiCard label="Net platform earnings" value={formatPesoCentavos(finance('net_platform_earnings'))} icon={<Landmark size={16} aria-hidden="true" />} accent
+          sparkline={points.map(point => point.netEarningsCentavos)}
+          hint="Commission after approved credits and output VAT, less platform processing costs."
+          breakdown={{ caption: 'Net platform earnings calculation', rows: [
+            { key: 'commission', label: 'Net commission earned', amount: formatPesoCentavos(finance('net_commission')) },
+            { key: 'vat', label: 'Output VAT on fees', amount: minus(finance('fee_vat')) },
+            { key: 'revenue', label: 'Commission revenue, excluding VAT', amount: formatPesoCentavos(finance('platform_revenue')), total: true },
+            { key: 'processing', label: 'Platform processing costs', amount: minus(finance('processing_expense')) },
+            { key: 'total', label: 'Net platform earnings', amount: formatPesoCentavos(finance('net_platform_earnings')), total: true },
+          ] }} />
+        <KpiCard label="Net commission earned" value={formatPesoCentavos(finance('net_commission'))} icon={<Percent size={16} aria-hidden="true" />}
+          sparkline={points.map(point => point.earnedCentavos - point.creditsCentavos)}
+          hint="Each order’s saved rate on completed materials, excluding VAT, after approved credits."
+          breakdown={{ caption: 'Net commission earned calculation', rows: [
+            { key: 'earned', label: 'Commission earned at completion', amount: formatPesoCentavos(finance('earned_commission')) },
+            { key: 'credits', label: 'Approved commission credits', amount: minus(finance('fee_credits')) },
+            { key: 'total', label: 'Net commission earned', amount: formatPesoCentavos(finance('net_commission')), total: true },
+          ] }} />
+        <KpiCard label="Platform-held funds" value={formatPesoCentavos(finance('net_collected'))} icon={<Wallet size={16} aria-hidden="true" />}
+          sparkline={points.map(point => point.collectedCentavos - point.refundedCentavos)}
+          hint="Commission paid into the MateryalPH account, less commission refunds. Buyer payments never pass through it."
+          breakdown={{ caption: 'Platform-held funds calculation', rows: [
+            { key: 'collected', label: 'Commission payments collected', amount: formatPesoCentavos(finance('collected')) },
+            { key: 'refunded', label: 'Commission refunds to Vendors', amount: minus(finance('refunded_commissions')) },
+            { key: 'total', label: 'Platform-held funds', amount: formatPesoCentavos(finance('net_collected')), total: true },
+          ] }} />
+        <KpiCard label="Outstanding receivables" value={formatPesoCentavos(receivables)} icon={<ReceiptText size={16} aria-hidden="true" />}
+          hint={`Issued commission bills not yet paid. ${formatPesoCentavos(finance('pending_commissions'))} is pending in total, including unbilled earnings and draft bills.`}
+          breakdown={{ caption: 'Outstanding receivables calculation', rows: [
+            { key: 'current', label: 'Issued, not yet due', amount: formatPesoCentavos(Math.max(0, receivables - overdue)) },
+            { key: 'overdue', label: 'Overdue', amount: formatPesoCentavos(overdue) },
+            { key: 'total', label: 'Outstanding receivables', amount: formatPesoCentavos(receivables), total: true },
+          ] }} />
+      </dl>
+      <DashboardPanel title="Commission activity" description={`Commission earned each ${unit}, with commission cash collected, approved credits and confirmed commission refunds.`}>
         <div className="grid gap-4">
           <TrendLineChart title={`Commission earned, collected, credited and refunded per ${unit}`} labels={dates} formatLabel={formatLabel} formatValue={chartValue} emptyReason="No commission activity in this period." series={[
             { key: 'earned', label: 'Earned', colorVar: '--mp-viz-series-1', values: points.map(point => point.earnedCentavos), kind: 'bar' },
             { key: 'collected', label: 'Collected', colorVar: '--mp-viz-series-2', values: points.map(point => point.collectedCentavos) },
             { key: 'credits', label: 'Approved credits', colorVar: '--mp-viz-series-3', values: points.map(point => point.creditsCentavos) },
-            { key: 'refunded', label: 'Confirmed refunds', colorVar: '--mp-viz-series-4', values: points.map(point => point.refundedCentavos) },
+            { key: 'refunded', label: 'Commission refunds', colorVar: '--mp-viz-series-4', values: points.map(point => point.refundedCentavos) },
           ]} />
           <ChartDataTable caption={`${monthly ? 'Monthly' : 'Daily'} commission activity`} rowHeader={monthly ? 'Month' : 'Date'} rows={rows} columns={[
             column('Earned', points.map(point => point.earnedCentavos)), column('Approved credits', points.map(point => point.creditsCentavos)),
-            column('Collected', points.map(point => point.collectedCentavos)), column('Refunded', points.map(point => point.refundedCentavos)), column('Net platform earnings', points.map(point => point.netEarningsCentavos))]} />
+            column('Collected', points.map(point => point.collectedCentavos)), column('Commission refunds', points.map(point => point.refundedCentavos)), column('Net platform earnings', points.map(point => point.netEarningsCentavos))]} />
         </div>
       </DashboardPanel>
-    </div>
+    </section>
 
-    <DashboardPanel title="Other recorded figures" description="Billing, VAT and tax records kept apart from platform earnings.">
+    <section aria-labelledby="marketplace-money-heading" className="grid min-w-0 gap-4">
+      <GroupHeading id="marketplace-money-heading" title="Marketplace payments" description="Money that belongs to Vendors and Buyers. Online payments settle to each Vendor’s own Xendit account and cash is kept by the Vendor; none of it is platform revenue." />
+      <dl aria-label="Marketplace payments" className="grid gap-4 md:grid-cols-2">
+        <KpiCard label="Gross merchandise value" value={formatPesoCentavos(market('gross_gmv'))} icon={<ShoppingCart size={16} aria-hidden="true" />}
+          sparkline={points.map(point => point.gmvCentavos)}
+          hint={`${plural(count('confirmed_orders'), 'confirmed order')}, by confirmation date, before cancellations and refunds.`}
+          breakdown={{ caption: 'Gross merchandise value calculation', rows: [
+            { key: 'gross', label: 'Gross merchandise value', amount: formatPesoCentavos(market('gross_gmv')) },
+            { key: 'cancelled', label: 'Cancelled order value', amount: minus(market('cancelled_gmv')) },
+            { key: 'refunded', label: 'Refunded order value', amount: minus(market('refunded_gmv')) },
+            { key: 'total', label: 'Net merchandise value', amount: formatPesoCentavos(market('net_gmv')), total: true },
+          ] }} />
+        <KpiCard label="Buyer payments received" value={formatPesoCentavos(market('buyer_payments'))} icon={<Banknote size={16} aria-hidden="true" />}
+          sparkline={points.map(point => point.buyerPaymentsCentavos)}
+          hint={`Includes ${formatPesoCentavos(market('buyer_processing_fees'))} in Buyer processing fees, which cover the payment provider.`}
+          breakdown={{ caption: 'Buyer payments received calculation', rows: [
+            { key: 'online', label: 'Verified online payments', amount: formatPesoCentavos(market('online_payments')) },
+            { key: 'cod', label: 'Cash on Delivery collected', amount: formatPesoCentavos(market('cash_on_delivery')) },
+            { key: 'store', label: 'In-Store payments collected', amount: formatPesoCentavos(market('in_store')) },
+            { key: 'total', label: 'Buyer payments received', amount: formatPesoCentavos(market('buyer_payments')), total: true },
+          ] }} />
+        <KpiCard label="Refunds to Buyers" value={formatPesoCentavos(market('buyer_refunds'))} icon={<Undo2 size={16} aria-hidden="true" />}
+          sparkline={points.map(point => point.buyerRefundsCentavos)}
+          hint={pendingRefunds > 0 ? `${formatPesoCentavos(pendingRefunds)} more in ${plural(count('pending_buyer_refunds'), 'refund')} still in progress.` : 'Confirmed refunds only. No refunds are in progress.'}
+          breakdown={{ caption: 'Refunds to Buyers calculation', rows: [
+            { key: 'cancellation', label: 'Cancellation refunds', amount: formatPesoCentavos(market('cancellation_refunds')) },
+            { key: 'dispute', label: 'Dispute-conclusion refunds', amount: formatPesoCentavos(market('dispute_refunds')) },
+            ...(otherRefunds > 0 ? [{ key: 'other', label: 'Other online refunds', amount: formatPesoCentavos(otherRefunds) }] : []),
+            { key: 'cash', label: 'Cash reimbursements', amount: formatPesoCentavos(market('cash_reimbursements')) },
+            { key: 'total', label: 'Refunds to Buyers', amount: formatPesoCentavos(market('buyer_refunds')), total: true },
+          ] }} />
+        <KpiCard label="Net Vendor collections" value={formatPesoCentavos(market('net_buyer_payments'))} icon={<Store size={16} aria-hidden="true" />}
+          sparkline={points.map(point => point.buyerPaymentsCentavos - point.buyerRefundsCentavos)}
+          hint="What Vendors kept from Buyer payments after refunds, before their own commission bills."
+          breakdown={{ caption: 'Net Vendor collections calculation', rows: [
+            { key: 'received', label: 'Buyer payments received', amount: formatPesoCentavos(market('buyer_payments')) },
+            { key: 'refunds', label: 'Refunds to Buyers', amount: minus(market('buyer_refunds')) },
+            { key: 'total', label: 'Net Vendor collections', amount: formatPesoCentavos(market('net_buyer_payments')), total: true },
+          ] }} />
+      </dl>
+      <div className="grid min-w-0 gap-4 xl:grid-cols-3">
+        <div className="min-w-0 xl:col-span-2"><DashboardPanel title="Marketplace volume" description={`Order value confirmed each ${unit}, with Buyer payments received and refunds returned.`}>
+          <div className="grid gap-4">
+            <TrendLineChart title={`Gross merchandise value, Buyer payments and refunds per ${unit}`} labels={dates} formatLabel={formatLabel} formatValue={chartValue} emptyReason="No marketplace activity in this period." series={[
+              { key: 'gmv', label: 'Gross merchandise value', colorVar: '--mp-viz-series-1', values: points.map(point => point.gmvCentavos), kind: 'bar' },
+              { key: 'payments', label: 'Buyer payments', colorVar: '--mp-viz-series-2', values: points.map(point => point.buyerPaymentsCentavos) },
+              { key: 'refunds', label: 'Refunds to Buyers', colorVar: '--mp-viz-series-4', values: points.map(point => point.buyerRefundsCentavos) },
+            ]} />
+            <ChartDataTable caption={`${monthly ? 'Monthly' : 'Daily'} marketplace volume`} rowHeader={monthly ? 'Month' : 'Date'} rows={rows} columns={[
+              column('Gross merchandise value', points.map(point => point.gmvCentavos)), column('Buyer payments', points.map(point => point.buyerPaymentsCentavos)), column('Refunds to Buyers', points.map(point => point.buyerRefundsCentavos))]} />
+          </div>
+        </DashboardPanel></div>
+        <PaymentMethods methods={data.paymentMethods ?? []} />
+      </div>
+    </section>
+
+    <DashboardPanel title="Billing and tax records" description="Kept apart from earnings: output VAT is owed on commission, and CWT is the Vendors’ simulated withholding.">
       <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {[['billed', 'Issued commission bills'], ['fee_vat', 'Output VAT on fees'], ['assessed_cwt', 'Assessed CWT (simulated)'], ['reported_deductions', 'Provider-reported deductions']].map(([key, label]) =>
-          <div key={key} className="min-w-0 rounded-control bg-surface-canvas px-4 py-3"><dt className="text-xs font-semibold text-text-secondary">{label}</dt><dd className="mt-1 break-words text-lg font-semibold tabular-nums text-text-strong">{formatPesoCentavos(figure(String(key)))}</dd></div>)}
+        {[['billed', 'Issued commission bills'], ['fee_vat', 'Output VAT on fees'], ['assessed_cwt', 'Assessed CWT (simulated)'], ['reported_deductions', 'Provider-reported deductions']].map(([key = '', label]) =>
+          <div key={key} className="min-w-0 rounded-control bg-surface-canvas px-4 py-3"><dt className="text-xs font-semibold text-text-secondary">{label}</dt><dd className="mt-1 break-words text-lg font-semibold tabular-nums text-text-strong">{formatPesoCentavos(finance(key))}</dd></div>)}
       </dl>
     </DashboardPanel>
 
     <MethodNote label="What every figure means">
-      <dl className="grid gap-3 md:grid-cols-2">{data.finance.map(item => <div key={item.key}><dt className="font-semibold text-text-strong">{item.label}</dt><dd>{item.definition}</dd></div>)}</dl>
+      <p className="mb-2">{data.scenario}</p>
+      {points.length > 0 && <p className="mb-4">{`Charted by ${unit} · ${formatLabel(dates[0] ?? '')}${points.length > 1 ? ` – ${formatLabel(dates.at(-1) ?? '')}` : ''} (Asia/Manila)`}</p>}
+      <div className="grid gap-4 md:grid-cols-2">{[['Platform figures', data.finance], ['Marketplace figures', data.commerce]].map(([title, items]) => <div key={String(title)} className="min-w-0">
+        <p className="font-semibold text-text-strong">{String(title)}</p>
+        <dl className="mt-2 grid gap-2">{(items as FinanceKpi[]).map(item => <div key={item.key}><dt className="font-semibold text-text-strong">{item.label}</dt><dd>{item.definition}</dd></div>)}</dl>
+      </div>)}</div>
     </MethodNote>
   </>
 }
 
-function Readiness({ counts }: { counts: Record<string, number> }) {
-  const rows = [
+/** Buyer payments by method: online against cash, then each channel. Each row prints its amount and count. */
+function PaymentMethods({ methods }: { methods: NonNullable<FinanceKpis['paymentMethods']> }) {
+  const total = methods.reduce((sum, method) => sum + method.amountCentavos, 0)
+  const sum = (kind: string) => methods.filter(method => method.kind === kind).reduce((value, method) => value + method.amountCentavos, 0)
+  const share = (value: number) => total === 0 ? '' : ` · ${((value / total) * 100).toFixed(1)}%`
+  return <DashboardPanel title="Buyer payments by method" description="Verified online channels and recorded cash, by payment or record date.">
+    <div className="grid gap-5">
+      <ShareBar label="Buyer payments, online and cash" formatValue={value => formatCompactCentavos(value)} empty="No Buyer payments in this period." segments={[
+        { key: 'online', label: 'Online', value: sum('ONLINE'), colorVar: '--mp-viz-series-2' },
+        { key: 'cash', label: 'Cash', value: sum('PHYSICAL'), colorVar: '--mp-viz-series-5' },
+      ]} />
+      {methods.length > 0 && <BarList label="Buyer payments per method" colorVar="--mp-viz-series-2" empty="No Buyer payments in this period." items={methods.map(method => ({
+        key: method.method, label: method.label, value: method.amountCentavos, display: formatPesoCentavos(method.amountCentavos),
+        detail: `${plural(method.payments, method.kind === 'PHYSICAL' ? 'cash record' : 'payment')}${share(method.amountCentavos)}`,
+      }))} />}
+    </div>
+  </DashboardPanel>
+}
+
+/** Finance work waiting on an Admin. Each item links to its queue; an empty queue needs no action strip. */
+function FinanceAttention({ counts }: { counts: Record<string, number> }) {
+  const items = [
+    { key: 'open_work_items', label: 'Finance work items', href: '/finance?view=queue' },
     { key: 'unreconciled_remittances', label: 'Unreconciled remittances', href: '/finance?view=remittances' },
     { key: 'draft_statements', label: 'Draft commission statements', href: '/finance?view=statements' },
     { key: 'pending_commission_credits', label: 'Commission credits awaiting approval', href: '/finance?view=statements' },
-  ]
-  return <Panel title="Finance actions" description="Review reconciliation exceptions and issue monthly commission statements.">
-    <ul className="grid gap-2 sm:grid-cols-2">{rows.map(row => { const value = counts[row.key] ?? 0; return <li key={row.key} className="flex items-center justify-between gap-3 rounded-control border border-border-default px-3 py-2 text-sm">
-      <span className="flex items-center gap-2"><StatusBadge tone={value === 0 ? 'success' : 'warning'} label={value === 0 ? 'Clear' : String(value)} />{row.label}</span>{value > 0 && <Link className="inline-flex min-h-11 items-center font-semibold text-action-primary underline-offset-4 hover:underline" to={row.href}>Open</Link>}</li> })}</ul>
-  </Panel>
+    { key: 'overdue_statements', label: 'Overdue commission bills', href: '/finance?view=overdue' },
+  ].map(item => ({ ...item, value: counts[item.key] ?? 0 })).filter(item => item.value > 0)
+  if (items.length === 0) return null
+  return <section aria-labelledby="finance-attention-heading" className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 rounded-surface border border-border-default bg-surface-primary px-4 py-3">
+    <h3 id="finance-attention-heading" className="text-sm font-semibold text-text-strong">Finance actions</h3>
+    <ul className="flex min-w-0 flex-wrap gap-2">{items.map(item => <li key={item.key}><Link className="inline-flex min-h-11 items-center gap-2 rounded-control border border-border-default px-3 text-sm font-semibold text-text-strong hover:bg-surface-canvas focus-visible:outline-2 focus-visible:outline-focus-ring" to={item.href}>
+      <StatusBadge tone="warning" label={String(item.value)} />{item.label}</Link></li>)}</ul>
+  </section>
 }
 
 export function RemittanceQueue() {
@@ -138,115 +237,6 @@ export function RemittanceQueue() {
           <td className="px-4 py-3 text-[13px]"><p>Calculation: {humanize(row.calculationState)}</p><p>Evidence: {humanize(row.deductionEvidenceState)}</p><p><StatusBadge label={humanize(row.reconciliationState)} tone={row.reconciliationState === 'RECONCILED' ? 'success' : row.reconciliationState === 'PENDING' ? 'neutral' : 'error'} /></p></td>
           <td className="px-4 py-3">{row.reviewItemId ? <Link className="inline-flex min-h-11 items-center font-semibold text-action-primary underline-offset-4 hover:underline" to="/finance?view=queue">Open work queue</Link> : '—'}</td>
         </tr> })}
-      </Table>}
-    </Paged>
-  </section>
-}
-
-const ADJUSTMENT_KINDS: Record<string, string> = { REFUND_AFTER_ASSESSMENT: 'Refund after assessment', DISPUTE_REFUND_AFTER_ASSESSMENT: 'Dispute refund after assessment' }
-const ADJUSTMENT_STATES: Record<string, { label: string; tone: 'warning' | 'info' | 'success' | 'error' | 'neutral' }> = {
-  ADJUSTMENT_REQUIRED: { label: 'Needs preparation', tone: 'warning' }, UNDER_REVIEW: { label: 'Under review', tone: 'info' }, APPROVED: { label: 'Approved — ready to post', tone: 'info' },
-  POSTED: { label: 'Posted', tone: 'success' }, REJECTED: { label: 'Rejected', tone: 'error' }, NOT_REQUIRED: { label: 'Not required', tone: 'neutral' },
-}
-
-/** FIN-07 withholding corrections after a refund. DEMO: nothing here files with the BIR or moves money. */
-export function TaxAdjustmentQueue() {
-  const [state, setStateFilter] = useState('')
-  const [range, setRange] = useState(ALL_DATES)
-  const paged = usePaged(page => listTaxAdjustments(page, state || undefined, range), [state, range.from, range.to])
-  return <section className="grid gap-4" aria-labelledby="adjustments-heading">
-    <div className="flex flex-wrap items-center justify-between gap-3"><h2 id="adjustments-heading" className="text-lg font-semibold">Tax adjustments</h2>
-      <FilterChips label="Adjustment state" chips={[{ value: '', label: 'All' }, { value: 'ADJUSTMENT_REQUIRED', label: 'Needs preparation' }, { value: 'UNDER_REVIEW', label: 'Under review' }, { value: 'APPROVED', label: 'Approved' },
-        { value: 'POSTED', label: 'Posted' }, { value: 'REJECTED', label: 'Rejected' }, { value: 'NOT_REQUIRED', label: 'Not required' }]} value={state} onChange={setStateFilter} /></div>
-    <p className="text-sm text-text-secondary">A refund after a withholding was recorded opens a review here. One finance user prepares the corrected withholding and a different one approves it before it is posted as a linked entry. The original assessment and the FIN-04A counter are never rewritten, and a refund never restores relief. A fully refunded collection in an uncrossed year is voided and needs no review. DEMO — no real funds or BIR filing.</p>
-    <Toolbar filters={<><DateFilter title="Adjustment opened dates" value={range} onChange={setRange} />{(range.from || range.to) && <Button variant="quiet" onClick={() => setRange(ALL_DATES)}>Reset dates</Button>}</>} />
-    <Paged state={paged} empty="No tax adjustments in this state.">
-      {items => <ul className="grid gap-3">{items.map(item => <TaxAdjustmentRow key={item.id} item={item} onDone={paged.reload} />)}</ul>}
-    </Paged>
-  </section>
-}
-
-function TaxAdjustmentRow({ item, onDone }: { item: TaxAdjustment; onDone: () => void }) {
-  const meta = ADJUSTMENT_STATES[item.state] ?? { label: humanize(item.state), tone: 'neutral' as const }
-  const before = item.beforeValues as Record<string, unknown>
-  const after = item.afterValues as Record<string, unknown>
-  const [mode, setMode] = useState<'PREPARE' | 'REVIEW' | null>(null)
-  const [amount, setAmount] = useState(() => typeof after.proposed_withheld_centavos === 'number' ? (after.proposed_withheld_centavos / 100).toFixed(2) : '')
-  const [impact, setImpact] = useState<CertificateImpact>('NONE')
-  const [evidence, setEvidence] = useState('')
-  const [reason, setReason] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const can = (action: string) => item.allowedActions.some(value => value === action)
-  async function run(task: () => Promise<unknown>) {
-    setBusy(true); setError(null)
-    try { await task(); setMode(null); onDone() } catch (cause) { setError(await readableVerificationError(cause)) } finally { setBusy(false) }
-  }
-  function prepare(event: FormEvent) {
-    event.preventDefault()
-    const text = amount.trim().replaceAll(',', '')
-    if (!/^\d{1,11}(\.\d{1,2})?$/.test(text)) { setError('Enter the corrected withholding in pesos, for example 0.00.'); return }
-    if (reason.trim().length < 10) { setError('Give the reason in at least 10 characters.'); return }
-    const [whole, fraction = ''] = text.split('.')
-    void run(() => prepareTaxAdjustment(item.id, Number(whole) * 100 + Number(fraction.padEnd(2, '0')), reason.trim(), impact, evidence.trim()))
-  }
-  function review(decision: 'APPROVED' | 'REJECTED') {
-    if (reason.trim().length < 10) { setError('Give the reason in at least 10 characters.'); return }
-    void run(() => reviewTaxAdjustment(item.id, decision, reason.trim()))
-  }
-  const field = 'min-h-12 w-full rounded-control border border-border-default bg-surface-primary px-3 text-base font-normal'
-  return <li className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-4">
-    <div className="flex flex-wrap items-start justify-between gap-2">
-      <div className="min-w-0"><p className="font-semibold">{ADJUSTMENT_KINDS[item.kind] ?? humanize(item.kind)}</p>
-        <p className="text-sm text-text-secondary">{item.orderReference ?? 'No order'} · {item.vendorName ?? 'Vendor'} · {formatPesoCentavos(item.amountCentavos)} refunded · {iso(item.periodStart)} – {iso(item.periodEnd)}</p></div>
-      <StatusBadge label={meta.label} tone={meta.tone} />
-    </div>
-    <p className="text-sm">{item.reason}</p>
-    <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
-      <div className="flex justify-between gap-3"><dt className="text-text-secondary">Withheld at assessment</dt><dd className="tabular-nums">{formatPesoCentavos(Number(before.withheld_centavos ?? 0))}</dd></div>
-      {typeof after.proposed_withheld_centavos === 'number' && <div className="flex justify-between gap-3"><dt className="text-text-secondary">Proposed corrected withholding</dt><dd className="tabular-nums">{formatPesoCentavos(after.proposed_withheld_centavos)}</dd></div>}
-      {typeof after.certificate_impact === 'string' && <div className="flex justify-between gap-3"><dt className="text-text-secondary">Certificate impact</dt><dd>{humanize(after.certificate_impact)}</dd></div>}
-      {item.preparer && <div className="flex justify-between gap-3"><dt className="text-text-secondary">Prepared by</dt><dd>{item.preparer}</dd></div>}
-      {item.reviewer && <div className="flex justify-between gap-3"><dt className="text-text-secondary">Reviewed by</dt><dd>{item.reviewer}</dd></div>}
-    </dl>
-    {typeof after.note === 'string' && <p className="text-sm text-text-secondary">{after.note}</p>}
-    {item.separationNote && <p className="text-sm text-text-secondary">{item.separationNote}</p>}
-    {error && <StatusMessage tone="error">{error}</StatusMessage>}
-    {mode === 'PREPARE' && <form className="grid gap-3 sm:grid-cols-2" onSubmit={prepare}>
-      <label className="grid gap-1.5 text-sm font-semibold">Corrected withholding (₱)<input className={field} inputMode="decimal" value={amount} onChange={event => setAmount(event.target.value)} disabled={busy} /></label>
-      <label className="grid gap-1.5 text-sm font-semibold">Certificate impact<select className={field} value={impact} onChange={event => setImpact(event.target.value as CertificateImpact)} disabled={busy}>
-        <option value="NONE">None</option><option value="REISSUE_REQUIRED">Certificate reissue required</option><option value="AMENDMENT_REQUIRED">Amendment required</option></select></label>
-      <label className="grid gap-1.5 text-sm font-semibold sm:col-span-2">Reason<input className={field} value={reason} onChange={event => setReason(event.target.value)} disabled={busy} maxLength={2000} /></label>
-      <label className="grid gap-1.5 text-sm font-semibold sm:col-span-2">Refund evidence reference (optional)<input className={field} value={evidence} onChange={event => setEvidence(event.target.value)} disabled={busy} maxLength={200} /></label>
-      <div className="flex flex-wrap gap-2 sm:col-span-2"><Button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Send for review'}</Button><Button variant="quiet" disabled={busy} onClick={() => setMode(null)}>Cancel</Button></div>
-    </form>}
-    {mode === 'REVIEW' && <div className="grid gap-3">
-      <label className="grid gap-1.5 text-sm font-semibold">Decision reason<input className={field} value={reason} onChange={event => setReason(event.target.value)} disabled={busy} maxLength={2000} /></label>
-      <div className="flex flex-wrap gap-2"><Button disabled={busy} onClick={() => review('APPROVED')}>Approve</Button><Button variant="secondary" disabled={busy} onClick={() => review('REJECTED')}>Reject</Button><Button variant="quiet" disabled={busy} onClick={() => setMode(null)}>Cancel</Button></div>
-    </div>}
-    {mode === null && <div className="flex flex-wrap gap-2">
-      {can('PREPARE') && <Button variant="secondary" onClick={() => { setError(null); setMode('PREPARE') }}>{item.state === 'REJECTED' ? 'Prepare again' : 'Prepare correction'}</Button>}
-      {(can('APPROVE') || can('REJECT')) && <Button variant="secondary" onClick={() => { setError(null); setReason(''); setMode('REVIEW') }}>Review (different user)</Button>}
-      {can('POST') && <Button disabled={busy} onClick={() => void run(() => postTaxAdjustment(item.id))}>{busy ? 'Posting…' : 'Post linked entry'}</Button>}
-    </div>}
-  </li>
-}
-
-export function TaxEvidenceQueue() {
-  const [state, setStateFilter] = useState('PENDING')
-  const [range, setRange] = useState(ALL_DATES)
-  const paged = usePaged(page => taxEvidenceQueue(page, state || undefined, range), [state, range.from, range.to])
-  return <section className="grid gap-4" aria-labelledby="evidence-heading">
-    <div className="flex flex-wrap items-center justify-between gap-3"><h2 id="evidence-heading" className="text-lg font-semibold">Tax evidence</h2>
-      <FilterChips label="Review state" chips={[{ value: 'PENDING', label: 'Pending' }, { value: 'APPROVED', label: 'Approved' }, { value: 'REJECTED', label: 'Rejected' }, { value: '', label: 'All' }]} value={state} onChange={setStateFilter} /></div>
-    <p className="text-sm text-text-secondary">Sworn Declarations and other FIN-04 evidence. Decisions are made in the Vendor verification case. A declaration never reverses a crossed FIN-04A threshold for that year.</p>
-    <Toolbar filters={<><DateFilter title="Evidence submission dates" value={range} onChange={setRange} />{(range.from || range.to) && <Button variant="quiet" onClick={() => setRange(ALL_DATES)}>Reset dates</Button>}</>} />
-    <Paged state={paged} empty="No tax evidence in this state.">
-      {items => <Table caption="Tax evidence" headers={['Vendor', 'Evidence', 'Taxable year', 'Validity', 'Review', 'Decision']}>
-        {items.map(row => <tr key={row.id} className="align-top"><td className="px-4 py-3 font-semibold">{row.vendor.name}</td><td className="px-4 py-3">{humanize(row.evidenceType)}<p className="text-[13px] text-text-secondary">{humanize(row.origin)} · profile v{row.taxProfileVersion}</p></td>
-          <td className="px-4 py-3">{row.taxableYear ?? '—'}</td><td className="px-4 py-3 text-[13px]">{row.validFrom ? iso(row.validFrom) : '—'} – {row.validUntil ? iso(row.validUntil) : 'open'}</td>
-          <td className="px-4 py-3"><StatusBadge label={humanize(row.reviewState)} tone={row.reviewState === 'APPROVED' ? 'success' : row.reviewState === 'REJECTED' ? 'error' : 'warning'} />{row.note && <p className="mt-1 text-[13px] text-text-secondary">{row.note}</p>}</td>
-          <td className="px-4 py-3"><Link className="inline-flex min-h-11 items-center font-semibold text-action-primary underline-offset-4 hover:underline" to={row.decisionHref}>Open case</Link></td></tr>)}
       </Table>}
     </Paged>
   </section>

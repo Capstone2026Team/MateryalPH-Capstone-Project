@@ -116,7 +116,7 @@ export interface UploadVendorInvoiceRequest {
      */
     invoiceNumber: string;
     /**
-     *
+     * Invoice calendar date; must not be later than today in Asia/Manila.
      */
     issuedOn: Date;
     /**

@@ -19,6 +19,12 @@ class _$CommissionTrendPoint extends CommissionTrendPoint {
   final int refundedCentavos;
   @override
   final int netEarningsCentavos;
+  @override
+  final int gmvCentavos;
+  @override
+  final int buyerPaymentsCentavos;
+  @override
+  final int buyerRefundsCentavos;
 
   factory _$CommissionTrendPoint(
           [void Function(CommissionTrendPointBuilder)? updates]) =>
@@ -30,7 +36,10 @@ class _$CommissionTrendPoint extends CommissionTrendPoint {
       required this.creditsCentavos,
       required this.collectedCentavos,
       required this.refundedCentavos,
-      required this.netEarningsCentavos})
+      required this.netEarningsCentavos,
+      required this.gmvCentavos,
+      required this.buyerPaymentsCentavos,
+      required this.buyerRefundsCentavos})
       : super._();
   @override
   CommissionTrendPoint rebuild(
@@ -50,7 +59,10 @@ class _$CommissionTrendPoint extends CommissionTrendPoint {
         creditsCentavos == other.creditsCentavos &&
         collectedCentavos == other.collectedCentavos &&
         refundedCentavos == other.refundedCentavos &&
-        netEarningsCentavos == other.netEarningsCentavos;
+        netEarningsCentavos == other.netEarningsCentavos &&
+        gmvCentavos == other.gmvCentavos &&
+        buyerPaymentsCentavos == other.buyerPaymentsCentavos &&
+        buyerRefundsCentavos == other.buyerRefundsCentavos;
   }
 
   @override
@@ -62,6 +74,9 @@ class _$CommissionTrendPoint extends CommissionTrendPoint {
     _$hash = $jc(_$hash, collectedCentavos.hashCode);
     _$hash = $jc(_$hash, refundedCentavos.hashCode);
     _$hash = $jc(_$hash, netEarningsCentavos.hashCode);
+    _$hash = $jc(_$hash, gmvCentavos.hashCode);
+    _$hash = $jc(_$hash, buyerPaymentsCentavos.hashCode);
+    _$hash = $jc(_$hash, buyerRefundsCentavos.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -74,7 +89,10 @@ class _$CommissionTrendPoint extends CommissionTrendPoint {
           ..add('creditsCentavos', creditsCentavos)
           ..add('collectedCentavos', collectedCentavos)
           ..add('refundedCentavos', refundedCentavos)
-          ..add('netEarningsCentavos', netEarningsCentavos))
+          ..add('netEarningsCentavos', netEarningsCentavos)
+          ..add('gmvCentavos', gmvCentavos)
+          ..add('buyerPaymentsCentavos', buyerPaymentsCentavos)
+          ..add('buyerRefundsCentavos', buyerRefundsCentavos))
         .toString();
   }
 }
@@ -112,6 +130,20 @@ class CommissionTrendPointBuilder
   set netEarningsCentavos(int? netEarningsCentavos) =>
       _$this._netEarningsCentavos = netEarningsCentavos;
 
+  int? _gmvCentavos;
+  int? get gmvCentavos => _$this._gmvCentavos;
+  set gmvCentavos(int? gmvCentavos) => _$this._gmvCentavos = gmvCentavos;
+
+  int? _buyerPaymentsCentavos;
+  int? get buyerPaymentsCentavos => _$this._buyerPaymentsCentavos;
+  set buyerPaymentsCentavos(int? buyerPaymentsCentavos) =>
+      _$this._buyerPaymentsCentavos = buyerPaymentsCentavos;
+
+  int? _buyerRefundsCentavos;
+  int? get buyerRefundsCentavos => _$this._buyerRefundsCentavos;
+  set buyerRefundsCentavos(int? buyerRefundsCentavos) =>
+      _$this._buyerRefundsCentavos = buyerRefundsCentavos;
+
   CommissionTrendPointBuilder() {
     CommissionTrendPoint._defaults(this);
   }
@@ -125,6 +157,9 @@ class CommissionTrendPointBuilder
       _collectedCentavos = $v.collectedCentavos;
       _refundedCentavos = $v.refundedCentavos;
       _netEarningsCentavos = $v.netEarningsCentavos;
+      _gmvCentavos = $v.gmvCentavos;
+      _buyerPaymentsCentavos = $v.buyerPaymentsCentavos;
+      _buyerRefundsCentavos = $v.buyerRefundsCentavos;
       _$v = null;
     }
     return this;
@@ -160,6 +195,16 @@ class CommissionTrendPointBuilder
               netEarningsCentavos,
               r'CommissionTrendPoint',
               'netEarningsCentavos'),
+          gmvCentavos: BuiltValueNullFieldError.checkNotNull(
+              gmvCentavos, r'CommissionTrendPoint', 'gmvCentavos'),
+          buyerPaymentsCentavos: BuiltValueNullFieldError.checkNotNull(
+              buyerPaymentsCentavos,
+              r'CommissionTrendPoint',
+              'buyerPaymentsCentavos'),
+          buyerRefundsCentavos: BuiltValueNullFieldError.checkNotNull(
+              buyerRefundsCentavos,
+              r'CommissionTrendPoint',
+              'buyerRefundsCentavos'),
         );
     replace(_$result);
     return _$result;

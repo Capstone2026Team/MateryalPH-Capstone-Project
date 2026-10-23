@@ -26,6 +26,24 @@ final class OutboxDeliveryTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_import_boundary_blocks_dispatch_and_an_already_queued_historical_job(): void
+    {
+        Mail::fake();
+        Queue::fake();
+        $this->app->instance('env', 'staging');
+        config(['mail.outbox_delivery_not_before' => now()->addDay()->toISOString()]);
+        $eventId = $this->publisher()->publish('AUTH_EMAIL_OTP_REQUESTED', 'EMAIL_OTP', (string) Str::uuid7(), [
+            'recipient' => 'synthetic@example.test', 'purpose' => 'EMAIL_VERIFICATION', 'code' => '123456',
+        ]);
+        Queue::fake();
+        $this->artisan('materyalph:outbox-dispatch')->assertSuccessful();
+        Queue::assertNothingPushed();
+        app(OutboxProcessor::class)->process($eventId);
+        self::assertNull(DB::table('outbox_events')->where('id', $eventId)->value('processed_at'));
+        self::assertSame(0, DB::table('outbox_events')->where('id', $eventId)->value('attempts'));
+        Mail::assertNothingSent();
+    }
+
     public function test_onboarding_mail_renders_and_escapes_its_body_through_the_real_mailer(): void
     {
         $body = 'Review your setup <script>alert("sample")</script>';

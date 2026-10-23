@@ -57,9 +57,17 @@ if (in_array('--guard-only', $argv, true)) {
     exit(0);
 }
 
+// PostgreSQL migrate:fresh drops tables but retains standalone trigger functions (see tests/TestCase.php).
+$app['events']->listen(Illuminate\Database\Events\MigrationStarted::class, static function ($event): void {
+    if ($event->method === 'up' && $event->name === '2026_10_11_020000_protect_phase_fifteen_snapshot_history') {
+        Illuminate\Support\Facades\DB::unprepared('DROP FUNCTION IF EXISTS protect_phase15_export_snapshot(); DROP FUNCTION IF EXISTS protect_phase15_tax_snapshot();');
+    }
+});
+
+// History-preserving migrations are forward-only, so verification proves an empty-database build
+// and a no-op rerun on the current schema instead of a rollback.
 foreach ([
     ['migrate:fresh', ['--seed' => true, '--force' => true]],
-    ['migrate:rollback', ['--force' => true]],
     ['migrate', ['--seed' => true, '--force' => true]],
     ['materyalph:schema-document', []],
     ['materyalph:schema-document', ['--check' => true]],
@@ -76,3 +84,14 @@ foreach ([
         exit($status);
     }
 }
+
+$migrator = $app['migrator'];
+$pending = array_diff(
+    array_keys($migrator->getMigrationFiles([database_path('migrations')])),
+    $migrator->getRepository()->getRan(),
+);
+if ($pending !== []) {
+    fwrite(STDERR, 'Pending migrations remain after the current-schema rerun: '.count($pending).PHP_EOL);
+    exit(1);
+}
+echo "No pending migrations on the current schema.\n";

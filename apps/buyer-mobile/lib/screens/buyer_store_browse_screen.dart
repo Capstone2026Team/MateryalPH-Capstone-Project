@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/buyer_transport.dart';
 import '../design_system/components/buyer_overlays.dart'
     show showBuyerBottomSheet;
 import '../design_system/components/discovery_controls.dart' show ScoreBadge;
@@ -24,7 +25,9 @@ class BuyerStoreRepository {
               'API_BASE_URL',
               defaultValue: 'http://10.0.2.2:8080/api/v1',
             ),
-          );
+          ) {
+    configureBuyerTransport(_client.dio);
+  }
 
   final MateryalphApiClient _client;
 
@@ -991,8 +994,7 @@ class _StoreDetailsTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                for (final (index, (icon, label, value, onTap))
-                    in rows.indexed)
+                for (final (index, (icon, label, value, onTap)) in rows.indexed)
                   Semantics(
                     container: true,
                     button: onTap != null,
@@ -1202,7 +1204,11 @@ class _StoreRatingSection extends StatelessWidget {
           const SizedBox(height: 10),
           const Text(
             'From verified purchases only. Published scores use a rolling 90-day window and appear once enough eligible ratings exist.',
-            style: TextStyle(fontSize: 12, height: 1.5, color: BuyerTheme.muted),
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.5,
+              color: BuyerTheme.muted,
+            ),
           ),
         ],
       );

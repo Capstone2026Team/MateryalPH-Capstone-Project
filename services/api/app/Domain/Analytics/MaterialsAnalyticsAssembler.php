@@ -28,9 +28,10 @@ final class MaterialsAnalyticsAssembler
         $points = $this->service->points($request, $ids, $endpoints);
         $current = $this->service->current($request, $ids);
         $own = $request->audience === 'VENDOR' ? $this->service->ownOffers((string) $request->ownOrganizationId, $ids) : [];
+        $images = $this->service->images($request, $ids, $own);
         $rows = [];
         foreach ($page['groups'] as $group) {
-            $row = $this->row($request, $group, $points, $current, $own);
+            $row = $this->row($request, $group, $points, $current, $own, $images);
             // A Vendor sees groups it sells or where competitor aggregates are displayable; nothing else hints at a sub-threshold count.
             if ($request->audience === 'VENDOR' && $row['own'] === null && $row['start']['status'] !== 'OK' && $row['end']['status'] !== 'OK') {
                 continue;
@@ -64,7 +65,7 @@ final class MaterialsAnalyticsAssembler
                 $previousIds = $ids;
             }
         }
-        $row = $this->row($request, $group, $points, $current, $own);
+        $row = $this->row($request, $group, $points, $current, $own, $this->service->images($request, [(string) $group->id], $own));
 
         return $serializer->envelope($request, $points['snapshot'], $current) + $serializer->detail($row, $series, $this->service->siblings($group));
     }
@@ -73,9 +74,10 @@ final class MaterialsAnalyticsAssembler
      * @param  array{published: array<string, true>, points: array<string, array<string, array{vendors: int, average: string, vendor_ids: list<string>}>>, snapshot: ?array<string, mixed>}  $points
      * @param  array{as_of: string, groups: array<string, array{vendors: int, listings: int}>, not_yet_comparable: int}  $current
      * @param  array<string, array<string, mixed>>  $own
+     * @param  array<string, array{url: string, alt_text: ?string}>  $images
      * @return array<string, mixed>
      */
-    private function row(AnalyticsRequest $request, object $group, array $points, array $current, array $own): array
+    private function row(AnalyticsRequest $request, object $group, array $points, array $current, array $own, array $images): array
     {
         $endpoint = function (?string $date) use ($request, $group, $points): array {
             $published = $date !== null && isset($points['published'][$date]);
@@ -92,6 +94,7 @@ final class MaterialsAnalyticsAssembler
                 : MaterialsAnalyticsService::trend($start['point'], $end['point'], $request->minimumTrendVendors(), $start['published'], $end['published']),
             'current' => $current['groups'][(string) $group->id] ?? ['vendors' => 0, 'listings' => 0],
             'own' => $own[(string) $group->id] ?? null,
+            'image' => $images[(string) $group->id] ?? null,
         ];
     }
 

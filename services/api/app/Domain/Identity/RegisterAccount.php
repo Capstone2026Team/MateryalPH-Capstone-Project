@@ -26,7 +26,8 @@ final class RegisterAccount
                 app(BuyerRegistrationTerms::class)->assertCurrent($input['terms_version_id'] ?? null, $input['terms_content_hash'] ?? null);
             }
             $email = mb_strtolower(trim((string) $input['email']));
-            if (User::query()->whereRaw('LOWER(email) = ?', [$email])->exists()) {
+            $existing = User::query()->whereRaw('LOWER(email) = ?', [$email])->lockForUpdate()->first();
+            if ($existing !== null && ($input['account_type'] !== 'BUYER' || ! app(ReleaseDeletedBuyerIdentity::class)->release($existing))) {
                 throw new AuthenticationException('ACCOUNT_ALREADY_EXISTS', 'An account already exists for this email.', 409);
             }
 
@@ -80,10 +81,11 @@ final class RegisterAccount
         });
     }
 
-    public function assertEmailAvailable(string $email): void
+    public function assertEmailAvailable(string $email, string $accountType): void
     {
         $normalized = mb_strtolower(trim($email));
-        if (User::query()->whereRaw('LOWER(email) = ?', [$normalized])->exists()) {
+        $user = User::query()->whereRaw('LOWER(email) = ?', [$normalized])->first();
+        if ($user !== null && ! ($accountType === 'BUYER' && $user->account_type === 'BUYER' && $user->account_status === 'DELETED' && $user->account_deleted_at !== null)) {
             throw new AuthenticationException('ACCOUNT_ALREADY_EXISTS', 'An account already exists for this email.', 409);
         }
     }

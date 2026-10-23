@@ -88,7 +88,7 @@ class DirectoryPhotoLoader {
     } on DiscoveryFailure catch (failure) {
       if (failure.kind == DiscoveryFailureKind.rateLimited ||
           failure.kind == DiscoveryFailureKind.provider ||
-          failure.kind == DiscoveryFailureKind.offline) {
+          failure.isTransportFailure) {
         _suspendedUntil = _now().add(const Duration(minutes: 1));
       }
     } catch (_) {

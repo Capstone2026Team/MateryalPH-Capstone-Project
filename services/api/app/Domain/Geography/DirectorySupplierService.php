@@ -149,6 +149,8 @@ final class DirectorySupplierService
         $spacing = 10000.0;
         do {
             $circles = [];
+            $centre = 0;
+            $cellRadius = (int) ceil($spacing / sqrt(2)) + 1600;
             $steps = (int) ceil($radius / $spacing + 0.5);
             for ($y = -$steps; $y <= $steps; $y++) {
                 for ($x = -$steps; $x <= $steps; $x++) {
@@ -156,10 +158,13 @@ final class DirectorySupplierService
                     if (hypot(max(0, abs($x * $spacing) - $spacing / 2), max(0, abs($y * $spacing) - $spacing / 2)) > $radius) {
                         continue;
                     }
+                    if ($x === 0 && $y === 0) {
+                        $centre = count($circles);
+                    }
                     $circles[] = [
                         $latitude + rad2deg($y * $spacing / 6371000),
                         $longitude + rad2deg($x * $spacing / (6371000 * cos(deg2rad($latitude)))),
-                        min(50000, (int) ceil($spacing / sqrt(2)) + 1600),
+                        min(50000, $cellRadius),
                     ];
                 }
             }
@@ -168,6 +173,10 @@ final class DirectorySupplierService
         if (count($circles) === 1) {
             // Preserve the exact origin at 50 km: Google's maximum circle cannot be padded.
             $circles = [[(float) $scope->latitude, (float) $scope->longitude, $radius]];
+        } elseif ($cellRadius > 50000) {
+            // Capped circles no longer cover their squares, so the exact Buyer circle covers the whole radius;
+            // the outer cells still add results beyond the centre's 20-result cap.
+            $circles[$centre] = [(float) $scope->latitude, (float) $scope->longitude, $radius];
         }
         $types = implode(',', (array) config('services.google_maps.places.included_types', []));
 

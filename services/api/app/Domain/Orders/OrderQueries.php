@@ -312,7 +312,7 @@ final class OrderQueries
         $detail['permissions'] = [
             'can_confirm' => $pending && OrderAccess::allows($scope, OrderAccess::CONFIRM),
             'can_revise' => $pending && OrderAccess::allows($scope, OrderAccess::REVISE),
-            'can_set_nrpc' => $pending && OrderAccess::allows($scope, OrderAccess::SET_NRPC),
+            'can_set_nrpc' => $pending && in_array($order->payment_method, ['CASH_ON_DELIVERY', 'IN_STORE'], true) && OrderAccess::allows($scope, OrderAccess::SET_NRPC),
             'can_confirm_delivery' => $pending && $order->fulfillment_method === 'DELIVERY' && OrderAccess::allows($scope, OrderAccess::CONFIRM_DELIVERY),
             'can_decline' => $pending && OrderAccess::allows($scope, OrderAccess::CONFIRM),
             'can_view_inventory' => OrderAccess::allows($scope, InventoryAccess::VIEW),
@@ -521,7 +521,7 @@ final class OrderQueries
             'latest_attempt' => $attempts->isEmpty() ? null : $presenter->attempt($attempts->first(), false),
             'verified_payment' => $verified === null ? null : $presenter->attempt($verified, false),
             'attempts' => $forBuyer ? $attempts->take(5)->map(static fn (object $payment): array => $presenter->attempt($payment, false))->values()->all() : [],
-            'physical' => app(PhysicalPaymentService::class)->summary($order),
+            'physical' => app(PhysicalPaymentService::class)->summary($order, ! $forBuyer),
             'environment' => 'TEST',
             'notice' => match (true) {
                 $due !== null && $due['purpose'] === 'NRPC_ASSURANCE_PAYMENT' => 'Pay the accepted NRPC online now; it is credited once against the balance you pay the Vendor directly. Its processing fee is not credited.',

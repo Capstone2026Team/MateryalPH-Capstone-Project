@@ -465,6 +465,50 @@ final class PhaseFourteenAnalyticsTest extends TestCase
         $this->buyerAnalytics()->assertStatus(503)->assertJsonPath('errors.0.code', 'MATERIALS_ANALYTICS_UNAVAILABLE');
     }
 
+    public function test_rows_carry_one_role_safe_listing_photo_and_buyer_offers_carry_their_own(): void
+    {
+        $group = $this->comparableGroup();
+        [, $owner, $ownListing] = $this->analyticsStore('Own Store', 13000, 500);
+        [, , $cheap] = $this->analyticsStore('Cheap Unphotographed', 9000, 800, 10);
+        [, , $mid] = $this->analyticsStore('Mid Photographed', 10000, 1000, 100);
+        [, , $high] = $this->analyticsStore('High Photographed', 12000, 1200, 200);
+        foreach ([$ownListing => 'own', $mid => 'mid', $high => 'high'] as $listing => $name) {
+            $files = DB::table('listing_media')->where('vendor_listing_id', $listing)->pluck('file_id')->all();
+            DB::table('files')->whereIn('id', $files)->update(['visibility' => 'PUBLIC', 'scan_state' => 'CLEAN', 'metadata' => json_encode(['public_url' => 'https://cdn.example.test/'.$name.'.jpg'])]);
+        }
+
+        // Buyer: the cheapest current offer that has a photo, as a bare {url, alt_text}; each offer carries its own.
+        $this->buyer();
+        $list = $this->buyerAnalytics()->assertOk();
+        $row = collect($list->json('data.items'))->firstWhere('group_id', $group);
+        self::assertSame('https://cdn.example.test/mid.jpg', $row['image']['url']);
+        self::assertSame(['url', 'alt_text'], array_keys($row['image']));
+        $offers = collect($this->postJson('/api/v1/buyers/materials-analytics/'.$group.'/offers', $this->origin())->assertOk()->json('data'))->keyBy('listing_id');
+        self::assertNull($offers[$cheap]['image']);
+        self::assertSame('https://cdn.example.test/high.jpg', $offers[$high]['image']['url']);
+        self::assertSame('https://cdn.example.test/mid.jpg', $this->buyerAnalytics([], $group)->assertOk()->json('data.group.image.url'));
+
+        // Vendor: only its own listing's photo; a competitor photo would identify the competitor (MAT-05).
+        $this->signInStoreMember($owner);
+        $vendor = $this->getJson('/api/v1/vendor/materials-analytics')->assertOk();
+        self::assertSame('https://cdn.example.test/own.jpg', collect($vendor->json('data.items'))->firstWhere('group_id', $group)['image']['url']);
+        foreach (['mid.jpg', 'high.jpg', $mid, $high] as $leak) {
+            self::assertStringNotContainsString($leak, $vendor->getContent());
+        }
+        self::assertStringNotContainsString('mid.jpg', $this->getJson('/api/v1/vendor/materials-analytics/'.$group)->assertOk()->getContent());
+
+        // Admin: the offer photo only with materials_analytics.inspect_sources.
+        $this->psgcVersion();
+        $this->signInAdmin($this->admin('ADMIN_SUPERADMIN'));
+        self::assertSame('https://cdn.example.test/mid.jpg', collect($this->getJson('/api/v1/admin/materials-analytics')->assertOk()->json('data.items'))->firstWhere('group_id', $group)['image']['url']);
+        DB::table('role_permissions')->insert(['id' => (string) Str::uuid7(), 'platform_role_id' => DB::table('platform_roles')->where('code', 'ADMIN_SUPPORT')->value('id'),
+            'permission_id' => DB::table('permissions')->where('code', 'analytics.view_aggregates')->value('id'), 'created_at' => now(), 'updated_at' => now()]);
+        $this->signInAdmin($this->admin('ADMIN_SUPPORT'));
+        $aggregate = $this->getJson('/api/v1/admin/materials-analytics')->assertOk();
+        self::assertNull(collect($aggregate->json('data.items'))->firstWhere('group_id', $group)['image']);
+        self::assertStringNotContainsString('cdn.example.test', $aggregate->getContent());
+    }
+
     private function freeze(CarbonImmutable $instant): void
     {
         CarbonImmutable::setTestNow($instant);

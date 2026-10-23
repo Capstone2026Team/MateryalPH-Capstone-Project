@@ -1,8 +1,6 @@
 import {
   VendorFinanceApi,
-  VendorFinanceReviewsApi,
   type VendorCommissionMonitoring,
-  type VendorFinanceReviews,
   type FeeStatementDetail,
   type ListVendorTransactionsStatusEnum,
   type ListVendorTransactionsTabEnum,
@@ -19,7 +17,7 @@ import { newIdempotencyKey } from './onboarding-api'
 import { apiDateFilters, type DateFilters } from './date-filters'
 
 export { readableOnboardingError as readableFinanceError } from './onboarding-api'
-export type { VendorFinanceReviews, FeeStatementDetail, PaymentAttempt, PaymentChannelOption, PhysicalPaymentSettings, PhysicalPaymentSummary, VendorEarnings, VendorEarningsTrendPoint, VendorFinanceOverview }
+export type { FeeStatementDetail, PaymentAttempt, PaymentChannelOption, PhysicalPaymentSettings, PhysicalPaymentSummary, VendorEarnings, VendorEarningsTrendPoint, VendorFinanceOverview }
 
 const basePath = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'
 const financeApi = () => new VendorFinanceApi(createWebApiConfiguration(basePath, { refreshSession: true }))
@@ -82,6 +80,11 @@ export async function recordPhysicalPayment(orderId: string, amountCentavos: num
   return (await financeApi().recordVendorPhysicalPayment({ orderId, idempotencyKey, amountCentavos, file, ...(note.trim() ? { note: note.trim() } : {}) })).data
 }
 
+/** Confirms the cash Fulfillment Staff reported at handover; the handover photo is the evidence unless a receipt is attached. */
+export async function confirmHandoverCash(orderId: string, file: File | null, idempotencyKey = newIdempotencyKey()): Promise<PhysicalPaymentSummary> {
+  return (await financeApi().confirmVendorHandoverCash({ orderId, idempotencyKey, ...(file ? { file } : {}) })).data
+}
+
 export async function approveOnlineBalance(orderId: string): Promise<void> {
   await financeApi().approveVendorOnlineBalance({ orderId, idempotencyKey: newIdempotencyKey() })
 }
@@ -107,10 +110,4 @@ export function channelRows(channels: unknown): PaymentChannelRow[] {
       unavailableReason: (row.unavailable_reason ?? row.unavailableReason ?? null) as string | null, refundSupported: Boolean(row.refund_supported ?? row.refundSupported),
       rateLabel: String(row.rate_label ?? row.rateLabel ?? ''), feeCentavos: (row.fee_centavos ?? row.feeCentavos ?? null) as number | null, totalCentavos: (row.total_centavos ?? row.totalCentavos ?? null) as number | null }
   })
-}
-
-
-/** Owner-only review status: statement approval and payment, tax adjustments, evidence and open finance reviews. */
-export async function getFinanceReviews(): Promise<VendorFinanceReviews> {
-  return (await new VendorFinanceReviewsApi(createWebApiConfiguration(basePath, { refreshSession: true })).getVendorFinanceReviews()).data
 }

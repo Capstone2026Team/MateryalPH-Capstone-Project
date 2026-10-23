@@ -84,3 +84,7 @@ for (const field of ['brand', 'variant_label', 'specifications']) assert.ok(!spe
 assert.equal(spec.components.schemas.ChatQuotationMoney.properties.materials_gross_centavos.type, 'integer')
 assert.ok(!Object.keys(spec.paths).some(p => p.includes('fulfillment-thread')), 'Phase 12 entry must remain disabled')
 console.log(`Phase 9 contract passed: ${expected.size} authorized operations, private identity and immutable quotation schemas.`)
+
+assert.equal(spec.components.schemas.ChatDraftContent.properties.nrpc.deprecated, true)
+assert.match(spec.components.schemas.ChatDraftContent.properties.nrpc.description, /prohibited/)
+assert.match(spec.components.schemas.VendorOrderPermissions.properties.can_set_nrpc.description, /COD or In-Store/)

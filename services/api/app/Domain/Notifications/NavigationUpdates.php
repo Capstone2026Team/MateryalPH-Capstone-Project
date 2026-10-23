@@ -44,7 +44,7 @@ final class NavigationUpdates
         // Only pending work belongs on navigation. Informational dashboard metrics stay on the dashboard.
         $keys = ['vendor_verification', 'product_compliance', 'disputes', 'appeals', 'enforcement', 'review_moderation',
             'invoices', 'privacy', 'refund_failures', 'refunds_pending', 'reimbursements', 'jobs'];
-        foreach (app(OperationsQueueService::class)->queues($scope['permissions'], (int) $user->getKey()) as $queue) {
+        foreach (app(OperationsQueueService::class)->queues($scope['permissions']) as $queue) {
             if (in_array($queue['key'], $keys, true)) {
                 $path = explode('?', (string) $queue['href'], 2)[0];
                 $sections[$path] = ($sections[$path] ?? 0) + (int) $queue['count'];

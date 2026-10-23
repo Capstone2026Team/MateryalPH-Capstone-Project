@@ -18,7 +18,7 @@ const taxonomy = {
   attribute_definitions: [], tax_categories: ['VAT_12', 'VAT_ZERO', 'VAT_EXEMPT', 'NON_VAT'], allowed_tax_categories: ['NON_VAT'],
   limits: { max_variants: 50, max_media: 8, max_listing_image_kb: 5120, image_types: ['image/jpeg', 'image/png', 'image/webp'] },
 }
-const material = { id: 'mat-cement', code: 'PORTLAND_CEMENT', name: 'Portland cement', regulated: true, category_id: 'cat-cement', category_name: 'Cement and Concrete', canonical_unit_id: unit.id, compatible_unit_ids: [unit.id], suggested_tag_ids: ['tag-1'], regulated_rule: rule }
+const material = { id: 'mat-cement', code: 'PORTLAND_CEMENT', name: 'Portland cement', regulated: true, category_id: 'cat-cement', category_name: 'Cement and Concrete', canonical_unit_id: unit.id, compatible_unit_ids: [unit.id], suggested_tag_ids: ['tag-1'], custom_tags: [], regulated_rule: rule }
 const steps = (media: boolean, compliance: string) => [
   { key: 'material_classification', label: 'Material and classification', level: 'REQUIRED', status: 'COMPLETED' },
   { key: 'product_details', label: 'Product details', level: 'REQUIRED', status: 'COMPLETED' },
@@ -37,7 +37,7 @@ function listingState() {
   const body = () => ({
     id: 'listing-1', status, lock_version: lock, display_name: 'Portland cement 40 kg', vendor_sku: 'CEM-40', description: 'Bagged Type I cement.',
     material: { id: material.id, code: material.code, name: material.name, regulated: true }, material_match: 'EXACT', material_category_id: 'cat-cement', other_label: null,
-    tag_ids: ['tag-1'], technical_attributes: {}, brand: 'BrandCo', model: null, manufacturer: 'Sample Cement Corporation', manufacturer_address: 'Test City', country_of_manufacture: 'PH',
+    tag_ids: ['tag-1'], custom_tags: [], technical_attributes: {}, brand: 'BrandCo', model: null, manufacturer: 'Sample Cement Corporation', manufacturer_address: 'Test City', country_of_manufacture: 'PH',
     regulated: true, compliance_status: compliance, regulated_rule: rule, publication_version: 0, published_at: null, publication_requested_at: null,
     variants: [{ id: 'variant-1', sku: 'CEM-40-1', label: '40 kg', unit_id: unit.id, unit_code: 'BAG', pack_quantity: '1.0000', attributes: {}, active: true, weight_kg: '40.000', length_cm: '60.00', width_cm: '40.00', height_cm: '12.00', lock_version: 1,
       price: { price_version_id: 'price-1', version: 1, amount_centavos: 28550, tax_category: 'NON_VAT', tax_basis: null, included_vat_centavos: 0, effective_at: null },
@@ -96,6 +96,7 @@ async function vendorFixture(page: Page, options: { empty?: boolean } = {}) {
     if (path === '/vendor/catalog/listings/listing-1' && method === 'DELETE') return fulfil(route, { id: 'listing-1', removed_at: '2026-09-28T03:00:00Z' })
     if (path === '/vendor/catalog/listings/listing-1/media' && method === 'POST') { listing.addPhoto(); return fulfil(route, listing.body(), {}, 201) }
     if (path === '/vendor/catalog/listings/listing-1/compliance/evidence') return fulfil(route, { evidence_id: 'evidence-1', file_id: 'evidence-file-1', path: 'MANUAL', evidence_kind: 'MARKING_PHOTO', content_type: 'image/png', byte_size: PIXEL.length, scan_state: 'CLEAN', extraction: { source: 'MANUAL', status: 'NOT_REQUESTED', confidence: null, suggestions: {}, assistance_only: true } }, {}, 201)
+    if (path === '/vendor/catalog/listings/listing-1/compliance/lookup') return fulfil(route, { marking_type: 'PS_MARK', number: 'Q-1234', result: 'MATCHED', reason: null, message: 'PS License No. Q-1234 is listed for Portland cement.', can_verify_automatically: true, register: null, record: null })
     if (path === '/vendor/catalog/listings/listing-1/compliance') { listing.submit(); return fulfil(route, listing.body()) }
     if (path.startsWith('/vendor/catalog/listings/listing-1')) return fulfil(route, listing.body())
     if (path.startsWith('/vendor/catalog/files/')) return fulfil(route, { url: 'https://files.example.test/photo.png', expires_at: '2026-09-28T02:00:00Z' })
@@ -200,10 +201,9 @@ test('listing wizard creates a draft, validates variants and tiers, uploads a ph
   await expect(first.getByRole('textbox', { name: /Minimum quantity/ })).toHaveValue('50')
   await expect(first.getByText('50+ bag')).toBeVisible()
   await page.getByRole('button', { name: 'Add variant' }).click()
-  await page.getByRole('button', { name: 'Save product information' }).click()
-  const second = page.getByRole('region', { name: 'Variant 2' })
-  await expect(second.getByText('Choose a sale unit.').first()).toBeVisible()
-  await expect(second.getByRole('textbox', { name: 'Price (PHP)' })).toHaveAttribute('aria-invalid', 'true')
+  // Drafts autosave; an incomplete variant row is held back and named in the save status.
+  await expect(page.getByText('Not saved yet: Choose a sale unit.')).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByRole('button', { name: 'Save product information' })).toHaveCount(0)
   expect(mutations.slice(afterCreate).filter(item => item.path.endsWith('/variants') || item.method === 'PATCH')).toHaveLength(0)
   await fits(page)
   await capture(page, 'wizard-product-information')
@@ -224,16 +224,18 @@ test('listing wizard creates a draft, validates variants and tiers, uploads a ph
   await fits(page)
   await capture(page, 'wizard-compliance-preview')
   await page.getByRole('button', { name: 'Upload this photo' }).click()
-  await expect(page.getByRole('heading', { name: 'Review and confirm' })).toBeVisible()
+  // Only the number is entered; the DTI-BPS register lookup prefills the rest (rule register-number.v2).
   await page.getByRole('textbox', { name: /PS License No/ }).fill('Q-1234')
-  await page.getByRole('button', { name: 'Submit PS/ICC evidence' }).click()
-  await expect(page.getByText('Confirm that you reviewed each value against the physical marking.')).toBeVisible()
+  await page.getByRole('button', { name: 'Check number' }).click()
+  await expect(page.getByText('Found in the DTI-BPS register')).toBeVisible()
+  await page.getByRole('button', { name: 'Submit for automatic verification' }).click()
+  await expect(page.getByText(/Confirm that you/).first()).toBeVisible()
   expect(mutations.filter(item => item.path.endsWith('/compliance'))).toHaveLength(0)
   await fits(page)
   await capture(page, 'wizard-photos-compliance')
-  await page.getByRole('checkbox', { name: /checked every value/ }).check()
-  await page.getByRole('button', { name: 'Submit PS/ICC evidence' }).click()
-  await expect(page.getByText(/No result is an accusation/)).toBeVisible()
+  await page.getByRole('checkbox', { name: /checked this PS License No/ }).check()
+  await page.getByRole('button', { name: 'Submit for automatic verification' }).click()
+  await expect(page.getByText(/not treated as counterfeit/).first()).toBeVisible()
   expect(mutations.find(item => item.path.endsWith('/compliance'))?.idempotencyKey).toBeTruthy()
   await capture(page, 'wizard-compliance-submitted')
 
@@ -293,7 +295,12 @@ test('Admin product compliance queue and case name the exact target and require 
   await expect(page.getByRole('heading', { name: 'Product Compliance Queue' })).toBeVisible()
   const queue = page.viewportSize()!.width >= 1024 ? page.getByRole('table', { name: 'Product compliance submissions' }) : page.getByRole('list', { name: 'Product compliance submissions' })
   await expect(queue.getByText('Uncertain')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'DTI-BPS register snapshots' })).toBeVisible()
+  await page.getByRole('button', { name: 'DTI-BPS register snapshots' }).click()
+  const registers = page.getByRole('dialog', { name: 'DTI-BPS register snapshots' })
+  await expect(registers.getByRole('table', { name: 'Register snapshots' })).toBeVisible()
+  await fits(page)
+  await registers.getByRole('button', { name: 'Done' }).click()
+  await expect(registers).toBeHidden()
   await fits(page)
   await capture(page, 'admin-compliance-queue')
 

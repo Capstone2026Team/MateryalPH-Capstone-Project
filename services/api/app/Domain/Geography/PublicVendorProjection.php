@@ -76,10 +76,14 @@ final class PublicVendorProjection
             ->pluck('vps', 'vendor_organization_id');
         $badges = app(PublicScores::class)->badges($organizationIds);
         $hours = $this->openStatuses($rows->pluck('profile_id')->map(static fn (mixed $id): string => (string) $id)->all());
+        $deliveryOrganizations = app(VendorDeliveryEligibility::class)->availableOrganizations()
+            ->whereIn('delivery_profile.vendor_organization_id', $organizationIds)
+            ->pluck('delivery_profile.vendor_organization_id')
+            ->mapWithKeys(static fn (mixed $id): array => [(string) $id => true])->all();
 
         $summaries = [];
         foreach ($rows as $row) {
-            $deliveryAvailable = app(VendorDeliveryEligibility::class)->available((string) $row->id);
+            $deliveryAvailable = isset($deliveryOrganizations[(string) $row->id]);
             $method = $deliveryAvailable ? $row->fulfillment_method : (in_array($row->fulfillment_method, ['SELF_PICKUP', 'BOTH'], true) ? 'SELF_PICKUP' : null);
             $vps = $scores[$row->id] ?? null;
             $niches = json_decode((string) ($row->niches ?? '[]'), true);

@@ -7,6 +7,7 @@ import 'package:materyalph_api_client/src/model/analytics_category_ref.dart';
 import 'package:materyalph_api_client/src/model/admin_analytics_point.dart';
 import 'package:materyalph_api_client/src/model/admin_analytics_row.dart';
 import 'package:materyalph_api_client/src/model/comparable_specification.dart';
+import 'package:materyalph_api_client/src/model/listing_image.dart';
 import 'package:materyalph_api_client/src/model/analytics_current_counts.dart';
 import 'package:materyalph_api_client/src/model/analytics_unit.dart';
 import 'package:materyalph_api_client/src/model/analytics_trend.dart';
@@ -29,6 +30,7 @@ part 'admin_materials_analytics_detail_group.g.dart';
 /// * [endPoint]
 /// * [trend]
 /// * [current]
+/// * [image] - Photo of the cheapest current in-scope offer that has one, present only with materials_analytics.inspect_sources and null otherwise. Never its listing or store identity.
 /// * [description]
 @BuiltValue()
 abstract class AdminMaterialsAnalyticsDetailGroup implements AdminAnalyticsRow, Built<AdminMaterialsAnalyticsDetailGroup, AdminMaterialsAnalyticsDetailGroupBuilder> {
@@ -63,6 +65,13 @@ class _$AdminMaterialsAnalyticsDetailGroupSerializer implements PrimitiveSeriali
       object.endPoint,
       specifiedType: const FullType(AdminAnalyticsPoint),
     );
+    if (object.image != null) {
+      yield r'image';
+      yield serializers.serialize(
+        object.image,
+        specifiedType: const FullType.nullable(ListingImage),
+      );
+    }
     yield r'unit';
     yield serializers.serialize(
       object.unit,
@@ -144,6 +153,14 @@ class _$AdminMaterialsAnalyticsDetailGroupSerializer implements PrimitiveSeriali
             specifiedType: const FullType(AdminAnalyticsPoint),
           ) as AdminAnalyticsPoint;
           result.endPoint.replace(valueDes);
+          break;
+        case r'image':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ListingImage),
+          ) as ListingImage?;
+          if (valueDes == null) continue;
+          result.image.replace(valueDes);
           break;
         case r'unit':
           final valueDes = serializers.deserialize(

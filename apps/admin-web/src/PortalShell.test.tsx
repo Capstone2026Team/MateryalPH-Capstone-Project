@@ -16,8 +16,11 @@ it('keeps direct routes, disabled items and active names accessible when collaps
     { label: 'Other', items: [{ label: 'Audit Log', href: '/audit', icon: <Users /> }] },
   ]}><h1>Dashboard content</h1></PortalShell>)
   const sidebar = screen.getByLabelText('ADMIN PORTAL navigation')
-  expect(await within(sidebar).findByText('Authenticated Admin')).toBeVisible()
-  expect(within(sidebar).getByText('ADMIN SUPPORT')).toBeVisible()
+  // The top-bar account menu carries the Admin name; the sidebar footer only names the signed-in role.
+  expect(await screen.findByText('Authenticated Admin')).toBeVisible()
+  expect(within(sidebar).queryByText('Authenticated Admin')).not.toBeInTheDocument()
+  expect(await within(sidebar).findByText('ADMIN SUPPORT')).toBeInTheDocument()
+  expect(within(sidebar).queryByRole('group', { name: /Account profile:/ })).not.toBeInTheDocument()
   expect(sidebar.querySelectorAll('details, summary')).toHaveLength(0)
   fireEvent.click(screen.getByRole('button', { name: 'Collapse sidebar' }))
   expect(screen.getByRole('button', { name: 'Expand sidebar' })).toHaveAttribute('aria-expanded', 'false')

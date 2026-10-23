@@ -11,7 +11,6 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add($AuditEvent.serializer)
       ..add($BuyerAnalyticsRow.serializer)
       ..add($EnforcementSummary.serializer)
-      ..add($PrivacyRequestSummary.serializer)
       ..add($ProjectCandidateRequest.serializer)
       ..add($SubjectReview.serializer)
       ..add($SuccessEnvelope.serializer)
@@ -770,6 +769,8 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(FinanceKpis.serializer)
       ..add(FinanceKpisPeriod.serializer)
       ..add(FinanceKpisTrendGranularityEnum.serializer)
+      ..add(FinancePaymentMethod.serializer)
+      ..add(FinancePaymentMethodKindEnum.serializer)
       ..add(FinanceReviewItem.serializer)
       ..add(FinanceReviewItemListEnvelope.serializer)
       ..add(FinanceReviewItemStateEnum.serializer)
@@ -1177,6 +1178,8 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(PaymentWebhookAck.serializer)
       ..add(PaymentWebhookAckEnvelope.serializer)
       ..add(PaymentWebhookPayload.serializer)
+      ..add(PhysicalHandoverCash.serializer)
+      ..add(PhysicalHandoverCashMilestoneEnum.serializer)
       ..add(PhysicalPaymentRecord.serializer)
       ..add(PhysicalPaymentRecordKindEnum.serializer)
       ..add(PhysicalPaymentRecordSource_Enum.serializer)
@@ -1203,19 +1206,6 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(PriceHistoryEntry.serializer)
       ..add(PriceHistoryEntryPriceKindEnum.serializer)
       ..add(PriceHistoryEnvelope.serializer)
-      ..add(PrivacyHandler.serializer)
-      ..add(PrivacyRequestCreateRequest.serializer)
-      ..add(PrivacyRequestCreateRequestIntakeChannelEnum.serializer)
-      ..add(PrivacyRequestCreateRequestRequestTypeEnum.serializer)
-      ..add(PrivacyRequestDetail.serializer)
-      ..add(PrivacyRequestDetailAllowedActionsEnum.serializer)
-      ..add(PrivacyRequestDetailEnvelope.serializer)
-      ..add(PrivacyRequestEvent.serializer)
-      ..add(PrivacyRequestListEnvelope.serializer)
-      ..add(PrivacyRequestSummaryRequestTypeEnum.serializer)
-      ..add(PrivacyRequestSummaryStateEnum.serializer)
-      ..add(PrivacyTransitionRequest.serializer)
-      ..add(PrivacyTransitionRequestVerificationMethodEnum.serializer)
       ..add(ProblemResolveRequest.serializer)
       ..add(ProblemResponseRequest.serializer)
       ..add(ProcessingFee.serializer)
@@ -2766,6 +2756,10 @@ Serializers _$serializers = (Serializers().toBuilder()
           () => MapBuilder<String, int>())
       ..addBuilderFactory(
           const FullType(
+              BuiltList, const [const FullType(FinancePaymentMethod)]),
+          () => ListBuilder<FinancePaymentMethod>())
+      ..addBuilderFactory(
+          const FullType(
               BuiltList, const [const FullType(CommissionTrendPoint)]),
           () => ListBuilder<CommissionTrendPoint>())
       ..addBuilderFactory(
@@ -3206,30 +3200,6 @@ Serializers _$serializers = (Serializers().toBuilder()
             ])
           ]),
           () => ListBuilder<BuiltMap<String, JsonObject?>>())
-      ..addBuilderFactory(
-          const FullType(BuiltList, const [const FullType(PrivacyHandler)]),
-          () => ListBuilder<PrivacyHandler>())
-      ..addBuilderFactory(
-          const FullType(BuiltList,
-              const [const FullType(PrivacyRequestDetailAllowedActionsEnum)]),
-          () => ListBuilder<PrivacyRequestDetailAllowedActionsEnum>())
-      ..addBuilderFactory(
-          const FullType(
-              BuiltList, const [const FullType(PrivacyRequestEvent)]),
-          () => ListBuilder<PrivacyRequestEvent>())
-      ..addBuilderFactory(
-          const FullType(
-              BuiltList, const [const FullType(PrivacyRequestSummary)]),
-          () => ListBuilder<PrivacyRequestSummary>())
-      ..addBuilderFactory(
-          const FullType(BuiltMap, const [
-            const FullType(String),
-            const FullType.nullable(JsonObject)
-          ]),
-          () => MapBuilder<String, JsonObject?>())
-      ..addBuilderFactory(
-          const FullType(BuiltList, const [const FullType(ApiError)]),
-          () => ListBuilder<ApiError>())
       ..addBuilderFactory(
           const FullType(
               BuiltList, const [const FullType(ProductAnalyticsRow)]),
@@ -4287,15 +4257,6 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(AdminAnalyticsRow)]),
           () => ListBuilder<AdminAnalyticsRow>())
-      ..addBuilderFactory(
-          const FullType(BuiltMap, const [
-            const FullType(String),
-            const FullType.nullable(JsonObject)
-          ]),
-          () => MapBuilder<String, JsonObject?>())
-      ..addBuilderFactory(
-          const FullType(BuiltList, const [const FullType(ApiError)]),
-          () => ListBuilder<ApiError>())
       ..addBuilderFactory(
           const FullType(BuiltMap, const [
             const FullType(String),

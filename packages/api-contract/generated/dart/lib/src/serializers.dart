@@ -517,6 +517,7 @@ import 'package:materyalph_api_client/src/model/finance_kpi.dart';
 import 'package:materyalph_api_client/src/model/finance_kpi_envelope.dart';
 import 'package:materyalph_api_client/src/model/finance_kpis.dart';
 import 'package:materyalph_api_client/src/model/finance_kpis_period.dart';
+import 'package:materyalph_api_client/src/model/finance_payment_method.dart';
 import 'package:materyalph_api_client/src/model/finance_review_item.dart';
 import 'package:materyalph_api_client/src/model/finance_review_item_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/finance_transaction_list_envelope.dart';
@@ -770,6 +771,7 @@ import 'package:materyalph_api_client/src/model/payment_options_envelope.dart';
 import 'package:materyalph_api_client/src/model/payment_webhook_ack.dart';
 import 'package:materyalph_api_client/src/model/payment_webhook_ack_envelope.dart';
 import 'package:materyalph_api_client/src/model/payment_webhook_payload.dart';
+import 'package:materyalph_api_client/src/model/physical_handover_cash.dart';
 import 'package:materyalph_api_client/src/model/physical_payment_record.dart';
 import 'package:materyalph_api_client/src/model/physical_payment_settings.dart';
 import 'package:materyalph_api_client/src/model/physical_payment_settings_envelope.dart';
@@ -789,14 +791,6 @@ import 'package:materyalph_api_client/src/model/platform_setting_version.dart';
 import 'package:materyalph_api_client/src/model/prepare_tax_package201_response.dart';
 import 'package:materyalph_api_client/src/model/price_history_entry.dart';
 import 'package:materyalph_api_client/src/model/price_history_envelope.dart';
-import 'package:materyalph_api_client/src/model/privacy_handler.dart';
-import 'package:materyalph_api_client/src/model/privacy_request_create_request.dart';
-import 'package:materyalph_api_client/src/model/privacy_request_detail.dart';
-import 'package:materyalph_api_client/src/model/privacy_request_detail_envelope.dart';
-import 'package:materyalph_api_client/src/model/privacy_request_event.dart';
-import 'package:materyalph_api_client/src/model/privacy_request_list_envelope.dart';
-import 'package:materyalph_api_client/src/model/privacy_request_summary.dart';
-import 'package:materyalph_api_client/src/model/privacy_transition_request.dart';
 import 'package:materyalph_api_client/src/model/problem_resolve_request.dart';
 import 'package:materyalph_api_client/src/model/problem_response_request.dart';
 import 'package:materyalph_api_client/src/model/processing_fee.dart';
@@ -1716,6 +1710,7 @@ part 'serializers.g.dart';
   FinanceKpiEnvelope,
   FinanceKpis,
   FinanceKpisPeriod,
+  FinancePaymentMethod,
   FinanceReviewItem,
   FinanceReviewItemListEnvelope,
   FinanceTransactionListEnvelope,
@@ -1969,6 +1964,7 @@ part 'serializers.g.dart';
   PaymentWebhookAck,
   PaymentWebhookAckEnvelope,
   PaymentWebhookPayload,
+  PhysicalHandoverCash,
   PhysicalPaymentRecord,
   PhysicalPaymentSettings,
   PhysicalPaymentSettingsEnvelope,
@@ -1988,14 +1984,6 @@ part 'serializers.g.dart';
   PrepareTaxPackage201Response,
   PriceHistoryEntry,
   PriceHistoryEnvelope,
-  PrivacyHandler,
-  PrivacyRequestCreateRequest,
-  PrivacyRequestDetail,
-  PrivacyRequestDetailEnvelope,
-  PrivacyRequestEvent,
-  PrivacyRequestListEnvelope,
-  PrivacyRequestSummary,$PrivacyRequestSummary,
-  PrivacyTransitionRequest,
   ProblemResolveRequest,
   ProblemResponseRequest,
   ProcessingFee,
@@ -2662,10 +2650,6 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<ChatDraftLine>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(PrivacyRequestEvent)]),
-        () => ListBuilder<PrivacyRequestEvent>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(VolumeTier)]),
         () => ListBuilder<VolumeTier>(),
       )
@@ -2884,10 +2868,6 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(InventoryRow)]),
         () => ListBuilder<InventoryRow>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(PrivacyRequestSummary)]),
-        () => ListBuilder<PrivacyRequestSummary>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(VendorTeamInvitationRecord)]),
@@ -3322,6 +3302,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<GeoChild>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(FinancePaymentMethod)]),
+        () => ListBuilder<FinancePaymentMethod>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ReviewMediaLink)]),
         () => ListBuilder<ReviewMediaLink>(),
       )
@@ -3538,10 +3522,6 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<ComparableVariant>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(PrivacyHandler)]),
-        () => ListBuilder<PrivacyHandler>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(int)]),
         () => ListBuilder<int>(),
       )
@@ -3561,7 +3541,6 @@ Serializers serializers = (_$serializers.toBuilder()
       ..add(AuditEvent.serializer)
       ..add(BuyerAnalyticsRow.serializer)
       ..add(EnforcementSummary.serializer)
-      ..add(PrivacyRequestSummary.serializer)
       ..add(ProjectCandidateRequest.serializer)
       ..add(SubjectReview.serializer)
       ..add(SuccessEnvelope.serializer)

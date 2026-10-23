@@ -39,5 +39,23 @@ void main() {
       // TODO
     });
 
+    // Gross merchandise value of orders confirmed in the period (Vendor money, never platform revenue).
+    // int gmvCentavos
+    test('to test the property `gmvCentavos`', () async {
+      // TODO
+    });
+
+    // Verified online Buyer payments plus recorded Cash on Delivery and In-Store cash, received by Vendors.
+    // int buyerPaymentsCentavos
+    test('to test the property `buyerPaymentsCentavos`', () async {
+      // TODO
+    });
+
+    // Confirmed online refunds and cash reimbursements to Buyers.
+    // int buyerRefundsCentavos
+    test('to test the property `buyerRefundsCentavos`', () async {
+      // TODO
+    });
+
   });
 }

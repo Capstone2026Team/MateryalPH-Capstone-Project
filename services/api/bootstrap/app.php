@@ -28,7 +28,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->trustProxies(at: array_filter(array_map('trim', explode(',', (string) env('TRUSTED_PROXIES', '')))));
+        $proxies = trim((string) env('TRUSTED_PROXIES', ''));
+        // Laravel recognizes platform wildcards as strings, not entries in an IP list.
+        $middleware->trustProxies(at: in_array($proxies, ['*', '**'], true)
+            ? $proxies
+            : array_values(array_filter(array_map('trim', explode(',', $proxies)))));
         $middleware->redirectGuestsTo(static fn (Request $_request): ?string => null);
         $middleware->prependToGroup('api', [CorrelationId::class, IsolatePortalCookies::class]);
         $middleware->prependToPriorityList(AuthenticatesRequests::class, AuthenticateFromCookie::class);

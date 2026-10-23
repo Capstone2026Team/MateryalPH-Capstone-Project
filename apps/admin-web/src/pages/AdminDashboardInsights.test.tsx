@@ -2,7 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { expect, test } from 'vitest'
 import type { AdminDashboardMarketplace, AdminDashboardVendorHealth, GeoCell } from '@materyalph/api-client-ts'
-import { AreaSegmentsPanel, CaseRatesPanel, CategoryInsights, GmvTrendPanel, MarketplaceUnavailable, QueueLoadChart, VendorHealthPanel } from './AdminDashboardInsights'
+import { ActiveUsersPanel, AreaSegmentsPanel, CaseRatesPanel, CategoryInsights, GmvTrendPanel, MarketplaceUnavailable, QueueLoadChart, UserActivityKpis, VendorHealthPanel } from './AdminDashboardInsights'
 
 const cell = (value: number | null, suppressed = false): GeoCell => ({ value, suppressed, reason: suppressed ? 'Suppressed: fewer than 5 distinct Buyers or users.' : null })
 const dates = Array.from({ length: 30 }, (_, index) => new Date(Date.UTC(2026, 8, 10 + index)))
@@ -52,6 +52,28 @@ test('the GMV chart keeps suppressed days as gaps, prints the forecast and marks
   expect(screen.getByText('Marked period')).toBeVisible()
   fireEvent.click(screen.getByText('View as table'))
   expect(within(screen.getByRole('table', { name: 'GMV per day' })).getAllByText('Suppressed').length).toBeGreaterThanOrEqual(3)
+})
+
+test('user activity keeps Buyers and Vendor users as separate figures and says when a count is suppressed', () => {
+  const base = marketplace()
+  const suppressed = marketplace({ kpis: { ...base.kpis, activeUsers: { buyer: base.kpis.activeUsers.buyer, vendor: { dau: cell(null, true), wau: cell(null, true), mau: cell(12) } } } })
+  wrap(<><UserActivityKpis activeBuyers={128} activeVendors={25} inactiveVendors={8} marketplace={suppressed} /><ActiveUsersPanel marketplace={suppressed} /></>)
+  const kpis = screen.getByLabelText('Buyers and Vendors')
+  expect(within(kpis).getByText('Active Buyers').closest('div')).toHaveTextContent('128')
+  expect(within(kpis).getByText('Active Tier 2 Vendors').closest('div')).toHaveTextContent('25')
+  expect(within(kpis).getByText('Monthly active Buyers').closest('div')).toHaveTextContent('260')
+  const table = screen.getByRole('table', { name: 'Active users by period, ending on the last day shown' })
+  expect(within(within(table).getByRole('row', { name: /^Buyers/ })).getAllByRole('cell').map(item => item.textContent)).toEqual(['40', '120', '260'])
+  expect(within(within(table).getByRole('row', { name: /^Vendor users/ })).getAllByRole('cell').map(item => item.textContent)).toEqual(['Suppressed', 'Suppressed', '12'])
+  expect(screen.getByRole('img', { name: /Daily active Buyers and Vendor users/ })).toBeInTheDocument()
+  expect(screen.getByRole('img', { name: /Rolling 30-day active Buyers and Vendor users/ })).toBeInTheDocument()
+})
+
+test('user activity counts outside the Admin role scope or without analytics access are not shown as zero', () => {
+  wrap(<UserActivityKpis activeBuyers={null} activeVendors={null} inactiveVendors={null} marketplace={null} />)
+  expect(screen.getAllByText('Outside your role scope.')).toHaveLength(2)
+  expect(screen.getAllByText('Needs aggregate analytics access.')).toHaveLength(2)
+  expect(screen.queryByText('0')).not.toBeInTheDocument()
 })
 
 test('case rates say when a rate is suppressed instead of showing a number', () => {

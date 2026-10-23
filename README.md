@@ -12,6 +12,7 @@ MateryalPH is a geolocation-based construction-material marketplace with separat
 - `packages/design-tokens` — canonical semantic design tokens and generated platform outputs.
 - `packages/web-ui` — shared accessible React primitives.
 - `packages/shared-config` — shared strict TypeScript configuration.
+- `.tmp/` — local database exports, Docker image archives, deployment artifacts, and PDF tooling; excluded from Git and Docker builds. Use this folder for local temporary artifacts.
 
 Product behavior is defined by `docs/workflows`, architecture by `docs/architecture/MateryalPH_Technical_System_Design.md`, and interface implementation by `docs/design/MateryalPH_UI_UX_Implementation_Planner.md`.
 
@@ -24,6 +25,12 @@ Product behavior is defined by `docs/workflows`, architecture by `docs/architect
 - A Redis-compatible cache and queue service
 
 Do not create local environment files until the repository-root `.gitignore` has been verified. Use only the safe committed examples described in `docs/architecture/MateryalPH_Environment_and_API_Key_Setup.md`; never commit real credentials.
+
+## Staging deployment
+
+The approved primary target is [Hostinger KVM 2](docs/deployment/hostinger-vps.md), with independent runtime roles, free DuckDNS HTTPS, signed Buyer profiles and encrypted recovery sets. See [ADR 0003](docs/adr/0003-hostinger-vps-staging.md). The VPS is prepared; application release and cutover remain gated. Current evidence and outstanding setup are in [the verification record](docs/test-plans/hostinger-vps-verification.md). Render is retained as the manual fallback through 17 November 2026.
+
+The [free Render staging runbook](docs/deployment/render-staging.md) covers the API, Vendor and Admin deployment, CI/CD setup, required staging credentials, generated URLs and free-plan limits. Infrastructure is declared in [render.yaml](render.yaml).
 
 ## Local development
 
@@ -65,7 +72,7 @@ npm install
 npm run dev
 ```
 
-### Buyer application
+### Buyer application (local Run)
 
 ```powershell
 Set-Location apps/buyer-mobile
@@ -82,31 +89,70 @@ adb -s 110013341G000422 reverse tcp:8081 tcp:8081
 adb -s 110013341G000422 reverse --list
 ```
 
-### Temporary public demo with Cloudflare Quick Tunnel
+### Buyer application on Render staging
 
-This demo keeps the existing API and database local. The script checks that the API health route responds, builds the Admin and Vendor portals with same-origin `/api/v1` proxies, starts production previews on loopback ports 5183/5184, and opens one free Quick Tunnel for each portal. It does not start migrations, seed data, or expose PostgreSQL, Redis, MinIO, or Mailpit.
+The hosted staging environment uses Render for the API, jobs, Reverb, PostgreSQL,
+Key Value and Vendor/Admin portals. See the
+[deployment runbook](docs/deployment/render-staging.md).
 
-```powershell
-pwsh -ExecutionPolicy Bypass -File scripts/start-cloudflare-demo.ps1
-```
-
-Use the Vendor and Admin HTTPS URLs printed by the script. To build an Android Buyer demo package for the current Vendor URL, run the printed command with the Vendor root URL. If the C: drive is low on space, pass an empty scratch path on a drive with free space:
-
-```powershell
-pwsh -ExecutionPolicy Bypass -File scripts/build-buyer-cloudflare-apk.ps1 `
-  -VendorTunnelUrl 'https://<vendor-name>.trycloudflare.com' `
-  -BuildWorkspace 'D:\MateryalPH-Buyer-Demo-Build'
-```
-
-The script publishes `buyer-demo.apk` on the Vendor tunnel. Open `https://<vendor-name>.trycloudflare.com/buyer-demo.apk` on an Android phone, download and install it, then sign in. The APK uses the Vendor tunnel’s `/api/v1` proxy, so no separate public API tunnel or CORS change is needed. The temporary APK is a debug build and the download URL is public to anyone who has it.
-
-Quick Tunnel hostnames change when restarted. Keep the PC and both tunnel processes online for the demo; rebuild the Buyer APK if the Vendor hostname changes. The tunnel scripts bind only to loopback and can be stopped with:
+Buyer connects directly to the Render API. Copy
+`apps/buyer-mobile/config/staging.example.json` to the ignored `config/staging.json`
+in that app, configure the assigned Render API address and public client settings,
+and configure the exact finalized Render entry in ignored `config/deployments.json` from its example,
+then run from the repository root:
 
 ```powershell
-pwsh -ExecutionPolicy Bypass -File scripts/stop-cloudflare-demo.ps1
+./scripts/deployment/build-buyer-staging.ps1
+# To run on a connected device instead:
+./scripts/deployment/build-buyer-staging.ps1 -Run -Device 110013341G000422
 ```
 
-The local reCAPTCHA allowlist does not include temporary `trycloudflare.com` hostnames. If the login page rejects its reCAPTCHA token, use the existing accessible email verification option and retrieve its code from Mailpit on the desktop before taking the remote devices to the demo. Mailpit itself stays local. Reverb is not exposed by this two-tunnel setup, so messaging and notification updates use their existing polling fallback instead of live WebSockets.
+The phone needs internet; no `adb reverse`, tunnel or shared Wi-Fi is required.
+
+### Existing Render preview
+
+https://materyalph-staging-api.onrender.com/api/v1
+Check the Render API's current health before using the preview.
+From your project root, run:
+
+```powershell
+Set-Location apps/buyer-mobile
+flutter run -d 110013341G000422 `
+  --dart-define-from-file=config/development.json `
+  --dart-define=APP_ENV=staging `
+  --dart-define=API_BASE_URL=https://materyalph-staging-api.onrender.com/api/v1
+```
+
+This keeps your existing client configuration while connecting to Render. Stop the current Flutter session first, then run that command.
+To build an APK using Render:
+
+```powershell
+flutter build apk --debug `
+  --dart-define-from-file=config/development.json `
+  --dart-define=APP_ENV=staging `
+  --dart-define=API_BASE_URL=https://materyalph-staging-api.onrender.com/api/v1
+```
+
+The APK will be at:
+
+```powershell
+apps/buyer-mobile/build/app/outputs/flutter-apk/app-debug.apk
+```
+
+Your phone needs internet; adb reverse is unnecessary for Render. Before testing, open the API health page and wait for JSON—Render Free can take about a minute to wake after inactivity. Render documentation
+
+Sign in with a Buyer account from the staging database.
+
+## Demo Seeded Data
+Sign-in details were written to /workspace/services/api/storage/app/demo-vendor-credentials.json (git-ignored). Passwords and authenticator secrets are never printed.
+
+```powershell
+# For new machine run this
+py tools/demo-assets/fetch_demo_photos.py
+
+# 12 Vendor Seeded 
+docker compose exec api php artisan materyalph:demo-vendors-seed
+```
 
 ## Validation
 
@@ -132,28 +178,3 @@ npm run build
 flutter analyze
 flutter test
 ```
-
-## Demo Seeded Data
-Sign-in details were written to /workspace/services/api/storage/app/demo-vendor-credentials.json (git-ignored). Passwords and authenticator secrets are never printed.
-
-```powershell
-# For new machine run this
-py tools/demo-assets/fetch_demo_photos.py
-
-# 12 Vendor Seeded 
-docker compose exec api php artisan materyalph:demo-vendors-seed
-```
-
-## Other Information
-The API test runner finds Docker Desktop on PATH or in its standard user/system
-installation folder, waits for the test services to be healthy, and runs Laravel
-checks inside `api-test`. Do not run `php artisan test` directly from Windows:
-`postgres-test` resolves inside the isolated Compose network. The runner validates
-the test database before migrations and leaves the development database separate.
-
-Real provider credentials belong only n ignored local files. See
-`docs/architecture/MateryalPH_Environment_and_API_Key_Setup.md` for Google OIDC
-and Vendor reCAPTCHA Enterprise setup. Buyer iOS acceptance requires macOS with Xcode.
-
-The approved authentication target is Laravel Passport. See `docs/adr/0001-api-authentication-passport.md` for the controlled transition from the scaffold's Sanctum dependency.
-

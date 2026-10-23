@@ -4,6 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:materyalph_api_client/src/model/finance_kpis_period.dart';
+import 'package:materyalph_api_client/src/model/finance_payment_method.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/commission_trend_point.dart';
 import 'package:materyalph_api_client/src/model/finance_kpi.dart';
@@ -21,6 +22,7 @@ part 'finance_kpis.g.dart';
 /// * [commerce]
 /// * [finance]
 /// * [counts]
+/// * [paymentMethods] - Buyer payments received per method in the period: verified online captures per Xendit channel, then recorded Cash on Delivery and In-Store cash. Largest first; methods without activity are omitted.
 /// * [trend]
 /// * [trendGranularity] - DAY when the recorded range spans at most 92 days (empty days are zero-filled); otherwise MONTH, recorded months only.
 @BuiltValue()
@@ -42,6 +44,10 @@ abstract class FinanceKpis implements Built<FinanceKpis, FinanceKpisBuilder> {
 
   @BuiltValueField(wireName: r'counts')
   BuiltMap<String, int> get counts;
+
+  /// Buyer payments received per method in the period: verified online captures per Xendit channel, then recorded Cash on Delivery and In-Store cash. Largest first; methods without activity are omitted.
+  @BuiltValueField(wireName: r'payment_methods')
+  BuiltList<FinancePaymentMethod>? get paymentMethods;
 
   @BuiltValueField(wireName: r'trend')
   BuiltList<CommissionTrendPoint>? get trend;
@@ -104,6 +110,13 @@ class _$FinanceKpisSerializer implements PrimitiveSerializer<FinanceKpis> {
       object.counts,
       specifiedType: const FullType(BuiltMap, [FullType(String), FullType(int)]),
     );
+    if (object.paymentMethods != null) {
+      yield r'payment_methods';
+      yield serializers.serialize(
+        object.paymentMethods,
+        specifiedType: const FullType(BuiltList, [FullType(FinancePaymentMethod)]),
+      );
+    }
     if (object.trend != null) {
       yield r'trend';
       yield serializers.serialize(
@@ -182,6 +195,14 @@ class _$FinanceKpisSerializer implements PrimitiveSerializer<FinanceKpis> {
             specifiedType: const FullType(BuiltMap, [FullType(String), FullType(int)]),
           ) as BuiltMap<String, int>;
           result.counts.replace(valueDes);
+          break;
+        case r'payment_methods':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(FinancePaymentMethod)]),
+          ) as BuiltList<FinancePaymentMethod>?;
+          if (valueDes == null) continue;
+          result.paymentMethods.replace(valueDes);
           break;
         case r'trend':
           final valueDes = serializers.deserialize(

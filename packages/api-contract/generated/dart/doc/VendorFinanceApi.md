@@ -10,6 +10,7 @@ All URIs are relative to */api/v1*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**approveVendorOnlineBalance**](VendorFinanceApi.md#approvevendoronlinebalance) | **POST** /vendor/orders/{orderId}/online-balance/approve |
+[**confirmVendorHandoverCash**](VendorFinanceApi.md#confirmvendorhandovercash) | **POST** /vendor/orders/{orderId}/physical-payments/handover-confirmation |
 [**exportVendorTransactions**](VendorFinanceApi.md#exportvendortransactions) | **GET** /vendor/finance/transactions/export |
 [**getVendorCommissionMonitoring**](VendorFinanceApi.md#getvendorcommissionmonitoring) | **GET** /vendor/finance/commissions |
 [**getVendorEarnings**](VendorFinanceApi.md#getvendorearnings) | **GET** /vendor/finance/earnings |
@@ -77,6 +78,61 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **confirmVendorHandoverCash**
+> PhysicalPaymentSummaryEnvelope confirmVendorHandoverCash(orderId, idempotencyKey, file)
+
+
+
+Owner, Store Manager or Store Staff (payments.record_physical) confirm the cash Fulfillment Staff reported at Delivered or Picked up. Records one COLLECTION for the reported amount capped at the outstanding balance, with the handover photo (or the attached receipt) as evidence and the handover time as the received time. Once per handover; 409 HANDOVER_CASH_NOT_PENDING or PHYSICAL_PAYMENT_NOT_OPEN when nothing waits.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getVendorFinanceApi();
+final String orderId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final MultipartFile file = BINARY_DATA_HERE; // MultipartFile | Optional receipt (JPG, PNG, WebP or PDF up to 10 MB). Required only when the handover has no photo; otherwise the handover photo is the evidence.
+
+try {
+    final response = api.confirmVendorHandoverCash(orderId, idempotencyKey, file);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling VendorFinanceApi->confirmVendorHandoverCash: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **orderId** | **String**|  |
+ **idempotencyKey** | **String**|  |
+ **file** | **MultipartFile**| Optional receipt (JPG, PNG, WebP or PDF up to 10 MB). Required only when the handover has no photo; otherwise the handover photo is the evidence. | [optional]
+
+### Return type
+
+[**PhysicalPaymentSummaryEnvelope**](PhysicalPaymentSummaryEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: multipart/form-data
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **exportVendorTransactions**
 > String exportVendorTransactions(tab, status, from, to)
 
@@ -98,7 +154,7 @@ import 'package:materyalph_api_client/api.dart';
 
 final api = MateryalphApiClient().getVendorFinanceApi();
 final String tab = tab_example; // String |
-final String status = status_example; // String | Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled.
+final String status = status_example; // String | Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. PHYSICAL_* values select Cash on Delivery / In-Store obligations: COLLECTED (nothing remains), PARTIAL (part recorded), TO_RECORD (delivered or picked up, no cash recorded yet), AWAITING (before handover), RELEASED (cancelled unpaid).
 final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound.
 final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound.
 
@@ -115,7 +171,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **tab** | **String**|  |
- **status** | **String**| Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. | [optional]
+ **status** | **String**| Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. PHYSICAL_* values select Cash on Delivery / In-Store obligations: COLLECTED (nothing remains), PARTIAL (part recorded), TO_RECORD (delivered or picked up, no cash recorded yet), AWAITING (before handover), RELEASED (cancelled unpaid). | [optional]
  **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound. | [optional]
  **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound. | [optional]
 
@@ -409,7 +465,7 @@ import 'package:materyalph_api_client/api.dart';
 final api = MateryalphApiClient().getVendorFinanceApi();
 final String tab = tab_example; // String |
 final int page = 56; // int |
-final String status = status_example; // String | Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled.
+final String status = status_example; // String | Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. PHYSICAL_* values select Cash on Delivery / In-Store obligations: COLLECTED (nothing remains), PARTIAL (part recorded), TO_RECORD (delivered or picked up, no cash recorded yet), AWAITING (before handover), RELEASED (cancelled unpaid).
 final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end.
 final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end.
 
@@ -427,7 +483,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **tab** | **String**|  | [optional]
  **page** | **int**|  | [optional]
- **status** | **String**| Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. | [optional]
+ **status** | **String**| Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. PHYSICAL_* values select Cash on Delivery / In-Store obligations: COLLECTED (nothing remains), PARTIAL (part recorded), TO_RECORD (delivered or picked up, no cash recorded yet), AWAITING (before handover), RELEASED (cancelled unpaid). | [optional]
  **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end. | [optional]
  **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end. | [optional]
 

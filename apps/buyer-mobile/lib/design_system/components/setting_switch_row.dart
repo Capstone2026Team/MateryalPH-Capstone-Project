@@ -37,7 +37,9 @@ class SettingSwitchRow extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Expanded(child: Text(label, style: theme.textTheme.bodyLarge)),
+                  Expanded(
+                    child: Text(label, style: theme.textTheme.bodyLarge),
+                  ),
                   const SizedBox(width: 12),
                   Switch(
                     value: value,

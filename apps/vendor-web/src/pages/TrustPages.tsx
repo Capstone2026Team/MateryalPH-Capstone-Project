@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Award, BarChart3, Download, EyeOff, Gauge, PencilLine, Star } from 'lucide-react'
 import {
-  ActiveFilters, AnalyticsNullState, Button, BuyerRatingForm, ChartDataTable, DatasetNotice, DateFilter, FilterTabs, Toolbar, InfoNote, InsightPanel, PriceTrendPanel, ReviewRatingSummary, SampleMeter, Select, StatusBadge, StatusMessage, SuppressionNotice, TrendLineChart, TrendSummary,
+  ActiveFilters, AnalyticsNullState, Button, BuyerRatingForm, ChartDataTable, DatasetNotice, DateFilter, FilterTabs, Toolbar, InfoNote, InsightPanel, MaterialThumbnail, PriceTrendPanel, ReviewRatingSummary, SampleMeter, Select, StatusBadge, StatusMessage, SuppressionNotice, TrendLineChart, TrendSummary,
   analyticsDay, dateComparisonPreset, formatAnalyticsDate, formatChartDay, formatManilaDateTime, formatPhpDecimal, manilaToday, type BuyerRatingSubmission, type DateFilterRange, type PricePoint,
 } from '@materyalph/web-ui'
 import { ProductAnalyticsDetail, ProductAnalyticsWorkspace } from './ProductAnalyticsPages'
@@ -128,7 +128,7 @@ function MaterialsAnalyticsWorkspace() {
                     <caption className="sr-only">{category} comparable variants</caption>
                     <thead className="bg-surface-canvas text-left text-xs uppercase tracking-[0.08em] text-text-secondary"><tr><th className="px-4 py-2" scope="col">Material / variant</th><th className="px-4 py-2" scope="col">Competitor average</th><th className="px-4 py-2" scope="col">Change</th><th className="px-4 py-2" scope="col">Your price</th><th className="px-4 py-2" scope="col"><span className="sr-only">Action</span></th></tr></thead>
                     <tbody className="divide-y divide-border-default">{rows.map(row => <tr key={row.groupId}>
-                      <td className="px-4 py-3"><p className="font-semibold">{row.displayName}</p><p className="text-xs text-text-secondary">{row.material.name} · per {row.unit.name}</p></td>
+                      <td className="px-4 py-3"><div className="flex items-center gap-3"><MaterialThumbnail url={row.image?.url} categoryCode={row.category.code} size="sm" /><div><p className="font-semibold">{row.displayName}</p><p className="text-xs text-text-secondary">{row.material.name} · per {row.unit.name}</p></div></div></td>
                       <td className="px-4 py-3">{row.endPoint.status === 'OK' ? <><p className="font-semibold tabular-nums">{formatPhpDecimal(row.endPoint.averagePhp)}</p><p className="text-xs text-text-secondary">{row.endPoint.competitorCount} competitors · {formatAnalyticsDate(row.endPoint.date, true)}</p></> : row.endPoint.status === 'MISSING_DAY' ? <span className="text-text-secondary">No snapshot on {formatAnalyticsDate(row.endPoint.date, true)}</span> : <SuppressionNotice />}</td>
                       <td className="px-4 py-3"><TrendSummary compact trend={row.trend} /></td>
                       <td className="px-4 py-3">{row.ownOffer ? <><p className="font-semibold tabular-nums">{formatPhpDecimal(row.ownOffer.normalizedPhp)}</p><p className="text-xs text-text-secondary">{row.ownOffer.taxLabel}</p></> : <span className="text-text-secondary">Not listed</span>}</td>
@@ -172,7 +172,7 @@ function MaterialPriceDetails() {
   const points: PricePoint[] = detail.series.map((point: VendorAnalyticsPoint) => ({ date: analyticsDay(point.date) ?? '', value: point.averagePhp ?? null, status: point.status, label: point.label ?? null, count: point.competitorCount ?? null, participantsChanged: point.participantsChanged ?? null }))
   return <div className="space-y-6">
     {back}
-    <PageHeader eyebrow={`${group.category.name} · ${group.material.name}`} title={group.displayName} description={`Competitor average public listed price per ${group.unit.name}, excluding your store.`} />
+    <div className="flex items-start gap-4"><MaterialThumbnail url={group.image?.url} alt={group.image ? (group.image.altText ?? `Your listing photo for ${group.displayName}`) : ''} categoryCode={group.category.code} size="lg" /><div className="min-w-0 flex-1"><PageHeader eyebrow={`${group.category.name} · ${group.material.name}`} title={group.displayName} description={`Competitor average public listed price per ${group.unit.name}, excluding your store.`} /></div></div>
     <p className="text-[13px] text-text-secondary">Specifications: {[group.specification.brand, ...group.specification.attributes.map(attribute => `${attribute.key.replaceAll('_', ' ')} ${attribute.value}`)].filter(Boolean).join(' · ')}</p>
     <div className="grid gap-2"><AnalyticsFilterBar filters={filters} window={detail.window} busy={false} onChange={setFilters} /><AnalyticsRangeHint /></div>
     <DatasetNotice label={detail.dataset.label ?? 'Listed-price history'} updateSchedule={detail.updateSchedule} snapshotAt={detail.snapshot?.observedAt ? detail.snapshot.observedAt.toISOString() : null} currentAsOf={detail.currentAsOf.toISOString()} explanation={detail.explanation} />

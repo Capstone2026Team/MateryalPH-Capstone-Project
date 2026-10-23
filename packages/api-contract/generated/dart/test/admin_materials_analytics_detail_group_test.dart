@@ -57,6 +57,12 @@ void main() {
       // TODO
     });
 
+    // Photo of the cheapest current in-scope offer that has one, present only with materials_analytics.inspect_sources and null otherwise. Never its listing or store identity.
+    // ListingImage image
+    test('to test the property `image`', () async {
+      // TODO
+    });
+
     // String description
     test('to test the property `description`', () async {
       // TODO

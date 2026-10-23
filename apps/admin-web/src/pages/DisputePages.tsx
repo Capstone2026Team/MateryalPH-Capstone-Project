@@ -4,7 +4,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Gavel, Info, RefreshCw, Scale, ShieldAlert, UserRoundCheck } from 'lucide-react'
 import {
   ALL_DATES, Button, ConfirmDialog, DateFilter, DisputeDeadlines, DisputeStatusBadge, DisputeTimeline, FilterChips, OriginalPaymentMethodNotice, RefundTimeline, StatusMessage, Toolbar,
-  disputeIssueLabel, disputeRemedyLabel, disputeRoleLabel, formatManilaDateTime, formatPesoCentavos,
+  DisputeComplaintDetails, disputeIssueLabel, disputeRemedyLabel, disputeRoleLabel, formatManilaDateTime, formatPesoCentavos,
 } from '@materyalph/web-ui'
 import {
   adminApiBasePath, assignToMe, confirmRemedy, decide, decideAppeal, escalateCase, getCase, listQueue, newKey, requestClarification,
@@ -16,7 +16,7 @@ import { Pager } from '../components/OperationsKit'
 
 const control = 'min-h-12 w-full min-w-0 rounded-control border border-border-default bg-surface-primary px-3 text-base font-normal'
 const STATUSES: { value: QueueStatus; label: string }[] = [
-  { value: 'NEEDS_ADMIN', label: 'Needs Admin' }, { value: 'WITH_PARTIES', label: 'With the parties' }, { value: 'REMEDY_TRACKING', label: 'Remedy tracking' }, { value: 'CONCLUDED', label: 'Concluded' }, { value: 'ALL', label: 'All' },
+  { value: 'NEEDS_ADMIN', label: 'Needs Admin' }, { value: 'WITH_PARTIES', label: 'With the parties' }, { value: 'REMEDY_TRACKING', label: 'Remedy tracking' }, { value: 'CONCLUDED', label: 'Concluded' },
 ]
 const SANCTION_LABELS: Record<string, string> = { WARNING: 'Warning', TEMPORARY_RESTRICTION: 'Temporary restriction', SUSPENSION: 'Suspension', PERMANENT_BAN: 'Permanent ban' }
 const METRIC_LABELS: Record<string, string> = { VALIDATED_DEFECT_RETURN: 'Validated defect return', VENDOR_NON_FULFILLMENT: 'Vendor-caused non-fulfillment', MISREPRESENTED_LISTING: 'Misrepresented listing' }
@@ -42,7 +42,7 @@ export function AdminDisputeQueuePage() {
   return <AdminShell activeHref="/disputes"><div className="grid min-w-0 gap-6">
     <PageHeader eyebrow="Compliance & quality" title="Disputes & Appeals" description="Review escalated cases, request clarification, decide with a remedy, reason and conflict check, and track remedies until they complete. Refunds return only to the original payment; Admins never hold or disburse money."
       actions={<Button variant="secondary" onClick={() => setAttempt(value => value + 1)}><RefreshCw size={16} aria-hidden="true" />Refresh</Button>} />
-    <FilterChips label="Case queue" value={status} onChange={value => { setParams({ status: value }); setPage(1) }} chips={STATUSES.map(item => ({ value: item.value, label: item.label, count: item.value === 'ALL' ? undefined : meta?.counts?.[item.value] }))} />
+    <FilterChips label="Case queue" value={status} onChange={value => { setParams({ status: value }); setPage(1) }} chips={STATUSES.map(item => ({ value: item.value, label: item.label, count: meta?.counts?.[item.value] }))} />
     <Toolbar filters={<><DateFilter title="Case opened dates" value={range} onChange={value => { setRange(value); setPage(1) }} />{(range.from || range.to) && <Button variant="quiet" onClick={() => { setRange(ALL_DATES); setPage(1) }}>Reset dates</Button>}</>} />
     {error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} /> : rows === null ? <LoadingState /> : rows.length === 0
       ? <p className="rounded-surface border border-dashed border-border-default px-6 py-10 text-center text-sm text-text-secondary">No cases in this queue.</p>
@@ -91,7 +91,7 @@ export function AdminDisputeCasePage() {
       <div className="grid min-w-0 content-start gap-6">
         <section aria-labelledby="complaint-heading" className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5">
           <h2 id="complaint-heading" className="text-lg font-semibold">Original complaint</h2>
-          {detail.description && <p className="whitespace-pre-line break-words">{detail.description}</p>}
+          <DisputeComplaintDetails detail={detail} />
           {detail.affectedLines.length > 0 && <ul className="grid gap-1 text-sm">{detail.affectedLines.map(line => <li key={line.orderLineId} className="flex flex-wrap justify-between gap-x-3"><span>{line.displayName}</span>
             <span className="tabular-nums text-text-secondary">{formatPesoCentavos(line.lineTotalCentavos)} · {formatPesoCentavos(line.refundableCentavos)} still refundable</span></li>)}</ul>}
           {detail.originalPaymentMethod && <OriginalPaymentMethodNotice label={detail.originalPaymentMethod.label} notice={detail.originalPaymentMethod.notice} />}

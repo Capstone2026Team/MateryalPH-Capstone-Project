@@ -1,4 +1,4 @@
-import { FileSpreadsheet, Plus, AlertCircle, CheckCircle2, CircleDashed, Clock, EyeOff, FileText, Loader2, PauseCircle, ShieldCheck, XCircle } from 'lucide-react'
+import { Plus, AlertCircle, CheckCircle2, CircleDashed, Clock, EyeOff, FileText, Loader2, PauseCircle, ShieldCheck, XCircle } from 'lucide-react'
 import { Link, useNavigate }  from 'react-router-dom'
 import { Button, StatusBadge, FilterTabs } from '@materyalph/web-ui'
 import type { SaveStatus } from '../lib/listing-autosave'
@@ -50,5 +50,5 @@ export function SaveStatusLine({ status, manual, onSave, onRetry }: { status: Sa
 
 export function ProductActions({ canManage, primary = true }: { canManage: boolean; primary?: boolean }) {
   if (!canManage) return null
-  return <><Link className="inline-flex min-h-11 items-center gap-2 rounded-control border border-border-default bg-surface-primary px-4 text-sm font-semibold" to="/products/import"><FileSpreadsheet size={16} aria-hidden="true" />Bulk import</Link><Link className={`inline-flex min-h-11 items-center gap-2 rounded-control px-4 text-sm font-semibold ${primary ? 'bg-action-primary text-white' : 'border border-border-default bg-surface-primary text-text-strong'}`} to="/products/new"><Plus size={16} aria-hidden="true" />Add product</Link></>
+  return <Link className={`inline-flex min-h-11 items-center gap-2 rounded-control px-4 text-sm font-semibold ${primary ? 'bg-action-primary text-white' : 'border border-border-default bg-surface-primary text-text-strong'}`} to="/products/new"><Plus size={16} aria-hidden="true" />Add product</Link>
 }

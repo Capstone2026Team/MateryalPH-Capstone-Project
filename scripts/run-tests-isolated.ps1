@@ -2,7 +2,8 @@
 param(
     [switch] $GuardOnly,
     [switch] $KeepRunning,
-    [switch] $SkipComposer
+    [switch] $SkipComposer,
+    [switch] $SkipBuild
 )
 
 $ErrorActionPreference = 'Stop'
@@ -74,7 +75,8 @@ if (-not $testPasswordLine -or ($testPasswordLine.Substring('TEST_DB_PASSWORD='.
 Push-Location $repoRoot
 try {
     Invoke-TestCompose config --quiet
-    Invoke-TestCompose up -d --build --wait --wait-timeout 120 postgres-test redis-test api-test
+    $buildOption = if ($SkipBuild) { '--no-build' } else { '--build' }
+    Invoke-TestCompose up -d $buildOption --wait --wait-timeout 120 postgres-test redis-test api-test
 
     $postgresContainer = [string](Invoke-TestCompose ps -q postgres-test)
     $apiContainer = [string](Invoke-TestCompose ps -q api-test)

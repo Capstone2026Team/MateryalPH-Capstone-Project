@@ -1,0 +1,5 @@
+# Historical public Maps iOS client key. Owner confirmed iOS-app restrictions on 2026-10-19.
+# The current example uses a placeholder. This excludes only the reviewed historical finding.
+b5035560eb5a11f040d76e2e500d4cc8a45f378f:apps/buyer-mobile/ios/Flutter/MapsKeys.xcconfig.example:gcp-api-key:1
+# Public placeholder for browser-QA Maps stubs (not a key); later revisions carry an inline allow.
+5897d2570a130bec26038c521b195d679b35ed9d:.github/workflows/ci.yml:generic-api-key:340

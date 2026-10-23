@@ -38,6 +38,9 @@ abstract class BuyerAnalyticsRowBuilder {
 
   AnalyticsCurrentCountsBuilder get current;
   set current(AnalyticsCurrentCountsBuilder? current);
+
+  ListingImageBuilder get image;
+  set image(ListingImageBuilder? image);
 }
 
 class _$$BuyerAnalyticsRow extends $BuyerAnalyticsRow {
@@ -61,6 +64,8 @@ class _$$BuyerAnalyticsRow extends $BuyerAnalyticsRow {
   final AnalyticsTrend trend;
   @override
   final AnalyticsCurrentCounts current;
+  @override
+  final ListingImage? image;
 
   factory _$$BuyerAnalyticsRow(
           [void Function($BuyerAnalyticsRowBuilder)? updates]) =>
@@ -76,7 +81,8 @@ class _$$BuyerAnalyticsRow extends $BuyerAnalyticsRow {
       required this.startPoint,
       required this.endPoint,
       required this.trend,
-      required this.current})
+      required this.current,
+      this.image})
       : super._();
   @override
   $BuyerAnalyticsRow rebuild(
@@ -100,7 +106,8 @@ class _$$BuyerAnalyticsRow extends $BuyerAnalyticsRow {
         startPoint == other.startPoint &&
         endPoint == other.endPoint &&
         trend == other.trend &&
-        current == other.current;
+        current == other.current &&
+        image == other.image;
   }
 
   @override
@@ -116,6 +123,7 @@ class _$$BuyerAnalyticsRow extends $BuyerAnalyticsRow {
     _$hash = $jc(_$hash, endPoint.hashCode);
     _$hash = $jc(_$hash, trend.hashCode);
     _$hash = $jc(_$hash, current.hashCode);
+    _$hash = $jc(_$hash, image.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -132,7 +140,8 @@ class _$$BuyerAnalyticsRow extends $BuyerAnalyticsRow {
           ..add('startPoint', startPoint)
           ..add('endPoint', endPoint)
           ..add('trend', trend)
-          ..add('current', current))
+          ..add('current', current)
+          ..add('image', image))
         .toString();
   }
 }
@@ -196,6 +205,10 @@ class $BuyerAnalyticsRowBuilder
   set current(covariant AnalyticsCurrentCountsBuilder? current) =>
       _$this._current = current;
 
+  ListingImageBuilder? _image;
+  ListingImageBuilder get image => _$this._image ??= ListingImageBuilder();
+  set image(covariant ListingImageBuilder? image) => _$this._image = image;
+
   $BuyerAnalyticsRowBuilder() {
     $BuyerAnalyticsRow._defaults(this);
   }
@@ -213,6 +226,7 @@ class $BuyerAnalyticsRowBuilder
       _endPoint = $v.endPoint.toBuilder();
       _trend = $v.trend.toBuilder();
       _current = $v.current.toBuilder();
+      _image = $v.image?.toBuilder();
       _$v = null;
     }
     return this;
@@ -248,6 +262,7 @@ class $BuyerAnalyticsRowBuilder
             endPoint: endPoint.build(),
             trend: trend.build(),
             current: current.build(),
+            image: _image?.build(),
           );
     } catch (_) {
       late String _$failedField;
@@ -268,6 +283,8 @@ class $BuyerAnalyticsRowBuilder
         trend.build();
         _$failedField = 'current';
         current.build();
+        _$failedField = 'image';
+        _image?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'$BuyerAnalyticsRow', _$failedField, e.toString());
