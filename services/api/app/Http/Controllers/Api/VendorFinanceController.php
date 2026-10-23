@@ -131,6 +131,14 @@ final class VendorFinanceController extends Controller
         return ApiResponse::success($physical->record($request, $orderId, $input, $file), status: 201);
     }
 
+    public function confirmHandoverCash(Request $request, string $orderId, PhysicalPaymentService $physical): JsonResponse
+    {
+        $request->validate(['file' => ['sometimes', 'file', 'max:'.PlatformSettings::current()->uploadKb('case_evidence')]]);
+        $file = $request->file('file');
+
+        return ApiResponse::success($physical->confirmHandover($request, $orderId, $file instanceof UploadedFile ? $file : null), status: 201);
+    }
+
     public function approveOnlineBalance(Request $request, string $orderId, PhysicalPaymentService $physical): JsonResponse
     {
         $physical->approveOnlineBalance($request, $orderId);

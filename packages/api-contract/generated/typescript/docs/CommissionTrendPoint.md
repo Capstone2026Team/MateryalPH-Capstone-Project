@@ -12,6 +12,9 @@ Name | Type
 `collectedCentavos` | number
 `refundedCentavos` | number
 `netEarningsCentavos` | number
+`gmvCentavos` | number
+`buyerPaymentsCentavos` | number
+`buyerRefundsCentavos` | number
 
 ## Example
 
@@ -26,6 +29,9 @@ const example = {
   "collectedCentavos": null,
   "refundedCentavos": null,
   "netEarningsCentavos": null,
+  "gmvCentavos": null,
+  "buyerPaymentsCentavos": null,
+  "buyerRefundsCentavos": null,
 } satisfies CommissionTrendPoint
 
 console.log(example)

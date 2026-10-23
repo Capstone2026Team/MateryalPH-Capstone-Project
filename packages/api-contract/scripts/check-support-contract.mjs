@@ -5,9 +5,15 @@ import { fileURLToPath } from 'node:url'
 import { parse } from 'yaml'
 
 const spec = parse(readFileSync(new URL('../openapi.yaml', import.meta.url), 'utf8'))
-const result = spawnSync('php', ['artisan', 'route:list', '--path=support', '--json'], { cwd: fileURLToPath(new URL('../../../services/api', import.meta.url)), encoding: 'utf8', timeout: 60000 })
-assert.equal(result.status, 0, 'Support route export must succeed')
-const routes = JSON.parse(result.stdout)
+// CI passes its exported api/v1 route list; otherwise export the support routes from Laravel directly.
+const exported = process.argv[2]
+  ? readFileSync(process.argv[2], 'utf8').replace(/^﻿/, '')
+  : (() => {
+      const result = spawnSync('php', ['artisan', 'route:list', '--path=support', '--json'], { cwd: fileURLToPath(new URL('../../../services/api', import.meta.url)), encoding: 'utf8', timeout: 60000 })
+      assert.equal(result.status, 0, 'Support route export must succeed')
+      return result.stdout
+    })()
+const routes = JSON.parse(exported).filter(route => route.uri.includes('support'))
 const normalize = path => path.replace(/\{[^}]+\}/g, '{}')
 const operations = new Set()
 for (const route of routes) {
@@ -23,7 +29,7 @@ for (const route of routes) {
       assert.match(middleware, /support-guest/, 'Guest requests must be rate limited')
       assert.match(middleware, /VerifyAccountCsrf/, 'Guest browser mutations use existing CSRF')
     } else {
-      assert.match(middleware, /RequireAccountAccess/, 'Account access must be enforced')
+      assert.match(middleware, /RequireAccountAccess|account\.access:/, 'Account access must be enforced')
       assert.match(middleware, new RegExp(portal === 'buyers' ? 'MOBILE' : 'WEB'), 'Correct transport is required')
     }
     assert.match(middleware, new RegExp(`SetSupportPortal:${portal}`), 'Portal scope is fixed by the route')

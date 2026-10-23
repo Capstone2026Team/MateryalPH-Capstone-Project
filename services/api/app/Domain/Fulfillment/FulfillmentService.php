@@ -15,6 +15,7 @@ use App\Domain\Orders\OrderActor;
 use App\Domain\Orders\OrderNotifier;
 use App\Domain\Orders\OrderStates;
 use App\Domain\Orders\OrderTransitionService;
+use App\Domain\Payments\PhysicalPaymentService;
 use App\Domain\Vendors\VendorDeliveryEligibility;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -60,6 +61,7 @@ final class FulfillmentService
         private readonly OrderEvidenceFiles $files,
         private readonly OrderNotifier $notifier,
         private readonly AuditRecorder $audit,
+        private readonly PhysicalPaymentService $physical,
     ) {}
 
     /** @return list<array{user_id: int, display_name: string, assigned: bool}> */
@@ -154,6 +156,7 @@ final class FulfillmentService
         $order = $this->access->vendorOrder($scope, $orderId);
         $this->assertDeliveryRecorder($request, $scope, $order, $milestone);
         $this->validateProofInput($milestone, $input, $photo);
+        $this->handoverCash($order, $milestone, $input, $photo !== null);
         $stored = [];
         try {
             $photoId = $photo === null ? null : ($stored[] = $this->files->store($photo, $orderId, OrderEvidenceFiles::PROOF, (int) $request->user()->getKey(), true));
@@ -208,6 +211,11 @@ final class FulfillmentService
         if ($additionalIds !== []) {
             $payload['additional_photo_ids'] = $additionalIds;
         }
+        // Rechecked on the locked order: a balance paid online meanwhile cannot be collected again in cash.
+        $cash = $this->handoverCash($order, $milestone, $input, $photoId !== null);
+        if ($cash !== null) {
+            $payload['cash_received_centavos'] = $cash;
+        }
         $vehicle = null;
         if ($milestone === OrderStates::OUT_FOR_DELIVERY || ($milestone === OrderStates::DELIVERED && isset($input['vehicle_index']))) {
             $vehicle = $this->acceptedVehicle($order, $input);
@@ -237,6 +245,9 @@ final class FulfillmentService
                 'payload' => json_encode($payload, JSON_THROW_ON_ERROR), 'occurred_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
             // Physical stock leaves only now: on-hand and reserved fall together; available-to-sell is unchanged.
             $this->ledger->fulfillOrder((string) $order->id, $actor->userId);
+            if ($cash !== null) {
+                $this->physical->atHandover($request, $scope, $order, $milestone, $cash, $photoId);
+            }
         }
         $order = $this->transitions->apply($order, [OrderStates::ORDER => $milestone, OrderStates::FULFILLMENT => $milestone], $actor, 'MILESTONE_'.$milestone, $payload['note'] ?? null);
         $columns = ['state' => $milestone];
@@ -266,6 +277,32 @@ final class FulfillmentService
             && ($scope['role'] !== 'FULFILLMENT' || ! OrderAccess::assignedTo((string) $order->id, (int) $request->user()->getKey()))) {
             throw new AuthenticationException('PERMISSION_DENIED', 'Only the currently assigned Fulfillment Staff member can complete this delivery and submit its proof.', 403);
         }
+    }
+
+    /**
+     * Cash on Delivery and In-Store Payment handovers state the cash the Buyer handed over (0 when nothing was paid,
+     * for example a balance moved online), up to the outstanding balance. Cash needs a handover photo as its evidence.
+     * Returns null when the milestone is not a handover of an order with an open physical balance.
+     *
+     * @param  array<string, mixed>  $input
+     */
+    private function handoverCash(object $order, string $milestone, array $input, bool $hasPhoto): ?int
+    {
+        $outstanding = in_array($milestone, OrderStates::AWAITING_RECEIPT, true) ? $this->physical->outstanding($order) : 0;
+        if ($outstanding <= 0) {
+            return null;
+        }
+        $cash = $input['cash_received_centavos'] ?? null;
+        $balance = '₱'.number_format($outstanding / 100, 2);
+        if (! is_int($cash) || $cash < 0 || $cash > $outstanding) {
+            throw new AuthenticationException('PROOF_REQUIRED', 'Enter the cash received from the Buyer at handover.', 422,
+                ['cash_received_centavos' => ['Enter an amount from ₱0.00 to the outstanding '.$balance.'.']]);
+        }
+        if ($cash > 0 && ! $hasPhoto) {
+            throw new AuthenticationException('PROOF_REQUIRED', 'Add a handover photo as evidence of the cash received.', 422, ['file' => ['A handover photo is required when cash is received.']]);
+        }
+
+        return $cash;
     }
 
     /** @param array<string, mixed> $input */

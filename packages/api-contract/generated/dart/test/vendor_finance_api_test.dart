@@ -14,6 +14,13 @@ void main() {
       // TODO
     });
 
+    // Owner, Store Manager or Store Staff (payments.record_physical) confirm the cash Fulfillment Staff reported at Delivered or Picked up. Records one COLLECTION for the reported amount capped at the outstanding balance, with the handover photo (or the attached receipt) as evidence and the handover time as the received time. Once per handover; 409 HANDOVER_CASH_NOT_PENDING or PHYSICAL_PAYMENT_NOT_OPEN when nothing waits.
+    //
+    //Future<PhysicalPaymentSummaryEnvelope> confirmVendorHandoverCash(String orderId, String idempotencyKey, { MultipartFile file }) async
+    test('test confirmVendorHandoverCash', () async {
+      // TODO
+    });
+
     // Owner-only audited CSV export: Internal Operational Report — Not a Tax Invoice.
     //
     //Future<String> exportVendorTransactions(String tab, { String status, Date from, Date to }) async

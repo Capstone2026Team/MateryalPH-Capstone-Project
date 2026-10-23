@@ -19,6 +19,11 @@ for (const route of routeList) {
   if (/^api\/v1\/(?:auth\/|mobile\/auth\/|webhooks\/)/.test(route.uri)) continue
   const credentialAction = route.method === 'POST' && /\/(?:account\/(?:reauthentication(?:\/email)?|password|email(?:\/confirm)?|factor(?:\/confirm)?|recovery-codes|two-factor(?:\/confirm|\/disable)?|deletion)|vendors\/account\/invitations|vendors\/onboarding\/store-email(?:\/confirm)?)$/.test(route.uri)
   const throttles = route.middleware.filter(name => /(?:throttle|ThrottleRequests):/.test(name))
+  if (/^api\/v1\/support\//.test(route.uri)) {
+    // Support intake has its own spam limiters; account-security limits never apply to it.
+    assert.ok(throttles.every(name => /:support-(?:guest|submit)$/.test(name)), `Unexpected support throttle policy: ${route.method} ${route.uri}`)
+    continue
+  }
   assert.equal(throttles.length, credentialAction ? 1 : 0, `Unexpected throttle policy: ${route.method} ${route.uri}`)
   if (credentialAction) assert.ok(throttles[0].endsWith(':account-security'), route.uri)
 }

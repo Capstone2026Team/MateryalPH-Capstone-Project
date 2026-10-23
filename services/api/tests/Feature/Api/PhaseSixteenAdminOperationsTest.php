@@ -500,7 +500,9 @@ final class PhaseSixteenAdminOperationsTest extends TestCase
         self::assertSame($accumulatorBefore, DB::table('vendor_withholding_accumulators')->where('organization_id', $store->id)->value('g_accumulated_centavos'), 'Refunds never restore FIN-04A relief.');
 
         $kpis = $this->getJson('/api/v1/admin/finance/kpis')->assertOk()->json('data');
-        self::assertSame(['gross_gmv', 'net_gmv'], array_column($kpis['commerce'], 'key'), 'GMV is reported apart from CWT, commission, revenue, cash and receivables.');
+        self::assertSame(['gross_gmv', 'cancelled_gmv', 'refunded_gmv', 'net_gmv', 'online_payments', 'buyer_processing_fees', 'cash_on_delivery', 'in_store', 'buyer_payments',
+            'cancellation_refunds', 'dispute_refunds', 'other_refunds', 'cash_reimbursements', 'buyer_refunds', 'pending_buyer_refunds', 'net_buyer_payments'], array_column($kpis['commerce'], 'key'));
+        self::assertSame([], array_intersect(array_column($kpis['commerce'], 'key'), array_column($kpis['finance'], 'key')), 'Marketplace money is reported apart from CWT, commission, revenue, platform cash and receivables.');
         self::assertContains('assessed_cwt', array_column($kpis['finance'], 'key'));
         $this->getJson('/api/v1/admin/finance/remittances')->assertOk()->assertJsonPath('data.0.order_reference', (string) DB::table('orders')->where('id', $orderId)->value('reference'));
         $this->signInAdmin($this->admin('ADMIN_USER_MANAGEMENT'));

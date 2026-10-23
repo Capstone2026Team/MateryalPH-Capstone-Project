@@ -1105,7 +1105,8 @@ class VendorFulfillmentApi {
   /// * [receiverKind]
   /// * [handoverConfirmed]
   /// * [note]
-  /// * [file] - Delivery photo (required for DELIVERED): JPG or PNG up to 10 MB, scanned fail-closed, stored privately.
+  /// * [cashReceivedCentavos] - Required on DELIVERED / PICKED_UP of a Cash on Delivery or In-Store order with an outstanding balance: the cash the Buyer handed over, 0 to the outstanding balance (422 PROOF_REQUIRED otherwise). Cash above zero needs the handover photo as its evidence. A member holding payments.record_physical records it as a collection at once; a Fulfillment Staff report waits for confirmation (POST /vendor/orders/{orderId}/physical-payments/handover-confirmation). Ignored for online orders.
+  /// * [file] - Delivery photo (required for DELIVERED; required for PICKED_UP when cash_received_centavos is above zero): JPG or PNG up to 10 MB, scanned fail-closed, stored privately.
   /// * [signature] - Optional receiver signature image.
   /// * [additionalPhotos]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -1128,6 +1129,7 @@ class VendorFulfillmentApi {
     String? receiverKind,
     bool? handoverConfirmed,
     String? note,
+    int? cashReceivedCentavos,
     MultipartFile? file,
     MultipartFile? signature,
     BuiltList<MultipartFile>? additionalPhotos,
@@ -1177,6 +1179,7 @@ class VendorFulfillmentApi {
         if (receiverKind != null) r'receiver_kind': encodeFormParameter(_serializers, receiverKind, const FullType(String)),
         if (handoverConfirmed != null) r'handover_confirmed': encodeFormParameter(_serializers, handoverConfirmed, const FullType(bool)),
         if (note != null) r'note': encodeFormParameter(_serializers, note, const FullType(String)),
+        if (cashReceivedCentavos != null) r'cash_received_centavos': encodeFormParameter(_serializers, cashReceivedCentavos, const FullType(int)),
         if (file != null) r'file': file,
         if (signature != null) r'signature': signature,
         if (additionalPhotos != null) r'additional_photos[]': additionalPhotos.toList(),

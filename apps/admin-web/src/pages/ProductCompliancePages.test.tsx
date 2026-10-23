@@ -37,6 +37,7 @@ test('queue loads oldest pending submissions with register result text', async (
   expect(within(table).getByText('Uncertain')).toBeVisible()
   expect(within(table).getByText('Vendor requested review')).toBeVisible()
   expect(api.listComplianceQueue).toHaveBeenCalledWith(expect.objectContaining({ status: 'PENDING_ADMIN_REVIEW', sort: 'oldest' }))
+  fireEvent.click(screen.getByRole('button', { name: 'DTI-BPS register snapshots' }))
   expect(screen.getByRole('heading', { name: 'DTI-BPS register snapshots' })).toBeVisible()
   // The government sheets disable downloads, so the snapshot DTI-BPS provides is imported as .xlsx or .csv.
   expect(screen.getByLabelText(/Register file/)).toHaveAttribute('accept', expect.stringContaining('.xlsx'))

@@ -1,10 +1,13 @@
 import { EmptyState, PageHeader, StatCard, PortalPagePatterns } from './page-patterns'
+import { usePortalIdentity } from './portal-identity'
 import { useContext, type ReactNode } from 'react'
 
 import { ChartNoAxesCombined } from 'lucide-react'
 
-export function DashboardHeader({ eyebrow, title = 'Dashboard', description, actions, status }: { eyebrow: string; title?: string; description: string; actions?: ReactNode; status?: ReactNode }) {
-  return <PageHeader eyebrow={eyebrow} title={title} description={description} actions={actions} status={status} />
+/** Greets the signed-in person; falls back to a nameless greeting until the profile loads. */
+export function DashboardHeader({ eyebrow, title, description, actions, status }: { eyebrow: string; title?: string; description: string; actions?: ReactNode; status?: ReactNode }) {
+  const name = usePortalIdentity()?.profile?.fullName?.trim()
+  return <PageHeader compact eyebrow={eyebrow} title={title ?? (name ? `Welcome back, ${name}` : 'Welcome back')} description={description} actions={actions} status={status} />
 }
 
 export function MetricCard({ label, value, description, icon, accent = false, compact = false }: { label: string; value: ReactNode; description: string; icon?: ReactNode; accent?: boolean; compact?: boolean }) {

@@ -8,7 +8,7 @@ import type { FulfillmentProof, FulfillmentStep } from '@materyalph/api-client-t
 import type { DeliveryVehicleOption } from '@materyalph/api-client-ts'
 import { Link } from 'react-router-dom'
 import {
-  apiBasePath, apiFailure, assignFulfillment, cancelOrder, finalizeCancellationRequest, getCancellationPreview, listAssignees, readableOrderError, recordMilestone, recordReimbursement,
+  apiBasePath, apiFailure, assignFulfillment, cancelOrder, finalizeCancellationRequest, getCancellationPreview, listAssignees, pesoInputToCentavos, readableOrderError, recordMilestone, recordReimbursement,
   recordTrip, reportVehicleIssue, respondToProblem, retryRefund, listDeliveryVehicles,
   type FulfillmentAssignee, type MilestoneInput, type OrderDetail, type VehicleIssueRequestCategoryEnum, type VendorCancellationPreview, type VendorCancelRequestReasonCodeEnum,
 } from '../lib/orders-api'
@@ -133,10 +133,13 @@ function MilestoneAction({ order, onChanged, onReload }: { order: OrderDetail; o
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [message, setMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const key = useRef(newIdempotencyKey())
-  useEffect(() => { key.current = newIdempotencyKey() }, [note, receiver, receiverKind, handover, photo, signature, additional])
   const milestones: Record<string, MilestoneInput['milestone']> = { START_PREPARATION: 'PROCESSING', MARK_READY: 'READY_FOR_PICKUP', RECORD_PICKUP: 'PICKED_UP', RECORD_DELIVERY: 'DELIVERED' }
   const milestone: MilestoneInput['milestone'] = milestones[next] ?? 'PROCESSING'
+  // Cash on Delivery and In-Store handovers state the cash received, prefilled with the outstanding balance.
+  const outstanding = order.paymentMethod !== 'ONLINE' && (milestone === 'DELIVERED' || milestone === 'PICKED_UP') ? order.payment?.physical?.remainingCentavos ?? 0 : 0
+  const [cash, setCash] = useState(() => outstanding > 0 ? (outstanding / 100).toFixed(2) : '')
+  const key = useRef(newIdempotencyKey())
+  useEffect(() => { key.current = newIdempotencyKey() }, [note, receiver, receiverKind, handover, photo, signature, additional, cash])
   const label = ({ START_PREPARATION: 'Start preparing', MARK_READY: 'Mark ready for pickup', RECORD_PICKUP: 'Record handover', RECORD_DELIVERY: 'Record delivery' } as Record<string, string>)[next]
   function clearFieldError(name: string) {
     setErrors(current => { const updated = { ...current }; delete updated[name]; return updated })
@@ -149,6 +152,9 @@ function MilestoneAction({ order, onChanged, onReload }: { order: OrderDetail; o
     if (milestone === 'DELIVERED' && !photo) local.file = 'Add a delivery photo.'
     if ((milestone === 'DELIVERED' || milestone === 'PICKED_UP') && receiver.trim().length < 2) local.receiver_name = 'Enter the receiver\'s name.'
     if (milestone === 'PICKED_UP' && !handover) local.handover_confirmed = 'Confirm the handover.'
+    const cashCentavos = outstanding > 0 ? pesoInputToCentavos(cash) : null
+    if (outstanding > 0 && (cashCentavos === null || cashCentavos > outstanding)) local.cash_received_centavos = `Enter an amount from ₱0.00 to ${formatPesoCentavos(outstanding)}.`
+    if (milestone === 'PICKED_UP' && (cashCentavos ?? 0) > 0 && !photo) local.file = 'Add a handover photo as evidence of the cash received.'
     for (const [name, file] of [['file', photo], ['signature', signature], ...additional.map((file, index) => [`additional_${index}`, file])] as [string, File | null][]) {
       if (file && !['image/png', 'image/jpeg'].includes(file.type)) local[name] = 'Choose a JPG or PNG image.'
       if (file && order.fulfillment?.proofUploadLimitKb && file.size > order.fulfillment.proofUploadLimitKb * 1024) local[name] = `Choose an image up to ${Math.round(order.fulfillment.proofUploadLimitKb / 1024)} MB.`
@@ -158,6 +164,7 @@ function MilestoneAction({ order, onChanged, onReload }: { order: OrderDetail; o
     const input: MilestoneInput = { milestone, lockVersion: order.lockVersion, ...(note.trim() ? { note: note.trim() } : {}) }
     if (milestone === 'DELIVERED') Object.assign(input, { receiverName: receiver.trim(), ...(photo ? { file: photo } : {}), ...(signature ? { signature } : {}), ...(additional.some(Boolean) ? { additionalPhotos: additional.filter((file): file is File => file !== null) } : {}) })
     if (milestone === 'PICKED_UP') Object.assign(input, { receiverName: receiver.trim(), receiverKind, handoverConfirmed: true, ...(photo ? { file: photo } : {}) })
+    if (cashCentavos !== null) input.cashReceivedCentavos = cashCentavos
     setBusy(true); setMessage(null)
     try {
       const updated = await recordMilestone(order.id, input, key.current)
@@ -184,11 +191,18 @@ function MilestoneAction({ order, onChanged, onReload }: { order: OrderDetail; o
       {milestone === 'PICKED_UP' && <label className="grid gap-2 text-sm font-semibold">Receiver<select className={control} value={receiverKind} onChange={event => setReceiverKind(event.target.value as 'BUYER' | 'AUTHORIZED_RECEIVER')}>
         <option value="BUYER">The Buyer</option><option value="AUTHORIZED_RECEIVER">An authorized receiver</option></select></label>}
       <div className={milestone === 'PICKED_UP' ? 'min-w-0 sm:col-span-2' : 'min-w-0'}>
-        <FileSelectionField camera label={milestone === 'DELIVERED' ? 'Delivery photo' : 'Handover photo (optional)'} chooseLabel="Choose photo" accept="image/png,image/jpeg" hint={`JPG or PNG${order.fulfillment?.proofUploadLimitKb ? ` · up to ${Math.round(order.fulfillment.proofUploadLimitKb / 1024)} MB` : ''}`} required={milestone === 'DELIVERED'} file={photo} disabled={busy} error={errors.file} onChange={file => { setPhoto(file); clearFieldError('file') }} />
+        <FileSelectionField camera label={milestone === 'DELIVERED' ? 'Delivery photo' : outstanding > 0 ? 'Handover photo (required when cash is received)' : 'Handover photo (optional)'} chooseLabel="Choose photo" accept="image/png,image/jpeg" hint={`JPG or PNG${order.fulfillment?.proofUploadLimitKb ? ` · up to ${Math.round(order.fulfillment.proofUploadLimitKb / 1024)} MB` : ''}`} required={milestone === 'DELIVERED'} file={photo} disabled={busy} error={errors.file} onChange={file => { setPhoto(file); clearFieldError('file') }} />
       </div>
       {milestone === 'PICKED_UP' && <label className="flex min-h-11 items-start gap-3 text-sm sm:col-span-2"><input type="checkbox" className="mt-0.5 h-5 w-5 accent-action-primary" checked={handover} onChange={event => setHandover(event.target.checked)} />
         <span>I handed over every line of this order to the person named above.</span></label>}
       {errors.handover_confirmed && <p className="text-sm text-status-error sm:col-span-2" role="alert">{errors.handover_confirmed}</p>}
+      {outstanding > 0 && <div className={deliveryProof ? 'min-w-0 md:col-span-2' : 'min-w-0 sm:col-span-2'}>
+        <Field label={`Cash received from the Buyer (${order.paymentMethod === 'IN_STORE' ? 'In-Store Payment' : 'Cash on Delivery'})`} name="cash_received_centavos" inputMode="decimal" required startAdornment="₱"
+          value={cash} error={errors.cash_received_centavos} onChange={event => { setCash(event.target.value); clearFieldError('cash_received_centavos') }}
+          hint={`Outstanding ${formatPesoCentavos(outstanding)}. Enter 0 if the Buyer paid nothing. ${order.permissions?.canRecordPhysicalPayment
+            ? `It is recorded as cash received, with the ${deliveryProof ? 'delivery' : 'handover'} photo as evidence.`
+            : 'The Owner, Store Manager or Store Staff confirms it before it counts as collected.'}`} />
+      </div>}
     </div>}
     {deliveryProof ? <section aria-label="Optional delivery evidence" className="grid min-w-0 gap-4 border-t border-border-default pt-5">
       <h4 className="text-sm font-semibold">Optional details</h4>

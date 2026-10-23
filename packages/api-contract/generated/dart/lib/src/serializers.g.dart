@@ -769,6 +769,8 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(FinanceKpis.serializer)
       ..add(FinanceKpisPeriod.serializer)
       ..add(FinanceKpisTrendGranularityEnum.serializer)
+      ..add(FinancePaymentMethod.serializer)
+      ..add(FinancePaymentMethodKindEnum.serializer)
       ..add(FinanceReviewItem.serializer)
       ..add(FinanceReviewItemListEnvelope.serializer)
       ..add(FinanceReviewItemStateEnum.serializer)
@@ -1176,6 +1178,8 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(PaymentWebhookAck.serializer)
       ..add(PaymentWebhookAckEnvelope.serializer)
       ..add(PaymentWebhookPayload.serializer)
+      ..add(PhysicalHandoverCash.serializer)
+      ..add(PhysicalHandoverCashMilestoneEnum.serializer)
       ..add(PhysicalPaymentRecord.serializer)
       ..add(PhysicalPaymentRecordKindEnum.serializer)
       ..add(PhysicalPaymentRecordSource_Enum.serializer)
@@ -2750,6 +2754,10 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(
               BuiltMap, const [const FullType(String), const FullType(int)]),
           () => MapBuilder<String, int>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(FinancePaymentMethod)]),
+          () => ListBuilder<FinancePaymentMethod>())
       ..addBuilderFactory(
           const FullType(
               BuiltList, const [const FullType(CommissionTrendPoint)]),

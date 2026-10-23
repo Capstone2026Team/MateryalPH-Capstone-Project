@@ -30,21 +30,34 @@ class BuyerDocumentExportButton extends StatelessWidget {
     required this.repository,
     required this.resourceId,
     required this.types,
+    this.label,
   });
+  final String? label;
   final NotificationsRepository repository;
   final String resourceId;
   final List<api.DocumentExportInputTypeEnum> types;
   @override
-  Widget build(BuildContext context) => BuyerHeaderIconButton(
-    icon: Icons.picture_as_pdf_outlined,
-    tooltip: 'Export PDF',
-    onPressed: () => showBuyerDocumentExports(
-      context: context,
-      repository: repository,
-      resourceId: resourceId,
-      types: types,
-    ),
-  );
+  Widget build(BuildContext context) => label != null
+      ? OutlinedButton.icon(
+          icon: const Icon(Icons.picture_as_pdf_outlined),
+          label: Text(label!),
+          onPressed: () => showBuyerDocumentExports(
+            context: context,
+            repository: repository,
+            resourceId: resourceId,
+            types: types,
+          ),
+        )
+      : BuyerHeaderIconButton(
+          icon: Icons.picture_as_pdf_outlined,
+          tooltip: 'Export PDF',
+          onPressed: () => showBuyerDocumentExports(
+            context: context,
+            repository: repository,
+            resourceId: resourceId,
+            types: types,
+          ),
+        );
 }
 
 class BuyerDocumentExportDialog extends StatefulWidget {

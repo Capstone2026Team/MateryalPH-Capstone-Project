@@ -56,7 +56,7 @@ final class QuotationTerms
             'delivery.access_confirmed' => ['required_if:fulfillment_method,DELIVERY', 'boolean'],
             'delivery.heavy_vehicle_access_confirmed' => ['sometimes', 'boolean'], 'delivery.manual_review_note' => ['nullable', 'string', 'max:2000'],
             'delivery.change_reason' => ['nullable', 'string', 'min:10', 'max:2000'],
-            'nrpc' => ['nullable', 'array'], 'nrpc.amount_centavos' => ['required_with:nrpc', 'integer', 'min:1'],
+            'nrpc' => ['prohibited'], 'nrpc.amount_centavos' => ['required_with:nrpc', 'integer', 'min:1'],
             'nrpc.reason' => ['required_with:nrpc', 'string', 'min:3', 'max:2000'], 'nrpc.allocations' => ['required_with:nrpc', 'array', 'min:1'],
             'nrpc.allocations.*' => ['required', 'integer', 'min:1'],
         ])->validate();
@@ -65,7 +65,7 @@ final class QuotationTerms
         }
 
         // Older editors may still send a preference. Only the Buyer chooses at acceptance.
-        unset($validated['payment_method']);
+        unset($validated['payment_method'], $validated['nrpc']);
 
         return $validated;
     }

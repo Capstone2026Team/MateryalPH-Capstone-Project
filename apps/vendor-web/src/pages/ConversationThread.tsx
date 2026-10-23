@@ -5,7 +5,7 @@ import { listFleet } from '../lib/inventory-api'
 import { Fragment, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ChatDraftContentFromJSON, ChatDraftContentToJSON, ChatQuotationContentToJSON, type ChatDraftContent, type ChatMessage, type ChatProduct, type ChatHandler, type ChatQuotation, type ChatQuotationVersion, type ConversationDetail } from '@materyalph/api-client-ts'
-import { Button, CatalogProductPicker, CountBadge, FormDialog, ChatMessageBubble, ChatTypingIndicator, ConversationHeader, NrpcPreparationEditor, QuotationDeliveryArrangement, QuotationDiscountEditor, QuotationMaterialsEditor, QuotationThreadCard, QuotationVersionCard, StatusMessage, useNavigationRefresh, chatRoleLabel, conversationLabel, conversationTimeline, formatPesoCentavos, nrpcPreparationAssessment, quotationDiscountPreview, type NrpcPreparedMaterial, type NrpcPreparationValue } from '@materyalph/web-ui'
+import { Button, CatalogProductPicker, CountBadge, FormDialog, ChatMessageBubble, ChatTypingIndicator, ConversationHeader, QuotationDeliveryArrangement, QuotationDiscountEditor, QuotationMaterialsEditor, QuotationThreadCard, QuotationVersionCard, StatusMessage, useNavigationRefresh, chatRoleLabel, conversationLabel, conversationTimeline, formatPesoCentavos, quotationDiscountPreview } from '@materyalph/web-ui'
 import { ArrowLeft, FileText, MessageSquare, Paperclip, Send, UsersRound } from 'lucide-react'
 import { chatApi, loadChatAvatar, readableChatError, watchConversation } from '../lib/messaging-api'
 import { getListing, listListings, readableCatalogError } from '../lib/catalog-api'
@@ -274,7 +274,6 @@ export function ConversationThread({ selected, role, onBack, onRead, onMessage, 
 
 function QuotationDraftEditor({ open, onClose, conversationId, quotation, role, onSaved, reference, sourceNames = {} }: { open: boolean; onClose: () => void; conversationId: string; quotation?: ChatQuotation | null; role: string; onSaved: () => Promise<void>; reference?: unknown; sourceNames?: Record<string, string> }) {
   const [draft, setDraft] = useState<ChatDraftContent>(() => quotation?.draft ? ChatDraftContentFromJSON(quotation.draft) : { lines: [], fulfillmentMethod: 'PICKUP', fulfillmentDate: '', deadlineHours: 24, discount: { scope: 'MATERIALS', percent: '' } })
-  const nrpcBuffer = useRef<NrpcPreparationValue | null>(null)
   const [names, setNames] = useState<Record<string, string>>({})
   const [productDetails, setProductDetails] = useState<Record<string, { variantLabel: string; specifications: Record<string, string> }>>({})
   const [error, setError] = useState<string | null>(null)
@@ -284,19 +283,16 @@ function QuotationDraftEditor({ open, onClose, conversationId, quotation, role, 
   const [saved, setSaved] = useState(false)
   useEffect(() => { if (!dirty && quotation) { setLock(quotation.lockVersion); if (quotation.draft) setDraft(ChatDraftContentFromJSON(quotation.draft)) } }, [quotation, dirty])
   const delivery = draft.delivery ?? {}
-  const nrpcValues = { reason: typeof draft.nrpc?.reason === 'string' ? draft.nrpc.reason : '', allocations: Object.fromEntries(Object.entries(draft.nrpc?.allocations ?? {}).map(([id, amount]) => [id, typeof amount === 'number' ? amount : null])) }
   const deliveryEdit = (patch: Record<string, unknown>) => edit({ ...draft, delivery: { ...delivery, ...patch } })
   const key = useRef(newIdempotencyKey())
   const edit = (value: ChatDraftContent) => { setDraft(value); setDirty(true); setSaved(false); key.current = newIdempotencyKey() }
   const materialNames = { ...sourceNames, ...names }
   const amounts = quotationDiscountPreview(draft)
-  const nrpcMaterials: NrpcPreparedMaterial[] = draft.lines.map((line, index) => ({ id: line.variantId, name: materialNames[line.variantId] ?? (line.description?.trim() || `Material ${index + 1}`), detail: `Quantity ${line.quantity}`, payableCentavos: amounts.valid ? amounts.linePayableCentavos[line.variantId] ?? 0 : null }))
-  const nrpcAssessment = nrpcPreparationAssessment(nrpcMaterials, nrpcValues, { min: 3, max: 2000 })
-  const moneyValid = amounts.valid && (role === 'CUSTOMER_SERVICE' || !draft.nrpc || nrpcAssessment.valid)
+  const moneyValid = amounts.valid
   async function act(action: () => Promise<void>) { setBusy(true); setError(null); try { await action() } catch (e) { setError(await readableChatError(e)) } finally { setBusy(false) } }
-  return <FormDialog open={open} onClose={onClose} busy={busy} title="Prepare quotation" description={role === 'CUSTOMER_SERVICE' ? 'Save a draft for an authorized publisher to review.' : 'Add materials, confirm fulfillment, then save and publish your quotation.'} footer={<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end"><p className="text-sm text-text-secondary sm:mr-auto">{busy ? 'Saving changes...' : dirty ? 'Unsaved changes' : saved ? 'Draft saved' : 'Review your draft before publishing.'}</p><Button variant="quiet" disabled={busy} onClick={onClose}>Close</Button><Button disabled={busy || !moneyValid || !draft.lines.length || !draft.fulfillmentDate} onClick={() => void act(async () => { const result = await chatApi.draft(conversationId, lock, quotationDraftForSave(draft)); setLock(result.quotation?.lockVersion ?? lock + 1); setDirty(false); setSaved(true); await onSaved() })}>Save draft</Button>{role !== 'CUSTOMER_SERVICE' && <Button variant="secondary" disabled={busy || !moneyValid || dirty || !quotation?.draft} onClick={() => { if (window.confirm('Publish these terms? This starts a new Buyer deadline and supersedes the previous version.')) void act(async () => { await chatApi.publish(conversationId, lock, key.current); key.current = newIdempotencyKey(); await onSaved() }) }}>Publish quotation</Button>}</div>}>
+  return <FormDialog open={open} onClose={onClose} busy={busy} title="Prepare quotation" description={role === 'CUSTOMER_SERVICE' ? 'Save a draft for an authorized publisher to review.' : 'Add materials, confirm fulfillment, then save and publish your quotation.'} footer={<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end"><p className="text-sm text-text-secondary sm:mr-auto">{busy ? 'Saving changes...' : dirty ? 'Unsaved changes' : saved ? 'Draft saved' : 'Review your draft before publishing.'}</p><Button variant="quiet" disabled={busy} onClick={onClose}>Close</Button><Button disabled={busy || !moneyValid || !draft.lines.length || !draft.fulfillmentDate} onClick={() => void act(async () => { const result = await chatApi.draft(conversationId, lock, quotationDraftForSave(draft)); setLock(result.quotation?.lockVersion ?? lock + 1); setDirty(false); setSaved(true); await onSaved() })}>Save draft</Button>{role !== 'CUSTOMER_SERVICE' && <Button variant="secondary" disabled={busy || !moneyValid || dirty || Boolean(quotation?.draft?.nrpc) || !quotation?.draft} onClick={() => { if (window.confirm('Publish these terms? This starts a new Buyer deadline and supersedes the previous version.')) void act(async () => { await chatApi.publish(conversationId, lock, key.current); key.current = newIdempotencyKey(); await onSaved() }) }}>Publish quotation</Button>}</div>}>
     <section aria-label="Quotation draft" className="space-y-6">
-    {error && <StatusMessage tone="error">{error}</StatusMessage>}{saved && <StatusMessage tone="success">Draft saved.</StatusMessage>}
+    {error && <StatusMessage tone="error">{error}</StatusMessage>}{saved && <StatusMessage tone="success">Draft saved.</StatusMessage>}{quotation?.draft?.nrpc != null && <StatusMessage tone="info">NRPC is now set only on eligible orders awaiting Vendor confirmation. An Owner, Store Manager or Store Staff must save this draft to remove its previous NRPC before publishing.</StatusMessage>}
     <WorkPackageAttachment reference={reference} proposal={ChatDraftContentToJSON(draft)} />
     <section className="space-y-3"><div className="sticky top-0 z-10 space-y-2 bg-surface-primary pb-2"><div><h3 className="font-semibold">Materials</h3><p className="mt-1 text-sm text-text-secondary">Add products below. Expand a material to edit its description and specifications.</p></div>
     <CatalogProductPicker active={open} disabled={busy} selectedVariantIds={draft.lines.map(line => line.variantId)} loadProducts={loadQuotationProducts} loadProduct={getListing} readableError={readableCatalogError} onAdd={(listing, variant) => {
@@ -309,12 +305,7 @@ function QuotationDraftEditor({ open, onClose, conversationId, quotation, role, 
     {!draft.lines.length && <p className="rounded-control border border-dashed border-border-default bg-surface-canvas p-5 text-center text-sm text-text-secondary">No materials added yet. Select a product and add a variant to start your quotation.</p>}
     <QuotationMaterialsEditor lines={draft.lines} names={materialNames} productDetails={productDetails} disabled={busy} onChange={(variantId, patch) => edit({ ...draft, lines: draft.lines.map(line => line.variantId === variantId ? { ...line, ...patch } : line) })} onRemove={variantId => {
       const remaining = draft.lines.filter(line => line.variantId !== variantId)
-      if (draft.nrpc && role !== 'CUSTOMER_SERVICE') {
-        const nextAllocations = { ...nrpcValues.allocations }
-        delete nextAllocations[variantId]
-        const next = nrpcPreparationAssessment(nrpcMaterials.filter(line => line.id !== variantId), { ...nrpcValues, allocations: nextAllocations }, { min: 3, max: 2000 })
-        edit({ ...draft, lines: remaining, nrpc: { ...draft.nrpc, allocations: nextAllocations, amount_centavos: next.totalCentavos ?? 0 } })
-      } else edit({ ...draft, lines: remaining })
+      edit({ ...draft, lines: remaining })
     }} />
     </section>
 
@@ -327,22 +318,7 @@ function QuotationDraftEditor({ open, onClose, conversationId, quotation, role, 
       <label className="grid gap-2 text-sm font-semibold">Fulfillment<select className={control} disabled={busy} value={draft.fulfillmentMethod} onChange={e => edit({ ...draft, fulfillmentMethod: e.target.value as ChatDraftContent['fulfillmentMethod'], ...(e.target.value === 'PICKUP' && draft.discount?.scope === 'DELIVERY' ? { discount: { scope: 'MATERIALS', percent: '' } } : {}) })}><option value="PICKUP">Self-Pickup</option><option value="DELIVERY">Site Delivery</option></select></label>
       {draft.fulfillmentMethod === 'DELIVERY' && <QuotationDeliveryArrangement value={delivery} onChange={deliveryEdit} active={open} disabled={busy} loadVehicles={loadQuotationVehicles} readableError={readableChatError} />}
       <QuotationDiscountEditor draft={draft} disabled={busy} onChange={discount => edit({ ...draft, discount })} />
-      {role !== 'CUSTOMER_SERVICE' && <NrpcPreparationEditor enabled={Boolean(draft.nrpc)} value={nrpcValues} materials={nrpcMaterials} reasonLimits={{ min: 3, max: 2000 }} disabled={busy} onToggle={enabled => {
-        if (enabled) {
-          const value = nrpcBuffer.current ?? { reason: '', allocations: {} }
-          const restored = { ...value, allocations: Object.fromEntries(Object.entries(value.allocations).filter(([id]) => draft.lines.some(line => line.variantId === id))) }
-          const next = nrpcPreparationAssessment(nrpcMaterials, restored, { min: 3, max: 2000 })
-          edit({ ...draft, nrpc: { reason: restored.reason, allocations: restored.allocations, amount_centavos: next.totalCentavos ?? 0 } })
-        } else {
-          nrpcBuffer.current = nrpcValues
-          const { nrpc: previous, ...rest } = draft
-          void previous
-          edit(rest)
-        }
-      }} onChange={value => {
-        const next = nrpcPreparationAssessment(nrpcMaterials, value, { min: 3, max: 2000 })
-        edit({ ...draft, nrpc: { ...draft.nrpc, reason: value.reason, allocations: value.allocations, amount_centavos: next.totalCentavos ?? 0 } })
-      }} />}
+
     </div>
 
     </section>

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, Clock, PackageCheck, Scale, ShoppingCart, Undo2, Users, Wallet } from 'lucide-react'
+import { ArrowRight, Clock, PackageCheck, Scale, ShoppingCart, Store, Undo2, Users, Wallet } from 'lucide-react'
 import {
   AssociationRuleList, BarList, ChartDataTable, DashboardPanel, ForecastNote, IndicatorClassBadge, InfoNote, KpiCard, MethodNote, SegmentScatter, ShareBar, TrendLineChart,
   analyticsDay, formatChartDay, formatCompactCentavos, formatCount, formatDurationSeconds, formatPesoCentavos, type ForecastView, type TrendMarker, type VizColor,
@@ -133,13 +133,51 @@ export function VendorHealthPanel({ health }: { health: AdminDashboardVendorHeal
   </div>
 }
 
-export function ActivityPanel({ marketplace, audience }: { marketplace: AdminDashboardMarketplace; audience: 'both' | 'vendor' }) {
-  const labels = marketplace.activity.map(point => day(point.date))
-  const series = audience === 'vendor'
-    ? [{ key: 'vendor_dau', label: 'Vendor users (daily)', colorVar: '--mp-viz-series-1' as VizColor, values: marketplace.activity.map(point => point.vendorDau ?? null) }, { key: 'vendor_mau', label: 'Vendor users (30-day)', colorVar: '--mp-viz-series-2' as VizColor, values: marketplace.activity.map(point => point.vendorMau ?? null) }]
-    : [{ key: 'buyer_dau', label: 'Active Buyers (daily)', colorVar: '--mp-viz-series-1' as VizColor, values: marketplace.activity.map(point => point.buyerDau ?? null) }, { key: 'vendor_dau', label: 'Active Vendor users (daily)', colorVar: '--mp-viz-series-2' as VizColor, values: marketplace.activity.map(point => point.vendorDau ?? null) }]
-  return <DashboardPanel title={audience === 'vendor' ? 'Active Vendor users' : 'Meaningful active users'} description="Only human operational actions count; app opens, page views and auto-accept never do. Small counts are suppressed.">
-    <TrendLineChart title="Active users per day" labels={labels} formatLabel={formatChartDay} formatValue={value => formatCount(Math.round(value))} emptyReason="Every day is below the small-cell threshold or has no activity." series={series} />
+/**
+ * Buyers and Vendors side by side: account counts from the live summary and meaningful-active-user counts from the
+ * disclosure-controlled read model. The two groups are never merged into one number — they do different things on the
+ * platform, so each keeps its own figure and the same small-cell rule applies to both.
+ */
+export function UserActivityKpis({ activeBuyers, activeVendors, inactiveVendors, marketplace }: { activeBuyers: number | null; activeVendors: number | null; inactiveVendors: number | null; marketplace: AdminDashboardMarketplace | null }) {
+  const count = (value: number | null) => (value === null ? '—' : formatCount(value))
+  const users = marketplace?.kpis.activeUsers
+  const active = (cell: GeoCell | undefined) => (cell ? cellText(cell, value => formatCount(value)) : '—')
+  return <dl aria-label="Buyers and Vendors" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <KpiCard label="Active Buyers" value={count(activeBuyers)} hint={activeBuyers === null ? 'Outside your role scope.' : 'Buyer accounts with ACTIVE status.'} icon={<Users size={16} aria-hidden="true" />} accent />
+    <KpiCard label="Active Tier 2 Vendors" value={count(activeVendors)} hint={activeVendors === null ? 'Outside your role scope.' : `Active account and activated store${inactiveVendors === null ? '' : ` · ${formatCount(inactiveVendors)} more stores not yet active`}.`} icon={<Store size={16} aria-hidden="true" />} />
+    <KpiCard label="Monthly active Buyers" value={active(users?.buyer.mau)} hint={marketplace ? 'Distinct Buyers with a meaningful action in the last 30 days.' : 'Needs aggregate analytics access.'} />
+    <KpiCard label="Monthly active Vendor users" value={active(users?.vendor.mau)} hint={marketplace ? 'Distinct Vendor users with a human operational action in the last 30 days.' : 'Needs aggregate analytics access.'} />
+  </dl>
+}
+
+export function ActiveUsersPanel({ marketplace }: { marketplace: AdminDashboardMarketplace }) {
+  const users = marketplace.kpis.activeUsers
+  const points = marketplace.activity
+  const labels = points.map(point => day(point.date))
+  const count = (value: number | null | undefined) => formatCount(value ?? 0)
+  const chart = (title: string, buyers: (number | null)[], vendors: (number | null)[]) => <TrendLineChart title={title} labels={labels} formatLabel={formatChartDay} formatValue={value => formatCount(Math.round(value))} emptyReason="Every day is below the small-cell threshold or has no activity."
+    series={[{ key: 'buyers', label: 'Buyers', colorVar: '--mp-viz-series-1', values: buyers }, { key: 'vendors', label: 'Vendor users', colorVar: '--mp-viz-series-2', values: vendors }]} />
+  return <DashboardPanel title="Active Buyers and Vendor users" description="Distinct people taking a meaningful action. App opens, page views, automated jobs and auto-accept never count; small counts are suppressed.">
+    <div className="grid gap-5">
+      <table className="w-full text-sm">
+        <caption className="sr-only">Active users by period, ending on the last day shown</caption>
+        <thead><tr className="border-b border-border-default text-left text-xs text-text-secondary"><th scope="col" className="py-2 pr-4 font-medium">Group</th><th scope="col" className="py-2 pr-4 text-right font-medium">Daily</th><th scope="col" className="py-2 pr-4 text-right font-medium">7 days</th><th scope="col" className="py-2 text-right font-medium">30 days</th></tr></thead>
+        <tbody className="divide-y divide-border-default">{([['Buyers', users.buyer], ['Vendor users', users.vendor]] as const).map(([label, group]) => <tr key={label}>
+          <th scope="row" className="py-3 pr-4 text-left font-semibold text-text-strong">{label}</th>
+          {[group.dau, group.wau, group.mau].map((cell, index) => <td key={index} className="py-3 pr-4 text-right tabular-nums last:pr-0">{cellText(cell, value => formatCount(value))}</td>)}
+        </tr>)}</tbody>
+      </table>
+      <div className="grid items-start gap-5 xl:grid-cols-2">
+        <div className="grid gap-2"><h3 className="text-sm font-semibold text-text-strong">Daily active</h3>{chart('Daily active Buyers and Vendor users', points.map(point => point.buyerDau ?? null), points.map(point => point.vendorDau ?? null))}</div>
+        <div className="grid gap-2"><h3 className="text-sm font-semibold text-text-strong">Rolling 30-day active</h3>{chart('Rolling 30-day active Buyers and Vendor users', points.map(point => point.buyerMau ?? null), points.map(point => point.vendorMau ?? null))}</div>
+      </div>
+      <ChartDataTable caption="Active Buyers and Vendor users per day" rowHeader="Date" rows={labels.map(formatChartDay)} columns={[
+        { key: 'buyer_dau', header: 'Buyers (daily)', values: points.map(point => (point.buyerDau == null ? 'Suppressed' : count(point.buyerDau))) },
+        { key: 'vendor_dau', header: 'Vendor users (daily)', values: points.map(point => (point.vendorDau == null ? 'Suppressed' : count(point.vendorDau))) },
+        { key: 'buyer_mau', header: 'Buyers (30 days)', values: points.map(point => (point.buyerMau == null ? 'Suppressed' : count(point.buyerMau))) },
+        { key: 'vendor_mau', header: 'Vendor users (30 days)', values: points.map(point => (point.vendorMau == null ? 'Suppressed' : count(point.vendorMau))) },
+      ]} />
+    </div>
   </DashboardPanel>
 }
 

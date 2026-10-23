@@ -964,3 +964,6 @@ Contact Us uses a separate asynchronous ticket system for authenticated Buyers/V
 
 
 **Owner decision — 2026-10-20: Free staging upload scanning.** New MP4/MOV review uploads are limited to 25 MB each (25 MiB = 26,214,400 bytes), with the existing maximum of three attachments combined. Photos keep their existing 10 MB limit. This supersedes the former 100 MB video ceiling to support the approved ongoing Free scanner plan. Existing uploaded media and immutable review/settings history remain available under their existing access rules. Scanning must complete cleanly before files become accessible; provider outages, pending/failed scans or exhausted quota must never be treated as clean.
+
+
+**Owner decision — 2026-10-23: NRPC placement and eligibility.** New NRPC proposals are available only on COD or In-Store Payment orders awaiting Vendor confirmation, for roles already authorized to set NRPC. Prepare quotation no longer offers or accepts new NRPC; legacy drafts must remove it before publication. Quotation acceptance continues to create an accepted order without another Vendor review step. Published quotation versions and accepted NRPC history remain immutable. Buyer acceptance, online assurance payment, allocation within the materials total, preparation evidence and refund rules remain in force.

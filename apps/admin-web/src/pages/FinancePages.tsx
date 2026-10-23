@@ -1,9 +1,9 @@
 import { DocumentExportButton } from '@materyalph/web-ui'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, ExternalLink, RefreshCw } from 'lucide-react'
+import { ArrowLeft, ExternalLink, FilePlus, RefreshCw } from 'lucide-react'
 import {
-  ALL_DATES, Button, DateFilter, DemoLabel, FilterChips, PaymentAttemptBadge, StatusBadge, StatusMessage, ThresholdPanel, Toolbar, WithholdingStatusBadge, formatManilaDateTime, formatPesoCentavos,
+  ALL_DATES, Button, ControlBar, DataTable, DateFilter, DemoLabel, FilterChips, FilterTabs, MethodNote, PageHeader, PaymentAttemptBadge, Select, StatusBadge, StatusMessage, ThresholdPanel, WithholdingStatusBadge, formatManilaDateTime, formatPesoCentavos,
 } from '@materyalph/web-ui'
 import {
   approveFeeCredit, approveStatement, draftStatements, getAccumulator, listAccumulators, listChannelFees, listPayments, listReviewItems, listStatements, resolveOverlap, resolveReviewItem,
@@ -11,17 +11,17 @@ import {
 } from '../lib/finance-api'
 import { readableVerificationError } from '../lib/vendor-verification-api'
 import { record, records, type JsonRecord } from '../lib/admin-format'
-import { AdminShell, ErrorState, LoadingState, PageHeader } from './PhaseThreeAdminPages'
-import { Paged, Table } from '../components/OperationsKit'
-import { FinanceKpiPanel, RemittanceQueue, TaxAdjustmentQueue, TaxEvidenceQueue } from './FinanceOperationsPanels'
+import { AdminShell, ErrorState, LoadingState } from './PhaseThreeAdminPages'
+import { Paged, Panel, Table } from '../components/OperationsKit'
+import { FinanceKpiPanel, RemittanceQueue } from './FinanceOperationsPanels'
 import { usePaged } from '../lib/operations-hooks'
 import { CommissionPolicyPanel } from './CommissionPolicyPanel'
 
-type View = 'overview' | 'payments' | 'queue' | 'remittances' | 'evidence' | 'adjustments' | 'withholding' | 'statements' | 'overdue' | 'channels'
+type View = 'overview' | 'payments' | 'queue' | 'remittances' | 'withholding' | 'statements' | 'overdue' | 'channels'
 const VIEWS: { value: View; label: string }[] = [
-  { value: 'overview', label: 'Platform earnings' }, { value: 'statements', label: 'Commission management' }, { value: 'overdue', label: 'Overdue debt' }, { value: 'payments', label: 'Payment status' },
-  { value: 'queue', label: 'Work queue' }, { value: 'remittances', label: 'Remittance reconciliation' }, { value: 'evidence', label: 'Tax evidence' },
-  { value: 'adjustments', label: 'Tax adjustments' }, { value: 'withholding', label: 'Withholding threshold' }, { value: 'channels', label: 'Channel fees' },
+  { value: 'overview', label: 'Overview' }, { value: 'statements', label: 'Commission management' }, { value: 'overdue', label: 'Overdue debt' }, { value: 'payments', label: 'Payment log' },
+  { value: 'queue', label: 'Work queue' }, { value: 'remittances', label: 'Remittance reconciliation' },
+  { value: 'withholding', label: 'Withholding threshold' }, { value: 'channels', label: 'Channel fees' },
 ]
 const PRIMARY_VIEWS = [{ value: 'overview', label: 'Overview' }, { value: 'statements', label: 'Commission management' }, { value: 'payments', label: 'Payments and refunds' }, { value: 'queue', label: 'Reconciliation' }]
 
@@ -42,22 +42,27 @@ export function AdminFinancePage() {
     catch (cause) { setNotice({ tone: 'error', text: await readableVerificationError(cause) }) }
     finally { setBusy(false) }
   }
-  return <AdminShell activeHref="/finance"><div className="grid min-w-0 gap-6">
-    <PageHeader eyebrow="Finance" title="Platform accounting" description="Monitor platform earnings, collect commission bills and review financial exceptions."
+  return <AdminShell activeHref="/finance"><div className="grid min-w-0 gap-4">
+    <PageHeader compact eyebrow="Finance" title="Platform Finance"
       actions={<Button variant="secondary" disabled={busy} onClick={() => void reconcile()}><RefreshCw size={16} aria-hidden="true" />{busy ? 'Reconciling…' : 'Run reconciliation'}</Button>} />
     {notice && <StatusMessage tone={notice.tone}>{notice.text}</StatusMessage>}
-    <FilterChips label="Finance view" chips={PRIMARY_VIEWS} value={primary} appearance="tabs" onChange={value => setParams({ view: value })} />
+    <FilterTabs label="Finance view" chips={PRIMARY_VIEWS} value={primary} appearance="tabs" onChange={value => setParams({ view: value })} />
     {primary === 'payments' && <FilterChips label="Payment sections" chips={VIEWS.filter(item => ['payments', 'channels'].includes(item.value))} value={view} onChange={value => setParams({ view: value })} />}
-    {primary === 'queue' && <FilterChips label="Reconciliation sections" chips={VIEWS.filter(item => ['queue', 'remittances', 'evidence', 'withholding'].includes(item.value))} value={view} onChange={value => setParams({ view: value })} />}
+    {primary === 'queue' && <FilterChips label="Reconciliation sections" chips={VIEWS.filter(item => ['queue', 'remittances', 'withholding'].includes(item.value))} value={view} onChange={value => setParams({ view: value })} />}
     <div key={`${view}-${refresh}`} className="grid min-w-0 gap-6">
     {view === 'overview' && <FinanceKpiPanel />}
     {view === 'queue' && <ReviewQueue />}
     {view === 'remittances' && <RemittanceQueue />}
-    {view === 'evidence' && <TaxEvidenceQueue />}
-    {view === 'adjustments' && <TaxAdjustmentQueue />}
     {view === 'payments' && <PaymentLog />}
     {view === 'withholding' && <Accumulators />}
-    {primary === 'statements' && <><CommissionPolicyPanel /><FilterChips label="Commission sections" chips={[{ value: 'statements', label: 'All statements' }, { value: 'overdue', label: 'Overdue debt' }]} value={view} onChange={value => setParams({ view: value })} /><Statements overdue={view === 'overdue'} />{view === 'statements' && <ReviewQueue kind="FEE_CREDIT_PROPOSAL" title="Commission credit approvals" empty="No commission credits awaiting approval." />}</>}
+    {primary === 'statements' && <>
+      <CommissionPolicyPanel />
+      <div className="grid min-w-0 gap-4">
+        <FilterChips label="Commission sections" chips={[{ value: 'statements', label: 'All statements' }, { value: 'overdue', label: 'Overdue debt' }]} value={view} onChange={value => setParams({ view: value })} />
+        <Statements overdue={view === 'overdue'} />
+        {view === 'statements' && <ReviewQueue kind="FEE_CREDIT_PROPOSAL" title="Commission credit approvals" empty="No commission credits awaiting approval." />}
+      </div>
+    </>}
     {view === 'channels' && <ChannelFees />}
     </div>
   </div></AdminShell>
@@ -73,14 +78,15 @@ function ReviewQueue({ kind, title = 'Finance work queue', empty }: { kind?: str
   const [state, setStateFilter] = useState<'OPEN' | 'RESOLVED'>('OPEN')
   const [range, setRange] = useState(ALL_DATES)
   const paged = usePaged(page => listReviewItems(page, state, kind, range), [state, kind, range.from, range.to])
-  return <section className="grid gap-4" aria-labelledby="queue-heading">
-    <div className="flex flex-wrap items-center justify-between gap-3"><h2 id="queue-heading" className="text-lg font-semibold">{title}</h2>
-      <FilterChips label="Item state" chips={[{ value: 'OPEN', label: 'Open' }, { value: 'RESOLVED', label: 'Resolved' }]} value={state} onChange={value => setStateFilter(value as 'OPEN' | 'RESOLVED')} /></div>
-    <Toolbar filters={<><DateFilter title="Work item recorded dates" value={range} onChange={setRange} />{(range.from || range.to) && <Button variant="quiet" onClick={() => setRange(ALL_DATES)}>Reset dates</Button>}</>} />
-    <Paged state={paged} empty={state === 'OPEN' ? (empty ?? 'No open finance work. Mismatches, late captures, overlap reviews and overdue statements appear here.') : 'No resolved items yet.'}>
-      {items => <ul className="grid gap-3">{items.map(item => <ReviewItemRow key={item.id} item={item} onDone={paged.reload} />)}</ul>}
-    </Paged>
-  </section>
+  return <Panel id="queue-heading" title={title}>
+    <ControlBar tabs={<FilterChips label="Item state" chips={[{ value: 'OPEN', label: 'Open' }, { value: 'RESOLVED', label: 'Resolved' }]} value={state} onChange={value => setStateFilter(value as 'OPEN' | 'RESOLVED')} />}
+      actions={<><DateFilter title="Work item recorded dates" value={range} onChange={setRange} />{(range.from || range.to) && <Button variant="quiet" onClick={() => setRange(ALL_DATES)}>Reset dates</Button>}</>} />
+    <div className="min-w-0 border-t border-border-default pt-4">
+      <Paged embedded state={paged} empty={state === 'OPEN' ? (empty ?? 'No open finance work. Mismatches, late captures, overlap reviews and overdue statements appear here.') : 'No resolved items yet.'}>
+        {items => <ul className="grid gap-3">{items.map(item => <ReviewItemRow key={item.id} item={item} onDone={paged.reload} />)}</ul>}
+      </Paged>
+    </div>
+  </Panel>
 }
 
 function ReviewItemRow({ item, onDone }: { item: FinanceReviewItem; onDone: () => void }) {
@@ -116,25 +122,52 @@ function ReviewItemRow({ item, onDone }: { item: FinanceReviewItem; onDone: () =
   </li>
 }
 
+const PAYMENT_PURPOSES: Record<string, string> = {
+  FULL_ORDER_PAYMENT: 'Order payment', NRPC_ASSURANCE_PAYMENT: 'NRPC assurance', ORDER_BALANCE_PAYMENT: 'Order balance', PLATFORM_FEE_PAYMENT: 'Commission payment',
+}
+const EVIDENCE_ORIGINS: Record<string, string> = { XENDIT_TEST: 'Xendit TEST', SIMULATED: 'Simulated' }
+const sentence = (value: unknown) => { const text = String(value ?? '').replaceAll('_', ' ').toLowerCase(); return text.charAt(0).toUpperCase() + text.slice(1) }
+
+/** Buyer payments settle to the Vendor's own Xendit account; only commission payments reach the platform account. */
 function PaymentLog() {
   const [state, setStateFilter] = useState('')
+  const [purpose, setPurpose] = useState('')
   const [range, setRange] = useState(ALL_DATES)
-  const paged = usePaged(page => listPayments(page, state || undefined, range), [state, range.from, range.to])
-  return <section className="grid gap-4" aria-labelledby="payments-heading">
-    <div className="flex flex-wrap items-center justify-between gap-3"><h2 id="payments-heading" className="text-lg font-semibold">Payment log</h2>
-      <FilterChips label="Attempt state" chips={[{ value: '', label: 'All' }, { value: 'PENDING', label: 'Pending' }, { value: 'UNCERTAIN', label: 'Uncertain' }, { value: 'PAID', label: 'Paid' }, { value: 'FAILED', label: 'Failed' }, { value: 'EXPIRED', label: 'Expired' }, { value: 'CANCELLED', label: 'Cancelled' }]} value={state} onChange={setStateFilter} /></div>
-    <Toolbar filters={<><DateFilter title="Payment request dates" value={range} onChange={setRange} />{(state || range.from || range.to) && <Button variant="quiet" onClick={() => { setStateFilter(''); setRange(ALL_DATES) }}>Reset filters</Button>}</>} />
-    <Paged state={paged} empty="No payment attempts match this filter.">
-      {items => <Table caption="Payment attempts" headers={['Reference', 'Vendor', 'Purpose', 'Status', 'Total', 'Refunded', 'Net collected', 'Origin', 'Reconciliation', 'Created']}>
-        {items.map(row => <tr key={String(row.id)}><td className="px-4 py-3 font-semibold">{String(row.reference ?? '—')}</td><td className="px-4 py-3">{String(row.vendor_name ?? '—')}</td>
-          <td className="px-4 py-3">{String(row.purpose).replaceAll('_', ' ').toLowerCase()}</td><td className="px-4 py-3"><PaymentAttemptBadge status={String(row.status)} /></td>
-          <td className="px-4 py-3 tabular-nums">{formatPesoCentavos(Number(row.total_centavos))}</td>
-          <td className="px-4 py-3 tabular-nums">{formatPesoCentavos(Number(row.refunded_centavos ?? 0))}{Number(row.refund_pending_count ?? 0) > 0 && <p className="text-sm text-text-secondary">Refund pending</p>}{Number(row.refund_failed_count ?? 0) > 0 && <p className="text-sm text-text-secondary">Refund failed</p>}</td>
-          <td className="px-4 py-3 tabular-nums">{formatPesoCentavos(Number(row.net_collected_centavos ?? 0))}</td><td className="px-4 py-3">{String(row.evidence_origin)} · {String(row.gateway_mode ?? 'TEST')}</td>
-          <td className="px-4 py-3">{String(row.reconciliation_state).replaceAll('_', ' ').toLowerCase()}{row.late_capture ? ' · late capture' : ''}</td><td className="px-4 py-3">{formatManilaDateTime(row.created_at as string)}</td></tr>)}
-      </Table>}
-    </Paged>
-  </section>
+  const paged = usePaged(page => listPayments(page, state || undefined, range, purpose || undefined), [state, purpose, range.from, range.to])
+  return <Panel id="payments-heading" title="Payment log" description="Online payment attempts, with refunds and settlement details.">
+    <div className="grid min-w-0 items-end gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,14rem)_minmax(0,18rem)_minmax(0,1fr)]">
+      <Select label="Payment status" value={state} onChange={event => setStateFilter(event.target.value)}>
+        <option value="">All statuses</option>
+        {['PENDING', 'UNCERTAIN', 'PAID', 'FAILED', 'EXPIRED', 'CANCELLED'].map(value => <option key={value} value={value}>{sentence(value)}</option>)}
+      </Select>
+      <Select label="Payment purpose" value={purpose} onChange={event => setPurpose(event.target.value)}>
+        <option value="">All purposes</option>
+        {Object.entries(PAYMENT_PURPOSES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+      </Select>
+      <div className="flex min-w-0 flex-wrap items-center gap-2 sm:col-span-2 xl:col-span-1 xl:justify-end">
+        <DateFilter title="Payment request dates" value={range} onChange={setRange} />
+        {(state || purpose || range.from || range.to) && <Button variant="quiet" onClick={() => { setStateFilter(''); setPurpose(''); setRange(ALL_DATES) }}>Reset filters</Button>}
+      </div>
+    </div>
+    <div className="min-w-0 border-t border-border-default pt-4">
+      <Paged embedded state={paged} empty="No payment attempts match these filters.">
+        {items => <DataTable caption="Payment attempts" minWidth="84rem" headers={['Payment', 'Purpose', 'Channel', 'Status', 'Total', 'Refunded', 'Net collected', 'Reconciliation', 'Created'].map(label =>
+          <span key={label} className={`block whitespace-nowrap ${['Total', 'Refunded', 'Net collected'].includes(label) ? 'text-right' : ''}`}>{label}</span>)}>
+          {items.map(row => <tr key={String(row.id)} className="align-top">
+            <td className="min-w-52 px-4 py-3"><p className="whitespace-nowrap font-semibold text-text-strong">{String(row.reference || '—')}</p><p className="mt-1 max-w-64 text-[13px] text-text-secondary">{String(row.vendor_name || '—')}</p></td>
+            <td className="min-w-40 px-4 py-3"><p>{PAYMENT_PURPOSES[String(row.purpose)] ?? sentence(row.purpose)}</p><p className="mt-1 text-[13px] text-text-secondary">{row.account_scope === 'PLATFORM_ACCOUNT' ? 'To platform account' : 'To Vendor account'}</p></td>
+            <td className="min-w-24 whitespace-nowrap px-4 py-3">{String(row.channel_name ?? row.channel_code ?? '—')}</td>
+            <td className="min-w-60 whitespace-nowrap px-4 py-3"><PaymentAttemptBadge status={String(row.status)} /><p className="mt-1 text-[13px] text-text-secondary">{EVIDENCE_ORIGINS[String(row.evidence_origin)] ?? sentence(row.evidence_origin)}</p></td>
+            <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">{formatPesoCentavos(Number(row.total_centavos))}</td>
+            <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">{formatPesoCentavos(Number(row.refunded_centavos ?? 0))}{Number(row.refund_pending_count ?? 0) > 0 && <p className="mt-1 text-[13px] text-text-secondary">Refund pending</p>}{Number(row.refund_failed_count ?? 0) > 0 && <p className="mt-1 text-[13px] text-text-secondary">Refund failed</p>}</td>
+            <td className="whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums text-text-strong">{formatPesoCentavos(Number(row.net_collected_centavos ?? 0))}</td>
+            <td className="min-w-32 whitespace-nowrap px-4 py-3">{sentence(row.reconciliation_state)}{row.late_capture ? <p className="mt-1 text-[13px] text-text-secondary">Late capture</p> : null}</td>
+            <td className="min-w-52 px-4 py-3 text-[13px] [overflow-wrap:normal]">{formatManilaDateTime(row.created_at as string)}</td>
+          </tr>)}
+        </DataTable>}
+      </Paged>
+    </div>
+  </Panel>
 }
 
 function Accumulators() {
@@ -172,7 +205,7 @@ export function AdminAccumulatorPage() {
           localGrossCentavos: data.gAccumulatedCentavos, externalDeclaredCentavos: data.gExternalDeclaredCentavos, externalOverlapCentavos: data.gExternalOverlapCentavos, externalOverlapState: data.externalOverlapState,
           percentOfThreshold: Math.min(100, Math.floor(data.gEffectiveCentavos * 100 / data.thresholdCentavos)), advisory: data.gEffectiveCentavos * 100 >= data.thresholdCentavos * 80 && !data.breached,
           status: data.status, reasonCode: data.reasonCode, crossedAt: data.crossedAt, priorYearTotalCentavos: data.priorYearTotalCentavos,
-          finalForYearNotice: 'Crossing is final for the taxable year: a refund or a later declaration never restores relief; corrections open adjustment reviews.' }} />
+          finalForYearNotice: 'Crossing is final for the taxable year: a refund or a later declaration never restores relief.' }} />
       </div>
       <dl className="grid gap-x-6 gap-y-3 rounded-surface border border-border-default bg-surface-primary p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
         {Object.entries(record(data.taxProfile)).map(([key, value]) => <div key={key}><dt className="text-xs font-semibold uppercase tracking-wide text-text-secondary">{key.replaceAll('_', ' ')}</dt><dd className="font-semibold">{value === null || value === undefined || value === '' ? '—' : String(value)}</dd></div>)}
@@ -234,24 +267,25 @@ function Statements({ overdue = false }: { overdue?: boolean }) {
     try { await approveStatement(String(row.id), Number(row.lock_version)); setMessage({ tone: 'success', text: `${String(row.reference)} issued. The Owner was notified.` }); paged.reload() }
     catch (cause) { setMessage({ tone: 'error', text: await readableVerificationError(cause) }) } finally { setBusy(null) }
   }
-  return <section className="grid gap-4" aria-labelledby="statements-heading">
-    <div className="flex flex-wrap items-center justify-between gap-3"><h2 id="statements-heading" className="text-lg font-semibold">{overdue ? 'Overdue commission debt' : 'Commission fee management'}</h2>
-      <div className="flex flex-wrap items-center gap-3"><FilterChips label="Statement state" chips={[{ value: '', label: 'All' }, ...(!overdue ? [{ value: 'DRAFT', label: 'Draft' }] : []), { value: 'ISSUED', label: 'Issued' }, { value: 'PARTIALLY_PAID', label: 'Partially paid' }, ...(!overdue ? [{ value: 'PAID', label: 'Settled' }, { value: 'VOIDED', label: 'Voided' }] : [])]} value={state} onChange={setStateFilter} />
-        {!overdue && <Button variant="secondary" disabled={busy !== null} onClick={() => void draft()}>{busy === 'draft' ? 'Drafting…' : 'Draft last month'}</Button>}</div></div>
-    <p className="text-sm text-text-secondary">Drafted automatically at 00:05 on the first (Asia/Manila); approve by the third. Due on the fifteenth, or twelve days after a late issue.</p>
-    <Toolbar filters={<><DateFilter title="Statement issue dates" value={range} onChange={setRange} />{(range.from || range.to) && <Button variant="quiet" onClick={() => setRange(ALL_DATES)}>Reset dates</Button>}</>} />
+  return <Panel id="statements-heading" title={overdue ? 'Overdue commission debt' : 'Commission statements'}
+    actions={!overdue && <Button variant="secondary" disabled={busy !== null} onClick={() => void draft()}><FilePlus size={16} aria-hidden="true" />{busy === 'draft' ? 'Drafting…' : 'Draft last month'}</Button>}>
+    <ControlBar tabs={<FilterChips label="Statement state" chips={[{ value: '', label: 'All' }, ...(!overdue ? [{ value: 'DRAFT', label: 'Draft' }] : []), { value: 'ISSUED', label: 'Issued' }, { value: 'PARTIALLY_PAID', label: 'Partially paid' }, ...(!overdue ? [{ value: 'PAID', label: 'Settled' }, { value: 'VOIDED', label: 'Voided' }] : [])]} value={state} onChange={setStateFilter} />}
+      actions={<><DateFilter title="Statement issue dates" value={range} onChange={setRange} />{(range.from || range.to) && <Button variant="quiet" onClick={() => setRange(ALL_DATES)}>Reset dates</Button>}</>} />
     {message && <StatusMessage tone={message.tone}>{message.text}</StatusMessage>}
-    <Paged state={paged} empty="No statements match these filters. Completed orders are included in the next monthly draft.">
-      {items => <Table caption="Commission statements" headers={['Statement', 'Vendor', 'Period', 'Charges', 'Credits', 'Paid before refunds', 'Outstanding', 'Due (Asia/Manila)', 'Status / Action']}>
-        {items.map(row => <tr key={String(row.id)}><td className="px-4 py-3 font-semibold">{String(row.reference)}</td><td className="px-4 py-3">{String(row.vendor_name)}</td>
-          <td className="px-4 py-3">{String(row.period_start)} – {String(row.period_end)}</td>
-          <td className="px-4 py-3 tabular-nums">{formatPesoCentavos(Number(row.charges_centavos))}</td><td className="px-4 py-3 tabular-nums">{formatPesoCentavos(Number(row.credits_centavos))}</td>
-          <td className="px-4 py-3 tabular-nums">{formatPesoCentavos(Number(row.paid_centavos))}</td><td className="px-4 py-3 tabular-nums">{formatPesoCentavos(Number(row.outstanding_centavos))}</td>
-          <td className="px-4 py-3">{String(row.due_on)}{row.overdue ? ' · overdue' : ''}</td>
-          <td className="px-4 py-3">{row.state === 'DRAFT' ? <Button variant="secondary" disabled={busy !== null} onClick={() => void approve(row)}>{busy === row.id ? 'Approving…' : 'Approve and issue'}</Button> : <StatusBadge label={row.overdue ? 'Overdue' : row.state === 'PAID' ? 'Settled' : String(row.state).replaceAll('_', ' ').toLowerCase()} tone={row.overdue ? 'error' : row.state === 'PAID' ? 'success' : 'neutral'} />}<div className="mt-2"><DocumentExportButton basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} audience="admin" types={['FEE_STATEMENT']} resourceId={String(row.id)} title={String(row.reference)} /></div></td></tr>)}
-      </Table>}
-    </Paged>
-  </section>
+    <div className="min-w-0 border-t border-border-default pt-4">
+      <Paged embedded state={paged} empty={overdue ? 'No overdue commission balances match these filters.' : 'No statements match these filters. Completed orders are included in the next monthly draft.'}>
+        {items => <Table caption="Commission statements" headers={['Statement', 'Vendor', 'Period', 'Charges', 'Credits', 'Paid before refunds', 'Outstanding', 'Due (Asia/Manila)', 'Status / Action']}>
+          {items.map(row => <tr key={String(row.id)}><td className="px-4 py-3 font-semibold">{String(row.reference)}</td><td className="px-4 py-3">{String(row.vendor_name)}</td>
+            <td className="px-4 py-3">{String(row.period_start)} – {String(row.period_end)}</td>
+            <td className="px-4 py-3 tabular-nums">{formatPesoCentavos(Number(row.charges_centavos))}</td><td className="px-4 py-3 tabular-nums">{formatPesoCentavos(Number(row.credits_centavos))}</td>
+            <td className="px-4 py-3 tabular-nums">{formatPesoCentavos(Number(row.paid_centavos))}</td><td className="px-4 py-3 tabular-nums">{formatPesoCentavos(Number(row.outstanding_centavos))}</td>
+            <td className="px-4 py-3">{String(row.due_on)}{row.overdue ? ' · overdue' : ''}</td>
+            <td className="px-4 py-3">{row.state === 'DRAFT' ? <Button variant="secondary" disabled={busy !== null} onClick={() => void approve(row)}>{busy === row.id ? 'Approving…' : 'Approve and issue'}</Button> : <StatusBadge label={row.overdue ? 'Overdue' : row.state === 'PAID' ? 'Settled' : String(row.state).replaceAll('_', ' ').toLowerCase()} tone={row.overdue ? 'error' : row.state === 'PAID' ? 'success' : 'neutral'} />}<div className="mt-2"><DocumentExportButton basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} audience="admin" types={['FEE_STATEMENT']} resourceId={String(row.id)} title={String(row.reference)} /></div></td></tr>)}
+        </Table>}
+      </Paged>
+    </div>
+    {!overdue && <MethodNote label="Billing schedule and due dates">Drafted automatically at 00:05 on the first (Asia/Manila); approve by the third. Due on the fifteenth, or twelve days after a late issue.</MethodNote>}
+  </Panel>
 }
 
 /** Xendit's own dashboard; the platform account signs in there, never through MateryalPH. */

@@ -31,6 +31,14 @@ export interface VendorEarningsBreakdownPhysical {
      *
      */
     inStoreCentavos: number;
+    /**
+     * Not a collection and not part of physical_collections_centavos: the cash still owed on Cash on Delivery and In-Store orders already delivered or picked up, for the same orders and dates as commercial sales. It falls as the Vendor records or confirms the cash.
+     */
+    unrecordedCentavos: number;
+    /**
+     *
+     */
+    unrecordedOrders: number;
 }
 
 /**
@@ -40,6 +48,8 @@ export function instanceOfVendorEarningsBreakdownPhysical(value: object): value 
     if (!('records' in value) || value['records'] === undefined) return false;
     if ((!('cashOnDeliveryCentavos' in (value as Record<string, any>)) && !('cash_on_delivery_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['cashOnDeliveryCentavos'] === undefined && (value as Record<string, any>)['cash_on_delivery_centavos'] === undefined)) return false;
     if ((!('inStoreCentavos' in (value as Record<string, any>)) && !('in_store_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['inStoreCentavos'] === undefined && (value as Record<string, any>)['in_store_centavos'] === undefined)) return false;
+    if ((!('unrecordedCentavos' in (value as Record<string, any>)) && !('unrecorded_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['unrecordedCentavos'] === undefined && (value as Record<string, any>)['unrecorded_centavos'] === undefined)) return false;
+    if ((!('unrecordedOrders' in (value as Record<string, any>)) && !('unrecorded_orders' in (value as Record<string, any>))) || ((value as Record<string, any>)['unrecordedOrders'] === undefined && (value as Record<string, any>)['unrecorded_orders'] === undefined)) return false;
     return true;
 }
 
@@ -56,6 +66,8 @@ export function VendorEarningsBreakdownPhysicalFromJSONTyped(json: any, ignoreDi
         'records': json['records'],
         'cashOnDeliveryCentavos': json['cash_on_delivery_centavos'],
         'inStoreCentavos': json['in_store_centavos'],
+        'unrecordedCentavos': json['unrecorded_centavos'],
+        'unrecordedOrders': json['unrecorded_orders'],
     };
 }
 
@@ -73,6 +85,8 @@ export function VendorEarningsBreakdownPhysicalToJSONTyped(value?: VendorEarning
         'records': value['records'],
         'cash_on_delivery_centavos': value['cashOnDeliveryCentavos'],
         'in_store_centavos': value['inStoreCentavos'],
+        'unrecorded_centavos': value['unrecordedCentavos'],
+        'unrecorded_orders': value['unrecordedOrders'],
     };
 }
 

@@ -1,6 +1,5 @@
 import { useNavigationRefresh } from '@materyalph/web-ui'
 import { DocumentExportButton } from '@materyalph/web-ui'
-import { WorkPackageAttachment } from '../components/WorkPackageAttachment'
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Bot, CheckCircle2, Store, MapPin, MessageSquare, PackageSearch, ShieldAlert, Truck } from 'lucide-react'
@@ -221,7 +220,7 @@ function OrderDetailWorkspace({ orderId, panel = false, canMessage = false, canV
     </div>
     {deadline?.at && <DeadlineCountdown at={deadline.at} label={deadline.label} onExpire={load} />}
     {notice && <StatusMessage tone={notice.tone}>{notice.text}</StatusMessage>}
-    {order.projectContext && <><WorkPackageAttachment reference={order.projectContext} />{order.projectContext.note != null && <StatusMessage tone="info">Informational Note: {String(order.projectContext.note)} · No response required</StatusMessage>}</>}
+    {order.projectContext?.note != null && <StatusMessage tone="info">Informational Note: {String(order.projectContext.note)} · No response required</StatusMessage>}
     <div className="grid min-w-0 items-start gap-4 sm:gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="grid min-w-0 content-start gap-4 sm:gap-5">
         {order.primaryAction === 'CONFIRM' && order.permissions?.canConfirm
@@ -399,7 +398,9 @@ function ConfirmationWorkspace({ order, onDone, onReload }: { order: OrderDetail
   const permissions = order.permissions ?? { canConfirm: false, canRevise: false, canSetNrpc: false, canConfirmDelivery: false, canDecline: false, canViewInventory: false }
   const [quantities, setQuantities] = useState<Record<string, string>>(() => Object.fromEntries(order.lines.map(line => [line.id, quantityText(line.requestedQuantity)])))
   const [discount, setDiscount] = useState<ChatQuotationDiscount>({ scope: order.money.discount?.scope ?? 'MATERIALS', percent: order.money.discount?.percent ?? '' })
-  const [nrpcOn, setNrpcOn] = useState(false)
+  const canSetNrpc = permissions.canSetNrpc && ['CASH_ON_DELIVERY', 'IN_STORE'].includes(order.paymentMethod)
+  const [nrpcSelected, setNrpcOn] = useState(false)
+  const nrpcOn = canSetNrpc && nrpcSelected
   const [nrpcReason, setNrpcReason] = useState('')
   const [nrpcLines, setNrpcLines] = useState<Record<string, number | null>>({})
   const [readyDate, setReadyDate] = useState(() => manilaToday())
@@ -545,7 +546,7 @@ function ConfirmationWorkspace({ order, onDone, onReload }: { order: OrderDetail
         date={deliveryDate} setDate={setDeliveryDate} arrangement={arrangement} setArrangement={setArrangement} access={accessConfirmed} setAccess={setAccessConfirmed} heavy={heavyAccess} setHeavy={setHeavyAccess} note={manualNote} setNote={setManualNote} recommendationChanged={recommendationChanged} changeReason={changeReason} setChangeReason={setChangeReason} />}
     </section>
 
-    {permissions.canSetNrpc && <NrpcPreparationEditor enabled={nrpcOn} value={nrpcValues} materials={nrpcMaterials} reasonLimits={{ min: 10, max: 1000 }} disabled={busy} termsAvailable={order.nrpcTerms?.available} termsVersion={order.nrpcTerms?.version} errors={errors} onToggle={enabled => { setNrpcOn(enabled); setErrors(current => Object.fromEntries(Object.entries(current).filter(([field]) => !field.startsWith('nrpc.')))) }} onChange={value => {
+    {canSetNrpc && <NrpcPreparationEditor enabled={nrpcOn} value={nrpcValues} materials={nrpcMaterials} reasonLimits={{ min: 10, max: 1000 }} disabled={busy} termsAvailable={order.nrpcTerms?.available} termsVersion={order.nrpcTerms?.version} errors={errors} onToggle={enabled => { setNrpcOn(enabled); setErrors(current => Object.fromEntries(Object.entries(current).filter(([field]) => !field.startsWith('nrpc.')))) }} onChange={value => {
       setNrpcReason(value.reason)
       setNrpcLines(value.allocations)
       setErrors(current => Object.fromEntries(Object.entries(current).filter(([field]) => !field.startsWith('nrpc.'))))

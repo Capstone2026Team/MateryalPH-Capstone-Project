@@ -249,7 +249,11 @@ export interface RecordVendorFulfillmentMilestoneRequest {
      */
     note?: string;
     /**
-     * Delivery photo (required for DELIVERED): JPG or PNG up to 10 MB, scanned fail-closed, stored privately.
+     * Required on DELIVERED / PICKED_UP of a Cash on Delivery or In-Store order with an outstanding balance: the cash the Buyer handed over, 0 to the outstanding balance (422 PROOF_REQUIRED otherwise). Cash above zero needs the handover photo as its evidence. A member holding payments.record_physical records it as a collection at once; a Fulfillment Staff report waits for confirmation (POST /vendor/orders/{orderId}/physical-payments/handover-confirmation). Ignored for online orders.
+     */
+    cashReceivedCentavos?: number;
+    /**
+     * Delivery photo (required for DELIVERED; required for PICKED_UP when cash_received_centavos is above zero): JPG or PNG up to 10 MB, scanned fail-closed, stored privately.
      */
     file?: Blob;
     /**
@@ -1111,6 +1115,10 @@ export class VendorFulfillmentApi extends runtime.BaseAPI {
 
         if (requestParameters['note'] != null) {
             formParams.append('note', requestParameters['note'] as any);
+        }
+
+        if (requestParameters['cashReceivedCentavos'] != null) {
+            formParams.append('cash_received_centavos', requestParameters['cashReceivedCentavos'] as any);
         }
 
         if (requestParameters['file'] != null) {

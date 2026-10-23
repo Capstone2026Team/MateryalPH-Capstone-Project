@@ -69,7 +69,8 @@ export interface ChatDraftContent {
      */
     delivery?: { [key: string]: any; };
     /**
-     *
+     * Historical drafts only. Omit when saving; new quotation NRPC is prohibited.
+     * @deprecated
      */
     nrpc?: { [key: string]: any; };
 }

@@ -517,6 +517,7 @@ import 'package:materyalph_api_client/src/model/finance_kpi.dart';
 import 'package:materyalph_api_client/src/model/finance_kpi_envelope.dart';
 import 'package:materyalph_api_client/src/model/finance_kpis.dart';
 import 'package:materyalph_api_client/src/model/finance_kpis_period.dart';
+import 'package:materyalph_api_client/src/model/finance_payment_method.dart';
 import 'package:materyalph_api_client/src/model/finance_review_item.dart';
 import 'package:materyalph_api_client/src/model/finance_review_item_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/finance_transaction_list_envelope.dart';
@@ -770,6 +771,7 @@ import 'package:materyalph_api_client/src/model/payment_options_envelope.dart';
 import 'package:materyalph_api_client/src/model/payment_webhook_ack.dart';
 import 'package:materyalph_api_client/src/model/payment_webhook_ack_envelope.dart';
 import 'package:materyalph_api_client/src/model/payment_webhook_payload.dart';
+import 'package:materyalph_api_client/src/model/physical_handover_cash.dart';
 import 'package:materyalph_api_client/src/model/physical_payment_record.dart';
 import 'package:materyalph_api_client/src/model/physical_payment_settings.dart';
 import 'package:materyalph_api_client/src/model/physical_payment_settings_envelope.dart';
@@ -1708,6 +1710,7 @@ part 'serializers.g.dart';
   FinanceKpiEnvelope,
   FinanceKpis,
   FinanceKpisPeriod,
+  FinancePaymentMethod,
   FinanceReviewItem,
   FinanceReviewItemListEnvelope,
   FinanceTransactionListEnvelope,
@@ -1961,6 +1964,7 @@ part 'serializers.g.dart';
   PaymentWebhookAck,
   PaymentWebhookAckEnvelope,
   PaymentWebhookPayload,
+  PhysicalHandoverCash,
   PhysicalPaymentRecord,
   PhysicalPaymentSettings,
   PhysicalPaymentSettingsEnvelope,
@@ -3296,6 +3300,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(GeoChild)]),
         () => ListBuilder<GeoChild>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(FinancePaymentMethod)]),
+        () => ListBuilder<FinancePaymentMethod>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ReviewMediaLink)]),

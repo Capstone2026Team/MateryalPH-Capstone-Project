@@ -5,9 +5,10 @@ import { SearchInput } from './filter-controls'
 
 export const PortalPagePatterns = createContext(false)
 
-export function PageHeader({ eyebrow, title, description, actions, status }: { eyebrow: string; title: string; description?: string; actions?: ReactNode; status?: ReactNode }) {
-  return <header className="flex min-w-0 flex-col gap-4 border-b border-border-default pb-6 lg:flex-row lg:items-end lg:justify-between">
-    <div className="min-w-0 max-w-3xl"><p className="text-label uppercase tracking-widest text-action-primary">{eyebrow}</p><div className="mt-2 flex flex-wrap items-center gap-2"><h1 className="break-words text-h1 tracking-tight text-text-strong">{title}</h1>{status}</div>{description && <p className="mt-2 text-sm leading-6 text-text-secondary">{description}</p>}</div>
+/** `compact` tightens the header for pages whose controls sit directly beneath it. */
+export function PageHeader({ eyebrow, title, description, actions, status, compact = false }: { eyebrow: string; title: string; description?: string; actions?: ReactNode; status?: ReactNode; compact?: boolean }) {
+  return <header className={`flex min-w-0 flex-col border-b border-border-default lg:flex-row lg:items-end lg:justify-between ${compact ? 'gap-3 pb-3' : 'gap-4 pb-6'}`}>
+    <div className="min-w-0 max-w-3xl"><p className="text-label uppercase tracking-widest text-action-primary">{eyebrow}</p><div className={`flex flex-wrap items-center gap-2 ${compact ? 'mt-1' : 'mt-2'}`}><h1 className="break-words text-h1 tracking-tight text-text-strong">{title}</h1>{status}</div>{description && <p className={`text-sm leading-6 text-text-secondary ${compact ? 'mt-0.5' : 'mt-2'}`}>{description}</p>}</div>
     {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
   </header>
 }
@@ -50,6 +51,14 @@ export function Toolbar({ filters, search, viewToggle, searchFirst = false, alig
     {filters && <div className="flex min-w-0 flex-wrap items-center gap-2 [&>select]:w-auto [&>select]:max-w-full [&>select]:min-h-12 sm:[&>select]:min-h-11">{filters}</div>}
     {!searchFirst && <div className="flex min-w-0 flex-1 xl:justify-end">{searchField}</div>}
     {viewToggle && <div className="flex shrink-0 items-center gap-2 xl:ml-auto">{viewToggle}</div>}
+  </div>
+}
+
+/** One row for a section switcher and the controls that act on it: dates, filters and exports wrap beneath the tabs on narrow screens. */
+export function ControlBar({ tabs, actions }: { tabs: ReactNode; actions?: ReactNode }) {
+  return <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2">
+    {tabs}
+    {actions && <div className="flex min-w-0 flex-wrap items-center gap-2">{actions}</div>}
   </div>
 }
 

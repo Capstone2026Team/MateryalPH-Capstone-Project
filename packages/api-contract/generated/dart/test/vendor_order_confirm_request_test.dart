@@ -28,6 +28,7 @@ void main() {
       // TODO
     });
 
+    // Available only for COD or In-Store Payment orders awaiting Vendor confirmation.
     // NrpcProposal nrpc
     test('to test the property `nrpc`', () async {
       // TODO

@@ -15,6 +15,7 @@ use App\Domain\Messaging\ConversationBroadcast;
 use App\Domain\Messaging\ConversationService;
 use App\Domain\Messaging\FulfillmentThreadService;
 use App\Domain\Messaging\QuotationService;
+use App\Domain\Messaging\QuotationTerms;
 use App\Domain\Vendors\AddressGeocoder;
 use App\Domain\Vendors\VendorFileScanner;
 use Carbon\CarbonImmutable;
@@ -1024,7 +1025,7 @@ final class PhaseNineMessagingTest extends TestCase
         $this->signInStoreMember($cs);
         $draft = $this->draftInput($variant);
         $draft['nrpc'] = ['amount_centavos' => 100, 'reason' => 'Preparation', 'allocations' => [$variant => 100]];
-        $this->putJson('/api/v1/vendor/conversations/'.$id.'/quotation/draft', ['lock_version' => 1, 'draft' => $draft])->assertForbidden();
+        $this->putJson('/api/v1/vendor/conversations/'.$id.'/quotation/draft', ['lock_version' => 1, 'draft' => $draft])->assertUnprocessable();
     }
 
     public function test_one_hour_deadline_reminder_and_exact_expiry_boundary(): void
@@ -1193,7 +1194,7 @@ final class PhaseNineMessagingTest extends TestCase
         self::assertSame(2, DB::table('messages')->where('conversation_id', $sales)->count());
     }
 
-    public function test_nrpc_quotation_acceptance_freezes_terms_and_allocations_once(): void
+    public function test_historical_nrpc_quotation_acceptance_preserves_terms_and_allocations(): void
     {
         [$store, $owner, $listing] = $this->pickupStore('NRPC quote');
         DB::table('vendor_payment_settings')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $store->id, 'in_store_enabled' => true, 'lock_version' => 1, 'created_at' => now(), 'updated_at' => now()]);
@@ -1203,7 +1204,19 @@ final class PhaseNineMessagingTest extends TestCase
         $this->signInStoreMember($owner);
         $draft = $this->draftInput($variant);
         $draft['nrpc'] = ['amount_centavos' => 1000, 'reason' => 'Custom preparation for these materials', 'allocations' => [$variant => 1000]];
-        $v = $this->publishQuote($id, $draft)['versions'][0];
+        // Seed an immutable version published under the previous policy.
+        $withoutNrpc = $draft;
+        unset($withoutNrpc['nrpc']);
+        $v = $this->publishQuote($id, $withoutNrpc)['versions'][0];
+        $content = app(QuotationTerms::class)->freeze($owner, DB::table('conversations')->where('id', $id)->first(), $draft, null);
+        $json = json_encode($content, JSON_THROW_ON_ERROR);
+        $v['content'] = $content;
+        $v['content_hash'] = hash('sha256', $json);
+        $historical = (array) DB::table('quotation_versions')->where('id', $v['id'])->first();
+        $historical['supersedes_version_id'] = $v['id'];
+        $v['id'] = (string) Str::uuid7();
+        DB::table('quotation_versions')->insert(array_replace($historical, ['id' => $v['id'], 'version' => 2, 'content' => $json, 'content_hash' => $v['content_hash'], 'nrpc_centavos' => 1000]));
+        DB::table('quotations')->where('conversation_id', $id)->update(['current_version_id' => $v['id']]);
         $this->signInBuyer($buyer);
         $payload = ['version_id' => $v['id'], 'content_hash' => $v['content_hash'], 'payment_method' => 'IN_STORE'];
         $this->postJson('/api/v1/buyers/conversations/'.$id.'/quotation/accept', $payload, ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable();
@@ -1215,6 +1228,24 @@ final class PhaseNineMessagingTest extends TestCase
         self::assertSame('IN_STORE', DB::table('orders')->where('id', $order)->value('payment_method'));
         self::assertSame('AWAITING_PAYMENT', DB::table('orders')->where('id', $order)->value('order_state'));
         self::assertSame(0, DB::table('physical_payment_records')->where('order_id', $order)->count());
+    }
+
+    public function test_new_nrpc_is_rejected_in_quotation_drafts_and_publication(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('NRPC quote');
+        DB::table('vendor_payment_settings')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $store->id, 'in_store_enabled' => true, 'lock_version' => 1, 'created_at' => now(), 'updated_at' => now()]);
+        $variant = $this->variantIds($listing)[0];
+        $buyer = $this->buyer();
+        $id = $this->inquiry($store->id, $variant);
+        $this->signInStoreMember($owner);
+        $draft = $this->draftInput($variant);
+        $draft['nrpc'] = ['amount_centavos' => 1000, 'reason' => 'Custom preparation for these materials', 'allocations' => [$variant => 1000]];
+        $this->putJson('/api/v1/vendor/conversations/'.$id.'/quotation/draft', ['lock_version' => 1, 'draft' => $draft])->assertUnprocessable();
+        self::assertSame(0, DB::table('quotation_versions')->count());
+        // An old persisted draft must also be rejected at publication.
+        DB::table('quotations')->where('conversation_id', $id)->update(['draft' => json_encode($draft)]);
+        $this->postJson('/api/v1/vendor/conversations/'.$id.'/quotation/publish', ['lock_version' => 1], ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable();
+        self::assertSame(0, DB::table('nrpc_records')->count());
     }
 
     public function test_delivery_quote_preserves_buyer_access_and_confirmed_vehicle_calculation(): void

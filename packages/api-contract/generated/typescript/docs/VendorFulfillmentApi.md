@@ -925,7 +925,7 @@ example().catch(console.error);
 
 ## recordVendorFulfillmentMilestone
 
-> OrderDetailEnvelope recordVendorFulfillmentMilestone(orderId, idempotencyKey, milestone, lockVersion, vehicleIndex, tripNumber, receiverName, receiverKind, handoverConfirmed, note, file, signature, additionalPhotos)
+> OrderDetailEnvelope recordVendorFulfillmentMilestone(orderId, idempotencyKey, milestone, lockVersion, vehicleIndex, tripNumber, receiverName, receiverKind, handoverConfirmed, note, cashReceivedCentavos, file, signature, additionalPhotos)
 
 
 
@@ -971,7 +971,9 @@ async function example() {
     handoverConfirmed: true,
     // string (optional)
     note: 'note_example',
-    // Blob | Delivery photo (required for DELIVERED): JPG or PNG up to 10 MB, scanned fail-closed, stored privately. (optional)
+    // number | Required on DELIVERED / PICKED_UP of a Cash on Delivery or In-Store order with an outstanding balance: the cash the Buyer handed over, 0 to the outstanding balance (422 PROOF_REQUIRED otherwise). Cash above zero needs the handover photo as its evidence. A member holding payments.record_physical records it as a collection at once; a Fulfillment Staff report waits for confirmation (POST /vendor/orders/{orderId}/physical-payments/handover-confirmation). Ignored for online orders. (optional)
+    cashReceivedCentavos: 56,
+    // Blob | Delivery photo (required for DELIVERED; required for PICKED_UP when cash_received_centavos is above zero): JPG or PNG up to 10 MB, scanned fail-closed, stored privately. (optional)
     file: new Blob(['example file content'], { type: 'application/octet-stream' }),
     // Blob | Optional receiver signature image. (optional)
     signature: new Blob(['example file content'], { type: 'application/octet-stream' }),
@@ -1006,7 +1008,8 @@ example().catch(console.error);
 | **receiverKind** | `BUYER`, `AUTHORIZED_RECEIVER` |  | [Optional] [Defaults to `undefined`] [Enum: BUYER, AUTHORIZED_RECEIVER] |
 | **handoverConfirmed** | `boolean` |  | [Optional] [Defaults to `undefined`] |
 | **note** | `string` |  | [Optional] [Defaults to `undefined`] |
-| **file** | `Blob` | Delivery photo (required for DELIVERED): JPG or PNG up to 10 MB, scanned fail-closed, stored privately. | [Optional] [Defaults to `undefined`] |
+| **cashReceivedCentavos** | `number` | Required on DELIVERED / PICKED_UP of a Cash on Delivery or In-Store order with an outstanding balance: the cash the Buyer handed over, 0 to the outstanding balance (422 PROOF_REQUIRED otherwise). Cash above zero needs the handover photo as its evidence. A member holding payments.record_physical records it as a collection at once; a Fulfillment Staff report waits for confirmation (POST /vendor/orders/{orderId}/physical-payments/handover-confirmation). Ignored for online orders. | [Optional] [Defaults to `undefined`] |
+| **file** | `Blob` | Delivery photo (required for DELIVERED; required for PICKED_UP when cash_received_centavos is above zero): JPG or PNG up to 10 MB, scanned fail-closed, stored privately. | [Optional] [Defaults to `undefined`] |
 | **signature** | `Blob` | Optional receiver signature image. | [Optional] [Defaults to `undefined`] |
 | **additionalPhotos** | `Array<Blob>` |  | [Optional] |
 

@@ -162,6 +162,17 @@ final class PhaseElevenFinanceFlowsTest extends TestCase
         $done = $this->post('/api/v1/vendor/orders/'.$orderId.'/physical-payments', ['amount_centavos' => 600000, 'file' => UploadedFile::fake()->image('receipt.png')], ['Idempotency-Key' => (string) Str::uuid7(), 'Accept' => 'application/json'])
             ->assertCreated()->json('data');
         self::assertSame(['PHYSICAL_PAYMENT_RECORDED', 0], [$done['state'], $done['remaining_centavos']]);
+        $this->signInStoreMember($owner);
+        $earnings = $this->getJson('/api/v1/vendor/finance/earnings')->assertOk()->json('data');
+        $this->signInAdmin($this->admin('ADMIN_SUPERADMIN'));
+        $kpis = $this->getJson('/api/v1/admin/finance/kpis')->assertOk()->json('data');
+        $market = collect($kpis['commerce'])->pluck('value_centavos', 'key');
+        self::assertSame([1000000, 0, 1000000, 0], [$market['in_store'], $market['cash_on_delivery'], $market['buyer_payments'], $market['online_payments']]);
+        self::assertSame($earnings['physical_collections_centavos'], $market['in_store'] + $market['cash_on_delivery']);
+        self::assertSame([['IN_STORE', 'In-Store Payment', 'PHYSICAL', 2, 1000000]], array_map(static fn (array $m): array => array_values($m), $kpis['payment_methods']));
+        self::assertSame(2, $kpis['counts']['cash_records']);
+        $this->getJson('/api/v1/admin/finance/kpis?from=2000-01-01&to=2000-01-31')->assertOk()->assertJsonPath('data.payment_methods', [])
+            ->assertJsonPath('data.trend_granularity', 'DAY')->assertJsonCount(31, 'data.trend');
 
         $this->signInBuyer($buyer);
         $record = collect($this->getJson('/api/v1/buyers/orders/'.$orderId)->json('data.payment.physical.records'))->firstWhere('kind', 'COLLECTION');
@@ -215,6 +226,25 @@ final class PhaseElevenFinanceFlowsTest extends TestCase
         $balanceAssessment = DB::table('remittance_assessments')->where('payment_id', $balance['id'])->first();
         self::assertSame(900000, (int) $balanceAssessment->gross_basis_centavos, 'The balance collection is assessed alone; the NRPC principal is never assessed twice.');
         self::assertSame(2, DB::table('remittance_assessments')->count());
+
+        $this->signInStoreMember($owner);
+        $earnings = $this->getJson('/api/v1/vendor/finance/earnings')->assertOk()->json('data');
+        $this->signInAdmin($this->admin('ADMIN_SUPERADMIN'));
+        $kpis = $this->getJson('/api/v1/admin/finance/kpis')->assertOk()->json('data');
+        $market = collect($kpis['commerce'])->pluck('value_centavos', 'key');
+        $paid = (int) DB::table('payments')->whereIn('id', [$nrpcPayment['id'], $balance['id']])->sum('total_centavos');
+        self::assertSame([1000000, 0, 1000000, 1], [$market['gross_gmv'], $market['cancelled_gmv'], $market['net_gmv'], $kpis['counts']['confirmed_orders']],
+            'GMV is the order value once, live from the order: the NRPC principal and the balance are not counted twice.');
+        self::assertSame([$paid, $paid, 0, $paid], [$market['online_payments'], $market['buyer_payments'], $market['buyer_refunds'], $market['net_buyer_payments']]);
+        self::assertSame($earnings['online_collections_centavos'] + $earnings['buyer_processing_fees_centavos'], $market['net_buyer_payments'],
+            'Admin Buyer payments equal the Vendor Earnings online collections and Buyer fees for the same records.');
+        self::assertSame($earnings['buyer_processing_fees_centavos'], $market['buyer_processing_fees']);
+        self::assertSame(['GCASH', 'MAYA'], collect($kpis['payment_methods'])->pluck('method')->sort()->values()->all());
+        self::assertSame($paid, array_sum(array_column($kpis['payment_methods'], 'amount_centavos')));
+        self::assertSame(['ONLINE', 'ONLINE'], array_column($kpis['payment_methods'], 'kind'));
+        self::assertSame([1000000, $paid, 0], [array_sum(array_column($kpis['trend'], 'gmv_centavos')), array_sum(array_column($kpis['trend'], 'buyer_payments_centavos')), array_sum(array_column($kpis['trend'], 'buyer_refunds_centavos'))],
+            'The marketplace chart adds up to the cards, even with no commission activity yet.');
+        self::assertSame(0, collect($kpis['finance'])->firstWhere('key', 'net_collected')['value_centavos'], 'Buyer payments to the Vendor account are never platform-held funds.');
     }
 
     public function test_monthly_statement_is_drafted_approved_by_a_reviewer_and_paid_by_the_owner_in_installments(): void

@@ -18,6 +18,9 @@ part 'commission_trend_point.g.dart';
 /// * [collectedCentavos]
 /// * [refundedCentavos]
 /// * [netEarningsCentavos] - Posted fee revenue net of credits and fee VAT, less platform commission payment processing expense. Can be negative in a refund period.
+/// * [gmvCentavos] - Gross merchandise value of orders confirmed in the period (Vendor money, never platform revenue).
+/// * [buyerPaymentsCentavos] - Verified online Buyer payments plus recorded Cash on Delivery and In-Store cash, received by Vendors.
+/// * [buyerRefundsCentavos] - Confirmed online refunds and cash reimbursements to Buyers.
 @BuiltValue()
 abstract class CommissionTrendPoint implements Built<CommissionTrendPoint, CommissionTrendPointBuilder> {
   /// Asia/Manila day, or month start when the trend is monthly.
@@ -39,6 +42,18 @@ abstract class CommissionTrendPoint implements Built<CommissionTrendPoint, Commi
   /// Posted fee revenue net of credits and fee VAT, less platform commission payment processing expense. Can be negative in a refund period.
   @BuiltValueField(wireName: r'net_earnings_centavos')
   int get netEarningsCentavos;
+
+  /// Gross merchandise value of orders confirmed in the period (Vendor money, never platform revenue).
+  @BuiltValueField(wireName: r'gmv_centavos')
+  int get gmvCentavos;
+
+  /// Verified online Buyer payments plus recorded Cash on Delivery and In-Store cash, received by Vendors.
+  @BuiltValueField(wireName: r'buyer_payments_centavos')
+  int get buyerPaymentsCentavos;
+
+  /// Confirmed online refunds and cash reimbursements to Buyers.
+  @BuiltValueField(wireName: r'buyer_refunds_centavos')
+  int get buyerRefundsCentavos;
 
   CommissionTrendPoint._();
 
@@ -91,6 +106,21 @@ class _$CommissionTrendPointSerializer implements PrimitiveSerializer<Commission
     yield r'net_earnings_centavos';
     yield serializers.serialize(
       object.netEarningsCentavos,
+      specifiedType: const FullType(int),
+    );
+    yield r'gmv_centavos';
+    yield serializers.serialize(
+      object.gmvCentavos,
+      specifiedType: const FullType(int),
+    );
+    yield r'buyer_payments_centavos';
+    yield serializers.serialize(
+      object.buyerPaymentsCentavos,
+      specifiedType: const FullType(int),
+    );
+    yield r'buyer_refunds_centavos';
+    yield serializers.serialize(
+      object.buyerRefundsCentavos,
       specifiedType: const FullType(int),
     );
   }
@@ -157,6 +187,27 @@ class _$CommissionTrendPointSerializer implements PrimitiveSerializer<Commission
             specifiedType: const FullType(int),
           ) as int;
           result.netEarningsCentavos = valueDes;
+          break;
+        case r'gmv_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.gmvCentavos = valueDes;
+          break;
+        case r'buyer_payments_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.buyerPaymentsCentavos = valueDes;
+          break;
+        case r'buyer_refunds_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.buyerRefundsCentavos = valueDes;
           break;
         default:
           unhandled.add(key);

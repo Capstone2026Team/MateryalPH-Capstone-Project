@@ -31,8 +31,10 @@ final class FinanceOperationsService
     {
         $this->access->admin($request, 'finance.view');
         $filters = array_filter(['from' => $from, 'to' => $to], static fn (?string $date): bool => $date !== null);
-        $gmv = PortalDateRange::apply(DB::table('analytics_order_facts')->where('environment', 'TEST'), 'confirmed_on', $filters, true)
-            ->selectRaw('COALESCE(SUM(gross_value_centavos), 0) AS gross, COALESCE(SUM(net_value_centavos), 0) AS net')->first();
+        $flow = PlatformMoneyFlow::totals($filters);
+        $buyerPayments = $flow['online_payments'] + $flow['cash_on_delivery'] + $flow['in_store'];
+        $onlineRefunds = $flow['cancellation_refunds'] + $flow['dispute_refunds'] + $flow['other_refunds'];
+        $buyerRefunds = $onlineRefunds + $flow['cash_reimbursements'];
         $cwt = PortalDateRange::apply(DB::table('remittance_assessments')->where('calculation_state', 'POSTED'), 'created_at', $filters)
             ->selectRaw('COALESCE(SUM(withheld_centavos), 0) AS assessed, COALESCE(SUM(reported_withheld_centavos), 0) AS reported')->first();
         $earned = PortalDateRange::apply(CommissionService::movements(), 'occurred_at', $filters)
@@ -55,12 +57,28 @@ final class FinanceOperationsService
         $item = static fn (string $key, string $label, int $value, string $definition): array => ['key' => $key, 'label' => $label, 'value_centavos' => $value, 'definition' => $definition];
         $trend = $this->trend($filters);
 
-        return ['label' => 'Recorded transactions', 'scenario' => 'Earnings and cash use event dates; debt uses statement issue dates and current balances. Dates are Asia/Manila.',
+        return ['label' => 'Recorded transactions', 'scenario' => 'Each figure uses its own event date; commission debt uses statement issue dates and current balances. Dates are Asia/Manila.',
             'period' => ['from' => $from, 'to' => $to],
+            // Marketplace money belongs to Vendors and Buyers. It is shown beside platform figures and never added to them.
             'commerce' => [
-                $item('gross_gmv', 'Gross GMV', (int) $gmv->gross, 'Confirmed order value before cancellations and refunds, excluding the Buyer processing fee (TEST marketplace facts).'),
-                $item('net_gmv', 'Net GMV', (int) $gmv->net, 'Gross GMV less cancelled and refunded commercial value.'),
+                $item('gross_gmv', 'Gross merchandise value', $flow['gross_gmv'], 'Commercial value of every order once confirmed, by confirmation date, before cancellations and refunds. Materials after discounts, delivery and NRPC counted once; excludes the Buyer processing fee.'),
+                $item('cancelled_gmv', 'Cancelled order value', $flow['cancelled_gmv'], 'Commercial value of confirmed orders that were later cancelled.'),
+                $item('refunded_gmv', 'Refunded order value', $flow['refunded_gmv'], 'Confirmed dispute and other non-cancellation refunds of commercial value on orders that were not cancelled, excluding refunded Buyer processing fees.'),
+                $item('net_gmv', 'Net merchandise value', $flow['gross_gmv'] - $flow['cancelled_gmv'] - $flow['refunded_gmv'], 'Gross merchandise value less cancelled and refunded order value.'),
+                $item('online_payments', 'Verified online payments', $flow['online_payments'], 'Buyer payments verified by Xendit, by payment date, including the Buyer processing fee. They settle to each Vendor’s own Xendit account. Late captures are excluded.'),
+                $item('buyer_processing_fees', 'Buyer processing fees', $flow['buyer_processing_fees'], 'Part of verified online payments: the channel fee charged to the Buyer to cover the payment provider. Not platform revenue.'),
+                $item('cash_on_delivery', 'Cash on Delivery collected', $flow['cash_on_delivery'], 'Cash the Vendor recorded as received at delivery, by record date.'),
+                $item('in_store', 'In-Store payments collected', $flow['in_store'], 'Cash the Vendor recorded as received at the store, by record date.'),
+                $item('buyer_payments', 'Buyer payments received', $buyerPayments, 'Verified online payments plus recorded Cash on Delivery and In-Store cash. Received by Vendors, never held by the platform.'),
+                $item('cancellation_refunds', 'Cancellation refunds', $flow['cancellation_refunds'], 'Confirmed online refunds after an order cancellation, by refund confirmation date.'),
+                $item('dispute_refunds', 'Dispute-conclusion refunds', $flow['dispute_refunds'], 'Confirmed online refunds ordered by a dispute decision, by refund confirmation date.'),
+                $item('other_refunds', 'Other online refunds', $flow['other_refunds'], 'Any other confirmed refund of an order payment, by refund confirmation date.'),
+                $item('cash_reimbursements', 'Cash reimbursements', $flow['cash_reimbursements'], 'Cash the Vendor returned to the Buyer, once confirmed, by reimbursement date.'),
+                $item('buyer_refunds', 'Refunds to Buyers', $buyerRefunds, 'Confirmed online refunds plus confirmed cash reimbursements. Commission refunds to Vendors are separate.'),
+                $item('pending_buyer_refunds', 'Refunds in progress', $flow['pending_online_refunds'] + $flow['pending_cash_reimbursements'], 'Online refunds pending or failed at the provider and cash reimbursements not yet confirmed, by request date. Not yet money returned.'),
+                $item('net_buyer_payments', 'Net Vendor collections', $buyerPayments - $buyerRefunds, 'Buyer payments received less refunds to Buyers, each by its own event date.'),
             ],
+            'payment_methods' => PlatformMoneyFlow::paymentMethods($filters),
             'finance' => [
                 $item('assessed_cwt', 'Assessed CWT (simulated)', (int) $cwt->assessed, 'Posted FIN-05 withholding W. Never platform revenue and never subtracted from GMV.'),
                 $item('reported_deductions', 'Provider-reported deductions', (int) $cwt->reported, 'Imported simulated deductions reconciled against assessments; never a second deduction.'),
@@ -74,12 +92,16 @@ final class FinanceOperationsService
                 $item('billed', 'Issued commission bills', (int) $statements->billed, 'Approved statement charges less credits.'),
                 $item('collected', 'Collected commissions', $collected, 'Verified payments allocated once to commission bills, by collection date. Excludes failed attempts, late captures and unallocated overpayments.'),
                 $item('refunded_commissions', 'Refunded commissions', $refunded, 'Confirmed returns of collected commissions, by successful refund date. Pending and failed refunds remain unpaid refund obligations.'),
-                $item('net_collected', 'Net collected commissions', $collected - $refunded, 'Collected commission payments less confirmed fee refunds; a cash figure, separate from earned revenue.'),
+                $item('net_collected', 'Net collected commissions', $collected - $refunded, 'Collected commission payments less confirmed fee refunds: the commission cash in the MateryalPH platform account, the only funds the platform holds. A cash figure, separate from earned revenue.'),
                 $item('pending_commissions', 'Pending commissions', $unbilled + $draft + (int) $statements->receivable, 'Current unpaid earned fees: unbilled earnings, draft bills and issued balances in the selected earning/issue periods. Approved credits are removed.'),
                 $item('receivables', 'Outstanding receivables', (int) $statements->receivable, 'Issued, unpaid statement balances. A late fee is a receivable task, never a Buyer cancellation or withheld refund.'),
                 $item('overdue', 'Overdue receivables', (int) $statements->overdue, 'Outstanding balances past their due date.'),
             ],
-            'counts' => ['unreconciled_remittances' => DB::table('remittance_assessments')->where('reconciliation_state', 'RECONCILIATION_EXCEPTION')->count(),
+            'counts' => ['open_work_items' => DB::table('finance_review_items')->where('state', 'OPEN')->where('kind', '<>', 'FEE_CREDIT_PROPOSAL')->count(),
+                'overdue_statements' => DB::table('fee_statements')->whereIn('state', ['ISSUED', 'PARTIALLY_PAID'])->where('outstanding_centavos', '>', 0)->where('due_on', '<', CarbonImmutable::now('Asia/Manila')->toDateString())->count(),
+                'confirmed_orders' => $flow['confirmed_orders'], 'online_payments' => $flow['online_payment_count'], 'cash_records' => $flow['cash_record_count'],
+                'pending_buyer_refunds' => $flow['pending_online_refund_count'] + $flow['pending_cash_reimbursement_count'],
+                'unreconciled_remittances' => DB::table('remittance_assessments')->where('reconciliation_state', 'RECONCILIATION_EXCEPTION')->count(),
                 'pending_certificates' => DB::table('tax_certificates')->where('verification_state', '<>', 'VERIFIED')->count(),
                 'draft_statements' => DB::table('fee_statements')->where('state', 'DRAFT')->count(),
                 'pending_commission_credits' => DB::table('finance_review_items')->where('kind', 'FEE_CREDIT_PROPOSAL')->where('state', 'OPEN')->count(),
@@ -117,8 +139,9 @@ final class FinanceOperationsService
     }
 
     /**
-     * Movements bucketed by Asia/Manila day when the recorded range spans at most 92 days (empty days filled with zero so
-     * the chart keeps an even time axis), otherwise by calendar month (recorded months only, most recent 120).
+     * Commission and marketplace movements bucketed by Asia/Manila day when the recorded range spans at most 92 days
+     * (empty days filled with zero so the chart keeps an even time axis), otherwise by calendar month (recorded months
+     * only, most recent 120). The range covers both kinds of activity, so neither series is cut off by the other.
      *
      * @param  array<string, mixed>  $filters
      * @return array{granularity: string, points: list<array<string, int|string>>}
@@ -127,25 +150,34 @@ final class FinanceOperationsService
     {
         $local = "(occurred_at AT TIME ZONE 'Asia/Manila')::date";
         $bounds = $this->trendQuery($filters)->selectRaw("MIN({$local}) AS first_day, MAX({$local}) AS last_day")->first();
-        $start = isset($filters['from']) ? CarbonImmutable::parse((string) $filters['from'], 'Asia/Manila')->startOfDay() : ($bounds->first_day === null ? null : CarbonImmutable::parse((string) $bounds->first_day, 'Asia/Manila'));
-        $end = isset($filters['to']) ? CarbonImmutable::parse((string) $filters['to'], 'Asia/Manila')->startOfDay() : ($bounds->last_day === null ? null : CarbonImmutable::parse((string) $bounds->last_day, 'Asia/Manila'));
+        [$marketFirst, $marketLast] = PlatformMoneyFlow::bounds($filters);
+        $first = min(array_filter([$bounds->first_day === null ? null : (string) $bounds->first_day, $marketFirst]) ?: [null]);
+        $last = max(array_filter([$bounds->last_day === null ? null : (string) $bounds->last_day, $marketLast]) ?: [null]);
+        $start = isset($filters['from']) ? CarbonImmutable::parse((string) $filters['from'], 'Asia/Manila')->startOfDay() : ($first === null ? null : CarbonImmutable::parse($first, 'Asia/Manila'));
+        $end = isset($filters['to']) ? CarbonImmutable::parse((string) $filters['to'], 'Asia/Manila')->startOfDay() : ($last === null ? null : CarbonImmutable::parse($last, 'Asia/Manila'));
         $daily = $start !== null && $end !== null && $start->lessThanOrEqualTo($end) && (int) $start->diffInDays($end) + 1 <= self::TREND_DAILY_MAX_DAYS;
         $bucket = $daily ? $local : "date_trunc('month', occurred_at AT TIME ZONE 'Asia/Manila')::date";
 
-        $rows = $this->trendQuery($filters)->selectRaw("{$bucket} AS period, SUM(earned_centavos) AS earned_centavos, SUM(credits_centavos) AS credits_centavos,
+        $commission = $this->trendQuery($filters)->selectRaw("{$bucket} AS period, SUM(earned_centavos) AS earned_centavos, SUM(credits_centavos) AS credits_centavos,
             SUM(collected_centavos) AS collected_centavos, SUM(refunded_centavos) AS refunded_centavos, SUM(revenue_centavos - processing_centavos) AS net_earnings_centavos")
-            ->groupByRaw($bucket)->orderByDesc('period')->limit(120)->get()->reverse()->values()->map(static fn (object $row): array => [
-                'period' => (string) $row->period, 'earned_centavos' => (int) $row->earned_centavos, 'credits_centavos' => (int) $row->credits_centavos,
+            ->groupByRaw($bucket)->get()->mapWithKeys(static fn (object $row): array => [(string) $row->period => [
+                'earned_centavos' => (int) $row->earned_centavos, 'credits_centavos' => (int) $row->credits_centavos,
                 'collected_centavos' => (int) $row->collected_centavos, 'refunded_centavos' => (int) $row->refunded_centavos, 'net_earnings_centavos' => (int) $row->net_earnings_centavos,
-            ])->keyBy('period');
+            ]])->all();
+        $market = PlatformMoneyFlow::trendBuckets($filters, $daily ? 'DAY' : 'MONTH');
+        $zero = ['earned_centavos' => 0, 'credits_centavos' => 0, 'collected_centavos' => 0, 'refunded_centavos' => 0, 'net_earnings_centavos' => 0]
+            + array_fill_keys(PlatformMoneyFlow::TREND_FIGURES, 0);
+        $point = static fn (string $period): array => ['period' => $period] + ($commission[$period] ?? []) + ($market[$period] ?? []) + $zero;
         if (! $daily) {
-            return ['granularity' => 'MONTH', 'points' => $rows->values()->all()];
+            $periods = array_unique([...array_keys($commission), ...array_keys($market)]);
+            sort($periods);
+
+            return ['granularity' => 'MONTH', 'points' => array_map($point, array_slice($periods, -120))];
         }
 
-        $zero = ['earned_centavos' => 0, 'credits_centavos' => 0, 'collected_centavos' => 0, 'refunded_centavos' => 0, 'net_earnings_centavos' => 0];
         $points = [];
         for ($cursor = $start; $cursor->lessThanOrEqualTo($end); $cursor = $cursor->addDay()) {
-            $points[] = ['period' => $cursor->toDateString()] + ($rows->get($cursor->toDateString()) ?? $zero);
+            $points[] = $point($cursor->toDateString());
         }
 
         return ['granularity' => 'DAY', 'points' => $points];

@@ -20,6 +20,13 @@ import {
     PhysicalPaymentRecordToJSON,
     PhysicalPaymentRecordToJSONTyped,
 } from './PhysicalPaymentRecord';
+import type { PhysicalHandoverCash } from './PhysicalHandoverCash';
+import {
+    PhysicalHandoverCashFromJSON,
+    PhysicalHandoverCashFromJSONTyped,
+    PhysicalHandoverCashToJSON,
+    PhysicalHandoverCashToJSONTyped,
+} from './PhysicalHandoverCash';
 
 /**
  *
@@ -47,6 +54,10 @@ export interface PhysicalPaymentSummary {
      *
      */
     onlineBalanceApproved: boolean;
+    /**
+     *
+     */
+    handoverCash?: PhysicalHandoverCash;
     /**
      *
      */
@@ -85,6 +96,7 @@ export function PhysicalPaymentSummaryFromJSONTyped(json: any, ignoreDiscriminat
         'state': json['state'],
         'remainingCentavos': json['remaining_centavos'] == null ? undefined : json['remaining_centavos'],
         'onlineBalanceApproved': json['online_balance_approved'],
+        'handoverCash': json['handover_cash'] == null ? undefined : PhysicalHandoverCashFromJSON(json['handover_cash']),
         'records': ((json['records'] as Array<any>).map(PhysicalPaymentRecordFromJSON)),
         'notice': json['notice'],
     };
@@ -106,6 +118,7 @@ export function PhysicalPaymentSummaryToJSONTyped(value?: PhysicalPaymentSummary
         'state': value['state'],
         'remaining_centavos': value['remainingCentavos'],
         'online_balance_approved': value['onlineBalanceApproved'],
+        'handover_cash': PhysicalHandoverCashToJSON(value['handoverCash']),
         'records': ((value['records'] as Array<any>).map(PhysicalPaymentRecordToJSON)),
         'notice': value['notice'],
     };

@@ -13,7 +13,7 @@ part 'vendor_order_permissions.g.dart';
 /// Properties:
 /// * [canConfirm]
 /// * [canRevise]
-/// * [canSetNrpc]
+/// * [canSetNrpc] - True only for authorized roles on COD or In-Store Payment orders awaiting Vendor confirmation.
 /// * [canConfirmDelivery]
 /// * [canDecline]
 /// * [canViewInventory]
@@ -36,6 +36,7 @@ abstract class VendorOrderPermissions implements Built<VendorOrderPermissions, V
   @BuiltValueField(wireName: r'can_revise')
   bool get canRevise;
 
+  /// True only for authorized roles on COD or In-Store Payment orders awaiting Vendor confirmation.
   @BuiltValueField(wireName: r'can_set_nrpc')
   bool get canSetNrpc;
 

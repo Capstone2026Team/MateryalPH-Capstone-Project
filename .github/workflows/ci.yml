@@ -154,6 +154,9 @@ jobs:
       - name: Check API contracts against Laravel routes
         run: |
           npm ci --prefix ../../packages/api-contract
+          # Several route checks import the generated TypeScript client build.
+          npm ci --prefix ../../packages/api-contract/generated/typescript
+          npm run build --prefix ../../packages/api-contract/generated/typescript
           php artisan route:list --json --path=api/v1 > /tmp/materyalph-routes.json
           trap 'rm -f /tmp/materyalph-routes.json' EXIT
           cd ../../packages/api-contract

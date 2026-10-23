@@ -14,6 +14,8 @@ part 'vendor_earnings_breakdown_physical.g.dart';
 /// * [records]
 /// * [cashOnDeliveryCentavos]
 /// * [inStoreCentavos]
+/// * [unrecordedCentavos] - Not a collection and not part of physical_collections_centavos: the cash still owed on Cash on Delivery and In-Store orders already delivered or picked up, for the same orders and dates as commercial sales. It falls as the Vendor records or confirms the cash.
+/// * [unrecordedOrders]
 @BuiltValue()
 abstract class VendorEarningsBreakdownPhysical implements Built<VendorEarningsBreakdownPhysical, VendorEarningsBreakdownPhysicalBuilder> {
   @BuiltValueField(wireName: r'records')
@@ -24,6 +26,13 @@ abstract class VendorEarningsBreakdownPhysical implements Built<VendorEarningsBr
 
   @BuiltValueField(wireName: r'in_store_centavos')
   int get inStoreCentavos;
+
+  /// Not a collection and not part of physical_collections_centavos: the cash still owed on Cash on Delivery and In-Store orders already delivered or picked up, for the same orders and dates as commercial sales. It falls as the Vendor records or confirms the cash.
+  @BuiltValueField(wireName: r'unrecorded_centavos')
+  int get unrecordedCentavos;
+
+  @BuiltValueField(wireName: r'unrecorded_orders')
+  int get unrecordedOrders;
 
   VendorEarningsBreakdownPhysical._();
 
@@ -61,6 +70,16 @@ class _$VendorEarningsBreakdownPhysicalSerializer implements PrimitiveSerializer
     yield r'in_store_centavos';
     yield serializers.serialize(
       object.inStoreCentavos,
+      specifiedType: const FullType(int),
+    );
+    yield r'unrecorded_centavos';
+    yield serializers.serialize(
+      object.unrecordedCentavos,
+      specifiedType: const FullType(int),
+    );
+    yield r'unrecorded_orders';
+    yield serializers.serialize(
+      object.unrecordedOrders,
       specifiedType: const FullType(int),
     );
   }
@@ -106,6 +125,20 @@ class _$VendorEarningsBreakdownPhysicalSerializer implements PrimitiveSerializer
             specifiedType: const FullType(int),
           ) as int;
           result.inStoreCentavos = valueDes;
+          break;
+        case r'unrecorded_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.unrecordedCentavos = valueDes;
+          break;
+        case r'unrecorded_orders':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.unrecordedOrders = valueDes;
           break;
         default:
           unhandled.add(key);

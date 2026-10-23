@@ -32,6 +32,11 @@ void main() {
       // TODO
     });
 
+    // PhysicalHandoverCash handoverCash
+    test('to test the property `handoverCash`', () async {
+      // TODO
+    });
+
     // BuiltList<PhysicalPaymentRecord> records
     test('to test the property `records`', () async {
       // TODO

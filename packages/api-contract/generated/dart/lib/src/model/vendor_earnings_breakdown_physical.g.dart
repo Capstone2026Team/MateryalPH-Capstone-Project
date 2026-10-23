@@ -14,6 +14,10 @@ class _$VendorEarningsBreakdownPhysical
   final int cashOnDeliveryCentavos;
   @override
   final int inStoreCentavos;
+  @override
+  final int unrecordedCentavos;
+  @override
+  final int unrecordedOrders;
 
   factory _$VendorEarningsBreakdownPhysical(
           [void Function(VendorEarningsBreakdownPhysicalBuilder)? updates]) =>
@@ -22,7 +26,9 @@ class _$VendorEarningsBreakdownPhysical
   _$VendorEarningsBreakdownPhysical._(
       {required this.records,
       required this.cashOnDeliveryCentavos,
-      required this.inStoreCentavos})
+      required this.inStoreCentavos,
+      required this.unrecordedCentavos,
+      required this.unrecordedOrders})
       : super._();
   @override
   VendorEarningsBreakdownPhysical rebuild(
@@ -39,7 +45,9 @@ class _$VendorEarningsBreakdownPhysical
     return other is VendorEarningsBreakdownPhysical &&
         records == other.records &&
         cashOnDeliveryCentavos == other.cashOnDeliveryCentavos &&
-        inStoreCentavos == other.inStoreCentavos;
+        inStoreCentavos == other.inStoreCentavos &&
+        unrecordedCentavos == other.unrecordedCentavos &&
+        unrecordedOrders == other.unrecordedOrders;
   }
 
   @override
@@ -48,6 +56,8 @@ class _$VendorEarningsBreakdownPhysical
     _$hash = $jc(_$hash, records.hashCode);
     _$hash = $jc(_$hash, cashOnDeliveryCentavos.hashCode);
     _$hash = $jc(_$hash, inStoreCentavos.hashCode);
+    _$hash = $jc(_$hash, unrecordedCentavos.hashCode);
+    _$hash = $jc(_$hash, unrecordedOrders.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -57,7 +67,9 @@ class _$VendorEarningsBreakdownPhysical
     return (newBuiltValueToStringHelper(r'VendorEarningsBreakdownPhysical')
           ..add('records', records)
           ..add('cashOnDeliveryCentavos', cashOnDeliveryCentavos)
-          ..add('inStoreCentavos', inStoreCentavos))
+          ..add('inStoreCentavos', inStoreCentavos)
+          ..add('unrecordedCentavos', unrecordedCentavos)
+          ..add('unrecordedOrders', unrecordedOrders))
         .toString();
   }
 }
@@ -82,6 +94,16 @@ class VendorEarningsBreakdownPhysicalBuilder
   set inStoreCentavos(int? inStoreCentavos) =>
       _$this._inStoreCentavos = inStoreCentavos;
 
+  int? _unrecordedCentavos;
+  int? get unrecordedCentavos => _$this._unrecordedCentavos;
+  set unrecordedCentavos(int? unrecordedCentavos) =>
+      _$this._unrecordedCentavos = unrecordedCentavos;
+
+  int? _unrecordedOrders;
+  int? get unrecordedOrders => _$this._unrecordedOrders;
+  set unrecordedOrders(int? unrecordedOrders) =>
+      _$this._unrecordedOrders = unrecordedOrders;
+
   VendorEarningsBreakdownPhysicalBuilder() {
     VendorEarningsBreakdownPhysical._defaults(this);
   }
@@ -92,6 +114,8 @@ class VendorEarningsBreakdownPhysicalBuilder
       _records = $v.records;
       _cashOnDeliveryCentavos = $v.cashOnDeliveryCentavos;
       _inStoreCentavos = $v.inStoreCentavos;
+      _unrecordedCentavos = $v.unrecordedCentavos;
+      _unrecordedOrders = $v.unrecordedOrders;
       _$v = null;
     }
     return this;
@@ -123,6 +147,14 @@ class VendorEarningsBreakdownPhysicalBuilder
               inStoreCentavos,
               r'VendorEarningsBreakdownPhysical',
               'inStoreCentavos'),
+          unrecordedCentavos: BuiltValueNullFieldError.checkNotNull(
+              unrecordedCentavos,
+              r'VendorEarningsBreakdownPhysical',
+              'unrecordedCentavos'),
+          unrecordedOrders: BuiltValueNullFieldError.checkNotNull(
+              unrecordedOrders,
+              r'VendorEarningsBreakdownPhysical',
+              'unrecordedOrders'),
         );
     replace(_$result);
     return _$result;

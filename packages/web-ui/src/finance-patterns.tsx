@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { AlertOctagon, BadgeCheck, CircleDashed, Clock, FlaskConical, Gauge, History, Percent, Search, ShieldCheck, XCircle } from 'lucide-react'
+import { AlertOctagon, BadgeCheck, Banknote, CircleDashed, Clock, FlaskConical, Gauge, History, Percent, Search, ShieldCheck, XCircle } from 'lucide-react'
 import { formatPesoCentavos } from './order-patterns'
 import { StatusBadge } from './portal-shell'
 import { formatManilaDateTime, type DateLike } from './stock-ledger'
@@ -176,6 +176,12 @@ const attemptStatus: Record<string, { label: string; tone: Tone; icon: typeof Sh
   FAILED: { label: 'Failed — not charged', tone: 'error', icon: XCircle },
   EXPIRED: { label: 'Expired — not charged', tone: 'neutral', icon: CircleDashed },
   CAPTURED_LATE_REFUND_PENDING: { label: 'Late capture — refund queued', tone: 'info', icon: History },
+  // Cash on Delivery / In-Store obligations: a Vendor record, never provider verification.
+  PHYSICAL_COLLECTED: { label: 'Collected — Vendor record', tone: 'success', icon: Banknote },
+  PHYSICAL_PARTIAL: { label: 'Partially collected', tone: 'info', icon: Banknote },
+  PHYSICAL_TO_RECORD: { label: 'Handed over — cash not recorded', tone: 'warning', icon: Clock },
+  PHYSICAL_AWAITING: { label: 'Awaiting delivery or pickup', tone: 'neutral', icon: CircleDashed },
+  PHYSICAL_RELEASED: { label: 'Not collected — order cancelled', tone: 'neutral', icon: CircleDashed },
 }
 
 const paidRefundStatus: Record<string, { label: string; tone: Tone; icon: typeof ShieldCheck }> = {

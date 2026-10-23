@@ -12,6 +12,7 @@ Name | Type
 `commerce` | [Array&lt;FinanceKpi&gt;](FinanceKpi.md)
 `finance` | [Array&lt;FinanceKpi&gt;](FinanceKpi.md)
 `counts` | { [key: string]: number; }
+`paymentMethods` | [Array&lt;FinancePaymentMethod&gt;](FinancePaymentMethod.md)
 `trend` | [Array&lt;CommissionTrendPoint&gt;](CommissionTrendPoint.md)
 `trendGranularity` | string
 
@@ -28,6 +29,7 @@ const example = {
   "commerce": null,
   "finance": null,
   "counts": null,
+  "paymentMethods": null,
   "trend": null,
   "trendGranularity": null,
 } satisfies FinanceKpis

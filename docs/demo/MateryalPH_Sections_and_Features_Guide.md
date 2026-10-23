@@ -261,11 +261,11 @@ Review Moderation handles reported reviews through a documented assessment of th
 
 #### Transaction
 
-The sidebar label **Transaction** opens platform accounting. It connects commission billing, payment and refund records, and reconciliation work.
+The sidebar label **Platform Finance** opens the platform's finance module. It connects platform earnings, commission billing, Buyer payment and refund records, and reconciliation work.
 
 **Main features:**
 
-- **Overview:** financial summaries and tasks requiring attention.
+- **Overview:** platform earnings and platform-held funds, kept apart from marketplace payments (gross merchandise value, Buyer payments, refunds to Buyers and net Vendor collections), with trend charts, a payment-method breakdown and tasks requiring attention.
 - **Commission Management:** rate policies, Vendor statements, charges, credits, and billing status.
 - **Payments and Refunds:** authoritative transaction records and their source orders.
 - **Reconciliation:** mismatches, exceptions, and supporting evidence.

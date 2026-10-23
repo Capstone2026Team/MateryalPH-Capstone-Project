@@ -11,6 +11,7 @@ Name | Type
 `state` | string
 `remainingCentavos` | number
 `onlineBalanceApproved` | boolean
+`handoverCash` | [PhysicalHandoverCash](PhysicalHandoverCash.md)
 `records` | [Array&lt;PhysicalPaymentRecord&gt;](PhysicalPaymentRecord.md)
 `notice` | string
 
@@ -26,6 +27,7 @@ const example = {
   "state": null,
   "remainingCentavos": null,
   "onlineBalanceApproved": null,
+  "handoverCash": null,
   "records": null,
   "notice": null,
 } satisfies PhysicalPaymentSummary

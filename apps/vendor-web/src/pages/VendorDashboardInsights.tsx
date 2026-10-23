@@ -43,24 +43,24 @@ export function VendorInsightsWorkspace({ overviewFooter, overviewAside, canView
   }, [error])
   useAutomaticRefresh(refresh, { enabled: !pending, intervalMs: error ? 120_000 : 60_000 })
 
-  const toolbar = <div className="grid gap-3"><div className="flex flex-wrap items-center justify-between gap-3">
+  const dateControls = <>
     <DateFilter title="Dashboard dates" value={range} disabled={pending && !data} onChange={changeDates} />
     {data && <p className="text-xs text-text-secondary">Updated {formatManilaDateTime(data.generatedAt)} · {formatChartDay(day(data.period.from))} – {formatChartDay(day(data.period.to))}</p>}
-  </div><ActiveFilters filters={range.from || range.to ? [{ key: 'dates', label: dateFilterLabel(range), onRemove: () => changeDates(ALL_DATES) }] : []} onClear={() => changeDates(ALL_DATES)} /></div>
-  if (!data) return <div className="space-y-5">{toolbar}
+  </>
+  const activeFilters = <ActiveFilters filters={range.from || range.to ? [{ key: 'dates', label: dateFilterLabel(range), onRemove: () => changeDates(ALL_DATES) }] : []} onClear={() => changeDates(ALL_DATES)} />
+  if (!data) return <div className="space-y-4"><div className="flex flex-wrap items-center gap-3">{dateControls}</div>{activeFilters}
     {message ? <div className="space-y-3"><StatusMessage tone="error">{message}</StatusMessage><Button variant="secondary" onClick={() => void refresh()}>Retry</Button></div>
       : <p role="status" className="text-sm text-text-secondary">Loading your store dashboard…</p>}
     {overviewAside}
     {overviewFooter}
   </div>
   const periodLabel = `previous ${data.period.days} days`
-  return <div className="space-y-5">
-    {toolbar}
+  return <div className="space-y-4">
+    {activeFilters}
     {message && <StatusMessage tone="error">{message} Showing the last successful update.</StatusMessage>}
-    <SectionWorkspace dashboard sections={[
+    <SectionWorkspace dashboard actions={dateControls} sections={[
       { label: 'Overview', content: <OverviewSection data={data} periodLabel={periodLabel} footer={overviewFooter} aside={overviewAside} /> },
       { label: 'Performance', content: <PerformanceSection data={data} /> },
-      { label: 'Action Items & Alerts', content: <ActionsSection data={data} /> },
       { label: 'Sales & Revenue', content: <SalesSection data={data} periodLabel={periodLabel} productAnalytics={canViewProductAnalytics} /> },
       { label: 'Traffic & Volume', content: <TrafficSection data={data} productAnalytics={canViewProductAnalytics} /> },
       { label: 'Disputes & Quality', content: <QualitySection data={data} /> },
@@ -87,7 +87,7 @@ function OverviewSection({ data, periodLabel, footer, aside }: { data: VendorDas
     <div className="grid items-start gap-5 xl:grid-cols-3">
       <div className="min-w-0 xl:col-span-2">{orders ? <OrdersTrendPanel orders={orders} /> : <DashboardPanel title="Store-wide order trends"><p className="text-sm text-text-secondary">Store-wide order measures are available to the Owner, Store Manager, Store Staff and Customer Service. Your dashboard shows the work assigned to your role.</p></DashboardPanel>}</div>
       <div className="min-w-0 space-y-5">
-        <DashboardPanel title="Priority actions" description="Work waiting for your role, most urgent first."><ActionList actions={data.actions} compact /></DashboardPanel>
+        <DashboardPanel title="Priority actions" description="Work waiting for your role, most urgent first."><ActionList actions={data.actions} /></DashboardPanel>
         {aside}
       </div>
     </div>
@@ -98,6 +98,7 @@ function OverviewSection({ data, periodLabel, footer, aside }: { data: VendorDas
           <span className="text-right"><span className="block text-sm font-semibold tabular-nums text-text-strong">{formatPesoCentavos(order.totalCentavos)}</span>{order.dueAt && <span className="block text-xs text-text-secondary">Decide by {formatManilaDateTime(order.dueAt)}</span>}</span>
         </Link></li>)}</ul>}
     </DashboardPanel>}
+    <OperationsSummary data={data} />
     {footer}
   </>
 }
@@ -180,11 +181,10 @@ function PerformanceSection({ data }: { data: VendorDashboardInsights }) {
   </>
 }
 
-function ActionsSection({ data }: { data: VendorDashboardInsights }) {
+function OperationsSummary({ data }: { data: VendorDashboardInsights }) {
   const pipeline = (data.orders?.pipeline ?? []).filter(item => item.count > 0)
   const stock = data.stock
   return <>
-    <DashboardPanel title="Action items" description="Every item links to the module where you act on it."><ActionList actions={data.actions} /></DashboardPanel>
     <div className="grid items-start gap-5 xl:grid-cols-2">
       {data.orders && <DashboardPanel title="Open orders by state" description="Where today’s orders are in the order journey.">
         <BarList label="Open orders by state" empty="No open orders right now." items={pipeline.map(item => ({ key: item.state, label: orderStateLabel(item.state), value: item.count, display: formatCount(item.count) }))} />
@@ -233,7 +233,7 @@ function SalesSection({ data, periodLabel, productAnalytics }: { data: VendorDas
           { key: 'net', header: 'Net sales', values: orders.series.map(point => formatPesoCentavos(point.netSalesCentavos ?? null)) },
           { key: 'orders', header: 'Orders', values: orders.series.map(point => formatCount(point.orders)) },
         ]} />
-        <p className="text-xs text-text-secondary">Internal operational view — not a tax invoice, accounting record or tax return. Commission and withholding are in Earnings and Transaction History.</p>
+        <p className="text-xs text-text-secondary">Internal operational view — not a tax invoice, accounting record or tax return. Commission and withholding are in Earnings and Transactions.</p>
       </div>
     </DashboardPanel>}
     <div className="grid items-start gap-5 xl:grid-cols-2">

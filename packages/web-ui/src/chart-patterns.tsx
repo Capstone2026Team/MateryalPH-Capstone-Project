@@ -87,10 +87,11 @@ export function KpiBreakdown({ caption, rows }: KpiBreakdownData) {
 export function Sparkline({ values, colorVar = '--mp-viz-series-1' }: { values: (number | null)[]; colorVar?: VizColor }) {
   const numeric = values.filter((value): value is number => value !== null)
   const high = Math.max(...numeric, 1)
+  const low = Math.min(...numeric, 0)
   const width = 160, height = 32
   const x = (index: number) => (values.length === 1 ? width / 2 : (index * width) / (values.length - 1))
   let d = '', open = false
-  values.forEach((value, index) => { if (value === null) { open = false; return } d += `${open ? 'L' : 'M'}${x(index).toFixed(1)},${(height - 2 - (value / high) * (height - 4)).toFixed(1)} `; open = true })
+  values.forEach((value, index) => { if (value === null) { open = false; return } d += `${open ? 'L' : 'M'}${x(index).toFixed(1)},${(height - 2 - ((value - low) / (high - low)) * (height - 4)).toFixed(1)} `; open = true })
   return <svg viewBox={`0 0 ${width} ${height}`} className="mp-viz h-8 w-full" preserveAspectRatio="none" focusable="false"><path d={d} fill="none" stroke={`var(${colorVar})`} strokeWidth={2} vectorEffect="non-scaling-stroke" strokeLinejoin="round" /></svg>
 }
 

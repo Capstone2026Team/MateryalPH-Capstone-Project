@@ -2,7 +2,7 @@ import { useNavigationRefresh } from '@materyalph/web-ui'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AlertCircle, ArrowLeft, BadgeCheck, CheckCircle2, Clock, ExternalLink, FileSearch, ShieldCheck, XCircle } from 'lucide-react'
-import { ALL_DATES, Button, DateFilter, Field, PrivateEvidenceGallery, ResponsiveRecordList, ReviewWorkspace, StatusMessage, manilaToday, type PrivateEvidenceItem, type RecordColumn } from '@materyalph/web-ui'
+import { ALL_DATES, Button, DateFilter, Field, FormDialog, PrivateEvidenceGallery, ResponsiveRecordList, ReviewWorkspace, StatusMessage, manilaToday, type PrivateEvidenceItem, type RecordColumn } from '@materyalph/web-ui'
 import type { ComplianceReferenceResult, CompliancePath, ListProductComplianceQueueStatusEnum } from '@materyalph/api-client-ts'
 import { activateRegister, complianceErrorCode, decideCompliance, getComplianceCase, getComplianceFileUrl, importRegister, listComplianceQueue, listRegisters, type ComplianceRegister, type ProductComplianceCase, type ProductComplianceQueueItem } from '../lib/product-compliance-api'
 import { readableVerificationError } from '../lib/vendor-verification-api'
@@ -55,7 +55,7 @@ export function AdminProductComplianceQueuePage() {
   ]
   const control = 'min-h-11 rounded-control border border-border-default bg-surface-primary px-3 font-normal'
   return <AdminShell activeHref="/product-compliance"><div className="space-y-6">
-    <PageHeader eyebrow="Compliance & quality" title="Product Compliance Queue" description="PS Mark and ICC sticker submissions for DTI-BPS regulated products. Oldest pending first. MateryalPH review is a marketplace control, not a government certification." actions={<Button variant="secondary" disabled={loading} onClick={() => setAttempt(value => value + 1)}>Refresh queue</Button>} />
+    <PageHeader eyebrow="Compliance & quality" title="Product Compliance Queue" description="PS Mark and ICC sticker submissions for DTI-BPS regulated products. Oldest pending first. MateryalPH review is a marketplace control, not a government certification." actions={<><RegisterSnapshotsDialog /><Button variant="secondary" disabled={loading} onClick={() => setAttempt(value => value + 1)}>Refresh queue</Button></>} />
     <form className="flex flex-wrap items-end gap-3 rounded-surface border border-border-default bg-surface-primary p-4" aria-label="Filter compliance queue" onSubmit={event => { event.preventDefault(); setPage(1); setApplied(filters) }}>
       <DateFilter title="Submission dates" value={range} onChange={value => { setRange(value); setPage(1) }} />
       <label className="grid gap-2 text-sm font-semibold">Status<select className={control} value={filters.status} onChange={event => setFilters({ ...filters, status: event.target.value as ListProductComplianceQueueStatusEnum })}>{['PENDING_ADMIN_REVIEW', 'CHANGES_REQUIRED', 'VERIFIED', 'REJECTED', 'SUPERSEDED', 'ALL'].map(status => <option key={status} value={status}>{statusLabel(status)}</option>)}</select></label>
@@ -68,11 +68,11 @@ export function AdminProductComplianceQueuePage() {
     {loading ? <LoadingState /> : error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} />
       : items.length === 0 ? <section className="grid min-h-48 place-items-center border-y border-border-default py-10 text-center"><div><CheckCircle2 className="mx-auto text-action-primary" size={28} aria-hidden="true" /><h2 className="mt-3 text-xl font-semibold">No submissions match this view.</h2><p className="mt-2 text-sm text-text-secondary">{applied.status === 'PENDING_ADMIN_REVIEW' ? 'Nothing is waiting for review. New PS/ICC submissions appear here automatically.' : 'Change the filters to see other submissions.'}</p></div></section>
         : <><p className="text-sm text-text-secondary" aria-live="polite">{meta.total ?? items.length} submissions</p><ResponsiveRecordList caption="Product compliance submissions" rows={items} columns={columns} rowKey={row => row.id} cardTitle={row => <Link className="text-action-primary underline" to={`/product-compliance/${row.id}`}>{row.displayName}</Link>} /><div className="flex items-center gap-3"><Button variant="secondary" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>Previous</Button><span>Page {page} of {meta.last_page ?? 1}</span><Button variant="secondary" disabled={page >= (meta.last_page ?? 1)} onClick={() => setPage(value => value + 1)}>Next</Button></div></>}
-    <RegisterPanel />
   </div></AdminShell>
 }
 
-function RegisterPanel() {
+function RegisterSnapshotsDialog() {
+  const [open, setOpen] = useState(false)
   const [registers, setRegisters] = useState<ComplianceRegister[]>([])
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
@@ -96,8 +96,10 @@ function RegisterPanel() {
     try { await activateRegister(register.id); await load(); setMessage({ tone: 'success', text: `${statusLabel(register.registerKind)} snapshot of ${register.snapshotDate.toString().slice(0, 10)} is now active; the previous active snapshot is superseded.` }) }
     catch (cause) { setMessage({ tone: 'error', text: await readableVerificationError(cause) }) } finally { setBusy(false) }
   }
-  return <section aria-labelledby="register-heading" className="grid gap-4 border-t border-border-default pt-6">
-    <div><h2 id="register-heading" className="text-xl font-semibold">DTI-BPS register snapshots</h2><p className="mt-1 max-w-3xl text-sm text-text-secondary">The List of PS Licensees and List of ICC Certificate Holders are maintained by DTI-BPS and updated monthly. Their Google Sheets disable downloading, so import the file DTI-BPS provides (.xlsx or .csv, official layout) as a dated snapshot. A PS License No. or ICC sticker serial listed for the product verifies a submission automatically; Vendors send anything else here only when they request manual review.</p></div>
+  return <>
+    <Button variant="secondary" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}><FileSearch size={16} aria-hidden="true" />DTI-BPS register snapshots</Button>
+    <FormDialog open={open} title="DTI-BPS register snapshots" description="Import dated register snapshots, review their records and activate drafts for product matching." busy={busy} onClose={() => setOpen(false)} bodyClassName="grid min-h-0 gap-4 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6" footer={<div className="flex justify-end"><Button variant="secondary" disabled={busy} onClick={() => setOpen(false)}>Done</Button></div>}>
+    <p className="max-w-3xl text-sm text-text-secondary">The List of PS Licensees and List of ICC Certificate Holders are maintained by DTI-BPS and updated monthly. Their Google Sheets disable downloading, so import the file DTI-BPS provides (.xlsx or .csv, official layout) as a dated snapshot. A PS License No. or ICC sticker serial listed for the product verifies a submission automatically; Vendors send anything else here only when they request manual review.</p>
     {message && <StatusMessage tone={message.tone}>{message.text}</StatusMessage>}
     <form className="grid grid-cols-1 gap-4 rounded-surface border border-border-default bg-surface-primary p-4 sm:grid-cols-2" onSubmit={submit} aria-busy={busy}>
       <label className="grid gap-2 text-sm font-semibold">Register<select name="register_kind" className="min-h-12 rounded-control border border-border-default bg-surface-primary px-3 text-base font-normal" required><option value="PS_LICENSE">PS licensees</option><option value="ICC_CERTIFICATE">ICC certificates</option></select></label>
@@ -108,7 +110,8 @@ function RegisterPanel() {
     </form>
     {imported && imported.rejectedRows && imported.rejectedRows.length > 0 && <details className="text-sm"><summary className="min-h-11 cursor-pointer py-2 font-semibold">Rejected rows ({imported.rejectedRowCount})</summary><ul className="mt-2 grid gap-1">{records(imported.rejectedRows).map(row => <li key={numberValue(row.row_number)}>Row {numberValue(row.row_number)}: {stringValue(row.reason)}</li>)}</ul></details>}
     {registers.length > 0 && <div className="overflow-x-auto rounded-surface border border-border-default"><table className="w-full min-w-[640px] text-left text-sm"><caption className="sr-only">Register snapshots</caption><thead className="bg-surface-canvas"><tr>{['Register', 'Snapshot', 'Records', 'Status', 'Source', 'Action'].map(label => <th key={label} scope="col" className="px-4 py-3">{label}</th>)}</tr></thead><tbody>{registers.map(register => <tr key={register.id} className="border-t border-border-default"><td className="px-4 py-3">{register.registerKind === 'PS_LICENSE' ? 'PS licensees' : 'ICC certificates'}</td><td className="px-4 py-3">{formatDate(register.snapshotDate)}</td><td className="px-4 py-3">{register.rowCount}{register.rejectedRowCount ? ` (${register.rejectedRowCount} rejected)` : ''}</td><td className="px-4 py-3">{statusLabel(register.status)}{register.stale && <span className="mt-1 flex items-center gap-1 text-xs font-semibold text-amber-900"><AlertCircle size={14} aria-hidden="true" />Older than a month — import the latest list</span>}</td><td className="px-4 py-3">{register.sourceChannel === 'FEED' ? 'Authorized feed' : 'Admin upload'}</td><td className="px-4 py-3">{register.status === 'DRAFT' ? <Button variant="secondary" disabled={busy} onClick={() => void activate(register)}>Activate</Button> : '—'}</td></tr>)}</tbody></table></div>}
-  </section>
+    </FormDialog>
+  </>
 }
 
 const sections = [

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
-import { BadgeCheck, Banknote, FileCheck2 } from 'lucide-react'
-import { Button, PaymentAttemptBadge, StatusMessage, formatManilaDateTime, formatPesoCentavos } from '@materyalph/web-ui'
-import { approveOnlineBalance, readableFinanceError, recordPhysicalPayment } from '../lib/finance-api'
+import { BadgeCheck, Banknote, Clock, FileCheck2 } from 'lucide-react'
+import { Button, EvidenceFilePicker, PaymentAttemptBadge, StatusMessage, formatManilaDateTime, formatPesoCentavos } from '@materyalph/web-ui'
+import { approveOnlineBalance, confirmHandoverCash, readableFinanceError, recordPhysicalPayment } from '../lib/finance-api'
 import { newIdempotencyKey } from '../lib/onboarding-api'
 import { pesoInputToCentavos, type OrderDetail } from '../lib/orders-api'
 
@@ -69,12 +69,47 @@ function PhysicalPanel({ order, onChanged }: { order: OrderDetail; onChanged: ()
       <span className="flex items-center gap-1.5">{row.kind === 'ONLINE_BALANCE_CREDIT' ? <BadgeCheck size={14} aria-hidden="true" /> : <FileCheck2 size={14} aria-hidden="true" />}{RECORD_LABELS[row.kind] ?? row.kind}{row.buyerAcknowledgedAt ? ' · Buyer acknowledged' : ''}</span>
       <span className="tabular-nums font-semibold">{formatPesoCentavos(row.amountCentavos)}</span></li>)}</ul>}
     {message && <StatusMessage tone={message.tone}>{message.text}</StatusMessage>}
+    {physical.handoverCash && <HandoverCash order={order} onChanged={onChanged} onMessage={setMessage} />}
     {canRecord && <form className="grid gap-3" onSubmit={event => void record(event)} aria-label="Record payment received">
       <label className="grid gap-1.5 text-sm font-semibold">Amount received (₱)<input className="min-h-12 rounded-control border border-border-default px-3 text-base font-normal" inputMode="decimal" value={amount} disabled={busy} onChange={event => setAmount(event.target.value)} /></label>
-      <label className="grid gap-1.5 text-sm font-semibold">Receipt evidence<input className="min-h-11 w-full min-w-0 text-sm font-normal" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" disabled={busy} onChange={event => setFile(event.target.files?.[0] ?? null)} /><span className="text-xs font-normal text-text-secondary">JPG, PNG, WebP or PDF up to 10 MB. Stored privately.</span></label>
+      <EvidenceFilePicker label="Receipt evidence" file={file} onChange={setFile} disabled={busy} />
       <label className="grid gap-1.5 text-sm font-semibold">Note (optional)<input className="min-h-12 rounded-control border border-border-default px-3 text-base font-normal" maxLength={500} value={note} disabled={busy} onChange={event => setNote(event.target.value)} /></label>
       <Button type="submit" variant="secondary" disabled={busy}>{busy ? 'Recording…' : 'Record payment received'}</Button>
     </form>}
     {canApprove && !physical.onlineBalanceApproved && <Button variant="secondary" disabled={busy} onClick={() => void approve()}>Allow Buyer to pay balance online</Button>}
+  </div>
+}
+
+/**
+ * Cash Fulfillment Staff reported at Delivered / Picked up. It counts as collected only after a member who may record
+ * cash confirms it; the handover photo is the evidence unless the handover had none, which then needs a receipt.
+ */
+function HandoverCash({ order, onChanged, onMessage }: { order: OrderDetail; onChanged: () => void; onMessage: (message: { tone: 'success' | 'error'; text: string }) => void }) {
+  const handover = order.payment!.physical!.handoverCash!
+  const canConfirm = Boolean(order.permissions?.canRecordPhysicalPayment)
+  const [file, setFile] = useState<File | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [key, setKey] = useState(newIdempotencyKey)
+  const place = handover.milestone === 'PICKED_UP' ? 'pickup' : 'delivery'
+
+  async function confirm() {
+    if (!handover.hasPhoto && !file) { onMessage({ tone: 'error', text: 'This handover has no photo. Attach a receipt photo or PDF to confirm the cash.' }); return }
+    setBusy(true)
+    try {
+      await confirmHandoverCash(order.id, file, key)
+      setKey(newIdempotencyKey())
+      onMessage({ tone: 'success', text: `${formatPesoCentavos(handover.confirmableCentavos)} recorded as cash received. The Buyer is asked to acknowledge it.` })
+      onChanged()
+    } catch (cause) { onMessage({ tone: 'error', text: await readableFinanceError(cause) }) }
+    finally { setBusy(false) }
+  }
+
+  return <div className="grid gap-3 rounded-control border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+    <p className="flex items-start gap-2"><Clock size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+      <span><strong className="tabular-nums">{formatPesoCentavos(handover.reportedCentavos)}</strong> cash was reported at {place} on {formatManilaDateTime(handover.reportedAt)}. {canConfirm ? 'Confirm it once the cash is with the store.' : 'The Owner, Store Manager or Store Staff confirms it.'}</span></p>
+    {canConfirm && <>
+      {!handover.hasPhoto && <EvidenceFilePicker label="Receipt evidence" file={file} onChange={setFile} disabled={busy} />}
+      <Button variant="secondary" className="w-fit" disabled={busy} onClick={() => void confirm()}>{busy ? 'Confirming…' : `Confirm ${formatPesoCentavos(handover.confirmableCentavos)} received`}</Button>
+    </>}
   </div>
 }

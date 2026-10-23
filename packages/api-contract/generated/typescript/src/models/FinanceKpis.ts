@@ -20,6 +20,13 @@ import {
     FinanceKpiToJSON,
     FinanceKpiToJSONTyped,
 } from './FinanceKpi';
+import type { FinancePaymentMethod } from './FinancePaymentMethod';
+import {
+    FinancePaymentMethodFromJSON,
+    FinancePaymentMethodFromJSONTyped,
+    FinancePaymentMethodToJSON,
+    FinancePaymentMethodToJSONTyped,
+} from './FinancePaymentMethod';
 import type { CommissionTrendPoint } from './CommissionTrendPoint';
 import {
     CommissionTrendPointFromJSON,
@@ -65,6 +72,10 @@ export interface FinanceKpis {
      *
      */
     counts: { [key: string]: number; };
+    /**
+     * Buyer payments received per method in the period: verified online captures per Xendit channel, then recorded Cash on Delivery and In-Store cash. Largest first; methods without activity are omitted.
+     */
+    paymentMethods?: Array<FinancePaymentMethod>;
     /**
      *
      */
@@ -115,6 +126,7 @@ export function FinanceKpisFromJSONTyped(json: any, ignoreDiscriminator: boolean
         'commerce': ((json['commerce'] as Array<any>).map(FinanceKpiFromJSON)),
         'finance': ((json['finance'] as Array<any>).map(FinanceKpiFromJSON)),
         'counts': json['counts'],
+        'paymentMethods': json['payment_methods'] == null ? undefined : ((json['payment_methods'] as Array<any>).map(FinancePaymentMethodFromJSON)),
         'trend': json['trend'] == null ? undefined : ((json['trend'] as Array<any>).map(CommissionTrendPointFromJSON)),
         'trendGranularity': json['trend_granularity'] == null ? undefined : json['trend_granularity'],
     };
@@ -137,6 +149,7 @@ export function FinanceKpisToJSONTyped(value?: FinanceKpis | null, ignoreDiscrim
         'commerce': ((value['commerce'] as Array<any>).map(FinanceKpiToJSON)),
         'finance': ((value['finance'] as Array<any>).map(FinanceKpiToJSON)),
         'counts': value['counts'],
+        'payment_methods': value['paymentMethods'] == null ? undefined : ((value['paymentMethods'] as Array<any>).map(FinancePaymentMethodToJSON)),
         'trend': value['trend'] == null ? undefined : ((value['trend'] as Array<any>).map(CommissionTrendPointToJSON)),
         'trend_granularity': value['trendGranularity'],
     };

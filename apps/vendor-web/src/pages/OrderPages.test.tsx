@@ -341,7 +341,7 @@ test('a lower quantity becomes a revision for Buyer approval and a stock conflic
 })
 
 test('an NRPC above zero needs a reason before it is sent', async () => {
-  vi.mocked(orders.getOrder).mockResolvedValue(detail())
+  vi.mocked(orders.getOrder).mockResolvedValue(detail({ paymentMethod: 'IN_STORE' }))
   openDetail()
   fireEvent.click(await screen.findByRole('checkbox', { name: 'Include NRPC' }))
   fireEvent.change(screen.getByLabelText('Add prepared material'), { target: { value: 'line-1' } })
@@ -503,4 +503,13 @@ test.each(['AWAITING_PAYMENT', 'COMPLETED', 'CANCELLED'])('compact %s review exc
   expect(within(panel).queryByText('History')).not.toBeInTheDocument()
   expect(within(panel).queryByText('Order documents')).not.toBeInTheDocument()
   expect(within(panel).queryByRole('button', { name: 'Review & confirm order' })).not.toBeInTheDocument()
+})
+
+
+test.each(['ONLINE', 'IN_STORE', 'CASH_ON_DELIVERY'] as const)('NRPC setup follows the order payment method %s', async paymentMethod => {
+  vi.mocked(orders.getOrder).mockResolvedValue(detail({ paymentMethod }))
+  openDetail()
+  await screen.findByRole('region', { name: 'Order information' })
+  if (paymentMethod === 'ONLINE') expect(screen.queryByRole('checkbox', { name: 'Include NRPC' })).not.toBeInTheDocument()
+  else expect(screen.getByRole('checkbox', { name: 'Include NRPC' })).toBeEnabled()
 })

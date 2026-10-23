@@ -539,6 +539,7 @@ doc/FinanceKpi.md
 doc/FinanceKpiEnvelope.md
 doc/FinanceKpis.md
 doc/FinanceKpisPeriod.md
+doc/FinancePaymentMethod.md
 doc/FinanceReviewItem.md
 doc/FinanceReviewItemListEnvelope.md
 doc/FinanceTransactionListEnvelope.md
@@ -795,6 +796,7 @@ doc/PaymentWebhookAck.md
 doc/PaymentWebhookAckEnvelope.md
 doc/PaymentWebhookPayload.md
 doc/PaymentWebhooksApi.md
+doc/PhysicalHandoverCash.md
 doc/PhysicalPaymentRecord.md
 doc/PhysicalPaymentSettings.md
 doc/PhysicalPaymentSettingsEnvelope.md
@@ -1815,6 +1817,7 @@ lib/src/model/finance_kpi.dart
 lib/src/model/finance_kpi_envelope.dart
 lib/src/model/finance_kpis.dart
 lib/src/model/finance_kpis_period.dart
+lib/src/model/finance_payment_method.dart
 lib/src/model/finance_review_item.dart
 lib/src/model/finance_review_item_list_envelope.dart
 lib/src/model/finance_transaction_list_envelope.dart
@@ -2068,6 +2071,7 @@ lib/src/model/payment_options_envelope.dart
 lib/src/model/payment_webhook_ack.dart
 lib/src/model/payment_webhook_ack_envelope.dart
 lib/src/model/payment_webhook_payload.dart
+lib/src/model/physical_handover_cash.dart
 lib/src/model/physical_payment_record.dart
 lib/src/model/physical_payment_settings.dart
 lib/src/model/physical_payment_settings_envelope.dart
@@ -3037,6 +3041,7 @@ test/finance_kpi_envelope_test.dart
 test/finance_kpi_test.dart
 test/finance_kpis_period_test.dart
 test/finance_kpis_test.dart
+test/finance_payment_method_test.dart
 test/finance_review_item_list_envelope_test.dart
 test/finance_review_item_test.dart
 test/finance_transaction_list_envelope_test.dart
@@ -3293,6 +3298,7 @@ test/payment_webhook_ack_envelope_test.dart
 test/payment_webhook_ack_test.dart
 test/payment_webhook_payload_test.dart
 test/payment_webhooks_api_test.dart
+test/physical_handover_cash_test.dart
 test/physical_payment_record_test.dart
 test/physical_payment_settings_envelope_test.dart
 test/physical_payment_settings_test.dart

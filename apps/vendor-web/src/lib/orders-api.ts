@@ -76,6 +76,8 @@ export type MilestoneInput = {
   receiverKind?: RecordVendorFulfillmentMilestoneReceiverKindEnum
   handoverConfirmed?: boolean
   note?: string
+  /** Cash the Buyer handed over at Delivered / Picked up of a Cash on Delivery or In-Store order. */
+  cashReceivedCentavos?: number
   file?: Blob
   signature?: Blob
   additionalPhotos?: Blob[]

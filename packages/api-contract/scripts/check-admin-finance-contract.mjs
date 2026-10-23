@@ -10,13 +10,20 @@ const schemas = spec.components.schemas
 assert.equal(schemas.FinanceKpis.properties.trend.maxItems, 120)
 assert.deepEqual(schemas.FinanceKpis.properties.trend_granularity.enum, ['DAY', 'MONTH'], 'Platform earnings trend is daily for short ranges and monthly otherwise')
 assert.equal(schemas.FinanceKpis.properties.trend.items.$ref, '#/components/schemas/CommissionTrendPoint')
-assert.deepEqual(schemas.CommissionTrendPoint.required, ['period', 'earned_centavos', 'credits_centavos', 'collected_centavos', 'refunded_centavos', 'net_earnings_centavos'])
+assert.deepEqual(schemas.CommissionTrendPoint.required, ['period', 'earned_centavos', 'credits_centavos', 'collected_centavos', 'refunded_centavos', 'net_earnings_centavos', 'gmv_centavos', 'buyer_payments_centavos', 'buyer_refunds_centavos'])
 assert.equal(schemas.CommissionTrendPoint.properties.net_earnings_centavos.minimum, undefined)
 assert.equal(schemas.VendorEarnings.properties.earned_commission_centavos.minimum, undefined)
-const wire = { label: 'Recorded transactions', scenario: 'Event dates', period: { from: null, to: null }, commerce: [], finance: [], counts: {}, trend: [{ period: '2026-10-01', earned_centavos: 0, credits_centavos: 4000, collected_centavos: 0, refunded_centavos: 4000, net_earnings_centavos: -4100 }] }
+assert.equal(schemas.FinanceKpis.properties.payment_methods.items.$ref, '#/components/schemas/FinancePaymentMethod')
+assert.equal(schemas.FinanceKpis.required.includes('payment_methods'), false, 'Older Platform Finance responses without the method breakdown still parse')
+assert.deepEqual(schemas.FinancePaymentMethod.properties.kind.enum, ['ONLINE', 'PHYSICAL'])
+const wire = { label: 'Recorded transactions', scenario: 'Event dates', period: { from: null, to: null }, commerce: [], finance: [], counts: {},
+  payment_methods: [{ method: 'GCASH', label: 'GCash', kind: 'ONLINE', payments: 2, amount_centavos: 205000 }, { method: 'CASH_ON_DELIVERY', label: 'Cash on Delivery', kind: 'PHYSICAL', payments: 1, amount_centavos: 90000 }],
+  trend: [{ period: '2026-10-01', earned_centavos: 0, credits_centavos: 4000, collected_centavos: 0, refunded_centavos: 4000, net_earnings_centavos: -4100, gmv_centavos: 300000, buyer_payments_centavos: 295000, buyer_refunds_centavos: 1000 }] }
 const parsed = FinanceKpisFromJSON(wire)
 assert.equal(parsed.trend[0].netEarningsCentavos, -4100)
 assert.equal(parsed.trend[0].creditsCentavos, 4000)
+assert.deepEqual([parsed.trend[0].gmvCentavos, parsed.trend[0].buyerPaymentsCentavos, parsed.trend[0].buyerRefundsCentavos], [300000, 295000, 1000])
+assert.deepEqual(parsed.paymentMethods.map(method => [method.method, method.kind, method.amountCentavos]), [['GCASH', 'ONLINE', 205000], ['CASH_ON_DELIVERY', 'PHYSICAL', 90000]])
 let requested
 const api = new AdminFinanceApi(new Configuration({ basePath: 'https://example.invalid/api/v1', fetchApi: async (url) => {
   requested = String(url)
@@ -50,4 +57,4 @@ assert.equal(monitoring.data.currentPolicy.commissionBasisPoints, 325)
 assert.equal(monitoring.data.assessments[0].commissionBasisPoints, 200)
 assert.equal(monitoring.data.assessments[0].netCentavos, 16000)
 assert.equal(monitoring.data.termsAccepted, false)
-console.log('Admin finance contract checks passed: dated earnings, rate publishing transport, saved order rates, monitoring pagination, authorization.')
+console.log('Admin finance contract checks passed: dated earnings, marketplace money flow and payment methods, rate publishing transport, saved order rates, monitoring pagination, authorization.')

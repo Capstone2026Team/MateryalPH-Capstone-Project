@@ -5,6 +5,7 @@ All URIs are relative to */api/v1*
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
 | [**approveVendorOnlineBalance**](VendorFinanceApi.md#approvevendoronlinebalance) | **POST** /vendor/orders/{orderId}/online-balance/approve |  |
+| [**confirmVendorHandoverCash**](VendorFinanceApi.md#confirmvendorhandovercash) | **POST** /vendor/orders/{orderId}/physical-payments/handover-confirmation |  |
 | [**exportVendorTransactions**](VendorFinanceApi.md#exportvendortransactions) | **GET** /vendor/finance/transactions/export |  |
 | [**getVendorCommissionMonitoring**](VendorFinanceApi.md#getvendorcommissionmonitoring) | **GET** /vendor/finance/commissions |  |
 | [**getVendorEarnings**](VendorFinanceApi.md#getvendorearnings) | **GET** /vendor/finance/earnings |  |
@@ -100,6 +101,90 @@ example().catch(console.error);
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## confirmVendorHandoverCash
+
+> PhysicalPaymentSummaryEnvelope confirmVendorHandoverCash(orderId, idempotencyKey, file)
+
+
+
+Owner, Store Manager or Store Staff (payments.record_physical) confirm the cash Fulfillment Staff reported at Delivered or Picked up. Records one COLLECTION for the reported amount capped at the outstanding balance, with the handover photo (or the attached receipt) as evidence and the handover time as the received time. Once per handover; 409 HANDOVER_CASH_NOT_PENDING or PHYSICAL_PAYMENT_NOT_OPEN when nothing waits.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  VendorFinanceApi,
+} from '@materyalph/api-client-ts';
+import type { ConfirmVendorHandoverCashRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new VendorFinanceApi(config);
+
+  const body = {
+    // string
+    orderId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // Blob | Optional receipt (JPG, PNG, WebP or PDF up to 10 MB). Required only when the handover has no photo; otherwise the handover photo is the evidence. (optional)
+    file: BINARY_DATA_HERE,
+  } satisfies ConfirmVendorHandoverCashRequest;
+
+  try {
+    const data = await api.confirmVendorHandoverCash(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **orderId** | `string` |  | [Defaults to `undefined`] |
+| **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
+| **file** | `Blob` | Optional receipt (JPG, PNG, WebP or PDF up to 10 MB). Required only when the handover has no photo; otherwise the handover photo is the evidence. | [Optional] [Defaults to `undefined`] |
+
+### Return type
+
+[**PhysicalPaymentSummaryEnvelope**](PhysicalPaymentSummaryEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: `multipart/form-data`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **201** | Recorded, or an idempotent replay. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **404** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## exportVendorTransactions
 
 > string exportVendorTransactions(tab, status, from, to)
@@ -130,7 +215,7 @@ async function example() {
   const body = {
     // 'PAYMENTS' | 'PHYSICAL' | 'REMITTANCES' | 'STATEMENTS' | 'REFUNDS' | 'TAX_DOCUMENTS'
     tab: tab_example,
-    // 'PAID' | 'PAID_PARTIALLY_REFUNDED' | 'PAID_REFUND_PENDING' | 'PAID_REFUNDED' | 'PAID_REFUND_FAILED' | 'PENDING' | 'FAILED' | 'EXPIRED' | 'LATE_CAPTURE' | Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. (optional)
+    // 'PAID' | 'PAID_PARTIALLY_REFUNDED' | 'PAID_REFUND_PENDING' | 'PAID_REFUNDED' | 'PAID_REFUND_FAILED' | 'PENDING' | 'FAILED' | 'EXPIRED' | 'LATE_CAPTURE' | 'PHYSICAL_COLLECTED' | 'PHYSICAL_PARTIAL' | 'PHYSICAL_TO_RECORD' | 'PHYSICAL_AWAITING' | 'PHYSICAL_RELEASED' | Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. PHYSICAL_* values select Cash on Delivery / In-Store obligations: COLLECTED (nothing remains), PARTIAL (part recorded), TO_RECORD (delivered or picked up, no cash recorded yet), AWAITING (before handover), RELEASED (cancelled unpaid). (optional)
     status: status_example,
     // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound. (optional)
     from: 2013-10-20,
@@ -156,7 +241,7 @@ example().catch(console.error);
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **tab** | `PAYMENTS`, `PHYSICAL`, `REMITTANCES`, `STATEMENTS`, `REFUNDS`, `TAX_DOCUMENTS` |  | [Defaults to `undefined`] [Enum: PAYMENTS, PHYSICAL, REMITTANCES, STATEMENTS, REFUNDS, TAX_DOCUMENTS] |
-| **status** | `PAID`, `PAID_PARTIALLY_REFUNDED`, `PAID_REFUND_PENDING`, `PAID_REFUNDED`, `PAID_REFUND_FAILED`, `PENDING`, `FAILED`, `EXPIRED`, `LATE_CAPTURE` | Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. | [Optional] [Defaults to `undefined`] [Enum: PAID, PAID_PARTIALLY_REFUNDED, PAID_REFUND_PENDING, PAID_REFUNDED, PAID_REFUND_FAILED, PENDING, FAILED, EXPIRED, LATE_CAPTURE] |
+| **status** | `PAID`, `PAID_PARTIALLY_REFUNDED`, `PAID_REFUND_PENDING`, `PAID_REFUNDED`, `PAID_REFUND_FAILED`, `PENDING`, `FAILED`, `EXPIRED`, `LATE_CAPTURE`, `PHYSICAL_COLLECTED`, `PHYSICAL_PARTIAL`, `PHYSICAL_TO_RECORD`, `PHYSICAL_AWAITING`, `PHYSICAL_RELEASED` | Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. PHYSICAL_* values select Cash on Delivery / In-Store obligations: COLLECTED (nothing remains), PARTIAL (part recorded), TO_RECORD (delivered or picked up, no cash recorded yet), AWAITING (before handover), RELEASED (cancelled unpaid). | [Optional] [Defaults to `undefined`] [Enum: PAID, PAID_PARTIALLY_REFUNDED, PAID_REFUND_PENDING, PAID_REFUNDED, PAID_REFUND_FAILED, PENDING, FAILED, EXPIRED, LATE_CAPTURE, PHYSICAL_COLLECTED, PHYSICAL_PARTIAL, PHYSICAL_TO_RECORD, PHYSICAL_AWAITING, PHYSICAL_RELEASED] |
 | **from** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound. | [Optional] [Defaults to `undefined`] |
 | **to** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound. | [Optional] [Defaults to `undefined`] |
 
@@ -590,7 +675,7 @@ async function example() {
     tab: tab_example,
     // number (optional)
     page: 56,
-    // 'PAID' | 'PAID_PARTIALLY_REFUNDED' | 'PAID_REFUND_PENDING' | 'PAID_REFUNDED' | 'PAID_REFUND_FAILED' | 'PENDING' | 'FAILED' | 'EXPIRED' | 'LATE_CAPTURE' | Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. (optional)
+    // 'PAID' | 'PAID_PARTIALLY_REFUNDED' | 'PAID_REFUND_PENDING' | 'PAID_REFUNDED' | 'PAID_REFUND_FAILED' | 'PENDING' | 'FAILED' | 'EXPIRED' | 'LATE_CAPTURE' | 'PHYSICAL_COLLECTED' | 'PHYSICAL_PARTIAL' | 'PHYSICAL_TO_RECORD' | 'PHYSICAL_AWAITING' | 'PHYSICAL_RELEASED' | Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. PHYSICAL_* values select Cash on Delivery / In-Store obligations: COLLECTED (nothing remains), PARTIAL (part recorded), TO_RECORD (delivered or picked up, no cash recorded yet), AWAITING (before handover), RELEASED (cancelled unpaid). (optional)
     status: status_example,
     // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end. (optional)
     from: 2013-10-20,
@@ -617,7 +702,7 @@ example().catch(console.error);
 |------------- | ------------- | ------------- | -------------|
 | **tab** | `PAYMENTS`, `PHYSICAL`, `REMITTANCES`, `STATEMENTS`, `REFUNDS`, `TAX_DOCUMENTS` |  | [Optional] [Defaults to `undefined`] [Enum: PAYMENTS, PHYSICAL, REMITTANCES, STATEMENTS, REFUNDS, TAX_DOCUMENTS] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
-| **status** | `PAID`, `PAID_PARTIALLY_REFUNDED`, `PAID_REFUND_PENDING`, `PAID_REFUNDED`, `PAID_REFUND_FAILED`, `PENDING`, `FAILED`, `EXPIRED`, `LATE_CAPTURE` | Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. | [Optional] [Defaults to `undefined`] [Enum: PAID, PAID_PARTIALLY_REFUNDED, PAID_REFUND_PENDING, PAID_REFUNDED, PAID_REFUND_FAILED, PENDING, FAILED, EXPIRED, LATE_CAPTURE] |
+| **status** | `PAID`, `PAID_PARTIALLY_REFUNDED`, `PAID_REFUND_PENDING`, `PAID_REFUNDED`, `PAID_REFUND_FAILED`, `PENDING`, `FAILED`, `EXPIRED`, `LATE_CAPTURE`, `PHYSICAL_COLLECTED`, `PHYSICAL_PARTIAL`, `PHYSICAL_TO_RECORD`, `PHYSICAL_AWAITING`, `PHYSICAL_RELEASED` | Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. PHYSICAL_* values select Cash on Delivery / In-Store obligations: COLLECTED (nothing remains), PARTIAL (part recorded), TO_RECORD (delivered or picked up, no cash recorded yet), AWAITING (before handover), RELEASED (cancelled unpaid). | [Optional] [Defaults to `undefined`] [Enum: PAID, PAID_PARTIALLY_REFUNDED, PAID_REFUND_PENDING, PAID_REFUNDED, PAID_REFUND_FAILED, PENDING, FAILED, EXPIRED, LATE_CAPTURE, PHYSICAL_COLLECTED, PHYSICAL_PARTIAL, PHYSICAL_TO_RECORD, PHYSICAL_AWAITING, PHYSICAL_RELEASED] |
 | **from** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end. | [Optional] [Defaults to `undefined`] |
 | **to** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end. | [Optional] [Defaults to `undefined`] |
 

@@ -477,6 +477,7 @@ Class | Method | HTTP request | Description
 [*VendorDisputesApi*](doc/VendorDisputesApi.md) | [**respondVendorDispute**](doc/VendorDisputesApi.md#respondvendordispute) | **POST** /vendor/disputes/{caseId}/respond |
 [*VendorDisputesApi*](doc/VendorDisputesApi.md) | [**sendVendorDisputeMessage**](doc/VendorDisputesApi.md#sendvendordisputemessage) | **POST** /vendor/disputes/{caseId}/messages |
 [*VendorFinanceApi*](doc/VendorFinanceApi.md) | [**approveVendorOnlineBalance**](doc/VendorFinanceApi.md#approvevendoronlinebalance) | **POST** /vendor/orders/{orderId}/online-balance/approve |
+[*VendorFinanceApi*](doc/VendorFinanceApi.md) | [**confirmVendorHandoverCash**](doc/VendorFinanceApi.md#confirmvendorhandovercash) | **POST** /vendor/orders/{orderId}/physical-payments/handover-confirmation |
 [*VendorFinanceApi*](doc/VendorFinanceApi.md) | [**exportVendorTransactions**](doc/VendorFinanceApi.md#exportvendortransactions) | **GET** /vendor/finance/transactions/export |
 [*VendorFinanceApi*](doc/VendorFinanceApi.md) | [**getVendorCommissionMonitoring**](doc/VendorFinanceApi.md#getvendorcommissionmonitoring) | **GET** /vendor/finance/commissions |
 [*VendorFinanceApi*](doc/VendorFinanceApi.md) | [**getVendorEarnings**](doc/VendorFinanceApi.md#getvendorearnings) | **GET** /vendor/finance/earnings |
@@ -1081,6 +1082,7 @@ Class | Method | HTTP request | Description
  - [FinanceKpiEnvelope](doc/FinanceKpiEnvelope.md)
  - [FinanceKpis](doc/FinanceKpis.md)
  - [FinanceKpisPeriod](doc/FinanceKpisPeriod.md)
+ - [FinancePaymentMethod](doc/FinancePaymentMethod.md)
  - [FinanceReviewItem](doc/FinanceReviewItem.md)
  - [FinanceReviewItemListEnvelope](doc/FinanceReviewItemListEnvelope.md)
  - [FinanceTransactionListEnvelope](doc/FinanceTransactionListEnvelope.md)
@@ -1334,6 +1336,7 @@ Class | Method | HTTP request | Description
  - [PaymentWebhookAck](doc/PaymentWebhookAck.md)
  - [PaymentWebhookAckEnvelope](doc/PaymentWebhookAckEnvelope.md)
  - [PaymentWebhookPayload](doc/PaymentWebhookPayload.md)
+ - [PhysicalHandoverCash](doc/PhysicalHandoverCash.md)
  - [PhysicalPaymentRecord](doc/PhysicalPaymentRecord.md)
  - [PhysicalPaymentSettings](doc/PhysicalPaymentSettings.md)
  - [PhysicalPaymentSettingsEnvelope](doc/PhysicalPaymentSettingsEnvelope.md)

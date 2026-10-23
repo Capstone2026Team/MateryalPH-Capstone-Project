@@ -98,9 +98,14 @@ final class VendorFulfillmentController extends Controller
             'receiver_kind' => ['sometimes', 'nullable', Rule::in(['BUYER', 'AUTHORIZED_RECEIVER'])],
             'handover_confirmed' => ['sometimes', 'boolean'],
             'note' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'cash_received_centavos' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'file' => ['sometimes', 'file', 'max:'.PlatformSettings::current()->uploadKb('case_evidence')],
             'signature' => ['sometimes', 'file', 'max:'.PlatformSettings::current()->uploadKb('case_evidence')],
         ]);
+        // Multipart sends every field as text; the cash rule compares integers.
+        if (isset($input['cash_received_centavos'])) {
+            $input['cash_received_centavos'] = (int) $input['cash_received_centavos'];
+        }
         $photo = $request->file('file');
         $signature = $request->file('signature');
         /** @var mixed $uploaded */
@@ -109,7 +114,7 @@ final class VendorFulfillmentController extends Controller
         if (count($additional) > 3 || array_filter($additional, static fn (UploadedFile $file): bool => $file->getSize() > PlatformSettings::current()->uploadKb('case_evidence') * 1024) !== []) {
             throw new AuthenticationException('FILE_VALIDATION_FAILED', 'Attach up to three additional photos within the evidence upload limit.', 422);
         }
-        /** @var array{milestone: string, lock_version: int, vehicle_index?: int|null, trip_number?: int|null, receiver_name?: string|null, receiver_kind?: string|null, handover_confirmed?: bool|null, note?: string|null} $input */
+        /** @var array{milestone: string, lock_version: int, vehicle_index?: int|null, trip_number?: int|null, receiver_name?: string|null, receiver_kind?: string|null, handover_confirmed?: bool|null, note?: string|null, cash_received_centavos?: int|null} $input */
         $this->fulfillment->record($request, $orderId, $input, $photo instanceof UploadedFile ? $photo : null, $signature instanceof UploadedFile ? $signature : null, $additional);
 
         return ApiResponse::success($this->queries->vendorDetail($request, $orderId));

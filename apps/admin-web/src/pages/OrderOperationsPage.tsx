@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { Banknote, Clock, RefreshCw, Undo2 } from 'lucide-react'
-import { ALL_DATES, Button, ConfirmDialog, DateFilter, DocumentExportButton, EmptyState, FilterPanel, FilterTabs, Pagination, RefundStatusBadge, Select, StatCard, StatusBadge, StatusMessage, formatManilaDateTime, formatPesoCentavos } from '@materyalph/web-ui'
+import { Link, useSearchParams } from 'react-router-dom'
+import { Banknote, Clock, FileText, RefreshCw, Undo2 } from 'lucide-react'
+import { ALL_DATES, Button, ConfirmDialog, ControlBar, DateFilter, DocumentExportButton, EmptyState, FilterChips, FilterPanel, FilterTabs, Pagination, RefundStatusBadge, StatCard, StatusBadge, StatusMessage, formatManilaDateTime, formatPesoCentavos } from '@materyalph/web-ui'
 import {
   confirmReimbursement, getSummary, listCancellationRequests, listRefunds, listReimbursements, retryRefund,
   type AdminCancellationRequestRow, type AdminOrderOperationsSummary, type AdminRefundRow, type AdminReimbursementRow,
@@ -10,7 +10,13 @@ import { readableVerificationError } from '../lib/vendor-verification-api'
 import { AdminShell, ErrorState, LoadingState, PageHeader } from './PhaseThreeAdminPages'
 
 type View = 'refunds' | 'reimbursements' | 'requests'
+type RefundState = 'REFUND_FAILED' | 'REFUND_PENDING' | 'REFUNDED'
 const VIEWS: { value: View; label: string }[] = [{ value: 'refunds', label: 'Refunds' }, { value: 'reimbursements', label: 'Cash reimbursements' }, { value: 'requests', label: 'Open cancellation requests' }]
+const REFUND_STATUSES: { value: RefundState; label: string }[] = [
+  { value: 'REFUND_FAILED', label: 'Failed' },
+  { value: 'REFUND_PENDING', label: 'Awaiting provider' },
+  { value: 'REFUNDED', label: 'Processed' },
+]
 const TRIGGERS: Record<string, string> = { CANCELLATION: 'Cancellation', DISPUTE_CONCLUSION: 'Dispute conclusion', TECHNICAL_COMPENSATION: 'Technical compensation', FEE_CREDIT: 'Platform fee credit' }
 
 /**
@@ -32,10 +38,10 @@ export function AdminOrderOperationsPage() {
     return () => { active = false }
   }, [attempt])
   const chips = VIEWS.map(item => ({ ...item, count: summary ? (item.value === 'refunds' ? summary.refundsTotal : item.value === 'reimbursements' ? summary.reimbursementsTotal : summary.cancellationRequestsOpen) : undefined }))
-  return <AdminShell activeHref="/order-operations"><div className="grid min-w-0 gap-6">
-    <PageHeader eyebrow="Orders" title="Orders and refunds" description="Monitor refund status, Vendor cash reimbursements, and Buyer cancellation requests. Refunds return only to the original payment method. All figures are TEST."
-      actions={<Button variant="secondary" onClick={reload}><RefreshCw size={16} aria-hidden="true" />Refresh</Button>} />
-    {summaryError ? <ErrorState message={summaryError} onRetry={reload} /> : summary && <dl aria-label="Order operations summary" className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-5 xl:[&_dt]:min-h-10 xl:[&_dt]:items-start">
+  return <AdminShell activeHref="/order-operations"><div className="grid min-w-0 gap-4">
+    <PageHeader compact eyebrow="Orders" title="Orders and refunds" description="Monitor refund status, Vendor cash reimbursements, and Buyer cancellation requests. Refunds return only to the original payment method. All figures are TEST."
+      actions={<><Link to="/invoices" className="inline-flex min-h-11 items-center gap-2 rounded-control px-4 text-sm font-semibold text-action-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"><FileText size={16} aria-hidden="true" />Invoice Request Log</Link><Button variant="secondary" onClick={reload}><RefreshCw size={16} aria-hidden="true" />Refresh</Button></>} />
+    {summaryError ? <ErrorState message={summaryError} onRetry={reload} /> : summary && <dl aria-label="Order operations summary" className="grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 xl:[&_dt]:min-h-10 xl:[&_dt]:items-start">
       {[['Failed refunds', summary.refundsFailed], ['Refunds awaiting provider', summary.refundsPending], ['Reimbursements pending', summary.reimbursementsPending], ['Open cancellation requests', summary.cancellationRequestsOpen], ['Vendor cancellations (30 days)', summary.nfrEvents30Days]].map(([label, value]) =>
         <StatCard key={String(label)} label={String(label)} value={value} />)}
     </dl>}
@@ -47,7 +53,7 @@ export function AdminOrderOperationsPage() {
 }
 
 function RefundList({ onChanged, refreshVersion }: { onChanged: () => void; refreshVersion: number }) {
-  const [state, setState] = useState<'REFUND_FAILED' | 'REFUND_PENDING' | 'REFUNDED' | ''>('REFUND_FAILED')
+  const [state, setState] = useState<RefundState>('REFUND_FAILED')
   const [range, setRange] = useState(ALL_DATES)
   const [page, setPage] = useState(1)
   const [rows, setRows] = useState<AdminRefundRow[] | null>(null)
@@ -59,7 +65,7 @@ function RefundList({ onChanged, refreshVersion }: { onChanged: () => void; refr
   useEffect(() => {
     let active = true
     setRows(null); setError(null)
-    listRefunds(page, state || undefined, range).then(value => { if (active) { setRows(value.items); setMore(value.hasMore) } }).catch(async cause => { const text = await readableVerificationError(cause); if (active) setError(text) })
+    listRefunds(page, state, range).then(value => { if (active) { setRows(value.items); setMore(value.hasMore) } }).catch(async cause => { const text = await readableVerificationError(cause); if (active) setError(text) })
     return () => { active = false }
   }, [page, state, range, attempt, refreshVersion])
   async function retry(row: AdminRefundRow) {
@@ -69,13 +75,13 @@ function RefundList({ onChanged, refreshVersion }: { onChanged: () => void; refr
   }
   return <section className="grid min-w-0 gap-4" aria-label="Refunds">
     <FilterPanel label="Refund filters">
-      <div className="flex min-w-0 flex-wrap items-end gap-4">
-        <Select label="Status" className="w-full sm:max-w-xs" value={state} onChange={event => { setPage(1); setState(event.target.value as typeof state) }}>
-          <option value="REFUND_FAILED">Failed</option><option value="REFUND_PENDING">Awaiting provider</option><option value="REFUNDED">Processed</option><option value="">All</option>
-        </Select>
+      <ControlBar tabs={<div className="grid min-w-0 gap-2">
+        <p className="text-sm font-semibold">Status</p>
+        <FilterChips label="Refund status" chips={REFUND_STATUSES} value={state} onChange={value => { setPage(1); setState(value as RefundState) }} />
+      </div>} actions={<>
         <div className="grid min-w-0 gap-2"><p className="text-sm font-semibold">Requested dates</p><div className="flex min-w-0"><DateFilter title="Refund requested dates" value={range} onChange={value => { setRange(value); setPage(1) }} /></div></div>
-        {(state || range.from || range.to) && <Button variant="quiet" className="sm:ml-auto" onClick={() => { setState(''); setRange(ALL_DATES); setPage(1) }}>Reset filters</Button>}
-      </div>
+        {(state !== 'REFUND_FAILED' || range.from || range.to) && <Button variant="quiet" className="self-end" onClick={() => { setState('REFUND_FAILED'); setRange(ALL_DATES); setPage(1) }}>Reset filters</Button>}
+      </>} />
     </FilterPanel>
     {notice && <StatusMessage tone={notice.tone}>{notice.text}</StatusMessage>}
     {error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} /> : rows === null ? <LoadingState /> : rows.length === 0

@@ -90,13 +90,28 @@ export interface ApproveVendorOnlineBalanceRequest {
     idempotencyKey: string;
 }
 
+export interface ConfirmVendorHandoverCashRequest {
+    /**
+     *
+     */
+    orderId: string;
+    /**
+     *
+     */
+    idempotencyKey: string;
+    /**
+     * Optional receipt (JPG, PNG, WebP or PDF up to 10 MB). Required only when the handover has no photo; otherwise the handover photo is the evidence.
+     */
+    file?: Blob;
+}
+
 export interface ExportVendorTransactionsRequest {
     /**
      *
      */
     tab: ExportVendorTransactionsTabEnum;
     /**
-     * Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled.
+     * Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. PHYSICAL_* values select Cash on Delivery / In-Store obligations: COLLECTED (nothing remains), PARTIAL (part recorded), TO_RECORD (delivered or picked up, no cash recorded yet), AWAITING (before handover), RELEASED (cancelled unpaid).
      */
     status?: ExportVendorTransactionsStatusEnum;
     /**
@@ -151,7 +166,7 @@ export interface ListVendorTransactionsRequest {
      */
     page?: number;
     /**
-     * Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled.
+     * Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. PHYSICAL_* values select Cash on Delivery / In-Store obligations: COLLECTED (nothing remains), PARTIAL (part recorded), TO_RECORD (delivered or picked up, no cash recorded yet), AWAITING (before handover), RELEASED (cancelled unpaid).
      */
     status?: ListVendorTransactionsStatusEnum;
     /**
@@ -282,6 +297,87 @@ export class VendorFinanceApi extends runtime.BaseAPI {
      */
     async approveVendorOnlineBalance(requestParameters: ApproveVendorOnlineBalanceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<FinanceActionResultEnvelope> {
         const response = await this.approveVendorOnlineBalanceRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for confirmVendorHandoverCash without sending the request
+     */
+    async confirmVendorHandoverCashRequestOpts(requestParameters: ConfirmVendorHandoverCashRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['orderId'] == null) {
+            throw new runtime.RequiredError(
+                'orderId',
+                'Required parameter "orderId" was null or undefined when calling confirmVendorHandoverCash().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling confirmVendorHandoverCash().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+        const consumes: runtime.Consume[] = [
+            { contentType: 'multipart/form-data' },
+        ];
+        // @ts-ignore: canConsumeForm may be unused
+        const canConsumeForm = runtime.canConsumeForm(consumes);
+
+        let formParams: { append(param: string, value: any): any };
+        let useForm = false;
+        // use FormData to transmit files using content-type "multipart/form-data"
+        useForm = canConsumeForm;
+        if (useForm) {
+            formParams = new FormData();
+        } else {
+            formParams = new URLSearchParams();
+        }
+
+        if (requestParameters['file'] != null) {
+            formParams.append('file', requestParameters['file'] as any);
+        }
+
+
+        let urlPath = `/vendor/orders/{orderId}/physical-payments/handover-confirmation`;
+        urlPath = urlPath.replace('{orderId}', encodeURIComponent(String(requestParameters['orderId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: formParams,
+        };
+    }
+
+    /**
+     * Owner, Store Manager or Store Staff (payments.record_physical) confirm the cash Fulfillment Staff reported at Delivered or Picked up. Records one COLLECTION for the reported amount capped at the outstanding balance, with the handover photo (or the attached receipt) as evidence and the handover time as the received time. Once per handover; 409 HANDOVER_CASH_NOT_PENDING or PHYSICAL_PAYMENT_NOT_OPEN when nothing waits.
+     */
+    async confirmVendorHandoverCashRaw(requestParameters: ConfirmVendorHandoverCashRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PhysicalPaymentSummaryEnvelope>> {
+        const requestOptions = await this.confirmVendorHandoverCashRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => PhysicalPaymentSummaryEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Owner, Store Manager or Store Staff (payments.record_physical) confirm the cash Fulfillment Staff reported at Delivered or Picked up. Records one COLLECTION for the reported amount capped at the outstanding balance, with the handover photo (or the attached receipt) as evidence and the handover time as the received time. Once per handover; 409 HANDOVER_CASH_NOT_PENDING or PHYSICAL_PAYMENT_NOT_OPEN when nothing waits.
+     */
+    async confirmVendorHandoverCash(requestParameters: ConfirmVendorHandoverCashRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PhysicalPaymentSummaryEnvelope> {
+        const response = await this.confirmVendorHandoverCashRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -992,6 +1088,11 @@ export const ExportVendorTransactionsStatusEnum = {
     Failed: 'FAILED',
     Expired: 'EXPIRED',
     LateCapture: 'LATE_CAPTURE',
+    PhysicalCollected: 'PHYSICAL_COLLECTED',
+    PhysicalPartial: 'PHYSICAL_PARTIAL',
+    PhysicalToRecord: 'PHYSICAL_TO_RECORD',
+    PhysicalAwaiting: 'PHYSICAL_AWAITING',
+    PhysicalReleased: 'PHYSICAL_RELEASED',
 } as const;
 export type ExportVendorTransactionsStatusEnum = typeof ExportVendorTransactionsStatusEnum[keyof typeof ExportVendorTransactionsStatusEnum];
 /**
@@ -1019,5 +1120,10 @@ export const ListVendorTransactionsStatusEnum = {
     Failed: 'FAILED',
     Expired: 'EXPIRED',
     LateCapture: 'LATE_CAPTURE',
+    PhysicalCollected: 'PHYSICAL_COLLECTED',
+    PhysicalPartial: 'PHYSICAL_PARTIAL',
+    PhysicalToRecord: 'PHYSICAL_TO_RECORD',
+    PhysicalAwaiting: 'PHYSICAL_AWAITING',
+    PhysicalReleased: 'PHYSICAL_RELEASED',
 } as const;
 export type ListVendorTransactionsStatusEnum = typeof ListVendorTransactionsStatusEnum[keyof typeof ListVendorTransactionsStatusEnum];

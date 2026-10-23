@@ -14,6 +14,9 @@ Name | Type | Description | Notes
 **collectedCentavos** | **int** |  |
 **refundedCentavos** | **int** |  |
 **netEarningsCentavos** | **int** | Posted fee revenue net of credits and fee VAT, less platform commission payment processing expense. Can be negative in a refund period. |
+**gmvCentavos** | **int** | Gross merchandise value of orders confirmed in the period (Vendor money, never platform revenue). |
+**buyerPaymentsCentavos** | **int** | Verified online Buyer payments plus recorded Cash on Delivery and In-Store cash, received by Vendors. |
+**buyerRefundsCentavos** | **int** | Confirmed online refunds and cash reimbursements to Buyers. |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

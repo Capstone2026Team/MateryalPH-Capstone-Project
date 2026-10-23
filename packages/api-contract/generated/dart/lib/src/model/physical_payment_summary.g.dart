@@ -18,6 +18,8 @@ class _$PhysicalPaymentSummary extends PhysicalPaymentSummary {
   @override
   final bool onlineBalanceApproved;
   @override
+  final PhysicalHandoverCash? handoverCash;
+  @override
   final BuiltList<PhysicalPaymentRecord> records;
   @override
   final String notice;
@@ -32,6 +34,7 @@ class _$PhysicalPaymentSummary extends PhysicalPaymentSummary {
       required this.state,
       this.remainingCentavos,
       required this.onlineBalanceApproved,
+      this.handoverCash,
       required this.records,
       required this.notice})
       : super._();
@@ -53,6 +56,7 @@ class _$PhysicalPaymentSummary extends PhysicalPaymentSummary {
         state == other.state &&
         remainingCentavos == other.remainingCentavos &&
         onlineBalanceApproved == other.onlineBalanceApproved &&
+        handoverCash == other.handoverCash &&
         records == other.records &&
         notice == other.notice;
   }
@@ -65,6 +69,7 @@ class _$PhysicalPaymentSummary extends PhysicalPaymentSummary {
     _$hash = $jc(_$hash, state.hashCode);
     _$hash = $jc(_$hash, remainingCentavos.hashCode);
     _$hash = $jc(_$hash, onlineBalanceApproved.hashCode);
+    _$hash = $jc(_$hash, handoverCash.hashCode);
     _$hash = $jc(_$hash, records.hashCode);
     _$hash = $jc(_$hash, notice.hashCode);
     _$hash = $jf(_$hash);
@@ -79,6 +84,7 @@ class _$PhysicalPaymentSummary extends PhysicalPaymentSummary {
           ..add('state', state)
           ..add('remainingCentavos', remainingCentavos)
           ..add('onlineBalanceApproved', onlineBalanceApproved)
+          ..add('handoverCash', handoverCash)
           ..add('records', records)
           ..add('notice', notice))
         .toString();
@@ -111,6 +117,12 @@ class PhysicalPaymentSummaryBuilder
   set onlineBalanceApproved(bool? onlineBalanceApproved) =>
       _$this._onlineBalanceApproved = onlineBalanceApproved;
 
+  PhysicalHandoverCashBuilder? _handoverCash;
+  PhysicalHandoverCashBuilder get handoverCash =>
+      _$this._handoverCash ??= PhysicalHandoverCashBuilder();
+  set handoverCash(PhysicalHandoverCashBuilder? handoverCash) =>
+      _$this._handoverCash = handoverCash;
+
   ListBuilder<PhysicalPaymentRecord>? _records;
   ListBuilder<PhysicalPaymentRecord> get records =>
       _$this._records ??= ListBuilder<PhysicalPaymentRecord>();
@@ -133,6 +145,7 @@ class PhysicalPaymentSummaryBuilder
       _state = $v.state;
       _remainingCentavos = $v.remainingCentavos;
       _onlineBalanceApproved = $v.onlineBalanceApproved;
+      _handoverCash = $v.handoverCash?.toBuilder();
       _records = $v.records.toBuilder();
       _notice = $v.notice;
       _$v = null;
@@ -169,6 +182,7 @@ class PhysicalPaymentSummaryBuilder
                 onlineBalanceApproved,
                 r'PhysicalPaymentSummary',
                 'onlineBalanceApproved'),
+            handoverCash: _handoverCash?.build(),
             records: records.build(),
             notice: BuiltValueNullFieldError.checkNotNull(
                 notice, r'PhysicalPaymentSummary', 'notice'),
@@ -176,6 +190,8 @@ class PhysicalPaymentSummaryBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'handoverCash';
+        _handoverCash?.build();
         _$failedField = 'records';
         records.build();
       } catch (e) {

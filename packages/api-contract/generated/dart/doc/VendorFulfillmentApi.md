@@ -618,7 +618,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **recordVendorFulfillmentMilestone**
-> OrderDetailEnvelope recordVendorFulfillmentMilestone(orderId, idempotencyKey, milestone, lockVersion, vehicleIndex, tripNumber, receiverName, receiverKind, handoverConfirmed, note, file, signature, additionalPhotos)
+> OrderDetailEnvelope recordVendorFulfillmentMilestone(orderId, idempotencyKey, milestone, lockVersion, vehicleIndex, tripNumber, receiverName, receiverKind, handoverConfirmed, note, cashReceivedCentavos, file, signature, additionalPhotos)
 
 
 
@@ -647,12 +647,13 @@ final String receiverName = receiverName_example; // String |
 final String receiverKind = receiverKind_example; // String |
 final bool handoverConfirmed = true; // bool |
 final String note = note_example; // String |
-final MultipartFile file = BINARY_DATA_HERE; // MultipartFile | Delivery photo (required for DELIVERED): JPG or PNG up to 10 MB, scanned fail-closed, stored privately.
+final int cashReceivedCentavos = 56; // int | Required on DELIVERED / PICKED_UP of a Cash on Delivery or In-Store order with an outstanding balance: the cash the Buyer handed over, 0 to the outstanding balance (422 PROOF_REQUIRED otherwise). Cash above zero needs the handover photo as its evidence. A member holding payments.record_physical records it as a collection at once; a Fulfillment Staff report waits for confirmation (POST /vendor/orders/{orderId}/physical-payments/handover-confirmation). Ignored for online orders.
+final MultipartFile file = BINARY_DATA_HERE; // MultipartFile | Delivery photo (required for DELIVERED; required for PICKED_UP when cash_received_centavos is above zero): JPG or PNG up to 10 MB, scanned fail-closed, stored privately.
 final MultipartFile signature = BINARY_DATA_HERE; // MultipartFile | Optional receiver signature image.
 final BuiltList<MultipartFile> additionalPhotos = /path/to/file.txt; // BuiltList<MultipartFile> |
 
 try {
-    final response = api.recordVendorFulfillmentMilestone(orderId, idempotencyKey, milestone, lockVersion, vehicleIndex, tripNumber, receiverName, receiverKind, handoverConfirmed, note, file, signature, additionalPhotos);
+    final response = api.recordVendorFulfillmentMilestone(orderId, idempotencyKey, milestone, lockVersion, vehicleIndex, tripNumber, receiverName, receiverKind, handoverConfirmed, note, cashReceivedCentavos, file, signature, additionalPhotos);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling VendorFulfillmentApi->recordVendorFulfillmentMilestone: $e\n');
@@ -673,7 +674,8 @@ Name | Type | Description  | Notes
  **receiverKind** | **String**|  | [optional]
  **handoverConfirmed** | **bool**|  | [optional]
  **note** | **String**|  | [optional]
- **file** | **MultipartFile**| Delivery photo (required for DELIVERED): JPG or PNG up to 10 MB, scanned fail-closed, stored privately. | [optional]
+ **cashReceivedCentavos** | **int**| Required on DELIVERED / PICKED_UP of a Cash on Delivery or In-Store order with an outstanding balance: the cash the Buyer handed over, 0 to the outstanding balance (422 PROOF_REQUIRED otherwise). Cash above zero needs the handover photo as its evidence. A member holding payments.record_physical records it as a collection at once; a Fulfillment Staff report waits for confirmation (POST /vendor/orders/{orderId}/physical-payments/handover-confirmation). Ignored for online orders. | [optional]
+ **file** | **MultipartFile**| Delivery photo (required for DELIVERED; required for PICKED_UP when cash_received_centavos is above zero): JPG or PNG up to 10 MB, scanned fail-closed, stored privately. | [optional]
  **signature** | **MultipartFile**| Optional receiver signature image. | [optional]
  **additionalPhotos** | [**BuiltList&lt;MultipartFile&gt;**](MultipartFile.md)|  | [optional]
 

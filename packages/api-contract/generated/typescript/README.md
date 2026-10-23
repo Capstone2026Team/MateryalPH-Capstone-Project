@@ -471,6 +471,7 @@ All URIs are relative to */api/v1*
 *VendorDisputesApi* | [**respondVendorDispute**](docs/VendorDisputesApi.md#respondvendordispute) | **POST** /vendor/disputes/{caseId}/respond |
 *VendorDisputesApi* | [**sendVendorDisputeMessage**](docs/VendorDisputesApi.md#sendvendordisputemessage) | **POST** /vendor/disputes/{caseId}/messages |
 *VendorFinanceApi* | [**approveVendorOnlineBalance**](docs/VendorFinanceApi.md#approvevendoronlinebalance) | **POST** /vendor/orders/{orderId}/online-balance/approve |
+*VendorFinanceApi* | [**confirmVendorHandoverCash**](docs/VendorFinanceApi.md#confirmvendorhandovercash) | **POST** /vendor/orders/{orderId}/physical-payments/handover-confirmation |
 *VendorFinanceApi* | [**exportVendorTransactions**](docs/VendorFinanceApi.md#exportvendortransactions) | **GET** /vendor/finance/transactions/export |
 *VendorFinanceApi* | [**getVendorCommissionMonitoring**](docs/VendorFinanceApi.md#getvendorcommissionmonitoring) | **GET** /vendor/finance/commissions |
 *VendorFinanceApi* | [**getVendorEarnings**](docs/VendorFinanceApi.md#getvendorearnings) | **GET** /vendor/finance/earnings |
@@ -1075,6 +1076,7 @@ All URIs are relative to */api/v1*
 - [FinanceKpiEnvelope](docs/FinanceKpiEnvelope.md)
 - [FinanceKpis](docs/FinanceKpis.md)
 - [FinanceKpisPeriod](docs/FinanceKpisPeriod.md)
+- [FinancePaymentMethod](docs/FinancePaymentMethod.md)
 - [FinanceReviewItem](docs/FinanceReviewItem.md)
 - [FinanceReviewItemListEnvelope](docs/FinanceReviewItemListEnvelope.md)
 - [FinanceTransactionListEnvelope](docs/FinanceTransactionListEnvelope.md)
@@ -1328,6 +1330,7 @@ All URIs are relative to */api/v1*
 - [PaymentWebhookAck](docs/PaymentWebhookAck.md)
 - [PaymentWebhookAckEnvelope](docs/PaymentWebhookAckEnvelope.md)
 - [PaymentWebhookPayload](docs/PaymentWebhookPayload.md)
+- [PhysicalHandoverCash](docs/PhysicalHandoverCash.md)
 - [PhysicalPaymentRecord](docs/PhysicalPaymentRecord.md)
 - [PhysicalPaymentSettings](docs/PhysicalPaymentSettings.md)
 - [PhysicalPaymentSettingsEnvelope](docs/PhysicalPaymentSettingsEnvelope.md)

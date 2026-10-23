@@ -128,6 +128,9 @@ final class OrderConfirmationService
             }
             $order = $this->access->vendorOrder($scope, $orderId, true);
             $this->assertPending($order, (int) $input['lock_version']);
+            if ($nrpcInput !== null && ! in_array($order->payment_method, ['CASH_ON_DELIVERY', 'IN_STORE'], true)) {
+                throw new AuthenticationException('VALIDATION_FAILED', 'NRPC is available only for COD or In-Store Payment orders awaiting Vendor confirmation.', 422);
+            }
             if ($order->procurement_type === 'PROJECT_BASED' && ! DB::table('store_profiles')->where('vendor_organization_id', $order->vendor_organization_id)->where('bulk_capability', true)->exists()) {
                 throw new AuthenticationException('PROJECT_VENDOR_INELIGIBLE', 'Bulk capability is required to confirm new Project-Based work. Accepted obligations are retained.', 409);
             }

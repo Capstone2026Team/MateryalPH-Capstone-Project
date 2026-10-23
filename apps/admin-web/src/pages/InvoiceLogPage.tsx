@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { FileText, Info } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { ArrowLeft, FileText, Info } from 'lucide-react'
 import { ALL_DATES, Button, DateFilter, FilterChips, SignedFileButton, StatusBadge, Toolbar, formatManilaDateTime, formatPesoCentavos } from '@materyalph/web-ui'
 import { adminApiBasePath, listInvoiceLog, type InvoiceListMeta, type InvoiceLogRow, type InvoiceLogView } from '../lib/disputes-api'
 import { readableVerificationError } from '../lib/vendor-verification-api'
@@ -27,8 +27,9 @@ export function AdminInvoiceLogPage() {
     listInvoiceLog(view, page, range).then(result => { if (active) { setRows(result.items); setMeta(result.meta) } }).catch(async cause => { const text = await readableVerificationError(cause); if (active) setError(text) })
     return () => { active = false }
   }, [view, page, range, attempt])
-  return <AdminShell activeHref="/invoices"><div className="grid min-w-0 gap-6">
-    <PageHeader eyebrow="Finance" title="Invoice Request Log" description="Buyer copy and correction requests, Vendor-uploaded invoice copies and their reconciliation. MateryalPH documents are not the Vendor's invoice; Admins never create or certify a tax invoice." />
+  return <AdminShell activeHref="/order-operations"><div className="grid min-w-0 gap-6">
+    <Link to="/order-operations" className="inline-flex min-h-11 w-fit items-center gap-2 rounded-control text-sm font-semibold text-action-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"><ArrowLeft size={16} aria-hidden="true" />Back to Orders &amp; Refunds</Link>
+    <PageHeader eyebrow="Orders and refunds" title="Invoice Request Log" description="Buyer copy and correction requests, Vendor-uploaded invoice copies and their reconciliation. MateryalPH documents are not the Vendor's invoice; Admins never create or certify a tax invoice." />
     {meta?.notice && <p className="flex items-start gap-2 rounded-control border border-border-default bg-surface-primary px-3 py-2 text-sm"><Info size={16} className="mt-0.5 shrink-0" aria-hidden="true" />{meta.notice}{meta.counts?.REQUESTS_OVERDUE ? ` ${meta.counts.REQUESTS_OVERDUE} request(s) are past the three-business-day target.` : ''}</p>}
     <FilterChips label="Invoice log view" value={view} onChange={value => { setParams({ view: value }); setPage(1) }} chips={VIEWS.map(item => ({ value: item.value, label: item.label, count: meta?.counts?.[item.count] }))} />
     <Toolbar filters={<><DateFilter title={view === 'REQUESTS' ? 'Invoice request dates' : 'Invoice issue dates'} value={range} onChange={value => { setRange(value); setPage(1) }} />{(range.from || range.to) && <Button variant="quiet" onClick={() => { setRange(ALL_DATES); setPage(1) }}>Reset dates</Button>}</>} />

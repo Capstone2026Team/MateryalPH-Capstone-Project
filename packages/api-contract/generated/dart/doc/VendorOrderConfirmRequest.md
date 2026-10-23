@@ -12,7 +12,7 @@ Name | Type | Description | Notes
 **lines** | [**BuiltList&lt;OrderLineQuantity&gt;**](OrderLineQuantity.md) |  |
 **vendorDiscountCentavos** | **int** | Legacy fixed materials discount. Omit when discount is supplied. | [optional]
 **discount** | [**ChatQuotationDiscount**](ChatQuotationDiscount.md) |  | [optional]
-**nrpc** | [**NrpcProposal**](NrpcProposal.md) |  | [optional]
+**nrpc** | [**NrpcProposal**](NrpcProposal.md) | Available only for COD or In-Store Payment orders awaiting Vendor confirmation. | [optional]
 **pickup** | [**PickupConfirmation**](PickupConfirmation.md) |  | [optional]
 **delivery** | [**DeliveryConfirmation**](DeliveryConfirmation.md) |  | [optional]
 

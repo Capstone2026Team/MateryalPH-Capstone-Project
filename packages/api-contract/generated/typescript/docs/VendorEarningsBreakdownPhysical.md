@@ -9,6 +9,8 @@ Name | Type
 `records` | number
 `cashOnDeliveryCentavos` | number
 `inStoreCentavos` | number
+`unrecordedCentavos` | number
+`unrecordedOrders` | number
 
 ## Example
 
@@ -20,6 +22,8 @@ const example = {
   "records": null,
   "cashOnDeliveryCentavos": null,
   "inStoreCentavos": null,
+  "unrecordedCentavos": null,
+  "unrecordedOrders": null,
 } satisfies VendorEarningsBreakdownPhysical
 
 console.log(example)

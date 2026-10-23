@@ -4,7 +4,11 @@ import '../../features/projects/projects_repository.dart';
 import '../../features/projects/work_package_material_widgets.dart';
 import '../theme.dart';
 
-const _fulfillment = {'PICKUP': 'Pickup', 'DELIVERY': 'Site delivery'};
+const _fulfillment = {
+  'PICKUP': 'Pickup',
+  'DELIVERY': 'Site delivery',
+  'BOTH': 'Pickup or site delivery',
+};
 const _payment = {
   'ONLINE': 'Online payment',
   'CASH_ON_DELIVERY': 'Cash on delivery',
@@ -17,12 +21,14 @@ class WorkPackageAttachment extends StatelessWidget {
     super.key,
     required this.original,
     this.proposed,
+    this.actions,
     this.version,
     this.locked = true,
     this.title,
     this.showPaymentMethod = true,
   });
   final ProjectData original;
+  final Widget? actions;
   final ProjectData? proposed;
   final Object? version;
   final bool locked;
@@ -66,6 +72,10 @@ class WorkPackageAttachment extends StatelessWidget {
               ),
             ],
           ),
+          if (identical(value, original) && actions != null) ...[
+            const SizedBox(height: 12),
+            actions!,
+          ],
           if (value['name'] != null) ...[
             const SizedBox(height: 8),
             Text(
@@ -121,7 +131,7 @@ class WorkPackageAttachment extends StatelessWidget {
             : LucideIcons.pencilLine,
         original,
       );
-      if (proposed == null) return left;
+      if (proposed == null || proposed!.isEmpty) return left;
       final right = _copy(
         context,
         'Vendor proposal',

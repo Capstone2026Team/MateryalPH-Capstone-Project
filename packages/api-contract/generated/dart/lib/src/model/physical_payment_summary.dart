@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:materyalph_api_client/src/model/physical_handover_cash.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/physical_payment_record.dart';
 import 'package:built_value/built_value.dart';
@@ -18,6 +19,7 @@ part 'physical_payment_summary.g.dart';
 /// * [state]
 /// * [remainingCentavos]
 /// * [onlineBalanceApproved]
+/// * [handoverCash]
 /// * [records]
 /// * [notice]
 @BuiltValue()
@@ -36,6 +38,9 @@ abstract class PhysicalPaymentSummary implements Built<PhysicalPaymentSummary, P
 
   @BuiltValueField(wireName: r'online_balance_approved')
   bool get onlineBalanceApproved;
+
+  @BuiltValueField(wireName: r'handover_cash')
+  PhysicalHandoverCash? get handoverCash;
 
   @BuiltValueField(wireName: r'records')
   BuiltList<PhysicalPaymentRecord> get records;
@@ -93,6 +98,13 @@ class _$PhysicalPaymentSummarySerializer implements PrimitiveSerializer<Physical
       object.onlineBalanceApproved,
       specifiedType: const FullType(bool),
     );
+    if (object.handoverCash != null) {
+      yield r'handover_cash';
+      yield serializers.serialize(
+        object.handoverCash,
+        specifiedType: const FullType(PhysicalHandoverCash),
+      );
+    }
     yield r'records';
     yield serializers.serialize(
       object.records,
@@ -161,6 +173,14 @@ class _$PhysicalPaymentSummarySerializer implements PrimitiveSerializer<Physical
             specifiedType: const FullType(bool),
           ) as bool;
           result.onlineBalanceApproved = valueDes;
+          break;
+        case r'handover_cash':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(PhysicalHandoverCash),
+          ) as PhysicalHandoverCash?;
+          if (valueDes == null) continue;
+          result.handoverCash.replace(valueDes);
           break;
         case r'records':
           final valueDes = serializers.deserialize(

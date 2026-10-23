@@ -78,6 +78,8 @@ class _$FinanceKpis extends FinanceKpis {
   @override
   final BuiltMap<String, int> counts;
   @override
+  final BuiltList<FinancePaymentMethod>? paymentMethods;
+  @override
   final BuiltList<CommissionTrendPoint>? trend;
   @override
   final FinanceKpisTrendGranularityEnum? trendGranularity;
@@ -92,6 +94,7 @@ class _$FinanceKpis extends FinanceKpis {
       required this.commerce,
       required this.finance,
       required this.counts,
+      this.paymentMethods,
       this.trend,
       this.trendGranularity})
       : super._();
@@ -112,6 +115,7 @@ class _$FinanceKpis extends FinanceKpis {
         commerce == other.commerce &&
         finance == other.finance &&
         counts == other.counts &&
+        paymentMethods == other.paymentMethods &&
         trend == other.trend &&
         trendGranularity == other.trendGranularity;
   }
@@ -125,6 +129,7 @@ class _$FinanceKpis extends FinanceKpis {
     _$hash = $jc(_$hash, commerce.hashCode);
     _$hash = $jc(_$hash, finance.hashCode);
     _$hash = $jc(_$hash, counts.hashCode);
+    _$hash = $jc(_$hash, paymentMethods.hashCode);
     _$hash = $jc(_$hash, trend.hashCode);
     _$hash = $jc(_$hash, trendGranularity.hashCode);
     _$hash = $jf(_$hash);
@@ -140,6 +145,7 @@ class _$FinanceKpis extends FinanceKpis {
           ..add('commerce', commerce)
           ..add('finance', finance)
           ..add('counts', counts)
+          ..add('paymentMethods', paymentMethods)
           ..add('trend', trend)
           ..add('trendGranularity', trendGranularity))
         .toString();
@@ -178,6 +184,12 @@ class FinanceKpisBuilder implements Builder<FinanceKpis, FinanceKpisBuilder> {
       _$this._counts ??= MapBuilder<String, int>();
   set counts(MapBuilder<String, int>? counts) => _$this._counts = counts;
 
+  ListBuilder<FinancePaymentMethod>? _paymentMethods;
+  ListBuilder<FinancePaymentMethod> get paymentMethods =>
+      _$this._paymentMethods ??= ListBuilder<FinancePaymentMethod>();
+  set paymentMethods(ListBuilder<FinancePaymentMethod>? paymentMethods) =>
+      _$this._paymentMethods = paymentMethods;
+
   ListBuilder<CommissionTrendPoint>? _trend;
   ListBuilder<CommissionTrendPoint> get trend =>
       _$this._trend ??= ListBuilder<CommissionTrendPoint>();
@@ -202,6 +214,7 @@ class FinanceKpisBuilder implements Builder<FinanceKpis, FinanceKpisBuilder> {
       _commerce = $v.commerce.toBuilder();
       _finance = $v.finance.toBuilder();
       _counts = $v.counts.toBuilder();
+      _paymentMethods = $v.paymentMethods?.toBuilder();
       _trend = $v.trend?.toBuilder();
       _trendGranularity = $v.trendGranularity;
       _$v = null;
@@ -235,6 +248,7 @@ class FinanceKpisBuilder implements Builder<FinanceKpis, FinanceKpisBuilder> {
             commerce: commerce.build(),
             finance: finance.build(),
             counts: counts.build(),
+            paymentMethods: _paymentMethods?.build(),
             trend: _trend?.build(),
             trendGranularity: trendGranularity,
           );
@@ -249,6 +263,8 @@ class FinanceKpisBuilder implements Builder<FinanceKpis, FinanceKpisBuilder> {
         finance.build();
         _$failedField = 'counts';
         counts.build();
+        _$failedField = 'paymentMethods';
+        _paymentMethods?.build();
         _$failedField = 'trend';
         _trend?.build();
       } catch (e) {
