@@ -62,8 +62,9 @@ describe('Admin verification case review', () => {
     expect(screen.getAllByText('Test Supply Inc.')).toHaveLength(2)
     fireEvent.click(within(list).getByRole('button', { name: 'Review Government ID — Registered legal identity' }))
     expect(screen.getByText('Juan Dela Cruz')).toBeVisible()
-    expect(screen.getByText('Inline preview: Government ID — Front / identity page')).toBeVisible()
-    expect(screen.getByText('Inline preview: Government ID — Back')).toBeVisible()
+    // The selection settles through an effect; wait for its previews rather than the first render.
+    expect(await screen.findByText('Inline preview: Government ID — Front / identity page')).toBeVisible()
+    expect(await screen.findByText('Inline preview: Government ID — Back')).toBeVisible()
     expect(screen.getByLabelText('Verified document number')).toBeVisible()
   })
 
