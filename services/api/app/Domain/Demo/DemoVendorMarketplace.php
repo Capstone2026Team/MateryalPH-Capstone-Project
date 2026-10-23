@@ -72,6 +72,16 @@ final class DemoVendorMarketplace
 
     private const BASE32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
+    /**
+     * Tables read by the shared eligibility, delivery and activation checks. Seeding fills them in one burst, faster
+     * than autovacuum re-analyzes them, so the planner would keep empty-table estimates and nest loops over every row.
+     */
+    private const PLANNER_TABLES = [
+        'vendor_organizations', 'vendor_listings', 'listing_variants', 'inventory_items', 'listing_price_versions', 'products',
+        'vendor_tax_profiles', 'vendor_tax_profile_versions', 'store_profiles', 'vendor_memberships', 'users', 'vendor_addresses',
+        'vendor_address_versions', 'delivery_service_areas', 'vendor_vehicles', 'vehicle_rate_versions', 'files',
+    ];
+
     /** @var array<string, string> */
     private array $notes = [];
 
@@ -116,6 +126,8 @@ final class DemoVendorMarketplace
                 $report[] = ['slug' => $vendor['slug'], 'status' => 'FAILED', 'error' => $error::class.': '.Str::limit($error->getMessage(), 300), 'notes' => $this->notes];
             }
             $this->saveCredentials($credentialsPath, $credentials, $password);
+            // Statistics only; ANALYZE also counts rows of an enclosing uncommitted transaction.
+            DB::statement('ANALYZE '.implode(', ', self::PLANNER_TABLES));
         }
         if ($payments === 'xendit' && ! $refreshOnly) {
             $report = $this->finishWhenSubAccountsGoLive($selected, $report, $password, $admin === null ? null : (int) $admin, $credentials, $credentialsPath);
