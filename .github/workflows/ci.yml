@@ -113,6 +113,14 @@ jobs:
           key: composer-${{ runner.os }}-${{ hashFiles('services/api/composer.lock') }}
           restore-keys: composer-${{ runner.os }}-
 
+      # Review videos are validated with ffprobe, which the API images install with ffmpeg.
+      - name: Install video validation tools
+        working-directory: .
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends ffmpeg
+          ffprobe -version | head -n 1
+
       - name: Install PHP dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
