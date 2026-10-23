@@ -436,13 +436,13 @@ function ComplianceSection({ listing, canSubmit, busy, setBusy, onSubmitted }: {
         <span className="text-sm text-text-secondary">{path === 'QR' ? 'Photograph the ICC sticker straight on so the whole QR code is sharp and in frame.' : `Take a clear, well-lit photo showing the ${copy.numberLabel}.`} JPG, PNG or WebP up to 10 MB. You can check the photo before it is uploaded. Stored privately; never shown to Buyers.</span>
         <input ref={picker} type="file" accept={IMAGE_TYPES.join(',')} capture={path === 'PHOTO_OCR' ? 'environment' : undefined} disabled={busy} className="min-h-11 w-full min-w-0 max-w-xs text-sm" onChange={event => { choose(event.target.files?.[0]); event.target.value = '' }} />
       </label>
-      {pending && <section aria-labelledby="pending-photo-heading" className="grid gap-4 rounded-surface border border-border-default p-4 sm:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] sm:items-start">
+      {pending && <section aria-labelledby="pending-photo-heading" className="grid gap-4 rounded-surface border border-border-default p-4 xl:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] xl:items-start">
         <div className="grid min-h-48 place-items-center overflow-hidden rounded-control border border-border-default bg-surface-canvas">{pending.url ? <img src={pending.url} alt={`Preview of ${pending.file.name}`} className="max-h-72 w-full object-contain" /> : <UploadCloud size={32} className="text-text-secondary" aria-hidden="true" />}</div>
-        <div className="grid content-start gap-3">
+        <div className="grid min-w-0 content-start gap-3">
           <h4 id="pending-photo-heading" className="text-lg font-semibold">Check the photo before uploading</h4>
           <p className="break-words text-sm text-text-secondary">{pending.file.name} · {Math.max(1, Math.round(pending.file.size / 1024))} KB</p>
           <p className="text-sm">Make sure the {path === 'QR' ? 'QR code' : `${copy.name} and its ${copy.numberLabel}`} is sharp, fully in frame and readable. A blurry or cropped photo cannot be read or reviewed.</p>
-          <div className="flex flex-wrap gap-2"><Button disabled={busy} onClick={() => void upload()}>{busy ? 'Uploading and reading…' : 'Upload this photo'}</Button><Button variant="secondary" disabled={busy} onClick={() => picker.current?.click()}>Choose a different photo</Button><Button variant="quiet" disabled={busy} onClick={() => setPending(null)}>Cancel</Button></div>
+          <div className="flex min-w-0 flex-wrap gap-2"><Button disabled={busy} onClick={() => void upload()}>{busy ? 'Uploading and reading…' : 'Upload this photo'}</Button><Button variant="secondary" disabled={busy} onClick={() => picker.current?.click()}>Choose a different photo</Button><Button variant="quiet" disabled={busy} onClick={() => setPending(null)}>Cancel</Button></div>
         </div>
       </section>}
       {error && <StatusMessage tone="error">{error}</StatusMessage>}

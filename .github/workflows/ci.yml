@@ -337,7 +337,7 @@ jobs:
     timeout-minutes: 30
     env:
       # Public placeholder so the interactive-map specs exercise their stubbed Maps API; never a real key.
-      VITE_GOOGLE_MAPS_BROWSER_KEY: e2e-synthetic-maps-key
+      VITE_GOOGLE_MAPS_BROWSER_KEY: e2e-synthetic-maps-key # gitleaks:allow
     strategy:
       fail-fast: false
       matrix:
