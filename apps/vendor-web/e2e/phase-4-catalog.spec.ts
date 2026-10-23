@@ -295,7 +295,12 @@ test('Admin product compliance queue and case name the exact target and require 
   await expect(page.getByRole('heading', { name: 'Product Compliance Queue' })).toBeVisible()
   const queue = page.viewportSize()!.width >= 1024 ? page.getByRole('table', { name: 'Product compliance submissions' }) : page.getByRole('list', { name: 'Product compliance submissions' })
   await expect(queue.getByText('Uncertain')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'DTI-BPS register snapshots' })).toBeVisible()
+  await page.getByRole('button', { name: 'DTI-BPS register snapshots' }).click()
+  const registers = page.getByRole('dialog', { name: 'DTI-BPS register snapshots' })
+  await expect(registers.getByRole('table', { name: 'Register snapshots' })).toBeVisible()
+  await fits(page)
+  await registers.getByRole('button', { name: 'Done' }).click()
+  await expect(registers).toBeHidden()
   await fits(page)
   await capture(page, 'admin-compliance-queue')
 

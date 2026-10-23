@@ -46,9 +46,10 @@ test('Vendor dashboard switches sections without stacking reports', async ({ pag
   await page.clock.install()
   const reads = await mockDashboard(page, 'vendor')
   await page.goto('/dashboard')
-  await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^Welcome back/, level: 1 })).toBeVisible()
   await expect(page.getByRole('button', { name: /Refresh/ })).toHaveCount(0)
   await expect(page.getByRole('region', { name: 'Store workspace', exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Priority actions', exact: true })).toBeVisible()
   await expect(page.getByRole('img', { name: /Orders confirmed per day/ })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Incoming order requests', exact: true })).toBeVisible()
   await capture(page, 'vendor-overview')
@@ -59,7 +60,7 @@ test('Vendor dashboard switches sections without stacking reports', async ({ pag
   await expect(page.getByRole('region', { name: 'Frequently ordered together', exact: true })).toBeVisible()
   await expect(navigation.getByRole('tab', { name: 'Sales & Revenue', exact: true })).toHaveAttribute('aria-selected', 'true')
   await capture(page, 'vendor-sales')
-  for (const [tab, region, name] of [['Performance', 'Store health indicator', 'vendor-performance'], ['Action Items & Alerts', 'Action items', 'vendor-actions'], ['Traffic & Volume', 'Demand funnel', 'vendor-traffic'], ['Disputes & Quality', 'Issue types', 'vendor-quality']] as const) {
+  for (const [tab, region, name] of [['Performance', 'Store health indicator', 'vendor-performance'],['Traffic & Volume', 'Demand funnel', 'vendor-traffic'], ['Disputes & Quality', 'Issue types', 'vendor-quality']] as const) {
     await navigation.getByRole('tab', { name: tab, exact: true }).click()
     await expect(page.getByRole('region', { name: region, exact: true })).toBeVisible()
     await capture(page, name)

@@ -175,12 +175,19 @@ test('setup previews media and switches every operational section without page o
       await page.getByRole('combobox', { name: 'Vehicle Type' }).selectOption('FLATBED_TRUCK')
       await expect(page.getByRole('textbox', { name: 'Vehicle Name' })).toBeVisible()
       await page.getByRole('textbox', { name: 'Vehicle Name' }).fill('Store truck')
-      const categoryBox = await page.getByRole('combobox', { name: 'Vehicle Category' }).boundingBox()
-      const typeBox = await page.getByRole('combobox', { name: 'Vehicle Type' }).boundingBox()
-      const brandBox = await page.getByRole('textbox', { name: 'Vehicle Brand' }).boundingBox()
       const selectImage = page.getByRole('button', { name: 'Select image', exact: true })
       await expect(selectImage).toBeVisible()
-      const imageBox = await selectImage.boundingBox()
+      // Measure every box in one frame, in page coordinates, so scrolling after the fill cannot skew the comparison.
+      const handles = await Promise.all([
+        page.getByRole('combobox', { name: 'Vehicle Category' }),
+        page.getByRole('combobox', { name: 'Vehicle Type' }),
+        page.getByRole('textbox', { name: 'Vehicle Brand' }),
+        selectImage,
+      ].map(locator => locator.elementHandle()))
+      const [categoryBox, typeBox, brandBox, imageBox] = await page.evaluate(elements => elements.map(element => {
+        const box = element!.getBoundingClientRect()
+        return { x: box.x + scrollX, y: box.y + scrollY, width: box.width, height: box.height }
+      }), handles)
       expect(typeBox!.y).toBeGreaterThan(categoryBox!.y + categoryBox!.height)
       expect(Math.abs(typeBox!.x - categoryBox!.x)).toBeLessThan(2)
       if (page.viewportSize()!.width >= 768) expect(imageBox!.x).toBeGreaterThan(categoryBox!.x + categoryBox!.width)

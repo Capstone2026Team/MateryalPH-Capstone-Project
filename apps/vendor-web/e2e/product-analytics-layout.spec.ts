@@ -128,7 +128,7 @@ test('Store Performance scores, Product analytics, a product page and My Product
   await expect(page.getByRole('region', { name: 'From view to order' })).toBeVisible()
   await capture(page, 'product-detail')
   await page.goto('/products')
-  await expect(page.getByRole('link', { name: 'Product analytics' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Product analytics', exact: true })).toBeVisible()
   await expect(page.getByRole('link', { name: 'View product analytics' }).first()).toBeVisible()
   await capture(page, 'my-products')
 })
