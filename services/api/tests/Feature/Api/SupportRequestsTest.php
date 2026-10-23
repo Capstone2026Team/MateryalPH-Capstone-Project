@@ -125,7 +125,7 @@ final class SupportRequestsTest extends TestCase
     {
         // Deployed default; .env.example turns it off for plain-HTTP local development.
         config()->set('materyalph.auth.cookie_secure', true);
-        $ticket =$this->withHeader('Idempotency-Key', (string) Str::uuid7())->postJson('/api/v1/support/guest/tickets', $this->input())->assertCreated()->json('data');
+        $ticket = $this->withHeader('Idempotency-Key', (string) Str::uuid7())->postJson('/api/v1/support/guest/tickets', $this->input())->assertCreated()->json('data');
         $event = DB::table('outbox_events')->where('event_type', 'SUPPORT_GUEST_EMAIL')->first();
         $envelope = json_decode($event->payload, true);
         $payload = json_decode(Crypt::decryptString($envelope['sealed_payload']), true);
