@@ -4,6 +4,21 @@ set -eu
 
 cd /app/services/api
 
+# Keep Render's supervised preview by default; VPS roles run independently.
+export RUN_QUEUE="${RUN_QUEUE:-true}"
+export RUN_SCHEDULER="${RUN_SCHEDULER:-true}"
+export DEPLOYMENT_STANDBY="${DEPLOYMENT_STANDBY:-false}"
+export PHP_FPM_CONFIG=/usr/local/etc/php-fpm.conf
+if [ "${VPS_RUNTIME:-false}" = true ]; then
+    export PHP_FPM_CONFIG=/app/infrastructure/vps-php-fpm.conf
+fi
+for value in "$RUN_QUEUE" "$RUN_SCHEDULER" "$DEPLOYMENT_STANDBY"; do
+    case "$value" in true|false) ;; *) echo 'Runtime switches must be true or false.' >&2; exit 1 ;; esac
+done
+if [ "$DEPLOYMENT_STANDBY" = true ]; then
+    export RUN_QUEUE=false RUN_SCHEDULER=false
+fi
+
 # Render's generateValue produces a base64-encoded 256-bit key. Laravel needs its prefix.
 if [ -n "${APP_KEY:-}" ]; then
     case "$APP_KEY" in
@@ -34,7 +49,11 @@ if [ "$#" -gt 0 ]; then
     shift
 fi
 
-if [ "$role" = api ] && [ "${FREE_STAGING_PREVIEW:-false}" = true ]; then
+if [ "$DEPLOYMENT_STANDBY" = true ]; then
+    case "$role" in worker|scheduler|scheduler-loop|release) echo 'Standby cannot execute background work or releases.' >&2; exit 1 ;; esac
+fi
+
+if [ "$role" = api ] && [ "${FREE_STAGING_PREVIEW:-false}" = true ] && [ "$DEPLOYMENT_STANDBY" = false ]; then
     # Free compute has no pre-deploy command. Only this role releases before supervised jobs start.
     php /app/infrastructure/staging-release.php
 fi
@@ -43,7 +62,7 @@ case "$role" in
     release)
         exec php /app/infrastructure/staging-release.php
         ;;
-    api|worker|reverb|scheduler)
+    api|worker|reverb|scheduler|scheduler-loop)
         echo 'Render startup: caching configuration.'
         php artisan config:cache
         echo 'Render startup: caching routes.'
@@ -75,5 +94,8 @@ case "$role" in
         ;;
     scheduler)
         exec php artisan schedule:run --no-interaction
+        ;;
+    scheduler-loop)
+        exec php artisan schedule:work --no-interaction
         ;;
 esac

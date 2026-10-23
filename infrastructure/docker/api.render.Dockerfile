@@ -45,6 +45,8 @@ COPY infrastructure/docker/render-nginx.conf /app/infrastructure/nginx.conf
 COPY infrastructure/docker/render-supervisord.conf /app/infrastructure/supervisord.conf
 COPY infrastructure/docker/render-freshclam.conf /app/infrastructure/freshclam.conf
 COPY infrastructure/docker/render-php-fpm.conf /usr/local/etc/php-fpm.d/zz-render.conf
+COPY infrastructure/docker/vps-php-fpm.conf /app/infrastructure/vps-php-fpm.conf
+COPY scripts/deployment/vps-transfer.php /app/infrastructure/vps-transfer.php
 
 RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache /var/lib/clamav /tmp/nginx \
     && composer dump-autoload --no-dev --optimize --no-scripts \

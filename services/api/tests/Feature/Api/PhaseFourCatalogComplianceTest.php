@@ -222,12 +222,13 @@ final class PhaseFourCatalogComplianceTest extends TestCase
             $this->patchJson('/api/v1/vendor/catalog/listings/'.$listing, ['lock_version' => 1, 'display_name' => 'Changed'])->assertForbidden();
             $this->postJson('/api/v1/vendor/catalog/listings', ['display_name' => 'Other', 'vendor_sku' => 'X-1'], ['Idempotency-Key' => (string) Str::uuid7()])->assertForbidden();
         }
-        // Customer Service keeps the sales stock view; Fulfillment sees only assigned products.
+        // Customer Service keeps the sales stock view. The assigned-delivery decision
+        // removes catalog API access from Fulfillment Staff entirely.
         $this->signInVendor($this->member($organization, 'CUSTOMER_SERVICE'));
         $this->getJson('/api/v1/vendor/catalog/listings')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $listing);
         $this->signInVendor($this->member($organization, 'FULFILLMENT'));
-        $this->getJson('/api/v1/vendor/catalog/listings')->assertOk()->assertJsonCount(0, 'data')->assertJsonPath('meta.scope', 'ASSIGNED_ONLY');
-        $this->getJson('/api/v1/vendor/catalog/listings/'.$listing)->assertNotFound();
+        $this->getJson('/api/v1/vendor/catalog/listings')->assertForbidden();
+        $this->getJson('/api/v1/vendor/catalog/listings/'.$listing)->assertForbidden();
 
         // Another organization cannot read or act on this listing.
         [, $otherOwner] = $this->activeStore('Other Store');

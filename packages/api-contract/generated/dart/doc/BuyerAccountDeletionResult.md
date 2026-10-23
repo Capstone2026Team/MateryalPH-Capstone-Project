@@ -8,7 +8,7 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**reference** | **String** | Privacy request reference for follow-up with support. |
+**reference** | **String** | Account-deletion reference recorded in the audit trail for follow-up with support. |
 **deletedAt** | [**DateTime**](DateTime.md) |  |
 **signInRequired** | **bool** |  |
 

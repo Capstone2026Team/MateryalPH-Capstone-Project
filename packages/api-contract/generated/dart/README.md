@@ -172,10 +172,6 @@ Class | Method | HTTP request | Description
 [*AdminPlatformSettingsApi*](doc/AdminPlatformSettingsApi.md) | [**listPlatformSettingHistory**](doc/AdminPlatformSettingsApi.md#listplatformsettinghistory) | **GET** /admin/platform-settings/{key}/history |
 [*AdminPlatformSettingsApi*](doc/AdminPlatformSettingsApi.md) | [**listPlatformSettings**](doc/AdminPlatformSettingsApi.md#listplatformsettings) | **GET** /admin/platform-settings |
 [*AdminPlatformSettingsApi*](doc/AdminPlatformSettingsApi.md) | [**updatePlatformSetting**](doc/AdminPlatformSettingsApi.md#updateplatformsetting) | **PUT** /admin/platform-settings/{key} |
-[*AdminPrivacyRequestsApi*](doc/AdminPrivacyRequestsApi.md) | [**getPrivacyRequest**](doc/AdminPrivacyRequestsApi.md#getprivacyrequest) | **GET** /admin/privacy-requests/{requestId} |
-[*AdminPrivacyRequestsApi*](doc/AdminPrivacyRequestsApi.md) | [**listPrivacyRequests**](doc/AdminPrivacyRequestsApi.md#listprivacyrequests) | **GET** /admin/privacy-requests |
-[*AdminPrivacyRequestsApi*](doc/AdminPrivacyRequestsApi.md) | [**recordPrivacyRequest**](doc/AdminPrivacyRequestsApi.md#recordprivacyrequest) | **POST** /admin/privacy-requests |
-[*AdminPrivacyRequestsApi*](doc/AdminPrivacyRequestsApi.md) | [**transitionPrivacyRequest**](doc/AdminPrivacyRequestsApi.md#transitionprivacyrequest) | **POST** /admin/privacy-requests/{requestId}/{command} |
 [*AdminProductComplianceApi*](doc/AdminProductComplianceApi.md) | [**activateComplianceRegister**](doc/AdminProductComplianceApi.md#activatecomplianceregister) | **POST** /admin/product-compliance/registers/{registerId}/activate |
 [*AdminProductComplianceApi*](doc/AdminProductComplianceApi.md) | [**createComparableGroup**](doc/AdminProductComplianceApi.md#createcomparablegroup) | **POST** /admin/taxonomy/comparable-groups |
 [*AdminProductComplianceApi*](doc/AdminProductComplianceApi.md) | [**decideProductCompliance**](doc/AdminProductComplianceApi.md#decideproductcompliance) | **POST** /admin/product-compliance/{submissionId}/decision |
@@ -1357,14 +1353,6 @@ Class | Method | HTTP request | Description
  - [PrepareTaxPackage201Response](doc/PrepareTaxPackage201Response.md)
  - [PriceHistoryEntry](doc/PriceHistoryEntry.md)
  - [PriceHistoryEnvelope](doc/PriceHistoryEnvelope.md)
- - [PrivacyHandler](doc/PrivacyHandler.md)
- - [PrivacyRequestCreateRequest](doc/PrivacyRequestCreateRequest.md)
- - [PrivacyRequestDetail](doc/PrivacyRequestDetail.md)
- - [PrivacyRequestDetailEnvelope](doc/PrivacyRequestDetailEnvelope.md)
- - [PrivacyRequestEvent](doc/PrivacyRequestEvent.md)
- - [PrivacyRequestListEnvelope](doc/PrivacyRequestListEnvelope.md)
- - [PrivacyRequestSummary](doc/PrivacyRequestSummary.md)
- - [PrivacyTransitionRequest](doc/PrivacyTransitionRequest.md)
  - [ProblemResolveRequest](doc/ProblemResolveRequest.md)
  - [ProblemResponseRequest](doc/ProblemResponseRequest.md)
  - [ProcessingFee](doc/ProcessingFee.md)

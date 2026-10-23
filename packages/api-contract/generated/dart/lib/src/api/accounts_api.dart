@@ -1050,7 +1050,7 @@ class AccountsApi {
   }
 
   /// deleteBuyerAccount
-  /// Deletes the signed-in Buyer account. Requires recent authentication and the typed confirmation phrase. Refused with 409 ACCOUNT_DELETION_BLOCKED (details.blockers) while an order, dispute or refund is open. The account becomes DELETED (final), every session, push device and authenticator is revoked and an IN_APP DELETION privacy request is opened. Orders, payments, disputes, reviews and audit records are retained and later minimized, never deleted. The same email or Google identity may subsequently register a separate Buyer account; the deleted account and its history are never restored.
+  /// Deletes the signed-in Buyer account. Requires recent authentication and the typed confirmation phrase. Refused with 409 ACCOUNT_DELETION_BLOCKED (details.blockers) while an order, dispute or refund is open. The account becomes DELETED (final), every session, push device and authenticator is revoked. An account-deletion reference is recorded in the existing audit trail without opening a privacy case. Orders, payments, disputes, reviews and audit records are retained and later minimized, never deleted. The same email or Google identity may subsequently register a separate Buyer account; the deleted account and its history are never restored.
   ///
   /// Parameters:
   /// * [buyerAccountDeletionRequest]

@@ -44,6 +44,9 @@ final class VendorEarningsTrendTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // Seed effective policies at the same instant as the simulated orders.
+        CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 10, 20, 10, 0, 0, 'Asia/Manila'));
+        Carbon::setTestNow(CarbonImmutable::now());
         $this->seed(SystemFoundationSeeder::class);
         config()->set('materyalph.files.disk', 'local');
         config()->set('services.cloudinary.cloud_name', '');
@@ -54,8 +57,6 @@ final class VendorEarningsTrendTest extends TestCase
         $this->app->instance(RouteProvider::class, new FakeRouteProvider);
         $this->app->instance(AddressGeocoder::class, new FakeAddressGeocoder);
         $this->fakePayments();
-        CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 10, 20, 10, 0, 0, 'Asia/Manila'));
-        Carbon::setTestNow(CarbonImmutable::now());
     }
 
     protected function tearDown(): void

@@ -325,18 +325,6 @@ Support Requests is the Admin workspace for concerns submitted by Buyers, Vendor
 
 **How to use:** Open a ticket → read the concern → assign or respond as permitted → update its status. The requester follows the same ticket from their application. Formal disputes and financial decisions continue through their own authorized processes.
 
-#### Privacy Requests
-
-Privacy Requests tracks requests about personal information, including eligible account-deletion handling.
-
-**Main features:**
-
-- Request details, status, and processing history.
-- Retention requirements, pending obligations, and legal holds where applicable.
-- Recorded handling outcomes and explanations.
-
-**How to use:** Open the request → check its scope and blockers → complete the permitted handling process. Required commercial, financial, dispute, and audit records remain subject to retention rules.
-
 #### Integration & Job Health
 
 Integration & Job Health helps administrators identify problems with connected services and background processing.

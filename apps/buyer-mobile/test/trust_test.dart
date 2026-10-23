@@ -132,15 +132,8 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('No comparable materials here yet'), findsOneWidget);
-      expect(
-        find
-            .byType(CustomPaint)
-            .evaluate()
-            .where(
-              (element) => (element.widget as CustomPaint).painter != null,
-            ),
-        isEmpty,
-      );
+      // No chart is drawn; shaped Material borders still paint and are not charts.
+      expect(find.byType(PriceTrendPanel), findsNothing);
     },
   );
 
@@ -344,7 +337,10 @@ void main() {
       await tester.ensureVisible(find.text('Preview and submit'));
       await tester.tap(find.text('Preview and submit'));
       await tester.pumpAndSettle();
-      expect(find.textContaining('“Verified Buyer”'), findsOneWidget);
+      expect(
+        find.text('Shown as Verified Buyer · Verified purchase'),
+        findsOneWidget,
+      );
       await tester.tap(find.text('Submit'));
       await tester.pumpAndSettle();
       expect(repository.submissions, hasLength(1));

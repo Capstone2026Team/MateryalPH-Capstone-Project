@@ -54,7 +54,7 @@ final class OutboxProcessor
     public function process(string $eventId): void
     {
         Cache::lock('outbox-event:'.$eventId, 120)->block(5, function () use ($eventId): void {
-            $event = DB::table('outbox_events')->where('id', $eventId)->first();
+            $event = ImportedOutboxBoundary::apply(DB::table('outbox_events'))->where('id', $eventId)->first();
             if ($event === null || $event->processed_at !== null || (int) $event->attempts >= self::MAX_ATTEMPTS) {
                 return;
             }

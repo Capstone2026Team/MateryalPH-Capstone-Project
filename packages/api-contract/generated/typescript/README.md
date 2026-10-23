@@ -166,10 +166,6 @@ All URIs are relative to */api/v1*
 *AdminPlatformSettingsApi* | [**listPlatformSettingHistory**](docs/AdminPlatformSettingsApi.md#listplatformsettinghistory) | **GET** /admin/platform-settings/{key}/history |
 *AdminPlatformSettingsApi* | [**listPlatformSettings**](docs/AdminPlatformSettingsApi.md#listplatformsettings) | **GET** /admin/platform-settings |
 *AdminPlatformSettingsApi* | [**updatePlatformSetting**](docs/AdminPlatformSettingsApi.md#updateplatformsetting) | **PUT** /admin/platform-settings/{key} |
-*AdminPrivacyRequestsApi* | [**getPrivacyRequest**](docs/AdminPrivacyRequestsApi.md#getprivacyrequest) | **GET** /admin/privacy-requests/{requestId} |
-*AdminPrivacyRequestsApi* | [**listPrivacyRequests**](docs/AdminPrivacyRequestsApi.md#listprivacyrequests) | **GET** /admin/privacy-requests |
-*AdminPrivacyRequestsApi* | [**recordPrivacyRequest**](docs/AdminPrivacyRequestsApi.md#recordprivacyrequest) | **POST** /admin/privacy-requests |
-*AdminPrivacyRequestsApi* | [**transitionPrivacyRequest**](docs/AdminPrivacyRequestsApi.md#transitionprivacyrequest) | **POST** /admin/privacy-requests/{requestId}/{command} |
 *AdminProductComplianceApi* | [**activateComplianceRegister**](docs/AdminProductComplianceApi.md#activatecomplianceregister) | **POST** /admin/product-compliance/registers/{registerId}/activate |
 *AdminProductComplianceApi* | [**createComparableGroup**](docs/AdminProductComplianceApi.md#createcomparablegroup) | **POST** /admin/taxonomy/comparable-groups |
 *AdminProductComplianceApi* | [**decideProductCompliance**](docs/AdminProductComplianceApi.md#decideproductcompliance) | **POST** /admin/product-compliance/{submissionId}/decision |
@@ -1351,14 +1347,6 @@ All URIs are relative to */api/v1*
 - [PrepareTaxPackage201Response](docs/PrepareTaxPackage201Response.md)
 - [PriceHistoryEntry](docs/PriceHistoryEntry.md)
 - [PriceHistoryEnvelope](docs/PriceHistoryEnvelope.md)
-- [PrivacyHandler](docs/PrivacyHandler.md)
-- [PrivacyRequestCreateRequest](docs/PrivacyRequestCreateRequest.md)
-- [PrivacyRequestDetail](docs/PrivacyRequestDetail.md)
-- [PrivacyRequestDetailEnvelope](docs/PrivacyRequestDetailEnvelope.md)
-- [PrivacyRequestEvent](docs/PrivacyRequestEvent.md)
-- [PrivacyRequestListEnvelope](docs/PrivacyRequestListEnvelope.md)
-- [PrivacyRequestSummary](docs/PrivacyRequestSummary.md)
-- [PrivacyTransitionRequest](docs/PrivacyTransitionRequest.md)
 - [ProblemResolveRequest](docs/ProblemResolveRequest.md)
 - [ProblemResponseRequest](docs/ProblemResponseRequest.md)
 - [ProcessingFee](docs/ProcessingFee.md)

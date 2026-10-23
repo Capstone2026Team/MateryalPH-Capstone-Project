@@ -136,9 +136,7 @@ Xendit API keys, webhook verification tokens, Google API keys, email credentials
 
 **15. Budget Override Records:** Buyer budget overrides retain their immutable records, including project, work package, prior budget, order amount, overage, written reason, actor, and timestamp. The Admin Portal has no dedicated Budget Override Audit Log page or navigation entry. Overrides are Buyer decisions and do not require Admin approval unless a separate fraud or account case exists.
 
-**16. Privacy Request Management:** Tracks verified requests for access, correction, objection, deletion, restriction, portability where applicable, or another lawful privacy action. Each request records identity verification, scope, handler, legal or retention exception, response, completion date, and audit trail. Admins see only the personal information necessary for the assigned request.
-
-**17. Integration and Job Health:** Displays safe operational status for Xendit, Google services, email, file storage, Laravel Reverb, queues, scheduled tasks, analytics aggregation, PSGC import, and OCR. It supports authorized retries of idempotent jobs and shows correlation identifiers without exposing secrets or sensitive payloads.
+**16. Integration and Job Health:** Displays safe operational status for Xendit, Google services, email, file storage, Laravel Reverb, queues, scheduled tasks, analytics aggregation, PSGC import, and OCR. It supports authorized retries of idempotent jobs and shows correlation identifiers without exposing secrets or sensitive payloads.
 
 ---
 

@@ -3,7 +3,6 @@ import {
   AdminEnforcementApi,
   AdminIntegrationHealthApi,
   AdminPlatformSettingsApi,
-  AdminPrivacyRequestsApi,
   ReportingApi,
   ResponseError,
   type AuditEvent,
@@ -17,27 +16,21 @@ import {
   type FixedSetting,
   type IntegrationOverview,
   type ListEnforcementActionsRequest,
-  type ListPrivacyRequestsRequest,
   type OperationFailure,
   type OperationRetryRecord,
   type OperationRetryRequest,
   type OperationRetryResult,
   type PlatformSetting,
   type PlatformSettingVersion,
-  type PrivacyRequestCreateRequest,
-  type PrivacyRequestDetail,
-  type PrivacyRequestSummary,
-  type PrivacyTransitionRequest,
   type SearchAuditLogRequest,
   type SubjectReview,
-  type TransitionPrivacyRequestCommandEnum,
 } from '@materyalph/api-client-ts'
 import { createWebApiConfiguration, rateLimitMessage } from '@materyalph/web-ui'
 import { dateQuery, type CalendarRange } from './admin-format'
 
 export type {
   AuditEvent, AuditEventDetail, EnforcementDetail, EnforcementSubjectMatch, EnforcementSummary, FixedSetting, IntegrationOverview, OperationFailure,
-  OperationRetryRecord, PlatformSetting, PlatformSettingVersion, PrivacyRequestDetail, PrivacyRequestSummary, SubjectReview,
+  OperationRetryRecord, PlatformSetting, PlatformSettingVersion, SubjectReview,
 }
 export type Page<T> = { items: T[]; total: number; lastPage: number }
 
@@ -118,21 +111,6 @@ export async function declineEnforcement(actionId: string, lockVersion: number, 
 }
 export async function liftEnforcement(actionId: string, lockVersion: number, reason: string): Promise<EnforcementDetail> {
   return (await new AdminEnforcementApi(config()).liftEnforcementAction({ actionId, reasonedVersionRequest: { lockVersion, reason } })).data
-}
-
-// Privacy requests
-export async function listPrivacy(filters: ListPrivacyRequestsRequest): Promise<Page<PrivacyRequestSummary>> {
-  const response = await new AdminPrivacyRequestsApi(config()).listPrivacyRequests(filters)
-  return pageOf(response.data, response.meta)
-}
-export async function getPrivacy(requestId: string): Promise<PrivacyRequestDetail> {
-  return (await new AdminPrivacyRequestsApi(config()).getPrivacyRequest({ requestId })).data
-}
-export async function recordPrivacy(input: PrivacyRequestCreateRequest, idempotencyKey: string): Promise<PrivacyRequestDetail> {
-  return (await new AdminPrivacyRequestsApi(config()).recordPrivacyRequest({ idempotencyKey, privacyRequestCreateRequest: input })).data
-}
-export async function transitionPrivacy(requestId: string, command: TransitionPrivacyRequestCommandEnum, input: PrivacyTransitionRequest): Promise<PrivacyRequestDetail> {
-  return (await new AdminPrivacyRequestsApi(config()).transitionPrivacyRequest({ requestId, command, privacyTransitionRequest: input })).data
 }
 
 // Audit search (append-only; there is no edit or delete operation)

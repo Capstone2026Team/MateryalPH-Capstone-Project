@@ -66,15 +66,37 @@ Map<String, Object?> fulfillmentFixture({
       ),
 };
 
+/// A server candidate view, including the all-suppliers procurement totals the
+/// server derives from the fulfillment (known delivery: none for Pickup).
 Map<String, Object?> candidate(
   String id,
   String name, {
   int total = 3376700,
   Map<String, Object?>? fulfillment,
+}) {
+  final f = fulfillment ?? fulfillmentFixture(total: total);
+  return {
+    ..._candidate(id, name, total: total, fulfillment: f),
+    'draft_groups': <Object?>[],
+    'separate_delivery_centavos': 0,
+    'procurement_materials_centavos':
+        220000 + (f['separate_total_centavos'] as int),
+    'procurement_delivery_centavos': 0,
+    'procurement_total_centavos': f['combined_total_centavos'],
+    'procurement_budget_label': 'UNDER_BUDGET',
+  };
+}
+
+Map<String, Object?> _candidate(
+  String id,
+  String name, {
+  required int total,
+  required Map<String, Object?> fulfillment,
 }) => {
   'id': id,
   'estimate_id': '01995000-0000-7000-8000-0000000000e1',
-  'vendor_id': '01995000-0000-7000-8000-0000000000f$id'.substring(0, 36),
+  'vendor_id':
+      '01995000-0000-7000-8000-0000000000f${id.substring(id.length - 1)}',
   'store_name': name,
   'rank': 1,
   'latitude': 14.6,
@@ -106,7 +128,11 @@ Map<String, Object?> candidate(
       'unit_code': 'BAG',
       'amount_centavos': 220000,
       'allocations': [
-        {'matched_quantity': '10.0000', 'unit_price_centavos': 22000},
+        {
+          'matched_quantity': '10.0000',
+          'unit_price_centavos': 22000,
+          'amount_centavos': 220000,
+        },
       ],
     },
     {
@@ -137,7 +163,7 @@ Map<String, Object?> candidate(
   'label': 'System-compiled estimate — advisory',
   'current_quotation_state': 'NO_INQUIRY',
   'is_favorite': true,
-  'fulfillment': fulfillment ?? fulfillmentFixture(total: total),
+  'fulfillment': fulfillment,
 };
 
 const estimate = {
@@ -149,8 +175,12 @@ const estimate = {
   'context': {'radius_km': 50},
 };
 
-Map<String, Object?> package() => {
+/// [legacy] is a package that already selected one Vendor before grouped
+/// arrangements, which keeps the per-Vendor estimate list and its four sorts.
+Map<String, Object?> package({bool legacy = false}) => {
   'id': packageId,
+  if (legacy)
+    'procurement_candidate_id': '01995000-0000-7000-8000-0000000000c9',
   'name': 'Masonry works',
   'status': 'ACTIVE',
   'project_status': 'ACTIVE',
@@ -221,7 +251,19 @@ ProjectsRepository repository(
             );
             return;
           }
-          final Object? data = path.endsWith('/estimates')
+          // Grouped arrangements are an empty page here; the per-Vendor
+          // candidate views are the legacy estimate list.
+          final Object? data = path.endsWith('/arrangement-options')
+              ? {
+                  'estimate': estimate,
+                  'items': <Object?>[],
+                  'page': 1,
+                  'has_more': false,
+                  'total': 0,
+                  'unfiltered_total': 0,
+                  'sort': options.uri.queryParameters['sort'] ?? 'BEST_MATCH',
+                }
+              : path.endsWith('/estimates')
               ? {
                   'estimate': estimate,
                   'items': [
@@ -322,9 +364,7 @@ void main() {
     expect(find.text('90.00/100'), findsOneWidget);
     expect(find.text('Under budget'), findsOneWidget);
     expect(
-      find.text(
-        '1 material to source — see Item-Based recommendations from other stores',
-      ),
+      find.text('1 material to source — see recommendations from other stores'),
       findsOneWidget,
     );
     expect(find.byTooltip('Preferred seller'), findsOneWidget);
@@ -339,6 +379,53 @@ void main() {
     expect(viewed, 1);
   });
 
+  testWidgets(
+    'grouped comparisons offer Recommended and Price, sorted by the server',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(420, 1400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final requests = <RequestOptions>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: BuyerTheme.light,
+          home: VendorSelectionScreen(
+            repository: repository(requests),
+            package: package(),
+            mapBuilder: (context, props) =>
+                const ColoredBox(color: Colors.white),
+            links: links(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Recommended'), findsOneWidget);
+      expect(find.text('Price'), findsOneWidget);
+      expect(find.text('Budget fit'), findsNothing);
+      expect(find.text('Rating'), findsNothing);
+      await tester.ensureVisible(find.text('Price'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Price'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Preferred sellers'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Preferred sellers'));
+      await tester.pumpAndSettle();
+      final last = requests.lastWhere(
+        (r) => r.uri.path.endsWith('/arrangement-options'),
+      );
+      expect(last.uri.queryParameters['sort'], 'PRICE');
+      expect(last.uri.queryParameters['direction'], 'ASC');
+      expect(last.uri.queryParameters['favorites_only'], 'true');
+      expect(
+        requests.where(
+          (r) => r.method == 'GET' && r.uri.path.endsWith('/estimates'),
+        ),
+        isEmpty,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('sorting and filters are requested from the server', (
     tester,
   ) async {
@@ -351,7 +438,7 @@ void main() {
         theme: BuyerTheme.light,
         home: VendorSelectionScreen(
           repository: repository(requests),
-          package: package(),
+          package: package(legacy: true),
           mapBuilder: (context, props) {
             map = props;
             return const ColoredBox(color: Colors.white);
@@ -361,7 +448,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.textContaining('Found 2 Vendors within 50 km'), findsOneWidget);
+    expect(
+      find.text('2 procurement options · suppliers within 50 km'),
+      findsOneWidget,
+    );
     // 50 km is the only radius: one fixed chip, none of the old options.
     expect(find.widgetWithText(ChoiceChip, '50 km'), findsOneWidget);
     for (final km in [5, 10, 20, 30, 40]) {
@@ -410,9 +500,13 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('Order summary'), findsOneWidget);
-      expect(find.text('10 BAG × ₱220.00 · Sold by BuildMart'), findsOneWidget);
+      expect(find.text('10 BAG · BuildMart'), findsOneWidget);
+      expect(find.text('₱220.00 / BAG · ₱2,200.00'), findsOneWidget);
       expect(find.text('Missing items'), findsOneWidget);
-      expect(find.text('This Vendor has no exact match'), findsOneWidget);
+      expect(
+        find.text('Recommended from other stores within 50 km'),
+        findsOneWidget,
+      );
       expect(find.byType(OfferRow), findsNWidgets(3));
       expect(find.text('View list (4)'), findsOneWidget);
       expect(
@@ -430,16 +524,29 @@ void main() {
       );
       expect(find.text('Procurement rules'), findsOneWidget);
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Add').first);
+      await tester.tap(find.widgetWithText(TextButton, 'Add').first);
       await tester.pumpAndSettle();
-      final add = requests.lastWhere((r) => r.uri.path.endsWith('/cart/items'));
+      // Add saves a draft supplier item for this Vendor's gap; the cart is untouched.
+      final add = requests.lastWhere(
+        (r) => r.uri.path.contains('/draft-items/'),
+      );
+      expect(
+        add.uri.path,
+        endsWith(
+          '/candidates/01995000-0000-7000-8000-0000000000c1/draft-items/$lineId/${offer(1)['variant_id']}',
+        ),
+      );
       final body = add.data as Map;
-      expect(body['work_package_line_id'], lineId);
-      expect(body['quantity'], '7');
+      expect(body['lock_version'], 3);
+      expect(body['price_version_id'], offer(1)['price_version_id']);
+      expect(body['fulfillment_method'], 'PICKUP');
       // The server fixes the radius and sizes the quantity; neither is sent.
+      expect(body.containsKey('quantity'), isFalse);
       expect(body.containsKey('radius_km'), isFalse);
-      expect(body.containsKey('location_id'), isFalse);
-      expect(body.containsKey('allow_partial_stock'), isFalse);
+      expect(
+        requests.where((r) => r.uri.path.endsWith('/cart/items')),
+        isEmpty,
+      );
       expect(
         requests
             .firstWhere((r) => r.uri.path.endsWith('/alternatives'))
@@ -602,7 +709,7 @@ void main() {
     );
     expect(
       find.text(
-        'No suitable Item-Based listing within 50 km for the 7 PC still needed. 2 listings are out of stock.',
+        'No suitable product within 50 km for the 7 PC still needed. 2 listings are out of stock.',
       ),
       findsOneWidget,
     );
@@ -658,7 +765,7 @@ void main() {
       expect(find.text('2/2'), findsOneWidget);
       expect(
         find.text(
-          '• Every material is covered; the rest are bought separately',
+          '• All materials covered, including selected items from other suppliers',
         ),
         findsOneWidget,
       );
@@ -688,12 +795,13 @@ void main() {
       );
       expect(find.text('Every material covered'), findsOneWidget);
       expect(find.text('Covered'), findsOneWidget);
-      expect(find.text('Buying separately'), findsOneWidget);
+      expect(find.text('Earlier linked purchases'), findsOneWidget);
       expect(find.textContaining('Block Depot'), findsWidgets);
       // Totals come from the server: the Vendor's total plus the separate items.
       expect(find.text('₱33,872.00'), findsOneWidget);
+      expect(find.text('Projected total · all suppliers'), findsOneWidget);
       expect(
-        find.textContaining('Covered by your separate purchases'),
+        find.textContaining('Covered by the current arrangement'),
         findsOneWidget,
       );
     },
@@ -730,8 +838,8 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.textContaining('does not meet the stated specification'),
-      findsOneWidget,
+      find.text('Different specifications — requirement remains open'),
+      findsWidgets,
     );
     expect(find.text('Covered'), findsNothing);
   });

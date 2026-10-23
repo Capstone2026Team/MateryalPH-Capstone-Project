@@ -303,7 +303,7 @@ Use state restoration carefully: never restore a stale quotation acceptance, exp
 | Projects | Project list, create/edit, phase/work package, BOM/BOQ editor, compiled results, comparison, Project Vendor Map, notes |
 | Messaging | Conversation list, conversation detail, staff identity, attached Work Package, quotation version/change summary, counter-offer |
 | Orders | Order list, order detail, timeline, proof, cancellation, refund status, issue/dispute, review |
-| Profile | Personal details, saved locations, favorites, ranking preferences, notification settings, sessions/security, reports, privacy requests |
+| Profile | Personal details, saved locations, favorites, ranking preferences, notification settings, sessions/security, reports, account deletion |
 
 Every page implements loading, empty, populated, validation, disabled, permission-denied, offline/provider-failure, retry, and success states where applicable.
 

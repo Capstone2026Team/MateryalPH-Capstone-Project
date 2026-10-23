@@ -302,7 +302,7 @@ void main() {
       await tester.tap(find.text('Select it manually'));
       await tester.pumpAndSettle();
       expect(find.text('Search location'), findsOneWidget);
-      expect(find.text('Location Details'), findsOneWidget);
+      expect(find.text('Location details'), findsOneWidget);
       expect(find.text('Enter address'), findsNothing);
       expect(find.text('City or municipality'), findsNothing);
       for (final removed in ['Latitude', 'Longitude', 'Enter coordinates']) {

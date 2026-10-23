@@ -234,13 +234,54 @@ void main() {
       ),
     );
     expect(find.text('₱2,200.00'), findsWidgets);
-    expect(find.text('Over your budget by ₱200.00'), findsOneWidget);
     expect(
-      find.textContaining('excludes delivery fees and labor'),
+      find.textContaining('Labor and payment processing are excluded'),
       findsOneWidget,
     );
     expect(find.text('10 BAG × ₱220.00'), findsOneWidget);
     expect(find.text('2 CUM · unlisted, not priced'), findsOneWidget);
+    // An incomplete estimate is never compared with the budget or offered as one.
+    expect(
+      find.text('Materials subtotal · estimate incomplete'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Over your budget'), findsNothing);
+    expect(find.text('Use estimate as budget'), findsNothing);
+
+    await tester.pumpWidget(
+      host(
+        WorkPackageEstimateSection(
+          lines: const [
+            {'name': 'Portland cement', 'quantity': '10', 'unit_code': 'BAG'},
+          ],
+          // Complete: the server totals materials and delivery (none for pick-up).
+          estimate: const {
+            'materials_total_centavos': 220000,
+            'delivery_centavos': 0,
+            'delivery_status': 'NOT_APPLICABLE',
+            'estimated_total_centavos': 220000,
+            'priced_line_count': 1,
+            'radius_km': 5,
+            'lines': [
+              {
+                'index': 0,
+                'status': 'PRICED',
+                'average_unit_price_centavos': 22000,
+                'amount_centavos': 220000,
+              },
+            ],
+          },
+          loading: false,
+          error: null,
+          budgetCentavos: 200000,
+          ready: true,
+          onRetry: () {},
+          onUseAsBudget: (total) => used = total,
+        ),
+      ),
+    );
+    expect(find.text('Estimated total cost'), findsOneWidget);
+    expect(find.text('Over your budget by ₱200.00'), findsOneWidget);
     await tester.tap(find.text('Use estimate as budget'));
     expect(used, 220000);
   });

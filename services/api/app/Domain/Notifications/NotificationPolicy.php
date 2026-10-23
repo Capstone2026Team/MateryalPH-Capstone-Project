@@ -112,12 +112,10 @@ final class NotificationPolicy
 
             return $scope['role'] === 'OWNER';
         }
-        if ($user->account_type === 'ADMIN' && in_array($type, ['PLATFORM_SETTING', 'ENFORCEMENT_ACTION', 'PRIVACY_REQUEST'], true)) {
+        if ($user->account_type === 'ADMIN' && in_array($type, ['PLATFORM_SETTING', 'ENFORCEMENT_ACTION'], true)) {
             return match ($type) {
                 'PLATFORM_SETTING' => in_array('platform_settings.view', $scope['permissions'], true),
                 'ENFORCEMENT_ACTION' => in_array('enforcement.view', $scope['permissions'], true),
-                default => in_array('privacy.manage', $scope['permissions'], true)
-                    || (in_array('privacy.handle', $scope['permissions'], true) && DB::table('privacy_requests')->where('id', $id)->where('handler_user_id', $user->getKey())->exists()),
             };
         }
         if ($type === 'PROJECT') {
@@ -144,7 +142,6 @@ final class NotificationPolicy
             'TAX_REPORT_PACKAGE' => '/reports/tax/'.$notice->resource_id,
             'PLATFORM_SETTING' => '/settings',
             'ENFORCEMENT_ACTION' => '/enforcement/'.$notice->resource_id,
-            'PRIVACY_REQUEST' => '/privacy/'.$notice->resource_id,
             'VENDOR_ORGANIZATION' => match ($notice->category) {
                 'TEAM' => '/team',
                 'VENDOR_PAYMENT_CONNECTION' => '/onboarding/setup?step=S3',

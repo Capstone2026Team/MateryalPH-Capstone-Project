@@ -1,5 +1,7 @@
 # Render: free staging preview
 
+The approved Hostinger primary and manual recovery procedure is in [the VPS runbook](hostinger-vps.md). Preserve this deployment path, keep automatic deployments off and fence Render at accepted Hostinger cutover using `DEPLOYMENT_STANDBY=true`. The selected fallback window ends 17 November 2026; do not assume free database availability after its supplied 18 November 2026, 22:52 Philippine-time expiry. Before promotion preserve current Render data and restore the selected verified recovery set; never run two writers/schedulers.
+
 This deploys the API backend, Vendor portal and Admin portal using Free Render resources in the confirmed **capstone's workspace** (`tea-db8ouuc9v7es73dc3u7g`). It adds the CI/CD and deployment configuration requested for staging. It does not mark Phase 19 complete or create a production environment.
 
 ## Resources and limits

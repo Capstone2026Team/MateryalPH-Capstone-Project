@@ -12,6 +12,8 @@
 # Flutter environment and signing
 apps/buyer-mobile/config/development.json
 apps/buyer-mobile/config/staging.json
+apps/buyer-mobile/config/hostinger.json
+apps/buyer-mobile/config/deployments.json
 apps/buyer-mobile/config/production.json
 apps/buyer-mobile/android/secrets.properties
 apps/buyer-mobile/android/key.properties

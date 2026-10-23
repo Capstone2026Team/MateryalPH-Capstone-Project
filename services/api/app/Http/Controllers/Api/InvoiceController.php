@@ -13,6 +13,7 @@ use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Support\PortalDateRange;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -73,7 +74,8 @@ final class InvoiceController extends Controller
     {
         $input = $request->validate([
             'invoice_type' => ['required', Rule::in(InvoiceService::VENDOR_TYPES)], 'issuer_name' => ['required', 'string', 'max:240'],
-            'invoice_number' => ['required', 'string', 'max:64', 'regex:/^[A-Za-z0-9][A-Za-z0-9 \-\/#.]*$/'], 'issued_on' => ['required', 'date', 'before_or_equal:today'],
+            'invoice_number' => ['required', 'string', 'max:64', 'regex:/^[A-Za-z0-9][A-Za-z0-9 \-\/#.]*$/'],
+            'issued_on' => ['required', 'date', 'before_or_equal:'.CarbonImmutable::today((string) config('materyalph.business_timezone', 'Asia/Manila'))->toDateString()],
             'amount_centavos' => ['required', 'integer', 'min:0', 'max:100000000000'], 'vat_centavos' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'vat_exempt_centavos' => ['sometimes', 'nullable', 'integer', 'min:0'], 'zero_rated_centavos' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'related_line_ids' => ['sometimes', 'array', 'max:200'], 'related_line_ids.*' => ['uuid'],

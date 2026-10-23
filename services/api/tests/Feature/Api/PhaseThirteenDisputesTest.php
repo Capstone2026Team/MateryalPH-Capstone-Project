@@ -504,6 +504,10 @@ final class PhaseThirteenDisputesTest extends TestCase
 
     public function test_invoice_records_are_available_before_completion_with_narrow_upload_scope_reconciliation_requests_and_audited_downloads(): void
     {
+        // Manila is on the next calendar date while the application stores time in UTC.
+        $now = CarbonImmutable::now('UTC')->setTime(18, 0);
+        CarbonImmutable::setTestNow($now);
+        Carbon::setTestNow($now);
         [$store, $owner, $buyer, $orderId] = $this->paidPickup('Invoice Store');
         DB::table('vendor_organizations')->where('id', $store->id)->update(['legal_business_name' => 'Invoice Store Trading Corp.']);
         $staff = $this->teamMember($store, 'STORE_STAFF');
@@ -537,6 +541,8 @@ final class PhaseThirteenDisputesTest extends TestCase
         $this->signInStoreMember($inventory);
         $this->getJson('/api/v1/vendor/orders/'.$orderId.'/invoices')->assertForbidden();
         $this->signInStoreMember($staff);
+        $this->post('/api/v1/vendor/orders/'.$orderId.'/invoices', ['issued_on' => CarbonImmutable::now('Asia/Manila')->addDay()->toDateString(), 'file' => $this->validPdf()] + $upload,
+            $this->key() + ['Accept' => 'application/json'])->assertUnprocessable()->assertJsonPath('errors.0.details.issued_on.0', fn (string $message): bool => $message !== '');
         $this->post('/api/v1/vendor/orders/'.$orderId.'/invoices', ['issuer_name' => 'Somebody Else Inc', 'file' => $this->validPdf()] + $upload, $this->key() + ['Accept' => 'application/json'])->assertStatus(422)->assertJsonPath('errors.0.code', 'INVOICE_ISSUER_MISMATCH');
         $this->post('/api/v1/vendor/orders/'.$orderId.'/invoices', ['invoice_type' => 'PLATFORM_SERVICE_INVOICE'] + $upload, $this->key() + ['Accept' => 'application/json'])->assertStatus(422);
         $pdf = $this->validPdf();

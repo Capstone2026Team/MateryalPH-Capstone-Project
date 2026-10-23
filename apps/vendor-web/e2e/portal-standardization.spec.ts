@@ -64,8 +64,7 @@ for (const portal of ['vendor', 'admin'] as const) {
     await page.getByRole('button', { name: 'Mark all as read', exact: true }).click()
     await expect.poll(() => submitted).toMatchObject({ through_id: currentId, from: '2026-10-09', to: '2026-10-09' })
     await expect(page.getByRole('heading', { name: 'DEMO Current notice' })).toHaveCount(0)
-    await page.getByRole('combobox', { name: 'Status', exact: true }).selectOption('archived')
-    await expect(page.getByRole('heading', { name: 'DEMO Current notice' })).toBeVisible()
+    // Read notices leave the inbox; the former Unread/Read/Archived status filter was removed (2026-10-17).
     await capture(page, `${portal}-notification-dates`)
   })
 

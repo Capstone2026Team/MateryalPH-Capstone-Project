@@ -14,7 +14,6 @@ export * from './AdminInvoicesApi';
 export * from './AdminMaterialsAnalyticsApi';
 export * from './AdminOrderOperationsApi';
 export * from './AdminPlatformSettingsApi';
-export * from './AdminPrivacyRequestsApi';
 export * from './AdminProductComplianceApi';
 export * from './AdminReviewModerationApi';
 export * from './AdminScoreMonitoringApi';

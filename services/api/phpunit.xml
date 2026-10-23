@@ -18,6 +18,8 @@
         </include>
     </source>
     <php>
+        <!-- The full single-process suite needs more than PHP's default 128M (image fixtures). -->
+        <ini name="memory_limit" value="512M"/>
         <env name="APP_ENV" value="testing" force="true"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file" force="true"/>
         <env name="HASH_DRIVER" value="argon2id" force="true"/>

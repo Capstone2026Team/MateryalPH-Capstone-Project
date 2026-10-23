@@ -17,6 +17,7 @@ return [
     'default' => env('MAIL_MAILER', 'smtp'),
 
     'delivery_not_before' => env('MAIL_DELIVERY_NOT_BEFORE'),
+    'outbox_delivery_not_before' => env('OUTBOX_DELIVERY_NOT_BEFORE'),
 
     /*
     |--------------------------------------------------------------------------

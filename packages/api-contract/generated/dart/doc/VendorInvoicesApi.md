@@ -261,7 +261,7 @@ final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final String invoiceType = invoiceType_example; // String |
 final String issuerName = issuerName_example; // String | Must equal the registered business name.
 final String invoiceNumber = invoiceNumber_example; // String |
-final Date issuedOn = 2013-10-20; // Date |
+final Date issuedOn = 2013-10-20; // Date | Invoice calendar date; must not be later than today in Asia/Manila.
 final int amountCentavos = 56; // int |
 final String sourceSystem = sourceSystem_example; // String |
 final String invoicingMethod = invoicingMethod_example; // String |
@@ -290,7 +290,7 @@ Name | Type | Description  | Notes
  **invoiceType** | **String**|  |
  **issuerName** | **String**| Must equal the registered business name. |
  **invoiceNumber** | **String**|  |
- **issuedOn** | **Date**|  |
+ **issuedOn** | **Date**| Invoice calendar date; must not be later than today in Asia/Manila. |
  **amountCentavos** | **int**|  |
  **sourceSystem** | **String**|  |
  **invoicingMethod** | **String**|  |

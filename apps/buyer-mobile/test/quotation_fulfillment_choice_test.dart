@@ -68,8 +68,47 @@ Map<String, Object?> candidate({
     'label': 'System-compiled estimate — advisory',
     'current_quotation_state': 'NO_INQUIRY',
     'fulfillment': fulfillmentFor(delivery ? 105500 : 45000),
+    'draft_groups': <Object?>[],
+    'payment_methods': [
+      {'method': 'ONLINE', 'available': true},
+      {
+        'method': delivery ? 'CASH_ON_DELIVERY' : 'IN_STORE',
+        'available': false,
+      },
+    ],
   };
 }
+
+/// The Work Package as the checkout reloads it before pricing.
+Map<String, Object?> packageView({String method = 'BOTH'}) => {
+  ...package(method: method),
+  'project_id': '01995000-0000-7000-8000-0000000000b9',
+  'name': 'Roof framing',
+  'version': {
+    'id': '01995000-0000-7000-8000-0000000000e2',
+    'version': 1,
+    'content_hash': 'fixture',
+    'locked_at': '2026-10-01T00:00:00Z',
+    'content': {'fulfillment_method': method, 'lines': <Object?>[]},
+  },
+  'budget': {
+    'budget_centavos': 1000000,
+    'pending_centavos': 0,
+    'actual_centavos': 0,
+    'awaiting_recovery_centavos': 0,
+    'committed_centavos': 0,
+    'remaining_centavos': 1000000,
+    'utilization_percent': '0.00',
+    'warning': false,
+    'label': 'UNDER_BUDGET',
+    'allocated_centavos': 1000000,
+    'unallocated_centavos': 0,
+    'pending_confirmation_count': 0,
+    'processing_fee_status': 'PENDING_PAYMENT_CHANNEL_UNTIL_QUOTED',
+  },
+  'missing_lines': <Object?>[],
+  'document': <String, Object?>{},
+};
 
 const estimate = {
   'id': '01995000-0000-7000-8000-0000000000e1',
@@ -107,6 +146,8 @@ ProjectsRepository repository(
                 )
               : path.endsWith('/selection') || path.endsWith('/inquiries')
               ? {'id': orderId}
+              : path.endsWith('/work-packages/$packageId')
+              ? packageView()
               : null;
           if (data == null) {
             handler.reject(
@@ -164,6 +205,31 @@ Future<void> pumpQuotation(
   await tester.pumpAndSettle();
 }
 
+/// Selects the quotation and completes its checkout: pay online, confirm the
+/// review, continue, then send the primary request. Returns that request.
+Future<RequestOptions> checkout(
+  WidgetTester tester,
+  List<RequestOptions> requests,
+) async {
+  await tester.tap(find.widgetWithText(FilledButton, 'Select this quotation'));
+  await tester.pumpAndSettle();
+  expect(find.text('Selection checklist'), findsOneWidget);
+  await tester.ensureVisible(find.text('Online payment'));
+  await tester.tap(find.text('Online payment'));
+  await tester.pumpAndSettle();
+  final review = find.text(
+    'I reviewed the items, specifications, quantities and payment choices.',
+  );
+  await tester.ensureVisible(review);
+  await tester.tap(review);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Continue to quotation checkout'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Send request to primary Vendor'));
+  await tester.pumpAndSettle();
+  return requests.lastWhere((r) => r.uri.path.endsWith('/selection'));
+}
+
 void main() {
   testWidgets(
     'a Vendor offering both lets the Buyer pick, re-prices it and sends the pick with the selection',
@@ -194,22 +260,16 @@ void main() {
       expect(find.text('₱1,055.00'), findsWidgets);
       expect(find.text('Delivery configuration'), findsOneWidget);
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Select this Vendor'));
-      // The Note field's blinking cursor never settles; pump through the dialog.
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.tap(find.widgetWithText(FilledButton, 'Select Vendor'));
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.pump(const Duration(milliseconds: 400));
-      final select = requests.lastWhere(
-        (r) => r.uri.path.endsWith('/selection'),
-      );
+      final select = await checkout(tester, requests);
       expect((select.data as Map)['fulfillment_method'], 'DELIVERY');
+      expect((select.data as Map)['payment_method'], 'ONLINE');
+      await tester.tap(find.text('View primary request'));
       expect(order, orderId);
       expect(tester.takeException(), isNull);
     },
   );
 
-  testWidgets('a Vendor offering one method stays locked and sends no pick', (
+  testWidgets('a Vendor offering one method stays locked and sends its method', (
     tester,
   ) async {
     final requests = <RequestOptions>[];
@@ -231,13 +291,9 @@ void main() {
       isEmpty,
     );
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Select this Vendor'));
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.tap(find.widgetWithText(FilledButton, 'Select Vendor'));
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.pump(const Duration(milliseconds: 400));
-    final select = requests.lastWhere((r) => r.uri.path.endsWith('/selection'));
-    expect((select.data as Map).containsKey('fulfillment_method'), isFalse);
+    // The checkout prices and requests the one method the Vendor offers.
+    final select = await checkout(tester, requests);
+    expect((select.data as Map)['fulfillment_method'], 'PICKUP');
   });
 
   test('the card names the priced method and the other one on offer', () {

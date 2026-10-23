@@ -381,7 +381,7 @@ async function example() {
     issuerName: issuerName_example,
     // string
     invoiceNumber: invoiceNumber_example,
-    // Date
+    // Date | Invoice calendar date; must not be later than today in Asia/Manila.
     issuedOn: 2013-10-20,
     // number
     amountCentavos: 56,
@@ -427,7 +427,7 @@ example().catch(console.error);
 | **invoiceType** | `VENDOR_GOODS_INVOICE`, `VENDOR_ADJUSTMENT_DOCUMENT` |  | [Defaults to `undefined`] [Enum: VENDOR_GOODS_INVOICE, VENDOR_ADJUSTMENT_DOCUMENT] |
 | **issuerName** | `string` | Must equal the registered business name. | [Defaults to `undefined`] |
 | **invoiceNumber** | `string` |  | [Defaults to `undefined`] |
-| **issuedOn** | `Date` |  | [Defaults to `undefined`] |
+| **issuedOn** | `Date` | Invoice calendar date; must not be later than today in Asia/Manila. | [Defaults to `undefined`] |
 | **amountCentavos** | `number` |  | [Defaults to `undefined`] |
 | **sourceSystem** | `REGISTERED_CAS`, `BIR_EIS`, `LOOSE_LEAF_OR_PRINTED`, `OTHER_REGISTERED` |  | [Defaults to `undefined`] [Enum: REGISTERED_CAS, BIR_EIS, LOOSE_LEAF_OR_PRINTED, OTHER_REGISTERED] |
 | **invoicingMethod** | `ELECTRONIC`, `COMPUTERIZED`, `MANUAL` |  | [Defaults to `undefined`] [Enum: ELECTRONIC, COMPUTERIZED, MANUAL] |

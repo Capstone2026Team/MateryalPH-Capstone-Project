@@ -58,7 +58,8 @@ test('quotation history and public handler identity remain readable across scree
   await expect(old.getByRole('button')).toHaveCount(0)
   await expect(old.getByText('Superseded', { exact: true })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-  await page.getByRole('button', { name: 'Quotation history', exact: true }).click()
+  // Quotation history is a modal above the conversation; it closes with its own button.
+  await page.getByRole('button', { name: 'Close quotation history' }).click()
   await page.getByRole('button', { name: 'Prepare quotation', exact: true }).click()
   await expect(page.getByRole('region', { name: 'Quotation draft' })).toBeVisible()
   await page.getByRole('button', { name: 'Close prepare quotation' }).click()
@@ -87,5 +88,6 @@ test('quotation history and public handler identity remain readable across scree
   await page.getByRole('button', { name: 'New quotation', exact: true }).click()
   await expect(page.getByRole('region', { name: 'Quotation draft' })).toBeVisible()
   await page.getByRole('button', { name: 'Close prepare quotation' }).click()
+  await page.getByRole('button', { name: 'Quotation history', exact: true }).click()
   await expect(page.getByRole('link', { name: /Open accepted order/ })).toHaveAttribute('href', '/orders/order-one')
 })

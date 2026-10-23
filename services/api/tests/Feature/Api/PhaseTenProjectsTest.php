@@ -180,7 +180,7 @@ final class PhaseTenProjectsTest extends TestCase
         $original = $w['version']['content_hash'];
         $saved = DB::table('compiled_estimate_vendors')->where('id', $e['items'][0]['id'])->value('snapshot');
         $this->bulk($v->id, false);
-        $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/selection', ['lock_version' => $w['lock_version'], 'candidate_id' => $e['items'][0]['id']], $this->key())->assertConflict();
+        $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/selection', ['lock_version' => $w['lock_version'], 'candidate_id' => $e['items'][0]['id'], 'payment_method' => 'ONLINE'], $this->key())->assertConflict();
         self::assertSame([], $this->scan($w)['items']);
         self::assertSame($saved, DB::table('compiled_estimate_vendors')->where('id', $e['items'][0]['id'])->value('snapshot'));
         self::assertSame($original, DB::table('work_package_versions')->where('id', $w['current_version_id'])->value('content_hash'));
@@ -204,7 +204,7 @@ final class PhaseTenProjectsTest extends TestCase
         Carbon::setTestNow($later);
         CarbonImmutable::setTestNow($later);
         $this->getJson('/api/v1/buyers/work-packages/'.$w['id'].'/estimates')->assertOk()->assertJsonPath('data.estimate.state', 'EXPIRED')->assertJsonPath('data.items.0.fms.score', $e['items'][0]['fms']['score']);
-        $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/selection', ['lock_version' => $w['lock_version'], 'candidate_id' => $e['items'][0]['id']], $this->key())->assertConflict()->assertJsonPath('errors.0.code', 'ESTIMATE_EXPIRED');
+        $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/selection', ['lock_version' => $w['lock_version'], 'candidate_id' => $e['items'][0]['id'], 'payment_method' => 'ONLINE'], $this->key())->assertConflict()->assertJsonPath('errors.0.code', 'ESTIMATE_EXPIRED');
     }
 
     public function test_multi_vendor_inquiries_share_original_and_single_award_expires_competitors_with_replay(): void
@@ -227,14 +227,14 @@ final class PhaseTenProjectsTest extends TestCase
             $this->signInBuyer($buyer);
         }
         $key = $this->key();
-        $body = ['lock_version' => $w['lock_version'], 'candidate_id' => $e['items'][0]['id'], 'note' => 'Unload beside the gate.'];
+        $body = ['lock_version' => $w['lock_version'], 'candidate_id' => $e['items'][0]['id'], 'payment_method' => 'ONLINE', 'note' => 'Unload beside the gate.'];
         $order = $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/selection', $body, $key)->assertCreated()->json('data.id');
         $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/selection', $body, $key)->assertCreated()->assertJsonPath('data.id', $order);
         self::assertSame(1, DB::table('orders')->where('work_package_id', $w['id'])->count());
         self::assertSame('Unload beside the gate.', DB::table('orders')->where('id', $order)->value('project_note'));
         $this->getJson('/api/v1/buyers/conversations/'.$chatB)->assertOk()->assertJsonPath('data.quotations.quotation.state', 'EXPIRED')->assertJsonCount(1, 'data.quotations.versions');
         $current = $this->getJson('/api/v1/buyers/work-packages/'.$w['id'])->assertOk()->json('data');
-        $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/selection', ['lock_version' => $current['lock_version'], 'candidate_id' => $e['items'][1]['id']], $this->key())->assertConflict();
+        $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/selection', ['lock_version' => $current['lock_version'], 'candidate_id' => $e['items'][1]['id'], 'payment_method' => 'ONLINE'], $this->key())->assertConflict();
     }
 
     public function test_quotation_acceptance_requires_written_budget_override_and_retains_history_after_bulk_no(): void
@@ -248,7 +248,7 @@ final class PhaseTenProjectsTest extends TestCase
         $this->signInStoreMember($owner);
         $quote = $this->publish($chat, $this->variantIds($listing)[0]);
         $this->signInBuyer($buyer);
-        $body = ['version_id' => $quote['id'], 'content_hash' => $quote['content_hash']];
+        $body = ['version_id' => $quote['id'], 'content_hash' => $quote['content_hash'], 'payment_method' => 'ONLINE'];
         $this->postJson('/api/v1/buyers/conversations/'.$chat.'/quotation/accept', $body, $this->key())->assertUnprocessable()->assertJsonPath('errors.0.code', 'BUDGET_OVERRIDE_REQUIRED');
         self::assertSame(0, DB::table('orders')->count());
         $order = $this->postJson('/api/v1/buyers/conversations/'.$chat.'/quotation/accept', $body + ['budget_override_reason' => 'Approved extra materials for foundation.'], $this->key())->assertOk()->json('data.order_id');
@@ -280,13 +280,13 @@ final class PhaseTenProjectsTest extends TestCase
         self::assertSame('ALTERNATE_DROP_OFF', $snapshot['destination']['vehicle_endpoint']);
         $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/candidates/'.$snapshot['id'].'/route')->assertOk()->assertJsonPath('data.origin', 'PROJECT_SITE');
         DB::table('vendor_vehicles')->where('id', $vehicle)->update(['available' => false]);
-        $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/selection', ['lock_version' => $w['lock_version'], 'candidate_id' => $snapshot['id']], $this->key())->assertConflict();
+        $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/selection', ['lock_version' => $w['lock_version'], 'candidate_id' => $snapshot['id'], 'payment_method' => 'ONLINE'], $this->key())->assertConflict();
         DB::table('vendor_vehicles')->where('id', $vehicle)->update(['available' => true]);
         [$chat,$w] = $this->inquiry($w, $this->scan($w)['items'][0]);
         $this->signInStoreMember($owner);
         $quote = $this->publish($chat, $this->variantIds($listing)[0], '10', ['vehicles' => [['vehicle_id' => $vehicle, 'number_of_vehicles' => 1, 'total_vehicle_trips' => 1]], 'final_fee_centavos' => 60500, 'arrangement' => 'Delivery to North gate', 'access_confirmed' => true, 'heavy_vehicle_access_confirmed' => true]);
         $this->signInBuyer($buyer);
-        $order = $this->postJson('/api/v1/buyers/conversations/'.$chat.'/quotation/accept', ['version_id' => $quote['id'], 'content_hash' => $quote['content_hash']], $this->key())->assertOk()->json('data.order_id');
+        $order = $this->postJson('/api/v1/buyers/conversations/'.$chat.'/quotation/accept', ['version_id' => $quote['id'], 'content_hash' => $quote['content_hash'], 'payment_method' => 'ONLINE'], $this->key())->assertOk()->json('data.order_id');
         $confirmed = DB::table('order_delivery_snapshots')->where('order_id', $order)->value('snapshot');
         DB::table('vendor_vehicles')->where('id', $vehicle)->update(['available' => false]);
         $this->bulk($v->id, false);
@@ -328,7 +328,7 @@ final class PhaseTenProjectsTest extends TestCase
 
         $both = $items[$deliverer->id];
         $url = '/api/v1/buyers/work-packages/'.$w['id'];
-        $choice = ['lock_version' => $w['lock_version'], 'candidate_id' => $both['id']];
+        $choice = ['lock_version' => $w['lock_version'], 'candidate_id' => $both['id'], 'payment_method' => 'ONLINE'];
         // A Vendor offering both needs the Buyer's choice; a method the Vendor lacks is refused.
         $this->postJson($url.'/selection', $choice, $this->key())->assertUnprocessable()->assertJsonPath('errors.0.code', 'FULFILLMENT_CHOICE_REQUIRED');
         $this->postJson($url.'/selection', ['candidate_id' => $items[$pickup->id]['id'], 'fulfillment_method' => 'DELIVERY'] + $choice, $this->key())
@@ -363,7 +363,7 @@ final class PhaseTenProjectsTest extends TestCase
         $fee = $candidate['delivery']['estimate']['fee_min_centavos'];
         self::assertSame(60500, $fee);
         $order = $this->postJson('/api/v1/buyers/work-packages/'.$package['id'].'/selection', [
-            'lock_version' => $package['lock_version'], 'candidate_id' => $candidate['id'],
+            'lock_version' => $package['lock_version'], 'candidate_id' => $candidate['id'], 'payment_method' => 'ONLINE',
         ], $this->key())->assertCreated()->json('data.id');
         $assertEstimate = static fn ($response) => $response->assertOk()
             ->assertJsonPath('data.money.delivery.estimate.min_centavos', $fee)
@@ -447,7 +447,7 @@ final class PhaseTenProjectsTest extends TestCase
         $this->signInStoreMember($owner);
         $quote = $this->publish($chat, $this->variantIds($listing)[0], '3');
         $this->signInBuyer($buyer);
-        $order = $this->postJson('/api/v1/buyers/conversations/'.$chat.'/quotation/accept', ['version_id' => $quote['id'], 'content_hash' => $quote['content_hash']], $this->key())->assertOk()->json('data.order_id');
+        $order = $this->postJson('/api/v1/buyers/conversations/'.$chat.'/quotation/accept', ['version_id' => $quote['id'], 'content_hash' => $quote['content_hash'], 'payment_method' => 'ONLINE'], $this->key())->assertOk()->json('data.order_id');
         // Fulfillment actions belong to Phase 12; this synthetic canonical fact exercises completion projection.
         DB::table('orders')->where('id', $order)->update(['order_state' => 'COMPLETED']);
         $current = $this->getJson('/api/v1/buyers/work-packages/'.$w['id'])->assertOk()->assertJsonPath('data.status', 'IN_PROGRESS')->assertJsonPath('data.budget.actual_centavos', 5100)->json('data');
@@ -467,7 +467,7 @@ final class PhaseTenProjectsTest extends TestCase
         $this->signInStoreMember($owner);
         $quote = $this->publish($chat, $this->variantIds($listing)[0]);
         $this->signInBuyer($buyer);
-        $order = $this->postJson('/api/v1/buyers/conversations/'.$chat.'/quotation/accept', ['version_id' => $quote['id'], 'content_hash' => $quote['content_hash']], $this->key())->assertOk()->json('data.order_id');
+        $order = $this->postJson('/api/v1/buyers/conversations/'.$chat.'/quotation/accept', ['version_id' => $quote['id'], 'content_hash' => $quote['content_hash'], 'payment_method' => 'ONLINE'], $this->key())->assertOk()->json('data.order_id');
         $payment = (string) Str::uuid7();
         DB::table('payments')->insert(['id' => $payment, 'order_id' => $order, 'purpose' => 'FULL_ORDER_PAYMENT', 'principal_centavos' => 17000, 'processing_fee_centavos' => 300, 'total_centavos' => 17300, 'state' => 'PAID', 'idempotency_key' => (string) Str::uuid7(),
             // Phase 11: a PAID row always carries its provider session, account and evidence origin.

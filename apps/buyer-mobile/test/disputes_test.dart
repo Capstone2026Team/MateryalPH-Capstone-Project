@@ -663,7 +663,11 @@ void main() {
       find.widgetWithText(TextFormField, 'Details for the Vendor'),
       'Please send the sales invoice.',
     );
+    // Consent sits at the end of the form; Submit stays disabled without it.
+    await tester.ensureVisible(find.byType(CheckboxListTile));
+    await tester.pumpAndSettle();
     await tester.tap(find.byType(CheckboxListTile));
+    await tester.pump();
     await tester.tap(find.text('Submit Request'));
     await tester.pumpAndSettle();
     expect(repository.calls, contains('requestInvoice:COPY'));

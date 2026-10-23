@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Domain\Operations\ImportedOutboxBoundary;
 use App\Domain\Operations\OutboxProcessor;
 use App\Jobs\ProcessOutboxEvent;
 use Illuminate\Console\Command;
@@ -18,7 +19,7 @@ final class DispatchOutbox extends Command
     public function handle(): int
     {
         $limit = max(1, min(1000, (int) $this->option('limit')));
-        $ids = DB::table('outbox_events')
+        $ids = ImportedOutboxBoundary::apply(DB::table('outbox_events'))
             ->whereNull('processed_at')
             ->where('attempts', '<', OutboxProcessor::MAX_ATTEMPTS)
             ->where('available_at', '<=', now())

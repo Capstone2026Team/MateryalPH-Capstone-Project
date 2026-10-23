@@ -149,7 +149,7 @@ final class WorkPackageAuthoringTest extends TestCase
         self::assertSame(['UNLISTED', null], [$estimate['lines'][1]['status'], $estimate['lines'][1]['amount_centavos']]);
         self::assertSame('NO_PRICE_DATA', $estimate['lines'][2]['status']);
         self::assertSame([19010, 1, 2], [$estimate['materials_total_centavos'], $estimate['priced_line_count'], $estimate['unpriced_line_count']]);
-        self::assertSame(['DELIVERY_FEE', 'LABOR'], $estimate['excludes']);
+        self::assertSame(['LABOR', 'PROCESSING_FEE'], $estimate['excludes']);
         // 50 km is the only Project-Based radius: another value is refused, never applied.
         $this->postJson('/api/v1/buyers/projects/'.$p['id'].'/work-package-estimate', ['radius_km' => 10] + $body)->assertUnprocessable();
         self::assertSame(0, DB::table('compiled_estimates')->count());

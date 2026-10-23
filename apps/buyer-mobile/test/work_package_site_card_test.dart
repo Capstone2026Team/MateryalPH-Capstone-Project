@@ -177,7 +177,6 @@ void main() {
     final tops = [
       for (final label in [
         'Fulfillment',
-        'Payment method',
         'Project site',
         'Site contact',
         'Access instructions',
@@ -186,15 +185,8 @@ void main() {
         tester.getTopLeft(find.text(label)).dy,
     ];
     expect(tops, orderedEquals([...tops]..sort()));
-    // The payment helper sits directly beneath the Payment method field.
-    expect(
-      tester
-          .getTopLeft(
-            find.text('Only Vendors that support it appear in the scan'),
-          )
-          .dy,
-      lessThan(tester.getTopLeft(find.text('Project site')).dy),
-    );
+    // Payment is chosen per supplier at quotation checkout, not in the package.
+    expect(find.text('Payment method'), findsNothing);
   });
 
   testWidgets('Heavy vehicles restricted shows for Delivery and Both only', (
@@ -231,7 +223,7 @@ void main() {
     expect(off.thumbColor?.resolve({}), BuyerTheme.muted);
   });
 
-  testWidgets('Both can only be paid online and saves as BOTH', (tester) async {
+  testWidgets('Both saves as BOTH with the delivery details', (tester) async {
     final saves = <Map<String, Object?>>[];
     await _open(
       tester,
@@ -241,23 +233,14 @@ void main() {
       ),
     );
     await _pick(tester, 'Delivery', 'Both');
-    await tester.tap(find.text('Online payment'));
-    await tester.pumpAndSettle();
-    expect(find.text('Cash on Delivery'), findsNothing);
-    expect(find.text('In-Store Payment'), findsNothing);
-    await tester.tap(find.text('Online payment').last);
-    await tester.pumpAndSettle();
-    expect(
-      find.text('Cash on Delivery and In-Store need one fulfillment method'),
-      findsOneWidget,
-    );
 
     // A Draft saves with Finalize.
     await tester.tap(find.text('Finalize'));
     await tester.pumpAndSettle();
     expect(saves, hasLength(1));
     expect(saves.single['fulfillment_method'], 'BOTH');
-    expect(saves.single['payment_method'], 'ONLINE');
+    // Payment is chosen per supplier at quotation checkout.
+    expect(saves.single.containsKey('payment_method'), isFalse);
     expect(saves.single['site_contact'], '+639171234567');
     expect(saves.single['heavy_vehicle_restriction'], 'NO');
   });
@@ -328,7 +311,6 @@ void main() {
     for (final text in [
       'Project site',
       'Fulfillment',
-      'Payment method',
       'Site contact',
       'Access instructions',
       'Heavy vehicles restricted',

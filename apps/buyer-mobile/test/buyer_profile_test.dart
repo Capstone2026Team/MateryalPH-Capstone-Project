@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:materyalph/design_system/theme.dart';
+import 'package:materyalph/features/notifications/notification_scope.dart';
+import 'package:materyalph/features/notifications/notification_settings_screen.dart';
+import 'package:materyalph/features/notifications/notifications_screen.dart';
 import 'package:materyalph/screens/buyer_home_screen.dart';
 import 'package:materyalph/widgets/buyer_account_widgets.dart';
 import 'buyer_account_test.dart' as fixtures;
+import 'fulfillment_badges_test.dart' show notifications;
 
 void main() {
   testWidgets('Profile stays navigable when no repository is supplied', (
@@ -108,9 +112,12 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: BuyerTheme.light,
-          home: BuyerHomeScreen(
-            repository: fixtures.repository(),
-            onSignOut: () async {},
+          home: NotificationScope(
+            repository: notifications(),
+            child: BuyerHomeScreen(
+              repository: fixtures.repository(),
+              onSignOut: () async {},
+            ),
           ),
         ),
       );
@@ -118,11 +125,23 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Notifications'));
       await tester.pumpAndSettle();
-      expect(find.text('Inbox'), findsOneWidget);
-      expect(find.text('Preferences'), findsOneWidget);
+      expect(find.byType(NotificationsScreen), findsOneWidget);
       expect(find.text('Not yet implemented'), findsNothing);
       await tester.tap(find.byTooltip('Back'));
       await tester.pumpAndSettle();
+      // Preferences have their own profile row.
+      await reveal(tester, 'Notification Settings');
+      await tester.tap(find.text('Notification Settings'));
+      await tester.pumpAndSettle();
+      expect(find.byType(NotificationSettingsScreen), findsOneWidget);
+      await tester.tap(find.byTooltip('Back'));
+      await tester.pumpAndSettle();
+      // Account Setting sits above the Notification Settings row.
+      await tester.scrollUntilVisible(
+        find.text('Account Setting'),
+        -180,
+        scrollable: find.byType(Scrollable).first,
+      );
       await reveal(tester, 'Account Setting');
       await tester.tap(find.text('Account Setting'));
       await tester.pumpAndSettle();

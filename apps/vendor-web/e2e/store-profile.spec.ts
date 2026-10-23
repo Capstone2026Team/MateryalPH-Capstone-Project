@@ -66,7 +66,7 @@ test('Store Profile reflows and keeps business evidence and location accessible'
       await expect(dialog).toBeHidden()
     }
     if (section === 'Fulfillment Configuration') {
-      await expect(page.getByRole('radio', { name: 'Vendor Delivery' })).toBeChecked()
+      await expect(page.getByRole('radio', { name: 'Vendor Delivery Only', exact: true })).toBeChecked()
       await expect(page.getByRole('button', { name: 'Save fulfillment configuration' })).toBeVisible()
       await expect(page.getByRole('link', { name: 'Update fulfillment configuration' })).toHaveCount(0)
       await page.screenshot({ path: testInfo.outputPath('fulfillment.png'), fullPage: true })

@@ -21,7 +21,6 @@ final class NavigationBroadcast
             str_starts_with($action, 'VENDOR_VERIFICATION_') || $action === 'VENDOR_EVIDENCE_SUBMITTED' => 'vendor_verification.review',
             $type === 'COMPLIANCE_SUBMISSION' || $action === 'CATALOG_LISTING_DELETED' => 'product_compliance.review',
             $type === 'REVIEW' && in_array($action, ['REVIEW_REPORTED', 'REVIEW_MODERATED', 'REVIEW_CORRECTED'], true) => 'reviews.moderate',
-            $type === 'PRIVACY_REQUEST' && $action !== 'PRIVACY_REQUEST_VIEWED' => 'privacy',
             $type === 'ENFORCEMENT_ACTION' => 'enforcement.view',
             $action === 'OPERATION_RETRY_QUEUED' => 'integrations.view',
             $action === 'ORDER_FULFILLMENT_ASSIGNED' => 'orders.operations.view',
@@ -69,9 +68,7 @@ final class NavigationBroadcast
             } catch (AuthenticationException) {
                 continue;
             }
-            if ($user->account_type === 'ADMIN' && ($permission === null || ! ($permission === 'privacy'
-                ? count(array_intersect(['privacy.manage', 'privacy.handle'], $scope['permissions'])) > 0
-                : in_array($permission, $scope['permissions'], true)))) {
+            if ($user->account_type === 'ADMIN' && ($permission === null || ! in_array($permission, $scope['permissions'], true))) {
                 continue;
             }
             if ($user->account_type === 'VENDOR') {

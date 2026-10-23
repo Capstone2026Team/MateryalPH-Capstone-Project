@@ -252,8 +252,10 @@ The Phase 1 schema creates the complete baseline below. Later phases may add add
 | Disputes | `dispute_cases`, `dispute_parties`, `dispute_evidence`, `dispute_responses`, `dispute_clarifications`, `dispute_decisions`, `dispute_appeals`, `dispute_remedies` |
 | Reviews and scores | `reviews`, `review_media`, `review_moderation`, `metric_events`, `score_snapshots`, `badge_definitions`, `vendor_badge_history` |
 | Geography | `psgc_versions`, `psgc_areas`, `psgc_boundaries`, `directory_suppliers`, `place_cache_entries`, `route_cache_entries` |
-| Operations | `notifications`, `notification_deliveries`, `notification_preferences`, `files`, `webhook_events`, `idempotency_records`, `outbox_events`, `audit_logs`, `privacy_requests`, `data_exports`, `platform_settings` |
+| Operations | `notifications`, `notification_deliveries`, `notification_preferences`, `files`, `webhook_events`, `idempotency_records`, `outbox_events`, `audit_logs`, `data_exports`, `platform_settings` |
 | Analytics | `analytics_daily_facts`, `analytics_geography_facts`, `analytics_category_facts`, `analytics_active_user_facts`, `analytics_refresh_runs`, `price_observations` |
+
+> Owner correction (2026-10-23): Privacy Requests is retired across the portal, API and clients. Existing `privacy_requests` and `privacy_request_events` tables remain as retained historical records under their original guards; they have no active feature routes or writers. Buyer deletion records its reference in the existing audit trail. Migration `2026_10_29_000000_retire_privacy_request_permissions.php` removes the former permission grants. Existing Support Requests and DPO contact channels remain available for privacy inquiries.
 
 **Financial and Materials Analytics schema extension.** On a new database these are part of the Phase 1 baseline; on an already migrated repository introduce additive migrations and backfill only evidenced data. Never reset the database or rewrite applied migrations to adopt this revision. API names with hyphens map to snake_case tables; reuse `physical_payment_records`, `listing_price_versions`, `price_observations` and `analytics_refresh_runs` rather than creating synonyms.
 
@@ -406,7 +408,7 @@ Use `SELECT ... FOR UPDATE`, deterministic row ordering, database constraints, a
 | --- | --- |
 | `/auth` | register, verify email, login, refresh, logout, Google callback/exchange, recover, TOTP, sessions |
 | `/agreements` | current documents, acceptances, required reacceptance |
-| `/buyers` | profile, locations, preferences, favorites, privacy requests |
+| `/buyers` | profile, locations, preferences, favorites, account deletion |
 | `/vendors` | public store, onboarding, contacts, documents, activation, team, payment connection |
 | `/taxonomy` | categories, materials, aliases, units, technical fields, Admin changes |
 | `/listings` | create, edit, variants, media, price versions, publication, search |

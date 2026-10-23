@@ -11,12 +11,12 @@ part 'buyer_account_deletion_result.g.dart';
 /// BuyerAccountDeletionResult
 ///
 /// Properties:
-/// * [reference] - Privacy request reference for follow-up with support.
+/// * [reference] - Account-deletion reference recorded in the audit trail for follow-up with support.
 /// * [deletedAt]
 /// * [signInRequired]
 @BuiltValue()
 abstract class BuyerAccountDeletionResult implements Built<BuyerAccountDeletionResult, BuyerAccountDeletionResultBuilder> {
-  /// Privacy request reference for follow-up with support.
+  /// Account-deletion reference recorded in the audit trail for follow-up with support.
   @BuiltValueField(wireName: r'reference')
   String get reference;
 

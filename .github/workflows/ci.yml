@@ -1,6 +1,6 @@
 name: quality gates
 
-# CI only. Deploy approved commits through Render after the required checks pass.
+# CI only. Operators deploy accepted commits to Hostinger or the Render fallback.
 on:
   pull_request:
   push:
@@ -134,6 +134,9 @@ jobs:
 
       - name: Run backend tests
         run: php artisan test
+
+      - name: Verify recovery archive integrity guards
+        run: php ../../scripts/deployment/test-vps-transfer.php
 
       - uses: actions/setup-node@v7.1.0
         with:
@@ -332,6 +335,9 @@ jobs:
     name: Vendor and Admin responsive browser QA (${{ matrix.shard }}/4)
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    env:
+      # Public placeholder so the interactive-map specs exercise their stubbed Maps API; never a real key.
+      VITE_GOOGLE_MAPS_BROWSER_KEY: e2e-synthetic-maps-key
     strategy:
       fail-fast: false
       matrix:
@@ -506,7 +512,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.infrastructure == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-node@v7.1.0
@@ -517,6 +523,15 @@ jobs:
           python-version: '3.13'
       - run: python -m pip install -r tools/deployment/requirements.txt
       - run: python tools/deployment/validate_configuration.py
+      - run: python tools/deployment/validate_vps.py
+      - run: mkdir -p .tmp && python scripts/deployment/test-vps-compose.py
+      - run: python scripts/deployment/test-vps-database.py
+      - run: node --test scripts/deployment/vps-deployment.test.mjs
+      - run: python scripts/deployment/test-vps-host.py
+      - run: bash -n scripts/deployment/vpsctl.sh && sh -n infrastructure/vps/init-database.sh
+      - run: bash -n scripts/deployment/bootstrap-vps.sh && sh -n infrastructure/vps/postgres-entrypoint.sh
+      - run: python -m py_compile scripts/deployment/vps-host.py scripts/deployment/package-vps.py scripts/deployment/export-vps-source.py
+      - run: python -m py_compile scripts/deployment/prepare-vps-environment.py
       - run: sh -n infrastructure/docker/install-phpredis.sh && sh scripts/deployment/test-phpredis-installer.sh
       - run: sh -n infrastructure/docker/render-start.sh && sh -n scripts/deployment/build-portal.sh
       - run: node --check scripts/deployment/deploy-render-staging.mjs && node --check scripts/ci/changed-paths.mjs
@@ -528,18 +543,35 @@ jobs:
           node -e 'require("node:fs").writeFileSync("services/api/.env.testing", `TEST_DB_PASSWORD=${require("node:crypto").randomBytes(32).toString("hex")}\n`)'
           docker compose --env-file services/api/.env.testing -f compose.test.yaml config --quiet
       - run: docker build --pull -f infrastructure/docker/api.render.Dockerfile -t materyalph-api:${{ github.sha }} .
+      - name: Build both VPS portals off-server
+        run: docker build --pull -f infrastructure/docker/portals.vps.Dockerfile --build-arg VENDOR_RECAPTCHA_SITE_KEY=public-ci-vendor --build-arg ADMIN_RECAPTCHA_SITE_KEY=public-ci-admin --build-arg GOOGLE_MAPS_BROWSER_KEY=public-ci-maps -t materyalph-edge:${{ github.sha }} .
+      - name: Validate the Caddy edge image
+        run: docker run --rm --network none -e API_HOST=api.example.test -e VENDOR_HOST=vendor.example.test -e ADMIN_HOST=admin.example.test -e REVERB_HOST=ws.example.test materyalph-edge:${{ github.sha }} caddy adapt --config /etc/caddy/Caddyfile --validate > /dev/null
       - name: Exercise the isolated Render HTTP runtime
         run: python scripts/deployment/test-render-runtime.py --image materyalph-api:${{ github.sha }}
+      - name: Exercise VPS concurrency and maintenance fencing
+        run: python scripts/deployment/test-render-runtime.py --image materyalph-api:${{ github.sha }} --vps
       - name: Check the non-root runtime and server configuration
         run: |
           test "$(docker image inspect materyalph-api:${{ github.sha }} --format '{{.Config.User}}')" = app
           docker run --rm --env FRONTEND_VENDOR_HOST=vendor.example.test --env FRONTEND_ADMIN_HOST=admin.example.test --entrypoint /bin/sh materyalph-api:${{ github.sha }} -c 'php /app/infrastructure/prepare-nginx.php && php-fpm -t && nginx -e /dev/null -t -c /app/infrastructure/nginx.conf'
+          docker run --rm --entrypoint php-fpm materyalph-api:${{ github.sha }} -t -y /app/infrastructure/vps-php-fpm.conf
+          docker run --rm --entrypoint php materyalph-api:${{ github.sha }} -l /app/infrastructure/vps-transfer.php
           if docker run --rm --network none --env APP_ENV=production --env XENDIT_MODE=TEST --env LIVE_COMMERCE_ENABLED=false materyalph-api:${{ github.sha }} /usr/local/bin/render-start release; then
             echo 'Non-staging release unexpectedly succeeded'; exit 1
           fi
-      - uses: aquasecurity/trivy-action@v0.36.0
+      - name: Scan the API image
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: materyalph-api:${{ github.sha }}
+          format: table
+          exit-code: '1'
+          severity: HIGH,CRITICAL
+          hide-progress: true
+      - name: Scan the VPS edge image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: materyalph-edge:${{ github.sha }}
           format: table
           exit-code: '1'
           severity: HIGH,CRITICAL

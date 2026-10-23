@@ -106,7 +106,7 @@ final class WorkPackageSpecificationTest extends TestCase
         self::assertSame('10.0000', $line['missing_quantity']);
         self::assertSame('Thickness', $line['allocations'][0]['offered_specifications'][0]['label']);
 
-        $request = ['lock_version' => $w['lock_version'], 'candidate_id' => $candidate['id']];
+        $request = ['lock_version' => $w['lock_version'], 'candidate_id' => $candidate['id'], 'payment_method' => 'ONLINE'];
         $this->postJson($base.'/selection', $request, $this->key())->assertUnprocessable()->assertJsonPath('errors.0.code', 'SPECIFICATION_SELECTION_REQUIRED');
         $this->postJson($base.'/inquiries', $request, $this->key())->assertUnprocessable()->assertJsonPath('errors.0.code', 'SPECIFICATION_SELECTION_REQUIRED');
         $this->postJson($base.'/candidates/'.$candidate['id'].'/selection-preview', ['selections' => [['line_id' => $line['line_id'], 'option_id' => 'ffffffffffffffff']]])

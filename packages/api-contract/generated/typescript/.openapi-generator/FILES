@@ -95,7 +95,6 @@ docs/AdminOrderOperationsSummary.md
 docs/AdminOrderOperationsSummaryEnvelope.md
 docs/AdminPaymentListEnvelope.md
 docs/AdminPlatformSettingsApi.md
-docs/AdminPrivacyRequestsApi.md
 docs/AdminProductComplianceApi.md
 docs/AdminRefundListEnvelope.md
 docs/AdminRefundRow.md
@@ -815,14 +814,6 @@ docs/PlatformSettingVersion.md
 docs/PrepareTaxPackage201Response.md
 docs/PriceHistoryEntry.md
 docs/PriceHistoryEnvelope.md
-docs/PrivacyHandler.md
-docs/PrivacyRequestCreateRequest.md
-docs/PrivacyRequestDetail.md
-docs/PrivacyRequestDetailEnvelope.md
-docs/PrivacyRequestEvent.md
-docs/PrivacyRequestListEnvelope.md
-docs/PrivacyRequestSummary.md
-docs/PrivacyTransitionRequest.md
 docs/ProblemResolveRequest.md
 docs/ProblemResponseRequest.md
 docs/ProcessingFee.md
@@ -1269,7 +1260,6 @@ src/apis/AdminInvoicesApi.ts
 src/apis/AdminMaterialsAnalyticsApi.ts
 src/apis/AdminOrderOperationsApi.ts
 src/apis/AdminPlatformSettingsApi.ts
-src/apis/AdminPrivacyRequestsApi.ts
 src/apis/AdminProductComplianceApi.ts
 src/apis/AdminReviewModerationApi.ts
 src/apis/AdminScoreMonitoringApi.ts
@@ -2090,14 +2080,6 @@ src/models/PlatformSettingVersion.ts
 src/models/PrepareTaxPackage201Response.ts
 src/models/PriceHistoryEntry.ts
 src/models/PriceHistoryEnvelope.ts
-src/models/PrivacyHandler.ts
-src/models/PrivacyRequestCreateRequest.ts
-src/models/PrivacyRequestDetail.ts
-src/models/PrivacyRequestDetailEnvelope.ts
-src/models/PrivacyRequestEvent.ts
-src/models/PrivacyRequestListEnvelope.ts
-src/models/PrivacyRequestSummary.ts
-src/models/PrivacyTransitionRequest.ts
 src/models/ProblemResolveRequest.ts
 src/models/ProblemResponseRequest.ts
 src/models/ProcessingFee.ts

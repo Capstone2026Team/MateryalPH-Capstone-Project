@@ -334,7 +334,7 @@ If a required item is missing or invalid, submission is blocked and the exact re
 
 ### Privacy Notice
 
-Before submission of personal, legal-business, identity, tax, or compliance information, the system presents the applicable Privacy Notice. It explains collected categories, purposes, processing activities, authorized recipients/processors, retention basis, data-subject rights, privacy-request process, and other required information. The system records the Vendor/User, organization, Privacy Notice version, timestamp, processing activity, source/interface, and acknowledgment.
+Before submission of personal, legal-business, identity, tax, or compliance information, the system presents the applicable Privacy Notice. It explains collected categories, purposes, processing activities, authorized recipients/processors, retention basis, data-subject rights, privacy inquiry channels through existing Support Requests or the DPO contact, and other required information. The system records the Vendor/User, organization, Privacy Notice version, timestamp, processing activity, source/interface, and acknowledgment.
 
 Privacy Notice acknowledgment is stored separately from Terms of Service, Vendor Code of Conduct, Commission Agreement, payment agreements, and other commercial terms. It does not automatically accept unrelated agreements or optional processing.
 

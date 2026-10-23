@@ -398,7 +398,9 @@ void main() {
       );
       expect(find.text('Shown at payment'), findsOneWidget);
       expect(find.text('Est. ₱605.00'), findsOneWidget);
-      expect(find.text('Total before delivery'), findsOneWidget);
+      // With a delivery estimate, the total is labelled as an estimate.
+      expect(find.text('Estimated total'), findsOneWidget);
+      expect(find.text('Order total'), findsNothing);
       expect(
         find.textContaining(
           RegExp('commission|withholding', caseSensitive: false),

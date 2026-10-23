@@ -79,7 +79,7 @@ Future<List<RequestOptions>> pumpScreen(WidgetTester tester) async {
       theme: BuyerTheme.light,
       home: VendorSelectionScreen(
         repository: repository(requests),
-        package: package(),
+        package: package(legacy: true),
         mapBuilder: (context, props) => const ColoredBox(color: Colors.white),
         links: links(),
       ),
@@ -245,7 +245,7 @@ void main() {
         theme: BuyerTheme.light,
         home: VendorSelectionScreen(
           repository: repository(requests),
-          package: package(),
+          package: package(legacy: true),
           mapBuilder: (context, props) => const ColoredBox(color: Colors.white),
           links: links(),
         ),

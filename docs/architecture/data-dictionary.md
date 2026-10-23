@@ -243,6 +243,7 @@ Phase 1 platform foundation record.
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
 | `requires_reacceptance` | `boolean` | No | `false` | Requires reacceptance. |
+| `published_content` | `text` | Yes | — | Published content. |
 
 **Constraints**
 
@@ -1154,9 +1155,9 @@ Buyer identity, profile, or saved-context record.
 
 **Constraints**
 
-- `buyer_ranking_item_weights_check` — CHECK: `CHECK (procurement_type::text <> 'ITEM_BASED'::text OR jsonb_typeof(weights) = 'object'::text AND jsonb_exists_all(weights, ARRAY['distance'::text, 'price'::text, 'vps'::text, 'stock'::text, 'product_rating'::text]) AND (weights - ARRAY['distance'::text, 'price'::text, 'vps'::text, 'stock'::text, 'product_rating'::text]) = '{}'::jsonb AND (weights ->> 'distance'::text) ~ '^[0-9]{1,3}$'::text AND (weights ->> 'price'::text) ~ '^[0-9]{1,3}$'::text AND (weights ->> 'vps'::text) ~ '^[0-9]{1,3}$'::text AND (weights ->> 'stock'::text) ~ '^[0-9]{1,3}$'::text AND (weights ->> 'product_rating'::text) ~ '^[0-9]{1,3}$'::text AND (((weights ->> 'distance'::text)::integer) + ((weights ->> 'price'::text)::integer) + ((weights ->> 'vps'::text)::integer) + ((weights ->> 'stock'::text)::integer) + ((weights ->> 'product_rating'::text)::integer)) = 100)`
+- `buyer_ranking_item_weights_check` — CHECK: `CHECK (procurement_type::text <> 'ITEM_BASED'::text OR jsonb_typeof(weights) = 'object'::text AND jsonb_exists_all(weights, ARRAY['distance'::text, 'price'::text, 'vps'::text, 'stock'::text, 'product_rating'::text]) AND (weights - ARRAY['distance'::text, 'price'::text, 'vps'::text, 'stock'::text, 'product_rating'::text]) = '{}'::jsonb AND jsonb_typeof(weights -> 'distance'::text) = 'number'::text AND (weights ->> 'distance'::text) ~ '^[0-9]{1,3}$'::text AND ((weights ->> 'distance'::text)::integer) >= 0 AND ((weights ->> 'distance'::text)::integer) <= 100 AND jsonb_typeof(weights -> 'price'::text) = 'number'::text AND (weights ->> 'price'::text) ~ '^[0-9]{1,3}$'::text AND ((weights ->> 'price'::text)::integer) >= 0 AND ((weights ->> 'price'::text)::integer) <= 100 AND jsonb_typeof(weights -> 'vps'::text) = 'number'::text AND (weights ->> 'vps'::text) ~ '^[0-9]{1,3}$'::text AND ((weights ->> 'vps'::text)::integer) >= 0 AND ((weights ->> 'vps'::text)::integer) <= 100 AND jsonb_typeof(weights -> 'stock'::text) = 'number'::text AND (weights ->> 'stock'::text) ~ '^[0-9]{1,3}$'::text AND ((weights ->> 'stock'::text)::integer) >= 0 AND ((weights ->> 'stock'::text)::integer) <= 100 AND jsonb_typeof(weights -> 'product_rating'::text) = 'number'::text AND (weights ->> 'product_rating'::text) ~ '^[0-9]{1,3}$'::text AND ((weights ->> 'product_rating'::text)::integer) >= 0 AND ((weights ->> 'product_rating'::text)::integer) <= 100 AND (((weights ->> 'distance'::text)::integer) + ((weights ->> 'price'::text)::integer) + ((weights ->> 'vps'::text)::integer) + ((weights ->> 'stock'::text)::integer) + ((weights ->> 'product_rating'::text)::integer)) > 0)`
 - `buyer_ranking_procurement_type_check` — CHECK: `CHECK (procurement_type::text = ANY (ARRAY['ITEM_BASED'::character varying, 'PROJECT_BASED'::character varying]::text[]))`
-- `buyer_ranking_project_weights_check` — CHECK: `CHECK (procurement_type::text <> 'PROJECT_BASED'::text OR jsonb_typeof(weights) = 'object'::text AND jsonb_exists_all(weights, ARRAY['material_match'::text, 'budget_fit'::text, 'distance'::text, 'vps'::text]) AND (weights - ARRAY['material_match'::text, 'budget_fit'::text, 'distance'::text, 'vps'::text]) = '{}'::jsonb AND (weights ->> 'material_match'::text) ~ '^[0-9]{1,3}$'::text AND (weights ->> 'budget_fit'::text) ~ '^[0-9]{1,3}$'::text AND (weights ->> 'distance'::text) ~ '^[0-9]{1,3}$'::text AND (weights ->> 'vps'::text) ~ '^[0-9]{1,3}$'::text AND ((weights ->> 'material_match'::text)::integer) >= 0 AND ((weights ->> 'material_match'::text)::integer) <= 100 AND ((weights ->> 'budget_fit'::text)::integer) >= 0 AND ((weights ->> 'budget_fit'::text)::integer) <= 100 AND ((weights ->> 'distance'::text)::integer) >= 0 AND ((weights ->> 'distance'::text)::integer) <= 100 AND ((weights ->> 'vps'::text)::integer) >= 0 AND ((weights ->> 'vps'::text)::integer) <= 100 AND (((weights ->> 'material_match'::text)::integer) + ((weights ->> 'budget_fit'::text)::integer) + ((weights ->> 'distance'::text)::integer) + ((weights ->> 'vps'::text)::integer)) = 100)`
+- `buyer_ranking_project_weights_check` — CHECK: `CHECK (procurement_type::text <> 'PROJECT_BASED'::text OR jsonb_typeof(weights) = 'object'::text AND jsonb_exists_all(weights, ARRAY['material_match'::text, 'budget_fit'::text, 'distance'::text, 'vps'::text]) AND (weights - ARRAY['material_match'::text, 'budget_fit'::text, 'distance'::text, 'vps'::text]) = '{}'::jsonb AND jsonb_typeof(weights -> 'material_match'::text) = 'number'::text AND (weights ->> 'material_match'::text) ~ '^[0-9]{1,3}$'::text AND ((weights ->> 'material_match'::text)::integer) >= 0 AND ((weights ->> 'material_match'::text)::integer) <= 100 AND jsonb_typeof(weights -> 'budget_fit'::text) = 'number'::text AND (weights ->> 'budget_fit'::text) ~ '^[0-9]{1,3}$'::text AND ((weights ->> 'budget_fit'::text)::integer) >= 0 AND ((weights ->> 'budget_fit'::text)::integer) <= 100 AND jsonb_typeof(weights -> 'distance'::text) = 'number'::text AND (weights ->> 'distance'::text) ~ '^[0-9]{1,3}$'::text AND ((weights ->> 'distance'::text)::integer) >= 0 AND ((weights ->> 'distance'::text)::integer) <= 100 AND jsonb_typeof(weights -> 'vps'::text) = 'number'::text AND (weights ->> 'vps'::text) ~ '^[0-9]{1,3}$'::text AND ((weights ->> 'vps'::text)::integer) >= 0 AND ((weights ->> 'vps'::text)::integer) <= 100 AND (((weights ->> 'material_match'::text)::integer) + ((weights ->> 'budget_fit'::text)::integer) + ((weights ->> 'distance'::text)::integer) + ((weights ->> 'vps'::text)::integer)) > 0)`
 - `buyer_ranking_preferences_buyer_profile_id_foreign` — FOREIGN KEY: `FOREIGN KEY (buyer_profile_id) REFERENCES buyer_profiles(id) ON DELETE RESTRICT`
 - `buyer_ranking_preferences_updated_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (updated_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
 - `buyer_ranking_preferences_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
@@ -1691,9 +1692,16 @@ Phase 1 platform foundation record.
 | `expires_on` | `date` | Yes | — | Expires on. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `serial_prefix` | `character varying` | Yes | — | Serial prefix. |
+| `serial_from` | `bigint` | Yes | — | Serial from. |
+| `serial_to` | `bigint` | Yes | — | Serial to. |
+| `serial_digits` | `smallint` | Yes | — | Serial digits. |
+| `model_type` | `text` | Yes | — | Model type. |
+| `details` | `jsonb` | Yes | — | Details. |
 
 **Constraints**
 
+- `compliance_reference_serial_range_check` — CHECK: `CHECK (serial_prefix IS NULL AND serial_from IS NULL AND serial_to IS NULL AND serial_digits IS NULL OR serial_prefix::text ~ '^[A-Z]{1,2}$'::text AND serial_from IS NOT NULL AND serial_to IS NOT NULL AND serial_from <= serial_to AND serial_digits >= 6 AND serial_digits <= 12)`
 - `compliance_reference_records_compliance_reference_register_id_f` — FOREIGN KEY: `FOREIGN KEY (compliance_reference_register_id) REFERENCES compliance_reference_registers(id) ON DELETE RESTRICT`
 - `compliance_reference_records_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
 
@@ -1701,6 +1709,7 @@ Phase 1 platform foundation record.
 
 - `compliance_reference_record_lookup_index` — `CREATE INDEX compliance_reference_record_lookup_index ON public.compliance_reference_records USING btree (compliance_reference_register_id, record_number)`
 - `compliance_reference_records_pkey` — `CREATE UNIQUE INDEX compliance_reference_records_pkey ON public.compliance_reference_records USING btree (id)`
+- `compliance_reference_serial_lookup_index` — `CREATE INDEX compliance_reference_serial_lookup_index ON public.compliance_reference_records USING btree (compliance_reference_register_id, serial_prefix, serial_from, serial_to) WHERE (serial_prefix IS NOT NULL)`
 
 ## `compliance_reference_registers`
 
@@ -1718,15 +1727,17 @@ Phase 1 platform foundation record.
 | `column_mapping` | `jsonb` | No | — | Column mapping. |
 | `content_hash` | `character varying` | No | — | Content hash. |
 | `file_id` | `uuid` | No | — | File id. |
-| `imported_by_user_id` | `bigint` | No | — | Imported by user id. |
+| `imported_by_user_id` | `bigint` | Yes | — | Imported by user id. |
 | `activated_by_user_id` | `bigint` | Yes | — | Activated by user id. |
 | `activated_at` | `timestamp with time zone` | Yes | — | Activated at. |
 | `superseded_at` | `timestamp with time zone` | Yes | — | Superseded at. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `source_channel` | `character varying` | No | `'UPLOAD'::character varying` | Source channel. |
 
 **Constraints**
 
+- `compliance_register_channel_check` — CHECK: `CHECK ((source_channel::text = ANY (ARRAY['UPLOAD'::character varying, 'FEED'::character varying]::text[])) AND (source_channel::text = 'FEED'::text OR imported_by_user_id IS NOT NULL))`
 - `compliance_register_state_check` — CHECK: `CHECK ((register_kind::text = ANY (ARRAY['PS_LICENSE'::character varying, 'ICC_CERTIFICATE'::character varying]::text[])) AND (status::text = ANY (ARRAY['DRAFT'::character varying, 'ACTIVE'::character varying, 'SUPERSEDED'::character varying]::text[])) AND (status::text = 'DRAFT'::text OR activated_at IS NOT NULL))`
 - `compliance_reference_registers_activated_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (activated_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
 - `compliance_reference_registers_file_id_foreign` — FOREIGN KEY: `FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE RESTRICT`
@@ -1795,12 +1806,16 @@ Phase 1 platform foundation record.
 | `lock_version` | `integer` | No | `1` | Lock version. |
 | `decided_at` | `timestamp with time zone` | Yes | — | Decided at. |
 | `listing_fingerprint` | `character varying` | Yes | — | Listing fingerprint. |
+| `review_mode` | `character varying` | No | `'AUTOMATIC'::character varying` | Review mode. |
+| `compliance_reference_record_id` | `uuid` | Yes | — | Compliance reference record id. |
 
 **Constraints**
 
 - `compliance_submission_marking_check` — CHECK: `CHECK (marking_type IS NULL OR (marking_type::text = ANY (ARRAY['PS_MARK'::character varying, 'ICC_STICKER'::character varying]::text[])))`
 - `compliance_submission_path_check` — CHECK: `CHECK (path::text = ANY (ARRAY['PHOTO_OCR'::character varying, 'QR'::character varying, 'MANUAL'::character varying]::text[]))`
+- `compliance_submission_review_mode_check` — CHECK: `CHECK (review_mode::text = ANY (ARRAY['AUTOMATIC'::character varying, 'MANUAL_REVIEW'::character varying]::text[]))`
 - `compliance_submission_status_check` — CHECK: `CHECK (status::text = ANY (ARRAY['PENDING_ADMIN_REVIEW'::character varying, 'VERIFIED'::character varying, 'CHANGES_REQUIRED'::character varying, 'REJECTED'::character varying, 'SUPERSEDED'::character varying]::text[]))`
+- `compliance_submissions_compliance_reference_record_id_foreign` — FOREIGN KEY: `FOREIGN KEY (compliance_reference_record_id) REFERENCES compliance_reference_records(id) ON DELETE RESTRICT`
 - `compliance_submissions_regulated_material_rule_id_foreign` — FOREIGN KEY: `FOREIGN KEY (regulated_material_rule_id) REFERENCES regulated_material_rules(id) ON DELETE RESTRICT`
 - `compliance_submissions_submitted_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (submitted_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
 - `compliance_submissions_supersedes_submission_id_foreign` — FOREIGN KEY: `FOREIGN KEY (supersedes_submission_id) REFERENCES compliance_submissions(id) ON DELETE RESTRICT`
@@ -2835,7 +2850,7 @@ FIN-01–FIN-12 financial control and evidence record.
 
 **Constraints**
 
-- `fee_assessment_amounts_check` — CHECK: `CHECK (commission_basis_centavos >= 0 AND commission_basis_points = 200 AND earned_centavos >= 0 AND earned_target_centavos >= 0 AND credited_centavos >= 0 AND credited_centavos <= earned_centavos)`
+- `fee_assessment_amounts_check` — CHECK: `CHECK (commission_basis_centavos >= 0 AND commission_basis_points >= 0 AND commission_basis_points <= 10000 AND earned_centavos >= 0 AND earned_target_centavos >= 0 AND credited_centavos >= 0 AND credited_centavos <= earned_centavos)`
 - `fee_assessment_state_check` — CHECK: `CHECK ((state::text = ANY (ARRAY['ESTIMATED'::character varying, 'EARNED'::character varying, 'CANCELLED'::character varying]::text[])) AND (credited_state::text = ANY (ARRAY['NOT_CREDITED'::character varying, 'PARTIALLY_CREDITED'::character varying, 'CREDITED'::character varying]::text[])))`
 - `fee_assessments_fee_policy_version_id_foreign` — FOREIGN KEY: `FOREIGN KEY (fee_policy_version_id) REFERENCES fee_policy_versions(id) ON DELETE RESTRICT`
 - `fee_assessments_financial_snapshot_id_foreign` — FOREIGN KEY: `FOREIGN KEY (financial_snapshot_id) REFERENCES financial_snapshots(id) ON DELETE RESTRICT`
@@ -2897,17 +2912,21 @@ FIN-01–FIN-12 financial control and evidence record.
 | `approved_at` | `timestamp with time zone` | Yes | — | Approved at. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `agreement_version_id` | `uuid` | Yes | — | Agreement version id. |
+| `reason` | `text` | Yes | — | Reason. |
 
 **Constraints**
 
-- `fee_policy_commission_check` — CHECK: `CHECK (commission_basis_points = 200 AND basis::text = 'MATERIALS_AFTER_DISCOUNT_EXCLUDING_VAT'::text AND cadence::text = 'MONTHLY'::text)`
+- `fee_policy_commission_check` — CHECK: `CHECK (commission_basis_points >= 0 AND commission_basis_points <= 10000 AND basis::text = 'MATERIALS_AFTER_DISCOUNT_EXCLUDING_VAT'::text AND cadence::text = 'MONTHLY'::text)`
 - `fee_policy_environment_check` — CHECK: `CHECK (environment::text = ANY (ARRAY['TEST'::character varying, 'DEMO'::character varying, 'LIVE'::character varying]::text[]))`
+- `fee_policy_versions_agreement_version_id_foreign` — FOREIGN KEY: `FOREIGN KEY (agreement_version_id) REFERENCES agreement_versions(id) ON DELETE RESTRICT`
 - `fee_policy_versions_approved_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (approved_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
 - `fee_policy_versions_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
 - `fee_policy_versions_environment_code_version_unique` — UNIQUE: `UNIQUE (environment, code, version)`
 
 **Indexes**
 
+- `fee_policy_effective_lookup` — `CREATE INDEX fee_policy_effective_lookup ON public.fee_policy_versions USING btree (environment, code, effective_from DESC, version DESC)`
 - `fee_policy_versions_environment_code_version_unique` — `CREATE UNIQUE INDEX fee_policy_versions_environment_code_version_unique ON public.fee_policy_versions USING btree (environment, code, version)`
 - `fee_policy_versions_pkey` — `CREATE UNIQUE INDEX fee_policy_versions_pkey ON public.fee_policy_versions USING btree (id)`
 
@@ -3558,6 +3577,37 @@ Phase 1 platform foundation record.
 - `idempotency_records_actor_user_id_endpoint_idempotency_key_uniq` — `CREATE UNIQUE INDEX idempotency_records_actor_user_id_endpoint_idempotency_key_uniq ON public.idempotency_records USING btree (actor_user_id, endpoint, idempotency_key)`
 - `idempotency_records_pkey` — `CREATE UNIQUE INDEX idempotency_records_pkey ON public.idempotency_records USING btree (id)`
 
+## `imported_encrypted_values`
+
+Phase 1 platform foundation record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `source_ciphertext_sha256` | `character` | No | — | Source ciphertext sha256. |
+| `staging_ciphertext` | `text` | No | — | Staging ciphertext. |
+| `source_table` | `character varying` | No | — | Source table. |
+| `source_column` | `character varying` | No | — | Source column. |
+| `source_record_id` | `uuid` | No | — | Source record id. |
+| `staging_identity_hash` | `character` | Yes | — | Staging identity hash. |
+| `canonical_identity_hash` | `character` | Yes | — | Canonical identity hash. |
+| `import_batch_id` | `uuid` | No | — | Import batch id. |
+| `created_at` | `timestamp with time zone` | No | — | Created at. |
+
+**Constraints**
+
+- `imported_ciphertext_fingerprint_check` — CHECK: `CHECK (source_ciphertext_sha256 ~ '^[a-f0-9]{64}$'::text)`
+- `imported_identity_hashes_check` — CHECK: `CHECK (staging_identity_hash IS NULL AND canonical_identity_hash IS NULL OR staging_identity_hash IS NOT NULL AND canonical_identity_hash IS NOT NULL AND staging_identity_hash ~ '^[a-f0-9]{64}$'::text AND canonical_identity_hash ~ '^[a-f0-9]{64}$'::text)`
+- `imported_encrypted_values_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `imported_encrypted_values_source_ciphertext_sha256_unique` — UNIQUE: `UNIQUE (source_ciphertext_sha256)`
+
+**Indexes**
+
+- `imported_encrypted_values_import_batch_id_index` — `CREATE INDEX imported_encrypted_values_import_batch_id_index ON public.imported_encrypted_values USING btree (import_batch_id)`
+- `imported_encrypted_values_pkey` — `CREATE UNIQUE INDEX imported_encrypted_values_pkey ON public.imported_encrypted_values USING btree (id)`
+- `imported_encrypted_values_source_ciphertext_sha256_unique` — `CREATE UNIQUE INDEX imported_encrypted_values_source_ciphertext_sha256_unique ON public.imported_encrypted_values USING btree (source_ciphertext_sha256)`
+- `imported_identity_lookup` — `CREATE INDEX imported_identity_lookup ON public.imported_encrypted_values USING btree (source_table, source_column, staging_identity_hash)`
+
 ## `inventory_holds`
 
 Phase 1 platform foundation record.
@@ -3879,6 +3929,31 @@ MAT-01–MAT-07 comparability, observation, publication, or audience-safe aggreg
 - `listing_comparable_assignments_listing_variant_id_material_comp` — `CREATE UNIQUE INDEX listing_comparable_assignments_listing_variant_id_material_comp ON public.listing_comparable_assignments USING btree (listing_variant_id, material_comparable_group_version_id)`
 - `listing_comparable_assignments_pkey` — `CREATE UNIQUE INDEX listing_comparable_assignments_pkey ON public.listing_comparable_assignments USING btree (id)`
 - `listing_one_effective_comparable_assignment` — `CREATE UNIQUE INDEX listing_one_effective_comparable_assignment ON public.listing_comparable_assignments USING btree (listing_variant_id) WHERE ((effective_until IS NULL) AND ((mapping_state)::text = 'APPROVED'::text))`
+
+## `listing_custom_tags`
+
+Phase 1 platform foundation record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `vendor_listing_id` | `uuid` | No | — | Vendor listing id. |
+| `label` | `character varying` | No | — | Label. |
+| `normalized_label` | `character varying` | No | — | Normalized label. |
+| `created_at` | `timestamp with time zone` | Yes | — | Created at. |
+| `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+
+**Constraints**
+
+- `listing_custom_tags_label_check` — CHECK: `CHECK (char_length(btrim(label::text)) >= 2 AND normalized_label::text = lower(normalized_label::text))`
+- `listing_custom_tags_vendor_listing_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_listing_id) REFERENCES vendor_listings(id) ON DELETE RESTRICT`
+- `listing_custom_tags_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `listing_custom_tags_vendor_listing_id_normalized_label_unique` — UNIQUE: `UNIQUE (vendor_listing_id, normalized_label)`
+
+**Indexes**
+
+- `listing_custom_tags_pkey` — `CREATE UNIQUE INDEX listing_custom_tags_pkey ON public.listing_custom_tags USING btree (id)`
+- `listing_custom_tags_vendor_listing_id_normalized_label_unique` — `CREATE UNIQUE INDEX listing_custom_tags_vendor_listing_id_normalized_label_unique ON public.listing_custom_tags USING btree (vendor_listing_id, normalized_label)`
 
 ## `listing_media`
 
@@ -5329,6 +5404,8 @@ Procurement or immutable commerce record.
 | `project_note` | `text` | Yes | — | Project note. |
 | `online_balance_approved_at` | `timestamp with time zone` | Yes | — | Online balance approved at. |
 | `online_balance_approved_by_user_id` | `bigint` | Yes | — | Online balance approved by user id. |
+| `project_arrangement_id` | `uuid` | Yes | — | Project arrangement id. |
+| `project_arrangement_vendor_id` | `uuid` | Yes | — | Project arrangement vendor id. |
 
 **Constraints**
 
@@ -5344,10 +5421,14 @@ Procurement or immutable commerce record.
 - `order_procurement_type_check` — CHECK: `CHECK (procurement_type::text = ANY (ARRAY['ITEM_BASED'::character varying, 'PROJECT_BASED'::character varying]::text[]))`
 - `order_refund_state_check` — CHECK: `CHECK (refund_state::text = ANY (ARRAY['NOT_REQUESTED'::character varying, 'REFUND_PENDING'::character varying, 'PARTIALLY_REFUNDED'::character varying, 'REFUNDED'::character varying, 'REFUND_FAILED'::character varying]::text[]))`
 - `order_state_check` — CHECK: `CHECK (order_state::text = ANY (ARRAY['AWAITING_VENDOR_CONFIRMATION'::character varying, 'AWAITING_BUYER_APPROVAL'::character varying, 'AWAITING_NRPC_ACCEPTANCE'::character varying, 'AWAITING_PAYMENT'::character varying, 'CONFIRMED'::character varying, 'PROCESSING'::character varying, 'READY_FOR_PICKUP'::character varying, 'OUT_FOR_DELIVERY'::character varying, 'DELIVERED'::character varying, 'PICKED_UP'::character varying, 'COMPLETED'::character varying, 'CANCELLATION_REQUESTED'::character varying, 'DECLINED'::character varying, 'EXPIRED'::character varying, 'CANCELLED'::character varying, 'DISPUTED'::character varying]::text[]))`
+- `project_arrangement_order_context` — CHECK: `CHECK (project_arrangement_id IS NULL AND project_arrangement_vendor_id IS NULL OR project_arrangement_id IS NOT NULL AND project_arrangement_vendor_id IS NOT NULL AND procurement_type::text = 'PROJECT_BASED'::text)`
+- `order_project_arrangement_scope` — FOREIGN KEY: `FOREIGN KEY (project_arrangement_vendor_id, project_arrangement_id) REFERENCES project_arrangement_vendors(id, arrangement_id) ON DELETE RESTRICT`
 - `orders_buyer_profile_id_foreign` — FOREIGN KEY: `FOREIGN KEY (buyer_profile_id) REFERENCES buyer_profiles(id) ON DELETE RESTRICT`
 - `orders_checkout_group_id_foreign` — FOREIGN KEY: `FOREIGN KEY (checkout_group_id) REFERENCES checkout_groups(id) ON DELETE RESTRICT`
 - `orders_compiled_estimate_vendor_id_foreign` — FOREIGN KEY: `FOREIGN KEY (compiled_estimate_vendor_id) REFERENCES compiled_estimate_vendors(id) ON DELETE RESTRICT`
 - `orders_online_balance_approved_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (online_balance_approved_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
+- `orders_project_arrangement_id_foreign` — FOREIGN KEY: `FOREIGN KEY (project_arrangement_id) REFERENCES project_procurement_arrangements(id) ON DELETE RESTRICT`
+- `orders_project_arrangement_vendor_id_foreign` — FOREIGN KEY: `FOREIGN KEY (project_arrangement_vendor_id) REFERENCES project_arrangement_vendors(id) ON DELETE RESTRICT`
 - `orders_quotation_version_id_foreign` — FOREIGN KEY: `FOREIGN KEY (quotation_version_id) REFERENCES quotation_versions(id) ON DELETE RESTRICT`
 - `orders_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
 - `orders_work_package_id_foreign` — FOREIGN KEY: `FOREIGN KEY (work_package_id) REFERENCES work_packages(id) ON DELETE RESTRICT`
@@ -5357,7 +5438,8 @@ Procurement or immutable commerce record.
 
 **Indexes**
 
-- `one_project_order_per_version` — `CREATE UNIQUE INDEX one_project_order_per_version ON public.orders USING btree (work_package_version_id) WHERE (((procurement_type)::text = 'PROJECT_BASED'::text) AND ((order_state)::text <> ALL ((ARRAY['CANCELLED'::character varying, 'DECLINED'::character varying, 'EXPIRED'::character varying])::text[])))`
+- `one_project_order_per_arrangement_vendor` — `CREATE UNIQUE INDEX one_project_order_per_arrangement_vendor ON public.orders USING btree (project_arrangement_id, vendor_organization_id) WHERE ((project_arrangement_id IS NOT NULL) AND ((order_state)::text <> ALL ((ARRAY['CANCELLED'::character varying, 'DECLINED'::character varying, 'EXPIRED'::character varying])::text[])))`
+- `one_project_order_per_version` — `CREATE UNIQUE INDEX one_project_order_per_version ON public.orders USING btree (work_package_version_id) WHERE (((procurement_type)::text = 'PROJECT_BASED'::text) AND (project_arrangement_id IS NULL) AND ((order_state)::text <> ALL ((ARRAY['CANCELLED'::character varying, 'DECLINED'::character varying, 'EXPIRED'::character varying])::text[])))`
 - `orders_buyer_profile_id_created_at_index` — `CREATE INDEX orders_buyer_profile_id_created_at_index ON public.orders USING btree (buyer_profile_id, created_at)`
 - `orders_checkout_group_id_index` — `CREATE INDEX orders_checkout_group_id_index ON public.orders USING btree (checkout_group_id)`
 - `orders_open_deadlines` — `CREATE INDEX orders_open_deadlines ON public.orders USING btree (order_state, vendor_response_due_at, buyer_response_due_at, payment_expires_at) WHERE (closed_at IS NULL)`
@@ -6100,6 +6182,154 @@ Phase 1 platform foundation record.
 - `products_brand_trgm` — `CREATE INDEX products_brand_trgm ON public.products USING gin (lower((brand)::text) gin_trgm_ops)`
 - `products_pkey` — `CREATE UNIQUE INDEX products_pkey ON public.products USING btree (id)`
 - `products_public_id_unique` — `CREATE UNIQUE INDEX products_public_id_unique ON public.products USING btree (public_id)`
+
+## `project_arrangement_items`
+
+Phase 1 platform foundation record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `arrangement_id` | `uuid` | No | — | Arrangement id. |
+| `arrangement_vendor_id` | `uuid` | No | — | Arrangement vendor id. |
+| `work_package_line_id` | `uuid` | No | — | Work package line id. |
+| `listing_variant_id` | `uuid` | No | — | Listing variant id. |
+| `quantity` | `numeric` | No | — | Quantity. |
+| `snapshot` | `jsonb` | No | — | Snapshot. |
+| `removed_at` | `timestamp with time zone` | Yes | — | Removed at. |
+| `created_at` | `timestamp with time zone` | Yes | — | Created at. |
+| `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+
+**Constraints**
+
+- `project_arrangement_quantity_positive` — CHECK: `CHECK (quantity > 0::numeric)`
+- `project_arrangement_item_vendor_scope` — FOREIGN KEY: `FOREIGN KEY (arrangement_vendor_id, arrangement_id) REFERENCES project_arrangement_vendors(id, arrangement_id) ON DELETE RESTRICT`
+- `project_arrangement_items_arrangement_id_foreign` — FOREIGN KEY: `FOREIGN KEY (arrangement_id) REFERENCES project_procurement_arrangements(id) ON DELETE RESTRICT`
+- `project_arrangement_items_listing_variant_id_foreign` — FOREIGN KEY: `FOREIGN KEY (listing_variant_id) REFERENCES listing_variants(id) ON DELETE RESTRICT`
+- `project_arrangement_items_work_package_line_id_foreign` — FOREIGN KEY: `FOREIGN KEY (work_package_line_id) REFERENCES work_package_lines(id) ON DELETE RESTRICT`
+- `project_arrangement_items_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+
+**Indexes**
+
+- `project_arrangement_item_unique` — `CREATE UNIQUE INDEX project_arrangement_item_unique ON public.project_arrangement_items USING btree (arrangement_id, work_package_line_id, listing_variant_id) WHERE (removed_at IS NULL)`
+- `project_arrangement_items_pkey` — `CREATE UNIQUE INDEX project_arrangement_items_pkey ON public.project_arrangement_items USING btree (id)`
+
+## `project_arrangement_vendors`
+
+Phase 1 platform foundation record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `arrangement_id` | `uuid` | No | — | Arrangement id. |
+| `vendor_organization_id` | `uuid` | No | — | Vendor organization id. |
+| `fulfillment_method` | `character varying` | No | — | Fulfillment method. |
+| `order_id` | `uuid` | Yes | — | Order id. |
+| `conversation_id` | `uuid` | Yes | — | Conversation id. |
+| `requested_at` | `timestamp with time zone` | Yes | — | Requested at. |
+| `created_at` | `timestamp with time zone` | Yes | — | Created at. |
+| `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+
+**Constraints**
+
+- `project_arrangement_method` — CHECK: `CHECK (fulfillment_method::text = ANY (ARRAY['DELIVERY'::character varying, 'PICKUP'::character varying]::text[]))`
+- `project_arrangement_vendors_arrangement_id_foreign` — FOREIGN KEY: `FOREIGN KEY (arrangement_id) REFERENCES project_procurement_arrangements(id) ON DELETE RESTRICT`
+- `project_arrangement_vendors_conversation_id_foreign` — FOREIGN KEY: `FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE RESTRICT`
+- `project_arrangement_vendors_order_id_foreign` — FOREIGN KEY: `FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE RESTRICT`
+- `project_arrangement_vendors_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
+- `project_arrangement_vendors_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `project_arrangement_vendor_scope` — UNIQUE: `UNIQUE (id, arrangement_id)`
+- `project_arrangement_vendor_unique` — UNIQUE: `UNIQUE (arrangement_id, vendor_organization_id)`
+
+**Indexes**
+
+- `project_arrangement_vendor_scope` — `CREATE UNIQUE INDEX project_arrangement_vendor_scope ON public.project_arrangement_vendors USING btree (id, arrangement_id)`
+- `project_arrangement_vendor_unique` — `CREATE UNIQUE INDEX project_arrangement_vendor_unique ON public.project_arrangement_vendors USING btree (arrangement_id, vendor_organization_id)`
+- `project_arrangement_vendors_pkey` — `CREATE UNIQUE INDEX project_arrangement_vendors_pkey ON public.project_arrangement_vendors USING btree (id)`
+
+## `project_procurement_arrangements`
+
+Phase 1 platform foundation record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `work_package_version_id` | `uuid` | No | — | Work package version id. |
+| `source_candidate_id` | `uuid` | No | — | Source candidate id. |
+| `lock_version` | `integer` | No | `1` | Lock version. |
+| `preferences` | `jsonb` | No | — | Preferences. |
+| `submitted_at` | `timestamp with time zone` | Yes | — | Submitted at. |
+| `created_at` | `timestamp with time zone` | Yes | — | Created at. |
+| `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+
+**Constraints**
+
+- `project_procurement_arrangements_source_candidate_id_foreign` — FOREIGN KEY: `FOREIGN KEY (source_candidate_id) REFERENCES compiled_estimate_vendors(id) ON DELETE RESTRICT`
+- `project_procurement_arrangements_work_package_version_id_foreig` — FOREIGN KEY: `FOREIGN KEY (work_package_version_id) REFERENCES work_package_versions(id) ON DELETE RESTRICT`
+- `project_procurement_arrangements_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+
+**Indexes**
+
+- `project_procurement_arrangements_pkey` — `CREATE UNIQUE INDEX project_procurement_arrangements_pkey ON public.project_procurement_arrangements USING btree (id)`
+
+## `project_procurement_draft_exclusions`
+
+Phase 1 platform foundation record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `work_package_version_id` | `uuid` | No | — | Work package version id. |
+| `primary_vendor_id` | `uuid` | No | — | Primary vendor id. |
+| `work_package_line_id` | `uuid` | No | — | Work package line id. |
+| `created_at` | `timestamp with time zone` | Yes | — | Created at. |
+| `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+
+**Constraints**
+
+- `project_procurement_draft_exclusions_primary_vendor_id_foreign` — FOREIGN KEY: `FOREIGN KEY (primary_vendor_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
+- `project_procurement_draft_exclusions_work_package_line_id_forei` — FOREIGN KEY: `FOREIGN KEY (work_package_line_id) REFERENCES work_package_lines(id) ON DELETE RESTRICT`
+- `project_procurement_draft_exclusions_work_package_version_id_fo` — FOREIGN KEY: `FOREIGN KEY (work_package_version_id) REFERENCES work_package_versions(id) ON DELETE RESTRICT`
+- `project_procurement_draft_exclusions_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `project_draft_exclusion_unique` — UNIQUE: `UNIQUE (work_package_version_id, primary_vendor_id, work_package_line_id)`
+
+**Indexes**
+
+- `project_draft_exclusion_unique` — `CREATE UNIQUE INDEX project_draft_exclusion_unique ON public.project_procurement_draft_exclusions USING btree (work_package_version_id, primary_vendor_id, work_package_line_id)`
+- `project_procurement_draft_exclusions_pkey` — `CREATE UNIQUE INDEX project_procurement_draft_exclusions_pkey ON public.project_procurement_draft_exclusions USING btree (id)`
+
+## `project_procurement_draft_items`
+
+Phase 1 platform foundation record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `work_package_version_id` | `uuid` | No | — | Work package version id. |
+| `primary_vendor_id` | `uuid` | No | — | Primary vendor id. |
+| `work_package_line_id` | `uuid` | No | — | Work package line id. |
+| `listing_variant_id` | `uuid` | No | — | Listing variant id. |
+| `quantity` | `numeric` | No | — | Quantity. |
+| `snapshot` | `jsonb` | No | — | Snapshot. |
+| `order_id` | `uuid` | Yes | — | Order id. |
+| `created_at` | `timestamp with time zone` | Yes | — | Created at. |
+| `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+
+**Constraints**
+
+- `project_draft_quantity_positive` — CHECK: `CHECK (quantity > 0::numeric)`
+- `project_procurement_draft_items_listing_variant_id_foreign` — FOREIGN KEY: `FOREIGN KEY (listing_variant_id) REFERENCES listing_variants(id) ON DELETE RESTRICT`
+- `project_procurement_draft_items_order_id_foreign` — FOREIGN KEY: `FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE RESTRICT`
+- `project_procurement_draft_items_primary_vendor_id_foreign` — FOREIGN KEY: `FOREIGN KEY (primary_vendor_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
+- `project_procurement_draft_items_work_package_line_id_foreign` — FOREIGN KEY: `FOREIGN KEY (work_package_line_id) REFERENCES work_package_lines(id) ON DELETE RESTRICT`
+- `project_procurement_draft_items_work_package_version_id_foreign` — FOREIGN KEY: `FOREIGN KEY (work_package_version_id) REFERENCES work_package_versions(id) ON DELETE RESTRICT`
+- `project_procurement_draft_items_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `project_draft_item_unique` — UNIQUE: `UNIQUE (work_package_version_id, primary_vendor_id, work_package_line_id, listing_variant_id)`
+
+**Indexes**
+
+- `project_draft_item_unique` — `CREATE UNIQUE INDEX project_draft_item_unique ON public.project_procurement_draft_items USING btree (work_package_version_id, primary_vendor_id, work_package_line_id, listing_variant_id)`
+- `project_procurement_draft_items_pkey` — `CREATE UNIQUE INDEX project_procurement_draft_items_pkey ON public.project_procurement_draft_items USING btree (id)`
 
 ## `project_sites`
 
@@ -7203,6 +7433,54 @@ Phase 1 platform foundation record.
 - `sessions_pkey` — `CREATE UNIQUE INDEX sessions_pkey ON public.sessions USING btree (id)`
 - `sessions_user_id_index` — `CREATE INDEX sessions_user_id_index ON public.sessions USING btree (user_id)`
 
+## `site_inspection_requests`
+
+Phase 1 platform foundation record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `conversation_id` | `uuid` | No | — | Conversation id. |
+| `buyer_profile_id` | `uuid` | No | — | Buyer profile id. |
+| `vendor_organization_id` | `uuid` | No | — | Vendor organization id. |
+| `vendor_listing_id` | `uuid` | No | — | Vendor listing id. |
+| `listing_variant_id` | `uuid` | Yes | — | Listing variant id. |
+| `buyer_location_id` | `uuid` | No | — | Buyer location id. |
+| `site` | `jsonb` | No | — | Site. |
+| `preferred_date` | `date` | No | — | Preferred date. |
+| `buyer_notes_encrypted` | `text` | Yes | — | Buyer notes encrypted. |
+| `status` | `character varying` | No | — | Status. |
+| `scheduled_for` | `timestamp with time zone` | Yes | — | Scheduled for. |
+| `vendor_note` | `character varying` | Yes | — | Vendor note. |
+| `measured_volume_m3` | `numeric` | Yes | — | Measured volume m3. |
+| `requested_by_user_id` | `bigint` | No | — | Requested by user id. |
+| `decided_by_user_id` | `bigint` | Yes | — | Decided by user id. |
+| `lock_version` | `integer` | No | `1` | Lock version. |
+| `requested_at` | `timestamp with time zone` | No | — | Requested at. |
+| `closed_at` | `timestamp with time zone` | Yes | — | Closed at. |
+| `created_at` | `timestamp with time zone` | Yes | — | Created at. |
+| `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+
+**Constraints**
+
+- `site_inspection_status_check` — CHECK: `CHECK ((status::text = ANY (ARRAY['REQUESTED'::character varying, 'SCHEDULED'::character varying, 'COMPLETED'::character varying, 'DECLINED'::character varying, 'CANCELLED'::character varying]::text[])) AND (status::text <> 'SCHEDULED'::text OR scheduled_for IS NOT NULL) AND (status::text <> 'COMPLETED'::text OR measured_volume_m3 > 0::numeric AND scheduled_for IS NOT NULL) AND (status::text = ANY (ARRAY['REQUESTED'::character varying, 'SCHEDULED'::character varying]::text[])) = (closed_at IS NULL))`
+- `site_inspection_requests_buyer_location_id_foreign` — FOREIGN KEY: `FOREIGN KEY (buyer_location_id) REFERENCES buyer_locations(id) ON DELETE RESTRICT`
+- `site_inspection_requests_buyer_profile_id_foreign` — FOREIGN KEY: `FOREIGN KEY (buyer_profile_id) REFERENCES buyer_profiles(id) ON DELETE RESTRICT`
+- `site_inspection_requests_conversation_id_foreign` — FOREIGN KEY: `FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE RESTRICT`
+- `site_inspection_requests_decided_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (decided_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
+- `site_inspection_requests_listing_variant_id_foreign` — FOREIGN KEY: `FOREIGN KEY (listing_variant_id) REFERENCES listing_variants(id) ON DELETE RESTRICT`
+- `site_inspection_requests_requested_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (requested_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
+- `site_inspection_requests_vendor_listing_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_listing_id) REFERENCES vendor_listings(id) ON DELETE RESTRICT`
+- `site_inspection_requests_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
+- `site_inspection_requests_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+
+**Indexes**
+
+- `site_inspection_one_open_per_conversation` — `CREATE UNIQUE INDEX site_inspection_one_open_per_conversation ON public.site_inspection_requests USING btree (conversation_id) WHERE ((status)::text = ANY ((ARRAY['REQUESTED'::character varying, 'SCHEDULED'::character varying])::text[]))`
+- `site_inspection_requests_conversation_id_requested_at_index` — `CREATE INDEX site_inspection_requests_conversation_id_requested_at_index ON public.site_inspection_requests USING btree (conversation_id, requested_at)`
+- `site_inspection_requests_pkey` — `CREATE UNIQUE INDEX site_inspection_requests_pkey ON public.site_inspection_requests USING btree (id)`
+- `site_inspection_requests_vendor_organization_id_status_index` — `CREATE INDEX site_inspection_requests_vendor_organization_id_status_index ON public.site_inspection_requests USING btree (vendor_organization_id, status)`
+
 ## `spatial_ref_sys`
 
 Phase 1 platform foundation record.
@@ -7376,6 +7654,148 @@ Vendor organization, access, onboarding, or storefront record.
 - `store_profiles_vacation_window_index` — `CREATE INDEX store_profiles_vacation_window_index ON public.store_profiles USING btree (vacation_starts_at, vacation_ends_at) WHERE (vacation_starts_at IS NOT NULL)`
 - `store_profiles_vendor_organization_id_unique` — `CREATE UNIQUE INDEX store_profiles_vendor_organization_id_unique ON public.store_profiles USING btree (vendor_organization_id)`
 
+## `support_attachments`
+
+Phase 1 platform foundation record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `entry_id` | `uuid` | No | — | Entry id. |
+| `file_id` | `uuid` | No | — | File id. |
+| `created_at` | `timestamp with time zone` | No | — | Created at. |
+
+**Constraints**
+
+- `support_attachments_entry_id_foreign` — FOREIGN KEY: `FOREIGN KEY (entry_id) REFERENCES support_entries(id) ON DELETE RESTRICT`
+- `support_attachments_file_id_foreign` — FOREIGN KEY: `FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE RESTRICT`
+- `support_attachments_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `support_attachments_file_id_unique` — UNIQUE: `UNIQUE (file_id)`
+
+**Indexes**
+
+- `support_attachments_file_id_unique` — `CREATE UNIQUE INDEX support_attachments_file_id_unique ON public.support_attachments USING btree (file_id)`
+- `support_attachments_pkey` — `CREATE UNIQUE INDEX support_attachments_pkey ON public.support_attachments USING btree (id)`
+
+## `support_commands`
+
+Phase 1 platform foundation record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `scope_hash` | `character varying` | No | — | Scope hash. |
+| `idempotency_key` | `uuid` | No | — | Idempotency key. |
+| `request_hash` | `character varying` | No | — | Request hash. |
+| `result` | `jsonb` | Yes | — | Result. |
+| `created_at` | `timestamp with time zone` | No | — | Created at. |
+
+**Constraints**
+
+- `support_commands_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `support_commands_scope_hash_idempotency_key_unique` — UNIQUE: `UNIQUE (scope_hash, idempotency_key)`
+
+**Indexes**
+
+- `support_commands_pkey` — `CREATE UNIQUE INDEX support_commands_pkey ON public.support_commands USING btree (id)`
+- `support_commands_scope_hash_idempotency_key_unique` — `CREATE UNIQUE INDEX support_commands_scope_hash_idempotency_key_unique ON public.support_commands USING btree (scope_hash, idempotency_key)`
+
+## `support_entries`
+
+Phase 1 platform foundation record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `ticket_id` | `uuid` | No | — | Ticket id. |
+| `kind` | `character varying` | No | — | Kind. |
+| `actor_user_id` | `bigint` | Yes | — | Actor user id. |
+| `actor_name` | `character varying` | No | — | Actor name. |
+| `actor_role` | `character varying` | No | — | Actor role. |
+| `body` | `text` | No | — | Body. |
+| `details` | `jsonb` | No | `'{}'::jsonb` | Details. |
+| `correlation_id` | `uuid` | No | — | Correlation id. |
+| `created_at` | `timestamp with time zone` | No | — | Created at. |
+
+**Constraints**
+
+- `support_entry_kind_check` — CHECK: `CHECK (kind::text = ANY (ARRAY['MESSAGE'::character varying, 'STATUS_CHANGED'::character varying, 'ASSIGNED'::character varying]::text[]))`
+- `support_entries_actor_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (actor_user_id) REFERENCES users(id) ON DELETE RESTRICT`
+- `support_entries_ticket_id_foreign` — FOREIGN KEY: `FOREIGN KEY (ticket_id) REFERENCES support_tickets(id) ON DELETE RESTRICT`
+- `support_entries_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+
+**Indexes**
+
+- `support_entries_pkey` — `CREATE UNIQUE INDEX support_entries_pkey ON public.support_entries USING btree (id)`
+- `support_entries_ticket_id_id_index` — `CREATE INDEX support_entries_ticket_id_id_index ON public.support_entries USING btree (ticket_id, id)`
+
+## `support_guest_credentials`
+
+Phase 1 platform foundation record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `ticket_id` | `uuid` | No | — | Ticket id. |
+| `token_hash` | `character varying` | No | — | Token hash. |
+| `purpose` | `character varying` | No | — | Purpose. |
+| `expires_at` | `timestamp with time zone` | No | — | Expires at. |
+| `consumed_at` | `timestamp with time zone` | Yes | — | Consumed at. |
+| `created_at` | `timestamp with time zone` | No | — | Created at. |
+
+**Constraints**
+
+- `support_credential_purpose_check` — CHECK: `CHECK (purpose::text = ANY (ARRAY['LINK'::character varying, 'SESSION'::character varying]::text[]))`
+- `support_guest_credentials_ticket_id_foreign` — FOREIGN KEY: `FOREIGN KEY (ticket_id) REFERENCES support_tickets(id) ON DELETE RESTRICT`
+- `support_guest_credentials_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `support_guest_credentials_token_hash_unique` — UNIQUE: `UNIQUE (token_hash)`
+
+**Indexes**
+
+- `support_guest_credentials_pkey` — `CREATE UNIQUE INDEX support_guest_credentials_pkey ON public.support_guest_credentials USING btree (id)`
+- `support_guest_credentials_token_hash_unique` — `CREATE UNIQUE INDEX support_guest_credentials_token_hash_unique ON public.support_guest_credentials USING btree (token_hash)`
+
+## `support_tickets`
+
+Phase 1 platform foundation record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `ticket_number` | `character varying` | No | — | Ticket number. |
+| `user_id` | `bigint` | Yes | — | User id. |
+| `full_name` | `character varying` | No | — | Full name. |
+| `email` | `character varying` | No | — | Email. |
+| `user_type` | `character varying` | No | — | User type. |
+| `category` | `character varying` | No | — | Category. |
+| `subject` | `character varying` | No | — | Subject. |
+| `reference_type` | `character varying` | Yes | — | Reference type. |
+| `reference` | `character varying` | Yes | — | Reference. |
+| `status` | `character varying` | No | `'OPEN'::character varying` | Status. |
+| `assigned_admin_id` | `bigint` | Yes | — | Assigned admin id. |
+| `lock_version` | `integer` | No | `1` | Lock version. |
+| `privacy_acknowledged_at` | `timestamp with time zone` | No | — | Privacy acknowledged at. |
+| `created_at` | `timestamp with time zone` | Yes | — | Created at. |
+| `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+
+**Constraints**
+
+- `support_category_check` — CHECK: `CHECK (category::text = ANY (ARRAY['GENERAL_INQUIRY'::character varying, 'TECHNICAL_ISSUE'::character varying, 'ACCOUNT_CONCERN'::character varying, 'VERIFICATION_ISSUE'::character varying, 'PAYMENT_CONCERN'::character varying, 'ORDER_CONCERN'::character varying, 'COMPLAINT'::character varying, 'FEEDBACK_SUGGESTION'::character varying, 'OTHER'::character varying]::text[]))`
+- `support_status_check` — CHECK: `CHECK ((status::text = ANY (ARRAY['OPEN'::character varying, 'IN_PROGRESS'::character varying, 'WAITING_FOR_USER'::character varying, 'RESOLVED'::character varying, 'CLOSED'::character varying]::text[])) AND lock_version > 0)`
+- `support_type_check` — CHECK: `CHECK (user_type::text = ANY (ARRAY['BUYER'::character varying, 'VENDOR'::character varying, 'GUEST'::character varying]::text[]))`
+- `support_tickets_assigned_admin_id_foreign` — FOREIGN KEY: `FOREIGN KEY (assigned_admin_id) REFERENCES users(id) ON DELETE RESTRICT`
+- `support_tickets_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT`
+- `support_tickets_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `support_tickets_ticket_number_unique` — UNIQUE: `UNIQUE (ticket_number)`
+
+**Indexes**
+
+- `support_tickets_pkey` — `CREATE UNIQUE INDEX support_tickets_pkey ON public.support_tickets USING btree (id)`
+- `support_tickets_status_category_created_at_index` — `CREATE INDEX support_tickets_status_category_created_at_index ON public.support_tickets USING btree (status, category, created_at)`
+- `support_tickets_ticket_number_unique` — `CREATE UNIQUE INDEX support_tickets_ticket_number_unique ON public.support_tickets USING btree (ticket_number)`
+- `support_tickets_user_id_id_index` — `CREATE INDEX support_tickets_user_id_id_index ON public.support_tickets USING btree (user_id, id)`
+- `support_tickets_user_type_created_at_index` — `CREATE INDEX support_tickets_user_type_created_at_index ON public.support_tickets USING btree (user_type, created_at)`
+
 ## `tax_adjustments`
 
 FIN-01–FIN-12 financial control and evidence record.
@@ -7412,7 +7832,7 @@ FIN-01–FIN-12 financial control and evidence record.
 - `tax_adjustment_actor_check` — CHECK: `CHECK (reviewed_by_user_id IS NULL OR reviewed_by_user_id <> prepared_by_user_id)`
 - `tax_adjustment_dates_check` — CHECK: `CHECK (period_start <= period_end)`
 - `tax_adjustment_opened_by_check` — CHECK: `CHECK ((opened_by::text = ANY (ARRAY['USER'::character varying, 'SYSTEM'::character varying]::text[])) AND (opened_by::text = 'SYSTEM'::text OR prepared_by_user_id IS NOT NULL))`
-- `tax_adjustment_state_check` — CHECK: `CHECK (state::text = ANY (ARRAY['ADJUSTMENT_REQUIRED'::character varying, 'UNDER_REVIEW'::character varying, 'APPROVED'::character varying, 'POSTED'::character varying, 'REJECTED'::character varying]::text[]))`
+- `tax_adjustment_state_check` — CHECK: `CHECK (state::text = ANY (ARRAY['ADJUSTMENT_REQUIRED'::character varying, 'UNDER_REVIEW'::character varying, 'APPROVED'::character varying, 'POSTED'::character varying, 'REJECTED'::character varying, 'NOT_REQUIRED'::character varying]::text[]))`
 - `tax_adjustments_accumulator_id_foreign` — FOREIGN KEY: `FOREIGN KEY (accumulator_id) REFERENCES vendor_withholding_accumulators(id) ON DELETE RESTRICT`
 - `tax_adjustments_evidence_file_id_foreign` — FOREIGN KEY: `FOREIGN KEY (evidence_file_id) REFERENCES files(id) ON DELETE RESTRICT`
 - `tax_adjustments_order_id_foreign` — FOREIGN KEY: `FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE RESTRICT`
@@ -7884,9 +8304,12 @@ Phase 1 platform foundation record.
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
 | `created_by_user_id` | `bigint` | Yes | — | Created by user id. |
+| `mobilization_fee_centavos` | `bigint` | No | `'0'::bigint` | Integer Philippine centavos. Mobilization fee centavos. |
+| `mobilization_basis` | `character varying` | Yes | — | Mobilization basis. |
 
 **Constraints**
 
+- `vehicle_rate_mobilization_check` — CHECK: `CHECK (mobilization_fee_centavos >= 0 AND (mobilization_basis IS NULL OR (mobilization_basis::text = ANY (ARRAY['PER_TRUCK'::character varying, 'PER_TRIP'::character varying]::text[]))) AND (mobilization_fee_centavos = 0 OR mobilization_basis IS NOT NULL))`
 - `vehicle_rate_values_check` — CHECK: `CHECK (base_fee_centavos >= 0 AND per_km_centavos >= 0 AND maximum_distance_km > 0)`
 - `vehicle_rate_versions_created_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
 - `vehicle_rate_versions_vendor_vehicle_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_vehicle_id) REFERENCES vendor_vehicles(id) ON DELETE RESTRICT`
@@ -9184,16 +9607,21 @@ Procurement or immutable commerce record.
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
 | `lock_version` | `integer` | No | `1` | Lock version. |
+| `deleted_at` | `timestamp with time zone` | Yes | — | Deleted at. |
+| `selected_arrangement_id` | `uuid` | Yes | — | Selected arrangement id. |
 
 **Constraints**
 
 - `package_status_check` — CHECK: `CHECK (status::text = ANY (ARRAY['DRAFT'::character varying, 'ACTIVE'::character varying, 'QUOTATION_INQUIRY'::character varying, 'VENDOR_SELECTED'::character varying, 'AWAITING_PAYMENT'::character varying, 'IN_PROGRESS'::character varying, 'COMPLETED'::character varying, 'CANCELLED'::character varying]::text[]))`
 - `work_packages_budget_check` — CHECK: `CHECK (budget_centavos >= 0)`
+- `work_packages_deleted_is_cancelled_check` — CHECK: `CHECK (deleted_at IS NULL OR status::text = 'CANCELLED'::text)`
 - `work_packages_current_version_id_foreign` — FOREIGN KEY: `FOREIGN KEY (current_version_id) REFERENCES work_package_versions(id) ON DELETE RESTRICT`
 - `work_packages_project_id_foreign` — FOREIGN KEY: `FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE RESTRICT`
+- `work_packages_selected_arrangement_id_foreign` — FOREIGN KEY: `FOREIGN KEY (selected_arrangement_id) REFERENCES project_procurement_arrangements(id) ON DELETE RESTRICT`
 - `work_packages_selected_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (selected_vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
 - `work_packages_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
 
 **Indexes**
 
 - `work_packages_pkey` — `CREATE UNIQUE INDEX work_packages_pkey ON public.work_packages USING btree (id)`
+- `work_packages_project_visible_idx` — `CREATE INDEX work_packages_project_visible_idx ON public.work_packages USING btree (project_id) WHERE (deleted_at IS NULL)`

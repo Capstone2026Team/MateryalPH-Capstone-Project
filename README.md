@@ -26,7 +26,9 @@ Product behavior is defined by `docs/workflows`, architecture by `docs/architect
 
 Do not create local environment files until the repository-root `.gitignore` has been verified. Use only the safe committed examples described in `docs/architecture/MateryalPH_Environment_and_API_Key_Setup.md`; never commit real credentials.
 
-## Render staging deployment
+## Staging deployment
+
+The approved primary target is [Hostinger KVM 2](docs/deployment/hostinger-vps.md), with independent runtime roles, free DuckDNS HTTPS, signed Buyer profiles and encrypted recovery sets. See [ADR 0003](docs/adr/0003-hostinger-vps-staging.md). The VPS is prepared; application release and cutover remain gated. Current evidence and outstanding setup are in [the verification record](docs/test-plans/hostinger-vps-verification.md). Render is retained as the manual fallback through 17 November 2026.
 
 The [free Render staging runbook](docs/deployment/render-staging.md) covers the API, Vendor and Admin deployment, CI/CD setup, required staging credentials, generated URLs and free-plan limits. Infrastructure is declared in [render.yaml](render.yaml).
 
@@ -96,6 +98,7 @@ Key Value and Vendor/Admin portals. See the
 Buyer connects directly to the Render API. Copy
 `apps/buyer-mobile/config/staging.example.json` to the ignored `config/staging.json`
 in that app, configure the assigned Render API address and public client settings,
+and configure the exact finalized Render entry in ignored `config/deployments.json` from its example,
 then run from the repository root:
 
 ```powershell

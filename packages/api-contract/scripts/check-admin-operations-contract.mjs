@@ -18,9 +18,12 @@ if (routeFile) {
   assert.equal(result.status, 0, 'Laravel route export must succeed')
   routes = JSON.parse(result.stdout)
 }
-const TAGS = { 'Admin Platform Settings': 'ADMIN', 'Admin Enforcement': 'ADMIN', 'Admin Privacy Requests': 'ADMIN', 'Admin Audit Log': 'ADMIN', 'Admin Integration Health': 'ADMIN',
+assert.ok(!Object.keys(spec.paths).some(path => path.startsWith('/admin/privacy-requests')), 'Privacy request endpoints are retired')
+assert.ok(!routes.some(route => route.uri.startsWith('api/v1/admin/privacy-requests')), 'Retired privacy routes must not be registered')
+assert.ok(!Object.keys(spec.components.schemas).some(name => /^Privacy(Request|Transition|Handler)/.test(name)), 'Privacy request schemas are retired')
+const TAGS = { 'Admin Platform Settings': 'ADMIN', 'Admin Enforcement': 'ADMIN', 'Admin Audit Log': 'ADMIN', 'Admin Integration Health': 'ADMIN',
   'Admin Budget Overrides': 'ADMIN', 'Admin Geographic Analytics': 'ADMIN', 'Admin Finance Operations': 'ADMIN', 'Vendor Finance Reviews': 'VENDOR' }
-const KEYED = ['POST /admin/enforcement', 'POST /admin/privacy-requests', 'POST /admin/integrations/retries']
+const KEYED = ['POST /admin/enforcement', 'POST /admin/integrations/retries']
 const expected = new Set()
 let count = 0
 for (const [path, methods] of Object.entries(spec.paths)) {
@@ -45,8 +48,8 @@ for (const [path, methods] of Object.entries(spec.paths)) {
     }
   }
 }
-assert.ok(count >= 34, `Expected at least 34 Phase 16 operations, found ${count}`)
-const phaseSixteen = /^api\/v1\/(admin\/(platform-settings|enforcement|privacy-requests|audit-log|integrations|budget-overrides|geo-analytics|finance\/(kpis|remittances|evidence|tax-adjustments))|vendor\/finance\/reviews)/
+assert.ok(count >= 30, `Expected at least 30 Phase 16 operations, found ${count}`)
+const phaseSixteen = /^api\/v1\/(admin\/(platform-settings|enforcement|audit-log|integrations|budget-overrides|geo-analytics|finance\/(kpis|remittances|evidence|tax-adjustments))|vendor\/finance\/reviews)/
 for (const route of routes.filter(route => phaseSixteen.test(route.uri))) {
   for (const method of route.method.split('|').filter(method => method !== 'HEAD')) {
     assert.ok(expected.has(`${method} ${route.uri.replace(/\{[^}]+\}/g, '{}')}`), `Undocumented Phase 16 route ${method} ${route.uri}`)

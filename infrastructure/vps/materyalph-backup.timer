@@ -1,0 +1,8 @@
+[Unit]
+Description=MateryalPH nightly backup at 02:10 Asia/Manila
+[Timer]
+OnCalendar=*-*-* 18:10:00 UTC
+Persistent=true
+RandomizedDelaySec=60
+[Install]
+WantedBy=timers.target

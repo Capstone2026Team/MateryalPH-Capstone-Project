@@ -53,7 +53,7 @@ async function capture(page: Page, name: string) {
   await page.screenshot({ path: resolve(directory, `${page.viewportSize()!.width}-${name}.png`), fullPage: true })
 }
 
-test('verification and dashboard share seven grouped rows, setup uses the same panel', async ({ page }) => {
+test('verification and dashboard share nine grouped rows, setup uses the same panel', async ({ page }) => {
   await api(page)
   await page.goto('/onboarding/verification')
   await page.getByRole('button', { name: 'View submitted document' }).first().click()
@@ -61,13 +61,14 @@ test('verification and dashboard share seven grouped rows, setup uses the same p
   await page.getByRole('button', { name: 'Close preview' }).click()
   await page.getByRole('button', { name: '4 Privacy, Review and Submit' }).click()
   const checklist = page.getByRole('region', { name: 'Verification checklist', exact: true })
-  await expect(checklist.getByRole('listitem')).toHaveCount(7)
+  // Address and supplier classification are their own rows; Admin still groups them.
+  await expect(checklist.getByRole('listitem')).toHaveCount(9)
   await expect(checklist.getByText('Government ID — Registered legal identity', { exact: true })).toHaveCount(1)
   await expect(checklist.getByText('Front and back of the same ID')).toHaveCount(2)
   await expect(checklist.getByRole('button', { name: 'Review Authority to Act' })).toBeVisible()
   await capture(page, 'verification')
   await page.goto('/dashboard')
-  await expect(page.getByRole('region', { name: 'Store Verification', exact: true }).getByRole('listitem')).toHaveCount(7)
+  await expect(page.getByRole('region', { name: 'Store Verification', exact: true }).getByRole('listitem')).toHaveCount(9)
   await capture(page, 'dashboard')
   await page.goto('/onboarding/setup')
   await page.getByRole('button', { name: '6 Review and Complete' }).click()

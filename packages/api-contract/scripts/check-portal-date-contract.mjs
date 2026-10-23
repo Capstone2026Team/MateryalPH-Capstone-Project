@@ -8,7 +8,7 @@ const operations = new Map(Object.values(spec.paths).flatMap(path =>
 ))
 const datedReads = [
   'listVendorTeamActivity', 'listVendorOrders', 'getVendorDashboardInsights', 'getAdminDashboardInsights',
-  'listEnforcementActions', 'listPrivacyRequests', 'listOperationFailures', 'listBudgetOverrides',
+  'listEnforcementActions', 'listOperationFailures', 'listBudgetOverrides',
   'listRemittanceQueue', 'listTaxEvidenceQueue', 'listTaxAdjustments', 'listVendorReviews', 'listAdminReviewModeration',
   'listVendorDisputes', 'listAdminDisputes', 'listVendorInvoices', 'listAdminInvoiceLog', 'listAdminRefunds',
   'listVendorTransactions', 'exportVendorTransactions', 'getVendorEarnings', 'listAdminPayments',

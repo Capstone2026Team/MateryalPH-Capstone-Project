@@ -1,0 +1,10 @@
+{
+  "Hostinger": {
+    "apiBaseUrl": "https://materyalph26-api.duckdns.org/api/v1",
+    "addressesFinalized": false
+  },
+  "Render": {
+    "apiBaseUrl": "https://REPLACE-API-HOST.onrender.com/api/v1",
+    "addressesFinalized": false
+  }
+}

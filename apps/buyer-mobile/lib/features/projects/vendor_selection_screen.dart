@@ -231,7 +231,10 @@ class _VendorSelectionScreenState extends State<VendorSelectionScreen> {
               id,
               page: append ? projectInt(page?['page']) + 1 : 1,
               sort: sort,
-              direction: vendorSortDirection(sortDescending),
+              // Best Match is a fixed ranking: it has no direction to send.
+              direction: vendorSortDescending.containsKey(sort)
+                  ? vendorSortDirection(sortDescending)
+                  : null,
               favoritesOnly: favorites,
               completeOnly: complete,
               withinBudget: withinBudget,

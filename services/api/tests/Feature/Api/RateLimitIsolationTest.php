@@ -79,7 +79,15 @@ final class RateLimitIsolationTest extends TestCase
             }
             $credentialAction = in_array('POST', $route->methods(), true)
                 && preg_match('~/(?:account/(?:reauthentication(?:/email)?|password|email(?:/confirm)?|factor(?:/confirm)?|recovery-codes|two-factor(?:/confirm|/disable)?|deletion)|vendors/account/invitations|vendors/onboarding/store-email(?:/confirm)?)$~', $route->uri()) === 1;
-            self::assertSame($credentialAction ? ['throttle:account-security'] : [], $throttles, $route->uri());
+            $expected = $credentialAction ? ['throttle:account-security'] : [];
+            if (str_starts_with($route->uri(), 'api/v1/support/guest/')) {
+                $expected[] = 'throttle:support-guest';
+            }
+            if (in_array('POST', $route->methods(), true)
+                && preg_match('~^api/v1/support/(?:(?:buyers|vendors|guest)/tickets|guest/access-email)$~', $route->uri()) === 1) {
+                $expected[] = 'throttle:support-submit';
+            }
+            self::assertSame($expected, $throttles, $route->uri());
             if (preg_match('~^api/v1/(buyers|vendors|vendor|admin)/~', $route->uri()) === 1) {
                 self::assertContains('auth:api', $middleware, $route->uri());
                 self::assertNotEmpty(array_filter($middleware, fn (string $name): bool => str_starts_with($name, 'account.access')), $route->uri());

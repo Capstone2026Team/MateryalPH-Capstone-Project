@@ -26,6 +26,17 @@ map $request_uri $portal_host {
     default $request_host;
 NGINX;
 $maps .= "\n".'~^/api/v1/auth/google/callback(?:\?|$) "'.$vendor.'";'."\n}\n";
-if (file_put_contents('/tmp/nginx/portal-hosts.conf', $maps) === false) {
+$directory = getenv('MATERYALPH_NGINX_DIRECTORY') ?: '/tmp/nginx';
+if (file_put_contents($directory.'/portal-hosts.conf', $maps) === false) {
     throw new RuntimeException('Unable to prepare staging portal host configuration.');
+}
+$standby = getenv('DEPLOYMENT_STANDBY') ?: 'false';
+if (! in_array($standby, ['true', 'false'], true)) {
+    throw new RuntimeException('Invalid standby switch.');
+}
+// Static standby survives restarts; the VPS operator can also fence live HTTP
+// before a consistent backup. /up remains a liveness probe in both cases.
+$fence = ($standby === 'true' ? "return 503;\n" : '')."if (-f /run/materyalph/fenced) { return 503; }\n";
+if (file_put_contents($directory.'/deployment-fence.conf', $fence) === false) {
+    throw new RuntimeException('Unable to prepare deployment fence.');
 }

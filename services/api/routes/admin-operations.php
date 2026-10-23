@@ -37,11 +37,6 @@ Route::prefix('admin')->middleware($web('ADMIN'))->group(function (): void {
     Route::get('/vendors/{vendorId}/reviews', [U::class, 'vendorReviews'])->whereUuid('vendorId');
     Route::get('/vendors/{vendorId}/listings', [U::class, 'vendorListings'])->whereUuid('vendorId');
 
-    Route::get('/privacy-requests', [O::class, 'privacyQueue']);
-    Route::post('/privacy-requests', [O::class, 'recordPrivacyRequest']);
-    Route::get('/privacy-requests/{requestId}', [O::class, 'privacyDetail'])->whereUuid('requestId');
-    Route::post('/privacy-requests/{requestId}/{command}', [O::class, 'privacyTransition'])->whereUuid('requestId')->whereIn('command', ['assign', 'verify', 'start', 'complete', 'reject', 'withdraw']);
-
     Route::get('/audit-log', [O::class, 'audit']);
     Route::get('/audit-log/actions', [O::class, 'auditActions']);
     Route::get('/audit-log/{auditId}', [O::class, 'auditDetail'])->whereUuid('auditId');

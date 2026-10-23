@@ -23,7 +23,6 @@ import 'package:materyalph_api_client/src/api/admin_invoices_api.dart';
 import 'package:materyalph_api_client/src/api/admin_materials_analytics_api.dart';
 import 'package:materyalph_api_client/src/api/admin_order_operations_api.dart';
 import 'package:materyalph_api_client/src/api/admin_platform_settings_api.dart';
-import 'package:materyalph_api_client/src/api/admin_privacy_requests_api.dart';
 import 'package:materyalph_api_client/src/api/admin_product_compliance_api.dart';
 import 'package:materyalph_api_client/src/api/admin_review_moderation_api.dart';
 import 'package:materyalph_api_client/src/api/admin_score_monitoring_api.dart';
@@ -243,12 +242,6 @@ class MateryalphApiClient {
   /// by doing that all interceptors will not be executed
   AdminPlatformSettingsApi getAdminPlatformSettingsApi() {
     return AdminPlatformSettingsApi(dio, serializers);
-  }
-
-  /// Get AdminPrivacyRequestsApi instance, base route and serializer can be overridden by a given but be careful,
-  /// by doing that all interceptors will not be executed
-  AdminPrivacyRequestsApi getAdminPrivacyRequestsApi() {
-    return AdminPrivacyRequestsApi(dio, serializers);
   }
 
   /// Get AdminProductComplianceApi instance, base route and serializer can be overridden by a given but be careful,

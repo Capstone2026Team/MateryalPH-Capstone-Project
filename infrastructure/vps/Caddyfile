@@ -1,0 +1,67 @@
+{
+    admin off
+    # Do not retain signed URLs, OAuth codes, cookies or request headers in errors.
+    log default {
+        format filter {
+            wrap json
+            fields {
+                request delete
+            }
+        }
+    }
+}
+
+(security) {
+    header {
+        X-Content-Type-Options nosniff
+        Referrer-Policy strict-origin-when-cross-origin
+        -Server
+    }
+}
+
+{$API_HOST} {
+    import security
+    reverse_proxy api:10000 {
+        header_up Host {host}
+        header_up X-Forwarded-Host {host}
+        header_up X-Forwarded-Proto https
+    }
+}
+
+(portal) {
+    import security
+    @api path /api /api/*
+    handle @api {
+        header Cache-Control "private, no-store"
+        reverse_proxy api:10000 {
+            header_up Host {host}
+            header_up X-Forwarded-Host {host}
+            header_up X-Forwarded-Proto https
+        }
+    }
+}
+
+{$VENDOR_HOST} {
+    import portal
+    handle {
+        root * /srv/vendor
+        try_files {path} /index.html
+        header Cache-Control no-cache
+        file_server
+    }
+}
+
+{$ADMIN_HOST} {
+    import portal
+    handle {
+        root * /srv/admin
+        try_files {path} /index.html
+        header Cache-Control no-cache
+        file_server
+    }
+}
+
+{$REVERB_HOST} {
+    import security
+    reverse_proxy reverb:10000
+}

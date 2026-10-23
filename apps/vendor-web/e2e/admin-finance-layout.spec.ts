@@ -61,10 +61,15 @@ test('Admin Platform earnings analytics and Channel fees lay out cleanly', async
   await mock(page)
   await page.goto('http://127.0.0.1:4174/finance')
   await expect(page.getByRole('heading', { name: 'Platform earnings analytics' })).toBeVisible()
+  // Each KPI keeps its calculation behind a View breakdown disclosure.
+  const toggles = page.locator('summary', { hasText: 'View breakdown' })
+  await expect(toggles).toHaveCount(4)
+  for (let index = 0; index < 4; index++) await toggles.nth(index).click()
   for (const name of ['Net platform earnings calculation', 'Net commission earned calculation', 'Net collected commissions calculation', 'Outstanding receivables calculation']) await expect(page.getByRole('table', { name })).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Collections and debt' })).toBeVisible()
+  await expect(page.locator('dl[aria-label="Platform earnings summary"]')).toBeVisible()
   await capture(page, 'platform-earnings')
-  await page.getByRole('button', { name: 'Channel fees' }).click()
+  // Channel fees is a Payments and refunds sub-view.
+  await page.goto('http://127.0.0.1:4174/finance?view=channels')
   const link = page.getByRole('link', { name: /Open Xendit dashboard/ })
   await expect(link).toHaveAttribute('href', 'https://dashboard.xendit.co/')
   await expect(link).toHaveAttribute('target', '_blank')

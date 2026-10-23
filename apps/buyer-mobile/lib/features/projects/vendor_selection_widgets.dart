@@ -295,26 +295,31 @@ class VendorResultCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          fullTotal == null
-                              ? 'Cost review'
-                              : projectMoney(fullTotal),
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
+                    // Shrinks and wraps on narrow screens and large text.
+                    Flexible(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            fullTotal == null
+                                ? 'Cost review'
+                                : projectMoney(fullTotal),
+                            textAlign: TextAlign.end,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
-                        ),
-                        Text(
-                          fullTotal == null
-                              ? 'Delivery or price review'
-                              : 'All suppliers · incl. delivery',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: BuyerTheme.muted,
+                          Text(
+                            fullTotal == null
+                                ? 'Delivery or price review'
+                                : 'All suppliers · incl. delivery',
+                            textAlign: TextAlign.end,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: BuyerTheme.muted,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),

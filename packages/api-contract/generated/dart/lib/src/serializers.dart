@@ -789,14 +789,6 @@ import 'package:materyalph_api_client/src/model/platform_setting_version.dart';
 import 'package:materyalph_api_client/src/model/prepare_tax_package201_response.dart';
 import 'package:materyalph_api_client/src/model/price_history_entry.dart';
 import 'package:materyalph_api_client/src/model/price_history_envelope.dart';
-import 'package:materyalph_api_client/src/model/privacy_handler.dart';
-import 'package:materyalph_api_client/src/model/privacy_request_create_request.dart';
-import 'package:materyalph_api_client/src/model/privacy_request_detail.dart';
-import 'package:materyalph_api_client/src/model/privacy_request_detail_envelope.dart';
-import 'package:materyalph_api_client/src/model/privacy_request_event.dart';
-import 'package:materyalph_api_client/src/model/privacy_request_list_envelope.dart';
-import 'package:materyalph_api_client/src/model/privacy_request_summary.dart';
-import 'package:materyalph_api_client/src/model/privacy_transition_request.dart';
 import 'package:materyalph_api_client/src/model/problem_resolve_request.dart';
 import 'package:materyalph_api_client/src/model/problem_response_request.dart';
 import 'package:materyalph_api_client/src/model/processing_fee.dart';
@@ -1988,14 +1980,6 @@ part 'serializers.g.dart';
   PrepareTaxPackage201Response,
   PriceHistoryEntry,
   PriceHistoryEnvelope,
-  PrivacyHandler,
-  PrivacyRequestCreateRequest,
-  PrivacyRequestDetail,
-  PrivacyRequestDetailEnvelope,
-  PrivacyRequestEvent,
-  PrivacyRequestListEnvelope,
-  PrivacyRequestSummary,$PrivacyRequestSummary,
-  PrivacyTransitionRequest,
   ProblemResolveRequest,
   ProblemResponseRequest,
   ProcessingFee,
@@ -2662,10 +2646,6 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<ChatDraftLine>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(PrivacyRequestEvent)]),
-        () => ListBuilder<PrivacyRequestEvent>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(VolumeTier)]),
         () => ListBuilder<VolumeTier>(),
       )
@@ -2884,10 +2864,6 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(InventoryRow)]),
         () => ListBuilder<InventoryRow>(),
-      )
-      ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(PrivacyRequestSummary)]),
-        () => ListBuilder<PrivacyRequestSummary>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(VendorTeamInvitationRecord)]),
@@ -3538,10 +3514,6 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<ComparableVariant>(),
       )
       ..addBuilderFactory(
-        const FullType(BuiltList, [FullType(PrivacyHandler)]),
-        () => ListBuilder<PrivacyHandler>(),
-      )
-      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(int)]),
         () => ListBuilder<int>(),
       )
@@ -3561,7 +3533,6 @@ Serializers serializers = (_$serializers.toBuilder()
       ..add(AuditEvent.serializer)
       ..add(BuyerAnalyticsRow.serializer)
       ..add(EnforcementSummary.serializer)
-      ..add(PrivacyRequestSummary.serializer)
       ..add(ProjectCandidateRequest.serializer)
       ..add(SubjectReview.serializer)
       ..add(SuccessEnvelope.serializer)

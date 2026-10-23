@@ -639,17 +639,7 @@ The time-sensitive nature of construction projects means that delays in sourcing
 
 “Status and assignment changes record their reason and history. The user follows the same ticket from their application and receives relevant updates. A support ticket can guide or escalate a concern while formal disputes and financial decisions retain their own process.”
 
-### A18. Privacy Requests
-
-**Show:** Privacy request queue → prepared case → status, retained-record explanation, and history.
-
-**Say:**
-
-“Privacy Requests tracks requests concerning personal data. Authorized staff review the account, requested action, applicable retention requirements, and any blockers or legal holds.
-
-“The case records how the request is handled. Required commercial, financial, dispute, and audit history is preserved according to the approved retention rules.”
-
-### A19. Integration & Job Health
+### A18. Integration & Job Health
 
 **Show:** Integration health → provider status → failed/background work → analytics snapshot health.
 
@@ -659,7 +649,7 @@ The time-sensitive nature of construction projects means that delays in sourcing
 
 “Errors and stale data are shown with the available diagnostic information. Authorized retry actions help recover supported failures while retaining their operational history.”
 
-### A20. Audit Log and notifications
+### A19. Audit Log and notifications
 
 **Show:** Audit Log → filter by actor/resource/action/date → sample event; then bell → notification and permitted delivery-failure view.
 

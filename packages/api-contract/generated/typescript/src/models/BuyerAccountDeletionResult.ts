@@ -20,7 +20,7 @@ import { mapValues, parseDate, parseDateTime, serializeDate, serializeDateTime }
  */
 export interface BuyerAccountDeletionResult {
     /**
-     * Privacy request reference for follow-up with support.
+     * Account-deletion reference recorded in the audit trail for follow-up with support.
      */
     reference: string;
     /**

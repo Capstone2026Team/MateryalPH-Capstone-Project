@@ -9,7 +9,6 @@ Screenshots were **not captured** for this phase. Capturing them needs a signed-
 | Platform Settings | `/settings` | Version, previous value and rule. The weight-total error. Fixed rules with no control |
 | Enforcement | `/enforcement`, `/enforcement/:id` | Referred queue. Decision form with the exact target, version, before and after, and continuation plans |
 | Buyer Management | `/buyer-management` | Buyer-only enforcement queue |
-| Privacy Requests | `/privacy`, `/privacy/:id` | Lifecycle actions and history |
 | Audit Log | `/audit` | Search filters, keyset "Load older entries", redacted detail panel |
 | Integration & Job Health | `/integrations` | Masked integration statuses, analytics run health, retry panel |
 | Finance | `/finance?view=overview` and the other FIN-10 tabs | GMV kept apart from finance amounts, report readiness, tax adjustment two-person review |

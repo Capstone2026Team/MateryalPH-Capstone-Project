@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[2]
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--image", default="materyalph-api:staging-review")
+    parser.add_argument("--vps", action="store_true", help="Validate the eight-worker VPS pool and dynamic maintenance fence")
     args = parser.parse_args()
     docker = shutil.which("docker")
     if not docker:
@@ -41,7 +42,7 @@ def main():
         "    $result = [];\n"
         "    foreach ($_FILES as $file) { $result[] = $file['error'] . ':' . $file['size']; }\n"
         "    echo implode(',', $result);\n"
-        "} elseif (preg_match('#^/slow/([12])$#', $path, $match)) {\n"
+        "} elseif (preg_match('#^/slow/([1-8])$#', $path, $match)) {\n"
         "    touch('/tmp/runtime-start-' . $match[1]);\n"
         "    sleep(6);\n"
         "    echo 'slow-ok';\n"
@@ -112,7 +113,8 @@ $oversizedStatus = fgets($socket);
 fclose($socket);
 verify(str_contains($oversizedStatus, ' 413 '), 'Nginx did not reject a request above 80 MiB');
 $children = [];
-foreach ([1, 2] as $number) {
+$workerCount = (int) (getenv('RUNTIME_WORKERS') ?: 2);
+foreach (range(1, $workerCount) as $number) {
     $pid = pcntl_fork();
     verify($pid !== -1, 'fork failed');
     if ($pid === 0) {
@@ -124,10 +126,11 @@ foreach ([1, 2] as $number) {
 $deadline = microtime(true) + 3;
 do {
     clearstatcache();
-    $busy = is_file('/tmp/runtime-start-1') && is_file('/tmp/runtime-start-2');
+    $busy = true;
+    foreach (range(1, $workerCount) as $number) { $busy = $busy && is_file('/tmp/runtime-start-'.$number); }
     if (!$busy) { usleep(50000); }
 } while (!$busy && microtime(true) < $deadline);
-verify($busy, 'two ordinary request workers did not start concurrently');
+verify($busy, 'ordinary request workers did not start concurrently');
 [$status, $body, $duration] = request('/up');
 verify($status === 200 && $body === 'ok', 'FPM ping failed while ordinary workers were busy');
 verify($duration < 1, 'FPM ping exceeded one second');
@@ -137,6 +140,13 @@ foreach ($children as $pid) {
     pcntl_waitpid($pid, $result);
     verify(pcntl_wifexited($result) && pcntl_wexitstatus($result) === 0, 'slow request failed');
 }
+touch('/run/materyalph/fenced');
+[$fencedStatus] = request('/api/v1/fixture');
+[$fencedHealth] = request('/up');
+verify($fencedStatus === 503 && $fencedHealth === 200, 'maintenance fence failed or blocked liveness');
+unlink('/run/materyalph/fenced');
+[$openedStatus] = request('/api/v1/fixture');
+verify($openedStatus === 200, 'maintenance fence did not reopen');
 verify(posix_kill((int) file_get_contents('/tmp/test-fpm.pid'), SIGTERM), 'could not stop fixture FPM');
 for ($attempt = 0; $attempt < 50; $attempt++) {
     [$downStatus] = request('/up');
@@ -150,13 +160,14 @@ echo json_encode([
     'multipart_above_32_mib_passed' => true,
     'php_file_limit_enforced' => true,
     'nginx_request_limit_enforced' => true,
-    'concurrent_request_workers' => 2,
+    'concurrent_request_workers' => $workerCount,
+    'maintenance_fence_passed' => true,
     'health_while_workers_busy_passed' => true,
     'health_latency_ms' => round($duration * 1000, 1),
     'head_health_passed' => true,
     'fpm_failure_detected' => true,
     'network_isolated' => true,
-    'memory_limit_mib' => 512,
+    'memory_limit_mib' => (int) (getenv('RUNTIME_MEMORY_MIB') ?: 512),
 ]).PHP_EOL;
 ''',
         encoding="utf-8",
@@ -170,16 +181,21 @@ echo json_encode([
     started = False
     try:
         run(
-            "run", "-d", "--name", name, "--network", "none", "--memory", "512m",
-            "--cpus", "0.5", "--entrypoint", "/bin/sh",
+            "run", "-d", "--name", name, "--network", "none", "--memory", "2304m" if args.vps else "512m",
+            "--cpus", "1.5" if args.vps else "0.5", "--entrypoint", "/bin/sh",
+            "--env", f"RUNTIME_WORKERS={8 if args.vps else 2}",
+            "--env", f"RUNTIME_MEMORY_MIB={2304 if args.vps else 512}",
+            "--tmpfs", "/run/materyalph:mode=1777",
             "--mount", f"type=bind,src={ROOT / 'infrastructure/docker/render-nginx.conf'},dst=/check/nginx.conf,readonly",
             "--mount", f"type=bind,src={ROOT / 'infrastructure/docker/render-php-fpm.conf'},dst=/usr/local/etc/php-fpm.d/zz-render.conf,readonly",
+            "--mount", f"type=bind,src={ROOT / 'infrastructure/docker/vps-php-fpm.conf'},dst=/check/vps-php-fpm.conf,readonly",
             "--mount", f"type=bind,src={ROOT / 'infrastructure/docker/uploads.ini'},dst=/usr/local/etc/php/conf.d/uploads.ini,readonly",
             "--mount", f"type=bind,src={public},dst=/app/services/api/public,readonly",
             "--mount", f"type=bind,src={fixture},dst=/fixture,readonly",
             args.image, "-c",
             'mkdir -p /tmp/nginx; cp /fixture/portal-hosts.conf /tmp/nginx/portal-hosts.conf; '
-            'php-fpm -F & echo $! > /tmp/test-fpm.pid; '
+            'printf "if (-f /run/materyalph/fenced) { return 503; }\\n" > /tmp/nginx/deployment-fence.conf; '
+            + ('php-fpm -F -y /check/vps-php-fpm.conf' if args.vps else 'php-fpm -F') + ' & echo $! > /tmp/test-fpm.pid; '
             'nginx -e /dev/null -c /check/nginx.conf -g "daemon off;" & wait',
         )
         started = True
