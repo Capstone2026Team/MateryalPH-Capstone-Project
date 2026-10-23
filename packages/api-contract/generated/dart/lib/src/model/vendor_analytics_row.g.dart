@@ -41,6 +41,9 @@ abstract class VendorAnalyticsRowBuilder {
 
   VendorOwnOfferBuilder get ownOffer;
   set ownOffer(VendorOwnOfferBuilder? ownOffer);
+
+  ListingImageBuilder get image;
+  set image(ListingImageBuilder? image);
 }
 
 class _$$VendorAnalyticsRow extends $VendorAnalyticsRow {
@@ -66,6 +69,8 @@ class _$$VendorAnalyticsRow extends $VendorAnalyticsRow {
   final VendorCurrentCompetitors currentCompetitors;
   @override
   final VendorOwnOffer? ownOffer;
+  @override
+  final ListingImage? image;
 
   factory _$$VendorAnalyticsRow(
           [void Function($VendorAnalyticsRowBuilder)? updates]) =>
@@ -82,7 +87,8 @@ class _$$VendorAnalyticsRow extends $VendorAnalyticsRow {
       required this.endPoint,
       required this.trend,
       required this.currentCompetitors,
-      this.ownOffer})
+      this.ownOffer,
+      this.image})
       : super._();
   @override
   $VendorAnalyticsRow rebuild(
@@ -107,7 +113,8 @@ class _$$VendorAnalyticsRow extends $VendorAnalyticsRow {
         endPoint == other.endPoint &&
         trend == other.trend &&
         currentCompetitors == other.currentCompetitors &&
-        ownOffer == other.ownOffer;
+        ownOffer == other.ownOffer &&
+        image == other.image;
   }
 
   @override
@@ -124,6 +131,7 @@ class _$$VendorAnalyticsRow extends $VendorAnalyticsRow {
     _$hash = $jc(_$hash, trend.hashCode);
     _$hash = $jc(_$hash, currentCompetitors.hashCode);
     _$hash = $jc(_$hash, ownOffer.hashCode);
+    _$hash = $jc(_$hash, image.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -141,7 +149,8 @@ class _$$VendorAnalyticsRow extends $VendorAnalyticsRow {
           ..add('endPoint', endPoint)
           ..add('trend', trend)
           ..add('currentCompetitors', currentCompetitors)
-          ..add('ownOffer', ownOffer))
+          ..add('ownOffer', ownOffer)
+          ..add('image', image))
         .toString();
   }
 }
@@ -212,6 +221,10 @@ class $VendorAnalyticsRowBuilder
   set ownOffer(covariant VendorOwnOfferBuilder? ownOffer) =>
       _$this._ownOffer = ownOffer;
 
+  ListingImageBuilder? _image;
+  ListingImageBuilder get image => _$this._image ??= ListingImageBuilder();
+  set image(covariant ListingImageBuilder? image) => _$this._image = image;
+
   $VendorAnalyticsRowBuilder() {
     $VendorAnalyticsRow._defaults(this);
   }
@@ -230,6 +243,7 @@ class $VendorAnalyticsRowBuilder
       _trend = $v.trend.toBuilder();
       _currentCompetitors = $v.currentCompetitors.toBuilder();
       _ownOffer = $v.ownOffer?.toBuilder();
+      _image = $v.image?.toBuilder();
       _$v = null;
     }
     return this;
@@ -266,6 +280,7 @@ class $VendorAnalyticsRowBuilder
             trend: trend.build(),
             currentCompetitors: currentCompetitors.build(),
             ownOffer: _ownOffer?.build(),
+            image: _image?.build(),
           );
     } catch (_) {
       late String _$failedField;
@@ -288,6 +303,8 @@ class $VendorAnalyticsRowBuilder
         currentCompetitors.build();
         _$failedField = 'ownOffer';
         _ownOffer?.build();
+        _$failedField = 'image';
+        _image?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'$VendorAnalyticsRow', _$failedField, e.toString());

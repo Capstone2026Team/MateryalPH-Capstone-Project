@@ -21,6 +21,7 @@ Name | Type | Description | Notes
 **availability** | **String** |  |
 **distanceMeters** | **int** |  |
 **priceAsOf** | [**DateTime**](DateTime.md) |  |
+**image** | [**ListingImage**](ListingImage.md) | First public photo of this listing, or null. | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

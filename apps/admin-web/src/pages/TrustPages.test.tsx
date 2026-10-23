@@ -41,6 +41,20 @@ test('Materials presets stay anchored to the latest published snapshot and custo
   expect(screen.getByTestId('material-location')).toHaveTextContent('priceFrom=2026-09-01')
 })
 
+test('material rows show the permitted listing photo or fall back to the category icon', async () => {
+  vi.mocked(api.listRuns).mockResolvedValue([])
+  const point = { date: parseDate('2026-09-30'), status: 'OK', averagePhp: '18.42', vendorCount: 3 }
+  const row = { groupId: 'g1', displayName: 'CHB 100', material: { id: 'm', name: 'CHB' }, category: { id: 'c', code: 'MASONRY', name: 'Masonry' }, specification: { attributes: [] }, unit: { code: 'PC', name: 'Piece' },
+    startPoint: point, endPoint: point, trend: {}, current: { vendorCount: 3, listingCount: 3, status: 'AVAILABLE' } }
+  vi.mocked(api.listAdminAnalytics).mockResolvedValue({ dataset: { kind: 'TEST', label: 'TEST' }, window: { presetDays: 30, maxDays: 365, presets: [7, 30, 90] }, currentAsOf: new Date('2026-10-09T00:00:00Z'), snapshot: null, updateSchedule: 'Daily', explanation: 'Public prices.',
+    items: [{ ...row, image: { url: 'https://cdn.example.test/chb.jpg', altText: null } }, { ...row, groupId: 'g2', displayName: 'CHB 150', image: null }] } as never)
+  render(<MemoryRouter><MaterialsAnalyticsSection psgcCode={null} areaLabel="Philippines" /></MemoryRouter>)
+  await screen.findByText('CHB 150')
+  const [photographed, plain] = screen.getAllByTestId('material-thumbnail')
+  expect(photographed!.querySelector('img')).toHaveAttribute('src', 'https://cdn.example.test/chb.jpg')
+  expect(plain!.querySelector('img')).toBeNull()
+})
+
 test('moderation offers only server-allowed actions (never delete) and requires a recorded reason', async () => {
   vi.mocked(api.getModeration).mockResolvedValue(review())
   vi.mocked(api.moderate).mockResolvedValue(review({ moderationState: 'CORRECTION_REQUESTED', availableActions: ['REMOVE', 'RESTORE'], lockVersion: 3 }))

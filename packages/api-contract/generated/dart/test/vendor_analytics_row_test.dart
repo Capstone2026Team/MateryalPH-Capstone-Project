@@ -62,5 +62,11 @@ void main() {
       // TODO
     });
 
+    // The Vendor's own listing photo for this variant, or null. A competitor photo is never returned (MAT-05).
+    // ListingImage image
+    test('to test the property `image`', () async {
+      // TODO
+    });
+
   });
 }

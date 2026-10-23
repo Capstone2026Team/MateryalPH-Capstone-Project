@@ -55,6 +55,13 @@ import {
     AnalyticsMaterialRefToJSON,
     AnalyticsMaterialRefToJSONTyped,
 } from './AnalyticsMaterialRef';
+import type { ListingImage } from './ListingImage';
+import {
+    ListingImageFromJSON,
+    ListingImageFromJSONTyped,
+    ListingImageToJSON,
+    ListingImageToJSONTyped,
+} from './ListingImage';
 import type { VendorCurrentCompetitors } from './VendorCurrentCompetitors';
 import {
     VendorCurrentCompetitorsFromJSON,
@@ -121,6 +128,10 @@ export interface VendorMaterialsAnalyticsDetailGroup {
      */
     ownOffer?: VendorOwnOffer;
     /**
+     * The Vendor's own listing photo for this variant, or null. A competitor photo is never returned (MAT-05).
+     */
+    image?: ListingImage;
+    /**
      *
      */
     description?: string;
@@ -164,6 +175,7 @@ export function VendorMaterialsAnalyticsDetailGroupFromJSONTyped(json: any, igno
         'trend': AnalyticsTrendFromJSON(json['trend']),
         'currentCompetitors': VendorCurrentCompetitorsFromJSON(json['current_competitors']),
         'ownOffer': json['own_offer'] == null ? undefined : VendorOwnOfferFromJSON(json['own_offer']),
+        'image': json['image'] == null ? undefined : ListingImageFromJSON(json['image']),
         'description': json['description'] == null ? undefined : json['description'],
     };
 }
@@ -190,6 +202,7 @@ export function VendorMaterialsAnalyticsDetailGroupToJSONTyped(value?: VendorMat
         'trend': AnalyticsTrendToJSON(value['trend']),
         'current_competitors': VendorCurrentCompetitorsToJSON(value['currentCompetitors']),
         'own_offer': VendorOwnOfferToJSON(value['ownOffer']),
+        'image': ListingImageToJSON(value['image']),
         'description': value['description'],
     };
 }

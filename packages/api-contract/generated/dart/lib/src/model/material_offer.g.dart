@@ -100,6 +100,8 @@ class _$MaterialOffer extends MaterialOffer {
   final int distanceMeters;
   @override
   final DateTime priceAsOf;
+  @override
+  final ListingImage? image;
 
   factory _$MaterialOffer([void Function(MaterialOfferBuilder)? updates]) =>
       (MaterialOfferBuilder()..update(updates))._build();
@@ -117,7 +119,8 @@ class _$MaterialOffer extends MaterialOffer {
       required this.taxLabel,
       required this.availability,
       required this.distanceMeters,
-      required this.priceAsOf})
+      required this.priceAsOf,
+      this.image})
       : super._();
   @override
   MaterialOffer rebuild(void Function(MaterialOfferBuilder) updates) =>
@@ -142,7 +145,8 @@ class _$MaterialOffer extends MaterialOffer {
         taxLabel == other.taxLabel &&
         availability == other.availability &&
         distanceMeters == other.distanceMeters &&
-        priceAsOf == other.priceAsOf;
+        priceAsOf == other.priceAsOf &&
+        image == other.image;
   }
 
   @override
@@ -161,6 +165,7 @@ class _$MaterialOffer extends MaterialOffer {
     _$hash = $jc(_$hash, availability.hashCode);
     _$hash = $jc(_$hash, distanceMeters.hashCode);
     _$hash = $jc(_$hash, priceAsOf.hashCode);
+    _$hash = $jc(_$hash, image.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -180,7 +185,8 @@ class _$MaterialOffer extends MaterialOffer {
           ..add('taxLabel', taxLabel)
           ..add('availability', availability)
           ..add('distanceMeters', distanceMeters)
-          ..add('priceAsOf', priceAsOf))
+          ..add('priceAsOf', priceAsOf)
+          ..add('image', image))
         .toString();
   }
 }
@@ -245,6 +251,10 @@ class MaterialOfferBuilder
   DateTime? get priceAsOf => _$this._priceAsOf;
   set priceAsOf(DateTime? priceAsOf) => _$this._priceAsOf = priceAsOf;
 
+  ListingImageBuilder? _image;
+  ListingImageBuilder get image => _$this._image ??= ListingImageBuilder();
+  set image(ListingImageBuilder? image) => _$this._image = image;
+
   MaterialOfferBuilder() {
     MaterialOffer._defaults(this);
   }
@@ -265,6 +275,7 @@ class MaterialOfferBuilder
       _availability = $v.availability;
       _distanceMeters = $v.distanceMeters;
       _priceAsOf = $v.priceAsOf;
+      _image = $v.image?.toBuilder();
       _$v = null;
     }
     return this;
@@ -284,34 +295,48 @@ class MaterialOfferBuilder
   MaterialOffer build() => _build();
 
   _$MaterialOffer _build() {
-    final _$result = _$v ??
-        _$MaterialOffer._(
-          vendorId: BuiltValueNullFieldError.checkNotNull(
-              vendorId, r'MaterialOffer', 'vendorId'),
-          storeName: BuiltValueNullFieldError.checkNotNull(
-              storeName, r'MaterialOffer', 'storeName'),
-          listingId: BuiltValueNullFieldError.checkNotNull(
-              listingId, r'MaterialOffer', 'listingId'),
-          variantId: BuiltValueNullFieldError.checkNotNull(
-              variantId, r'MaterialOffer', 'variantId'),
-          displayName: BuiltValueNullFieldError.checkNotNull(
-              displayName, r'MaterialOffer', 'displayName'),
-          variantLabel: variantLabel,
-          priceCentavos: BuiltValueNullFieldError.checkNotNull(
-              priceCentavos, r'MaterialOffer', 'priceCentavos'),
-          normalizedPhp: BuiltValueNullFieldError.checkNotNull(
-              normalizedPhp, r'MaterialOffer', 'normalizedPhp'),
-          taxCategory: BuiltValueNullFieldError.checkNotNull(
-              taxCategory, r'MaterialOffer', 'taxCategory'),
-          taxLabel: BuiltValueNullFieldError.checkNotNull(
-              taxLabel, r'MaterialOffer', 'taxLabel'),
-          availability: BuiltValueNullFieldError.checkNotNull(
-              availability, r'MaterialOffer', 'availability'),
-          distanceMeters: BuiltValueNullFieldError.checkNotNull(
-              distanceMeters, r'MaterialOffer', 'distanceMeters'),
-          priceAsOf: BuiltValueNullFieldError.checkNotNull(
-              priceAsOf, r'MaterialOffer', 'priceAsOf'),
-        );
+    _$MaterialOffer _$result;
+    try {
+      _$result = _$v ??
+          _$MaterialOffer._(
+            vendorId: BuiltValueNullFieldError.checkNotNull(
+                vendorId, r'MaterialOffer', 'vendorId'),
+            storeName: BuiltValueNullFieldError.checkNotNull(
+                storeName, r'MaterialOffer', 'storeName'),
+            listingId: BuiltValueNullFieldError.checkNotNull(
+                listingId, r'MaterialOffer', 'listingId'),
+            variantId: BuiltValueNullFieldError.checkNotNull(
+                variantId, r'MaterialOffer', 'variantId'),
+            displayName: BuiltValueNullFieldError.checkNotNull(
+                displayName, r'MaterialOffer', 'displayName'),
+            variantLabel: variantLabel,
+            priceCentavos: BuiltValueNullFieldError.checkNotNull(
+                priceCentavos, r'MaterialOffer', 'priceCentavos'),
+            normalizedPhp: BuiltValueNullFieldError.checkNotNull(
+                normalizedPhp, r'MaterialOffer', 'normalizedPhp'),
+            taxCategory: BuiltValueNullFieldError.checkNotNull(
+                taxCategory, r'MaterialOffer', 'taxCategory'),
+            taxLabel: BuiltValueNullFieldError.checkNotNull(
+                taxLabel, r'MaterialOffer', 'taxLabel'),
+            availability: BuiltValueNullFieldError.checkNotNull(
+                availability, r'MaterialOffer', 'availability'),
+            distanceMeters: BuiltValueNullFieldError.checkNotNull(
+                distanceMeters, r'MaterialOffer', 'distanceMeters'),
+            priceAsOf: BuiltValueNullFieldError.checkNotNull(
+                priceAsOf, r'MaterialOffer', 'priceAsOf'),
+            image: _image?.build(),
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'image';
+        _image?.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'MaterialOffer', _$failedField, e.toString());
+      }
+      rethrow;
+    }
     replace(_$result);
     return _$result;
   }

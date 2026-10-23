@@ -16,6 +16,7 @@ Name | Type
 `endPoint` | [AdminAnalyticsPoint](AdminAnalyticsPoint.md)
 `trend` | [AnalyticsTrend](AnalyticsTrend.md)
 `current` | [AnalyticsCurrentCounts](AnalyticsCurrentCounts.md)
+`image` | [ListingImage](ListingImage.md)
 `description` | string
 
 ## Example
@@ -35,6 +36,7 @@ const example = {
   "endPoint": null,
   "trend": null,
   "current": null,
+  "image": null,
   "description": null,
 } satisfies AdminMaterialsAnalyticsDetailGroup
 

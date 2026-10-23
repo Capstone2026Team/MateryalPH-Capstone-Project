@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:materyalph/design_system/components/price_trend_chart.dart';
+import 'package:materyalph/design_system/components/product_summary_row.dart';
+import 'package:materyalph/features/item_procurement/explore_screen.dart'
+    show categoryIcon;
 import 'package:materyalph/design_system/theme.dart';
 import 'package:materyalph/features/map_discovery/discovery_models.dart';
 import 'package:materyalph/features/trust/listing_reviews_section.dart';
@@ -112,6 +115,77 @@ void main() {
       await tester.tap(find.text('7 days'));
       await tester.pumpAndSettle();
       expect(repository.windows.last, const AnalyticsWindowChoice.preset(7));
+    },
+  );
+
+  testWidgets(
+    'several categories start collapsed, open on tap and list variants under their material',
+    (tester) async {
+      ComparableGroupView wire(String id, String size) => ComparableGroupView(
+        groupId: id,
+        displayName: 'THHN building wire · Phelps Dodge · Nominal size $size',
+        materialName: 'THHN building wire',
+        categoryName: 'Electrical Supplies',
+        categoryCode: 'ELECTRICAL_SUPPLIES',
+        unitName: 'Meter',
+        specification: const ['Phelps Dodge'],
+        startPoint: const AnalyticsPointView(date: '2026-09-04', status: 'OK'),
+        endPoint: const AnalyticsPointView(
+          date: '2026-10-04',
+          status: 'LIMITED_DATA',
+          average: '31.99',
+          vendorCount: 1,
+        ),
+        trend: const AnalyticsTrendView(label: 'Insufficient Local Data'),
+        currentVendors: 1,
+        currentListings: 1,
+        imageUrl: id == 'w1' ? 'https://cdn.example.test/thhn.jpg' : null,
+      );
+      final repository = FakeAnalyticsRepository()
+        ..page = MaterialsAnalyticsPage(
+          envelope: _envelope,
+          items: [_group(), wire('w1', '2.0 mm'), wire('w2', '3.5 mm')],
+        );
+      await tester.pumpWidget(
+        _app(
+          MaterialsAnalyticsScreen(
+            repository: repository,
+            origin: _origin,
+            radiusKm: 10,
+            onOpenListing: (_, _) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('2 categories'), findsOneWidget);
+      expect(find.text('Electrical Supplies'), findsOneWidget);
+      expect(
+        find.text('2 variants · 1 material · 2 with current offers'),
+        findsOneWidget,
+      );
+      expect(find.text('Phelps Dodge · Nominal size 2.0 mm'), findsNothing);
+
+      await tester.tap(find.text('Electrical Supplies'));
+      await tester.pumpAndSettle();
+      expect(find.text('THHN building wire'), findsOneWidget);
+      expect(find.text('Phelps Dodge · Nominal size 2.0 mm'), findsOneWidget);
+      expect(find.text('Phelps Dodge · Nominal size 3.5 mm'), findsOneWidget);
+      expect(find.text('per Meter'), findsNWidgets(2));
+      expect(find.text('4-inch CHB — DemoBlock'), findsNothing);
+      // Each variant shows its photo; one without a photo falls back to its category icon.
+      final thumbnails = tester
+          .widgetList<ProductThumbnail>(find.byType(ProductThumbnail))
+          .toList();
+      expect(thumbnails.map((t) => t.url), [
+        'https://cdn.example.test/thhn.jpg',
+        null,
+      ]);
+      expect(thumbnails.last.fallbackIcon, categoryIcon('ELECTRICAL_SUPPLIES'));
+
+      await tester.tap(find.text('Expand all'));
+      await tester.pumpAndSettle();
+      expect(find.text('4-inch CHB — DemoBlock'), findsOneWidget);
+      expect(find.text('Collapse all'), findsOneWidget);
     },
   );
 

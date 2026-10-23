@@ -35,7 +35,7 @@ final class MaterialsAnalyticsService
 
     public const HISTORY_TTL_SECONDS = 86400;
 
-    public function __construct(private readonly ScopedOfferQuery $offers) {}
+    public function __construct(private readonly ScopedOfferQuery $offers, private readonly ListingPublicFacts $facts) {}
 
     /**
      * Candidate comparable groups for the list, filtered and paginated by offset cursor.
@@ -207,6 +207,60 @@ final class MaterialsAnalyticsService
     }
 
     /**
+     * One public listing photo per group so a row is recognizable, chosen under MAT-05: a Buyer, and an Admin holding
+     * materials_analytics.inspect_sources, see the photo of the cheapest current in-scope offer that has one; a Vendor
+     * sees only its own listing's photo, never a competitor's. Only {url, alt_text} leaves this method — never the
+     * source listing, store, price or rank.
+     *
+     * @param  list<string>  $groupIds
+     * @param  array<string, array<string, mixed>>  $own  the Vendor's ownOffers() for these groups
+     * @return array<string, array{url: string, alt_text: ?string}>
+     */
+    public function images(AnalyticsRequest $request, array $groupIds, array $own = []): array
+    {
+        if ($groupIds === []) {
+            return [];
+        }
+        if ($request->audience === 'VENDOR') {
+            $candidates = [];
+            foreach ($groupIds as $id) {
+                if (isset($own[$id])) {
+                    $candidates[$id] = [(string) $own[$id]['listing_id']];
+                }
+            }
+        } elseif ($request->audience === 'BUYER' || $request->sourceImages) {
+            sort($groupIds);
+            $key = $request->cacheKey('image-sources').':'.EligibleOfferQuery::generation().':'.hash('sha256', implode(',', $groupIds));
+            $candidates = Cache::remember($key, self::CURRENT_TTL_SECONDS, function () use ($request, $groupIds): array {
+                $rows = ComparableMappingService::joinComparable($this->currentScope($request))->whereIn('cg.id', $groupIds)->where('gv.review_state', 'APPROVED')
+                    ->whereRaw(ComparableMappingService::NORMALIZED_PRICE_SQL.' IS NOT NULL')->groupBy('cg.id', 'l.id')
+                    ->selectRaw('cg.id AS group_id, l.id AS listing_id, min('.ComparableMappingService::NORMALIZED_PRICE_SQL.') AS normalized')
+                    ->orderBy('cg.id')->orderBy('normalized')->orderBy('l.id')->get();
+                $byGroup = [];
+                foreach ($rows as $row) {
+                    $byGroup[(string) $row->group_id][] = (string) $row->listing_id;
+                }
+
+                return $byGroup;
+            });
+        } else {
+            return [];
+        }
+        $photos = $this->facts->images(array_values(array_unique(array_merge([], ...array_values($candidates)))));
+        $images = [];
+        foreach ($candidates as $groupId => $listingIds) {
+            foreach ($listingIds as $listingId) {
+                if (isset($photos[$listingId][0])) {
+                    $images[$groupId] = $photos[$listingId][0];
+                    break;
+                }
+            }
+        }
+
+        return $images;
+    }
+
+    /**
      * Buyer current public offers for one group within the Buyer's radius, cheapest per canonical unit first.
      *
      * @return array{items: list<array<string, mixed>>, next_cursor: ?string, total: int, as_of: string}
@@ -222,6 +276,7 @@ final class MaterialsAnalyticsService
             ->addSelect(['o.id as vendor_id', 'p.public_store_name', 'l.id as listing_id', 'l.display_name', 'v.id as variant_id', 'v.label as variant_label', 'pv.amount_centavos', 'pv.tax_category', 'pv.effective_at',
                 'i.quantity_on_hand', 'i.hard_reserved_quantity', 'i.reorder_level'])
             ->orderBy('normalized')->orderBy('distance_meters')->orderBy('v.id')->offset($offset)->limit($perPage)->get();
+        $photos = $this->facts->images($rows->pluck('listing_id')->map(static fn (mixed $id): string => (string) $id)->unique()->values()->all());
 
         return ['items' => $rows->map(static fn (object $row): array => [
             'vendor_id' => (string) $row->vendor_id, 'store_name' => (string) $row->public_store_name, 'listing_id' => (string) $row->listing_id, 'variant_id' => (string) $row->variant_id,
@@ -229,6 +284,7 @@ final class MaterialsAnalyticsService
             'normalized_php' => self::display((string) $row->normalized), 'tax_category' => (string) $row->tax_category, 'tax_label' => ListingPublicFacts::vatLabel((string) $row->tax_category),
             'availability' => StockAvailability::label(StockAvailability::availableToSell((string) $row->quantity_on_hand, (string) $row->hard_reserved_quantity), $row->reorder_level === null ? null : (string) $row->reorder_level),
             'distance_meters' => (int) round((float) $row->distance_meters), 'price_as_of' => CarbonImmutable::parse((string) $row->effective_at)->toIso8601String(),
+            'image' => $photos[(string) $row->listing_id][0] ?? null,
         ])->all(), 'next_cursor' => $offset + $perPage < $total ? base64_encode((string) ($offset + $perPage)) : null, 'total' => $total, 'as_of' => now()->toIso8601String()];
     }
 

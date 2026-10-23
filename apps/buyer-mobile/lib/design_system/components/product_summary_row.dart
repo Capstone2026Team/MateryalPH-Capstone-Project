@@ -6,17 +6,24 @@ import 'specification_chips.dart';
 
 /// A bounded thumbnail with the same fallback for missing and failed images.
 class ProductThumbnail extends StatelessWidget {
-  const ProductThumbnail({super.key, this.url, this.label, this.size = 56});
+  const ProductThumbnail({
+    super.key,
+    this.url,
+    this.label,
+    this.size = 56,
+    this.fallbackIcon = LucideIcons.package,
+  });
   final String? url, label;
   final double size;
+
+  /// Shown when there is no photo or it fails to load (e.g. the category icon).
+  final IconData fallbackIcon;
 
   @override
   Widget build(BuildContext context) {
     final placeholder = ColoredBox(
       color: BuyerTheme.canvas,
-      child: const Center(
-        child: Icon(LucideIcons.package, color: BuyerTheme.muted),
-      ),
+      child: Center(child: Icon(fallbackIcon, color: BuyerTheme.muted)),
     );
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),

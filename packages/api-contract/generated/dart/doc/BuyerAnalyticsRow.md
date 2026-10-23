@@ -18,6 +18,7 @@ Name | Type | Description | Notes
 **endPoint** | [**BuyerAnalyticsPoint**](BuyerAnalyticsPoint.md) |  |
 **trend** | [**AnalyticsTrend**](AnalyticsTrend.md) |  |
 **current** | [**AnalyticsCurrentCounts**](AnalyticsCurrentCounts.md) |  |
+**image** | [**ListingImage**](ListingImage.md) | Photo of the cheapest current in-scope offer that has one, so the row is recognizable. Only the public URL and alt text; never its listing, store or price. | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:materyalph_api_client/src/model/analytics_category_ref.dart';
 import 'package:materyalph_api_client/src/model/comparable_specification.dart';
+import 'package:materyalph_api_client/src/model/listing_image.dart';
 import 'package:materyalph_api_client/src/model/analytics_current_counts.dart';
 import 'package:materyalph_api_client/src/model/analytics_unit.dart';
 import 'package:materyalph_api_client/src/model/analytics_trend.dart';
@@ -28,6 +29,7 @@ part 'buyer_analytics_row.g.dart';
 /// * [endPoint]
 /// * [trend]
 /// * [current]
+/// * [image] - Photo of the cheapest current in-scope offer that has one, so the row is recognizable. Only the public URL and alt text; never its listing, store or price.
 @BuiltValue(instantiable: false)
 abstract class BuyerAnalyticsRow  {
   @BuiltValueField(wireName: r'group_id')
@@ -59,6 +61,10 @@ abstract class BuyerAnalyticsRow  {
 
   @BuiltValueField(wireName: r'current')
   AnalyticsCurrentCounts get current;
+
+  /// Photo of the cheapest current in-scope offer that has one, so the row is recognizable. Only the public URL and alt text; never its listing, store or price.
+  @BuiltValueField(wireName: r'image')
+  ListingImage? get image;
 
   @BuiltValueSerializer(custom: true)
   static Serializer<BuyerAnalyticsRow> get serializer => _$BuyerAnalyticsRowSerializer();
@@ -126,6 +132,13 @@ class _$BuyerAnalyticsRowSerializer implements PrimitiveSerializer<BuyerAnalytic
       object.current,
       specifiedType: const FullType(AnalyticsCurrentCounts),
     );
+    if (object.image != null) {
+      yield r'image';
+      yield serializers.serialize(
+        object.image,
+        specifiedType: const FullType.nullable(ListingImage),
+      );
+    }
   }
 
   @override
@@ -259,6 +272,14 @@ class _$$BuyerAnalyticsRowSerializer implements PrimitiveSerializer<$BuyerAnalyt
             specifiedType: const FullType(AnalyticsCurrentCounts),
           ) as AnalyticsCurrentCounts;
           result.current.replace(valueDes);
+          break;
+        case r'image':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ListingImage),
+          ) as ListingImage?;
+          if (valueDes == null) continue;
+          result.image.replace(valueDes);
           break;
         default:
           unhandled.add(key);

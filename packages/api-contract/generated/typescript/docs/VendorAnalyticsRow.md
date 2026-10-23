@@ -17,6 +17,7 @@ Name | Type
 `trend` | [AnalyticsTrend](AnalyticsTrend.md)
 `currentCompetitors` | [VendorCurrentCompetitors](VendorCurrentCompetitors.md)
 `ownOffer` | [VendorOwnOffer](VendorOwnOffer.md)
+`image` | [ListingImage](ListingImage.md)
 
 ## Example
 
@@ -36,6 +37,7 @@ const example = {
   "trend": null,
   "currentCompetitors": null,
   "ownOffer": null,
+  "image": null,
 } satisfies VendorAnalyticsRow
 
 console.log(example)

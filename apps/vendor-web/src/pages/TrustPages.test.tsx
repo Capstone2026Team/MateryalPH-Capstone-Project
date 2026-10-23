@@ -50,6 +50,20 @@ test('a suppressed competitor row states the reason with no count and keeps the 
   expect(within(table).getByRole('link', { name: 'View details for 4-inch CHB — DemoBlock' })).toBeInTheDocument()
 })
 
+test('a row shows the Vendor own listing photo, and a row without one falls back to its category icon', async () => {
+  snapshot(['materials_analytics.view_competitors'])
+  vi.mocked(api.listVendorAnalytics).mockResolvedValue(listing([
+    { ...suppressedRow, image: { url: 'https://cdn.example.test/own.jpg', altText: null } },
+    { ...suppressedRow, groupId: 'g2', displayName: '6-inch CHB — DemoBlock', image: null },
+  ]))
+  openList()
+  await screen.findByRole('table', { name: 'Masonry comparable variants' })
+  const [photographed, plain] = screen.getAllByTestId('material-thumbnail')
+  expect(photographed!.querySelector('img')).toHaveAttribute('src', 'https://cdn.example.test/own.jpg')
+  expect(plain!.querySelector('img')).toBeNull()
+  expect(plain!.querySelector('svg')).toBeInTheDocument()
+})
+
 test('an empty published history renders an explicit null state, never an empty chart', async () => {
   snapshot(['materials_analytics.view_competitors'])
   vi.mocked(api.listVendorAnalytics).mockResolvedValue(listing([]))

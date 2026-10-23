@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:built_value/json_object.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -76,7 +77,32 @@ void main() {
     'project picker opens its own thread and returning preserves the main item draft',
     (tester) async {
       final repository = ProjectMessagingRepository()
-        ..projectRows.add(projectRow(1));
+        ..projectRows.add(
+          projectRow(1).rebuild(
+            (b) => b
+              ..lockedReference.addAll({
+                'work_package': JsonObject({
+                  'name': 'Foundation materials',
+                  'lines': [
+                    {
+                      'name': 'Cement requirement',
+                      'quantity': '10',
+                      'unit_code': 'BAG',
+                    },
+                  ],
+                }),
+                'working_duplicate': JsonObject({
+                  'lines': [
+                    {
+                      'description': 'Proposed cement',
+                      'quantity': '10',
+                      'unit_code': 'BAG',
+                    },
+                  ],
+                }),
+              }),
+          ),
+        );
       repository.stores[0] = repository.stores.first.rebuild(
         (b) => b..projectUnreadCount = 2,
       );
@@ -97,6 +123,22 @@ void main() {
       await tester.tap(find.text('Foundation 1'));
       await tester.pumpAndSettle();
       expect(repository.opened, contains('project-1'));
+      expect(find.text('Cement requirement'), findsNothing);
+      expect(find.text('Proposed cement'), findsNothing);
+      await tester.enterText(
+        find.byType(TextField).last,
+        'Keep this project inquiry draft',
+      );
+      await tester.tap(find.text('Foundation materials'));
+      await tester.pumpAndSettle();
+      expect(find.text('Locked Buyer original'), findsOneWidget);
+      expect(find.text('Vendor proposal'), findsOneWidget);
+      expect(find.text('Cement requirement'), findsOneWidget);
+      expect(find.text('Proposed cement'), findsOneWidget);
+      await tester.tap(find.byTooltip('Close work package attachment'));
+      await tester.pumpAndSettle();
+      expect(find.text('Cement requirement'), findsNothing);
+      expect(find.text('Keep this project inquiry draft'), findsOneWidget);
       await tester.pageBack();
       await tester.pumpAndSettle();
       await tester.pageBack();

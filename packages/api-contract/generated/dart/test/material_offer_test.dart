@@ -72,5 +72,11 @@ void main() {
       // TODO
     });
 
+    // First public photo of this listing, or null.
+    // ListingImage image
+    test('to test the property `image`', () async {
+      // TODO
+    });
+
   });
 }

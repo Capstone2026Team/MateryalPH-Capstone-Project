@@ -62,6 +62,13 @@ import {
     AnalyticsMaterialRefToJSON,
     AnalyticsMaterialRefToJSONTyped,
 } from './AnalyticsMaterialRef';
+import type { ListingImage } from './ListingImage';
+import {
+    ListingImageFromJSON,
+    ListingImageFromJSONTyped,
+    ListingImageToJSON,
+    ListingImageToJSONTyped,
+} from './ListingImage';
 
 /**
  *
@@ -109,6 +116,10 @@ export interface AdminAnalyticsRow {
      *
      */
     current: AnalyticsCurrentCounts;
+    /**
+     * Photo of the cheapest current in-scope offer that has one, present only with materials_analytics.inspect_sources and null otherwise. Never its listing or store identity.
+     */
+    image?: ListingImage | null;
 }
 
 /**
@@ -148,6 +159,7 @@ export function AdminAnalyticsRowFromJSONTyped(json: any, ignoreDiscriminator: b
         'endPoint': AdminAnalyticsPointFromJSON(json['end_point']),
         'trend': AnalyticsTrendFromJSON(json['trend']),
         'current': AnalyticsCurrentCountsFromJSON(json['current']),
+        'image': json['image'] === undefined ? undefined : json['image'] === null ? null : ListingImageFromJSON(json['image']),
     };
 }
 
@@ -172,6 +184,7 @@ export function AdminAnalyticsRowToJSONTyped(value?: AdminAnalyticsRow | null, i
         'end_point': AdminAnalyticsPointToJSON(value['endPoint']),
         'trend': AnalyticsTrendToJSON(value['trend']),
         'current': AnalyticsCurrentCountsToJSON(value['current']),
+        'image': ListingImageToJSON(value['image']),
     };
 }
 

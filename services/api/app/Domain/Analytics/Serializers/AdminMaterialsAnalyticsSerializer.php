@@ -7,7 +7,8 @@ namespace App\Domain\Analytics\Serializers;
 /**
  * Admin aggregate audience (analytics.view_aggregates): the same averages as Buyers within a PSGC scope, plus the
  * exact 8-dp means and current listing counts for market-quality review. Source listing identities are never part of
- * this payload; they require materials_analytics.inspect_sources through the separate audited sources resource.
+ * this payload; they require materials_analytics.inspect_sources through the separate audited sources resource. A row
+ * image (a bare public photo URL and alt text, without its listing or store) is present only for that permission.
  */
 final class AdminMaterialsAnalyticsSerializer extends MaterialsAnalyticsSerializer
 {
@@ -22,6 +23,7 @@ final class AdminMaterialsAnalyticsSerializer extends MaterialsAnalyticsSerializ
             'end_point' => $this->point($row['end']),
             'trend' => $this->trend($row['trend'], $row['start']['date'], $row['end']['date']),
             'current' => ['vendor_count' => $row['current']['vendors'], 'listing_count' => $row['current']['listings'], 'status' => $row['current']['vendors'] > 0 ? 'AVAILABLE' : 'NO_CURRENT_OFFERS'],
+            'image' => $row['image'],
         ];
     }
 

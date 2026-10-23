@@ -39165,6 +39165,13 @@ components:
           "$ref": "#/components/schemas/AnalyticsTrend"
         "current":
           "$ref": "#/components/schemas/AnalyticsCurrentCounts"
+        "image":
+          "oneOf":
+            - "$ref": "#/components/schemas/ListingImage"
+            - "type": "null"
+          "description": "Photo of the cheapest current in-scope offer that has one,
+            so the row is recognizable. Only the public URL and alt text; never its
+            listing, store or price."
     "VendorAnalyticsRow":
       "type": "object"
       "required":
@@ -39204,6 +39211,12 @@ components:
           "oneOf":
             - "$ref": "#/components/schemas/VendorOwnOffer"
             - "type": "null"
+        "image":
+          "oneOf":
+            - "$ref": "#/components/schemas/ListingImage"
+            - "type": "null"
+          "description": "The Vendor's own listing photo for this variant, or null. A
+            competitor photo is never returned (MAT-05)."
     "AdminAnalyticsRow":
       "type": "object"
       "required":
@@ -39239,6 +39252,13 @@ components:
           "$ref": "#/components/schemas/AnalyticsTrend"
         "current":
           "$ref": "#/components/schemas/AnalyticsCurrentCounts"
+        "image":
+          "oneOf":
+            - "$ref": "#/components/schemas/ListingImage"
+            - "type": "null"
+          "description": "Photo of the cheapest current in-scope offer that has one,
+            present only with materials_analytics.inspect_sources and null otherwise.
+            Never its listing or store identity."
     "ComparableVariant":
       "type": "object"
       "required":
@@ -39641,6 +39661,11 @@ components:
         "price_as_of":
           "type": "string"
           "format": "date-time"
+        "image":
+          "oneOf":
+            - "$ref": "#/components/schemas/ListingImage"
+            - "type": "null"
+          "description": "First public photo of this listing, or null."
       "description": "Buyer-only current public offer; opens the existing Product
         Details. Never exact stock."
     "AnalyticsSource":

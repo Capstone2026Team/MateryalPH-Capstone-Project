@@ -18,6 +18,7 @@ Name | Type | Description | Notes
 **endPoint** | [**AdminAnalyticsPoint**](AdminAnalyticsPoint.md) |  |
 **trend** | [**AnalyticsTrend**](AnalyticsTrend.md) |  |
 **current** | [**AnalyticsCurrentCounts**](AnalyticsCurrentCounts.md) |  |
+**image** | [**ListingImage**](ListingImage.md) | Photo of the cheapest current in-scope offer that has one, present only with materials_analytics.inspect_sources and null otherwise. Never its listing or store identity. | [optional]
 **description** | **String** |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

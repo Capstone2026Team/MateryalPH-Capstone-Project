@@ -57,5 +57,11 @@ void main() {
       // TODO
     });
 
+    // Photo of the cheapest current in-scope offer that has one, so the row is recognizable. Only the public URL and alt text; never its listing, store or price.
+    // ListingImage image
+    test('to test the property `image`', () async {
+      // TODO
+    });
+
   });
 }

@@ -115,6 +115,12 @@ assert.ok(!Object.keys(spec.paths).some(path => /^\/vendor\/materials-analytics\
 for (const name of ['VendorAnalyticsRow', 'VendorMaterialsAnalyticsDetail', 'StorePerformance']) {
   for (const field of Object.keys(s[name].properties ?? {})) assert.ok(!/commission|withholding|earning|payout|taxpayer|remittance|fee_statement|transaction/i.test(field), `${name}.${field} must not expose protected finance`)
 }
+// Row photos are a bare ListingImage {url, alt_text}: never a listing, store or price of the source (MAT-05).
+for (const name of ['BuyerAnalyticsRow', 'VendorAnalyticsRow', 'AdminAnalyticsRow', 'MaterialOffer']) {
+  assert.deepEqual(s[name].properties.image.oneOf, [{ $ref: '#/components/schemas/ListingImage' }, { type: 'null' }], `${name}.image is a nullable ListingImage object`)
+  assert.ok(!(s[name].required ?? []).includes('image'), `${name}.image is optional for older clients`)
+}
+assert.deepEqual(Object.keys(s.ListingImage.properties).sort(), ['alt_text', 'url'], 'A row photo carries no source identity')
 assert.equal(s.BuyerMaterialsAnalyticsRequest.additionalProperties, false, 'Undocumented analytics filters are refused')
 assert.deepEqual(s.AnalyticsWindow.properties.max_days, { type: 'integer' })
 assert.ok(JSON.stringify(s.AnalyticsTrend.properties.reason).includes('INSUFFICIENT_COMPETITOR_DATA'), 'Null trends carry their reason')

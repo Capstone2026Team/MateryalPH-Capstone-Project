@@ -55,6 +55,13 @@ import {
     AnalyticsMaterialRefToJSON,
     AnalyticsMaterialRefToJSONTyped,
 } from './AnalyticsMaterialRef';
+import type { ListingImage } from './ListingImage';
+import {
+    ListingImageFromJSON,
+    ListingImageFromJSONTyped,
+    ListingImageToJSON,
+    ListingImageToJSONTyped,
+} from './ListingImage';
 import type { BuyerAnalyticsPoint } from './BuyerAnalyticsPoint';
 import {
     BuyerAnalyticsPointFromJSON,
@@ -109,6 +116,10 @@ export interface BuyerAnalyticsRow {
      *
      */
     current: AnalyticsCurrentCounts;
+    /**
+     * Photo of the cheapest current in-scope offer that has one, so the row is recognizable. Only the public URL and alt text; never its listing, store or price.
+     */
+    image?: ListingImage | null;
 }
 
 /**
@@ -148,6 +159,7 @@ export function BuyerAnalyticsRowFromJSONTyped(json: any, ignoreDiscriminator: b
         'endPoint': BuyerAnalyticsPointFromJSON(json['end_point']),
         'trend': AnalyticsTrendFromJSON(json['trend']),
         'current': AnalyticsCurrentCountsFromJSON(json['current']),
+        'image': json['image'] === undefined ? undefined : json['image'] === null ? null : ListingImageFromJSON(json['image']),
     };
 }
 
@@ -172,6 +184,7 @@ export function BuyerAnalyticsRowToJSONTyped(value?: BuyerAnalyticsRow | null, i
         'end_point': BuyerAnalyticsPointToJSON(value['endPoint']),
         'trend': AnalyticsTrendToJSON(value['trend']),
         'current': AnalyticsCurrentCountsToJSON(value['current']),
+        'image': ListingImageToJSON(value['image']),
     };
 }
 

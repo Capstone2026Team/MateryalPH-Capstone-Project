@@ -16,6 +16,7 @@ final readonly class AnalyticsRequest
     /**
      * @param  array{environment: string, dataset_id: string, label: string, kind: string}  $dataset
      * @param  array{category_id?: string, q?: string}  $filters
+     * @param  bool  $sourceImages  an Admin holding materials_analytics.inspect_sources may see offer photos on rows
      */
     public function __construct(
         public string $audience,
@@ -24,6 +25,7 @@ final readonly class AnalyticsRequest
         public array $dataset,
         public AnalyticsWindow $window,
         public array $filters = [],
+        public bool $sourceImages = false,
     ) {}
 
     /** Buyer and Admin may see a one-Vendor average; a Vendor needs three competing Vendors for any point. */

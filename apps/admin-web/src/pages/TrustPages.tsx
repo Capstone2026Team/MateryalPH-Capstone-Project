@@ -4,7 +4,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardCheck, Download, Flag, Inbox, Package, Search, ShieldCheck, Store, UserRound } from 'lucide-react'
 import type { ReviewRatings } from '@materyalph/api-client-ts'
 import {
-  AnalyticsNullState, BadgeList, BadgeStatusList, Button, DateFilter, DatasetNotice, EventTimeline, FactList, FilterTabs, PriceTrendPanel, ReasonedDecisionForm, ReviewDetailContent, ReviewRatingSummary, ScoreSummaryGrid, SearchInput, StatusBadge, StatusMessage, TrendSummary,
+  AnalyticsNullState, BadgeList, BadgeStatusList, Button, DateFilter, DatasetNotice, EventTimeline, FactList, FilterTabs, MaterialThumbnail, PriceTrendPanel, ReasonedDecisionForm, ReviewDetailContent, ReviewRatingSummary, ScoreSummaryGrid, SearchInput, StatusBadge, StatusMessage, TrendSummary,
   analyticsDay, dateComparisonPreset, formatAnalyticsDate, formatManilaDateTime, formatPhpDecimal, manilaToday, type PricePoint,
   type ReviewPresentationRow,
 } from '@materyalph/web-ui'
@@ -100,7 +100,7 @@ export function MaterialsAnalyticsSection({ psgcCode, areaLabel }: { psgcCode: s
           <caption className="sr-only">Comparable material averages</caption>
           <thead className="bg-surface-canvas text-left text-xs uppercase tracking-[0.08em] text-text-secondary"><tr><th className="px-4 py-2" scope="col">Material / variant</th><th className="px-4 py-2" scope="col">Average (end)</th><th className="px-4 py-2" scope="col">Vendors</th><th className="px-4 py-2" scope="col">Change</th><th className="px-4 py-2" scope="col">Current offers</th><th className="px-4 py-2" scope="col"><span className="sr-only">Action</span></th></tr></thead>
           <tbody className="divide-y divide-border-default">{list.data.items.map(row => <tr key={row.groupId}>
-            <td className="px-4 py-3"><p className="font-semibold">{row.displayName}</p><p className="text-xs text-text-secondary">{row.category.name} · per {row.unit.name}</p></td>
+            <td className="px-4 py-3"><div className="flex items-center gap-3"><MaterialThumbnail url={row.image?.url} categoryCode={row.category.code} size="sm" /><div><p className="font-semibold">{row.displayName}</p><p className="text-xs text-text-secondary">{row.category.name} · per {row.unit.name}</p></div></div></td>
             <td className="px-4 py-3 tabular-nums">{row.endPoint.averagePhp ? formatPhpDecimal(row.endPoint.averagePhp) : <span className="text-text-secondary">{row.endPoint.label ?? '—'}</span>}{row.endPoint.status === 'LIMITED_DATA' && <p className="text-xs text-text-secondary">Limited Local Data — 1 Vendor</p>}</td>
             <td className="px-4 py-3 tabular-nums">{row.endPoint.vendorCount ?? '—'}</td>
             <td className="px-4 py-3"><TrendSummary compact trend={row.trend} /></td>
@@ -136,7 +136,7 @@ function MaterialDetail({ detail, filters, onChange }: { detail: AdminMaterialsA
   const group = detail.group
   const points: PricePoint[] = detail.series.map(point => ({ date: analyticsDay(point.date) ?? '', value: point.averagePhp ?? null, status: point.status, label: point.label ?? null, count: point.vendorCount ?? null, participantsChanged: point.participantsChanged ?? null }))
   return <>
-    <PageHeader eyebrow={`${group.category.name} · ${group.material.name}`} title={group.displayName} description={`Average public listed price per ${group.unit.name}. Current: ${group.current.vendorCount} Vendors, ${group.current.listingCount} listings.`} actions={<MaterialsDateControl filters={filters} onChange={onChange} window={detail.window} />} />
+    <div className="flex items-start gap-4"><MaterialThumbnail url={group.image?.url} alt={group.image ? (group.image.altText ?? `Listing photo for ${group.displayName}`) : ''} categoryCode={group.category.code} size="lg" /><div className="min-w-0 flex-1"><PageHeader eyebrow={`${group.category.name} · ${group.material.name}`} title={group.displayName} description={`Average public listed price per ${group.unit.name}. Current: ${group.current.vendorCount} Vendors, ${group.current.listingCount} listings.`} actions={<MaterialsDateControl filters={filters} onChange={onChange} window={detail.window} />} /></div></div>
     <div className="flex flex-wrap items-center gap-6 border-b border-border-default pb-5"><TrendSummary trend={group.trend} /></div>
     <PriceTrendPanel title={`Average for ${group.displayName}`} unit={group.unit.name} points={points} emptyReason="No published observation in this scope and period." />
     {detail.canInspectSources ? <SourceInspection groupId={group.groupId} dates={points.filter(point => point.value !== null).map(point => point.date)} /> : <p className="text-sm text-text-secondary">Source inspection requires the materials_analytics.inspect_sources permission.</p>}

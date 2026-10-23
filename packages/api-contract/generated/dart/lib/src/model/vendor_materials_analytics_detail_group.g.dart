@@ -32,6 +32,8 @@ class _$VendorMaterialsAnalyticsDetailGroup
   final VendorCurrentCompetitors currentCompetitors;
   @override
   final VendorOwnOffer? ownOffer;
+  @override
+  final ListingImage? image;
 
   factory _$VendorMaterialsAnalyticsDetailGroup(
           [void Function(VendorMaterialsAnalyticsDetailGroupBuilder)?
@@ -50,7 +52,8 @@ class _$VendorMaterialsAnalyticsDetailGroup
       required this.endPoint,
       required this.trend,
       required this.currentCompetitors,
-      this.ownOffer})
+      this.ownOffer,
+      this.image})
       : super._();
   @override
   VendorMaterialsAnalyticsDetailGroup rebuild(
@@ -76,7 +79,8 @@ class _$VendorMaterialsAnalyticsDetailGroup
         endPoint == other.endPoint &&
         trend == other.trend &&
         currentCompetitors == other.currentCompetitors &&
-        ownOffer == other.ownOffer;
+        ownOffer == other.ownOffer &&
+        image == other.image;
   }
 
   @override
@@ -94,6 +98,7 @@ class _$VendorMaterialsAnalyticsDetailGroup
     _$hash = $jc(_$hash, trend.hashCode);
     _$hash = $jc(_$hash, currentCompetitors.hashCode);
     _$hash = $jc(_$hash, ownOffer.hashCode);
+    _$hash = $jc(_$hash, image.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -112,7 +117,8 @@ class _$VendorMaterialsAnalyticsDetailGroup
           ..add('endPoint', endPoint)
           ..add('trend', trend)
           ..add('currentCompetitors', currentCompetitors)
-          ..add('ownOffer', ownOffer))
+          ..add('ownOffer', ownOffer)
+          ..add('image', image))
         .toString();
   }
 }
@@ -189,6 +195,10 @@ class VendorMaterialsAnalyticsDetailGroupBuilder
   set ownOffer(covariant VendorOwnOfferBuilder? ownOffer) =>
       _$this._ownOffer = ownOffer;
 
+  ListingImageBuilder? _image;
+  ListingImageBuilder get image => _$this._image ??= ListingImageBuilder();
+  set image(covariant ListingImageBuilder? image) => _$this._image = image;
+
   VendorMaterialsAnalyticsDetailGroupBuilder() {
     VendorMaterialsAnalyticsDetailGroup._defaults(this);
   }
@@ -208,6 +218,7 @@ class VendorMaterialsAnalyticsDetailGroupBuilder
       _trend = $v.trend.toBuilder();
       _currentCompetitors = $v.currentCompetitors.toBuilder();
       _ownOffer = $v.ownOffer?.toBuilder();
+      _image = $v.image?.toBuilder();
       _$v = null;
     }
     return this;
@@ -246,6 +257,7 @@ class VendorMaterialsAnalyticsDetailGroupBuilder
             trend: trend.build(),
             currentCompetitors: currentCompetitors.build(),
             ownOffer: _ownOffer?.build(),
+            image: _image?.build(),
           );
     } catch (_) {
       late String _$failedField;
@@ -268,6 +280,8 @@ class VendorMaterialsAnalyticsDetailGroupBuilder
         currentCompetitors.build();
         _$failedField = 'ownOffer';
         _ownOffer?.build();
+        _$failedField = 'image';
+        _image?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(r'VendorMaterialsAnalyticsDetailGroup',
             _$failedField, e.toString());

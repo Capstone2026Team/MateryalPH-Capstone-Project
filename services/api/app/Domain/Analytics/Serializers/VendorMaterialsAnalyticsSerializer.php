@@ -34,6 +34,8 @@ final class VendorMaterialsAnalyticsSerializer extends MaterialsAnalyticsSeriali
                 'price_centavos' => $row['own']['price_centavos'], 'normalized_php' => self::money($row['own']['normalized_php']),
                 'tax_label' => ListingPublicFacts::vatLabel($row['own']['tax_category']), 'price_as_of' => $row['own']['price_as_of'],
             ],
+            // Only the Vendor's own listing photo; a competitor's photo is identifying and never serialized here.
+            'image' => $row['image'],
         ];
     }
 

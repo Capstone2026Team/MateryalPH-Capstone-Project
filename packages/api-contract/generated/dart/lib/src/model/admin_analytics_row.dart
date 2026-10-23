@@ -6,6 +6,7 @@
 import 'package:materyalph_api_client/src/model/analytics_category_ref.dart';
 import 'package:materyalph_api_client/src/model/admin_analytics_point.dart';
 import 'package:materyalph_api_client/src/model/comparable_specification.dart';
+import 'package:materyalph_api_client/src/model/listing_image.dart';
 import 'package:materyalph_api_client/src/model/analytics_current_counts.dart';
 import 'package:materyalph_api_client/src/model/analytics_unit.dart';
 import 'package:materyalph_api_client/src/model/analytics_trend.dart';
@@ -28,6 +29,7 @@ part 'admin_analytics_row.g.dart';
 /// * [endPoint]
 /// * [trend]
 /// * [current]
+/// * [image] - Photo of the cheapest current in-scope offer that has one, present only with materials_analytics.inspect_sources and null otherwise. Never its listing or store identity.
 @BuiltValue(instantiable: false)
 abstract class AdminAnalyticsRow  {
   @BuiltValueField(wireName: r'group_id')
@@ -59,6 +61,10 @@ abstract class AdminAnalyticsRow  {
 
   @BuiltValueField(wireName: r'current')
   AnalyticsCurrentCounts get current;
+
+  /// Photo of the cheapest current in-scope offer that has one, present only with materials_analytics.inspect_sources and null otherwise. Never its listing or store identity.
+  @BuiltValueField(wireName: r'image')
+  ListingImage? get image;
 
   @BuiltValueSerializer(custom: true)
   static Serializer<AdminAnalyticsRow> get serializer => _$AdminAnalyticsRowSerializer();
@@ -126,6 +132,13 @@ class _$AdminAnalyticsRowSerializer implements PrimitiveSerializer<AdminAnalytic
       object.current,
       specifiedType: const FullType(AnalyticsCurrentCounts),
     );
+    if (object.image != null) {
+      yield r'image';
+      yield serializers.serialize(
+        object.image,
+        specifiedType: const FullType.nullable(ListingImage),
+      );
+    }
   }
 
   @override
@@ -259,6 +272,14 @@ class _$$AdminAnalyticsRowSerializer implements PrimitiveSerializer<$AdminAnalyt
             specifiedType: const FullType(AnalyticsCurrentCounts),
           ) as AnalyticsCurrentCounts;
           result.current.replace(valueDes);
+          break;
+        case r'image':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ListingImage),
+          ) as ListingImage?;
+          if (valueDes == null) continue;
+          result.image.replace(valueDes);
           break;
         default:
           unhandled.add(key);

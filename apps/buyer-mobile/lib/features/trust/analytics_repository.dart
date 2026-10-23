@@ -105,6 +105,8 @@ final class ApiAnalyticsRepository implements AnalyticsRepository {
         displayName: group.displayName,
         materialName: group.material.name,
         categoryName: group.category.name,
+        categoryCode: group.category.code,
+        imageUrl: group.image?.url,
         unitName: group.unit.name,
         specification: _specification(group.specification),
         startPoint: _point(group.startPoint),
@@ -148,6 +150,7 @@ final class ApiAnalyticsRepository implements AnalyticsRepository {
             taxLabel: offer.taxLabel,
             availability: offer.availability.name,
             distanceMeters: offer.distanceMeters,
+            imageUrl: offer.image?.url,
           ),
         )
         .toList(growable: false);
@@ -227,6 +230,8 @@ final class ApiAnalyticsRepository implements AnalyticsRepository {
     displayName: row.displayName,
     materialName: row.material.name,
     categoryName: row.category.name,
+    categoryCode: row.category.code,
+    imageUrl: row.image?.url,
     unitName: row.unit.name,
     specification: _specification(row.specification),
     startPoint: _point(row.startPoint),
