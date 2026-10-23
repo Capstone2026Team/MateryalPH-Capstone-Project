@@ -93,22 +93,26 @@ final class GeographyProviderAdapterTest extends TestCase
 
     public function test_directory_search_cells_cover_the_whole_radius_not_only_its_centre(): void
     {
-        foreach ([5, 10, 20, 30, 40, 50] as $radiusKm) {
-            $scope = new GeographyScope('BUYER', 'RADIUS', 'DEVICE', 14.6512, 121.0321, $radiusKm, str_repeat('a', 32));
-            $cells = app(DirectorySupplierService::class)->cells($scope);
-            self::assertLessThanOrEqual(121, count($cells));
-            self::assertGreaterThanOrEqual(5, count($cells));
-            self::assertCount(count($cells), array_unique(array_column($cells, 'key')));
-            // Every point on the radius boundary lies inside at least one cell, so results are not limited to the
-            // places nearest the Buyer.
-            for ($bearing = 0; $bearing < 360; $bearing += 15) {
-                $boundary = [
-                    14.6512 + rad2deg($radiusKm * 1000 * cos(deg2rad($bearing)) / 6371000),
-                    121.0321 + rad2deg($radiusKm * 1000 * sin(deg2rad($bearing)) / (6371000 * cos(deg2rad(14.6512)))),
-                ];
-                $covered = array_filter($cells, static fn (array $cell): bool => $cell['radius_meters'] <= 50000
-                    && 6371000 * acos(min(1.0, sin(deg2rad($boundary[0])) * sin(deg2rad($cell['latitude'])) + cos(deg2rad($boundary[0])) * cos(deg2rad($cell['latitude'])) * cos(deg2rad($boundary[1] - $cell['longitude'])))) <= $cell['radius_meters']);
-                self::assertNotEmpty($covered, "{$radiusKm} km boundary at {$bearing}° is covered.");
+        // The staging example budget (7) forces Google's 50 km circle cap; the default (121) keeps 10 km squares.
+        foreach ([7, 121] as $budget) {
+            config(['services.google_maps.places.max_search_cells' => $budget]);
+            foreach ([5, 10, 20, 30, 40, 50] as $radiusKm) {
+                $scope = new GeographyScope('BUYER', 'RADIUS', 'DEVICE', 14.6512, 121.0321, $radiusKm, str_repeat('a', 32));
+                $cells = app(DirectorySupplierService::class)->cells($scope);
+                self::assertLessThanOrEqual($budget, count($cells));
+                self::assertGreaterThanOrEqual(5, count($cells));
+                self::assertCount(count($cells), array_unique(array_column($cells, 'key')));
+                // Every point on the radius boundary lies inside at least one cell, so results are not limited to the
+                // places nearest the Buyer. Boundary points are geodesic; 1 cm absorbs floating-point error only.
+                $distance = $radiusKm * 1000 / 6371000;
+                $origin = deg2rad(14.6512);
+                for ($bearing = 0; $bearing < 360; $bearing += 15) {
+                    $latitude = asin(sin($origin) * cos($distance) + cos($origin) * sin($distance) * cos(deg2rad($bearing)));
+                    $boundary = [rad2deg($latitude), 121.0321 + rad2deg(atan2(sin(deg2rad($bearing)) * sin($distance) * cos($origin), cos($distance) - sin($origin) * sin($latitude)))];
+                    $covered = array_filter($cells, static fn (array $cell): bool => $cell['radius_meters'] <= 50000
+                        && 6371000 * acos(min(1.0, sin(deg2rad($boundary[0])) * sin(deg2rad($cell['latitude'])) + cos(deg2rad($boundary[0])) * cos(deg2rad($cell['latitude'])) * cos(deg2rad($boundary[1] - $cell['longitude'])))) <= $cell['radius_meters'] + 0.01);
+                    self::assertNotEmpty($covered, "{$budget}-cell budget: {$radiusKm} km boundary at {$bearing}° is covered.");
+                }
             }
         }
         config(['services.google_maps.places.max_search_cells' => 1]);
