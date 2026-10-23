@@ -48,7 +48,8 @@ jobs:
     if: needs.changes.outputs.backend == 'true'
     name: Laravel, PostgreSQL, and schema evidence
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    # The full suite alone takes about 23 minutes on a hosted runner.
+    timeout-minutes: 45
     services:
       postgres:
         image: postgis/postgis:16-3.5
