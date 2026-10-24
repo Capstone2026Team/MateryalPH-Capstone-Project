@@ -57,6 +57,13 @@ function Get-PortalValue([string] $file, [string] $name) {
     throw "Missing $name in $file"
 }
 
+# ---- 0. Network preflight: every later step needs these names to resolve -------------------
+Write-Step 'Checking DNS for GitHub and Docker Hub'
+foreach ($name in 'github.com', 'api.github.com', 'registry-1.docker.io', 'auth.docker.io') {
+    try { Resolve-DnsName $name -Type A -ErrorAction Stop | Out-Null }
+    catch { throw "Cannot resolve $name. Your DNS server is not answering; set DNS to 8.8.8.8 / 8.8.4.4 (Settings > Network > DNS server assignment), run 'ipconfig /flushdns', restart Docker Desktop, then rerun." }
+}
+
 # ---- 1. Exact commit and manual CI evidence -------------------------------------------------
 Write-Step 'Resolving the staging commit'
 git fetch origin staging --quiet
@@ -113,7 +120,7 @@ $releaseRoot = if ($OutputRoot) { $OutputRoot } else { Join-Path $repoRoot '.tmp
 $release = Join-Path $releaseRoot "$short-$([DateTime]::UtcNow.ToString('yyyyMMddHHmmss'))"
 try {
     python scripts/deployment/package-vps.py $Repository $Commit $release
-    if ($LASTEXITCODE -ne 0) { throw 'Packaging failed (see output above). A Trivy HIGH/CRITICAL finding must be fixed, not ignored.' }
+    if ($LASTEXITCODE -ne 0) { throw 'Packaging failed (see output above). "no such host" = DNS/network problem, rerun once fixed; a Trivy HIGH/CRITICAL finding must be fixed in the image, not ignored.' }
 } finally { Remove-Item Env:GITHUB_TOKEN -ErrorAction SilentlyContinue }
 $manifest = Get-Content -LiteralPath (Join-Path $release 'release.json') -Raw | ConvertFrom-Json
 
