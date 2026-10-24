@@ -130,6 +130,17 @@ Time a full drill before release:
 
 The selected fallback window ends **17 November 2026**; the supplied Render database expiry is **18 November 2026 at 22:52 Philippine time**. Verify the dashboard before the drill. No fallback coverage after that window is assumed. Render promotion deliberately remains a reviewed operation because managed extension ownership and the live target dataset must be inspected; the VPS restore script does not point at or overwrite Render.
 
+## 8a. Routine release of a new staging commit
+
+After the first deployment, release a pushed `staging` commit from the operator workstation with one command:
+
+```powershell
+./scripts/deployment/release-hostinger.ps1            # latest origin/staging
+./scripts/deployment/release-hostinger.ps1 -Commit SHA
+```
+
+It starts and waits for the manual `quality gates` run when none exists, packages with `package-vps.py`, uploads and verifies checksums, then on the VPS loads the images, installs the runtime (resetting the Windows archive's file modes), updates `control.env`, takes the required backup and deploys fenced in a detached session (log: `~/release-SHORT.log`). It reopens staging only after the operator types `REOPEN` to confirm the four rehearsal checks for that commit. The workstation's public IP must be allowed for TCP 22.
+
 ## 9. Release evidence
 
 Record required API/portal/Flutter/contract/infrastructure/secret checks, accepted commit/image hashes, quote approval, DNS/TLS, portal refresh/deep links, cookie/CSRF, private authorization/scanning, provider failures, user-led three-role journeys, device APK install, 20-user results, reboot recovery and timed restore drill in [the verification record](../test-plans/hostinger-vps-verification.md). Passing local static checks does not satisfy the live gates.
