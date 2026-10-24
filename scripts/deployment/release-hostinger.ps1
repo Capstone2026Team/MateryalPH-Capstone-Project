@@ -202,7 +202,10 @@ rm -rf ~/$stage ~/$stage.sh
 
 Write-Step 'Smoke test'
 foreach ($url in 'https://materyalph26-api.duckdns.org/up', 'https://materyalph26-api.duckdns.org/api/v1/auth/csrf', 'https://materyalph26-vendor.duckdns.org/', 'https://materyalph26-admin.duckdns.org/') {
-    $response = Invoke-WebRequest $url -TimeoutSec 60 -SkipHttpErrorCheck
-    Write-Host ("  {0}  {1}" -f $response.StatusCode, $url)
+    $status = 'unreachable from this PC (check your connection; the server may still be fine)'
+    foreach ($attempt in 1..4) {
+        try { $status = (Invoke-WebRequest $url -TimeoutSec 30 -SkipHttpErrorCheck).StatusCode; break } catch { Start-Sleep -Seconds (10 * $attempt) }
+    }
+    Write-Host ("  {0}  {1}" -f $status, $url)
 }
 Write-Host "`nReleased $Commit. Local release files: $release" -ForegroundColor Green
