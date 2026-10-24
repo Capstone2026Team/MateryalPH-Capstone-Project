@@ -129,4 +129,14 @@ final class DisputeRules
     {
         return $party === 'BUYER' ? 'VENDOR' : 'BUYER';
     }
+
+    /**
+     * Separation of review applies among Order and Dispute Staff: one who made the appealed decision leaves the
+     * appeal to another staff member or a Super Admin. A Super Admin may decide any appeal, including on their own
+     * decision.
+     */
+    public static function appealReviewerConflict(?object $appealed, ?int $userId, ?string $role): bool
+    {
+        return $appealed !== null && $role !== 'ADMIN_SUPERADMIN' && (int) $appealed->actor_user_id === $userId;
+    }
 }

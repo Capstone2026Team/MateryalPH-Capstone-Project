@@ -1,7 +1,7 @@
 
 # AdminDisputeAppealDecisionRequest
 
-Reviewed by an Admin who did not make the appealed decision (409 CONFLICT_OF_INTEREST otherwise). Final and executed at once.
+Reviewed by an Admin who did not make the appealed decision, unless that Admin is a Super Admin (409 CONFLICT_OF_INTEREST otherwise). Final and executed at once.
 
 ## Properties
 

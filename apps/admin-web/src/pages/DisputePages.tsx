@@ -192,7 +192,7 @@ function DecisionForm({ detail, mode, onChanged }: { detail: DisputeDetail; mode
   }
   const outcomes = (admin?.outcomes ?? []).filter(code => code !== 'NO_FURTHER_ACTION')
   return <Card title={mode === 'APPEAL' ? 'Decide the appeal' : 'Decision'} icon={<Gavel size={16} aria-hidden="true" />}>
-    {conflictBlocked && <StatusMessage tone="error">You made the appealed decision. Another Order and Dispute Staff member must review this appeal.</StatusMessage>}
+    {conflictBlocked && <StatusMessage tone="error">You made the appealed decision. Another Order and Dispute Staff member or a Super Admin must review this appeal.</StatusMessage>}
     {message && <StatusMessage tone="error">{message}</StatusMessage>}
     <form className="grid gap-4" noValidate onSubmit={event => { event.preventDefault(); if (validate()) setConfirming(true) }}>
       {mode === 'APPEAL' && <fieldset className="grid gap-2"><legend className="text-sm font-semibold">Appeal result</legend>{['AFFIRMED', 'MODIFIED', 'REVERSED'].map(value => <label key={value} className="flex min-h-11 items-center gap-3 text-sm">
@@ -232,7 +232,7 @@ function DecisionForm({ detail, mode, onChanged }: { detail: DisputeDetail; mode
       {mode === 'DECISION' && <label className="flex min-h-11 items-start gap-3 text-sm"><input type="checkbox" className="mt-0.5 h-5 w-5 accent-action-primary" checked={enforceable} onChange={event => setEnforceable(event.target.checked)} />
         <span><strong>Immediately enforceable.</strong> Otherwise the remedy starts only when the five-business-day appeal window ends unappealed.</span></label>}
       <label className="flex min-h-11 items-start gap-3 rounded-control border border-border-default bg-surface-canvas p-3 text-sm"><input type="checkbox" className="mt-0.5 h-5 w-5 accent-action-primary" checked={conflict} aria-invalid={Boolean(errors.conflict)} onChange={event => setConflict(event.target.checked)} />
-        <span><strong>Conflict check.</strong> I have no personal, financial or account connection to either party{mode === 'APPEAL' ? ' and I did not make the appealed decision' : ''}.</span></label>
+        <span><strong>Conflict check.</strong> I have no personal, financial or account connection to either party.</span></label>
       {errors.conflict && <p role="alert" className="text-sm text-status-error">{errors.conflict}</p>}
       <Button type="submit" disabled={conflictBlocked || busy}>{mode === 'APPEAL' ? 'Review appeal decision' : 'Review decision'}</Button>
     </form>

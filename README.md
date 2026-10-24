@@ -164,6 +164,9 @@ composer validate --strict
 vendor/bin/pint --test
 vendor/bin/phpstan analyse --memory-limit=1G
 
+# VPS Server
+pwsh -NoProfile -File "C:\Users\RJ\AppData\Local\Temp\claude\c--Users-RJ-Downloads-Capstone-Project-System-Capstone-MateryalPH\0209d432-8d74-4258-b4ef-4afad199e892\scratchpad\open-staging.ps1"
+
 # repository root: isolated PostgreSQL 16/PostGIS API test gate (PowerShell 7)
 pwsh -File scripts/run-tests-isolated.ps1
 # Keep the isolated services available for follow-up test runs:

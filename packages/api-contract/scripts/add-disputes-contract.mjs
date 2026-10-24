@@ -125,7 +125,7 @@ const schemas = {
   AdminDisputeAppealDecisionRequest: { type: 'object', required: ['result', 'reason', 'conflict_check_confirmed', 'lock_version'], properties: { result: enumOf('AFFIRMED', 'MODIFIED', 'REVERSED'),
     outcome: nullable(enumOf(...DECIDABLE)), reason: { ...str, minLength: 20, maxLength: 4000 }, amount_centavos: nullable({ type: 'integer', minimum: 1 }), affected_line_ids: arr(uuid), conflict_check_confirmed: bool,
     sanctions: { type: 'array', maxItems: 4, items: ref('DisputeSanctionInput') }, metric_event: nullable(enumOf(...METRICS)), lock_version: { type: 'integer', minimum: 1 } },
-    description: 'Reviewed by an Admin who did not make the appealed decision (409 CONFLICT_OF_INTEREST otherwise). Final and executed at once.' },
+    description: 'Reviewed by an Admin who did not make the appealed decision, unless that Admin is a Super Admin (409 CONFLICT_OF_INTEREST otherwise). Final and executed at once.' },
   DisputeExport: obj({ id: uuid, state: enumOf('QUEUED', 'READY', 'REVOKED', 'FAILED', 'EXPIRED'), row_count: nullable(int), requested_at: dt, completed_at: nullable(dt), expires_at: nullable(dt), revocation_reason: nullable(str) }),
   DisputeExportRequest: { type: 'object', properties: { group: nullable(enumOf(...GROUPS)) } },
   DisputeRealtime: obj({ channel: nullable(str), enabled: bool, key: nullable(str), host: nullable(str), port: nullable(int), scheme: nullable(str) }),

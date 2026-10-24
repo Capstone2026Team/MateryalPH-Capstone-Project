@@ -107,6 +107,14 @@ test('the original decider is blocked from deciding the appeal', async () => {
   expect(within(form).getByRole('button', { name: 'Review appeal decision' })).toBeDisabled()
 })
 
+test('a reviewer without an appeal conflict, such as a Super Admin, can decide the appeal', async () => {
+  vi.mocked(api.getCase).mockResolvedValue(detail({ status: 'APPEAL_OPEN', availableActions: ['DECIDE_APPEAL'] }))
+  at('/disputes/case-1')
+  const form = await screen.findByRole('region', { name: 'Decide the appeal' })
+  expect(within(form).queryByText(/must review this appeal/)).not.toBeInTheDocument()
+  expect(within(form).getByRole('button', { name: 'Review appeal decision' })).toBeEnabled()
+})
+
 test('a stale or unauthorized case shows the server message with retry', async () => {
   vi.mocked(api.getCase).mockRejectedValue(new ResponseError(new Response(JSON.stringify({ data: null, meta: {}, errors: [{ code: 'PERMISSION_DENIED', message: 'This Admin action is not available to your role.', details: {} }] }),
     { status: 403, headers: { 'Content-Type': 'application/json' } }), 'denied'))

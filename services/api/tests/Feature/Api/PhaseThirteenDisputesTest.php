@@ -303,6 +303,7 @@ final class PhaseThirteenDisputesTest extends TestCase
         $this->postJson('/api/v1/buyers/disputes/'.$caseId.'/appeal', ['grounds' => 'MATERIAL_PROCESS_ERROR', 'statement' => 'The case was decided without my second set of photos.'], $this->key())->assertStatus(409);
 
         $this->signInAdmin($first);
+        $this->getJson('/api/v1/admin/disputes/'.$caseId)->assertOk()->assertJsonPath('data.admin.appeal_reviewer_conflict', true);
         $lock = (int) DB::table('dispute_cases')->where('id', $caseId)->value('lock_version');
         $appeal = ['result' => 'MODIFIED', 'outcome' => 'PARTIAL_REFUND', 'amount_centavos' => 300000, 'affected_line_ids' => [$line], 'reason' => 'Dispatch photos show some blocks intact; three were cracked on site.',
             'conflict_check_confirmed' => true, 'lock_version' => $lock, 'sanctions' => [['subject' => 'VENDOR', 'action' => 'WARNING', 'reason' => 'Late evidence in a case.']]];
@@ -328,6 +329,29 @@ final class PhaseThirteenDisputesTest extends TestCase
         });
         self::assertSame(1, DB::table('refunds')->where('order_id', $orderId)->count());
         self::assertNotNull($store);
+    }
+
+    public function test_a_super_admin_may_decide_the_appeal_of_their_own_decision(): void
+    {
+        [, $owner, $buyer, $orderId] = $this->paidPickup('Super Admin Appeal Store');
+        $this->toPickedUp($owner, $orderId);
+        $caseId = (string) $this->fileCase($buyer, $orderId, ['requested_remedy' => 'FULL_REFUND'])->assertCreated()->json('data.id');
+        $this->signInStoreMember($owner);
+        $this->postJson('/api/v1/vendor/disputes/'.$caseId.'/respond', ['position' => 'REQUEST_ADMIN_REVIEW', 'body' => 'We disagree and ask MateryalPH to review.'], $this->key())->assertOk();
+        $super = $this->admin('ADMIN_SUPERADMIN');
+        $this->signInAdmin($super);
+        $this->postJson('/api/v1/admin/disputes/'.$caseId.'/decision', ['outcome' => 'FULL_REFUND', 'reason' => 'Wrong item delivered according to the handover photos.', 'enforceable' => false,
+            'conflict_check_confirmed' => true, 'lock_version' => (int) DB::table('dispute_cases')->where('id', $caseId)->value('lock_version')], $this->key())->assertOk();
+        $this->signInStoreMember($owner);
+        $this->post('/api/v1/vendor/disputes/'.$caseId.'/appeal', ['grounds' => 'NEW_EVIDENCE', 'statement' => 'Our dispatch photos show the ordered item at loading.', 'files' => [UploadedFile::fake()->image('dispatch.png')]],
+            $this->key() + ['Accept' => 'application/json'])->assertCreated();
+
+        $this->signInAdmin($super);
+        $this->getJson('/api/v1/admin/disputes/'.$caseId)->assertOk()->assertJsonPath('data.admin.appeal_reviewer_conflict', false);
+        $this->postJson('/api/v1/admin/disputes/'.$caseId.'/appeal-decision', ['result' => 'AFFIRMED', 'outcome' => 'FULL_REFUND', 'reason' => 'The dispatch photos do not show the item that reached the Buyer.',
+            'conflict_check_confirmed' => true, 'lock_version' => (int) DB::table('dispute_cases')->where('id', $caseId)->value('lock_version')], $this->key())
+            ->assertOk()->assertJsonPath('data.status', 'DECIDED');
+        self::assertSame(['ADMIN_DECISION', 'APPEAL_DECISION'], DB::table('dispute_decisions')->where('dispute_case_id', $caseId)->orderBy('version')->pluck('kind')->all());
     }
 
     public function test_an_unappealed_decision_becomes_final_after_five_business_days_and_suspension_is_referred_not_applied(): void

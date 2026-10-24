@@ -22,7 +22,8 @@ use Throwable;
  * otherwise the sweep executes it when the five-business-day appeal window lapses unappealed.
  *
  * Conflict check: the decider confirms no personal or financial interest; the server additionally refuses an
- * appeal reviewer who made the appealed decision and any Admin who is also a party's account.
+ * Order and Dispute Staff appeal reviewer who made the appealed decision (a Super Admin is exempt) and any Admin
+ * who is also a party's account.
  */
 final class DisputeAdminService
 {
@@ -326,8 +327,8 @@ final class DisputeAdminService
         if (! $confirmed) {
             throw new AuthenticationException('CONFLICT_CHECK_REQUIRED', 'Confirm the conflict-of-interest check before deciding.', 422, ['conflict_check_confirmed' => ['Confirm you have no personal or financial interest in this case.']]);
         }
-        if ($appealed !== null && (int) $appealed->actor_user_id === $actor->userId) {
-            throw new AuthenticationException('CONFLICT_OF_INTEREST', 'The Admin who made the appealed decision cannot review its appeal.', 409);
+        if (DisputeRules::appealReviewerConflict($appealed, $actor->userId, $actor->role)) {
+            throw new AuthenticationException('CONFLICT_OF_INTEREST', 'You made the appealed decision. Another Order and Dispute Staff member or a Super Admin must review this appeal.', 409);
         }
         $buyerUser = DB::table('buyer_profiles')->where('id', $case->buyer_profile_id)->value('user_id');
         $member = DB::table('vendor_memberships')->where('vendor_organization_id', $case->vendor_organization_id)->where('user_id', $actor->userId)->exists();

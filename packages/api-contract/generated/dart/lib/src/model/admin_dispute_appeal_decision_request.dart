@@ -10,7 +10,7 @@ import 'package:built_value/serializer.dart';
 
 part 'admin_dispute_appeal_decision_request.g.dart';
 
-/// Reviewed by an Admin who did not make the appealed decision (409 CONFLICT_OF_INTEREST otherwise). Final and executed at once.
+/// Reviewed by an Admin who did not make the appealed decision, unless that Admin is a Super Admin (409 CONFLICT_OF_INTEREST otherwise). Final and executed at once.
 ///
 /// Properties:
 /// * [result]

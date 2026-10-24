@@ -348,7 +348,7 @@ final class DisputeQueries
         return [
             'outcomes' => DisputeRules::OUTCOMES, 'sanctions' => DisputeRules::SANCTIONS, 'metric_events' => DisputeRules::METRIC_EVENTS, 'refundable' => $refundable,
             'already_awarded_centavos' => DisputeRefundPlanner::awardedSoFar((string) $case->id),
-            'appeal_reviewer_conflict' => $appealed !== null && (int) $appealed->actor_user_id === $scope['user_id'],
+            'appeal_reviewer_conflict' => DisputeRules::appealReviewerConflict($appealed, $scope['user_id'], $scope['role']),
             'unanswered_clarification' => DB::table('dispute_clarifications')->where('dispute_case_id', $case->id)->whereIn('state', ['OPEN', 'EXPIRED'])->exists(),
             'buyer' => ['display_name' => self::buyerName((string) $case->buyer_profile_id), 'prior_cases' => DB::table('dispute_cases')->where('buyer_profile_id', $case->buyer_profile_id)->where('id', '<>', $case->id)->count()],
             'vendor' => ['display_name' => (string) (DB::table('store_profiles')->where('vendor_organization_id', $case->vendor_organization_id)->value('public_store_name') ?? 'Store'),
