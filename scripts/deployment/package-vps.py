@@ -73,8 +73,9 @@ def main():
             target = runtime / item
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source / item, target)
-        for name in ['vpsctl.sh', '../../infrastructure/vps/init-database.sh']:
-            (runtime / 'scripts/deployment' / name).chmod(0o700)
+        (runtime / 'scripts/deployment/vpsctl.sh').chmod(0o700)
+        # PostgreSQL runs init scripts as its own user; this one holds no secret (it reads the password file at runtime).
+        (runtime / 'infrastructure/vps/init-database.sh').chmod(0o755)
         with tarfile.open(destination / 'runtime.tar', 'w') as stream:
             stream.add(runtime, arcname='runtime')
         record = {'format': 'materyalph-vps-release-v1', 'commit': commit, 'required_check': 'success', 'image_checks': 'runtime-and-trivy-passed', 'ci_run_url': accepted['html_url'], 'images': images,
