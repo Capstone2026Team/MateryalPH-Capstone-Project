@@ -9,11 +9,29 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 import urllib.request
 
 
 def run(arguments, **kwargs):
     return subprocess.run(arguments, check=True, **kwargs)
+
+
+def retry(action, attempts=6):
+    # Unstable links drop GitHub/Docker Hub connections; retry the network step, never the checks.
+    for attempt in range(1, attempts + 1):
+        try:
+            return action()
+        except (OSError, subprocess.CalledProcessError):
+            if attempt == attempts:
+                raise
+            print(f'Network step failed (attempt {attempt}/{attempts}); retrying in {15 * attempt}s.', file=sys.stderr)
+            time.sleep(15 * attempt)
+
+
+def fetch_runs(request):
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return json.load(response)['workflow_runs']
 
 
 def digest(path):
@@ -32,8 +50,7 @@ def main():
     if os.environ.get('GITHUB_TOKEN'):
         headers['Authorization'] = 'Bearer ' + os.environ['GITHUB_TOKEN']
     request = urllib.request.Request(f'https://api.github.com/repos/{repository}/actions/runs?head_sha={commit}&event=workflow_dispatch&per_page=100', headers=headers)
-    with urllib.request.urlopen(request, timeout=30) as response:
-        runs = json.load(response)['workflow_runs']
+    runs = retry(lambda: fetch_runs(request))
     accepted = next((item for item in runs if item['head_sha'] == commit and item['head_branch'] == 'staging' and item['path'] == '.github/workflows/ci.yml' and item['status'] == 'completed' and item['conclusion'] == 'success'), None)
     if accepted is None:
         raise ValueError('Run the full quality-gates workflow manually on the exact staging commit first.')
@@ -57,7 +74,7 @@ def main():
             if role == 'edge':
                 for key in ['VENDOR_RECAPTCHA_SITE_KEY', 'ADMIN_RECAPTCHA_SITE_KEY', 'GOOGLE_MAPS_BROWSER_KEY']:
                     command += ['--build-arg', key]
-            run(command + [str(source)])
+            retry(lambda: run(command + [str(source)]), attempts=4)
             images[role] = run(['docker', 'image', 'inspect', image, '--format', '{{.Id}}'], capture_output=True, text=True).stdout.strip()
         # Base tags can move after CI. Verify these exact rebuilt images before delivery.
         for mode in [[], ['--vps']]:
