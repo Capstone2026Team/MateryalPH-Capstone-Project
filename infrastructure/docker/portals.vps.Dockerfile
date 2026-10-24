@@ -23,6 +23,8 @@ RUN VITE_RECAPTCHA_SITE_KEY="$VENDOR_RECAPTCHA_SITE_KEY" VITE_GOOGLE_MAPS_BROWSE
     && VITE_RECAPTCHA_SITE_KEY="$ADMIN_RECAPTCHA_SITE_KEY" VITE_GOOGLE_MAPS_BROWSER_KEY="$GOOGLE_MAPS_BROWSER_KEY" sh scripts/deployment/build-portal.sh admin-web
 
 FROM caddy:2.11.7-alpine
+# The base tag lags Alpine security fixes (e.g. brotli-libs CVE-2026-111497); apply them before the Trivy gate.
+RUN apk upgrade --no-cache
 COPY --from=caddy-build /usr/bin/caddy /usr/bin/caddy
 COPY infrastructure/vps/Caddyfile /etc/caddy/Caddyfile
 COPY --from=portals /build/apps/vendor-web/dist /srv/vendor
