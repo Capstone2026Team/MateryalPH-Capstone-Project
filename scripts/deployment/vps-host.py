@@ -1,6 +1,6 @@
 """Small Ubuntu operator checks; never execute environment-file contents or print secrets."""
 import hashlib
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 import os
 from pathlib import Path
@@ -67,6 +67,14 @@ END;
 $restore$;"""
 
 
+def whole_second_ceiling(value):
+    # MailDeliveryPolicy accepts only Y-m-d\TH:i:s\Z; round up so no pre-import mail passes the boundary.
+    instant = datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(timezone.utc)
+    if instant.microsecond:
+        instant = instant.replace(microsecond=0) + timedelta(seconds=1)
+    return instant.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def restore_toc(contents):
     # PostGIS extensions recreate these schemas. Their application/custom data is retained.
     pattern = r'^\d+; \d+ \d+ SCHEMA - (?:tiger|tiger_data|topology) '
@@ -131,7 +139,7 @@ def main():
             raise ValueError("Render Free recovery sizing gate failed; no history was trimmed.")
         original = Path(control["VPS_API_ENV_FILE"])
         text = original.read_text()
-        updates = {"DB_DATABASE": name, "MAIL_DELIVERY_NOT_BEFORE": manifest["mail_delivery_not_before"], "OUTBOX_DELIVERY_NOT_BEFORE": manifest["outbox_delivery_not_before"]}
+        updates = {"DB_DATABASE": name, "MAIL_DELIVERY_NOT_BEFORE": whole_second_ceiling(manifest["mail_delivery_not_before"]), "OUTBOX_DELIVERY_NOT_BEFORE": manifest["outbox_delivery_not_before"]}
         for key, value in updates.items():
             if not isinstance(value, str) or "\n" in value or "\r" in value:
                 raise ValueError("Recovery metadata is incomplete.")
