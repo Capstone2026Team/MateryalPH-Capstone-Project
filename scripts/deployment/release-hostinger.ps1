@@ -60,6 +60,7 @@ function Get-PortalValue([string] $file, [string] $name) {
 # ---- 1. Exact commit and manual CI evidence -------------------------------------------------
 Write-Step 'Resolving the staging commit'
 git fetch origin staging --quiet
+if ($LASTEXITCODE -ne 0) { throw 'Cannot reach GitHub (git fetch failed). Check your internet/DNS connection and run the script again.' }
 if (-not $Commit) { $Commit = (git rev-parse origin/staging).Trim() }
 $Commit = (git rev-parse $Commit).Trim()
 if ($Commit -notmatch '^[a-f0-9]{40}$') { throw 'Could not resolve a full commit SHA.' }
@@ -68,14 +69,28 @@ Write-Host "Commit $Commit"
 
 $token = Get-GitHubToken
 $headers = @{ Authorization = "Bearer $token"; Accept = 'application/vnd.github+json'; 'X-GitHub-Api-Version' = '2022-11-28' }
-function Get-ManualRun { (Invoke-RestMethod -Headers $headers "https://api.github.com/repos/$Repository/actions/runs?head_sha=$Commit&event=workflow_dispatch&per_page=10").workflow_runs | Select-Object -First 1 }
+function Invoke-GitHubApi([string] $uri, [string] $method = 'Get', [string] $body) {
+    # Ride out short DNS/network outages instead of failing the whole release.
+    for ($attempt = 1; ; $attempt++) {
+        try {
+            if ($body) { return Invoke-RestMethod -Method $method -Headers $headers -ContentType 'application/json' -Body $body $uri }
+            return Invoke-RestMethod -Method $method -Headers $headers $uri
+        } catch {
+            $status = $_.Exception.Response.StatusCode.value__
+            if (($status -and $status -lt 500 -and $status -ne 429) -or $attempt -ge 6) { throw "GitHub API request failed ($($_.Exception.Message)). Check your connection and run the script again." }
+            Write-Host "  GitHub unreachable (attempt $attempt/6), retrying in $(15 * $attempt)s..."
+            Start-Sleep -Seconds (15 * $attempt)
+        }
+    }
+}
+function Get-ManualRun { (Invoke-GitHubApi "https://api.github.com/repos/$Repository/actions/runs?head_sha=$Commit&event=workflow_dispatch&per_page=10").workflow_runs | Select-Object -First 1 }
 
 Write-Step 'Checking for a successful manual quality-gates run'
 $run = Get-ManualRun
 if (-not $run -or ($run.status -eq 'completed' -and $run.conclusion -ne 'success')) {
     if ((git rev-parse origin/staging).Trim() -ne $Commit) { throw 'A manual run can only start on the current origin/staging head. Push the commit to staging first.' }
     Write-Host 'Starting a manual quality-gates run on staging...'
-    Invoke-RestMethod -Method Post -Headers $headers -ContentType 'application/json' -Body '{"ref":"staging"}' "https://api.github.com/repos/$Repository/actions/workflows/ci.yml/dispatches" | Out-Null
+    Invoke-GitHubApi "https://api.github.com/repos/$Repository/actions/workflows/ci.yml/dispatches" 'Post' '{"ref":"staging"}' | Out-Null
     Start-Sleep -Seconds 20
 }
 do {
