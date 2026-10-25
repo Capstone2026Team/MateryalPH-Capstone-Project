@@ -26,6 +26,8 @@ final class BuyerDiscoveryController extends Controller
             'include_verified' => ['sometimes', 'boolean'],
             'include_directory' => ['sometimes', 'boolean'],
             'favorites_only' => ['sometimes', 'boolean'],
+            'directory_min_rating' => ['sometimes', 'nullable', 'numeric', Rule::in([3.0, 3.5, 4.0, 4.5])],
+            'directory_max_distance_km' => ['sometimes', 'nullable', 'integer', Rule::in([1, 3, 5, 10, 20])],
             'supplier_type' => ['sometimes', 'nullable', Rule::in(['WHOLESALER_DISTRIBUTOR', 'RETAIL_HARDWARE_STORE', 'SPECIALIZED_SUPPLIER', 'OTHER'])],
             'category_id' => ['sometimes', 'nullable', 'uuid'],
             'page' => ['sometimes', 'integer', 'between:1,50'],

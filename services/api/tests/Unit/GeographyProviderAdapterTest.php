@@ -32,6 +32,47 @@ final class GeographyProviderAdapterTest extends TestCase
         Cache::flush();
     }
 
+    public function test_text_search_pages_are_bounded_filtered_and_charged_per_page(): void
+    {
+        $place = ['id' => 'ChIJtextPlace000001', 'displayName' => ['text' => 'Materials Store'], 'location' => ['latitude' => 14.6, 'longitude' => 121.0],
+            'types' => ['hardware_store'], 'primaryType' => 'hardware_store', 'businessStatus' => 'OPERATIONAL', 'rating' => 4.5, 'userRatingCount' => 18];
+        Http::fake(function (Request $request) use ($place) {
+            return Http::response(['places' => [$place,
+                array_replace($place, ['id' => 'ChIJrestaurant0001', 'types' => ['restaurant']]),
+                array_replace($place, ['id' => 'ChIJclosedText0001', 'businessStatus' => 'CLOSED_TEMPORARILY']),
+                array_replace($place, ['id' => 'ChIJforeignText001', 'location' => ['latitude' => 35.0, 'longitude' => 139.0]])],
+                'nextPageToken' => match ($request['pageToken'] ?? '') {
+                    '' => 'second', 'second' => 'third', default => 'never-requested'
+                }]);
+        });
+        $rectangle = ['low' => ['latitude' => 14.5, 'longitude' => 120.9], 'high' => ['latitude' => 14.7, 'longitude' => 121.1]];
+        $places = app(GooglePlacesProvider::class)->searchText([['key' => 'fixture-cell', 'query' => 'hardware', 'rectangle' => $rectangle]]);
+        self::assertCount(1, $places);
+        self::assertSame(4.5, $places[0]['google_rating']);
+        self::assertSame(18, $places[0]['google_rating_count']);
+        self::assertSame(['fixture-cell'], $places[0]['cell_keys']);
+        Http::assertSentCount(3);
+        self::assertSame(3, Cache::get('maps-budget:places:'.now('Asia/Manila')->toDateString()));
+        Http::assertSent(fn (Request $request): bool => ($request->data()['pageToken'] ?? null) === 'third'
+            && $request['locationRestriction']['rectangle'] === $rectangle && $request['textQuery'] === 'hardware'
+            && $request['regionCode'] === 'PH' && $request['pageSize'] === 20
+            && $request->hasHeader('X-Goog-FieldMask', GooglePlacesProvider::SEARCH_FIELD_MASK.',nextPageToken'));
+        self::assertStringContainsString('places.rating,places.userRatingCount', GooglePlacesProvider::SEARCH_FIELD_MASK);
+    }
+
+    public function test_text_search_stops_before_requesting_a_page_beyond_the_daily_budget(): void
+    {
+        config(['services.google_maps.places.max_calls_per_day' => 1]);
+        Http::fake(['places.googleapis.com/*' => Http::response(['places' => [], 'nextPageToken' => 'second'])]);
+        try {
+            app(GooglePlacesProvider::class)->searchText([['key' => 'cell', 'query' => 'lumber', 'rectangle' => ['low' => ['latitude' => 14.5, 'longitude' => 120.9], 'high' => ['latitude' => 14.7, 'longitude' => 121.1]]]]);
+            self::fail('The next page must stay within the provider budget.');
+        } catch (GeographyProviderUnavailable $error) {
+            self::assertSame('QUOTA', $error->reason);
+        }
+        Http::assertSentCount(1);
+    }
+
     public function test_list_thumbnail_fetches_one_small_photo_with_attribution_and_no_reviews(): void
     {
         Http::fake([

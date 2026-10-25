@@ -1,3 +1,4 @@
+import { manilaToday, shouldRotateIdempotencyKey } from '@materyalph/web-ui'
 import { cloneElement, useCallback, useEffect, useId, useRef, useState, type ReactElement } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { FileText, ReceiptText, Upload } from 'lucide-react'
@@ -8,7 +9,7 @@ import {
   disputeApiBasePath, explainDifference, getOrderInvoices, listInvoices, uploadInvoice,
   type InvoiceListMeta, type InvoiceLogRow, type InvoiceView, type VendorOrderInvoices,
 } from '../lib/disputes-api'
-import { pesoInputToCentavos, readableOrderError } from '../lib/orders-api'
+import { pesoInputToCentavos, readableOrderError, orderFieldErrors } from '../lib/orders-api'
 import { newIdempotencyKey } from '../lib/onboarding-api'
 import { storeName } from '../lib/catalog-access'
 import { useOnboardingSnapshot } from '../lib/vendor-status'
@@ -158,7 +159,7 @@ function FieldShell({ label, error, children, hint }: { label: string; error?: s
 }
 
 function UploadForm({ data, onChanged }: { data: VendorOrderInvoices; onChanged: (data: VendorOrderInvoices, text: string) => void }) {
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date())
+  const today = manilaToday()
   const [open, setOpen] = useState(false)
   const [type, setType] = useState('VENDOR_GOODS_INVOICE')
   const [issuer, setIssuer] = useState(data.issuerName)
@@ -190,26 +191,26 @@ function UploadForm({ data, onChanged }: { data: VendorOrderInvoices; onChanged:
     if (Object.keys(local).length) { setMessage('Check the highlighted fields.'); return }
     setBusy(true); setMessage(null)
     try {
-      const next = await uploadInvoice(data.orderId, { invoiceType: type, issuerName: issuer.trim(), invoiceNumber: number.trim(), issuedOn: new Date(`${issuedOn}T00:00:00+08:00`), amountCentavos: centavos!,
+      const next = await uploadInvoice(data.orderId, { invoiceType: type, issuerName: issuer.trim(), invoiceNumber: number.trim(), issuedOn: new Date(`${issuedOn}T00:00:00`), amountCentavos: centavos!,
         ...(vatCentavos !== undefined && vatCentavos !== null ? { vatCentavos } : {}), relatedLineIds: lines, sourceSystem: source, invoicingMethod: method, ...(amends ? { amendsInvoiceRecordId: amends } : {}), file: file! }, key.current)
       key.current = newIdempotencyKey(); setOpen(false)
       const record = next.records.at(-1)
       onChanged(next, record?.reconciliationState === 'INVOICE_RECONCILIATION_REQUIRED' ? 'Copy uploaded. Its totals differ from the accepted order — explain the difference or upload a correction. The Buyer\'s amount is unchanged.' : 'Invoice copy uploaded and shared with the Buyer.')
-    } catch (cause) { key.current = newIdempotencyKey(); setMessage(await readableOrderError(cause)) } finally { setBusy(false) }
+    } catch (cause) { if (shouldRotateIdempotencyKey(cause)) key.current = newIdempotencyKey(); setErrors(await orderFieldErrors(cause)); setMessage(await readableOrderError(cause)) } finally { setBusy(false) }
   }
   return <form className="grid gap-4 border-t border-border-default pt-4" noValidate aria-label="Upload invoice copy" onSubmit={event => { event.preventDefault(); void submit() }}>
     <h3 className="text-base font-semibold">Upload invoice copy</h3>
     {message && <StatusMessage tone="error">{message}</StatusMessage>}
     <div className="grid gap-4 sm:grid-cols-2">
       <FieldShell label="Document type"><select className={control} value={type} onChange={event => setType(event.target.value)}>{data.invoiceTypes.map(code => <option key={code} value={code}>{code === 'VENDOR_GOODS_INVOICE' ? 'Sales invoice' : 'Adjustment document'}</option>)}</select></FieldShell>
-      <FieldShell label="Issuer (registered business name)" error={errors.issuer} hint={`Must match: ${data.issuerName}`}><input className={control} value={issuer} maxLength={240} onChange={event => setIssuer(event.target.value)} /></FieldShell>
-      <FieldShell label="Invoice number" error={errors.number}><input className={control} value={number} maxLength={64} onChange={event => setNumber(event.target.value)} /></FieldShell>
-      <FieldShell label="Invoice date"><input type="date" className={control} max={today} value={issuedOn} onChange={event => setIssuedOn(event.target.value)} /></FieldShell>
-      <FieldShell label="Invoice total (₱)" error={errors.amount}><input className={control} inputMode="decimal" placeholder="0.00" value={amount} onChange={event => setAmount(event.target.value)} /></FieldShell>
-      <FieldShell label="VAT shown (₱, optional)" error={errors.vat}><input className={control} inputMode="decimal" placeholder="0.00" value={vat} onChange={event => setVat(event.target.value)} /></FieldShell>
+      <FieldShell label="Issuer (registered business name)" error={errors.issuer_name ?? errors.issuer} hint={`Must match: ${data.issuerName}`}><input className={control} value={issuer} maxLength={240} onChange={event => setIssuer(event.target.value)} /></FieldShell>
+      <FieldShell label="Invoice number" error={errors.invoice_number ?? errors.number}><input className={control} value={number} maxLength={64} onChange={event => setNumber(event.target.value)} /></FieldShell>
+      <FieldShell label="Invoice date" error={errors.issued_on}><input type="date" className={control} max={today} value={issuedOn} onChange={event => setIssuedOn(event.target.value)} /></FieldShell>
+      <FieldShell label="Invoice total (₱)" error={errors.amount_centavos ?? errors.amount}><input className={control} inputMode="decimal" placeholder="0.00" value={amount} onChange={event => setAmount(event.target.value)} /></FieldShell>
+      <FieldShell label="VAT shown (₱, optional)" error={errors.vat_centavos ?? errors.vat}><input className={control} inputMode="decimal" placeholder="0.00" value={vat} onChange={event => setVat(event.target.value)} /></FieldShell>
       <FieldShell label="Issued through"><select className={control} value={source} onChange={event => setSource(event.target.value)}>{data.sourceSystems.map(code => <option key={code} value={code}>{SOURCE_LABELS[code] ?? code}</option>)}</select></FieldShell>
       <FieldShell label="Invoicing method"><select className={control} value={method} onChange={event => setMethod(event.target.value)}>{data.invoicingMethods.map(code => <option key={code} value={code}>{METHOD_LABELS[code] ?? code}</option>)}</select></FieldShell>
-      {data.records.length > 0 && <FieldShell label={type === 'VENDOR_ADJUSTMENT_DOCUMENT' ? 'Adjusts invoice' : 'Corrects invoice (optional)'} error={errors.amends}><select className={control} value={amends} onChange={event => setAmends(event.target.value)}>
+      {data.records.length > 0 && <FieldShell label={type === 'VENDOR_ADJUSTMENT_DOCUMENT' ? 'Adjusts invoice' : 'Corrects invoice (optional)'} error={errors.amends_invoice_record_id ?? errors.amends}><select className={control} value={amends} onChange={event => setAmends(event.target.value)}>
         <option value="">None</option>{data.records.map(record => <option key={record.id} value={record.id}>{record.invoiceNumber} · {formatPesoCentavos(record.amountCentavos)}</option>)}</select></FieldShell>}
     </div>
     {data.lines.length > 1 && <fieldset className="grid gap-2"><legend className="text-sm font-semibold">Lines covered (leave all unchecked for the whole order)</legend>{data.lines.map(line => <label key={line.orderLineId} className="flex min-h-11 items-center gap-3 text-sm">

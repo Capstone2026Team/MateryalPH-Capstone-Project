@@ -9,6 +9,7 @@ use App\Domain\Analytics\AnalyticsRequest;
 use App\Domain\Analytics\AnalyticsWindow;
 use App\Domain\Analytics\MaterialsAnalyticsAdminService;
 use App\Domain\Analytics\MaterialsAnalyticsAssembler;
+use App\Domain\Analytics\MaterialsAnalyticsProducts;
 use App\Domain\Analytics\MaterialsAnalyticsService;
 use App\Domain\Geography\BuyerProfiles;
 use App\Domain\Geography\GeographyScopeResolver;
@@ -37,6 +38,7 @@ final class MaterialsAnalyticsController extends Controller
         private readonly MaterialsAnalyticsPolicy $policy,
         private readonly MaterialsAnalyticsAssembler $assembler,
         private readonly MaterialsAnalyticsService $service,
+        private readonly MaterialsAnalyticsProducts $products,
         private readonly GeographyScopeResolver $scopes,
         private readonly BuyerProfiles $profiles,
     ) {}
@@ -53,6 +55,22 @@ final class MaterialsAnalyticsController extends Controller
         $input = $this->input($request, 'viewBuyer', ['preset_days', 'start_date', 'end_date', ...self::BUYER_ORIGIN]);
 
         return ApiResponse::success($this->assembler->detail($this->buyerRequest($request, $input), self::uuid($groupId)));
+    }
+
+    /** One row per canonical product in the Buyer's scope, with per-category counts for the overview tiles. */
+    public function buyerProducts(Request $request): JsonResponse
+    {
+        $input = $this->input($request, 'viewBuyer', [...self::COMMON, ...self::BUYER_ORIGIN]);
+
+        return ApiResponse::success($this->products->list($this->buyerRequest($request, $input), $input['cursor'] ?? null, (int) ($input['per_page'] ?? MaterialsAnalyticsService::PER_PAGE)));
+    }
+
+    /** One product's summary, its most-offered variant's average and trend, and its variants. */
+    public function buyerProduct(Request $request, string $materialId): JsonResponse
+    {
+        $input = $this->input($request, 'viewBuyer', ['preset_days', 'start_date', 'end_date', ...self::BUYER_ORIGIN]);
+
+        return ApiResponse::success($this->products->detail($this->buyerRequest($request, $input), self::uuid($materialId)));
     }
 
     public function buyerOffers(Request $request, string $groupId): JsonResponse

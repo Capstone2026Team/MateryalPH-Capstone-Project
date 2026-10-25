@@ -45,7 +45,7 @@ void main() {
       expect(repo.detailCalls, 0);
       expect(find.text('Store Owner'), findsNothing);
       expect(find.text('Google Maps'), findsNothing);
-      // A Directory Supplier cannot be saved, so it has no save control.
+      // Without a save callback the row shows no save control.
       expect(find.byIcon(Icons.bookmark_border), findsNothing);
       final image = tester.widget<Image>(find.byType(Image).first);
       expect(

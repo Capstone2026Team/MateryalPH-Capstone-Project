@@ -1,3 +1,4 @@
+import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import '../notifications/notification_scope.dart';
 import '../reporting/document_export_dialog.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as export_api;
@@ -70,7 +71,9 @@ class ProjectsScreen extends StatefulWidget {
 }
 
 class _ProjectsScreenState extends State<ProjectsScreen> {
-  ProjectData? _page, _project, _package;
+  api.ProjectPage? _page;
+  api.ProjectView? _project;
+  api.WorkPackageView? _package;
   String? _error;
   bool _busy = false;
   int _sequence = 0;
@@ -78,10 +81,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   final Map<String, String> _keys = {};
   Timer? _refresh;
   ProjectsRepository get repo => widget.repository;
-  String get id => projectText(_package?['id']);
-  int get lock => projectInt(_package?['lock_version']);
-  ProjectData get content =>
-      projectObject(projectObject(_package?['version'])['content']);
+  String get id => projectText(_package?.id);
+  int get lock => projectInt(_package?.lockVersion);
+  ProjectData get content => projectObject(_package?.version?.content);
   @override
   void initState() {
     super.initState();
@@ -131,21 +133,16 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
 
   Future<void> _reload() async {
     final token = ++_sequence;
-    final result = _package != null
-        ? await repo.package(id)
-        : _project != null
-        ? await repo.project(projectText(_project!['id']))
-        : await repo.list();
-    if (!mounted || token != _sequence) return;
-    setState(() {
-      if (_package != null) {
-        _package = result;
-      } else if (_project != null) {
-        _project = result;
-      } else {
-        _page = result;
-      }
-    });
+    if (_package != null) {
+      final result = await repo.package(id);
+      if (mounted && token == _sequence) setState(() => _package = result);
+    } else if (_project != null) {
+      final result = await repo.project(_project!.id);
+      if (mounted && token == _sequence) setState(() => _project = result);
+    } else {
+      final result = await repo.list();
+      if (mounted && token == _sequence) setState(() => _page = result);
+    }
   }
 
   String _key(String action) => _keys.putIfAbsent(action, projectKey);
@@ -200,7 +197,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   }
 
   Future<void> _createProject({bool editing = false}) async {
-    final result = await Navigator.of(context).push<ProjectData>(
+    final result = await Navigator.of(context).push<api.ProjectView>(
       MaterialPageRoute(
         builder: (_) => ProjectEditor(
           repository: repo,
@@ -218,7 +215,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   }
 
   Future<void> _editPackage() async {
-    final result = await Navigator.of(context).push<ProjectData>(
+    final result = await Navigator.of(context).push<api.WorkPackageView>(
       MaterialPageRoute(
         builder: (_) => WorkPackageEditor(
           repository: repo,
@@ -272,10 +269,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   }
 
   Future<void> _deletePackage() async {
-    final name = projectText(_package?['name']);
+    final name = projectText(_package?.name);
     final plainDraft =
-        _package?['status'] == 'DRAFT' &&
-        projectObject(_package?['version'])['locked_at'] == null;
+        _package?.status == 'DRAFT' && _package?.version?.lockedAt == null;
     final confirmed =
         await showBuyerFormDialog<bool>(
           context: context,
@@ -320,7 +316,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
 
   /// Vendor selection: map, sortable results and quotations (opened from the
   /// package; the comparison no longer lives inside the package page).
-  Future<void> _findVendors([ProjectData? initial]) async {
+  Future<void> _findVendors([api.ProjectEstimatePage? initial]) async {
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (_) => VendorSelectionScreen(
@@ -343,13 +339,13 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   }
 
   Future<void> _reviewProcurement() => _run(() async {
-    if (_package!['selected_arrangement_id'] != null) {
+    if (_package!.selectedArrangementId != null) {
       await Navigator.of(context).push<void>(
         MaterialPageRoute(
           builder: (_) => ProjectArrangementScreen(
             repository: repo,
             package: _package!,
-            option: {'id': _package!['selected_arrangement_id'], 'version': 1},
+            arrangementId: _package!.selectedArrangementId,
             links: ProjectSourcingLinks(
               openConversation: widget.openConversation,
               openOrder: widget.openOrder,
@@ -364,7 +360,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     }
     final candidate = await repo.selectionPreview(
       id,
-      projectText(_package!['procurement_candidate_id']),
+      projectText(_package!.procurementCandidateId),
       const {},
     );
     if (!mounted) return;
@@ -375,9 +371,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           package: _package!,
           candidate: candidate,
           selections: {
-            for (final e in projectObject(
-              candidate['specification_selections'],
-            ).entries)
+            for (final e
+                in (candidate.specificationSelections?.toMap() ??
+                        <String, String>{})
+                    .entries)
               e.key: projectText(e.value),
           },
           links: ProjectSourcingLinks(
@@ -414,7 +411,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             )
           : buyerAppBar(
               context,
-              projectText(_package?['name'] ?? _project?['name'] ?? 'Projects'),
+              projectText(_package?.name ?? _project?.name ?? 'Projects'),
               // Inside a Project the back control steps up the Project hierarchy, not the route stack.
               onBack: _project == null
                   ? null
@@ -425,7 +422,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                 if (_project != null && NotificationScope.of(context) != null)
                   BuyerDocumentExportButton(
                     repository: NotificationScope.of(context)!,
-                    resourceId: projectText(_project?['id']),
+                    resourceId: projectText(_project?.id),
                     types: [
                       export_api.DocumentExportInputTypeEnum.PROJECT_SUMMARY,
                       export_api.DocumentExportInputTypeEnum.BUDGET_REPORT,
@@ -499,14 +496,14 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                 label: const Text('Create Project'),
               ),
             ),
-            if (_page != null && projectRows(_page!['items']).isEmpty)
+            if (_page != null && _page!.items.toList().isEmpty)
               const StateMessage(
                 kind: StateKind.empty,
                 title: 'No Projects yet',
                 message:
                     'Your Projects will appear here. Start with a site, timeline and overall budget.',
               ),
-            ...projectRows(_page?['items']).map(
+            ...(_page?.items.toList() ?? <api.ProjectSummary>[]).map(
               (p) => Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: Card(
@@ -518,9 +515,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                   margin: EdgeInsets.zero,
                   clipBehavior: Clip.antiAlias,
                   child: InkWell(
-                    onTap: _busy
-                        ? null
-                        : () => _openProject(projectText(p['id'])),
+                    onTap: _busy ? null : () => _openProject(projectText(p.id)),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(
@@ -535,7 +530,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
-                                  projectText(p['name']),
+                                  projectText(p.name),
                                   style: Theme.of(
                                     context,
                                   ).textTheme.titleMedium,
@@ -546,37 +541,31 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            projectStatus(p['status']),
+                            projectStatus(p.status),
                             style: const TextStyle(
                               fontWeight: FontWeight.w600,
                               color: BuyerTheme.muted,
                             ),
                           ),
-                          if (p['starts_on'] != null)
+                          if (p.startsOn != null)
                             Padding(
                               padding: const EdgeInsets.only(top: 4),
-                              child: Text(
-                                '${p['starts_on']} – ${p['ends_on']}',
-                              ),
+                              child: Text('${p.startsOn} – ${p.endsOn}'),
                             ),
                           const Divider(height: 24),
                           SpecificationRow(
                             'Budget',
-                            projectMoney(p['budget_centavos']),
+                            projectMoney(p.budgetCentavos),
                           ),
                           SpecificationRow(
                             'Committed',
-                            projectMoney(
-                              projectObject(p['budget'])['committed_centavos'],
-                            ),
+                            projectMoney(p.budget.committedCentavos),
                           ),
                           SpecificationRow(
                             'Remaining',
-                            projectMoney(
-                              projectObject(p['budget'])['remaining_centavos'],
-                            ),
+                            projectMoney(p.budget.remainingCentavos),
                           ),
-                          if (projectObject(p['budget'])['warning'] == true)
+                          if (p.budget.warning == true)
                             const StatusBand(
                               tone: BandTone.warning,
                               title: 'Budget needs attention',
@@ -588,23 +577,22 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                 ),
               ),
             ),
-            if (_page?['has_more'] == true)
+            if (_page?.hasMore == true)
               OutlinedButton(
                 onPressed: _busy
                     ? null
                     : () => _run(() async {
                         final next = await repo.list(
-                          page: projectInt(_page!['page']) + 1,
+                          page: projectInt(_page!.page) + 1,
                         );
                         if (mounted) {
                           setState(
-                            () => _page = {
-                              ...next,
-                              'items': [
-                                ...projectRows(_page!['items']),
-                                ...projectRows(next['items']),
-                              ],
-                            },
+                            () => _page = next.rebuild(
+                              (b) => b.items.replace([
+                                ..._page!.items,
+                                ...next.items,
+                              ]),
+                            ),
                           );
                         }
                       }),
@@ -613,7 +601,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           ],
         );
   Widget _projectBody() {
-    final p = _project!, packages = projectObject(p['packages']);
+    final p = _project!, packages = _project!.packages;
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 900),
@@ -634,24 +622,24 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                 children: [
                   if (_projectSection == 0) ...[
                     StatusBand(
-                      tone: p['status'] == 'ACTIVE'
+                      tone: p.status == 'ACTIVE'
                           ? BandTone.info
                           : BandTone.warning,
-                      title: projectStatus(p['status']),
-                      message: p['status'] == 'ARCHIVED'
+                      title: projectStatus(p.status),
+                      message: p.status == 'ARCHIVED'
                           ? 'This Project is archived. Your planning and procurement history remains available.'
-                          : p['status'] == 'COMPLETED'
+                          : p.status == 'COMPLETED'
                           ? 'This Project is complete. Your procurement history remains available.'
                           : 'Organize materials into Work Packages, compare Vendors and track your spending.',
                     ),
                     const SectionHeading('Budget overview'),
                     ProjectBudgetCard(
-                      budget: projectObject(p['budget']),
+                      budget: p.budget,
                       action: NotificationScope.of(context) == null
                           ? null
                           : BuyerDocumentExportButton(
                               repository: NotificationScope.of(context)!,
-                              resourceId: projectText(p['id']),
+                              resourceId: projectText(p.id),
                               types: [
                                 export_api
                                     .DocumentExportInputTypeEnum
@@ -673,19 +661,16 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                         children: [
                           SpecificationRow(
                             'Start date',
-                            projectText(p['starts_on']),
+                            projectText(p.startsOn),
                           ),
-                          SpecificationRow(
-                            'End date',
-                            projectText(p['ends_on']),
-                          ),
+                          SpecificationRow('End date', projectText(p.endsOn)),
                         ],
                       ),
                     ),
-                    if (p['status'] != 'ARCHIVED') ...[
+                    if (p.status != 'ARCHIVED') ...[
                       const SectionHeading('Manage Project'),
                       OutlinedButton.icon(
-                        onPressed: _busy || p['status'] != 'ACTIVE'
+                        onPressed: _busy || p.status != 'ACTIVE'
                             ? null
                             : () => _createProject(editing: true),
                         icon: const Icon(LucideIcons.pencil, size: 18),
@@ -696,12 +681,12 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                         children: [
                           Expanded(
                             child: OutlinedButton.icon(
-                              onPressed: _busy || p['status'] == 'ARCHIVED'
+                              onPressed: _busy || p.status == 'ARCHIVED'
                                   ? null
                                   : () => _run(() async {
                                       _project = await repo
-                                          .update(projectText(p['id']), {
-                                            'lock_version': p['lock_version'],
+                                          .update(projectText(p.id), {
+                                            'lock_version': p.lockVersion,
                                             'status': 'ARCHIVED',
                                           }, _key('archive'));
                                     }),
@@ -712,12 +697,12 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: OutlinedButton.icon(
-                              onPressed: _busy || p['status'] != 'ACTIVE'
+                              onPressed: _busy || p.status != 'ACTIVE'
                                   ? null
                                   : () => _run(() async {
                                       _project = await repo
-                                          .update(projectText(p['id']), {
-                                            'lock_version': p['lock_version'],
+                                          .update(projectText(p.id), {
+                                            'lock_version': p.lockVersion,
                                             'status': 'COMPLETED',
                                           }, _key('complete'));
                                     }),
@@ -730,8 +715,8 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                           ),
                         ],
                       ),
-                      if (p['status'] == 'ACTIVE' &&
-                          projectRows(packages['items']).isEmpty) ...[
+                      if (p.status == 'ACTIVE' &&
+                          packages.items.toList().isEmpty) ...[
                         const SizedBox(height: 12),
                         OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
@@ -748,8 +733,8 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                   )) {
                                     await _run(() async {
                                       await repo.delete(
-                                        projectText(p['id']),
-                                        projectInt(p['lock_version']),
+                                        projectText(p.id),
+                                        projectInt(p.lockVersion),
                                         project: true,
                                       );
                                       _project = null;
@@ -764,10 +749,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                     ],
                   ],
                   if (_projectSection == 1) ...[
-                    AllocationSummary(budget: projectObject(p['budget'])),
+                    AllocationSummary(budget: p.budget),
                     const SizedBox(height: 12),
                     FilledButton.icon(
-                      onPressed: _busy || p['status'] != 'ACTIVE'
+                      onPressed: _busy || p.status != 'ACTIVE'
                           ? null
                           : () => _editPackage(),
                       icon: const Icon(LucideIcons.plus),
@@ -776,42 +761,38 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                     SectionHeading(
                       'Work Packages',
                       trailing: Text(
-                        '${projectRows(packages['items']).length}${packages['has_more'] == true ? '+' : ''}',
+                        '${packages.items.toList().length}${packages.hasMore == true ? '+' : ''}',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: BuyerTheme.muted,
                         ),
                       ),
                     ),
-                    if (projectRows(packages['items']).isEmpty)
+                    if (packages.items.toList().isEmpty)
                       const WorkPackagesEmptyState(),
-                    ...projectRows(packages['items']).map(
+                    ...packages.items.toList().map(
                       (w) => WorkPackageCard(
                         package: w,
-                        onTap: () => _openPackage(projectText(w['id'])),
+                        onTap: () => _openPackage(projectText(w.id)),
                       ),
                     ),
-                    if (packages['has_more'] == true)
+                    if (packages.hasMore == true)
                       OutlinedButton(
                         onPressed: _busy
                             ? null
                             : () => _run(() async {
                                 final next = await repo.project(
-                                  projectText(p['id']),
-                                  page: projectInt(packages['page']) + 1,
+                                  projectText(p.id),
+                                  page: projectInt(packages.page) + 1,
                                 );
-                                final more = projectObject(next['packages']);
+                                final more = next.packages;
                                 if (mounted) {
                                   setState(
-                                    () => _project = {
-                                      ...next,
-                                      'packages': {
-                                        ...more,
-                                        'items': [
-                                          ...projectRows(packages['items']),
-                                          ...projectRows(more['items']),
-                                        ],
-                                      },
-                                    },
+                                    () => _project = next.rebuild(
+                                      (b) => b.packages.items.replace([
+                                        ...packages.items,
+                                        ...more.items,
+                                      ]),
+                                    ),
                                   );
                                 }
                               }),
@@ -823,7 +804,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                     const Text(
                       'Choose a saved site when creating a Work Package. Vendor discovery uses that site.',
                     ),
-                    ...projectRows(p['sites']).map(
+                    ...p.sites.toList().map(
                       (site) => Padding(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         child: Column(
@@ -832,11 +813,11 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                             ListTile(
                               contentPadding: EdgeInsets.zero,
                               leading: const Icon(Icons.location_on_outlined),
-                              title: Text(projectText(site['name'])),
+                              title: Text(projectText(site.name)),
                               subtitle: Text(
                                 projectText(
                                   projectObject(
-                                    site['point'],
+                                    site.point,
                                   )['formatted_address'],
                                 ),
                               ),
@@ -858,12 +839,12 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
 
   Widget _packageBody() {
     final w = _package!,
-        draft = w['status'] == 'DRAFT',
-        projectActive = w['project_status'] == 'ACTIVE',
+        draft = w.status == 'DRAFT',
+        projectActive = w.projectStatus.name == 'ACTIVE',
         editable = draft && projectActive,
-        cancelled = w['status'] == 'CANCELLED',
-        canDelete = w['can_delete'] == true,
-        manage = projectActive && w['has_order'] != true,
+        cancelled = w.status == 'CANCELLED',
+        canDelete = w.canDelete == true,
+        manage = projectActive && w.hasOrder != true,
         canEdit =
             manage &&
             [
@@ -871,13 +852,13 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
               'ACTIVE',
               'QUOTATION_INQUIRY',
               'CANCELLED',
-            ].contains(w['status']);
+            ].contains(w.status);
     final missingMaterials =
         !cancelled &&
             !draft &&
-            w['has_order'] == true &&
-            w['selected_arrangement_id'] == null
-        ? projectRows(w['missing_lines'])
+            w.hasOrder == true &&
+            w.selectedArrangementId == null
+        ? projectRows(w.missingLines)
         : <ProjectData>[];
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -886,10 +867,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           spacing: 8,
           runSpacing: 6,
           crossAxisAlignment: WrapCrossAlignment.center,
-          children: [WorkPackageStatusChip(projectText(w['status']))],
+          children: [WorkPackageStatusChip(projectText(w.status))],
         ),
         const SizedBox(height: 12),
-        ProjectBudgetCard(budget: projectObject(w['budget'])),
+        ProjectBudgetCard(budget: w.budget),
         const SizedBox(height: 16),
         if (editable) ...[
           FilledButton.icon(
@@ -900,7 +881,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                       'Activate this Work Package?',
                       'Estimates and Vendor comparison start now. You can still edit this Work Package until an order exists.',
                     )) {
-                      ProjectData? compiled;
+                      api.ProjectEstimatePage? compiled;
                       await _run(() async {
                         _package = await repo.activate(
                           id,
@@ -920,23 +901,22 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           ),
           const SizedBox(height: 12),
         ],
-        if (w['order_id'] != null && w['selected_arrangement_id'] == null) ...[
+        if (w.orderId != null && w.selectedArrangementId == null) ...[
           FilledButton.icon(
-            onPressed: () =>
-                widget.openOrder(context, projectText(w['order_id'])),
+            onPressed: () => widget.openOrder(context, projectText(w.orderId)),
             icon: const Icon(LucideIcons.receipt, size: 18),
             label: const Text('Open order'),
           ),
           const SizedBox(height: 12),
         ],
-        if (w['selected_arrangement_id'] != null) ...[
+        if (w.selectedArrangementId != null) ...[
           FilledButton.icon(
             onPressed: _busy ? null : _reviewProcurement,
             icon: const Icon(LucideIcons.clipboardList, size: 18),
             label: const Text('Review procurement arrangement'),
           ),
           const SizedBox(height: 12),
-          for (final order in projectRows(w['vendor_orders']))
+          for (final order in projectRows(w.vendorOrders))
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(projectText(order['reference'])),
@@ -946,8 +926,8 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             ),
         ],
         if (projectActive &&
-            w['procurement_candidate_id'] != null &&
-            w['selected_arrangement_id'] == null) ...[
+            w.procurementCandidateId != null &&
+            w.selectedArrangementId == null) ...[
           OutlinedButton.icon(
             onPressed: _busy ? null : _reviewProcurement,
             icon: const Icon(LucideIcons.clipboardList, size: 18),
@@ -955,7 +935,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           ),
           const SizedBox(height: 12),
         ],
-        if (!draft && !cancelled && w['selected_arrangement_id'] == null) ...[
+        if (!draft && !cancelled && w.selectedArrangementId == null) ...[
           FilledButton.icon(
             onPressed: _busy ? null : () => _findVendors(),
             icon: const Icon(LucideIcons.search, size: 18),
@@ -1117,7 +1097,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
 
 class ProjectBudgetCard extends StatelessWidget {
   const ProjectBudgetCard({super.key, required this.budget, this.action});
-  final ProjectData budget;
+  final api.ProjectBudget budget;
 
   /// Optional header action, such as the budget report export.
   final Widget? action;
@@ -1125,25 +1105,25 @@ class ProjectBudgetCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final total = projectInt(budget['budget_centavos']);
-    final committed = projectInt(budget['committed_centavos']);
-    final remaining = projectInt(budget['remaining_centavos']);
+    final total = projectInt(budget.budgetCentavos);
+    final committed = projectInt(budget.committedCentavos);
+    final remaining = projectInt(budget.remainingCentavos);
     final over = remaining < 0;
-    final percent = projectText(budget['utilization_percent']);
+    final percent = projectText(budget.utilizationPercent);
     final buckets = [
       (
         'Pending incomplete orders',
-        projectInt(budget['pending_centavos']),
+        projectInt(budget.pendingCentavos),
         Color.lerp(BuyerTheme.action, Colors.white, 0.55)!,
       ),
       (
         'Actual completed / retained cost',
-        projectInt(budget['actual_centavos']),
+        projectInt(budget.actualCentavos),
         BuyerTheme.action,
       ),
       (
         'Paid cancelled amount awaiting recovery',
-        projectInt(budget['awaiting_recovery_centavos']),
+        projectInt(budget.awaitingRecoveryCentavos),
         BuyerTheme.ink,
       ),
     ];
@@ -1220,11 +1200,11 @@ class ProjectBudgetCard extends StatelessWidget {
               ],
             ),
           ),
-          if (budget['warning'] == true) ...[
+          if (budget.warning == true) ...[
             const SizedBox(height: 12),
             StatusBand(
               tone: BandTone.warning,
-              title: '${budget['utilization_percent']}% utilized',
+              title: '${budget.utilizationPercent}% utilized',
               message: 'Purchases above 100% require a written override.',
             ),
           ],

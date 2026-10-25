@@ -243,14 +243,14 @@ final class PhaseFourCatalogComplianceTest extends TestCase
         $this->signInVendor($owner);
         $counts = fn (): array => array_map(fn (string $table): int => DB::table($table)->count(), ['material_categories', 'materials', 'material_aliases', 'material_tags', 'technical_attribute_definitions']);
         $before = $counts();
-        $listing = $this->createListing('Bamboo poles', 'BAMBOO-1');
+        $listing = $this->createListing('Nipa shingles', 'NIPA-1');
         $category = DB::table('material_categories')->where('code', 'WOOD_AND_LUMBER')->value('id');
-        $this->patchJson('/api/v1/vendor/catalog/listings/'.$listing, ['lock_version' => 1, 'other_label' => 'Bamboo poles', 'material_category_id' => $category, 'tag_ids' => [DB::table('material_tags')->where('code', 'EXTERIOR')->value('id')]])
-            ->assertOk()->assertJsonPath('data.other_label', 'Bamboo poles')->assertJsonPath('data.material', null)->assertJsonPath('data.material_match', 'UNMATCHED')->assertJsonPath('data.regulated', false);
+        $this->patchJson('/api/v1/vendor/catalog/listings/'.$listing, ['lock_version' => 1, 'other_label' => 'Nipa shingles', 'material_category_id' => $category, 'tag_ids' => [DB::table('material_tags')->where('code', 'EXTERIOR')->value('id')]])
+            ->assertOk()->assertJsonPath('data.other_label', 'Nipa shingles')->assertJsonPath('data.material', null)->assertJsonPath('data.material_match', 'UNMATCHED')->assertJsonPath('data.regulated', false);
         self::assertSame($before, $counts());
-        self::assertFalse(DB::table('material_aliases')->where('normalized_alias', 'bamboo poles')->exists());
-        self::assertNotContains('Bamboo poles', collect($this->getJson('/api/v1/vendor/catalog/taxonomy')->json('data.categories'))->pluck('name')->all());
-        $this->getJson('/api/v1/vendor/catalog/materials/search?q=bamboo%20poles')->assertOk()->assertJsonCount(0, 'data');
+        self::assertFalse(DB::table('material_aliases')->where('normalized_alias', 'nipa shingles')->exists());
+        self::assertNotContains('Nipa shingles', collect($this->getJson('/api/v1/vendor/catalog/taxonomy')->json('data.categories'))->pluck('name')->all());
+        $this->getJson('/api/v1/vendor/catalog/materials/search?q=nipa%20shingles')->assertOk()->assertJsonCount(0, 'data');
     }
 
     public function test_custom_search_tags_count_toward_the_one_tag_minimum_and_never_write_shared_taxonomy(): void

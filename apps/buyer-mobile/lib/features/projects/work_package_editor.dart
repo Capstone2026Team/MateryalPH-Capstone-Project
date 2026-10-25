@@ -1,3 +1,4 @@
+import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -49,8 +50,8 @@ class WorkPackageEditor extends StatefulWidget {
     this.package,
   });
   final ProjectsRepository repository;
-  final ProjectData project;
-  final ProjectData? package;
+  final api.ProjectView project;
+  final api.WorkPackageView? package;
   final Future<DiscoveryOrigin?> Function() chooseLocation;
   @override
   State<WorkPackageEditor> createState() => _WorkPackageEditorState();
@@ -76,7 +77,7 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
   bool contactTouched = false;
 
   bool estimateOn = false, estimating = false;
-  ProjectData? estimate;
+  api.WorkPackageBudgetEstimate? estimate;
   String? estimateError;
   int estimateSequence = 0;
   Timer? estimateDebounce;
@@ -85,14 +86,11 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
   /// non-cancelled package counts, so this package's own saved budget is
   /// returned to the pool while it is being edited.
   int get reserveCentavos {
-    final status = projectText(widget.package?['status']);
+    final status = projectText(widget.package?.status);
     final own = widget.package != null && status != 'CANCELLED'
-        ? projectInt(widget.package!['budget_centavos'])
+        ? projectInt(widget.package!.budgetCentavos)
         : 0;
-    return projectInt(
-          projectObject(widget.project['budget'])['unallocated_centavos'],
-        ) +
-        own;
+    return projectInt(widget.project.budget.unallocatedCentavos) + own;
   }
 
   bool get estimateReady => site != null && lines.isNotEmpty;
@@ -100,9 +98,7 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
   @override
   void initState() {
     super.initState();
-    final original = projectObject(
-      projectObject(widget.package?['version'])['content'],
-    );
+    final original = projectObject(widget.package?.version?.content);
     name.text = projectText(original['name']);
     budget.text = original['budget_centavos'] == null
         ? ''
@@ -111,8 +107,7 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
     contact.text = projectText(original['site_contact']);
     instructions.text = projectText(original['access_instructions']);
     site =
-        original['site_id'] as String? ??
-        projectRows(widget.project['sites']).firstOrNull?['id'] as String?;
+        original['site_id'] as String? ?? widget.project.sites.firstOrNull?.id;
     fulfillment = projectText(original['fulfillment_method']).isEmpty
         ? 'PICKUP'
         : projectText(original['fulfillment_method']);
@@ -198,7 +193,7 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
     });
     try {
       final result = await widget.repository.estimateBudget(
-        projectText(widget.project['id']),
+        projectText(widget.project.id),
         {
           'site_id': site,
           'radius_km': projectSearchRadiusKm,
@@ -297,7 +292,7 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
     });
     try {
       final result = await widget.repository.save(
-        projectText(widget.project['id']),
+        projectText(widget.project.id),
         {
           'name': name.text.trim(),
           'description': description.text.trim(),
@@ -311,14 +306,14 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
           if (fulfillment != 'PICKUP' && heavy == 'YES')
             'alternate_drop_off_location_id': alternate,
           if (widget.package != null)
-            'lock_version': widget.package!['lock_version'],
+            'lock_version': widget.package!.lockVersion,
           'lines': [
             for (final l in lines)
               <String, Object?>{for (final k in _lineKeys) k: l[k]},
           ],
         },
         key,
-        id: widget.package?['id'] as String?,
+        id: widget.package?.id,
       );
       if (mounted) Navigator.pop(context, result);
     } on DiscoveryFailure catch (e) {
@@ -344,7 +339,7 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
       status: lines.length == 1 ? '1 item' : '${lines.length} items',
       actionLabel: busy
           ? 'Saving…'
-          : widget.package == null || widget.package!['status'] == 'DRAFT'
+          : widget.package == null || widget.package!.status == 'DRAFT'
           ? 'Finalize'
           : 'Save changes',
       onAction: busy ? null : _save,
@@ -496,9 +491,10 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
   }
 
   String get _siteSummary {
-    final name = projectRows(
-      widget.project['sites'],
-    ).where((s) => s['id'] == site).map((s) => projectText(s['name']));
+    final name = widget.project.sites
+        .toList()
+        .where((s) => s.id == site)
+        .map((s) => projectText(s.name));
     return [
       _fulfillmentLabels[fulfillment] ?? 'Pickup',
       name.firstOrNull ?? 'Choose a Project site',
@@ -608,14 +604,14 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
       itemHeight: null,
       decoration: const InputDecoration(labelText: 'Project site'),
       selectedItemBuilder: (context) => [
-        for (final s in projectRows(widget.project['sites']))
-          _SiteName(projectText(s['name'])),
+        for (final s in widget.project.sites.toList())
+          _SiteName(projectText(s.name)),
       ],
       items: [
-        for (final s in projectRows(widget.project['sites']))
+        for (final s in widget.project.sites.toList())
           DropdownMenuItem(
-            value: projectText(s['id']),
-            child: _SiteName(projectText(s['name'])),
+            value: projectText(s.id),
+            child: _SiteName(projectText(s.name)),
           ),
       ],
       onChanged: (v) {
@@ -675,7 +671,7 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
       ProjectReserveHint(
         controller: budget,
         reserveCentavos: reserveCentavos,
-        projectCentavos: projectInt(widget.project['budget_centavos']),
+        projectCentavos: projectInt(widget.project.budgetCentavos),
       ),
       SwitchListTile(
         contentPadding: EdgeInsets.zero,

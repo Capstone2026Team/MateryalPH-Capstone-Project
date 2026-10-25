@@ -26,12 +26,18 @@ interface PlacesProvider
      * Construction-relevant places inside one circle. Closed businesses and results without a usable name or
      * location are already excluded.
      *
-     * @param  list<array{latitude: float, longitude: float, radius_meters: int}>  $cells
-     * @return list<array{place_id: string, name: string, latitude: float, longitude: float, formatted_address: ?string, primary_type: ?string, business_status: ?string}>
+     * @param  list<array{latitude: float, longitude: float, radius_meters: int, key?: string}>  $cells
+     * @return list<array{place_id: string, name: string, latitude: float, longitude: float, formatted_address: ?string, primary_type: ?string, business_status: ?string, google_rating?: ?float, google_rating_count?: ?int, cell_keys?: list<string>}>
      *
      * @throws GeographyProviderUnavailable
      */
     public function nearby(array $cells): array;
+
+    /** Paginated keyword searches in bounded rectangles. Results carry the input cell keys for cache counts.
+     * @param  list<array{key: string, query: string, rectangle: array{low: array{latitude: float, longitude: float}, high: array{latitude: float, longitude: float}}}>  $cells
+     * @return list<array{place_id: string, name: string, latitude: float, longitude: float, formatted_address: ?string, primary_type: ?string, business_status: ?string, google_rating?: ?float, google_rating_count?: ?int, cell_keys?: list<string>}>
+     */
+    public function searchText(array $cells): array;
 
     /**
      * Policy-permitted Place Details for one Directory Supplier, or null when Google no longer returns it.

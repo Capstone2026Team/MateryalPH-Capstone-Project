@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:built_collection/built_collection.dart';
@@ -27,10 +28,35 @@ final class AuthRepository {
       _client.dio.interceptors.insert(0, _BuyerAccountRequests());
     }
     configureBuyerTransport(_client.dio);
+    _client.dio.interceptors.add(_BuyerRefresh(this));
   }
 
   final TokenStore _tokenStore;
   final MateryalphApiClient _client;
+  AuthTokens? _tokens;
+  Future<bool>? _refreshing;
+  Future<void> _tokenStorage = Future<void>.value();
+
+  Future<void> _storeTokens(Future<void> Function() operation) =>
+      _tokenStorage = _tokenStorage
+          .catchError((Object _) {})
+          .then((_) => operation());
+  int _sessionEpoch = 0;
+  bool sessionOffline = false;
+  Future<void> Function()? _sessionExpiry;
+
+  void Function() attachSessionExpiry(Future<void> Function() callback) {
+    _sessionExpiry = callback;
+    return () {
+      if (_sessionExpiry == callback) _sessionExpiry = null;
+    };
+  }
+
+  Future<void> _rejectSession() async {
+    await clearAccountSession();
+    await _sessionExpiry?.call();
+  }
+
   Agreement? _registrationTerms;
   Agreement? _reviewedTerms;
 
@@ -109,8 +135,9 @@ final class AuthRepository {
     try {
       return await operation(_client.getAccountsApi());
     } on DioException catch (error) {
-      if (error.response?.statusCode == 401) {
-        await clearAccountSession();
+      if (error.response?.statusCode == 401 &&
+          error.requestOptions.extra['buyerRetried'] != true) {
+        await _rejectSession();
         throw const BuyerSessionExpired();
       }
       throw BuyerAuthException(_messageFrom(error), code: _codeFrom(error));
@@ -118,8 +145,15 @@ final class AuthRepository {
   }
 
   Future<void> clearAccountSession() async {
-    _client.setBearerAuth('passportBearer', '');
-    await _tokenStore.clear();
+    _sessionEpoch++;
+    _tokens = null;
+    sessionOffline = false;
+    _client.removeBearerAuth('passportBearer');
+    try {
+      await _storeTokens(_tokenStore.clear);
+    } catch (_) {
+      /* The session is cleared in memory even if storage is unavailable. */
+    }
   }
 
   Future<AccountProfile> uploadProfilePhoto(
@@ -192,24 +226,44 @@ final class AuthRepository {
     return bytes;
   }
 
+  bool restorationFailed = false;
+
   Future<bool> restoreSession() async {
-    final tokens = await _tokenStore.read();
-    if (tokens == null) {
+    restorationFailed = false;
+    try {
+      _tokens = await _tokenStore.read();
+      if (_tokens == null) return false;
+      _client.setBearerAuth('passportBearer', _tokens!.accessToken);
+      return await revalidateSession();
+    } catch (_) {
+      restorationFailed = true;
+      await clearAccountSession();
       return false;
     }
+  }
 
-    _client.setBearerAuth('passportBearer', tokens.accessToken);
+  /// Cached shell access is retained during provider/network failures; mutations still need the API.
+  Future<bool> revalidateSession() async {
     try {
       await _authentication.getBuyerMobileSession();
+      sessionOffline = false;
       return true;
     } on DioException catch (error) {
-      return error.response?.statusCode == 401
-          ? _refresh(tokens.refreshToken)
-          : false;
-    } catch (_) {
-      // Fail closed when the server cannot validate a stored session. The
-      // encrypted tokens remain available for a later online revalidation.
-      return false;
+      final status = error.response?.statusCode;
+      if (status == 401) {
+        sessionOffline = _tokens != null;
+        return sessionOffline;
+      }
+      if (status != null &&
+          status >= 400 &&
+          status < 500 &&
+          status != 408 &&
+          status != 429) {
+        await _rejectSession();
+        return false;
+      }
+      sessionOffline = _tokens != null;
+      return sessionOffline;
     }
   }
 
@@ -434,8 +488,7 @@ final class AuthRepository {
     } catch (_) {
       // Local sign-out must remain available when the network is unavailable.
     } finally {
-      _client.removeBearerAuth('passportBearer');
-      await _tokenStore.clear();
+      await clearAccountSession();
     }
   }
 
@@ -481,18 +534,56 @@ final class AuthRepository {
     }
   }
 
-  Future<bool> _refresh(String refreshToken) async {
+  Dio _uninterceptedDio() => _client.dio.clone(
+    interceptors: Interceptors()
+      ..addAll(_client.dio.interceptors.where((i) => i is! _BuyerRefresh)),
+  );
+
+  Future<bool> _refreshAfterUnauthorized(String? failedToken) {
+    if (_tokens != null &&
+        failedToken != null &&
+        failedToken != _tokens!.accessToken) {
+      return Future.value(true);
+    }
+    return _refreshing ??= _performRefresh().whenComplete(
+      () => _refreshing = null,
+    );
+  }
+
+  Future<bool> _performRefresh() async {
+    final epoch = _sessionEpoch;
+    AuthTokens? tokens;
     try {
-      final response = await _authentication.refreshBuyerMobileSession(
+      tokens = _tokens ?? await _tokenStore.read();
+    } catch (_) {
+      await _rejectSession();
+      return false;
+    }
+    if (tokens == null) return false;
+    try {
+      final api = MateryalphApiClient(
+        dio: _uninterceptedDio(),
+        interceptors: [],
+      ).getAuthenticationApi();
+      final response = await api.refreshBuyerMobileSession(
         buyerMobileRefreshRequest: BuyerMobileRefreshRequest(
-          (builder) => builder.refreshToken = refreshToken,
+          (b) => b.refreshToken = tokens!.refreshToken,
         ),
       );
+      if (epoch != _sessionEpoch) return false;
       await _saveTokens(response.data?.data);
+      if (epoch != _sessionEpoch) return false;
+      sessionOffline = false;
       return true;
+    } on DioException catch (error) {
+      if ([400, 401, 403, 422].contains(error.response?.statusCode)) {
+        await _rejectSession();
+        return false;
+      }
+      sessionOffline = true;
+      rethrow;
     } catch (_) {
-      _client.removeBearerAuth('passportBearer');
-      await _tokenStore.clear();
+      await _rejectSession();
       return false;
     }
   }
@@ -525,10 +616,19 @@ final class AuthRepository {
       );
     }
 
-    await _tokenStore.write(
-      AuthTokens(accessToken: accessToken, refreshToken: refreshToken),
+    final epoch = _sessionEpoch;
+    final tokens = AuthTokens(
+      accessToken: accessToken,
+      refreshToken: refreshToken,
     );
-    _client.setBearerAuth('passportBearer', accessToken);
+    await _storeTokens(() async {
+      if (epoch != _sessionEpoch) return;
+      await _tokenStore.write(tokens);
+      if (epoch != _sessionEpoch) return;
+      _tokens = tokens;
+      sessionOffline = false;
+      _client.setBearerAuth('passportBearer', accessToken);
+    });
   }
 
   String? _codeFrom(DioException error) {
@@ -642,5 +742,58 @@ final class _BuyerAccountRequests extends Interceptor {
           : const Duration(seconds: 60);
     }
     handler.next(options);
+  }
+}
+
+/// Only bearer-protected calls participate. Refresh and one retry use a separate pipeline so a
+/// queued error cannot deadlock waiting for another error behind itself.
+final class _BuyerRefresh extends QueuedInterceptor {
+  _BuyerRefresh(this.repository);
+  final AuthRepository repository;
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    options.extra['buyerSentAccess'] = repository._tokens?.accessToken;
+    handler.next(options);
+  }
+
+  @override
+  void onError(DioException error, ErrorInterceptorHandler handler) async {
+    final request = error.requestOptions;
+    final secure = request.extra['secure'];
+    final protected =
+        secure is List &&
+        secure.any((s) => s is Map && s['name'] == 'passportBearer');
+    if (error.response?.statusCode != 401 ||
+        !protected ||
+        request.extra['buyerRetried'] == true) {
+      handler.next(error);
+      return;
+    }
+    try {
+      final refreshed = await repository._refreshAfterUnauthorized(
+        request.extra['buyerSentAccess'] as String?,
+      );
+      if (!refreshed) {
+        handler.next(error);
+        return;
+      }
+      final data = request.data;
+      final retry = request.copyWith(
+        data: data is FormData ? data.clone() : data,
+        extra: {...request.extra, 'buyerRetried': true},
+      );
+      final response = await repository._uninterceptedDio().fetch<dynamic>(
+        retry,
+      );
+      handler.resolve(response);
+    } on DioException catch (failure) {
+      // Forward the refresh's network/provider failure, never the original 401.
+      handler.next(failure);
+    } catch (_) {
+      handler.next(
+        DioException(requestOptions: request, type: DioExceptionType.unknown),
+      );
+    }
   }
 }

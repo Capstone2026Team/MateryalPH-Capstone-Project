@@ -7,12 +7,8 @@ import 'discovery_models.dart';
 
 /// A saved location's results older than this are never shown. Google Places content is cached on
 /// the server for up to 7 days (see `GOOGLE_PLACES_CACHE_TTL_HOURS`); the app keeps its own copy for
-/// a shorter 24 hours so a Buyer never sees listings older than a day without a refresh.
+/// a shorter 24 hours for offline previews. Every restored snapshot is revalidated immediately.
 const Duration kDiscoveryCacheTtl = Duration(hours: 24);
-
-/// Results younger than this are shown without any request. Older (still within the TTL) results are
-/// shown at once and refreshed quietly in the background.
-const Duration kDiscoveryFreshWindow = Duration(minutes: 10);
 
 /// A complete, persisted result set for one saved location, radius and default filter set.
 class CachedDiscovery {
@@ -29,7 +25,6 @@ class CachedDiscovery {
   final DateTime savedAt;
 
   bool isExpired(DateTime now) => now.difference(savedAt) >= kDiscoveryCacheTtl;
-  bool isFresh(DateTime now) => now.difference(savedAt) < kDiscoveryFreshWindow;
 }
 
 /// Where completed searches are kept between app launches.
@@ -221,6 +216,8 @@ Map<String, Object?> _itemToJson(SupplierResultView item) => {
   'delivery_max_km': item.deliveryMaximumKm,
   'directory_address': item.directoryAddress,
   'directory_type': item.directoryType,
+  'google_rating': item.googleRating,
+  'google_rating_count': item.googleRatingCount,
 };
 
 SupplierResultView _itemFromJson(Map<String, dynamic> json) {
@@ -259,5 +256,7 @@ SupplierResultView _itemFromJson(Map<String, dynamic> json) {
     deliveryMaximumKm: json['delivery_max_km'] as int?,
     directoryAddress: json['directory_address'] as String?,
     directoryType: json['directory_type'] as String?,
+    googleRating: json['google_rating'] as String?,
+    googleRatingCount: json['google_rating_count'] as int?,
   );
 }

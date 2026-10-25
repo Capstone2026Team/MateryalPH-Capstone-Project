@@ -7,7 +7,7 @@ void main() {
   final instance = MateryalphApiClient().getBuyerDiscoveryApi();
 
   group(BuyerDiscoveryApi, () {
-    // Idempotently saves an active Verified Vendor as a Favorite Supplier. A Directory Supplier returns 422 FAVORITE_REQUIRES_VERIFIED_VENDOR.
+    // Idempotently saves an active Verified Vendor, or a currently listed Directory Supplier result id, as a Favorite Supplier. A Directory Favorite keeps only the Google Place ID and stays informational. An expired Directory result returns 404 DIRECTORY_SUPPLIER_NOT_FOUND.
     //
     //Future<FavoriteSupplierStateEnvelope> addFavoriteSupplier(String vendorId) async
     test('test addFavoriteSupplier', () async {
@@ -35,14 +35,14 @@ void main() {
       // TODO
     });
 
-    // The Buyer's Favorite Suppliers (Verified Vendors only). A Favorite without eligible offerings stays listed with currently_discoverable false.
+    // The Buyer's Favorite Suppliers, Verified Vendors and Directory Suppliers, newest first. A Favorite without eligible offerings, or a Directory Favorite not in the current Google cache, stays listed with currently_discoverable false.
     //
     //Future<FavoriteSupplierListEnvelope> listFavoriteSuppliers({ int page }) async
     test('test listFavoriteSuppliers', () async {
       // TODO
     });
 
-    // Idempotently removes a Favorite Supplier. Transaction and audit history are unaffected.
+    // Idempotently removes a Favorite Supplier by Verified Vendor id, Directory Supplier result id or the vendor_id returned by listFavoriteSuppliers. Transaction and audit history are unaffected.
     //
     //Future<FavoriteSupplierStateEnvelope> removeFavoriteSupplier(String vendorId) async
     test('test removeFavoriteSupplier', () async {

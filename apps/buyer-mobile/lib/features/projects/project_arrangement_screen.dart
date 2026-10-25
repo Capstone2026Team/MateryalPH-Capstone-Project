@@ -1,3 +1,5 @@
+import 'project_supplier_view.dart';
+import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -30,11 +32,14 @@ class ProjectArrangementScreen extends StatefulWidget {
     super.key,
     required this.repository,
     required this.package,
-    required this.option,
+    this.option,
+    this.arrangementId,
     required this.links,
   });
   final ProjectsRepository repository;
-  final ProjectData package, option;
+  final api.WorkPackageView package;
+  final api.ProjectArrangement? option;
+  final String? arrangementId;
   final ProjectSourcingLinks links;
   @override
   State<ProjectArrangementScreen> createState() =>
@@ -42,7 +47,7 @@ class ProjectArrangementScreen extends StatefulWidget {
 }
 
 class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
-  ProjectData? arrangement;
+  api.ProjectArrangement? arrangement;
   bool busy = false, loading = true, acknowledged = false;
   int stage = 0;
   String? error;
@@ -50,13 +55,12 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
   String? submitKey;
   final payments = <String, String>{};
   final note = TextEditingController(), reason = TextEditingController();
-  String get packageId => projectText(widget.package['id']);
-  String get id => projectText(arrangement?['id']);
-  List<ProjectData> get vendors => projectRows(arrangement?['vendors']);
-  ProjectData get coverage => projectObject(arrangement?['coverage']);
-  List<ProjectData> get requirements => projectRows(
-    projectObject(projectObject(widget.package['version'])['content'])['lines'],
-  );
+  String get packageId => projectText(widget.package.id);
+  String get id => projectText(arrangement?.id);
+  List<ProjectData> get vendors => projectRows(arrangement?.vendors);
+  ProjectData get coverage => projectObject(arrangement?.coverage);
+  List<ProjectData> get requirements =>
+      projectRows(projectObject(widget.package.version?.content)['lines']);
   bool get hasPending => vendors.any((v) => v['requested'] != true);
   bool get allQuoted =>
       vendors.isNotEmpty &&
@@ -71,8 +75,8 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
       !loading &&
       !busy &&
       vendors.isNotEmpty &&
-      ((arrangement!['issues'] as List?) ?? const []).isEmpty &&
-      arrangement!['stale'] != true;
+      arrangement!.issues.isEmpty &&
+      arrangement!.stale != true;
   bool get paymentsReady => vendors.every(
     (v) =>
         v['requested'] == true ||
@@ -92,10 +96,10 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
     super.dispose();
   }
 
-  void _accept(ProjectData next) {
+  void _accept(api.ProjectArrangement next) {
     arrangement = next;
     acknowledged = false;
-    for (final v in projectRows(next['vendors'])) {
+    for (final v in projectRows(next.vendors)) {
       final vendorId = projectText(v['vendor_id']);
       if (v['requested'] != true &&
           !available(v).contains(payments[vendorId])) {
@@ -112,16 +116,21 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
     try {
       final next = arrangement != null
           ? await widget.repository.arrangement(packageId, id)
-          : projectInt(widget.option['version']) > 0
+          : widget.arrangementId != null
           ? await widget.repository.arrangement(
               packageId,
-              projectText(widget.option['id']),
+              widget.arrangementId!,
+            )
+          : projectInt(widget.option?.version) > 0
+          ? await widget.repository.arrangement(
+              packageId,
+              projectText(widget.option!.id),
             )
           : await widget.repository.createArrangement(
               packageId,
-              projectText(widget.option['source_candidate_id']),
+              projectText(widget.option!.sourceCandidateId),
               createKey,
-              proposalToken: widget.option['proposal_token'] as String?,
+              proposalToken: widget.option!.proposalToken,
             );
       if (mounted) setState(() => _accept(next));
     } on DiscoveryFailure catch (e) {
@@ -139,7 +148,7 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
     });
     try {
       final next = await widget.repository.editArrangement(packageId, id, {
-        'version': arrangement!['version'],
+        'version': arrangement!.version,
         ...input,
       });
       if (mounted) {
@@ -181,7 +190,7 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
   }
 
   Future<void> _offers(ProjectData requirement) async {
-    final selected = await showBuyerBottomSheet<ProjectData>(
+    final selected = await showBuyerBottomSheet<api.WorkPackageAlternative>(
       context: context,
       builder: (context) => _ArrangementOffers(
         repository: widget.repository,
@@ -192,21 +201,19 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
       ),
     );
     if (selected == null || !mounted) return;
-    final methods = (selected['fulfillment_methods'] as List?) ?? const [];
-    final current = vendors.where(
-      (v) => v['vendor_id'] == selected['vendor_id'],
-    );
+    final methods = selected.fulfillmentMethods.map(projectText).toList();
+    final current = vendors.where((v) => v['vendor_id'] == selected.vendorId);
     final preferred = current.isNotEmpty
         ? projectText(current.first['fulfillment_method'])
         : projectText(
             projectObject(
-              projectObject(widget.package['version'])['content'],
+              widget.package.version?.content,
             )['fulfillment_method'],
           );
     await _edit({
       'line_id': requirement['id'],
-      'variant_id': selected['variant_id'],
-      'price_version_id': selected['price_version_id'],
+      'variant_id': selected.variantId,
+      'price_version_id': selected.priceVersionId,
       'method': methods.contains(preferred)
           ? preferred
           : methods.contains('DELIVERY')
@@ -263,7 +270,7 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
     try {
       final current = await widget.repository.package(packageId);
       await widget.repository.resolve(packageId, projectText(line['line_id']), {
-        'lock_version': current['lock_version'],
+        'lock_version': current.lockVersion,
         'reason': written,
       });
       if (mounted) await _refresh();
@@ -295,7 +302,7 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
         packageId,
         id,
         projectText(vendor['vendor_id']),
-        projectInt(arrangement!['version']),
+        projectInt(arrangement!.version),
       );
       if (!mounted) return;
       setState(() => _accept(next));
@@ -332,8 +339,8 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
     });
     try {
       final next = await widget.repository.submitArrangement(packageId, id, {
-        'version': arrangement!['version'],
-        'fingerprint': arrangement!['fingerprint'],
+        'version': arrangement!.version,
+        'fingerprint': arrangement!.fingerprint,
         'acknowledged': acknowledged,
         'payments': [
           for (final vendor in vendors)
@@ -420,7 +427,7 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
                 ),
               if (arrangement != null) ...[
                 Text(
-                  projectText(widget.package['name']),
+                  projectText(widget.package.name),
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -443,14 +450,14 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
                       ? 'Review each vendor’s current quotation version. Acceptance and payment remain separate steps.'
                       : 'Estimates are advisory. Issued quotations are identified under each vendor. Review confirmations before approval and payment.',
                 ),
-                if (arrangement!['stale'] == true)
+                if (arrangement!.stale == true)
                   const StatusBand(
                     tone: BandTone.warning,
                     title: 'Estimate expired',
                     message:
                         'Return to Quotation options and refresh the estimate before continuing.',
                   ),
-                if (arrangement!['submitted'] == true)
+                if (arrangement!.submitted == true)
                   Padding(
                     padding: const EdgeInsets.only(top: 12),
                     child: Text(
@@ -488,7 +495,7 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
                             ),
                           ),
                       if (stage == 0 &&
-                          arrangement!['submitted'] == true &&
+                          arrangement!.submitted == true &&
                           vendors.any((v) => v['order_id'] != null))
                         for (final line in projectRows(coverage['lines']))
                           if ((double.tryParse(
@@ -529,7 +536,7 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
                     for (final (index, vendor) in vendors.indexed) ...[
                       if (index > 0) const Divider(height: 24),
                       ProjectSupplierFulfillment(
-                        group: vendor,
+                        group: ProjectSupplierView.arrangement(vendor),
                         showStore: true,
                       ),
                       if (stage == 0 &&
@@ -539,7 +546,7 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
                                       0) >
                                   1 ||
                               ProjectSupplierFulfillment.requiresMixerDelivery(
-                                vendor,
+                                ProjectSupplierView.arrangement(vendor),
                               )))
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
@@ -566,7 +573,7 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
                                         }),
                                 ),
                               if (ProjectSupplierFulfillment.requiresMixerDelivery(
-                                vendor,
+                                ProjectSupplierView.arrangement(vendor),
                               ))
                                 const Tooltip(
                                   message:
@@ -585,7 +592,11 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
                           tilePadding: EdgeInsets.zero,
                           title: const Text('Delivery configuration'),
                           children: [
-                            ProjectDeliveryConfiguration(candidate: vendor),
+                            ProjectDeliveryConfiguration(
+                              candidate: ProjectSupplierView.arrangement(
+                                vendor,
+                              ),
+                            ),
                           ],
                         ),
                     ],
@@ -596,11 +607,11 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
                   children: [
                     _amount(
                       'Materials · all vendors',
-                      arrangement!['materials_centavos'],
+                      arrangement!.materialsCentavos,
                     ),
                     _amount(
                       'Delivery fee · all vendors',
-                      arrangement!['delivery_centavos'],
+                      arrangement!.deliveryCentavos,
                     ),
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 4),
@@ -614,9 +625,9 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
                     const Divider(height: 28),
                     Center(
                       child: Text(
-                        arrangement!['total_centavos'] == null
+                        arrangement!.totalCentavos == null
                             ? 'Cost review required'
-                            : projectMoney(arrangement!['total_centavos']),
+                            : projectMoney(arrangement!.totalCentavos),
                         style: theme.textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
@@ -624,26 +635,24 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
                     ),
                     const Center(child: Text('Projected total · all vendors')),
                     const SizedBox(height: 16),
-                    if (arrangement!['total_centavos'] != null)
+                    if (arrangement!.totalCentavos != null)
                       _amount(
-                        projectInt(arrangement!['total_centavos']) >
-                                projectInt(widget.package['budget_centavos'])
+                        projectInt(arrangement!.totalCentavos) >
+                                projectInt(widget.package.budgetCentavos)
                             ? 'Over budget by'
                             : 'Budget remaining',
-                        (projectInt(widget.package['budget_centavos']) -
-                                projectInt(arrangement!['total_centavos']))
+                        (projectInt(widget.package.budgetCentavos) -
+                                projectInt(arrangement!.totalCentavos))
                             .abs(),
                       ),
                     Row(
                       children: [
                         Expanded(
                           child: Text(
-                            'Work Package budget\n${projectMoney(widget.package['budget_centavos'])}',
+                            'Work Package budget\n${projectMoney(widget.package.budgetCentavos)}',
                           ),
                         ),
-                        BudgetStatusChip(
-                          projectText(arrangement!['budget_label']),
-                        ),
+                        BudgetStatusChip(projectText(arrangement!.budgetLabel)),
                       ],
                     ),
                   ],
@@ -651,13 +660,14 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
                   child: FulfillmentScoreTile(
-                    candidate: arrangement!,
-                    position: projectInt(arrangement!['rank']),
+                    factors: projectObject(arrangement!.fms),
+                    vendors: projectRows(arrangement!.vendors),
+                    position: projectInt(arrangement!.rank),
                     arrangement: true,
                   ),
                 ),
                 for (final previous in projectRows(
-                  arrangement!['previous_vendors'],
+                  arrangement!.previousVendors,
                 ))
                   ListTile(
                     contentPadding: EdgeInsets.zero,
@@ -696,7 +706,7 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
                           'Informational only; no separate response required.',
                     ),
                   ),
-                  if (arrangement!['budget_label'] == 'OVER_BUDGET')
+                  if (arrangement!.budgetLabel == 'OVER_BUDGET')
                     TextField(
                       controller: reason,
                       minLines: 2,
@@ -935,6 +945,8 @@ class ArrangementPanel extends StatelessWidget {
   );
 }
 
+/// One procurement option: rank and FMS, total with budget status, the
+/// member Vendors, coverage, and the routes / quotation actions.
 class ProjectArrangementCard extends StatelessWidget {
   const ProjectArrangementCard({
     super.key,
@@ -944,271 +956,178 @@ class ProjectArrangementCard extends StatelessWidget {
     required this.onReview,
     required this.onVendor,
     this.rankingPosition,
+    this.routes,
+    this.onHideRoutes,
   });
-  final ProjectData option;
+  final api.ProjectArrangement option;
   final int? rankingPosition;
   final bool selected;
   final VoidCallback onSelect, onReview;
   final ValueChanged<String> onVendor;
+
+  /// The members' road routes, shown in place of the Vendor rows while this
+  /// option is selected on the map.
+  final Widget? routes;
+  final VoidCallback? onHideRoutes;
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final vendors = projectRows(option['vendors']);
-    final coverage = projectObject(option['coverage']);
-    final complete =
-        projectInt(coverage['lines_total']) > 0 &&
-        projectInt(coverage['lines_fulfilled']) ==
-            projectInt(coverage['lines_total']);
+    final muted = theme.textTheme.bodySmall?.copyWith(color: BuyerTheme.muted);
+    final vendors = projectRows(option.vendors);
+    final coverage = projectObject(option.coverage);
+    final fulfilled = projectInt(coverage['lines_fulfilled']);
+    final total = projectInt(coverage['lines_total']);
+    final remaining = projectInt(coverage['lines_remaining']);
+    final complete = total > 0 && fulfilled == total;
     final single = vendors.length == 1 && complete;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: vendorCardDecoration(context),
+    final coverageColor = complete
+        ? BuyerTheme.successStrong
+        : BuyerTheme.actionPressed;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
+          borderRadius: BorderRadius.circular(20),
           onTap: onSelect,
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: selected
-                ? BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: BuyerTheme.action, width: 2),
-                  )
-                : null,
+          child: Ink(
+            decoration: vendorCardDecoration(context, selected: selected),
+            padding: const EdgeInsets.fromLTRB(16, 8, 12, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (rankingPosition != null) ...[
-                  RankingIndicator(
-                    position: rankingPosition!,
-                    recommendation: RankingRecommendation.bestMatch,
-                    description:
-                        'Based on material coverage, complete cost and your ranking preferences.',
-                  ),
-                  const SizedBox(height: 12),
-                ],
                 Row(
                   children: [
-                    Icon(
-                      single ? LucideIcons.store : LucideIcons.layers,
-                      size: 18,
-                      color: BuyerTheme.actionPressed,
-                    ),
-                    const SizedBox(width: 8),
                     Expanded(
-                      child: Text(
-                        single ? 'Complete package' : 'Quotation group',
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: BuyerTheme.actionPressed,
-                        ),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: rankingPosition == null
+                            ? Text('Estimated total', style: muted)
+                            : RankingIndicator(
+                                position: rankingPosition!,
+                                recommendation: RankingRecommendation.bestMatch,
+                                compact: true,
+                              ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Flexible(
-                      child: Text(
-                        '${vendors.length} vendor${vendors.length == 1 ? '' : 's'}',
-                        textAlign: TextAlign.right,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: BuyerTheme.muted,
-                        ),
+                      child: FulfillmentScoreBadge(
+                        factors: projectObject(option.fms),
+                        vendors: vendors,
+                        position: rankingPosition ?? 0,
+                        arrangement: true,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                if (single) ...[
-                  Text(
-                    projectText(vendors.first['store_name']),
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text('Main vendor', style: theme.textTheme.bodySmall),
-                ] else ...[
-                  for (final vendor in vendors)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 5),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (rankingPosition != null)
+                        Text('Estimated total', style: muted),
+                      // Wraps the chip under the total on narrow, large text.
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        runSpacing: 4,
                         children: [
+                          Text(
+                            option.totalCentavos == null
+                                ? 'Cost review required'
+                                : projectMoney(option.totalCentavos),
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          BudgetStatusChip(projectText(option.budgetLabel)),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        option.totalCentavos == null
+                            ? 'Materials or delivery estimates need review'
+                            : 'Materials ${_amount(option.materialsCentavos)} · '
+                                  'Delivery ${_amount(option.deliveryCentavos)}',
+                        style: muted,
+                      ),
+                      const Divider(height: 24),
+                      Row(
+                        children: [
+                          Icon(
+                            single ? LucideIcons.store : LucideIcons.layers,
+                            size: 16,
+                            color: BuyerTheme.muted,
+                          ),
+                          const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              projectText(vendor['store_name']),
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
+                              single
+                                  ? 'One Vendor for all materials'
+                                  : 'Quotation group · ${vendors.length} vendor${vendors.length == 1 ? '' : 's'}',
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: BuyerTheme.muted,
                               ),
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
+                          Icon(
+                            complete
+                                ? LucideIcons.circleCheck
+                                : LucideIcons.triangleAlert,
+                            size: 16,
+                            color: coverageColor,
+                          ),
+                          const SizedBox(width: 4),
                           Flexible(
                             child: Text(
-                              '${projectRows(vendor['items']).map((i) => i['line_id']).toSet().length} material${projectRows(vendor['items']).map((i) => i['line_id']).toSet().length == 1 ? '' : 's'}',
-                              textAlign: TextAlign.right,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: BuyerTheme.muted,
+                              '$fulfilled/$total materials',
+                              semanticsLabel:
+                                  '$fulfilled of $total materials covered',
+                              textAlign: TextAlign.end,
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: coverageColor,
                               ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                ],
-                const SizedBox(height: 12),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      complete
-                          ? LucideIcons.circleCheck
-                          : LucideIcons.triangleAlert,
-                      size: 18,
-                      color: complete
-                          ? BuyerTheme.successStrong
-                          : BuyerTheme.actionPressed,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '${projectInt(coverage['lines_fulfilled'])}/${projectInt(coverage['lines_total'])} materials covered',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: complete
-                              ? BuyerTheme.successStrong
-                              : BuyerTheme.actionPressed,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const Divider(height: 24),
-                _CardAmount('Materials', option['materials_centavos']),
-                _CardAmount(
-                  'Delivery · all vendors',
-                  option['delivery_centavos'],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Estimated total',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: BuyerTheme.muted,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  option['total_centavos'] == null
-                      ? 'Cost review required'
-                      : projectMoney(option['total_centavos']),
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                Text(
-                  option['total_centavos'] == null
-                      ? 'Materials or delivery estimates need review'
-                      : complete
-                      ? 'All materials and applicable delivery fees'
-                      : 'Selected materials and delivery · incomplete coverage',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: BuyerTheme.muted,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: BudgetStatusChip(projectText(option['budget_label'])),
-                ),
-                if (projectInt(coverage['lines_remaining']) > 0)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      '${projectInt(coverage['lines_remaining'])} material requirements still need a supplier.',
-                    ),
-                  ),
-                if (((option['issues'] as List?) ?? const []).isNotEmpty)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8),
-                    child: Text(
-                      'Review specifications or delivery details before submitting.',
-                    ),
-                  ),
-                const Divider(height: 24),
-                FulfillmentScoreTile(
-                  candidate: option,
-                  position: rankingPosition ?? 0,
-                  arrangement: true,
-                  outlined: false,
-                ),
-                ExpansionTile(
-                  shape: const Border(),
-                  collapsedShape: const Border(),
-                  tilePadding: EdgeInsets.zero,
-                  childrenPadding: EdgeInsets.zero,
-                  title: Text(
-                    'Vendor details',
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                  subtitle: Text(
-                    'Distance, rating and individual FMS',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: BuyerTheme.muted,
-                    ),
-                  ),
-                  children: [
-                    for (final vendor in vendors)
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(projectText(vendor['store_name'])),
-                        subtitle: Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Wrap(
-                            spacing: 12,
-                            runSpacing: 4,
-                            children: [
-                              Text(kilometres(vendor['distance_meters'])),
-                              Text(projectText(vendor['score_label'])),
-                              Text(
-                                fulfillmentLabel(vendor['fulfillment_method']),
-                              ),
-                              if (projectObject(vendor['fms'])['score'] != null)
-                                Text(
-                                  'Vendor FMS · ${projectObject(vendor['fms'])['score']}/100',
-                                ),
-                            ],
+                      const SizedBox(height: 4),
+                      if (routes != null)
+                        routes!
+                      else
+                        for (final vendor in vendors)
+                          _ArrangementVendorRow(
+                            vendor: vendor,
+                            onTap: () =>
+                                onVendor(projectText(vendor['vendor_id'])),
                           ),
+                      if (remaining > 0 || option.issues.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        StatusBand(
+                          tone: BandTone.warning,
+                          title: remaining > 0
+                              ? '$remaining material requirement${remaining == 1 ? ' still needs' : 's still need'} a supplier.'
+                              : _reviewIssues,
+                          message: remaining > 0 && option.issues.isNotEmpty
+                              ? _reviewIssues
+                              : null,
                         ),
-                        trailing: const Icon(LucideIcons.mapPin, size: 18),
-                        onTap: () => onVendor(projectText(vendor['vendor_id'])),
+                      ],
+                      const SizedBox(height: 12),
+                      _CardActions(
+                        showingRoutes: routes != null,
+                        onRoutes: routes != null && onHideRoutes != null
+                            ? onHideRoutes!
+                            : onSelect,
+                        onReview: onReview,
                       ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(
-                      LucideIcons.info,
-                      size: 16,
-                      color: BuyerTheme.muted,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        'System-compiled estimate',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: BuyerTheme.muted,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                FilledButton.icon(
-                  onPressed: onReview,
-                  icon: const Icon(LucideIcons.arrowRight, size: 18),
-                  iconAlignment: IconAlignment.end,
-                  label: const Text('View quotation'),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -1217,42 +1136,138 @@ class ProjectArrangementCard extends StatelessWidget {
       ),
     );
   }
+
+  static const _reviewIssues =
+      'Review specifications or delivery details before submitting.';
+
+  static String _amount(Object? centavos) =>
+      centavos == null ? 'Vendor review' : projectMoney(centavos);
 }
 
-class _CardAmount extends StatelessWidget {
-  const _CardAmount(this.label, this.amount);
-  final String label;
-  final Object? amount;
+/// Routes beside View quotation. Routes takes its label's width (it never
+/// wraps into "Rou-tes"); when that would take more than half the row, as
+/// with large text, the two actions stack with View quotation first.
+class _CardActions extends StatelessWidget {
+  const _CardActions({
+    required this.showingRoutes,
+    required this.onRoutes,
+    required this.onReview,
+  });
+  final bool showingRoutes;
+  final VoidCallback onRoutes, onReview;
+
+  static const _padding = 16.0, _icon = 18.0, _gap = 8.0;
+
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 3),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Text(
-            label,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: BuyerTheme.muted),
-          ),
+  Widget build(BuildContext context) {
+    final label = showingRoutes ? 'Hide routes' : 'Routes';
+    final routes = OutlinedButton.icon(
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(52, 52),
+        padding: const EdgeInsets.symmetric(horizontal: _padding),
+      ),
+      onPressed: onRoutes,
+      icon: Icon(
+        showingRoutes ? LucideIcons.mapPinOff : LucideIcons.mapPin,
+        size: _icon,
+      ),
+      label: Text(label, maxLines: 1, softWrap: false),
+    );
+    final review = FilledButton(
+      onPressed: onReview,
+      child: const Text('View quotation', textAlign: TextAlign.center),
+    );
+    final painter = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+          fontFamily: 'Inter',
+          fontWeight: FontWeight.w700,
         ),
-        const SizedBox(width: 12),
-        Flexible(
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              amount == null ? 'Vendor review' : projectMoney(amount),
-              textAlign: TextAlign.right,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+      ),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final needed = painter.width + _padding * 2 + _icon + _gap + 4;
+    painter.dispose();
+    return LayoutBuilder(
+      builder: (context, box) => needed > box.maxWidth / 2
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [review, const SizedBox(height: 8), routes],
+            )
+          : Row(
+              children: [
+                routes,
+                const SizedBox(width: 12),
+                Expanded(child: review),
+              ],
             ),
+    );
+  }
+}
+
+/// A member Vendor: store, its material count, distance and method. Tapping
+/// focuses that Vendor's route on the map.
+class _ArrangementVendorRow extends StatelessWidget {
+  const _ArrangementVendorRow({required this.vendor, required this.onTap});
+  final ProjectData vendor;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final materials = projectRows(
+      vendor['items'],
+    ).map((i) => i['line_id']).toSet().length;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      projectText(vendor['store_name']),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      [
+                        '$materials material${materials == 1 ? '' : 's'}',
+                        if (vendor['distance_meters'] != null)
+                          kilometres(vendor['distance_meters']),
+                        if (vendor['fulfillment_method'] != null)
+                          fulfillmentLabel(vendor['fulfillment_method']),
+                      ].join(' · '),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: BuyerTheme.muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(
+                LucideIcons.chevronRight,
+                size: 18,
+                color: BuyerTheme.muted,
+              ),
+            ],
           ),
         ),
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }
 
 class _ArrangementOffers extends StatefulWidget {
@@ -1272,7 +1287,7 @@ class _ArrangementOffers extends StatefulWidget {
 }
 
 class _ArrangementOffersState extends State<_ArrangementOffers> {
-  ProjectData? page;
+  api.WorkPackageAlternativePage? page;
   String? error;
   bool loading = false;
   @override
@@ -1291,18 +1306,14 @@ class _ArrangementOffersState extends State<_ArrangementOffers> {
         widget.packageId,
         projectText(widget.requirement['id']),
         arrangementId: widget.arrangementId,
-        page: more ? projectInt(page?['page']) + 1 : 1,
+        page: more ? projectInt(page?.page) + 1 : 1,
       );
       if (mounted) {
         setState(
           () => page = more
-              ? {
-                  ...next,
-                  'items': [
-                    ...projectRows(page?['items']),
-                    ...projectRows(next['items']),
-                  ],
-                }
+              ? next.rebuild(
+                  (b) => b.items.replace([...?page?.items, ...next.items]),
+                )
               : next,
         );
       }
@@ -1333,17 +1344,17 @@ class _ArrangementOffersState extends State<_ArrangementOffers> {
             title: error!,
             action: TextButton(onPressed: _load, child: const Text('Retry')),
           ),
-        if (page != null && projectRows(page!['items']).isEmpty && !loading)
+        if (page != null && page!.items.toList().isEmpty && !loading)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Text(noAlternativeMessage(page!, widget.requirement)),
           ),
-        for (final offer in projectRows(page?['items']))
+        for (final offer in page?.items ?? <api.WorkPackageAlternative>[])
           OfferRow(
             offer: offer,
             adding: loading,
-            quantity: materialQuantity(page?['needed_quantity']),
-            onAdd: offer['already_added'] == true
+            quantity: materialQuantity(page?.neededQuantity),
+            onAdd: offer.alreadyAdded == true
                 ? null
                 : () => Navigator.pop(context, offer),
             onOpen: widget.links.openProduct == null
@@ -1351,7 +1362,7 @@ class _ArrangementOffersState extends State<_ArrangementOffers> {
                 : (listing, variant) =>
                       widget.links.openProduct!(context, listing, variant),
           ),
-        if (page?['has_more'] == true)
+        if (page?.hasMore == true)
           OutlinedButton(
             onPressed: loading ? null : () => _load(more: true),
             child: const Text('More products'),

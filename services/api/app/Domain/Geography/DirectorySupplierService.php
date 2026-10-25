@@ -23,31 +23,39 @@ final class DirectorySupplierService
     public function __construct(private readonly PlacesProvider $places) {}
 
     /**
-     * Directory rows inside the exact scope radius, refreshing uncached search cells first.
+     * Directory rows inside the exact scope radius, refreshing uncached search cells first. With a Buyer id, only
+     * that Buyer's Favorite Directory Suppliers are returned.
      *
      * @return array{rows: list<object>, status: string, as_of: ?string}
      */
-    public function within(GeographyScope $scope): array
+    public function within(GeographyScope $scope, ?float $minimumRating = null, ?int $maximumDistanceKm = null, ?string $favoritesOfBuyerId = null): array
     {
-        $cells = $this->cells($scope);
+        $cells = [...$this->cells($scope), ...$this->textCells($scope)];
         $cached = DB::table('place_cache_entries')->whereIn('cache_key_hash', array_column($cells, 'key'))
             ->where('kind', 'SEARCH_CELL')->where('expires_at', '>', now())->pluck('cache_key_hash')->flip()->all();
         $missing = array_values(array_filter($cells, static fn (array $cell): bool => ! isset($cached[$cell['key']])));
         $status = 'AVAILABLE';
-        if ($missing !== []) {
+        foreach ([false, true] as $textSearch) {
+            $searchCells = array_values(array_filter($missing, static fn (array $cell): bool => isset($cell['query']) === $textSearch));
             try {
-                // Keep successful cells if a later batch hits a provider limit; failed cells stay
-                // uncached and can be retried. No transaction spans a provider request.
-                foreach (array_chunk($missing, 16) as $batch) {
-                    $places = $this->places->nearby(array_map(static fn (array $cell): array => array_intersect_key($cell, array_flip(['latitude', 'longitude', 'radius_meters'])), $batch));
+                foreach (array_chunk($searchCells, 16) as $batch) {
+                    $places = $textSearch ? $this->places->searchText($batch) : $this->places->nearby($batch);
                     $this->store($batch, $places);
                 }
             } catch (GeographyProviderUnavailable $unavailable) {
                 $status = $unavailable->reason === 'NOT_CONFIGURED' ? 'NOT_CONFIGURED' : 'UNAVAILABLE';
             }
         }
-        $rows = $this->visible()->whereRaw('ST_DWithin(d.location, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?)', [$scope->longitude, $scope->latitude, $scope->membershipMeters()])
-            ->selectRaw('d.id, d.name, d.formatted_address, d.primary_type, d.latitude, d.longitude, d.refreshed_at, ST_Distance(d.location, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography) AS distance_meters', [$scope->longitude, $scope->latitude])
+        $query = $this->visible();
+        if ($minimumRating !== null) {
+            $query->where('d.google_rating', '>=', $minimumRating);
+        }
+        if ($favoritesOfBuyerId !== null) {
+            $query->whereExists(fn (Builder $favorite) => $favorite->selectRaw('1')->from('favorite_directory_suppliers as fd')
+                ->whereColumn('fd.google_place_id', 'd.google_place_id')->where('fd.buyer_profile_id', $favoritesOfBuyerId));
+        }
+        $rows = $query->whereRaw('ST_DWithin(d.location, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?)', [$scope->longitude, $scope->latitude, min($scope->membershipMeters(), $maximumDistanceKm === null ? $scope->membershipMeters() : $maximumDistanceKm * 1000 + 0.01)])
+            ->selectRaw('d.id, d.google_place_id, d.name, d.formatted_address, d.primary_type, d.latitude, d.longitude, d.refreshed_at, d.google_rating, d.google_rating_count, ST_Distance(d.location, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography) AS distance_meters', [$scope->longitude, $scope->latitude])
             ->get()->all();
         if ($status !== 'AVAILABLE' && $rows !== []) {
             $status = 'CACHED';
@@ -181,14 +189,14 @@ final class DirectorySupplierService
         $types = implode(',', (array) config('services.google_maps.places.included_types', []));
 
         return array_map(static fn (array $circle): array => [
-            'key' => hash('sha256', 'cell|v3|'.implode('|', $circle).'|'.$types),
+            'key' => hash('sha256', 'cell|v4|'.implode('|', $circle).'|'.$types),
             'latitude' => round($circle[0], 6), 'longitude' => round($circle[1], 6), 'radius_meters' => $circle[2],
         ], $circles);
     }
 
     /**
-     * @param  list<array{key: string, latitude: float, longitude: float, radius_meters: int}>  $cells
-     * @param  list<array{place_id: string, name: string, latitude: float, longitude: float, formatted_address: ?string, primary_type: ?string, business_status: ?string}>  $places
+     * @param  list<array{key: string}>  $cells
+     * @param  list<array{place_id: string, name: string, latitude: float, longitude: float, formatted_address: ?string, primary_type: ?string, business_status: ?string, google_rating?: ?float, google_rating_count?: ?int, cell_keys?: list<string>}>  $places
      */
     private function store(array $cells, array $places): void
     {
@@ -198,20 +206,53 @@ final class DirectorySupplierService
                 if (! PhilippineBounds::contains($place['latitude'], $place['longitude'])) {
                     continue;
                 }
-                DB::statement('INSERT INTO directory_suppliers (id, google_place_id, name, formatted_address, latitude, longitude, location, primary_type, business_status, refreshed_at, expires_at, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?, ?, now(), ?, now(), now())
+                DB::statement('INSERT INTO directory_suppliers (id, google_place_id, name, formatted_address, latitude, longitude, location, primary_type, business_status, google_rating, google_rating_count, refreshed_at, expires_at, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?, ?, ?, ?, now(), ?, now(), now())
                     ON CONFLICT (google_place_id) DO UPDATE SET name = EXCLUDED.name, formatted_address = EXCLUDED.formatted_address, latitude = EXCLUDED.latitude, longitude = EXCLUDED.longitude,
-                    location = EXCLUDED.location, primary_type = EXCLUDED.primary_type, business_status = EXCLUDED.business_status, refreshed_at = now(), expires_at = EXCLUDED.expires_at, updated_at = now()', [
+                    location = EXCLUDED.location, primary_type = EXCLUDED.primary_type, business_status = EXCLUDED.business_status, google_rating = EXCLUDED.google_rating, google_rating_count = EXCLUDED.google_rating_count, refreshed_at = now(), expires_at = EXCLUDED.expires_at, updated_at = now()', [
                     (string) Str::uuid7(), $place['place_id'], $place['name'], $place['formatted_address'], $place['latitude'], $place['longitude'], $place['longitude'], $place['latitude'],
-                    $place['primary_type'], $place['business_status'], $expires,
+                    $place['primary_type'], $place['business_status'], $place['google_rating'] ?? null, $place['google_rating_count'] ?? null, $expires,
                 ]);
             }
             foreach ($cells as $cell) {
                 DB::table('place_cache_entries')->upsert([['id' => (string) Str::uuid7(), 'cache_key_hash' => $cell['key'], 'kind' => 'SEARCH_CELL', 'provider' => 'GOOGLE',
-                    'payload' => json_encode(['result_count' => count($places)], JSON_THROW_ON_ERROR), 'expires_at' => $expires, 'created_at' => now(), 'updated_at' => now()]],
+                    'payload' => json_encode(['result_count' => count(array_filter($places, static fn (array $place): bool => in_array($cell['key'], $place['cell_keys'] ?? [], true)))], JSON_THROW_ON_ERROR), 'expires_at' => $expires, 'created_at' => now(), 'updated_at' => now()]],
                     ['cache_key_hash'], ['payload', 'expires_at', 'created_at', 'updated_at']);
             }
         });
+    }
+
+    /** @return list<array{key: string, query: string, rectangle: array{low: array{latitude: float, longitude: float}, high: array{latitude: float, longitude: float}}}> */
+    public function textCells(GeographyScope $scope): array
+    {
+        $spacing = max(5, min(50, (int) config('services.google_maps.places.text_cell_km', 20))) * 1000;
+        $radius = $scope->radiusMeters();
+        $latitude = round((float) $scope->latitude, 2);
+        $longitude = round((float) $scope->longitude, 2);
+        $steps = (int) ceil($radius / $spacing + 0.5);
+        $cells = [];
+        foreach (array_slice((array) config('services.google_maps.places.text_queries', []), 0, 12) as $query) {
+            if (! is_string($query) || trim($query) === '') {
+                continue;
+            }
+            $query = mb_substr(trim($query), 0, 100);
+            for ($y = -$steps; $y <= $steps; $y++) {
+                for ($x = -$steps; $x <= $steps; $x++) {
+                    if (hypot(max(0, abs($x * $spacing) - $spacing / 2), max(0, abs($y * $spacing) - $spacing / 2)) > $radius) {
+                        continue;
+                    }
+                    $lat = $latitude + rad2deg($y * $spacing / 6371000);
+                    $lng = $longitude + rad2deg($x * $spacing / (6371000 * cos(deg2rad($latitude))));
+                    $halfLat = rad2deg(($spacing / 2 + 1600) / 6371000);
+                    $halfLng = $halfLat / cos(deg2rad($latitude));
+                    $rectangle = ['low' => ['latitude' => round($lat - $halfLat, 6), 'longitude' => round($lng - $halfLng, 6)],
+                        'high' => ['latitude' => round($lat + $halfLat, 6), 'longitude' => round($lng + $halfLng, 6)]];
+                    $cells[] = ['key' => hash('sha256', 'text|v1|'.$query.'|'.json_encode($rectangle, JSON_THROW_ON_ERROR)), 'query' => $query, 'rectangle' => $rectangle];
+                }
+            }
+        }
+
+        return $cells;
     }
 
     private function ttlHours(): int

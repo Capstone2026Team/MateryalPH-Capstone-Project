@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import io
 import json
+import shutil
 import sys
 import time
 import urllib.request
@@ -112,11 +113,25 @@ def main(argv: list[str]) -> int:
         for kind, photo in entries.items():
             jobs.append((OUT / "vendors" / slug / f"{kind}.jpg", photo, kind))
 
+    # Stores that sell the same product cite the same photo; reuse a copy already built from that exact source
+    # instead of downloading it again (some retail CDNs throttle or refuse repeated requests).
+    same_source: dict[str, list[Path]] = {}
+    for path, photo, kind in jobs:
+        if "url" in photo:
+            same_source.setdefault(json.dumps([photo["url"], photo.get("crop"), photo.get("focus"), kind]), []).append(path)
+
     failures = 0
     for path, photo, kind in jobs:
         if path.exists() and not force:
             continue
         try:
+            built = next((other for other in same_source.get(json.dumps([photo.get("url"), photo.get("crop"), photo.get("focus"), kind]), [])
+                          if other != path and other.exists()), None) if "url" in photo and not force else None
+            if built is not None:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(built, path)
+                print(f"ok   {path.relative_to(OUT)} (same source as {built.relative_to(OUT)})", flush=True)
+                continue
             if "collage" in photo:
                 save(collage(path.parent.name, photo["collage"], colors[path.parent.name]), path)
                 print(f"ok   {path.relative_to(OUT)}", flush=True)

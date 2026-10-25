@@ -1,3 +1,4 @@
+import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../design_system/theme.dart';
@@ -25,7 +26,7 @@ class WorkPackageEstimateSection extends StatelessWidget {
     required this.onUseAsBudget,
   });
   final List<ProjectData> lines;
-  final ProjectData? estimate;
+  final api.WorkPackageBudgetEstimate? estimate;
   final bool loading;
   final String? error;
   final int? budgetCentavos;
@@ -38,15 +39,14 @@ class WorkPackageEstimateSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final completeTotal = estimate?['estimated_total_centavos'];
-    final total = projectInt(
-      completeTotal ?? estimate?['materials_total_centavos'],
-    );
+    final completeTotal = estimate?.estimatedTotalCentavos;
+    final total = projectInt(completeTotal ?? estimate?.materialsTotalCentavos);
     final complete = completeTotal != null;
-    final priced = projectInt(estimate?['priced_line_count']);
+    final priced = projectInt(estimate?.pricedLineCount);
     final rows = {
-      for (final row in projectRows(estimate?['lines']))
-        projectInt(row['index']): row,
+      for (final row
+          in (estimate?.lines ?? <api.WorkPackageBudgetEstimateLine>[]))
+        projectInt(row.index): row,
     };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -127,7 +127,7 @@ class WorkPackageEstimateSection extends StatelessWidget {
                   ),
                 const SizedBox(height: 12),
                 Text(
-                  '$priced of ${lines.length} materials priced · average of nearby Vendors within ${projectInt(estimate!['radius_km'])} km',
+                  '$priced of ${lines.length} materials priced · average of nearby Vendors within ${projectInt(estimate!.radiusKm)} km',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: BuyerTheme.muted,
@@ -173,7 +173,7 @@ class WorkPackageEstimateSection extends StatelessWidget {
                       ),
                     ),
                     TextSpan(
-                      text: estimate?['delivery_status'] == 'NOT_APPLICABLE'
+                      text: estimate?.deliveryStatus?.name == 'NOT_APPLICABLE'
                           ? 'Self pick-up has no delivery fee. Labor and payment processing fees are excluded. This is an advisory estimate, not a Vendor quotation.'
                           : 'Includes estimated supplier delivery. Ready-mixed concrete always uses site delivery; Both also estimates delivery. Fees need Vendor confirmation. Labor and payment processing are excluded. This is not a Vendor quotation.',
                     ),
@@ -206,20 +206,19 @@ class WorkPackageEstimateSection extends StatelessWidget {
                 const Divider(height: 24),
                 _EstimateAmount(
                   'Materials',
-                  projectMoney(estimate!['materials_total_centavos']),
+                  projectMoney(estimate!.materialsTotalCentavos),
                 ),
                 _EstimateAmount(
                   'Delivery estimate',
-                  estimate!['delivery_centavos'] == null
+                  estimate!.deliveryCentavos == null
                       ? 'Vendor review'
-                      : projectMoney(estimate!['delivery_centavos']),
+                      : projectMoney(estimate!.deliveryCentavos),
                 ),
                 _EstimateAmount(
                   'Estimated total',
                   complete ? projectMoney(total) : 'Incomplete',
                 ),
-                for (final issue
-                    in (estimate!['delivery_issues'] as List?) ?? const [])
+                for (final issue in estimate!.deliveryIssues ?? <String>[])
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
                     child: Text(
@@ -296,7 +295,7 @@ class _BudgetFit extends StatelessWidget {
 class EstimateLineRow extends StatelessWidget {
   const EstimateLineRow({super.key, required this.line, required this.row});
   final ProjectData line;
-  final ProjectData? row;
+  final api.WorkPackageBudgetEstimateLine? row;
 
   @override
   Widget build(BuildContext context) {
@@ -304,10 +303,9 @@ class EstimateLineRow extends StatelessWidget {
     final quantity =
         '${materialQuantity(line['quantity'])} ${projectText(line['unit_code'])}'
             .trim();
-    final status = projectText(row?['status']);
+    final status = projectText(row?.status.name);
     final detail = switch (status) {
-      'PRICED' =>
-        '$quantity × ${projectMoney(row!['average_unit_price_centavos'])}',
+      'PRICED' => '$quantity × ${projectMoney(row!.averageUnitPriceCentavos)}',
       'UNLISTED' => '$quantity · unlisted, not priced',
       _ => '$quantity · no matching listing nearby',
     };
@@ -336,7 +334,7 @@ class EstimateLineRow extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Text(
-            status == 'PRICED' ? projectMoney(row!['amount_centavos']) : '—',
+            status == 'PRICED' ? projectMoney(row!.amountCentavos) : '—',
             style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w700,
             ),

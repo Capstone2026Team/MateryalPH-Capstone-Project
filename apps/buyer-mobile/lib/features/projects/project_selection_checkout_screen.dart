@@ -1,3 +1,5 @@
+import 'project_supplier_view.dart';
+import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import 'package:flutter/material.dart';
 
 import '../../design_system/components/buyer_app_bar.dart';
@@ -22,7 +24,8 @@ class ProjectSelectionCheckoutScreen extends StatefulWidget {
     required this.links,
   });
   final ProjectsRepository repository;
-  final ProjectData package, candidate;
+  final api.WorkPackageView package;
+  final api.ProjectCandidate candidate;
   final Map<String, String> selections;
   final ProjectSourcingLinks links;
 
@@ -33,7 +36,8 @@ class ProjectSelectionCheckoutScreen extends StatefulWidget {
 
 class _ProjectSelectionCheckoutScreenState
     extends State<ProjectSelectionCheckoutScreen> {
-  late ProjectData package = widget.package, candidate = widget.candidate;
+  late api.WorkPackageView package = widget.package;
+  late api.ProjectCandidate candidate = widget.candidate;
   final methods = <String, String>{},
       requestKeys = <String, String>{},
       requested = <String, String>{};
@@ -45,16 +49,15 @@ class _ProjectSelectionCheckoutScreenState
       previewReady = false;
   String? error, primaryOrder;
 
-  String get primaryId => projectText(candidate['vendor_id']);
-  List<ProjectData> get groups => projectRows(candidate['draft_groups']);
+  String get primaryId => projectText(candidate.vendorId);
+  List<api.ProjectDraftVendorGroup> get groups =>
+      candidate.draftGroups?.toList() ?? [];
 
-  List<String> _available(Object? rows) => [
-    for (final row in projectRows(rows))
-      if (row['available'] == true) projectText(row['method']),
+  List<String> _available(Iterable<api.ProjectPaymentMethod>? rows) => [
+    for (final row in rows ?? <api.ProjectPaymentMethod>[])
+      if (row.available) projectText(row.method),
   ];
-
-  List<String> _issues(Object? value) =>
-      value is List ? value.map(projectText).toList() : [];
+  List<String> _issues(Iterable<String>? value) => value?.toList() ?? [];
 
   bool get canReview =>
       previewReady &&
@@ -62,15 +65,13 @@ class _ProjectSelectionCheckoutScreenState
       !busy &&
       acknowledged &&
       (primaryOrder != null ||
-          _available(
-            candidate['payment_methods'],
-          ).contains(methods[primaryId])) &&
+          _available(candidate.paymentMethods).contains(methods[primaryId])) &&
       groups.every(
         (group) =>
-            _issues(group['issues']).isEmpty &&
+            _issues(group.issues).isEmpty &&
             _available(
-              group['payment_methods'],
-            ).contains(methods[projectText(group['vendor_id'])]),
+              group.paymentMethods,
+            ).contains(methods[projectText(group.vendorId)]),
       );
 
   @override
@@ -95,34 +96,30 @@ class _ProjectSelectionCheckoutScreenState
       });
     }
     try {
-      final current = await widget.repository.package(
-        projectText(package['id']),
-      );
+      final current = await widget.repository.package(projectText(package.id));
       final priced = await widget.repository.selectionPreview(
-        projectText(package['id']),
-        projectText(candidate['id']),
+        projectText(package.id),
+        projectText(candidate.id),
         widget.selections,
-        fulfillmentMethod: projectText(candidate['fulfillment_method']),
+        fulfillmentMethod: projectText(candidate.fulfillmentMethod),
       );
       if (!mounted) return;
       setState(() {
         package = current;
         candidate = priced;
         previewReady = true;
-        primaryOrder = priced['primary_order_id'] as String? ?? primaryOrder;
+        primaryOrder = priced.primaryOrderId ?? primaryOrder;
         if (primaryOrder != null) {
-          methods[primaryId] = projectText(priced['payment_method']);
+          methods[primaryId] = projectText(priced.paymentMethod);
           requested[primaryId] = primaryOrder!;
         }
         if (primaryOrder == null &&
-            !_available(
-              priced['payment_methods'],
-            ).contains(methods[primaryId])) {
+            !_available(priced.paymentMethods).contains(methods[primaryId])) {
           methods.remove(primaryId);
         }
         for (final group in groups) {
-          final id = projectText(group['vendor_id']);
-          if (!_available(group['payment_methods']).contains(methods[id])) {
+          final id = projectText(group.vendorId);
+          if (!_available(group.paymentMethods).contains(methods[id])) {
             methods.remove(id);
           }
         }
@@ -134,7 +131,7 @@ class _ProjectSelectionCheckoutScreenState
     }
   }
 
-  Future<void> _remove(ProjectData item) async {
+  Future<void> _remove(api.ProjectSeparatePurchase item) async {
     if (busy || loading) return;
     setState(() {
       busy = true;
@@ -142,11 +139,11 @@ class _ProjectSelectionCheckoutScreenState
     });
     try {
       await widget.repository.removeDraftItem(
-        packageId: projectText(package['id']),
-        candidateId: projectText(candidate['id']),
-        lineId: projectText(item['line_id']),
-        variantId: projectText(item['variant_id']),
-        lockVersion: projectInt(package['lock_version']),
+        packageId: projectText(package.id),
+        candidateId: projectText(candidate.id),
+        lineId: projectText(item.lineId),
+        variantId: projectText(item.variantId),
+        lockVersion: projectInt(package.lockVersion),
       );
       await _refresh();
     } on DiscoveryFailure catch (e) {
@@ -156,9 +153,9 @@ class _ProjectSelectionCheckoutScreenState
     }
   }
 
-  Future<void> _request({ProjectData? group}) async {
+  Future<void> _request({api.ProjectDraftVendorGroup? group}) async {
     if (loading || busy || !acknowledged) return;
-    final id = group == null ? primaryId : projectText(group['vendor_id']);
+    final id = group == null ? primaryId : projectText(group.vendorId);
     final method = methods[id];
     if (method == null) return;
     setState(() {
@@ -167,33 +164,33 @@ class _ProjectSelectionCheckoutScreenState
     });
     try {
       final body = <String, Object?>{
-        'lock_version': projectInt(package['lock_version']),
+        'lock_version': projectInt(package.lockVersion),
         'payment_method': method,
         if (budgetReason.text.trim().isNotEmpty)
           'budget_override_reason': budgetReason.text.trim(),
       };
       // A changed body gets a new key; a failed request retries its exact key.
       final action =
-          '$id:$method:${package['lock_version']}:${note.text.trim()}:${budgetReason.text.trim()}:${group?['draft_fingerprint'] ?? ''}';
+          '$id:$method:${package.lockVersion}:${note.text.trim()}:${budgetReason.text.trim()}:${group?.draftFingerprint ?? ''}';
       final key = requestKeys.putIfAbsent(action, projectKey);
       final order = group == null
           ? await widget.repository.candidate(
-              projectText(package['id']),
+              projectText(package.id),
               {
                 ...body,
-                'candidate_id': candidate['id'],
+                'candidate_id': candidate.id,
                 'selections': specificationSelections(widget.selections),
-                'fulfillment_method': candidate['fulfillment_method'],
+                'fulfillment_method': candidate.fulfillmentMethod,
                 if (note.text.trim().isNotEmpty) 'note': note.text.trim(),
               },
               key,
               select: true,
             )
           : await widget.repository.requestDraftSupplier(
-              packageId: projectText(package['id']),
-              candidateId: projectText(candidate['id']),
+              packageId: projectText(package.id),
+              candidateId: projectText(candidate.id),
               vendorId: id,
-              input: {...body, 'draft_fingerprint': group['draft_fingerprint']},
+              input: {...body, 'draft_fingerprint': group.draftFingerprint},
               key: key,
             );
       if (!mounted) return;
@@ -209,19 +206,20 @@ class _ProjectSelectionCheckoutScreenState
     }
   }
 
-  Widget _payment(String vendor, Object? options) => QuotationPaymentChoices(
-    fulfillmentMethod: projectText(candidate['fulfillment_method']),
-    availableMethods: _available(options),
-    value: methods[vendor],
-    availableOnly: true,
-    onChanged: (value) {
-      if (busy || loading || requested.containsKey(vendor)) return;
-      setState(() {
-        if (value != null) methods[vendor] = value;
-        acknowledged = false;
-      });
-    },
-  );
+  Widget _payment(String vendor, Iterable<api.ProjectPaymentMethod>? options) =>
+      QuotationPaymentChoices(
+        fulfillmentMethod: projectText(candidate.fulfillmentMethod),
+        availableMethods: _available(options),
+        value: methods[vendor],
+        availableOnly: true,
+        onChanged: (value) {
+          if (busy || loading || requested.containsKey(vendor)) return;
+          setState(() {
+            if (value != null) methods[vendor] = value;
+            acknowledged = false;
+          });
+        },
+      );
 
   Widget _section(String title, List<Widget> children, {String? subtitle}) =>
       Padding(
@@ -301,7 +299,7 @@ class _ProjectSelectionCheckoutScreenState
             ),
             const SizedBox(height: 12),
           ],
-          Text(projectText(package['name']), style: theme.textTheme.titleLarge),
+          Text(projectText(package.name), style: theme.textTheme.titleLarge),
           const SizedBox(height: 4),
           const Text(
             'System-compiled estimate · advisory',
@@ -313,15 +311,15 @@ class _ProjectSelectionCheckoutScreenState
           ),
           const SizedBox(height: 12),
           _section(
-            projectText(candidate['store_name']),
+            projectText(candidate.storeName),
             [
-              for (final line in projectRows(candidate['lines']))
+              for (final line in projectRows(candidate.lines))
                 if ((double.tryParse(projectText(line['matched_quantity'])) ??
                         0) >
                     0)
                   QuotationSummaryLine(
                     line: line,
-                    storeName: projectText(candidate['store_name']),
+                    storeName: projectText(candidate.storeName),
                     busy: true,
                     onChoose: () {},
                     onOpenProduct: widget.links.openProduct == null
@@ -337,11 +335,11 @@ class _ProjectSelectionCheckoutScreenState
                     ),
                   ),
               Text(
-                'Materials ${projectMoney(candidate['materials_centavos'])} · Delivery ${deliveryFee(candidate)}',
+                'Materials ${projectMoney(candidate.materialsCentavos)} · Delivery ${deliveryFee(candidate)}',
                 style: theme.textTheme.bodyMedium,
               ),
               if (!checkout && primaryOrder == null)
-                _payment(primaryId, candidate['payment_methods'])
+                _payment(primaryId, candidate.paymentMethods)
               else
                 Text('Payment: ${paymentLabel(methods[primaryId])}'),
               if (primaryOrder != null)
@@ -351,14 +349,16 @@ class _ProjectSelectionCheckoutScreenState
                 ),
             ],
             subtitle:
-                'Primary Project-Based Vendor · ${fulfillmentLabel(candidate['fulfillment_method'])}',
+                'Primary Project-Based Vendor · ${fulfillmentLabel(candidate.fulfillmentMethod)}',
           ),
           for (final group in groups) ...[
             const Divider(height: 16),
-            _section(projectText(group['store_name']), [
-              ProjectSupplierFulfillment(group: group),
+            _section(projectText(group.storeName), [
+              ProjectSupplierFulfillment(
+                group: ProjectSupplierView.draft(group),
+              ),
               const SizedBox(height: 8),
-              for (final item in projectRows(group['items']))
+              for (final item in group.items.toList())
                 ProjectSupplementRow(
                   item: item,
                   onOpen: widget.links.openProduct == null
@@ -370,17 +370,14 @@ class _ProjectSelectionCheckoutScreenState
                         ),
                   onRemove: busy || loading ? null : () => _remove(item),
                 ),
-              Text('Materials ${projectMoney(group['materials_centavos'])}'),
+              Text('Materials ${projectMoney(group.materialsCentavos)}'),
               if (!checkout)
-                _payment(
-                  projectText(group['vendor_id']),
-                  group['payment_methods'],
-                )
+                _payment(projectText(group.vendorId), group.paymentMethods)
               else
                 Text(
-                  'Payment: ${paymentLabel(methods[projectText(group['vendor_id'])])}',
+                  'Payment: ${paymentLabel(methods[projectText(group.vendorId)])}',
                 ),
-              for (final issue in _issues(group['issues']))
+              for (final issue in _issues(group.issues))
                 Text(issue, style: TextStyle(color: theme.colorScheme.error)),
               if (checkout && primaryOrder != null)
                 OutlinedButton(
@@ -388,10 +385,10 @@ class _ProjectSelectionCheckoutScreenState
                       busy ||
                           loading ||
                           !acknowledged ||
-                          _issues(group['issues']).isNotEmpty ||
+                          _issues(group.issues).isNotEmpty ||
                           !_available(
-                            group['payment_methods'],
-                          ).contains(methods[projectText(group['vendor_id'])])
+                            group.paymentMethods,
+                          ).contains(methods[projectText(group.vendorId)])
                       ? null
                       : () => _request(group: group),
                   child: const Text('Send request to this supplier'),
@@ -415,27 +412,27 @@ class _ProjectSelectionCheckoutScreenState
             'Fulfillment: ${fulfillmentSummary(candidate)}',
             style: theme.textTheme.titleSmall,
           ),
-          for (final line in projectRows(
-            candidateFulfillment(candidate)['lines'],
-          ))
-            if ((double.tryParse(projectText(line['remaining_quantity'])) ??
+          for (final remainingLine in candidate.fulfillment.lines)
+            if ((double.tryParse(
+                      projectText(remainingLine.remainingQuantity),
+                    ) ??
                     0) >
                 0)
               Text(
-                '${projectText(line['name'])}: ${projectText(line['remaining_quantity'])} ${projectText(line['unit_code'])} still to source',
+                '${projectText(remainingLine.name)}: ${projectText(remainingLine.remainingQuantity)} ${projectText(remainingLine.unitCode)} still to source',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: BuyerTheme.actionPressed,
                 ),
               ),
           const SizedBox(height: 8),
           Text(
-            'Delivery · all suppliers: ${candidate['procurement_delivery_centavos'] == null ? 'Vendor review' : projectMoney(candidate['procurement_delivery_centavos'])}',
+            'Delivery · all suppliers: ${candidate.procurementDeliveryCentavos == null ? 'Vendor review' : projectMoney(candidate.procurementDeliveryCentavos)}',
             style: theme.textTheme.bodyMedium,
           ),
           Text(
-            candidate['procurement_total_centavos'] == null
-                ? 'Materials total: ${projectMoney(candidate['procurement_materials_centavos'])}'
-                : 'Arrangement total (estimate): ${projectMoney(candidate['procurement_total_centavos'])}',
+            candidate.procurementTotalCentavos == null
+                ? 'Materials total: ${projectMoney(candidate.procurementMaterialsCentavos)}'
+                : 'Arrangement total (estimate): ${projectMoney(candidate.procurementTotalCentavos)}',
             style: theme.textTheme.titleSmall,
           ),
           const Text(

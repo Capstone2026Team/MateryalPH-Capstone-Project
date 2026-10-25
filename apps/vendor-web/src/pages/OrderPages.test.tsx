@@ -494,11 +494,12 @@ test('Message is unavailable before the fulfillment thread opens', async () => {
 
 test.each(['AWAITING_PAYMENT', 'COMPLETED', 'CANCELLED'])('compact %s review excludes operational panels', async state => {
   vi.mocked(orders.listOrders).mockResolvedValue({ items: [summary({ primaryAction: 'NONE' })], meta: { group: 'NEW', counts: { NEW: 1 }, page: 1, perPage: 20, total: 1, hasMore: false, currentAsOf: new Date() } })
-  vi.mocked(orders.getOrder).mockResolvedValue(detail({ states: states(state, 'PENDING'), primaryAction: 'NONE', fulfillmentMethod: 'DELIVERY', destination: { type: 'DELIVERY', intended: { locationId: 'site-1', label: 'Project site', kind: 'PROJECT_SITE', formattedAddress: 'Sample delivery address' }, accessInstructions: 'Use the north gate.' } }))
+  vi.mocked(orders.getOrder).mockResolvedValue(detail({ states: states(state, 'PENDING'), primaryAction: 'NONE', expectedFulfillmentDate: new Date(2026, 9, 24), fulfillmentMethod: 'DELIVERY', destination: { type: 'DELIVERY', intended: { locationId: 'site-1', label: 'Project site', kind: 'PROJECT_SITE', formattedAddress: 'Sample delivery address' }, accessInstructions: 'Use the north gate.' } }))
   render(<MemoryRouter initialEntries={['/orders?order=order-1']}><Routes><Route path="/orders" element={<VendorOrdersPage />} /></Routes></MemoryRouter>)
   const panel = await screen.findByRole('dialog')
   expect(await within(panel).findByText('Sample delivery address')).toBeInTheDocument()
   expect(within(panel).getByText('Use the north gate.')).toBeInTheDocument()
+  expect(within(panel).getByText('Expected fulfillment').nextElementSibling).toHaveTextContent('Oct 24, 2026')
   expect(within(panel).getByText('Payment due')).toBeInTheDocument()
   expect(within(panel).queryByText('History')).not.toBeInTheDocument()
   expect(within(panel).queryByText('Order documents')).not.toBeInTheDocument()

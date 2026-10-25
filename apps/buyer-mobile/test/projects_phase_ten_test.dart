@@ -1,3 +1,4 @@
+import 'typed_project_fixtures.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -67,7 +68,7 @@ void main() {
       final data = await repository.list();
       expect(authenticated, isTrue);
       expect(expired, isFalse);
-      expect(projectRows(data['items']), isEmpty);
+      expect(data.items, isEmpty);
     },
   );
   setUpAll(() async {
@@ -562,9 +563,9 @@ void main() {
       final data = await repository.estimates(
         '01995000-0000-7000-8000-000000000001',
       );
-      expect(data['estimate'], isNull);
-      expect(projectRows(data['items']), isEmpty);
-      expect(data['has_more'], false);
+      expect(data.estimate, isNull);
+      expect(data.items, isEmpty);
+      expect(data.hasMore, false);
     },
   );
   test(
@@ -656,10 +657,10 @@ void main() {
     'budget warning shows all three buckets without double subtraction',
     (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
+        MaterialApp(
           home: Scaffold(
             body: ProjectBudgetCard(
-              budget: {
+              budget: typedBudget({
                 'budget_centavos': 30000,
                 'pending_centavos': 10000,
                 'actual_centavos': 10000,
@@ -669,7 +670,7 @@ void main() {
                 'warning': true,
                 'utilization_percent': '93.33',
                 'label': 'UNDER_BUDGET',
-              },
+              }),
             ),
           ),
         ),

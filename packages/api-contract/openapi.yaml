@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: MateryalPH API
-  version: 1.0.0-phase.16
+  version: 1.0.1-audit.2026-10-24
   description: >-
     Versioned Phase 1–4 contract. Vendor onboarding, verification, activation
     readiness, private evidence, team invitations, the Vendor catalog and
@@ -8172,9 +8172,10 @@ paths:
   /buyers/favorite-suppliers:
     get:
       operationId: listFavoriteSuppliers
-      description: The Buyer's Favorite Suppliers (Verified Vendors only). A Favorite
-        without eligible offerings stays listed with currently_discoverable
-        false.
+      description: The Buyer's Favorite Suppliers, Verified Vendors and Directory
+        Suppliers, newest first. A Favorite without eligible offerings, or a
+        Directory Favorite not in the current Google cache, stays listed with
+        currently_discoverable false.
       tags: [ Buyer Discovery ]
       security: [ { passportBearer: [] } ]
       parameters:
@@ -8200,9 +8201,10 @@ paths:
         }
     put:
       operationId: addFavoriteSupplier
-      description: Idempotently saves an active Verified Vendor as a Favorite
-        Supplier. A Directory Supplier returns 422
-        FAVORITE_REQUIRES_VERIFIED_VENDOR.
+      description: Idempotently saves an active Verified Vendor, or a currently
+        listed Directory Supplier result id, as a Favorite Supplier. A Directory
+        Favorite keeps only the Google Place ID and stays informational. An
+        expired Directory result returns 404 DIRECTORY_SUPPLIER_NOT_FOUND.
       tags: [ Buyer Discovery ]
       security: [ { passportBearer: [] } ]
       responses:
@@ -8220,8 +8222,9 @@ paths:
         "422": { $ref: "#/components/responses/ErrorResponse" }
     delete:
       operationId: removeFavoriteSupplier
-      description: Idempotently removes a Favorite Supplier. Transaction and audit
-        history are unaffected.
+      description: Idempotently removes a Favorite Supplier by Verified Vendor id,
+        Directory Supplier result id or the vendor_id returned by
+        listFavoriteSuppliers. Transaction and audit history are unaffected.
       tags: [ Buyer Discovery ]
       security: [ { passportBearer: [] } ]
       responses:
@@ -12667,6 +12670,86 @@ paths:
           "$ref": "#/components/responses/ErrorResponse"
         "503":
           "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/materials-analytics/products":
+    "post":
+      "operationId": "listBuyerAnalyticsProducts"
+      "tags":
+        - "Buyer Materials Analytics"
+      "description": "One row per canonical product (material) within your origin and
+        radius: comparable variant count, distinct current Vendor count and the
+        min / median / max current price per canonical unit (each Vendor once per
+        variant at its lowest price; ranges span variants and are not
+        like-for-like). `categories` counts every product in scope for the
+        overview tiles regardless of category_id or q. Read-only; POST keeps the
+        origin out of URLs."
+      "security":
+        - "passportBearer": []
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/BuyerMaterialsAnalyticsRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/BuyerAnalyticsProductListEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
+  "/buyers/materials-analytics/products/{materialId}":
+    "post":
+      "operationId": "getBuyerAnalyticsProduct"
+      "tags":
+        - "Buyer Materials Analytics"
+      "description": "Product analytics: the product summary, its variants (each with
+        its own price range, Vendor count and best stock label) and the most-offered
+        variant's average, trend and daily series. Averages never blend different
+        variants (MAT-03)."
+      "security":
+        - "passportBearer": []
+      "parameters":
+        - "name": "materialId"
+          "in": "path"
+          "required": true
+          "schema":
+            "type": "string"
+            "format": "uuid"
+      "requestBody":
+        "required": true
+        "content":
+          "application/json":
+            "schema":
+              "$ref": "#/components/schemas/BuyerMaterialsAnalyticsRequest"
+      "responses":
+        "200":
+          "description": "Authorized result."
+          "content":
+            "application/json":
+              "schema":
+                "$ref": "#/components/schemas/BuyerAnalyticsProductDetailEnvelope"
+        "401":
+          "$ref": "#/components/responses/ErrorResponse"
+        "403":
+          "$ref": "#/components/responses/ErrorResponse"
+        "404":
+          "$ref": "#/components/responses/ErrorResponse"
+        "409":
+          "$ref": "#/components/responses/ErrorResponse"
+        "422":
+          "$ref": "#/components/responses/ErrorResponse"
+        "503":
+          "$ref": "#/components/responses/ErrorResponse"
   "/vendor/materials-analytics":
     "get":
       "operationId": "listVendorMaterialsAnalytics"
@@ -12790,6 +12873,12 @@ paths:
               - 50
           "description": "Around your own verified store point (default 50 km). Any origin
             or competitor field is refused."
+        - name: q
+          in: query
+          schema: { type: string, maxLength: 120 }
+        - name: category_id
+          in: query
+          schema: { type: string, format: uuid }
       "responses":
         "200":
           "description": "Competitor aggregates CSV; formulas neutralized."
@@ -25486,12 +25575,17 @@ components:
         serviceability: { $ref: "#/components/schemas/SupplierServiceability" }
     DirectorySupplierSummary:
       type: object
-      required: [ formatted_address, primary_type, source, refreshed_at ]
+      required: [ formatted_address, primary_type, source, refreshed_at, google_rating ]
       properties:
         formatted_address: { type: [ string, 'null' ] }
         primary_type: { type: [ string, 'null' ] }
         source: { type: string, enum: [ GOOGLE ] }
         refreshed_at: { type: string, format: date-time }
+        google_rating:
+          description: Google-sourced rating for Directory Suppliers only. Never VPS.
+          oneOf:
+            - { $ref: "#/components/schemas/GoogleRating" }
+            - { type: 'null' }
     SupplierResult:
       type: object
       required:
@@ -25664,7 +25758,22 @@ components:
           }
         include_verified: { type: boolean }
         include_directory: { type: boolean }
-        favorites_only: { type: boolean }
+        favorites_only:
+          {
+            type: boolean,
+            description: 'Limits both tiers to the Buyer''s Favorite Suppliers.
+              Unlike supplier_type and category_id, it does not hide Directory
+              Suppliers.'
+          }
+        directory_min_rating:
+          type: [ number, 'null' ]
+          format: double
+          enum: [ 3.0, 3.5, 4.0, 4.5, null ]
+          description: Inclusive minimum Google rating, Directory Suppliers only. Send a JSON number; a value of 3.0 keeps ratings from 3.0 through 5.0 and excludes lower-rated and unrated places. Verified Vendors and VPS are unchanged.
+        directory_max_distance_km:
+          type: [ integer, 'null' ]
+          enum: [ 1, 3, 5, 10, 20, null ]
+          description: Directory Suppliers only. Must not exceed the effective selected radius.
         supplier_type:
           {
             type: [ string, 'null' ],
@@ -26216,6 +26325,7 @@ components:
       required:
         [
           vendor_id,
+          tier,
           name,
           logo_url,
           score_label,
@@ -26223,7 +26333,15 @@ components:
           saved_at
         ]
       properties:
-        vendor_id: { type: string, format: uuid }
+        vendor_id:
+          {
+            type: string,
+            format: uuid,
+            description: 'Verified Vendor id, Directory Supplier result id, or
+              for a Directory Favorite outside the current cache the saved
+              Favorite id (accepted by removeFavoriteSupplier).'
+          }
+        tier: { type: string, enum: [ VERIFIED_VENDOR, DIRECTORY_SUPPLIER ] }
         name: { type: string }
         logo_url: { type: [ string, 'null' ], format: uri }
         score_label: { $ref: "#/components/schemas/ScoreLabel" }
@@ -40156,6 +40274,276 @@ components:
           "type": "array"
           "items":
             "$ref": "#/components/schemas/ApiError"
+    "AnalyticsPriceRange":
+      "type": "object"
+      "description": "Current per-Vendor prices per canonical unit (each Vendor once per
+        variant at its lowest normalized price), half-up at 2 dp; all null when there
+        is no current offer."
+      "required":
+        - "min_php"
+        - "median_php"
+        - "max_php"
+      "properties":
+        "min_php":
+          "type": "string"
+          "pattern": "^\\d+\\.\\d{2}$"
+          "nullable": true
+        "median_php":
+          "type": "string"
+          "pattern": "^\\d+\\.\\d{2}$"
+          "nullable": true
+        "max_php":
+          "type": "string"
+          "pattern": "^\\d+\\.\\d{2}$"
+          "nullable": true
+    "BuyerAnalyticsProductRow":
+      "type": "object"
+      "required":
+        - "material"
+        - "category"
+        - "regulated"
+        - "unit"
+        - "variant_count"
+        - "vendor_count"
+        - "price"
+      "properties":
+        "material":
+          "$ref": "#/components/schemas/AnalyticsMaterialRef"
+        "category":
+          "$ref": "#/components/schemas/AnalyticsCategoryRef"
+        "regulated":
+          "type": "boolean"
+          "description": "True when the material is on the DTI-BPS mandatory PS/ICC list."
+        "unit":
+          "$ref": "#/components/schemas/AnalyticsUnit"
+        "variant_count":
+          "type": "integer"
+        "vendor_count":
+          "type": "integer"
+          "description": "Distinct Vendors with a current eligible offer of any variant."
+        "price":
+          "$ref": "#/components/schemas/AnalyticsPriceRange"
+    "BuyerAnalyticsCategorySummary":
+      "type": "object"
+      "required":
+        - "category"
+        - "product_count"
+        - "variant_count"
+      "properties":
+        "category":
+          "$ref": "#/components/schemas/AnalyticsCategoryRef"
+        "product_count":
+          "type": "integer"
+        "variant_count":
+          "type": "integer"
+    "BuyerAnalyticsProductList":
+      "type": "object"
+      "required":
+        - "audience"
+        - "scope"
+        - "source_kind"
+        - "dataset"
+        - "window"
+        - "current_as_of"
+        - "update_schedule"
+        - "explanation"
+        - "categories"
+        - "items"
+        - "not_yet_comparable_listings"
+      "properties":
+        "audience":
+          "type": "string"
+          "enum":
+            - "BUYER"
+        "scope":
+          "type": "object"
+          "additionalProperties": true
+        "source_kind":
+          "type": "string"
+          "enum":
+            - "PUBLIC_LISTING"
+        "dataset":
+          "$ref": "#/components/schemas/DatasetLabel"
+        "window":
+          "$ref": "#/components/schemas/AnalyticsWindow"
+        "current_as_of":
+          "type": "string"
+          "format": "date-time"
+        "snapshot":
+          "oneOf":
+            - "$ref": "#/components/schemas/AnalyticsSnapshotRef"
+            - "type": "null"
+        "update_schedule":
+          "type": "string"
+        "explanation":
+          "type": "string"
+        "categories":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/BuyerAnalyticsCategorySummary"
+        "items":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/BuyerAnalyticsProductRow"
+        "next_cursor":
+          "type": "string"
+          "nullable": true
+        "not_yet_comparable_listings":
+          "type": "integer"
+          "description": "Current in-scope listings not mapped to any comparable variant,
+            so they are not price-compared."
+    "BuyerAnalyticsProductVariant":
+      "type": "object"
+      "required":
+        - "group_id"
+        - "display_name"
+        - "material"
+        - "category"
+        - "specification"
+        - "unit"
+        - "vendor_count"
+        - "listing_count"
+        - "price"
+        - "availability"
+      "properties":
+        "group_id":
+          "type": "string"
+          "format": "uuid"
+        "display_name":
+          "type": "string"
+        "material":
+          "$ref": "#/components/schemas/AnalyticsMaterialRef"
+        "category":
+          "$ref": "#/components/schemas/AnalyticsCategoryRef"
+        "specification":
+          "$ref": "#/components/schemas/ComparableSpecification"
+        "unit":
+          "$ref": "#/components/schemas/AnalyticsUnit"
+        "vendor_count":
+          "type": "integer"
+        "listing_count":
+          "type": "integer"
+        "price":
+          "$ref": "#/components/schemas/AnalyticsPriceRange"
+        "availability":
+          "type": "string"
+          "description": "Best public stock label among current offers."
+          "enum":
+            - "IN_STOCK"
+            - "LIMITED_STOCK"
+            - "NO_CURRENT_OFFERS"
+        "image":
+          "oneOf":
+            - "$ref": "#/components/schemas/ListingImage"
+            - "type": "null"
+    "BuyerAnalyticsFeaturedVariant":
+      "type": "object"
+      "description": "The most-offered variant, whose average and trend represent the
+        product without blending variants."
+      "required":
+        - "group"
+        - "series"
+      "properties":
+        "group":
+          "allOf":
+            - "$ref": "#/components/schemas/BuyerAnalyticsRow"
+            - "type": "object"
+              "properties":
+                "description":
+                  "type": "string"
+                  "nullable": true
+        "series":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/BuyerAnalyticsPoint"
+    "BuyerAnalyticsProductDetail":
+      "type": "object"
+      "required":
+        - "audience"
+        - "scope"
+        - "source_kind"
+        - "dataset"
+        - "window"
+        - "current_as_of"
+        - "update_schedule"
+        - "explanation"
+        - "product"
+        - "variants"
+      "properties":
+        "audience":
+          "type": "string"
+          "enum":
+            - "BUYER"
+        "scope":
+          "type": "object"
+          "additionalProperties": true
+        "source_kind":
+          "type": "string"
+          "enum":
+            - "PUBLIC_LISTING"
+        "dataset":
+          "$ref": "#/components/schemas/DatasetLabel"
+        "window":
+          "$ref": "#/components/schemas/AnalyticsWindow"
+        "current_as_of":
+          "type": "string"
+          "format": "date-time"
+        "snapshot":
+          "oneOf":
+            - "$ref": "#/components/schemas/AnalyticsSnapshotRef"
+            - "type": "null"
+        "update_schedule":
+          "type": "string"
+        "explanation":
+          "type": "string"
+        "product":
+          "allOf":
+            - "$ref": "#/components/schemas/BuyerAnalyticsProductRow"
+            - "type": "object"
+              "properties":
+                "description":
+                  "type": "string"
+                  "nullable": true
+        "featured":
+          "oneOf":
+            - "$ref": "#/components/schemas/BuyerAnalyticsFeaturedVariant"
+            - "type": "null"
+        "variants":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/BuyerAnalyticsProductVariant"
+    "BuyerAnalyticsProductListEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/BuyerAnalyticsProductList"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
+    "BuyerAnalyticsProductDetailEnvelope":
+      "type": "object"
+      "required":
+        - "data"
+        - "meta"
+        - "errors"
+      "properties":
+        "data":
+          "$ref": "#/components/schemas/BuyerAnalyticsProductDetail"
+        "meta":
+          "type": "object"
+          "additionalProperties": true
+        "errors":
+          "type": "array"
+          "items":
+            "$ref": "#/components/schemas/ApiError"
     "MaterialOfferListEnvelope":
       "type": "object"
       "required":
@@ -46177,6 +46565,12 @@ components:
         - "missing_lines"
         - "document"
       "properties":
+        selected_arrangement_id: { type: [ string, 'null' ], format: uuid }
+        procurement_candidate_id: { type: [ string, 'null' ], format: uuid }
+        vendor_orders:
+          type: array
+          items: { type: object, additionalProperties: true }
+
         "id":
           "type": "string"
           "format": "uuid"
@@ -46825,6 +47219,11 @@ components:
         - "line_total_centavos"
         - "satisfies_requirement"
       "properties":
+        load:
+          type: [ object, 'null' ]
+          additionalProperties: true
+          description: Public material load classification used for fulfillment guidance.
+
         "stage":
           "type": "string"
           "enum":

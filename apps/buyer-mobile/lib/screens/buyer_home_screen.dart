@@ -1,3 +1,4 @@
+import '../features/messaging/chat_drafts.dart';
 import '../features/support/support_repository.dart';
 import '../features/support/support_screens.dart';
 import '../design_system/components/count_badge.dart';
@@ -87,6 +88,8 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen>
   @override
   void initState() {
     super.initState();
+    ChatDrafts.activate();
+    _detachAuthExpiry = widget.repository?.attachSessionExpiry(_expireSession);
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -411,13 +414,23 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen>
     _explore?.dispose();
     _cart?.dispose();
     _discoveryController?.dispose();
+    _detachAuthExpiry?.call();
     super.dispose();
   }
 
-  Future<void> _expireSession() async {
+  void Function()? _detachAuthExpiry;
+  Future<void>? _expiry;
+  Future<void> _expireSession() => _expiry ??= _clearExpiredSession();
+
+  Future<void> _clearExpiredSession() async {
     _notifications?.inbox.setActive(false, clear: true);
     _notifications?.navigation.setActive(false, clear: true);
-    await _resultStore.clear();
+    try {
+      await _resultStore.clear();
+    } catch (_) {}
+    try {
+      await ChatDrafts.clear();
+    } catch (_) {}
     await widget.repository?.clearAccountSession();
     if (mounted) _sessionEnded();
   }
@@ -722,13 +735,13 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen>
             ? null
             : _openRankingPreferences,
         deviceLocation: widget.deviceLocation,
-        onSignedOut: _sessionEnded,
+        onSignedOut: () => unawaited(_expireSession()),
         onSignOut: () async {
           try {
             await _push?.revoke();
           } catch (_) {}
-          await _resultStore.clear();
           await widget.onSignOut();
+          await _expireSession();
         },
       );
     }

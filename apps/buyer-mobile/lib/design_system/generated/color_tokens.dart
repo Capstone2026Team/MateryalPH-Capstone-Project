@@ -5,6 +5,11 @@ abstract final class MateryalColorTokens {
   static const int brandOrange300 = 0xFFFDBA74;
   static const int brandOrange500 = 0xFFF97316;
   static const int brandOrange600 = 0xFFEA580C;
+  static const int mapTier2Fill = 0xFFC2410C;
+  static const int mapTier1Outline = 0xFF475569;
+  static const int mapFavoriteRing = 0xFFD4A017;
+  static const int mapClusterTier2 = 0xFFC2410C;
+  static const int mapClusterTier1 = 0xFF475569;
   static const int actionPrimary = 0xFFC2410C;
   static const int actionPrimaryPressed = 0xFF9A3412;
   static const int textStrong = 0xFF1F2937;

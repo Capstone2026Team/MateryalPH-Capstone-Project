@@ -71,6 +71,12 @@ assert.ok(schemas.GooglePlacePhoto.required.includes('authors'))
 assert.equal(schemas.DirectorySupplierPhoto.properties.photos.maxItems, 1)
 assert.equal(schemas.DirectorySupplierPhoto.additionalProperties, false)
 assert.deepEqual(schemas.GoogleRating.properties.source.enum, ['GOOGLE'], 'A Google rating is always attributed to Google')
+assert.deepEqual(schemas.DiscoverySearchRequest.properties.directory_min_rating.enum, [3, 3.5, 4, 4.5, null])
+assert.deepEqual(schemas.DiscoverySearchRequest.properties.directory_min_rating.type, ['number', 'null'], 'Minimum Google rating uses numeric JSON values')
+assert.match(schemas.DiscoverySearchRequest.properties.directory_min_rating.description, /Inclusive minimum Google rating/, 'The selected rating itself remains included')
+assert.deepEqual(schemas.DiscoverySearchRequest.properties.directory_max_distance_km.enum, [1, 3, 5, 10, 20, null])
+assert.ok(JSON.stringify(schemas.DirectorySupplierSummary.properties.google_rating).includes('#/components/schemas/GoogleRating'))
+assert.match(schemas.GoogleRating.properties.label.description, /Google rating/)
 for (const scopeField of ['latitude', 'longitude', 'origin_latitude', 'origin_longitude']) {
   assert.equal(schemas.DiscoveryScope.properties[scopeField], undefined, `Discovery scope must not echo ${scopeField}`)
 }

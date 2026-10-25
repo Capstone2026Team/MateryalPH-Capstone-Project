@@ -1,5 +1,6 @@
+import { openPendingWindow, shouldRotateIdempotencyKey } from '@materyalph/web-ui'
 import { DocumentExportButton } from '@materyalph/web-ui'
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Banknote, CreditCard, Download, ExternalLink, Landmark, ReceiptText, RefreshCw, ShieldAlert, ShieldCheck, Wallet } from 'lucide-react'
 import {
@@ -370,22 +371,36 @@ function PayStatementForm({ statement, onStarted }: { statement: FeeStatementDet
   const [amount, setAmount] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [key] = useState(newIdempotencyKey)
+  const key = useRef(newIdempotencyKey())
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null)
+  // Each provider attempt has a separate key; unknown transport outcomes retain the current one.
+  const attemptState = statement.payments.map(payment => `${payment.id}:${payment.status}`).join('|')
+  const previousState = useRef(attemptState)
+  const pendingAttempt = statement.payments.some(payment => payment.status === 'PENDING')
+  useEffect(() => {
+    if (previousState.current === attemptState) return
+    previousState.current = attemptState
+    if (!pendingAttempt) key.current = newIdempotencyKey()
+  }, [attemptState, pendingAttempt])
   const open = statement.payments.find(payment => payment.status === 'PENDING')
   async function submit(event: FormEvent) {
     event.preventDefault()
     setError(null)
     const centavos = installment ? pesoInputToCentavos(amount) : null
     if (installment && (centavos === null || centavos < 1 || centavos > statement.outstandingCentavos)) { setError(`Enter an amount from ₱0.01 to ${formatPesoCentavos(statement.outstandingCentavos)}.`); return }
+    const tab = openPendingWindow()
     setBusy(true)
     try {
-      const attempt = await payStatement(statement.id, channel, centavos, key)
-      if (attempt.checkoutUrl) window.open(attempt.checkoutUrl, '_blank', 'noopener,noreferrer')
+      const attempt = await payStatement(statement.id, channel, centavos, key.current)
+      setCheckoutUrl(attempt.checkoutUrl ?? null)
+      if (attempt.checkoutUrl && tab && !tab.closed) tab.location.replace(attempt.checkoutUrl)
+      else if (!attempt.checkoutUrl) tab?.close()
       onStarted()
-    } catch (cause) { setError(await readableFinanceError(cause)) }
+    } catch (cause) { tab?.close(); if (shouldRotateIdempotencyKey(cause)) key.current = newIdempotencyKey(); setError(await readableFinanceError(cause)) }
     finally { setBusy(false) }
   }
-  if (open) return <StatusMessage tone="info">A payment for this statement is pending verification. Check its status below before starting another.</StatusMessage>
+  const fallback = checkoutUrl && <a href={checkoutUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center font-semibold text-action-primary underline">Open payment checkout</a>
+  if (open) return <div className="grid gap-3"><StatusMessage tone="info">A payment for this statement is pending verification. Check its status below before starting another.</StatusMessage>{fallback}</div>
   return <form className="grid gap-4 rounded-surface border border-border-default bg-surface-primary p-4" onSubmit={event => void submit(event)} aria-labelledby="pay-heading">
     <div><h2 id="pay-heading" className="text-lg font-semibold">Pay statement</h2><p className="mt-1 text-sm text-text-secondary">Xendit TEST payment to the MateryalPH platform account. No real charge, no automatic debit; MateryalPH absorbs the processing charge on its own bill.</p></div>
     <fieldset className="grid gap-2"><legend className="text-sm font-semibold">Channel</legend>
@@ -396,6 +411,7 @@ function PayStatementForm({ statement, onStarted }: { statement: FeeStatementDet
     {installment && <label className="grid gap-2 text-sm font-semibold">Amount (₱)<input className="min-h-12 rounded-control border border-border-default px-3 text-base font-normal" inputMode="decimal" value={amount} onChange={event => setAmount(event.target.value)} disabled={busy} aria-describedby="amount-hint" /><span id="amount-hint" className="text-xs font-normal text-text-secondary">Up to {formatPesoCentavos(statement.outstandingCentavos)}</span></label>}
     {error && <StatusMessage tone="error">{error}</StatusMessage>}
     <Button type="submit" disabled={busy || !channel}>{busy ? 'Opening payment…' : `Pay ${installment ? 'amount' : formatPesoCentavos(statement.outstandingCentavos)} — TEST`} <ExternalLink size={16} aria-hidden="true" /></Button>
+    {fallback}
     <p className="text-xs text-text-secondary">The payment opens in a new tab. The statement updates only after the provider verifies it; returning from the payment page does not confirm it.</p>
   </form>
 }

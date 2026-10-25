@@ -7,6 +7,21 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(WorkPackageView, () {
+    // String selectedArrangementId
+    test('to test the property `selectedArrangementId`', () async {
+      // TODO
+    });
+
+    // String procurementCandidateId
+    test('to test the property `procurementCandidateId`', () async {
+      // TODO
+    });
+
+    // BuiltList<BuiltMap<String, JsonObject>> vendorOrders
+    test('to test the property `vendorOrders`', () async {
+      // TODO
+    });
+
     // String id
     test('to test the property `id`', () async {
       // TODO

@@ -47,9 +47,16 @@ final class OutboxPublisher
         ]);
 
         DB::afterCommit(static function () use ($id): void {
+            $leased = DB::table('outbox_events')->where('id', $id)->whereNull('processed_at')
+                ->where(fn ($query) => $query->whereNull('dispatched_until')->orWhere('dispatched_until', '<=', now()))
+                ->update(['dispatched_until' => now()->addHour()]);
+            if ($leased === 0) {
+                return;
+            }
             try {
                 ProcessOutboxEvent::dispatch($id);
             } catch (Throwable $exception) {
+                DB::table('outbox_events')->where('id', $id)->whereNull('processed_at')->update(['dispatched_until' => null]);
                 report($exception);
             }
         });

@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(ProjectSeparatePurchase, () {
+    // Public material load classification used for fulfillment guidance.
+    // BuiltMap<String, JsonObject> load
+    test('to test the property `load`', () async {
+      // TODO
+    });
+
     // String stage
     test('to test the property `stage`', () async {
       // TODO

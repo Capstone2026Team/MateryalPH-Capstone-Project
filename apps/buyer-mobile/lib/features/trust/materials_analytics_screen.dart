@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design_system/components/buyer_app_bar.dart';
+import '../../design_system/components/category_tile.dart';
 import '../../design_system/components/price_trend_chart.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/components/product_summary_row.dart'
@@ -16,25 +17,73 @@ import 'trust_models.dart';
 const _periods = ['7 days', '30 days', '90 days', 'Custom'];
 const _presetDays = [7, 30, 90];
 
+/// Owner decision 2026-10-25: Buyer Materials Analytics always covers 50 km around the Explore
+/// origin, with no radius choice, independent of the Explore browsing radius.
+const kMaterialsAnalyticsRadiusKm = 50;
+
 String _isoDay(DateTime date) =>
     '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
-/// Explore → Materials Analytics: comparable variants grouped by category for the origin and exact
-/// radius inherited from Explore. Daily averages are public listed prices with equal weight per
-/// seller; current seller counts and history carry separate timestamps.
+String _periodLabel(AnalyticsWindowChoice window) => window.isCustom
+    ? '${analyticsDayLabel(window.startDate!, year: true)} → ${analyticsDayLabel(window.endDate!, year: true)}'
+    : 'Last ${window.presetDays} days';
+
+String _plural(int count, String noun) => count == 1
+    ? '1 $noun'
+    : '$count ${noun.endsWith('y') ? '${noun.substring(0, noun.length - 1)}ies' : '${noun}s'}';
+
+String _peso(String? value) => value == null ? '—' : pesoDecimal(value);
+
+/// Table rows stack their price under the name instead of beside it under large text.
+bool _largeText(BuildContext context) =>
+    MediaQuery.textScalerOf(context).scale(1) > 1.3;
+
+/// The variant part of a display name once its product is named above it:
+/// "THHN building wire · Phelps Dodge · 2.0 mm" under "THHN building wire" → "Phelps Dodge · 2.0 mm".
+String _variantLabel(String displayName, String materialName) {
+  final prefix = '$materialName · '.toLowerCase();
+  return displayName.toLowerCase().startsWith(prefix) &&
+          displayName.length > prefix.length
+      ? displayName.substring(prefix.length)
+      : displayName;
+}
+
+/// Where every drill-down page came from: the 50 km area and the period chosen on the overview.
+@immutable
+class _Scope {
+  const _Scope({
+    required this.repository,
+    required this.origin,
+    required this.place,
+    required this.window,
+    required this.onOpenListing,
+  });
+
+  final AnalyticsRepository repository;
+  final DiscoveryOrigin origin;
+  final String place;
+  final AnalyticsWindowChoice window;
+  final void Function(BuildContext context, String listingId) onOpenListing;
+
+  String get summary =>
+      'Within $kMaterialsAnalyticsRadiusKm km of $place · ${_periodLabel(window)}';
+}
+
+/// Explore → Materials Analytics: the scope, period, search and category tiles. A tile (or a
+/// search) opens the product table; a product opens its analytics; a variant opens its offers.
+/// Daily averages are public listed prices with equal weight per seller; current seller counts and
+/// history carry separate timestamps.
 class MaterialsAnalyticsScreen extends StatefulWidget {
   const MaterialsAnalyticsScreen({
     super.key,
     required this.repository,
     required this.origin,
-    required this.radiusKm,
     required this.onOpenListing,
     this.originLabel,
   });
 
   final AnalyticsRepository repository;
   final DiscoveryOrigin origin;
-  final int radiusKm;
   final String? originLabel;
   final void Function(BuildContext context, String listingId) onOpenListing;
 
@@ -46,17 +95,20 @@ class MaterialsAnalyticsScreen extends StatefulWidget {
 class _MaterialsAnalyticsScreenState extends State<MaterialsAnalyticsScreen> {
   AnalyticsWindowChoice _window = const AnalyticsWindowChoice.preset(30);
   final _search = TextEditingController();
-  String _query = '';
-  MaterialsAnalyticsPage? _page;
-  List<ComparableGroupView> _items = const [];
+  AnalyticsProductsPage? _page;
   DiscoveryFailure? _failure;
   bool _loading = true;
-  bool _loadingMore = false;
   int _request = 0;
 
-  /// Categories the Buyer opened or closed against the default; kept across period changes and
-  /// Load more, reset by a new search.
-  final Set<String> _toggled = {};
+  String get _place => widget.originLabel ?? widget.origin.label;
+
+  _Scope get _scope => _Scope(
+    repository: widget.repository,
+    origin: widget.origin,
+    place: _place,
+    window: _window,
+    onOpenListing: widget.onOpenListing,
+  );
 
   @override
   void initState() {
@@ -70,39 +122,25 @@ class _MaterialsAnalyticsScreenState extends State<MaterialsAnalyticsScreen> {
     super.dispose();
   }
 
-  Future<void> _load({bool more = false}) async {
+  Future<void> _load() async {
     final request = ++_request;
     setState(() {
-      if (more) {
-        _loadingMore = true;
-      } else {
-        _loading = true;
-        _failure = null;
-      }
+      _loading = true;
+      _failure = null;
     });
     try {
-      final page = await widget.repository.list(
+      final page = await widget.repository.products(
         origin: widget.origin,
-        radiusKm: widget.radiusKm,
+        radiusKm: kMaterialsAnalyticsRadiusKm,
         window: _window,
-        query: _query,
-        cursor: more ? _page?.nextCursor : null,
       );
-      // A newer scope supersedes a slower response.
+      // A newer period supersedes a slower response.
       if (!mounted || request != _request) return;
-      setState(() {
-        _page = page;
-        _items = more ? [..._items, ...page.items] : page.items;
-      });
+      setState(() => _page = page);
     } on DiscoveryFailure catch (failure) {
       if (mounted && request == _request) setState(() => _failure = failure);
     } finally {
-      if (mounted && request == _request) {
-        setState(() {
-          _loading = false;
-          _loadingMore = false;
-        });
-      }
+      if (mounted && request == _request) setState(() => _loading = false);
     }
   }
 
@@ -144,52 +182,30 @@ class _MaterialsAnalyticsScreenState extends State<MaterialsAnalyticsScreen> {
   int get _selectedPeriod =>
       _window.isCustom ? 3 : _presetDays.indexOf(_window.presetDays ?? 30);
 
+  void _openProducts({AnalyticsCategorySummaryView? category, String? query}) =>
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => MaterialsAnalyticsProductsScreen._(
+            _scope,
+            title: query != null
+                ? 'Results for “$query”'
+                : category?.name ?? 'All materials',
+            categoryId: category?.id,
+            query: query,
+          ),
+        ),
+      );
+
   void _submitSearch(String value) {
-    _query = value.trim();
-    _toggled.clear();
-    _load();
+    final query = value.trim();
+    if (query.isNotEmpty) _openProducts(query: query);
   }
-
-  void _clearSearch() {
-    _search.clear();
-    _submitSearch('');
-  }
-
-  void _openDetails(ComparableGroupView item) => Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      builder: (_) => MaterialPriceDetailsScreen(
-        repository: widget.repository,
-        origin: widget.origin,
-        radiusKm: widget.radiusKm,
-        groupId: item.groupId,
-        window: _window,
-        onOpenListing: widget.onOpenListing,
-      ),
-    ),
-  );
-
-  /// Collapsed by default so the list reads as categories first; open by default while searching
-  /// or when only one category is shown.
-  bool _isOpen(_Category category, bool openByDefault) =>
-      openByDefault != _toggled.contains(category.name);
-
-  void _toggle(_Category category) => setState(() {
-    if (!_toggled.remove(category.name)) _toggled.add(category.name);
-  });
-
-  void _setAll(List<_Category> categories, bool openByDefault, bool open) =>
-      setState(() {
-        for (final category in categories) {
-          if (_isOpen(category, openByDefault) != open) _toggle(category);
-        }
-      });
 
   @override
   Widget build(BuildContext context) {
-    final categories = _byCategory(_items);
-    final openByDefault = _query.isNotEmpty || categories.length == 1;
-    final allOpen = categories.every((c) => _isOpen(c, openByDefault));
-    final envelope = _page?.envelope;
+    final page = _page;
+    final categories = page?.categories ?? const [];
+    final products = categories.fold(0, (sum, c) => sum + c.productCount);
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: buyerAppBar(context, 'Materials Analytics'),
@@ -201,32 +217,33 @@ class _MaterialsAnalyticsScreenState extends State<MaterialsAnalyticsScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
               _ScopeCard(
-                area:
-                    'Within ${widget.radiusKm} km of ${widget.originLabel ?? widget.origin.label}',
+                place: _place,
                 selected: _selectedPeriod,
                 onPeriod: _choosePeriod,
-                customRange: _window.isCustom
-                    ? '${analyticsDayLabel(_window.startDate!, year: true)} → ${analyticsDayLabel(_window.endDate!, year: true)}'
-                    : null,
+                customRange: _window.isCustom ? _periodLabel(_window) : null,
               ),
               const SizedBox(height: 12),
-              PillSearchField(
-                controller: _search,
-                hintText: 'Search materials',
-                onSubmitted: _submitSearch,
-                onSearch: () => _submitSearch(_search.text),
-                onClear: _query.isEmpty ? null : _clearSearch,
+              ListenableBuilder(
+                listenable: _search,
+                builder: (context, _) => PillSearchField(
+                  controller: _search,
+                  hintText: 'Search materials',
+                  onSubmitted: _submitSearch,
+                  onSearch: () => _submitSearch(_search.text),
+                  onClear: _search.text.isEmpty ? null : _search.clear,
+                ),
               ),
-              const SizedBox(height: 12),
-              if (envelope != null) _DatasetBand(envelope: envelope),
-              const SizedBox(height: 4),
+              if (page != null) ...[
+                const SizedBox(height: 12),
+                _DatasetBand(envelope: page.envelope),
+              ],
+              const SizedBox(height: 20),
               if (_loading)
-                ...List.generate(
-                  3,
-                  (_) => const Padding(
-                    padding: EdgeInsets.only(top: 12),
-                    child: SkeletonBox(height: 132),
-                  ),
+                CategoryTileGrid(
+                  children: [
+                    for (var index = 0; index < 6; index++)
+                      const SkeletonBox(height: 104),
+                  ],
                 )
               else if (_failure != null)
                 StatusBand(
@@ -240,40 +257,46 @@ class _MaterialsAnalyticsScreenState extends State<MaterialsAnalyticsScreen> {
                     child: const Text('Retry'),
                   ),
                 )
-              else if (_items.isEmpty)
+              else if (categories.isEmpty)
                 StateMessage(
                   kind: StateKind.empty,
                   compact: true,
                   title: 'No comparable materials here yet',
-                  message: envelope?.latestDate == null
+                  message: page?.envelope.latestDate == null
                       ? 'No daily price snapshot has been published yet. Prices are captured daily at 00:10 Asia/Manila.'
-                      : 'No comparable listing or recorded price matches this area and period. Try a larger radius on the Map or a longer period.',
-                  actionLabel: _query.isEmpty ? null : 'Clear search',
-                  onAction: _query.isEmpty ? null : _clearSearch,
+                      : 'No comparable listing or recorded price matches this area and period. Try a longer period.',
                 )
               else ...[
-                _CategoriesHeading(
-                  count: categories.length,
-                  allOpen: allOpen,
-                  onToggleAll: categories.length < 2
-                      ? null
-                      : () => _setAll(categories, openByDefault, !allOpen),
+                _Heading(
+                  'Categories',
+                  trailing: _plural(categories.length, 'category'),
                 ),
-                for (final category in categories)
-                  _CategorySection(
-                    category: category,
-                    expanded: _isOpen(category, openByDefault),
-                    onToggle: () => _toggle(category),
-                    onOpen: _openDetails,
-                  ),
-                if (_page?.nextCursor != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: OutlinedButton(
-                      onPressed: _loadingMore ? null : () => _load(more: true),
-                      child: Text(_loadingMore ? 'Loading…' : 'Load more'),
+                const SizedBox(height: 12),
+                CategoryTileGrid(
+                  children: [
+                    CategoryTile(
+                      name: 'All',
+                      icon: LucideIcons.layoutGrid,
+                      countLabel: _plural(products, 'product'),
+                      semanticsLabel:
+                          'All, ${_plural(products, 'compared product')}',
+                      onTap: _openProducts,
                     ),
-                  ),
+                    for (final category in categories)
+                      CategoryTile(
+                        name: category.name,
+                        icon: categoryIcon(category.code),
+                        countLabel: _plural(category.productCount, 'product'),
+                        semanticsLabel:
+                            '${category.name}, ${_plural(category.productCount, 'compared product')}',
+                        onTap: () => _openProducts(category: category),
+                      ),
+                  ],
+                ),
+              ],
+              if (page != null && page.notYetComparable > 0) ...[
+                const SizedBox(height: 16),
+                _CoverageNote(notYetComparable: page.notYetComparable),
               ],
             ],
           ),
@@ -283,16 +306,961 @@ class _MaterialsAnalyticsScreenState extends State<MaterialsAnalyticsScreen> {
   }
 }
 
-/// The inherited area and the history period, kept together so the scope reads as one choice.
+/// Why listings outnumber compared products: only listings matched to a standard material are
+/// price-compared.
+class _CoverageNote extends StatelessWidget {
+  const _CoverageNote({required this.notYetComparable});
+
+  final int notYetComparable;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Padding(
+        padding: EdgeInsets.only(top: 2),
+        child: Icon(LucideIcons.info, size: 14, color: BuyerTheme.muted),
+      ),
+      const SizedBox(width: 8),
+      Expanded(
+        child: Text(
+          'Price comparison covers listings matched to a standard material, so stores selling the same item share one row. '
+          '${_plural(notYetComparable, 'listing')} nearby — such as tools, hardware and custom-labelled items — '
+          '${notYetComparable == 1 ? "isn't" : "aren't"} price-compared yet.',
+          style: const TextStyle(
+            fontSize: 12,
+            color: BuyerTheme.muted,
+            height: 1.4,
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+/// One category, every category ("All") or a search: a table with one row per canonical product.
+class MaterialsAnalyticsProductsScreen extends StatefulWidget {
+  const MaterialsAnalyticsProductsScreen._(
+    this._scope, {
+    required this.title,
+    this.categoryId,
+    this.query,
+  });
+
+  /// The table for one category (or every category when [categoryId] is null).
+  factory MaterialsAnalyticsProductsScreen({
+    Key? key,
+    required AnalyticsRepository repository,
+    required DiscoveryOrigin origin,
+    required String place,
+    required AnalyticsWindowChoice window,
+    required String title,
+    required void Function(BuildContext context, String listingId)
+    onOpenListing,
+    String? categoryId,
+    String? query,
+  }) => MaterialsAnalyticsProductsScreen._(
+    _Scope(
+      repository: repository,
+      origin: origin,
+      place: place,
+      window: window,
+      onOpenListing: onOpenListing,
+    ),
+    title: title,
+    categoryId: categoryId,
+    query: query,
+  );
+
+  final _Scope _scope;
+  final String title;
+  final String? categoryId;
+  final String? query;
+
+  @override
+  State<MaterialsAnalyticsProductsScreen> createState() =>
+      _MaterialsAnalyticsProductsScreenState();
+}
+
+class _MaterialsAnalyticsProductsScreenState
+    extends State<MaterialsAnalyticsProductsScreen> {
+  AnalyticsProductsPage? _page;
+  List<AnalyticsProductView> _items = const [];
+  DiscoveryFailure? _failure;
+  bool _loading = true;
+  bool _loadingMore = false;
+  int _request = 0;
+
+  _Scope get _scope => widget._scope;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load({bool more = false}) async {
+    final request = ++_request;
+    setState(() {
+      if (more) {
+        _loadingMore = true;
+      } else {
+        _loading = true;
+        _failure = null;
+      }
+    });
+    try {
+      final page = await _scope.repository.products(
+        origin: _scope.origin,
+        radiusKm: kMaterialsAnalyticsRadiusKm,
+        window: _scope.window,
+        query: widget.query,
+        categoryId: widget.categoryId,
+        cursor: more ? _page?.nextCursor : null,
+      );
+      if (!mounted || request != _request) return;
+      setState(() {
+        _page = page;
+        _items = more ? [..._items, ...page.items] : page.items;
+      });
+    } on DiscoveryFailure catch (failure) {
+      if (mounted && request == _request) setState(() => _failure = failure);
+    } finally {
+      if (mounted && request == _request) {
+        setState(() {
+          _loading = false;
+          _loadingMore = false;
+        });
+      }
+    }
+  }
+
+  void _openProduct(AnalyticsProductView product) => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => MaterialsAnalyticsProductScreen._(
+        _scope,
+        materialId: product.materialId,
+        name: product.name,
+      ),
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final envelope = _page?.envelope;
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: buyerAppBar(context, widget.title),
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _load,
+          child: ListView(
+            key: PageStorageKey('materials-analytics-products-${widget.title}'),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            children: [
+              _ScopeLine(_scope.summary),
+              const SizedBox(height: 12),
+              if (_loading)
+                const SkeletonBox(height: 280)
+              else if (_failure != null)
+                _FailureBand(failure: _failure!, onRetry: _load)
+              else if (_items.isEmpty)
+                StateMessage(
+                  kind: StateKind.empty,
+                  compact: true,
+                  title: widget.query == null
+                      ? 'No comparable materials here yet'
+                      : 'No materials match “${widget.query}”',
+                  message: widget.query == null
+                      ? 'No comparable listing or recorded price matches this area and period. Try a longer period.'
+                      : 'Try another material name, brand or size.',
+                )
+              else ...[
+                _ProductTable(
+                  products: _items,
+                  showCategory: widget.categoryId == null,
+                  onOpen: _openProduct,
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Ranges span every variant of a product (sizes, brands, packs). Open a product for like-for-like averages per variant.',
+                  style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
+                ),
+                if (_page?.nextCursor != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: OutlinedButton(
+                      onPressed: _loadingMore ? null : () => _load(more: true),
+                      child: Text(_loadingMore ? 'Loading…' : 'Load more'),
+                    ),
+                  ),
+              ],
+              if (envelope != null) ...[
+                const SizedBox(height: 20),
+                _DatasetBand(envelope: envelope),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The product table: a header, then one row per product with its regulation badge, counts and
+/// current price range (median emphasized).
+class _ProductTable extends StatelessWidget {
+  const _ProductTable({
+    required this.products,
+    required this.showCategory,
+    required this.onOpen,
+  });
+
+  final List<AnalyticsProductView> products;
+  final bool showCategory;
+  final ValueChanged<AnalyticsProductView> onOpen;
+
+  @override
+  Widget build(BuildContext context) => _TableCard(
+    header: const _TableHeader(
+      left: 'Product',
+      right: 'Price per unit',
+      rightCaption: 'median · min–max',
+    ),
+    rows: [
+      for (final product in products)
+        _ProductRow(
+          product: product,
+          showCategory: showCategory,
+          onTap: () => onOpen(product),
+        ),
+    ],
+  );
+}
+
+class _ProductRow extends StatelessWidget {
+  const _ProductRow({
+    required this.product,
+    required this.showCategory,
+    required this.onTap,
+  });
+
+  final AnalyticsProductView product;
+  final bool showCategory;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final stacked = _largeText(context);
+    final price = product.price;
+    final meta = [
+      if (showCategory) product.categoryName,
+      _plural(product.variantCount, 'variant'),
+      _plural(product.vendorCount, 'vendor'),
+    ].join(' · ');
+    return Semantics(
+      button: true,
+      label:
+          '${product.name}, ${product.regulated ? 'regulated' : 'non-regulated'}, $meta, '
+          '${price.isEmpty ? 'no current offers' : 'median ${_peso(price.median)}, from ${_peso(price.min)} to ${_peso(price.max)} per ${product.unitName}'}',
+      hint: 'View product analytics',
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.name,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: BuyerTheme.ink,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    _RegulationBadge(regulated: product.regulated),
+                    const SizedBox(height: 4),
+                    Text(
+                      meta,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: BuyerTheme.muted,
+                      ),
+                    ),
+                    if (stacked) ...[
+                      const SizedBox(height: 6),
+                      _RangeCell(
+                        range: price,
+                        unit: product.unitName,
+                        alignEnd: false,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (!stacked) ...[
+                const SizedBox(width: 12),
+                _RangeCell(range: price, unit: product.unitName),
+              ],
+              const SizedBox(width: 4),
+              const Icon(
+                LucideIcons.chevronRight,
+                size: 18,
+                color: BuyerTheme.muted,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Product analytics: summary strip, the most-offered variant's trend, then every variant.
+class MaterialsAnalyticsProductScreen extends StatefulWidget {
+  const MaterialsAnalyticsProductScreen._(
+    this._scope, {
+    required this.materialId,
+    required this.name,
+  });
+
+  factory MaterialsAnalyticsProductScreen({
+    Key? key,
+    required AnalyticsRepository repository,
+    required DiscoveryOrigin origin,
+    required String place,
+    required AnalyticsWindowChoice window,
+    required String materialId,
+    required String name,
+    required void Function(BuildContext context, String listingId)
+    onOpenListing,
+  }) => MaterialsAnalyticsProductScreen._(
+    _Scope(
+      repository: repository,
+      origin: origin,
+      place: place,
+      window: window,
+      onOpenListing: onOpenListing,
+    ),
+    materialId: materialId,
+    name: name,
+  );
+
+  final _Scope _scope;
+  final String materialId;
+  final String name;
+
+  @override
+  State<MaterialsAnalyticsProductScreen> createState() =>
+      _MaterialsAnalyticsProductScreenState();
+}
+
+class _MaterialsAnalyticsProductScreenState
+    extends State<MaterialsAnalyticsProductScreen> {
+  AnalyticsProductDetailView? _detail;
+  DiscoveryFailure? _failure;
+  int _request = 0;
+
+  _Scope get _scope => widget._scope;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final request = ++_request;
+    setState(() {
+      _detail = null;
+      _failure = null;
+    });
+    try {
+      final detail = await _scope.repository.product(
+        materialId: widget.materialId,
+        origin: _scope.origin,
+        radiusKm: kMaterialsAnalyticsRadiusKm,
+        window: _scope.window,
+      );
+      if (mounted && request == _request) setState(() => _detail = detail);
+    } on DiscoveryFailure catch (failure) {
+      if (mounted && request == _request) setState(() => _failure = failure);
+    }
+  }
+
+  void _openVariant(String groupId) => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => MaterialPriceDetailsScreen(
+        repository: _scope.repository,
+        origin: _scope.origin,
+        radiusKm: kMaterialsAnalyticsRadiusKm,
+        groupId: groupId,
+        window: _scope.window,
+        onOpenListing: _scope.onOpenListing,
+      ),
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final detail = _detail;
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: buyerAppBar(context, 'Product analytics'),
+      body: SafeArea(
+        child: _failure != null
+            ? Padding(
+                padding: const EdgeInsets.all(16),
+                child: _FailureBand(failure: _failure!, onRetry: _load),
+              )
+            : detail == null
+            ? const Padding(
+                padding: EdgeInsets.all(16),
+                child: SkeletonBox(height: 360),
+              )
+            : RefreshIndicator(onRefresh: _load, child: _productBody(detail)),
+      ),
+    );
+  }
+
+  Widget _productBody(AnalyticsProductDetailView detail) {
+    final product = detail.product;
+    final featured = detail.featured;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      children: [
+        Semantics(
+          header: true,
+          child: Text(
+            product.name,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: BuyerTheme.ink,
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            _RegulationBadge(regulated: product.regulated),
+            Text(
+              '${product.categoryName} · per ${product.unitName}',
+              style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
+            ),
+          ],
+        ),
+        if (detail.description != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            detail.description!,
+            style: const TextStyle(fontSize: 13, color: BuyerTheme.ink),
+          ),
+        ],
+        const SizedBox(height: 8),
+        _ScopeLine(_scope.summary),
+        const SizedBox(height: 16),
+        _StatStrip(
+          stats: [
+            _Stat(
+              label: 'Average market price',
+              value: featured != null && featured.endPoint.hasValue
+                  ? pesoDecimal(featured.endPoint.average)
+                  : '—',
+              caption: 'per ${featured?.unitName ?? product.unitName}',
+            ),
+            _Stat(
+              label: 'Lowest price',
+              value: _peso(product.price.min),
+              caption: 'per ${product.unitName}',
+            ),
+            _Stat(
+              label: 'Vendors',
+              value: '${product.vendorCount}',
+              caption: 'selling now',
+            ),
+          ],
+        ),
+        if (featured != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Average and trend use the most-offered variant, ${_variantLabel(featured.displayName, product.name)}, so different sizes or brands are never mixed.',
+            style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
+          ),
+          const SizedBox(height: 20),
+          const _Heading('Price trend'),
+          const SizedBox(height: 8),
+          TrendText(trend: featured.trend),
+          const SizedBox(height: 12),
+          PriceTrendPanel(
+            title: 'Daily average for ${featured.displayName}',
+            unit: featured.unitName,
+            points: detail.series,
+            emptyReason:
+                'No price was recorded for this variant within 50 km during this period.',
+            collapsibleTable: true,
+          ),
+        ],
+        const SizedBox(height: 24),
+        _Heading(
+          'Variants',
+          trailing: _plural(detail.variants.length, 'variant'),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Each variant is one exact specification: brand, grade, size and pack.',
+          style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
+        ),
+        const SizedBox(height: 10),
+        if (detail.variants.isEmpty)
+          const AnalyticsNullCard(
+            title: 'No variants in this area',
+            reason:
+                'No comparable variant of this product is listed within 50 km during this period.',
+          )
+        else
+          _TableCard(
+            header: const _TableHeader(
+              left: 'Variant',
+              right: 'Price per unit',
+              rightCaption: 'min–max',
+            ),
+            rows: [
+              for (final variant in detail.variants)
+                _VariantRow(
+                  variant: variant,
+                  productName: product.name,
+                  onTap: () => _openVariant(variant.groupId),
+                ),
+            ],
+          ),
+        const SizedBox(height: 20),
+        _DatasetBand(envelope: detail.envelope),
+      ],
+    );
+  }
+}
+
+class _VariantRow extends StatelessWidget {
+  const _VariantRow({
+    required this.variant,
+    required this.productName,
+    required this.onTap,
+  });
+
+  final AnalyticsProductVariantView variant;
+  final String productName;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = _variantLabel(variant.displayName, productName);
+    final price = variant.price;
+    final range = price.isEmpty
+        ? 'No current offers'
+        : price.min == price.max
+        ? _peso(price.min)
+        : '${_peso(price.min)} – ${_peso(price.max)}';
+    final stacked = _largeText(context);
+    final priceCell = Column(
+      crossAxisAlignment: stacked
+          ? CrossAxisAlignment.start
+          : CrossAxisAlignment.end,
+      children: [
+        Text(
+          range,
+          textAlign: stacked ? TextAlign.start : TextAlign.end,
+          style: TextStyle(
+            fontSize: price.isEmpty ? 12 : 14,
+            fontWeight: price.isEmpty ? FontWeight.w500 : FontWeight.w800,
+            color: price.isEmpty ? BuyerTheme.muted : BuyerTheme.ink,
+          ),
+        ),
+        if (!price.isEmpty)
+          Text(
+            'per ${variant.unitName}',
+            style: const TextStyle(fontSize: 11, color: BuyerTheme.muted),
+          ),
+      ],
+    );
+    return Semantics(
+      button: true,
+      label:
+          '$label, $range per ${variant.unitName}, ${_plural(variant.vendorCount, 'vendor')}',
+      hint: 'View vendor offers',
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ExcludeSemantics(
+                child: ProductThumbnail(
+                  url: variant.imageUrl,
+                  size: 48,
+                  fallbackIcon: categoryIcon(variant.categoryCode),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ExcludeSemantics(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: BuyerTheme.ink,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _plural(variant.vendorCount, 'vendor'),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: BuyerTheme.muted,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      StockLabelText(
+                        label: variant.availability,
+                        compact: true,
+                      ),
+                      if (stacked) ...[const SizedBox(height: 6), priceCell],
+                    ],
+                  ),
+                ),
+              ),
+              if (!stacked) ...[
+                const SizedBox(width: 12),
+                ExcludeSemantics(child: priceCell),
+              ],
+              const Padding(
+                padding: EdgeInsets.only(left: 4, top: 2),
+                child: Icon(
+                  LucideIcons.chevronRight,
+                  size: 18,
+                  color: BuyerTheme.muted,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A bordered table: a tinted header row and divided body rows.
+class _TableCard extends StatelessWidget {
+  const _TableCard({required this.header, required this.rows});
+
+  final Widget header;
+  final List<Widget> rows;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.white,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+      side: const BorderSide(color: BuyerTheme.border),
+    ),
+    clipBehavior: Clip.antiAlias,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        header,
+        for (final (index, row) in rows.indexed) ...[
+          if (index > 0) const Divider(height: 1, indent: 14),
+          row,
+        ],
+      ],
+    ),
+  );
+}
+
+class _TableHeader extends StatelessWidget {
+  const _TableHeader({
+    required this.left,
+    required this.right,
+    required this.rightCaption,
+  });
+
+  final String left;
+  final String right;
+  final String rightCaption;
+
+  @override
+  Widget build(BuildContext context) {
+    const style = TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w700,
+      color: BuyerTheme.muted,
+      letterSpacing: 0.2,
+    );
+    return ExcludeSemantics(
+      child: Container(
+        color: BuyerTheme.canvas,
+        padding: const EdgeInsets.fromLTRB(14, 10, 30, 10),
+        child: _largeText(context)
+            // Rows stack their price under large text, so one heading line describes both.
+            ? Text('$left · $right ($rightCaption)', style: style)
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(child: Text(left, style: style)),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(right, style: style),
+                      Text(
+                        rightCaption,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: BuyerTheme.muted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+/// Median emphasized with the min–max range beneath, or "No current offers".
+class _RangeCell extends StatelessWidget {
+  const _RangeCell({
+    required this.range,
+    required this.unit,
+    this.alignEnd = true,
+  });
+
+  final PriceRangeView range;
+  final String unit;
+
+  /// False when the cell sits under the product name instead of beside it.
+  final bool alignEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    if (range.isEmpty) {
+      return Text(
+        alignEnd ? 'No current\noffers' : 'No current offers',
+        textAlign: alignEnd ? TextAlign.end : TextAlign.start,
+        style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
+      );
+    }
+    return Column(
+      crossAxisAlignment: alignEnd
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
+      children: [
+        Text(
+          _peso(range.median),
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+            color: BuyerTheme.ink,
+          ),
+        ),
+        Text(
+          range.min == range.max
+              ? 'per $unit'
+              : '${_peso(range.min)}–${_peso(range.max)}',
+          style: const TextStyle(fontSize: 11, color: BuyerTheme.muted),
+        ),
+      ],
+    );
+  }
+}
+
+class _RegulationBadge extends StatelessWidget {
+  const _RegulationBadge({required this.regulated});
+
+  final bool regulated;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = regulated ? BuyerTheme.actionPressed : BuyerTheme.muted;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: regulated ? BuyerTheme.brandSoft : BuyerTheme.canvas,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            regulated ? LucideIcons.shieldCheck : LucideIcons.circleDashed,
+            size: 12,
+            color: color,
+          ),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              regulated ? 'Regulated · PS/ICC' : 'Non-regulated',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+@immutable
+class _Stat {
+  const _Stat({
+    required this.label,
+    required this.value,
+    required this.caption,
+  });
+
+  final String label;
+  final String value;
+  final String caption;
+}
+
+/// Summary figures side by side, stacking under large text or on narrow screens.
+class _StatStrip extends StatelessWidget {
+  const _StatStrip({required this.stats});
+
+  final List<_Stat> stats;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final scale = MediaQuery.textScalerOf(context).scale(1);
+      final columns = (constraints.maxWidth / (108 * scale)).floor().clamp(
+        1,
+        stats.length,
+      );
+      final width = (constraints.maxWidth - (columns - 1) * 8) / columns;
+      return Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final stat in stats)
+            SizedBox(
+              width: width,
+              child: Semantics(
+                container: true,
+                label: '${stat.label}: ${stat.value} ${stat.caption}',
+                excludeSemantics: true,
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: BuyerTheme.canvas,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        stat.label,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: BuyerTheme.muted,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        stat.value,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: BuyerTheme.ink,
+                        ),
+                      ),
+                      Text(
+                        stat.caption,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: BuyerTheme.muted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      );
+    },
+  );
+}
+
+class _ScopeLine extends StatelessWidget {
+  const _ScopeLine(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Padding(
+        padding: EdgeInsets.only(top: 1),
+        child: Icon(LucideIcons.mapPin, size: 16, color: BuyerTheme.action),
+      ),
+      const SizedBox(width: 8),
+      Expanded(
+        child: Text(
+          text,
+          style: const TextStyle(fontSize: 13, color: BuyerTheme.ink),
+        ),
+      ),
+    ],
+  );
+}
+
+class _FailureBand extends StatelessWidget {
+  const _FailureBand({required this.failure, required this.onRetry});
+
+  final DiscoveryFailure failure;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => StatusBand(
+    tone: BandTone.warning,
+    title: failure.kind == DiscoveryFailureKind.offline
+        ? 'You are offline'
+        : 'Materials Analytics is unavailable',
+    message: failure.message,
+    action: TextButton(onPressed: onRetry, child: const Text('Retry')),
+  );
+}
+
+/// Where and when: the origin at the fixed analytics radius, then the history period.
 class _ScopeCard extends StatelessWidget {
   const _ScopeCard({
-    required this.area,
+    required this.place,
     required this.selected,
     required this.onPeriod,
     this.customRange,
   });
 
-  final String area;
+  final String place;
   final int selected;
   final ValueChanged<int> onPeriod;
   final String? customRange;
@@ -301,31 +1269,51 @@ class _ScopeCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
-      color: BuyerTheme.canvas,
-      borderRadius: BorderRadius.circular(12),
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: BuyerTheme.border),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
-              padding: EdgeInsets.only(top: 2),
-              child: Icon(
+            Container(
+              width: 40,
+              height: 40,
+              decoration: const BoxDecoration(
+                color: BuyerTheme.brandSoft,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
                 LucideIcons.mapPin,
-                size: 18,
-                color: BuyerTheme.action,
+                size: 20,
+                color: BuyerTheme.actionPressed,
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Expanded(
-              child: Text(
-                area,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: BuyerTheme.ink,
+              child: Semantics(
+                label: 'Within $kMaterialsAnalyticsRadiusKm km of $place',
+                excludeSemantics: true,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Within $kMaterialsAnalyticsRadiusKm km of',
+                      style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
+                    ),
+                    Text(
+                      place,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: BuyerTheme.ink,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -369,274 +1357,90 @@ class _ScopeCard extends StatelessWidget {
   );
 }
 
-/// What the numbers are: dataset, capture timing and the not-a-quotation explanation.
+/// What the numbers are: dataset, capture timing and the not-an-index explanation (MAT-03 keeps
+/// the explanation always visible).
 class _DatasetBand extends StatelessWidget {
   const _DatasetBand({required this.envelope});
 
   final AnalyticsEnvelopeView envelope;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    container: true,
-    child: Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: BuyerTheme.border),
-      ),
+  Widget build(BuildContext context) {
+    Widget line(IconData icon, String text) => Padding(
+      padding: const EdgeInsets.only(top: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 1),
-            child: Icon(LucideIcons.info, size: 18, color: BuyerTheme.action),
+          Padding(
+            padding: const EdgeInsets.only(top: 1),
+            child: Icon(icon, size: 14, color: BuyerTheme.muted),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  envelope.datasetLabel,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: BuyerTheme.ink,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  [
-                    envelope.updateSchedule,
-                    if (envelope.snapshotAt != null)
-                      'Last capture ${formatManilaTimestamp(envelope.snapshotAt!)}',
-                    'Current sellers as of ${formatManilaTimestamp(envelope.currentAsOf)}',
-                  ].join(' · '),
-                  style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  envelope.explanation,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: BuyerTheme.muted,
-                    height: 1.4,
-                  ),
-                ),
-              ],
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 12, color: BuyerTheme.ink),
             ),
           ),
         ],
       ),
-    ),
-  );
-}
-
-/// One category of the loaded rows, with its variants grouped by material in server order.
-class _Category {
-  _Category(this.name, this.code);
-
-  final String name;
-  final String code;
-  final Map<String, List<ComparableGroupView>> materials = {};
-
-  Iterable<ComparableGroupView> get variants =>
-      materials.values.expand((r) => r);
-}
-
-List<_Category> _byCategory(List<ComparableGroupView> items) {
-  final categories = <String, _Category>{};
-  for (final item in items) {
-    categories
-        .putIfAbsent(
-          item.categoryName,
-          () => _Category(item.categoryName, item.categoryCode),
-        )
-        .materials
-        .putIfAbsent(item.materialName, () => [])
-        .add(item);
-  }
-  return categories.values.toList(growable: false);
-}
-
-/// The variant part of a display name once its material heading is shown above it:
-/// "THHN building wire · Phelps Dodge · 2.0 mm" under "THHN building wire" → "Phelps Dodge · 2.0 mm".
-String _variantLabel(ComparableGroupView item) {
-  final prefix = '${item.materialName} · '.toLowerCase();
-  final name = item.displayName;
-  return name.toLowerCase().startsWith(prefix) && name.length > prefix.length
-      ? name.substring(prefix.length)
-      : name;
-}
-
-String _plural(int count, String noun) =>
-    '$count $noun${count == 1 ? '' : 's'}';
-
-class _CategoriesHeading extends StatelessWidget {
-  const _CategoriesHeading({
-    required this.count,
-    required this.allOpen,
-    required this.onToggleAll,
-  });
-
-  final int count;
-  final bool allOpen;
-  final VoidCallback? onToggleAll;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: 16),
-    child: Row(
-      children: [
-        Expanded(
-          child: Semantics(
-            header: true,
-            child: Text(
-              count == 1 ? '1 category' : '$count categories',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-            ),
-          ),
-        ),
-        if (onToggleAll != null)
-          TextButton(
-            onPressed: onToggleAll,
-            style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
-            child: Text(allOpen ? 'Collapse all' : 'Expand all'),
-          ),
-      ],
-    ),
-  );
-}
-
-/// A collapsible category card: icon, name and counts; open, its variants grouped by material.
-class _CategorySection extends StatelessWidget {
-  const _CategorySection({
-    required this.category,
-    required this.expanded,
-    required this.onToggle,
-    required this.onOpen,
-  });
-
-  final _Category category;
-  final bool expanded;
-  final VoidCallback onToggle;
-  final ValueChanged<ComparableGroupView> onOpen;
-
-  @override
-  Widget build(BuildContext context) {
-    final variants = category.variants.toList(growable: false);
-    final offering = variants.where((v) => v.currentVendors > 0).length;
-    final summary = [
-      _plural(variants.length, 'variant'),
-      _plural(category.materials.length, 'material'),
-      if (offering > 0) '$offering with current offers',
-    ].join(' · ');
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Material(
-        color: Colors.white,
-        shape: RoundedRectangleBorder(
+    );
+    return Semantics(
+      container: true,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: BuyerTheme.canvas,
           borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: BuyerTheme.border),
         ),
-        clipBehavior: Clip.antiAlias,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            MergeSemantics(
-              child: Semantics(
-                button: true,
-                expanded: expanded,
-                child: InkWell(
-                  onTap: onToggle,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 64),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
-                      child: Row(
-                        children: [
-                          ExcludeSemantics(
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: BuyerTheme.canvas,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Icon(
-                                categoryIcon(category.code),
-                                size: 20,
-                                color: BuyerTheme.action,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  category.name,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800,
-                                    color: BuyerTheme.ink,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  summary,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: BuyerTheme.muted,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          ExcludeSemantics(
-                            child: AnimatedRotation(
-                              turns: expanded ? 0.5 : 0,
-                              duration: const Duration(milliseconds: 200),
-                              child: const Icon(
-                                LucideIcons.chevronDown,
-                                size: 22,
-                                color: BuyerTheme.muted,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(top: 1),
+                  child: Icon(
+                    LucideIcons.info,
+                    size: 16,
+                    color: BuyerTheme.action,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    envelope.datasetLabel,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      color: BuyerTheme.ink,
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
-            AnimatedSize(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOut,
-              alignment: Alignment.topCenter,
-              child: expanded
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        for (final entry in category.materials.entries) ...[
-                          _MaterialStrip(
-                            name: entry.key,
-                            count: entry.value.length,
-                          ),
-                          for (final (index, item) in entry.value.indexed) ...[
-                            if (index > 0) const Divider(height: 1, indent: 14),
-                            _VariantRow(item: item, onOpen: () => onOpen(item)),
-                          ],
-                        ],
-                      ],
-                    )
-                  : const SizedBox(width: double.infinity),
+            line(
+              LucideIcons.clock,
+              [
+                if (envelope.snapshotAt != null)
+                  'Last capture ${formatManilaTimestamp(envelope.snapshotAt!)}',
+                envelope.updateSchedule,
+              ].join(' · '),
+            ),
+            line(
+              LucideIcons.store,
+              'Current sellers as of ${formatManilaTimestamp(envelope.currentAsOf)}',
+            ),
+            const SizedBox(height: 8),
+            Text(
+              envelope.explanation,
+              style: const TextStyle(
+                fontSize: 11.5,
+                color: BuyerTheme.muted,
+                height: 1.4,
+              ),
             ),
           ],
         ),
@@ -645,164 +1449,40 @@ class _CategorySection extends StatelessWidget {
   }
 }
 
-class _MaterialStrip extends StatelessWidget {
-  const _MaterialStrip({required this.name, required this.count});
+class _Heading extends StatelessWidget {
+  const _Heading(this.text, {this.trailing});
 
-  final String name;
-  final int count;
+  final String text;
+  final String? trailing;
 
   @override
-  Widget build(BuildContext context) => Container(
-    color: BuyerTheme.canvas,
-    padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
-    child: Row(
-      children: [
-        Expanded(
-          child: Semantics(
-            header: true,
-            child: Text(
-              name,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: BuyerTheme.ink,
-              ),
+  Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.end,
+    children: [
+      Expanded(
+        child: Semantics(
+          header: true,
+          child: Text(
+            text,
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              color: BuyerTheme.ink,
             ),
           ),
         ),
-        const SizedBox(width: 8),
+      ),
+      if (trailing != null)
         Text(
-          _plural(count, 'variant'),
+          trailing!,
           style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
         ),
-      ],
-    ),
+    ],
   );
 }
 
-/// One comparable variant inside its material: a photo (or the category icon), the label, the latest
-/// average per canonical unit with its date, the trend and current sellers. The row opens Material
-/// Price Details.
-class _VariantRow extends StatelessWidget {
-  const _VariantRow({required this.item, required this.onOpen});
-
-  final ComparableGroupView item;
-  final VoidCallback onOpen;
-
-  @override
-  Widget build(BuildContext context) {
-    final end = item.endPoint;
-    final offering = item.currentVendors > 0;
-    const muted = TextStyle(fontSize: 12, color: BuyerTheme.muted);
-    return Semantics(
-      button: true,
-      hint: 'View details',
-      child: InkWell(
-        onTap: onOpen,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ExcludeSemantics(
-                child: ProductThumbnail(
-                  url: item.imageUrl,
-                  fallbackIcon: categoryIcon(item.categoryCode),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _variantLabel(item),
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: BuyerTheme.ink,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 6,
-                      crossAxisAlignment: WrapCrossAlignment.end,
-                      children: [
-                        Text(
-                          end.hasValue ? pesoDecimal(end.average) : '—',
-                          style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
-                            color: BuyerTheme.ink,
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 2),
-                          child: Text('per ${item.unitName}', style: muted),
-                        ),
-                      ],
-                    ),
-                    Text(
-                      end.hasValue
-                          ? 'Average on ${analyticsDayLabel(end.date, year: true)}'
-                          : (end.label ??
-                                'No average on ${analyticsDayLabel(end.date, year: true)}'),
-                      style: muted,
-                    ),
-                    if (end.status == 'LIMITED_DATA')
-                      const Text('Limited Local Data — 1 seller', style: muted),
-                    const SizedBox(height: 6),
-                    TrendText(trend: item.trend, compact: true),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Icon(
-                          LucideIcons.store,
-                          size: 14,
-                          color: offering
-                              ? BuyerTheme.successStrong
-                              : BuyerTheme.muted,
-                        ),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            offering
-                                ? '${_plural(item.currentVendors, 'seller')} offering now'
-                                : 'No Current Offers',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: offering
-                                  ? BuyerTheme.ink
-                                  : BuyerTheme.muted,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const ExcludeSemantics(
-                child: Padding(
-                  padding: EdgeInsets.only(left: 2, top: 2),
-                  child: Icon(
-                    LucideIcons.chevronRight,
-                    size: 18,
-                    color: BuyerTheme.muted,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Material Price Details: one canonical comparable variant with its graph/table, specifications and
-/// the current public offers. An offer opens the existing single-seller Product Details.
+/// Variant detail: the current vendor offers first (each opens its Product Details), then the
+/// variant's daily price history and specification.
 class MaterialPriceDetailsScreen extends StatefulWidget {
   const MaterialPriceDetailsScreen({
     super.key,
@@ -875,7 +1555,7 @@ class _MaterialPriceDetailsScreenState
     final detail = _detail;
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: buyerAppBar(context, 'Material Price Details'),
+      appBar: buyerAppBar(context, 'Variant offers'),
       body: SafeArea(
         child: _failure != null
             ? Padding(
@@ -897,229 +1577,254 @@ class _MaterialPriceDetailsScreenState
                 padding: EdgeInsets.all(16),
                 child: SkeletonBox(height: 320),
               )
-            : ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            : _variantBody(detail),
+      ),
+    );
+  }
+
+  Widget _variantBody(MaterialPriceDetailsView detail) {
+    final group = detail.group;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ExcludeSemantics(
+              child: ProductThumbnail(
+                url: group.imageUrl,
+                size: 64,
+                fallbackIcon: categoryIcon(group.categoryCode),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ExcludeSemantics(
-                        child: ProductThumbnail(
-                          url: detail.group.imageUrl,
-                          size: 72,
-                          fallbackIcon: categoryIcon(detail.group.categoryCode),
-                        ),
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      group.displayName,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Semantics(
-                              header: true,
-                              child: Text(
-                                detail.group.displayName,
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                            Text(
-                              '${detail.group.categoryName} · ${detail.group.materialName}',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: BuyerTheme.muted,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (detail.description != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      detail.description!,
-                      style: const TextStyle(fontSize: 13),
                     ),
-                  ],
-                  const SizedBox(height: 8),
-                  for (final spec in detail.group.specification)
-                    Text('• $spec', style: const TextStyle(fontSize: 13)),
+                  ),
                   Text(
-                    'Unit: ${detail.group.unitName}',
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                  if (detail.variants.length > 1) ...[
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      initialValue: _groupId,
-                      isExpanded: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Comparable variant',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: [
-                        for (final variant in detail.variants)
-                          DropdownMenuItem(
-                            value: variant.groupId,
-                            child: Text(
-                              variant.displayName,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                      ],
-                      onChanged: (value) {
-                        if (value == null || value == _groupId) return;
-                        setState(() => _groupId = value);
-                        _load();
-                      },
+                    '${group.categoryName} · ${group.materialName}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: BuyerTheme.muted,
                     ),
-                  ],
-                  const SizedBox(height: 16),
-                  _DatasetBand(envelope: detail.envelope),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 24,
-                    runSpacing: 12,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            detail.group.endPoint.hasValue
-                                ? pesoDecimal(detail.group.endPoint.average)
-                                : '—',
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          Text(
-                            'Average per ${detail.group.unitName} on ${analyticsDayLabel(detail.group.endPoint.date, year: true)}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: BuyerTheme.muted,
-                            ),
-                          ),
-                        ],
-                      ),
-                      TrendText(trend: detail.group.trend),
-                    ],
                   ),
-                  const SizedBox(height: 16),
-                  PriceTrendPanel(
-                    title: 'Daily average for ${detail.group.displayName}',
-                    unit: detail.group.unitName,
-                    points: detail.series,
-                    emptyReason:
-                        'No price was recorded for this material within your radius during this period.',
-                  ),
-                  const SizedBox(height: 20),
-                  const SectionHeading('Current offers'),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Prices include any applicable VAT and exclude delivery and processing fees. An analytics price does not reserve stock or become a quotation.',
-                    style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
-                  ),
-                  const SizedBox(height: 8),
-                  if (_offers.isEmpty)
-                    const AnalyticsNullCard(
-                      title: 'No Current Offers',
-                      reason:
-                          'No seller within your radius currently offers this variant. The price history above remains for planning.',
-                    )
-                  else
-                    for (final offer in _offers)
-                      Semantics(
-                        button: true,
-                        label:
-                            '${offer.storeName}, ${pesoDecimal(offer.normalizedPhp)} per ${detail.group.unitName}, ${offer.taxLabel}, ${offer.availability == 'LIMITED_STOCK' ? 'Limited Stock' : 'In Stock'}, ${(offer.distanceMeters / 1000).toStringAsFixed(1)} km away. View product.',
-                        excludeSemantics: true,
-                        child: InkWell(
-                          onTap: () =>
-                              widget.onOpenListing(context, offer.listingId),
-                          child: Container(
-                            constraints: const BoxConstraints(minHeight: 64),
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            decoration: const BoxDecoration(
-                              border: Border(
-                                bottom: BorderSide(color: BuyerTheme.border),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                ProductThumbnail(
-                                  url: offer.imageUrl,
-                                  size: 48,
-                                  fallbackIcon: categoryIcon(
-                                    detail.group.categoryCode,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        offer.storeName,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                      Text(
-                                        '${offer.displayName}${offer.variantLabel == null ? '' : ' · ${offer.variantLabel}'}',
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: BuyerTheme.muted,
-                                        ),
-                                      ),
-                                      Text(
-                                        '${offer.taxLabel} · ${offer.availability == 'LIMITED_STOCK' ? 'Limited Stock' : 'In Stock'} · ${(offer.distanceMeters / 1000).toStringAsFixed(1)} km',
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: BuyerTheme.muted,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      pesoDecimal(offer.normalizedPhp),
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                    Text(
-                                      'per ${detail.group.unitName}',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: BuyerTheme.muted,
-                                      ),
-                                    ),
-                                    const Text(
-                                      'View product',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                        color: BuyerTheme.action,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
                 ],
               ),
+            ),
+          ],
+        ),
+        if (detail.variants.length > 1) ...[
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            initialValue: _groupId,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Comparable variant',
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              for (final variant in detail.variants)
+                DropdownMenuItem(
+                  value: variant.groupId,
+                  child: Text(
+                    variant.displayName,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+            ],
+            onChanged: (value) {
+              if (value == null || value == _groupId) return;
+              setState(() => _groupId = value);
+              _load();
+            },
+          ),
+        ],
+        const SizedBox(height: 16),
+        _StatStrip(
+          stats: [
+            _Stat(
+              label: 'Daily average',
+              value: group.endPoint.hasValue
+                  ? pesoDecimal(group.endPoint.average)
+                  : '—',
+              caption:
+                  'per ${group.unitName} · ${analyticsDayLabel(group.endPoint.date)}',
+            ),
+            _Stat(
+              label: 'Vendors',
+              value: '${group.currentVendors}',
+              caption: 'selling now',
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        _Heading('Vendor offers', trailing: _plural(_offers.length, 'offer')),
+        const SizedBox(height: 4),
+        const Text(
+          'Prices include any applicable VAT and exclude delivery and processing fees. An analytics price does not reserve stock or become a quotation.',
+          style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
+        ),
+        const SizedBox(height: 8),
+        if (_offers.isEmpty)
+          const AnalyticsNullCard(
+            title: 'No Current Offers',
+            reason:
+                'No seller within 50 km currently offers this variant. The price history below remains for planning.',
+          )
+        else
+          _TableCard(
+            header: const _TableHeader(
+              left: 'Vendor',
+              right: 'Unit price',
+              rightCaption: 'cheapest first',
+            ),
+            rows: [
+              for (final offer in _offers)
+                _OfferRow(
+                  offer: offer,
+                  unitName: group.unitName,
+                  categoryCode: group.categoryCode,
+                  onTap: () => widget.onOpenListing(context, offer.listingId),
+                ),
+            ],
+          ),
+        const SizedBox(height: 24),
+        const _Heading('Price history'),
+        const SizedBox(height: 8),
+        TrendText(trend: group.trend),
+        const SizedBox(height: 12),
+        PriceTrendPanel(
+          title: 'Daily average for ${group.displayName}',
+          unit: group.unitName,
+          points: detail.series,
+          emptyReason:
+              'No price was recorded for this variant within 50 km during this period.',
+        ),
+        if (detail.description != null || group.specification.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          const _Heading('Specification'),
+          const SizedBox(height: 6),
+          if (detail.description != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text(
+                detail.description!,
+                style: const TextStyle(fontSize: 13),
+              ),
+            ),
+          for (final spec in group.specification)
+            Text('• $spec', style: const TextStyle(fontSize: 13)),
+          Text('Unit: ${group.unitName}', style: const TextStyle(fontSize: 13)),
+        ],
+        const SizedBox(height: 20),
+        _DatasetBand(envelope: detail.envelope),
+      ],
+    );
+  }
+}
+
+/// One vendor's current offer: store, listing, tax/stock/distance, unit price and a View product
+/// link to its Product Details.
+class _OfferRow extends StatelessWidget {
+  const _OfferRow({
+    required this.offer,
+    required this.unitName,
+    required this.categoryCode,
+    required this.onTap,
+  });
+
+  final MaterialOfferView offer;
+  final String unitName;
+  final String categoryCode;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final stock = offer.availability == 'LIMITED_STOCK'
+        ? 'Limited Stock'
+        : 'In Stock';
+    final distance = '${(offer.distanceMeters / 1000).toStringAsFixed(1)} km';
+    return Semantics(
+      button: true,
+      label:
+          '${offer.storeName}, ${pesoDecimal(offer.normalizedPhp)} per $unitName, ${offer.taxLabel}, $stock, $distance away. View product.',
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+          child: Row(
+            children: [
+              ProductThumbnail(
+                url: offer.imageUrl,
+                size: 48,
+                fallbackIcon: categoryIcon(categoryCode),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      offer.storeName,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    Text(
+                      '${offer.displayName}${offer.variantLabel == null ? '' : ' · ${offer.variantLabel}'}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: BuyerTheme.muted,
+                      ),
+                    ),
+                    Text(
+                      '${offer.taxLabel} · $stock · $distance',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: BuyerTheme.muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    pesoDecimal(offer.normalizedPhp),
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  Text(
+                    'per $unitName',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: BuyerTheme.muted,
+                    ),
+                  ),
+                  const Text(
+                    'View product',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: BuyerTheme.action,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

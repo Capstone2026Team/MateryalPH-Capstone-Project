@@ -177,12 +177,17 @@ class PriceTrendPanel extends StatefulWidget {
     required this.unit,
     required this.points,
     required this.emptyReason,
+    this.collapsibleTable = false,
   });
 
   final String title;
   final String unit;
   final List<AnalyticsPointView> points;
   final String emptyReason;
+
+  /// Hides the daily table behind a "Show daily values" toggle where the panel is a summary; the
+  /// table stays one tap away as the graph's text alternative.
+  final bool collapsibleTable;
 
   @override
   State<PriceTrendPanel> createState() => _PriceTrendPanelState();
@@ -192,6 +197,7 @@ class _PriceTrendPanelState extends State<PriceTrendPanel> {
   String? _focused;
   bool _byValue = false;
   bool _ascending = false;
+  bool _tableOpen = false;
 
   @override
   Widget build(BuildContext context) {
@@ -215,12 +221,13 @@ class _PriceTrendPanelState extends State<PriceTrendPanel> {
             : a.date.compareTo(b.date);
         return _ascending ? order : -order;
       });
+    final showTable = !widget.collapsibleTable || _tableOpen;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Semantics(
           label:
-              '${widget.title}. $valued days with an average and ${points.length - valued} days without one, in pesos per ${widget.unit}. The table below lists every value.',
+              '${widget.title}. $valued days with an average and ${points.length - valued} days without one, in pesos per ${widget.unit}. ${showTable ? 'The table below lists every value.' : 'Show daily values to list every value.'}',
           image: true,
           excludeSemantics: true,
           child: LayoutBuilder(
@@ -257,84 +264,110 @@ class _PriceTrendPanelState extends State<PriceTrendPanel> {
             ),
           ),
         ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            _SortButton(
-              label: 'Date',
-              active: !_byValue,
-              ascending: _ascending,
-              onPressed: () => setState(() {
-                _ascending = !_byValue ? !_ascending : false;
-                _byValue = false;
-              }),
-            ),
-            const SizedBox(width: 8),
-            _SortButton(
-              label: 'Average',
-              active: _byValue,
-              ascending: _ascending,
-              onPressed: () => setState(() {
-                _ascending = _byValue ? !_ascending : true;
-                _byValue = true;
-              }),
-            ),
-          ],
-        ),
-        const Divider(height: 1),
-        for (final point in rows)
-          Semantics(
-            button: true,
-            selected: point.date == _focused,
-            label:
-                '${analyticsDayLabel(point.date, year: true)}, ${point.hasValue ? '${pesoDecimal(point.average)} per ${widget.unit}' : (point.label ?? 'no value')}${point.vendorCount == null || !point.hasValue ? '' : ', ${point.vendorCount} sellers'}${point.participantsChanged == true ? ', sellers changed' : ''}',
-            excludeSemantics: true,
-            child: InkWell(
-              onTap: () => setState(() => _focused = point.date),
-              child: Container(
-                constraints: const BoxConstraints(minHeight: 44),
-                color: point.date == _focused ? BuyerTheme.brandSoft : null,
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: Text(
-                        analyticsDayLabel(point.date, year: true),
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 3,
-                      child: Text(
-                        point.hasValue ? pesoDecimal(point.average) : '—',
-                        style: const TextStyle(
-                          fontFeatures: [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 4,
-                      child: Text(
-                        [
-                          if (point.hasValue && point.vendorCount != null)
-                            '${point.vendorCount} seller${point.vendorCount == 1 ? '' : 's'}',
-                          if (!point.hasValue || point.status == 'LIMITED_DATA')
-                            point.label ?? '',
-                          if (point.participantsChanged == true)
-                            'Sellers changed',
-                        ].where((text) => text.isNotEmpty).join(' · '),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: BuyerTheme.muted,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+        if (widget.collapsibleTable)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: TextButton.icon(
+              style: TextButton.styleFrom(
+                minimumSize: const Size(44, 44),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+              ),
+              onPressed: () => setState(() => _tableOpen = !_tableOpen),
+              icon: Icon(
+                _tableOpen ? LucideIcons.chevronUp : LucideIcons.chevronDown,
+                size: 18,
+              ),
+              label: Text(
+                _tableOpen
+                    ? 'Hide daily values'
+                    : 'Show daily values (${points.length})',
               ),
             ),
           ),
+        if (showTable) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _SortButton(
+                label: 'Date',
+                active: !_byValue,
+                ascending: _ascending,
+                onPressed: () => setState(() {
+                  _ascending = !_byValue ? !_ascending : false;
+                  _byValue = false;
+                }),
+              ),
+              const SizedBox(width: 8),
+              _SortButton(
+                label: 'Average',
+                active: _byValue,
+                ascending: _ascending,
+                onPressed: () => setState(() {
+                  _ascending = _byValue ? !_ascending : true;
+                  _byValue = true;
+                }),
+              ),
+            ],
+          ),
+          const Divider(height: 1),
+          for (final point in rows)
+            Semantics(
+              button: true,
+              selected: point.date == _focused,
+              label:
+                  '${analyticsDayLabel(point.date, year: true)}, ${point.hasValue ? '${pesoDecimal(point.average)} per ${widget.unit}' : (point.label ?? 'no value')}${point.vendorCount == null || !point.hasValue ? '' : ', ${point.vendorCount} sellers'}${point.participantsChanged == true ? ', sellers changed' : ''}',
+              excludeSemantics: true,
+              child: InkWell(
+                onTap: () => setState(() => _focused = point.date),
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 44),
+                  color: point.date == _focused ? BuyerTheme.brandSoft : null,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 4,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: Text(
+                          analyticsDayLabel(point.date, year: true),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 3,
+                        child: Text(
+                          point.hasValue ? pesoDecimal(point.average) : '—',
+                          style: const TextStyle(
+                            fontFeatures: [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 4,
+                        child: Text(
+                          [
+                            if (point.hasValue && point.vendorCount != null)
+                              '${point.vendorCount} seller${point.vendorCount == 1 ? '' : 's'}',
+                            if (!point.hasValue ||
+                                point.status == 'LIMITED_DATA')
+                              point.label ?? '',
+                            if (point.participantsChanged == true)
+                              'Sellers changed',
+                          ].where((text) => text.isNotEmpty).join(' · '),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: BuyerTheme.muted,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
       ],
     );
   }

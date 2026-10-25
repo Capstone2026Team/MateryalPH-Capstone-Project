@@ -296,6 +296,41 @@ final class ApiDiscoveryRepository implements DiscoveryRepository {
           ..favoritesOnly = filters.favoritesOnly
           ..supplierType = filters.supplierType
           ..categoryId = filters.categoryId
+          ..directoryMinRating = filters.tierSpecific
+              ? null
+              : {
+                  3.0: api
+                      .DiscoverySearchRequestDirectoryMinRatingEnum
+                      .number3Period0,
+                  3.5: api
+                      .DiscoverySearchRequestDirectoryMinRatingEnum
+                      .number3Period5,
+                  4.0: api
+                      .DiscoverySearchRequestDirectoryMinRatingEnum
+                      .number4Period0,
+                  4.5: api
+                      .DiscoverySearchRequestDirectoryMinRatingEnum
+                      .number4Period5,
+                }[filters.directoryMinRating]
+          ..directoryMaxDistanceKm = filters.tierSpecific
+              ? null
+              : const {
+                  1: api
+                      .DiscoverySearchRequestDirectoryMaxDistanceKmEnum
+                      .number1,
+                  3: api
+                      .DiscoverySearchRequestDirectoryMaxDistanceKmEnum
+                      .number3,
+                  5: api
+                      .DiscoverySearchRequestDirectoryMaxDistanceKmEnum
+                      .number5,
+                  10: api
+                      .DiscoverySearchRequestDirectoryMaxDistanceKmEnum
+                      .number10,
+                  20: api
+                      .DiscoverySearchRequestDirectoryMaxDistanceKmEnum
+                      .number20,
+                }[filters.directoryMaxDistanceKm]
           ..page = page
           ..perPage = 100,
       ),
@@ -468,6 +503,11 @@ final class ApiDiscoveryRepository implements DiscoveryRepository {
             name: favorite.name,
             scoreText: favorite.scoreLabel.text,
             currentlyDiscoverable: favorite.currentlyDiscoverable,
+            tier:
+                favorite.tier ==
+                    api.FavoriteSupplierTierEnum.DIRECTORY_SUPPLIER
+                ? SupplierTier.directory
+                : SupplierTier.verified,
           ),
         )
         .toList();
@@ -513,6 +553,8 @@ final class ApiDiscoveryRepository implements DiscoveryRepository {
       deliveryMaximumKm: vendor?.serviceability.deliveryMaximumKm,
       directoryAddress: result.directory?.formattedAddress,
       directoryType: result.directory?.primaryType,
+      googleRating: result.directory?.googleRating?.value,
+      googleRatingCount: result.directory?.googleRating?.count,
     );
   }
 

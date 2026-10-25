@@ -9,8 +9,8 @@ type Action = 'schedule' | 'decline' | 'complete'
 const STATUS_LABELS: Record<string, string> = { REQUESTED: 'Requested', SCHEDULED: 'Scheduled', COMPLETED: 'Completed', DECLINED: 'Declined', CANCELLED: 'Cancelled by Buyer' }
 const VOLUME = /^\d{1,6}(\.\d{1,3})?$/
 
-/** A calendar date from the API (parsed as UTC midnight), shown without shifting the day. */
-const preferredDateText = (date: Date) => date.toLocaleDateString('en-PH', { dateStyle: 'medium', timeZone: 'UTC' })
+/** Generated calendar dates use local midnight; keep their calendar day when displaying them. */
+const preferredDateText = (date: Date) => date.toLocaleDateString('en-PH', { dateStyle: 'medium' })
 
 /**
  * Free Site Inspection / Estimate requests in a sales conversation (owner decision 2026-10-16). The store

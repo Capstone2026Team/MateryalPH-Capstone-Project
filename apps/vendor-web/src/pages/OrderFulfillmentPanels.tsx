@@ -1,3 +1,4 @@
+import { openPendingWindow, shouldRotateIdempotencyKey } from '@materyalph/web-ui'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { AlertTriangle, Camera, ClipboardCheck, ImagePlus, PauseCircle, ShieldAlert, Truck, UserRoundCheck } from 'lucide-react'
 import {
@@ -8,7 +9,7 @@ import type { FulfillmentProof, FulfillmentStep } from '@materyalph/api-client-t
 import type { DeliveryVehicleOption } from '@materyalph/api-client-ts'
 import { Link } from 'react-router-dom'
 import {
-  apiBasePath, apiFailure, assignFulfillment, cancelOrder, finalizeCancellationRequest, getCancellationPreview, listAssignees, pesoInputToCentavos, readableOrderError, recordMilestone, recordReimbursement,
+  apiBasePath, apiFailure, assignFulfillment, cancelOrder, finalizeCancellationRequest, getCancellationPreview, listAssignees, pesoInputToCentavos, readableOrderError, orderFieldErrors, recordMilestone, recordReimbursement,
   recordTrip, reportVehicleIssue, respondToProblem, retryRefund, listDeliveryVehicles,
   type FulfillmentAssignee, type MilestoneInput, type OrderDetail, type VehicleIssueRequestCategoryEnum, type VendorCancellationPreview, type VendorCancelRequestReasonCodeEnum,
 } from '../lib/orders-api'
@@ -28,18 +29,24 @@ type Notify = (order: OrderDetail, message: string) => void
 /** Opens an order evidence file (proof, problem photo, reimbursement or NRPC evidence) through the authorized API path. */
 export function EvidenceLink({ path, label }: { path: string; label: string }) {
   const [state, setState] = useState<'idle' | 'busy' | 'error'>('idle')
+  const [fileUrl, setFileUrl] = useState<string | null>(null)
+  useEffect(() => () => { if (fileUrl) URL.revokeObjectURL(fileUrl) }, [fileUrl])
   async function open() {
+    const tab = openPendingWindow()
     setState('busy')
     try {
       const blob = await readOrderEvidenceFile(apiBasePath, path)
-      window.open(URL.createObjectURL(blob), '_blank', 'noopener')
+      const url = URL.createObjectURL(blob)
+      setFileUrl(url)
+      if (tab && !tab.closed) tab.location.replace(url)
       setState('idle')
-    } catch { setState('error') }
+    } catch { tab?.close(); setState('error') }
   }
   return <span className="inline-flex flex-wrap items-center gap-2">
     <button type="button" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-action-primary underline-offset-4 hover:underline disabled:opacity-50" disabled={state === 'busy'} onClick={() => void open()}>
       <Camera size={15} aria-hidden="true" />{state === 'busy' ? 'Opening…' : label}
     </button>
+    {fileUrl && <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-sm font-semibold text-action-primary underline">Open file</a>}
     {state === 'error' && <span role="alert" className="text-sm text-status-error">Could not open the file. Try again.</span>}
   </span>
 }
@@ -171,6 +178,8 @@ function MilestoneAction({ order, onChanged, onReload }: { order: OrderDetail; o
       key.current = newIdempotencyKey()
       onChanged(updated, `${label} recorded.`)
     } catch (cause) {
+      if (shouldRotateIdempotencyKey(cause)) key.current = newIdempotencyKey()
+      setErrors(await orderFieldErrors(cause))
       const failure = await apiFailure(cause)
       if (failure?.code === 'MILESTONE_ALREADY_RECORDED' || failure?.code === 'ORDER_STATE_CONFLICT' || failure?.code === 'STALE_VERSION') { setMessage('This order changed. Reloading its current fulfillment status…'); onReload() }
       else setMessage(await readableOrderError(cause))
@@ -387,7 +396,7 @@ export function CancellationPanel({ order, onChanged }: { order: OrderDetail; on
       const updated = dialog === 'cancel' ? await cancelOrder(order.id, order.lockVersion, reasonCode, reason.trim(), key.current) : await finalizeCancellationRequest(order.id, retain, reason.trim(), evidence ?? undefined, key.current)
       key.current = newIdempotencyKey(); setDialog(null); setReason(''); setEvidence(null)
       onChanged(updated, dialog === 'cancel' ? 'Order cancelled. Every Buyer-paid amount is being refunded to the original payment method and the stock was released.' : 'Cancellation finalized. The refund was initiated with the payment provider.')
-    } catch (cause) { key.current = newIdempotencyKey(); setError(await readableOrderError(cause)) } finally { setBusy(false) }
+    } catch (cause) { if (shouldRotateIdempotencyKey(cause)) key.current = newIdempotencyKey(); setError(await readableOrderError(cause)) } finally { setBusy(false) }
   }
   const plan = dialog === 'cancel' ? preview?.vendorCancellation : retain ? preview?.withNrpcRetained ?? preview?.fullRefund : preview?.fullRefund
   return <section aria-labelledby="cancellation-heading" className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-4">

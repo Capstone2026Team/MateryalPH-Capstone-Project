@@ -56,6 +56,96 @@ void main() {
     });
   }
 
+  testWidgets('profile save waits for a change and email links to Security', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BuyerAccountScreen(repository: repository(), onSignedOut: () {}),
+      ),
+    );
+    await tester.pumpAndSettle();
+    FilledButton save() =>
+        tester.widget(find.widgetWithText(FilledButton, 'Save changes'));
+    expect(save().onPressed, isNull);
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Full name'),
+      'Buyer renamed',
+    );
+    await tester.pump();
+    expect(save().onPressed, isNotNull);
+    await tester.enterText(find.widgetWithText(TextField, 'Full name'), ' ');
+    await tester.pump();
+    expect(save().onPressed, isNull);
+    expect(find.text('Contact details'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Verify identity'), findsOneWidget);
+    expect(find.textContaining('Account created Sep 1, 2026'), findsOneWidget);
+  });
+
+  testWidgets('an unmasked email offers a change action', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BuyerAccountScreen(
+          repository: repository(verified: true),
+          onSignedOut: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text('buyer.with.a.long.email.address@example.test'),
+      findsOneWidget,
+    );
+    await tester.tap(find.widgetWithText(TextButton, 'Change'));
+    await tester.pumpAndSettle();
+    expect(find.text('Verify your identity'), findsOneWidget);
+  });
+
+  testWidgets('security switches verification method and shows the window', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BuyerAccountScreen(
+          repository: repository(),
+          onSignedOut: () {},
+          initialSection: 'Security',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.widgetWithText(TextField, 'Email verification code'),
+      findsNothing,
+    );
+    await tester.tap(find.text('Send email verification instead'));
+    await tester.pumpAndSettle();
+    expect(
+      find.widgetWithText(TextField, 'Email verification code'),
+      findsOneWidget,
+    );
+    expect(
+      find.widgetWithText(FilledButton, 'Verify email code'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Use password instead'));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(TextField, 'Current password'), findsOneWidget);
+    await tester.tap(find.byTooltip('Show password').first);
+    await tester.pump();
+    expect(find.byTooltip('Hide password'), findsOneWidget);
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Current password'),
+      'correct horse battery',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Verify identity'));
+    await tester.pumpAndSettle();
+    expect(find.text('Identity verified'), findsOneWidget);
+    expect(find.textContaining('until'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'Current password'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('expired account access returns to sign-in', (tester) async {
     var signedOut = false;
     await tester.pumpWidget(

@@ -55,22 +55,34 @@ class MapGroup {
 
   SupplierResultView get single => members.single;
 
-  int get verifiedCount => members.where((item) => item.isVerified).length;
+  late final int verifiedCount = members
+      .where((item) => item.isVerified)
+      .length;
 
   int get directoryCount => members.length - verifiedCount;
 
-  int get favoriteCount => members.where((item) => item.isFavorite).length;
+  late final int favoriteCount = members
+      .where((item) => item.isFavorite)
+      .length;
 
-  GeoPoint get center => GeoPoint(
+  late final GeoPoint center = GeoPoint(
     members.map((item) => item.point.latitude).reduce((a, b) => a + b) /
         members.length,
     members.map((item) => item.point.longitude).reduce((a, b) => a + b) /
         members.length,
   );
 
-  String get id => isCluster
-      ? 'cluster:${members.map((item) => item.resultId).join(',').hashCode}'
-      : 'supplier:${single.resultId}';
+  late final String id = _id();
+
+  String _id() {
+    if (!isCluster) return 'supplier:${single.resultId}';
+    final ids = members.map((item) => item.resultId).toList()..sort();
+    var hash = 0;
+    for (final code in ids.join('|').codeUnits) {
+      hash = (hash * 31 + code) & 0xffffffff;
+    }
+    return 'cluster:${ids.length}:${hash.toRadixString(16)}';
+  }
 
   /// Accessible description that states the total and tier composition.
   String get semanticsLabel {
@@ -100,35 +112,129 @@ List<SupplierResultView> mapVisibleSuppliers(
   return selected.isEmpty ? items : selected;
 }
 
-/// Clustering cell size by zoom: strong clustering below 11, adaptive between 11 and 13.9 and
-/// individual markers from 14. The selected supplier is never hidden inside a cluster.
-double clusterCellSize(double zoom) {
-  if (zoom >= 14) return 0;
-  if (zoom >= 11) return 44 + (14 - zoom) * 12;
-  return 88;
+/// Only native map rendering is culled; the synchronized list keeps the full result set.
+/// Extra screen space keeps pins, labels and nearby cluster members ready while panning.
+class SupplierMapViewport {
+  const SupplierMapViewport({required this.southwest, required this.northeast});
+
+  final GeoPoint southwest;
+  final GeoPoint northeast;
+
+  List<SupplierResultView> suppliers(
+    List<SupplierResultView> items,
+    double zoom, {
+    String? selectedId,
+    double padding = 192,
+  }) {
+    final bounds = Rect.fromPoints(
+      projectToWorld(southwest, zoom),
+      projectToWorld(northeast, zoom),
+    ).inflate(padding);
+    return items.where((item) {
+      if (item.resultId == selectedId) return true;
+      final point = projectToWorld(item.point, zoom);
+      return point.dx >= bounds.left &&
+          point.dx <= bounds.right &&
+          point.dy >= bounds.top &&
+          point.dy <= bounds.bottom;
+    }).toList();
+  }
 }
 
-/// Grid clustering in world pixel space. Deterministic: groups keep result order (rank).
+/// A refreshed API model can change list details without changing any marker or label.
+bool sameSupplierMarkers(
+  List<SupplierResultView> previous,
+  List<SupplierResultView> next,
+) {
+  if (identical(previous, next)) return true;
+  if (previous.length != next.length) return false;
+  for (var index = 0; index < previous.length; index++) {
+    final a = previous[index], b = next[index];
+    if (a.resultId != b.resultId ||
+        a.tier != b.tier ||
+        a.point != b.point ||
+        a.rank != b.rank ||
+        a.markerLabel != b.markerLabel ||
+        a.isFavorite != b.isFavorite) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/// Logical screen-pixel radius: 64 below 11, 36 at 13, individual pins from 13.5.
+/// Owner tuning 2026-10-24; device/performance validation remains required.
+double clusterCellSize(double zoom) {
+  if (zoom >= 13.5) return 0;
+  if (zoom <= 11) return 64;
+  return 64 - (zoom.clamp(11, 13) - 11) * 14;
+}
+
+/// Greedy distance clustering across cell boundaries; server rank remains the list order.
 List<MapGroup> clusterSuppliers(
   List<SupplierResultView> items,
   double zoom, {
   String? selectedId,
 }) {
-  final cell = clusterCellSize(zoom);
-  final groups = <String, List<SupplierResultView>>{};
-  final order = <String>[];
-  for (final item in items) {
-    final String key;
-    if (cell == 0 || item.resultId == selectedId) {
-      key = 'single:${item.resultId}';
-    } else {
-      final world = projectToWorld(item.point, zoom);
-      key = '${(world.dx / cell).floor()}:${(world.dy / cell).floor()}';
-    }
-    if (!groups.containsKey(key)) order.add(key);
-    groups.putIfAbsent(key, () => []).add(item);
+  final radius = clusterCellSize(zoom);
+  if (radius == 0) {
+    return [
+      for (final item in items) MapGroup([item]),
+    ];
   }
-  return [for (final key in order) MapGroup(groups[key]!)];
+  final groups = <List<SupplierResultView>>[];
+  final anchors = <Offset>[];
+  final cells = <(int, int), List<int>>{};
+  for (final item in items) {
+    final point = projectToWorld(item.point, zoom);
+    final x = (point.dx / radius).floor(), y = (point.dy / radius).floor();
+    var target = -1;
+    if (item.resultId != selectedId) {
+      for (var dx = -1; dx <= 1; dx++) {
+        for (var dy = -1; dy <= 1; dy++) {
+          for (final index in cells[(x + dx, y + dy)] ?? const <int>[]) {
+            // Preserve the original greedy choice: the earliest matching anchor.
+            if ((target < 0 || index < target) &&
+                (anchors[index] - point).distanceSquared <= radius * radius) {
+              target = index;
+            }
+          }
+        }
+      }
+    }
+    if (target < 0) {
+      if (item.resultId != selectedId) {
+        (cells[(x, y)] ??= []).add(groups.length);
+      }
+      groups.add([item]);
+      anchors.add(point);
+    } else {
+      groups[target].add(item);
+    }
+  }
+  return groups.map(MapGroup.new).toList();
+}
+
+GeoPoint unprojectFromWorld(Offset point, double zoom) {
+  final scale = 256 * math.pow(2, zoom);
+  return GeoPoint(
+    (2 * math.atan(math.exp(math.pi * (1 - 2 * point.dy / scale))) -
+            math.pi / 2) *
+        180 /
+        math.pi,
+    point.dx / scale * 360 - 180,
+  );
+}
+
+double pointDistanceMeters(GeoPoint a, GeoPoint b) {
+  final lat = (b.latitude - a.latitude) * math.pi / 180;
+  final lng = (b.longitude - a.longitude) * math.pi / 180;
+  final h =
+      math.pow(math.sin(lat / 2), 2) +
+      math.cos(a.latitude * math.pi / 180) *
+          math.cos(b.latitude * math.pi / 180) *
+          math.pow(math.sin(lng / 2), 2);
+  return 6371000 * 2 * math.asin(math.sqrt(h.clamp(0, 1)));
 }
 
 /// Estimated rendered size of a store-name label; the renderer uses the same metrics.
@@ -153,7 +259,8 @@ Set<String> placeLabels(
       if (b.single.resultId == selectedId) return 1;
       return a.single.rank.compareTo(b.single.rank);
     });
-  final placed = <Rect>[];
+  const cellSize = 128.0;
+  final cells = <(int, int), List<Rect>>{};
   final labeled = <String>{};
   for (final group in singles) {
     final item = group.single;
@@ -164,11 +271,23 @@ Set<String> placeLabels(
       width: size.width,
       height: size.height,
     ).inflate(2);
+    final left = (rect.left / cellSize).floor();
+    final right = (rect.right / cellSize).floor();
+    final top = (rect.top / cellSize).floor();
+    final bottom = (rect.bottom / cellSize).floor();
+    final keys = [
+      for (var x = left; x <= right; x++)
+        for (var y = top; y <= bottom; y++) (x, y),
+    ];
     if (item.resultId != selectedId &&
-        placed.any((other) => other.overlaps(rect))) {
+        keys.any(
+          (key) => cells[key]?.any((other) => other.overlaps(rect)) ?? false,
+        )) {
       continue;
     }
-    placed.add(rect);
+    for (final key in keys) {
+      (cells[key] ??= []).add(rect);
+    }
     labeled.add(item.resultId);
   }
   return labeled;

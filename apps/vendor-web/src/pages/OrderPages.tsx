@@ -1,3 +1,4 @@
+import { manilaToday, shouldRotateIdempotencyKey } from '@materyalph/web-ui'
 import { useNavigationRefresh } from '@materyalph/web-ui'
 import { DocumentExportButton } from '@materyalph/web-ui'
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
@@ -8,7 +9,7 @@ import {
   dateFilterLabel, deliveryPlanVehicleOptions, formatManilaDateTime, formatPesoCentavos, nrpcPreparationAssessment, orderStateLabel, type NrpcPreparedMaterial, type RecordColumn,
 } from '@materyalph/web-ui'
 import {
-  apiFailure, confirmOrder, declineOrder, getDeliveryPlan, getOrder, listOrders, quantityText, readableOrderError,
+  apiFailure, confirmOrder, declineOrder, getDeliveryPlan, getOrder, listOrders, quantityText, readableOrderError, orderFieldErrors,
   type ClosedOrderState, type DeliveryPlan, type DeliveryVehicleSelection, type OrderDetail, type OrderGroup, type OrderLine, type OrderListMeta, type OrderSummary, type VendorOrderConfirmRequest, type VendorOrderDeclineReason,
 } from '../lib/orders-api'
 import type { ChatQuotationDiscount, DeliveryPlanVehicle } from '@materyalph/api-client-ts'
@@ -32,12 +33,12 @@ import { useFulfillmentUnreadCount } from '../lib/use-fulfillment-unread-count'
 type VisibleOrderGroup = Exclude<OrderGroup, 'ALL'>
 const GROUPS: { value: VisibleOrderGroup; label: string }[] = [
   { value: 'NEW', label: 'New requests' }, { value: 'WAITING_ON_BUYER', label: 'Waiting on Buyer' }, { value: 'AWAITING_PAYMENT', label: 'Awaiting payment' },
-  { value: 'CONFIRMED', label: 'Confirmed' }, { value: 'CLOSED', label: 'Closed' },
+  { value: 'CONFIRMED', label: 'Processing' }, { value: 'CLOSED', label: 'Closed' },
 ]
 const EMPTY: Record<VisibleOrderGroup, string> = {
   NEW: 'No new requests yet.',
   WAITING_ON_BUYER: 'Nothing is waiting on a Buyer decision.', AWAITING_PAYMENT: 'No confirmed orders are waiting for payment.',
-  CONFIRMED: 'No confirmed orders yet.', CLOSED: 'No completed, declined, expired or cancelled orders yet.',
+  CONFIRMED: 'No orders are being prepared or fulfilled right now.', CLOSED: 'No completed, declined, expired or cancelled orders yet.',
 }
 const CLOSED_STATES: { value: ClosedOrderState; label: string }[] = [
   { value: 'COMPLETED', label: 'Completed' }, { value: 'CANCELLED', label: 'Cancelled' },
@@ -45,7 +46,6 @@ const CLOSED_STATES: { value: ClosedOrderState; label: string }[] = [
 ]
 const DECLINE_LABELS: Record<string, string> = { STOCK_UNAVAILABLE: 'Stock unavailable', OPERATIONAL_INABILITY: 'Operational inability', DELIVERY_INABILITY: 'Cannot deliver', COMPLIANCE_RESTRICTION: 'Compliance restriction', BUYER_AGREEMENT: 'Agreed with the Buyer', OTHER: 'Other' }
 const control = 'min-h-12 w-full min-w-0 rounded-control border border-border-default bg-surface-primary px-3 text-base font-normal'
-const manilaToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date())
 
 function stateOf(states: { family: string; state: string }[], family: string): string {
   return states.find(row => row.family === family)?.state ?? ''
@@ -305,7 +305,7 @@ function OrderPanelContent({ order, notice, onChanged, onReload, canMessage, can
           {[
             ['Fulfillment', order.fulfillmentMethod === 'DELIVERY' ? 'Site Delivery' : 'Self-Pickup'],
             ['Address', order.destination?.type === 'PICKUP' ? order.destination.storeAddress : (order.destination?.alternateDropOff ?? order.destination?.intended)?.formattedAddress],
-            ['Expected fulfillment', order.expectedFulfillmentDate ? new Intl.DateTimeFormat('en-PH', { timeZone: 'UTC', dateStyle: 'medium' }).format(new Date(order.expectedFulfillmentDate)) : null],
+            ['Expected fulfillment', order.expectedFulfillmentDate ? new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium' }).format(new Date(order.expectedFulfillmentDate)) : null],
             ['Confirmed vehicle', order.delivery.confirmed?.vehicles.map(vehicle => `${vehicle.name} · ${vehicle.numberOfVehicles} vehicle(s), ${vehicle.totalVehicleTrips} trip(s)`).join('; ')],
             ['Payment method', order.paymentMethod === 'ONLINE' ? 'Online payment' : order.paymentMethod === 'CASH_ON_DELIVERY' ? 'Cash on Delivery' : 'In-Store Payment'],
             ['Payment status', orderStateLabel(stateOf(order.states, 'PAYMENT'))],
@@ -480,6 +480,7 @@ function ConfirmationWorkspace({ order, onDone, onReload }: { order: OrderDetail
       request.nrpc = { amountCentavos: nrpcAssessment.totalCentavos ?? 0, reason: nrpcReason.trim(), lines: Object.entries(nrpcLines).map(([orderLineId, principalCentavos]) => ({ orderLineId, principalCentavos: principalCentavos ?? 0 })) }
     }
     if (delivery) {
+      if (!deliveryDate || deliveryDate < manilaToday()) local['delivery.fulfillment_date'] = 'Choose a delivery date from today onward.'
       if (!plan || plan.groups.length === 0 || plan.groups.some(group => !choices.some(choice => choice.key === group.key && deliveryPlanVehicleOptions(group).some(vehicle => vehicle.vehicleId === choice.vehicleId)))) local.delivery = 'Load the vehicle options and choose an eligible vehicle for every line.'
       if (!accessConfirmed) local['delivery.access_confirmed'] = 'Confirm the drop-off is accessible for the chosen vehicles.'
       if (choices.some(choice => plan?.eligibleVehicles.some(vehicle => vehicle.vehicleId === choice.vehicleId && vehicle.heavyClassification === 'HEAVY')) && !heavyAccess) local['delivery.heavy_vehicle_access_confirmed'] = 'Confirm heavy-vehicle access for the selected vehicles.'
@@ -488,13 +489,13 @@ function ConfirmationWorkspace({ order, onDone, onReload }: { order: OrderDetail
       if (recommendationChanged && changeReason.trim().length < 10) local['delivery.change_reason'] = 'Explain the change for the Buyer (at least 10 characters).'
       request.delivery = {
         vehicles: choices.map((choice): DeliveryVehicleSelection => ({ vehicleId: choice.vehicleId, numberOfVehicles: choice.numberOfVehicles, totalVehicleTrips: choice.trips, groupKey: choice.key })),
-        finalFeeCentavos: deliveryFee, fulfillmentDate: new Date(`${deliveryDate}T00:00:00Z`), arrangement: arrangement.trim(), accessConfirmed, heavyVehicleAccessConfirmed: heavyAccess,
+        finalFeeCentavos: deliveryFee, fulfillmentDate: new Date(`${deliveryDate}T00:00:00`), arrangement: arrangement.trim(), accessConfirmed, heavyVehicleAccessConfirmed: heavyAccess,
         manualReviewNote: plan?.status === 'MANUAL_REVIEW_REQUIRED' ? manualNote.trim() : null,
         changeReason: recommendationChanged ? changeReason.trim() : null,
       }
     } else {
       if (!readyDate || readyDate < manilaToday()) local['pickup.ready_date'] = 'Choose a ready-for-pickup date from today onward.'
-      request.pickup = { readyDate: new Date(`${readyDate}T00:00:00Z`) }
+      request.pickup = { readyDate: new Date(`${readyDate}T00:00:00`) }
     }
     setErrors(local)
     return Object.keys(local).length ? null : request
@@ -510,8 +511,9 @@ function ConfirmationWorkspace({ order, onDone, onReload }: { order: OrderDetail
       idempotencyKey.current = newIdempotencyKey()
       onDone(next, changed || delivery ? 'Sent to the Buyer for approval. The confirmed stock is reserved.' : nrpcOn ? 'NRPC sent to the Buyer. The confirmed stock is reserved.' : 'Order confirmed and stock reserved. The Buyer has 24 hours to pay.')
     } catch (cause) {
-      idempotencyKey.current = newIdempotencyKey()
+      if (shouldRotateIdempotencyKey(cause)) idempotencyKey.current = newIdempotencyKey()
       const failure = await apiFailure(cause)
+      setErrors(await orderFieldErrors(cause))
       if (failure?.code === 'STOCK_INSUFFICIENT' && Array.isArray(failure.details.lines)) {
         setShortLines(Object.fromEntries((failure.details.lines as { order_line_id: string; available_to_sell: string }[]).map(item => [item.order_line_id, item.available_to_sell])))
         setMessage('Available stock is lower than a confirmed quantity. Nothing was reserved. Lower the quantity to propose a revision.')
@@ -606,7 +608,7 @@ function DeliveryPlanner({ plan, busy, onLoad, choices, setChoices, fee, errors,
     })}
     <p className="text-sm">Delivery fee before discount: <strong className="tabular-nums">{formatPesoCentavos(fee)}</strong> <span className="text-text-secondary">(per-trip rate × trips{choices.some(choice => mobilizationTotal(choice) > 0) ? ', plus mixer mobilization' : ''}; the Buyer sees this before paying)</span></p>
     <div className="grid gap-4 sm:grid-cols-2">
-      <Field label="Delivery date" name="delivery.fulfillment_date" type="date" min={manilaToday()} value={date} onChange={event => setDate(event.target.value)} />
+      <Field label="Delivery date" name="delivery.fulfillment_date" type="date" min={manilaToday()} error={errors['delivery.fulfillment_date']} value={date} onChange={event => setDate(event.target.value)} />
     </div>
     <DeliveryArrangementFields disabled={busy} showHeavyAccess={anyHeavy} manualReviewRequired={plan.status === 'MANUAL_REVIEW_REQUIRED'} recommendationChanged={recommendationChanged} errors={errors} value={{ arrangement, accessConfirmed: access, heavyAccessConfirmed: heavy, manualReviewNote: note, ...(recommendationChanged ? { changeReason } : {}) }} onChange={patch => {
       if (patch.changeReason !== undefined) setChangeReason(patch.changeReason)

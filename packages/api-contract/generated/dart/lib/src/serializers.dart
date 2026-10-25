@@ -114,6 +114,7 @@ import 'package:materyalph_api_client/src/model/analytics_correction_request.dar
 import 'package:materyalph_api_client/src/model/analytics_correction_result.dart';
 import 'package:materyalph_api_client/src/model/analytics_current_counts.dart';
 import 'package:materyalph_api_client/src/model/analytics_material_ref.dart';
+import 'package:materyalph_api_client/src/model/analytics_price_range.dart';
 import 'package:materyalph_api_client/src/model/analytics_run.dart';
 import 'package:materyalph_api_client/src/model/analytics_run_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/analytics_snapshot_ref.dart';
@@ -167,7 +168,16 @@ import 'package:materyalph_api_client/src/model/buyer_account_deletion_request.d
 import 'package:materyalph_api_client/src/model/buyer_account_deletion_result.dart';
 import 'package:materyalph_api_client/src/model/buyer_account_deletion_result_envelope.dart';
 import 'package:materyalph_api_client/src/model/buyer_account_retained_record.dart';
+import 'package:materyalph_api_client/src/model/buyer_analytics_category_summary.dart';
+import 'package:materyalph_api_client/src/model/buyer_analytics_featured_variant.dart';
 import 'package:materyalph_api_client/src/model/buyer_analytics_point.dart';
+import 'package:materyalph_api_client/src/model/buyer_analytics_product_detail.dart';
+import 'package:materyalph_api_client/src/model/buyer_analytics_product_detail_envelope.dart';
+import 'package:materyalph_api_client/src/model/buyer_analytics_product_detail_product.dart';
+import 'package:materyalph_api_client/src/model/buyer_analytics_product_list.dart';
+import 'package:materyalph_api_client/src/model/buyer_analytics_product_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/buyer_analytics_product_row.dart';
+import 'package:materyalph_api_client/src/model/buyer_analytics_product_variant.dart';
 import 'package:materyalph_api_client/src/model/buyer_analytics_row.dart';
 import 'package:materyalph_api_client/src/model/buyer_cancel_request.dart';
 import 'package:materyalph_api_client/src/model/buyer_cancellation_preview.dart';
@@ -1307,6 +1317,7 @@ part 'serializers.g.dart';
   AnalyticsCorrectionResult,
   AnalyticsCurrentCounts,
   AnalyticsMaterialRef,
+  AnalyticsPriceRange,
   AnalyticsRun,
   AnalyticsRunListEnvelope,
   AnalyticsSnapshotRef,
@@ -1360,7 +1371,16 @@ part 'serializers.g.dart';
   BuyerAccountDeletionResult,
   BuyerAccountDeletionResultEnvelope,
   BuyerAccountRetainedRecord,
+  BuyerAnalyticsCategorySummary,
+  BuyerAnalyticsFeaturedVariant,
   BuyerAnalyticsPoint,
+  BuyerAnalyticsProductDetail,
+  BuyerAnalyticsProductDetailEnvelope,
+  BuyerAnalyticsProductDetailProduct,
+  BuyerAnalyticsProductList,
+  BuyerAnalyticsProductListEnvelope,
+  BuyerAnalyticsProductRow,$BuyerAnalyticsProductRow,
+  BuyerAnalyticsProductVariant,
   BuyerAnalyticsRow,$BuyerAnalyticsRow,
   BuyerCancelRequest,
   BuyerCancellationPreview,
@@ -2486,6 +2506,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<DashboardAnomaly>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(BuyerAnalyticsCategorySummary)]),
+        () => ListBuilder<BuyerAnalyticsCategorySummary>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(NotificationPreference)]),
         () => ListBuilder<NotificationPreference>(),
       )
@@ -3058,6 +3082,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<ScoreMetric>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(BuyerAnalyticsProductVariant)]),
+        () => ListBuilder<BuyerAnalyticsProductVariant>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(VendorAnalyticsPoint)]),
         () => ListBuilder<VendorAnalyticsPoint>(),
       )
@@ -3318,6 +3346,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<ProjectSpecificationDetail>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(BuyerAnalyticsProductRow)]),
+        () => ListBuilder<BuyerAnalyticsProductRow>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(FixedSetting)]),
         () => ListBuilder<FixedSetting>(),
       )
@@ -3539,6 +3571,7 @@ Serializers serializers = (_$serializers.toBuilder()
       )
       ..add(AdminAnalyticsRow.serializer)
       ..add(AuditEvent.serializer)
+      ..add(BuyerAnalyticsProductRow.serializer)
       ..add(BuyerAnalyticsRow.serializer)
       ..add(EnforcementSummary.serializer)
       ..add(ProjectCandidateRequest.serializer)
@@ -3547,6 +3580,12 @@ Serializers serializers = (_$serializers.toBuilder()
       ..add(VendorAnalyticsRow.serializer)
       ..add(const OneOfSerializer())
       ..add(const AnyOfSerializer())
+      ..add(_NumericEnumSerializer<DiscoverySearchRequestDirectoryMinRatingEnum>({
+        DiscoverySearchRequestDirectoryMinRatingEnum.number3Period0: 3.0,
+        DiscoverySearchRequestDirectoryMinRatingEnum.number3Period5: 3.5,
+        DiscoverySearchRequestDirectoryMinRatingEnum.number4Period0: 4.0,
+        DiscoverySearchRequestDirectoryMinRatingEnum.number4Period5: 4.5,
+      }))
       ..add(_BooleanConstSerializer<ActivationRestrictionsOverrideAvailableEnum>(ActivationRestrictionsOverrideAvailableEnum.false_, false))
       ..add(_BooleanConstSerializer<AdminInvitationRequestTermsAcceptedEnum>(AdminInvitationRequestTermsAcceptedEnum.true_, true))
       ..add(_BooleanConstSerializer<AdminInvitationRequestPrivacyAcceptedEnum>(AdminInvitationRequestPrivacyAcceptedEnum.true_, true))
@@ -3575,6 +3614,38 @@ Serializers serializers = (_$serializers.toBuilder()
 
 Serializers standardSerializers =
     (serializers.toBuilder()..addPlugin(StandardJsonPlugin())).build();
+
+// Generated normalization for the numeric Directory minimum-rating enum.
+class _NumericEnumSerializer<T> implements PrimitiveSerializer<T> {
+  const _NumericEnumSerializer(this.values);
+
+  final Map<T, num> values;
+
+  @override
+  Iterable<Type> get types => [T];
+
+  @override
+  String get wireName => T.toString();
+
+  @override
+  Object serialize(Serializers serializers, T object,
+      {FullType specifiedType = FullType.unspecified}) {
+    final value = values[object];
+    if (value == null) throw ArgumentError('Invalid numeric enum value');
+    return value;
+  }
+
+  @override
+  T deserialize(Serializers serializers, Object serialized,
+      {FullType specifiedType = FullType.unspecified}) {
+    if (serialized is num) {
+      for (final entry in values.entries) {
+        if (entry.value == serialized) return entry.key;
+      }
+    }
+    throw ArgumentError('Invalid numeric enum value');
+  }
+}
 
 // Generated normalization for OpenAPI boolean const schemas.
 class _BooleanConstSerializer<T> implements PrimitiveSerializer<T> {

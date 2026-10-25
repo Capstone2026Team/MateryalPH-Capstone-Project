@@ -60,6 +60,21 @@ final class ConversationAccess
         return $this->accounts->resolve($user)['role'];
     }
 
+    /**
+     * The public role shown beside another participant's name. It never authorizes anything: a Buyer or staff account
+     * that is now deleted, suspended or deactivated keeps its recorded role, so the conversation still opens.
+     */
+    public function displayRole(User $user, object $conversation): string
+    {
+        try {
+            return $this->role($user);
+        } catch (AuthenticationException) {
+            return $user->account_type !== 'VENDOR' ? (string) $user->account_type
+                : (string) (DB::table('vendor_memberships')->where('user_id', $user->id)->where('vendor_organization_id', $conversation->vendor_organization_id)
+                    ->orderByDesc('updated_at')->value('role') ?? 'VENDOR');
+        }
+    }
+
     public function requireSales(User $user, object $conversation, bool $publish = false): string
     {
         $role = $this->role($user);
@@ -77,6 +92,12 @@ final class ConversationAccess
         $assignment = $conversation->purpose === 'FULFILLMENT'
             ? DB::table('order_fulfillment_assignments')->where('order_id', $conversation->order_id)->whereNull('ended_at')->value('id')
             : DB::table('conversation_assignments')->where('conversation_id', $conversation->id)->whereNull('ended_at')->value('id');
+
+        return $this->channelWithEpoch($user, $conversation, $member, $assignment);
+    }
+
+    public function channelWithEpoch(User $user, object $conversation, ?object $member, ?string $assignment): string
+    {
         $epoch = hash_hmac('sha256', implode('|', [$user->id, $user->account_status, $user->updated_at, $member?->role, $member?->status, $member?->updated_at, $assignment]), (string) config('app.key'));
 
         return 'conversation.'.$conversation->purpose.'.'.$conversation->id.'.'.$user->id.'.'.$epoch;

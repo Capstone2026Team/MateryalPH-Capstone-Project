@@ -1,3 +1,5 @@
+import 'project_supplier_view.dart';
+import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../design_system/components/specification_chips.dart';
@@ -52,7 +54,7 @@ class QuotationSummaryLine extends StatelessWidget {
     required this.onChoose,
     this.onOpenProduct,
     this.busy = false,
-    this.fulfillment = const {},
+    this.fulfillment,
   });
   final ProjectData line;
   final String storeName;
@@ -63,7 +65,7 @@ class QuotationSummaryLine extends StatelessWidget {
   /// The server's fulfillment row for this line (vendor, separate and
   /// remaining quantities), so the summary says what the quotation page and
   /// the Vendor card say.
-  final ProjectData fulfillment;
+  final api.ProjectFulfillmentLine? fulfillment;
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -151,11 +153,11 @@ extension on QuotationSummaryLine {
   /// already covered by separate purchases, from the server's fulfillment.
   String _gapNote(String unit) {
     final short = materialQuantity(line['missing_quantity']);
-    if (fulfillment.isEmpty) {
+    if (fulfillment == null) {
       return '$short $unit not available from this Vendor';
     }
-    final covered = materialQuantity(fulfillment['separate_quantity']);
-    final remaining = materialQuantity(fulfillment['remaining_quantity']);
+    final covered = materialQuantity(fulfillment?.separateQuantity);
+    final remaining = materialQuantity(fulfillment?.remainingQuantity);
     final open = (double.tryParse(remaining) ?? 0) > 0;
     final bought = (double.tryParse(covered) ?? 0) > 0;
     if (!open) {
@@ -449,35 +451,25 @@ class ProjectSupplierFulfillment extends StatelessWidget {
     this.showStore = false,
   });
 
-  final ProjectData group;
+  final ProjectSupplierView group;
   final bool showItems, showStore;
 
-  static bool requiresMixerDelivery(ProjectData group) {
-    final options = (group['fulfillment_options'] as List?) ?? const [];
-    return group['fulfillment_method'] == 'DELIVERY' &&
-        options.length == 1 &&
-        options.single == 'DELIVERY' &&
-        projectRows(group['items']).any(
-          (item) =>
-              projectObject(item['load'])['material_kind'] ==
-              'READY_MIXED_CONCRETE',
-        );
-  }
+  static bool requiresMixerDelivery(ProjectSupplierView group) =>
+      group.requiresMixer;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final pickup = group['fulfillment_method'] == 'PICKUP';
-    final options = (group['fulfillment_options'] as List?) ?? const [];
+    final pickup = group.method == 'PICKUP';
+    final options = group.methods;
     final method = pickup ? 'Self pick-up' : 'Site delivery';
-    final only =
-        options.length == 1 && options.first == group['fulfillment_method'];
+    final only = options.length == 1 && options.first == group.method;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (showStore) ...[
           Text(
-            projectText(group['store_name']),
+            projectText(group.storeName),
             style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w700,
             ),
@@ -517,9 +509,9 @@ class ProjectSupplierFulfillment extends StatelessWidget {
                     Text(
                       pickup
                           ? 'No delivery fee'
-                          : group['delivery_centavos'] == null
+                          : group.deliveryCentavos == null
                           ? 'Delivery fee · Vendor review'
-                          : 'Delivery fee · ${projectMoney(group['delivery_centavos'])}',
+                          : 'Delivery fee · ${projectMoney(group.deliveryCentavos)}',
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
@@ -540,21 +532,21 @@ class ProjectSupplierFulfillment extends StatelessWidget {
           ),
         ),
         if (showItems)
-          for (final item in projectRows(group['items']))
+          for (final item in group.items)
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ProductThumbnail(
-                    url: projectObject(item['image'])['url'] as String?,
-                    label: projectText(item['display_name']),
+                    url: item.imageUrl,
+                    label: projectText(item.name),
                     size: 40,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '${[projectText(item['display_name']), projectText(item['variant_label'])].where((value) => value.isNotEmpty).join(' · ')}\n${materialQuantity(item['quantity'])} ${projectText(item['unit_code'])}',
+                      '${[projectText(item.name), projectText(item.variant)].where((value) => value.isNotEmpty).join(' · ')}\n${materialQuantity(item.quantity)} ${projectText(item.unit)}',
                       style: theme.textTheme.bodySmall,
                     ),
                   ),
@@ -573,33 +565,33 @@ class ProjectSupplementRow extends StatelessWidget {
     this.onOpen,
     this.onRemove,
   });
-  final ProjectData item;
+  final api.ProjectSeparatePurchase item;
   final OpenProduct? onOpen;
   final VoidCallback? onRemove;
   @override
   Widget build(BuildContext context) {
-    final listing = item['listing_id'] as String?;
+    final listing = item.listingId as String?;
     return ProductSummaryRow(
       name: [
-        projectText(item['display_name']),
-        projectText(item['variant_label']),
+        projectText(item.displayName),
+        projectText(item.variantLabel),
       ].where((s) => s.isNotEmpty).join(' · '),
-      imageUrl: projectObject(item['image'])['url'] as String?,
-      specifications: specificationDetails(item['specifications']),
+      imageUrl: item.image?.url,
+      specifications: specificationDetails(item.specifications),
       details:
-          '${materialQuantity(item['quantity'])} ${projectText(item['unit_code'])} · ${projectText(item['store_name'])}',
+          '${materialQuantity(item.quantity)} ${projectText(item.unitCode)} · ${projectText(item.storeName)}',
       price:
-          '${projectMoney(item['unit_price_centavos'])} each · ${projectMoney(item['line_total_centavos'])}',
-      status: item['satisfies_requirement'] != true
+          '${projectMoney(item.unitPriceCentavos)} each · ${projectMoney(item.lineTotalCentavos)}',
+      status: item.satisfiesRequirement != true
           ? 'Different specifications — requirement remains open'
-          : item['stage'] == 'DRAFT'
+          : item.stage.name == 'DRAFT'
           ? 'Selected for this Work Package'
-          : item['stage'] == 'ORDERED'
-          ? 'Requested · ${projectText(item['order_reference'])}'
+          : item.stage.name == 'ORDERED'
+          ? 'Requested · ${projectText(item.orderReference)}'
           : 'Earlier cart selection',
       onOpen: onOpen == null || listing == null
           ? null
-          : () => onOpen!(listing, item['variant_id'] as String?),
+          : () => onOpen!(listing, item.variantId as String?),
       action: onRemove == null
           ? null
           : TextButton.icon(

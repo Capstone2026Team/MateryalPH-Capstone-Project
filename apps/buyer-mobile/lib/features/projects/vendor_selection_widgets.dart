@@ -1,3 +1,4 @@
+import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -52,20 +53,22 @@ String fulfillmentLabel(Object? method) =>
 
 /// Methods this Vendor offers for the package. More than one (a Both package)
 /// means the Buyer picks Delivery or Pickup before inquiring or selecting.
-List<String> fulfillmentOptions(ProjectData c) => [
-  for (final m in (c['fulfillment_options'] as List?) ?? const [])
+List<String> fulfillmentOptions(api.ProjectCandidate c) => [
+  for (final m
+      in c.fulfillmentOptions ?? <api.ProjectCandidateFulfillmentOptionsEnum>[])
     projectText(m),
 ];
 
-bool needsFulfillmentChoice(ProjectData c) => fulfillmentOptions(c).length > 1;
+bool needsFulfillmentChoice(api.ProjectCandidate c) =>
+    fulfillmentOptions(c).length > 1;
 
 /// The card's method line: the priced method, plus the other one when offered.
-String candidateFulfillmentLabel(ProjectData c) {
-  final label = fulfillmentLabel(c['fulfillment_method']);
+String candidateFulfillmentLabel(api.ProjectCandidate c) {
+  final label = fulfillmentLabel(c.fulfillmentMethod);
   if (!needsFulfillmentChoice(c)) return label;
   final other = fulfillmentOptions(
     c,
-  ).where((m) => m != projectText(c['fulfillment_method']));
+  ).where((m) => m != projectText(c.fulfillmentMethod));
   return '$label · ${other.map(fulfillmentLabel).join(', ').toLowerCase()} also offered';
 }
 
@@ -78,25 +81,25 @@ String paymentLabel(Object? method) => switch (projectText(method)) {
 /// The server's fulfillment for a quotation. The Vendor card, the quotation
 /// page and its order summary all read this one result, so no screen keeps
 /// its own count of what is covered.
-ProjectData candidateFulfillment(ProjectData candidate) =>
-    projectObject(candidate['fulfillment']);
+api.ProjectFulfillment candidateFulfillment(api.ProjectCandidate candidate) =>
+    candidate.fulfillment;
 
 /// Lines fully covered, out of all required lines.
-(int, int) fulfilledLines(ProjectData candidate) {
+(int, int) fulfilledLines(api.ProjectCandidate candidate) {
   final f = candidateFulfillment(candidate);
-  return (projectInt(f['lines_fulfilled']), projectInt(f['lines_total']));
+  return (projectInt(f.linesFulfilled), projectInt(f.linesTotal));
 }
 
 /// Lines not yet fully covered: partly covered or not covered at all.
-int linesToSource(ProjectData candidate) {
+int linesToSource(api.ProjectCandidate candidate) {
   final (full, total) = fulfilledLines(candidate);
   return total - full;
 }
 
 /// "2/4", with the partly covered lines noted: "2/4 · 1 partial".
-String fulfillmentSummary(ProjectData candidate) {
+String fulfillmentSummary(api.ProjectCandidate candidate) {
   final (full, total) = fulfilledLines(candidate);
-  final partial = projectInt(candidateFulfillment(candidate)['lines_partial']);
+  final partial = projectInt(candidate.fulfillment.linesPartial);
   return partial > 0 ? '$full/$total · $partial partial' : '$full/$total';
 }
 
@@ -113,24 +116,28 @@ String alternativesError(DiscoveryFailure failure) => switch (failure.kind) {
 };
 
 /// The server's fulfillment row for one Work Package line.
-ProjectData fulfillmentLine(ProjectData candidate, String lineId) {
-  for (final l in projectRows(candidateFulfillment(candidate)['lines'])) {
-    if (projectText(l['line_id']) == lineId) return l;
+api.ProjectFulfillmentLine? fulfillmentLine(
+  api.ProjectCandidate candidate,
+  String lineId,
+) {
+  for (final l in candidate.fulfillment.lines) {
+    if (projectText(l.lineId) == lineId) return l;
   }
-  return const {};
+  return null;
 }
 
 /// Projected total, or the materials subtotal while delivery is under review.
-String candidateTotal(ProjectData c) => c['projected_total_centavos'] == null
-    ? projectMoney(c['materials_centavos'])
-    : projectMoney(c['projected_total_centavos']);
+String candidateTotal(api.ProjectCandidate c) =>
+    c.projectedTotalCentavos == null
+    ? projectMoney(c.materialsCentavos)
+    : projectMoney(c.projectedTotalCentavos);
 
-String deliveryFee(ProjectData c) =>
-    projectText(c['fulfillment_method']) == 'PICKUP'
+String deliveryFee(api.ProjectCandidate c) =>
+    projectText(c.fulfillmentMethod) == 'PICKUP'
     ? 'Pick-up · ₱0.00'
-    : c['delivery_centavos'] == null
+    : c.deliveryCentavos == null
     ? 'Vendor review'
-    : projectMoney(c['delivery_centavos']);
+    : projectMoney(c.deliveryCentavos);
 
 class BudgetStatusChip extends StatelessWidget {
   const BudgetStatusChip(this.label, {super.key});
@@ -207,7 +214,7 @@ class VendorResultCard extends StatelessWidget {
     required this.onViewQuotation,
     this.rankingPosition,
   });
-  final ProjectData candidate;
+  final api.ProjectCandidate candidate;
   final int? rankingPosition;
   final bool selected;
   final VoidCallback onSelect;
@@ -220,12 +227,12 @@ class VendorResultCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final c = candidate;
-    final fms = projectObject(c['fms'])['score'];
-    final quotation = projectText(c['current_quotation_state']);
+    final fms = projectObject(c.fms)['score'];
+    final quotation = projectText(c.currentQuotationState);
     final missing = linesToSource(c);
     final fulfillment = candidateFulfillment(c);
-    final fullTotal = c['procurement_total_centavos'];
-    final separate = projectInt(fulfillment['separate_total_centavos']);
+    final fullTotal = c.procurementTotalCentavos;
+    final separate = projectInt(fulfillment.separateTotalCentavos);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
@@ -261,12 +268,12 @@ class VendorResultCard extends StatelessWidget {
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Text(
-                                projectText(c['store_name']),
+                                projectText(c.storeName),
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
-                              if (c['is_favorite'] == true)
+                              if (c.isFavorite == true)
                                 const Tooltip(
                                   message: 'Preferred seller',
                                   child: Icon(
@@ -283,11 +290,11 @@ class VendorResultCard extends StatelessWidget {
                             children: [
                               _Fact(
                                 LucideIcons.mapPin,
-                                kilometres(c['distance_meters']),
+                                kilometres(c.distanceMeters),
                               ),
                               _Fact(
                                 LucideIcons.star,
-                                projectText(c['score_label']),
+                                projectText(c.scoreLabel),
                               ),
                             ],
                           ),
@@ -326,19 +333,19 @@ class VendorResultCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 _VendorCostRow(
                   'Materials · all suppliers',
-                  projectMoney(c['procurement_materials_centavos']),
+                  projectMoney(c.procurementMaterialsCentavos),
                 ),
                 _VendorCostRow(
                   'Delivery · all suppliers',
-                  c['procurement_delivery_centavos'] == null
+                  c.procurementDeliveryCentavos == null
                       ? 'Vendor review'
-                      : projectMoney(c['procurement_delivery_centavos']),
+                      : projectMoney(c.procurementDeliveryCentavos),
                 ),
                 if (separate > 0)
                   Padding(
                     padding: const EdgeInsets.only(top: 4, bottom: 8),
                     child: Text(
-                      'Includes separate materials ${projectMoney(separate)} and delivery ${c['separate_delivery_centavos'] == null ? 'under review' : projectMoney(c['separate_delivery_centavos'])}.',
+                      'Includes separate materials ${projectMoney(separate)} and delivery ${c.separateDeliveryCentavos == null ? 'under review' : projectMoney(c.separateDeliveryCentavos)}.',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: BuyerTheme.muted,
                       ),
@@ -353,7 +360,7 @@ class VendorResultCard extends StatelessWidget {
                   VendorMetricTile(
                     label: 'Other suppliers',
                     value:
-                        '${projectRows(fulfillment['separate_items']).map((item) => projectText(item['vendor_id'])).toSet().length}',
+                        '${fulfillment.separateItems.toList().map((item) => item.vendorId).toSet().length}',
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -382,7 +389,7 @@ class VendorResultCard extends StatelessWidget {
                       ),
                     ),
                     BudgetStatusChip(
-                      projectText(c['procurement_budget_label']),
+                      projectText(c.procurementBudgetLabel?.name),
                     ),
                   ],
                 ),
@@ -392,7 +399,8 @@ class VendorResultCard extends StatelessWidget {
                     child: TextButton.icon(
                       onPressed: () => showVendorRankingExplanation(
                         context: context,
-                        candidate: c,
+                        factors: projectObject(c.fms),
+                        displayName: c.storeName,
                         position: rankingPosition!,
                       ),
                       icon: const Icon(LucideIcons.info, size: 16),
@@ -421,8 +429,8 @@ class VendorResultCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 if (missing == 0)
                   Text(
-                    projectInt(fulfillment['vendor_lines_fulfilled']) ==
-                            projectInt(fulfillment['lines_total'])
+                    projectInt(fulfillment.vendorLinesFulfilled) ==
+                            projectInt(fulfillment.linesTotal)
                         ? '• Package deal: every material from this Vendor'
                         : '• All materials covered, including selected items from other suppliers',
                     style: theme.textTheme.bodySmall?.copyWith(
@@ -444,12 +452,12 @@ class VendorResultCard extends StatelessWidget {
                     ),
                   ),
                 Text(
-                  '• ${candidateFulfillmentLabel(c)} · ${paymentLabel(c['payment_method'])}',
+                  '• ${candidateFulfillmentLabel(c)} · ${paymentLabel(c.paymentMethod)}',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: BuyerTheme.muted,
                   ),
                 ),
-                if (c['stale'] == true) ...[
+                if (c.stale == true) ...[
                   const SizedBox(height: 8),
                   Text(
                     'Prices or stock changed. Refresh the estimate before choosing this Vendor.',
@@ -470,8 +478,10 @@ class VendorResultCard extends StatelessWidget {
 
 Future<void> showVendorRankingExplanation({
   required BuildContext context,
-  required ProjectData candidate,
+  required ProjectData factors,
   int position = 0,
+  String displayName = 'Vendor quotation',
+  List<ProjectData> vendors = const [],
   bool arrangement = false,
 }) => showDialog<void>(
   context: context,
@@ -480,7 +490,9 @@ Future<void> showVendorRankingExplanation({
     child: SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: VendorRankingExplanation(
-        candidate: candidate,
+        factors: factors,
+        displayName: displayName,
+        vendors: vendors,
         position: position,
         arrangement: arrangement,
       ),
@@ -492,20 +504,24 @@ Future<void> showVendorRankingExplanation({
 class FulfillmentScoreTile extends StatelessWidget {
   const FulfillmentScoreTile({
     super.key,
-    required this.candidate,
+    required this.factors,
     this.position = 0,
     this.arrangement = false,
+    this.displayName = 'Vendor quotation',
+    this.vendors = const [],
     this.outlined = true,
   });
 
-  final ProjectData candidate;
+  final ProjectData factors;
+  final String displayName;
+  final List<ProjectData> vendors;
   final int position;
   final bool arrangement, outlined;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final score = projectObject(candidate['fms'])['score'];
+    final score = factors['score'];
     return Container(
       decoration: outlined ? vendorCardDecoration(context) : null,
       clipBehavior: outlined ? Clip.antiAlias : Clip.none,
@@ -514,7 +530,9 @@ class FulfillmentScoreTile extends StatelessWidget {
         child: InkWell(
           onTap: () => showVendorRankingExplanation(
             context: context,
-            candidate: candidate,
+            factors: factors,
+            displayName: displayName,
+            vendors: vendors,
             position: position,
             arrangement: arrangement,
           ),
@@ -560,6 +578,72 @@ class FulfillmentScoreTile extends StatelessWidget {
   }
 }
 
+/// Inline FMS for dense cards; opens the same ranking explanation as the tile.
+class FulfillmentScoreBadge extends StatelessWidget {
+  const FulfillmentScoreBadge({
+    super.key,
+    required this.factors,
+    this.position = 0,
+    this.arrangement = false,
+    this.vendors = const [],
+  });
+
+  final ProjectData factors;
+  final List<ProjectData> vendors;
+  final int position;
+  final bool arrangement;
+
+  @override
+  Widget build(BuildContext context) {
+    final score = factors['score'];
+    final points = _rankingPoints(score);
+    return Semantics(
+      button: true,
+      label: score == null
+          ? 'Fulfillment Match Score unavailable'
+          : 'Fulfillment Match Score $points out of 100',
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: () => showVendorRankingExplanation(
+          context: context,
+          factors: factors,
+          vendors: vendors,
+          position: position,
+          arrangement: arrangement,
+        ),
+        borderRadius: BorderRadius.circular(8),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Padding(
+            padding: const EdgeInsets.only(left: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  LucideIcons.gauge,
+                  size: 16,
+                  color: BuyerTheme.muted,
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    score == null ? 'FMS —' : 'FMS $points',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: BuyerTheme.actionPressed,
+                    ),
+                  ),
+                ),
+                const Icon(LucideIcons.chevronRight, size: 16),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 String _rankingPoints(Object? value) {
   final number = num.tryParse(projectText(value));
   return number == null
@@ -571,19 +655,23 @@ String _rankingPoints(Object? value) {
 class VendorRankingExplanation extends StatelessWidget {
   const VendorRankingExplanation({
     super.key,
-    required this.candidate,
+    required this.factors,
     required this.position,
     this.arrangement = false,
+    this.displayName = 'Vendor quotation',
+    this.vendors = const [],
   });
 
-  final ProjectData candidate;
+  final ProjectData factors;
+  final String displayName;
+  final List<ProjectData> vendors;
   final int position;
   final bool arrangement;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final fms = projectObject(candidate['fms']);
+    final fms = factors;
     final components = projectObject(fms['components']);
     final weights = projectObject(fms['weights']);
     final total = weights.values.fold<int>(0, (sum, v) => sum + projectInt(v));
@@ -602,9 +690,7 @@ class VendorRankingExplanation extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                arrangement
-                    ? 'Quotation arrangement'
-                    : projectText(candidate['store_name']),
+                arrangement ? 'Quotation arrangement' : displayName,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -724,7 +810,7 @@ class VendorRankingExplanation extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        '${projectRows(candidate['vendors']).where((v) => v['vendor_id'] == share['vendor_id']).map((v) => projectText(v['store_name'])).join()}${share['new_vendor'] == true ? '\nNew Vendor' : ''}',
+                        '${vendors.where((v) => v['vendor_id'] == share['vendor_id']).map((v) => projectText(v['store_name'])).join()}${share['new_vendor'] == true ? '\nNew Vendor' : ''}',
                         style: theme.textTheme.bodySmall,
                       ),
                     ),
@@ -1015,28 +1101,37 @@ class VendorFilterChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
+    // One row keeps the sheet short; the last chip peeks to show it scrolls.
     scrollDirection: Axis.horizontal,
     child: Row(
       children: [
-        FilterChip(
-          label: const Text('Preferred sellers'),
-          selected: favorites,
-          onSelected: (v) => onChanged(favorites: v),
-        ),
+        _chip(LucideIcons.heart, 'Preferred sellers', favorites, (v) {
+          onChanged(favorites: v);
+        }),
         const SizedBox(width: 8),
-        FilterChip(
-          label: const Text('Complete match'),
-          selected: complete,
-          onSelected: (v) => onChanged(complete: v),
-        ),
+        _chip(LucideIcons.circleCheck, 'Complete match', complete, (v) {
+          onChanged(complete: v);
+        }),
         const SizedBox(width: 8),
-        FilterChip(
-          label: const Text('Within budget'),
-          selected: withinBudget,
-          onSelected: (v) => onChanged(withinBudget: v),
-        ),
+        _chip(LucideIcons.wallet, 'Within budget', withinBudget, (v) {
+          onChanged(withinBudget: v);
+        }),
       ],
     ),
+  );
+
+  Widget _chip(
+    IconData icon,
+    String label,
+    bool selected,
+    ValueChanged<bool> onSelected,
+  ) => FilterChip(
+    avatar: selected ? null : Icon(icon, size: 16, color: BuyerTheme.muted),
+    label: Text(label),
+    selected: selected,
+    visualDensity: VisualDensity.compact,
+    materialTapTargetSize: MaterialTapTargetSize.padded,
+    onSelected: onSelected,
   );
 }
 

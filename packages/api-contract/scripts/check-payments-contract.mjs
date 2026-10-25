@@ -63,5 +63,5 @@ assert.ok(!schemas.PaymentAttempt.properties.status.enum.includes('SUCCESS'), 'A
 assert.equal(schemas.PaymentCreateRequest.properties.expected_total_centavos.minimum, 1)
 assert.deepEqual(schemas.CheckoutSubmitRequest.properties.payment_methods.additionalProperties.enum, ['ONLINE', 'CASH_ON_DELIVERY', 'IN_STORE'])
 assert.ok(schemas.OrderPaymentAvailability.properties.physical && schemas.VendorOrderPermissions.properties.can_record_physical_payment)
-assert.match(spec.info.version, /phase\.(1[1-9]|20)$/)
+assert.match(spec.info.version, /(?:phase\.(1[1-9]|20)|audit\.2026-10-24)$/)
 console.log(`Payments contract passed: ${expected.size} operations, transports, authorization middleware and FIN-04A enums`)

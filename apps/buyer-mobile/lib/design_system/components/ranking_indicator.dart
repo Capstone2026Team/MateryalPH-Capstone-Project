@@ -23,17 +23,36 @@ class RankingIndicator extends StatelessWidget {
     required this.position,
     required this.recommendation,
     this.description,
+    this.compact = false,
   }) : assert(position > 0);
 
   final int position;
   final RankingRecommendation recommendation;
   final String? description;
 
+  /// Renders TOP 1 as a single-line pill without the description banner.
+  final bool compact;
+
   @override
   Widget build(BuildContext context) {
     final style = Theme.of(
       context,
     ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700);
+    if (position == 1 && compact) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: BuyerTheme.brandSoft,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          'TOP 1 — ${recommendation.label} for You',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: style?.copyWith(color: BuyerTheme.actionPressed),
+        ),
+      );
+    }
     if (position == 1) {
       return Container(
         width: double.infinity,

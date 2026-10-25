@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:materyalph/design_system/components/category_tile.dart';
 import 'package:materyalph/design_system/components/price_trend_chart.dart';
 import 'package:materyalph/design_system/components/product_summary_row.dart';
 import 'package:materyalph/features/item_procurement/explore_screen.dart'
@@ -43,6 +44,8 @@ ComparableGroupView _group({
   displayName: '4-inch CHB — DemoBlock',
   materialName: 'Concrete hollow block',
   categoryName: 'Masonry',
+  categoryId: 'cat-masonry',
+  categoryCode: 'MASONRY',
   unitName: 'Piece',
   specification: const ['DemoBlock', 'thickness mm: 100'],
   startPoint: const AnalyticsPointView(
@@ -67,49 +70,100 @@ ComparableGroupView _group({
 Widget _app(Widget child) => MaterialApp(theme: BuyerTheme.light, home: child);
 
 void main() {
-  testWidgets(
-    'analytics list inherits the radius, labels DEMO data, shows trends and limited data, and opens details',
-    (tester) async {
-      final repository = FakeAnalyticsRepository()
-        ..page = MaterialsAnalyticsPage(
+  const masonry = AnalyticsCategorySummaryView(
+    id: 'cat-masonry',
+    name: 'Masonry',
+    code: 'MASONRY',
+    productCount: 1,
+    variantCount: 2,
+  );
+  const electrical = AnalyticsCategorySummaryView(
+    id: 'cat-electrical',
+    name: 'Electrical Supplies',
+    code: 'ELECTRICAL_SUPPLIES',
+    productCount: 1,
+    variantCount: 2,
+  );
+  const chb = AnalyticsProductView(
+    materialId: 'm-chb',
+    name: 'Concrete hollow block',
+    categoryId: 'cat-masonry',
+    categoryName: 'Masonry',
+    categoryCode: 'MASONRY',
+    regulated: false,
+    unitName: 'Piece',
+    variantCount: 2,
+    vendorCount: 4,
+    price: PriceRangeView(min: '100.00', median: '115.00', max: '150.00'),
+  );
+  const thhn = AnalyticsProductView(
+    materialId: 'm-thhn',
+    name: 'THHN building wire',
+    categoryId: 'cat-electrical',
+    categoryName: 'Electrical Supplies',
+    categoryCode: 'ELECTRICAL_SUPPLIES',
+    regulated: false,
+    unitName: 'Meter',
+    variantCount: 2,
+    vendorCount: 1,
+    price: PriceRangeView(min: '31.99', median: '31.99', max: '31.99'),
+  );
+  final cement = AnalyticsProductView(
+    materialId: 'm-cement',
+    name: 'Portland cement',
+    categoryId: 'cat-masonry',
+    categoryName: 'Masonry',
+    categoryCode: 'MASONRY',
+    regulated: true,
+    unitName: 'Bag',
+    variantCount: 1,
+    vendorCount: 0,
+    price: const PriceRangeView(),
+  );
+
+  FakeAnalyticsRepository productsRepository() =>
+      FakeAnalyticsRepository()
+        ..productsPage = AnalyticsProductsPage(
           envelope: _envelope,
-          items: [
-            _group(),
-            _group(
-              id: 'g2',
-              end: const AnalyticsPointView(
-                date: '2026-10-04',
-                status: 'LIMITED_DATA',
-                label: 'Limited Local Data — 1 Vendor',
-                average: '95.00',
-                vendorCount: 1,
-              ),
-              trend: const AnalyticsTrendView(
-                reason: 'INSUFFICIENT_LOCAL_DATA',
-                label: 'Insufficient Local Data',
-              ),
-              vendors: 0,
-            ),
-          ],
+          categories: const [masonry, electrical],
+          items: [chb, thhn, cement],
+          notYetComparable: 117,
         );
-      await tester.pumpWidget(
-        _app(
-          MaterialsAnalyticsScreen(
-            repository: repository,
-            origin: _origin,
-            radiusKm: 10,
-            onOpenListing: (_, _) {},
-          ),
+
+  Future<void> pumpOverview(
+    WidgetTester tester,
+    FakeAnalyticsRepository repository,
+  ) async {
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      _app(
+        MaterialsAnalyticsScreen(
+          repository: repository,
+          origin: _origin,
+          onOpenListing: (_, _) {},
         ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Within 10 km of Quezon City site'), findsOneWidget);
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets(
+    'the overview is fixed at 50 km, shows category tiles and why listings outnumber compared products',
+    (tester) async {
+      final repository = productsRepository();
+      await pumpOverview(tester, repository);
+      expect(find.text('Within 50 km of'), findsOneWidget);
+      expect(find.text('Quezon City site'), findsOneWidget);
       expect(find.text('DEMO — Simulated Marketplace Data'), findsOneWidget);
-      expect(find.text('+10.00% · Increasing'), findsOneWidget);
-      expect(find.text('Insufficient Local Data'), findsOneWidget);
-      expect(find.text('Limited Local Data — 1 seller'), findsOneWidget);
-      expect(find.text('No Current Offers'), findsOneWidget);
-      expect(repository.radii, [10]);
+      expect(find.byTooltip('Change radius'), findsNothing);
+      expect(find.byType(CategoryTile), findsNWidgets(3));
+      expect(find.text('2 products'), findsOneWidget);
+      expect(find.textContaining('117 listings nearby'), findsOneWidget);
+      // Products only appear after a tile is opened.
+      expect(find.text('Concrete hollow block'), findsNothing);
+      expect(repository.radii, [50]);
       expect(repository.windows.single, const AnalyticsWindowChoice.preset(30));
 
       await tester.tap(find.text('7 days'));
@@ -119,124 +173,226 @@ void main() {
   );
 
   testWidgets(
-    'several categories start collapsed, open on tap and list variants under their material',
+    'a category opens its product table with regulation badges, counts and the median and range',
     (tester) async {
-      ComparableGroupView wire(String id, String size) => ComparableGroupView(
-        groupId: id,
-        displayName: 'THHN building wire · Phelps Dodge · Nominal size $size',
-        materialName: 'THHN building wire',
-        categoryName: 'Electrical Supplies',
-        categoryCode: 'ELECTRICAL_SUPPLIES',
-        unitName: 'Meter',
-        specification: const ['Phelps Dodge'],
-        startPoint: const AnalyticsPointView(date: '2026-09-04', status: 'OK'),
-        endPoint: const AnalyticsPointView(
-          date: '2026-10-04',
-          status: 'LIMITED_DATA',
-          average: '31.99',
-          vendorCount: 1,
-        ),
-        trend: const AnalyticsTrendView(label: 'Insufficient Local Data'),
-        currentVendors: 1,
-        currentListings: 1,
-        imageUrl: id == 'w1' ? 'https://cdn.example.test/thhn.jpg' : null,
-      );
-      final repository = FakeAnalyticsRepository()
-        ..page = MaterialsAnalyticsPage(
-          envelope: _envelope,
-          items: [_group(), wire('w1', '2.0 mm'), wire('w2', '3.5 mm')],
-        );
-      await tester.pumpWidget(
-        _app(
-          MaterialsAnalyticsScreen(
-            repository: repository,
-            origin: _origin,
-            radiusKm: 10,
-            onOpenListing: (_, _) {},
-          ),
-        ),
-      );
+      final repository = productsRepository();
+      await pumpOverview(tester, repository);
+      await tester.tap(find.widgetWithText(CategoryTile, 'Masonry'));
       await tester.pumpAndSettle();
-      expect(find.text('2 categories'), findsOneWidget);
-      expect(find.text('Electrical Supplies'), findsOneWidget);
+
+      expect(repository.categoryIds.last, 'cat-masonry');
+      expect(find.text('Masonry'), findsOneWidget, reason: 'App bar title');
+      expect(find.text('Concrete hollow block'), findsOneWidget);
+      expect(find.text('Portland cement'), findsOneWidget);
+      expect(find.text('THHN building wire'), findsNothing);
+      expect(find.text('Non-regulated'), findsOneWidget);
+      expect(find.text('Regulated · PS/ICC'), findsOneWidget);
+      expect(find.text('2 variants · 4 vendors'), findsOneWidget);
+      expect(find.text('₱115.00'), findsOneWidget);
+      expect(find.text('₱100.00–₱150.00'), findsOneWidget);
+      expect(find.text('No current\noffers'), findsOneWidget);
       expect(
-        find.text('2 variants · 1 material · 2 with current offers'),
+        find.text('Within 50 km of Quezon City site · Last 30 days'),
         findsOneWidget,
       );
-      expect(find.text('Phelps Dodge · Nominal size 2.0 mm'), findsNothing);
 
-      await tester.tap(find.text('Electrical Supplies'));
+      // All lists every category, naming each product's category.
+      await tester.pageBack();
       await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(CategoryTile, 'All'));
+      await tester.pumpAndSettle();
+      expect(repository.categoryIds.last, isNull);
+      expect(find.text('All materials'), findsOneWidget);
+      expect(
+        find.text('Electrical Supplies · 2 variants · 1 vendor'),
+        findsOneWidget,
+      );
+
+      // A search opens the same table for its matches.
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'thhn');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+      expect(repository.queries.last, 'thhn');
+      expect(find.text('Results for “thhn”'), findsOneWidget);
       expect(find.text('THHN building wire'), findsOneWidget);
-      expect(find.text('Phelps Dodge · Nominal size 2.0 mm'), findsOneWidget);
-      expect(find.text('Phelps Dodge · Nominal size 3.5 mm'), findsOneWidget);
-      expect(find.text('per Meter'), findsNWidgets(2));
-      expect(find.text('4-inch CHB — DemoBlock'), findsNothing);
-      // Each variant shows its photo; one without a photo falls back to its category icon.
-      final thumbnails = tester
-          .widgetList<ProductThumbnail>(find.byType(ProductThumbnail))
-          .toList();
-      expect(thumbnails.map((t) => t.url), [
-        'https://cdn.example.test/thhn.jpg',
-        null,
-      ]);
-      expect(thumbnails.last.fallbackIcon, categoryIcon('ELECTRICAL_SUPPLIES'));
-
-      await tester.tap(find.text('Expand all'));
-      await tester.pumpAndSettle();
-      expect(find.text('4-inch CHB — DemoBlock'), findsOneWidget);
-      expect(find.text('Collapse all'), findsOneWidget);
+      expect(find.text('Concrete hollow block'), findsNothing);
     },
   );
 
   testWidgets(
-    'an empty history renders an explicit null state instead of an empty chart',
+    'product analytics shows the summary strip, the most-offered variant trend and the variants table',
     (tester) async {
-      final repository = FakeAnalyticsRepository()
-        ..page = MaterialsAnalyticsPage(envelope: _envelope, items: const []);
+      String? opened;
+      final repository = productsRepository()
+        ..productDetail = AnalyticsProductDetailView(
+          envelope: _envelope,
+          product: chb,
+          description: 'Load-bearing masonry unit.',
+          featured: _group(),
+          series: const [
+            AnalyticsPointView(
+              date: '2026-10-04',
+              status: 'OK',
+              average: '110.00',
+              vendorCount: 3,
+            ),
+          ],
+          variants: const [
+            AnalyticsProductVariantView(
+              groupId: 'g1',
+              displayName: 'Concrete hollow block · BrandCo · 100 mm',
+              materialName: 'Concrete hollow block',
+              specification: ['BrandCo', 'thickness mm: 100'],
+              unitName: 'Piece',
+              vendorCount: 3,
+              listingCount: 3,
+              price: PriceRangeView(
+                min: '100.00',
+                median: '110.00',
+                max: '120.00',
+              ),
+              availability: 'IN_STOCK',
+              categoryCode: 'MASONRY',
+            ),
+            AnalyticsProductVariantView(
+              groupId: 'g2',
+              displayName: 'Concrete hollow block · BrandCo · 150 mm',
+              materialName: 'Concrete hollow block',
+              specification: ['BrandCo', 'thickness mm: 150'],
+              unitName: 'Piece',
+              vendorCount: 1,
+              listingCount: 1,
+              price: PriceRangeView(
+                min: '150.00',
+                median: '150.00',
+                max: '150.00',
+              ),
+              availability: 'LIMITED_STOCK',
+              categoryCode: 'MASONRY',
+            ),
+          ],
+        )
+        ..detail = MaterialPriceDetailsView(
+          envelope: _envelope,
+          group: _group(),
+          description: null,
+          variants: const [
+            (groupId: 'g1', displayName: '4-inch CHB — DemoBlock'),
+          ],
+          series: const [],
+        )
+        ..currentOffers = const [
+          MaterialOfferView(
+            vendorId: 'v1',
+            storeName: 'DEMO — Santos Hardware',
+            listingId: 'l1',
+            displayName: 'CHB',
+            variantLabel: null,
+            priceCentavos: 10500,
+            normalizedPhp: '105.00',
+            taxLabel: 'Non-VAT seller',
+            availability: 'IN_STOCK',
+            distanceMeters: 1200,
+          ),
+        ];
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
       await tester.pumpWidget(
         _app(
-          MaterialsAnalyticsScreen(
+          MaterialsAnalyticsProductsScreen(
             repository: repository,
             origin: _origin,
-            radiusKm: 5,
-            onOpenListing: (_, _) {},
+            place: 'Quezon City site',
+            window: const AnalyticsWindowChoice.preset(30),
+            title: 'Masonry',
+            categoryId: 'cat-masonry',
+            onOpenListing: (_, id) => opened = id,
           ),
         ),
       );
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Concrete hollow block'));
+      await tester.pumpAndSettle();
+
+      expect(repository.productIds, ['m-chb']);
+      expect(find.text('Product analytics'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Average market price: ₱110.00 per Piece'),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel('Lowest price: ₱100.00 per Piece'),
+        findsOneWidget,
+      );
+      expect(find.bySemanticsLabel('Vendors: 4 selling now'), findsOneWidget);
+      expect(find.textContaining('most-offered variant'), findsOneWidget);
+      expect(find.text('+10.00% · Increasing'), findsOneWidget);
+      expect(find.byType(PriceTrendPanel), findsOneWidget);
+      expect(find.text('BrandCo · 100 mm'), findsOneWidget);
+      expect(find.text('₱100.00 – ₱120.00'), findsOneWidget);
+      expect(find.text('₱150.00'), findsOneWidget);
+      expect(find.text('3 vendors'), findsOneWidget);
+      expect(find.text('Limited Stock'), findsOneWidget);
+      expect(find.text('In Stock'), findsOneWidget);
+      // Each variant row shows its photo, falling back to its category icon.
+      final thumbnails = tester
+          .widgetList<ProductThumbnail>(find.byType(ProductThumbnail))
+          .toList();
+      expect(thumbnails, hasLength(2));
+      expect(thumbnails.first.url, isNull);
+      expect(thumbnails.first.fallbackIcon, categoryIcon('MASONRY'));
+
+      // A variant opens its vendor offers first; an offer opens Product Details.
+      await tester.tap(find.text('BrandCo · 100 mm'));
+      await tester.pumpAndSettle();
+      expect(find.text('Variant offers'), findsOneWidget);
+      expect(find.text('Vendor offers'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('Vendor offers')).dy,
+        lessThan(tester.getTopLeft(find.text('Price history')).dy),
+      );
+      expect(repository.radii.toSet(), {50});
+      await tester.tap(find.text('DEMO — Santos Hardware'));
+      expect(opened, 'l1');
+    },
+  );
+
+  testWidgets(
+    'an empty scope renders an explicit null state instead of tiles or a chart',
+    (tester) async {
+      final repository = FakeAnalyticsRepository()
+        ..productsPage = AnalyticsProductsPage(
+          envelope: _envelope,
+          categories: const [],
+          items: const [],
+          notYetComparable: 0,
+        );
+      await pumpOverview(tester, repository);
       expect(find.text('No comparable materials here yet'), findsOneWidget);
-      // No chart is drawn; shaped Material borders still paint and are not charts.
+      expect(find.byType(CategoryTile), findsNothing);
       expect(find.byType(PriceTrendPanel), findsNothing);
+      expect(find.textContaining('listings nearby'), findsNothing);
     },
   );
 
   testWidgets(
     'offline failures offer a retry and never show stale numbers as current',
     (tester) async {
-      final repository = FakeAnalyticsRepository()
+      final repository = productsRepository()
         ..failure = const DiscoveryFailure(
           DiscoveryFailureKind.offline,
           'You appear to be offline.',
         );
-      await tester.pumpWidget(
-        _app(
-          MaterialsAnalyticsScreen(
-            repository: repository,
-            origin: _origin,
-            radiusKm: 5,
-            onOpenListing: (_, _) {},
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
+      await pumpOverview(tester, repository);
       expect(find.text('You are offline'), findsOneWidget);
-      repository
-        ..failure = null
-        ..page = MaterialsAnalyticsPage(envelope: _envelope, items: [_group()]);
+      expect(find.byType(CategoryTile), findsNothing);
+      repository.failure = null;
       await tester.tap(find.text('Retry'));
       await tester.pumpAndSettle();
-      expect(find.text('4-inch CHB — DemoBlock'), findsOneWidget);
+      expect(find.widgetWithText(CategoryTile, 'Masonry'), findsOneWidget);
     },
   );
 
@@ -318,7 +474,11 @@ void main() {
       );
       await tester.ensureVisible(exact);
       expect(exact, findsOneWidget);
-      await tester.scrollUntilVisible(find.text('DEMO — Santos Hardware'), 300);
+      // Offers sit above the price history now, so scroll back up to them.
+      await tester.scrollUntilVisible(
+        find.text('DEMO — Santos Hardware'),
+        -300,
+      );
       await tester.tap(find.text('DEMO — Santos Hardware'));
       expect(opened, 'l1');
     },

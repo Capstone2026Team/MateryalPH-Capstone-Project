@@ -10,6 +10,7 @@ Name | Type
 `primaryType` | string
 `source` | string
 `refreshedAt` | Date
+`googleRating` | [GoogleRating](GoogleRating.md)
 
 ## Example
 
@@ -22,6 +23,7 @@ const example = {
   "primaryType": null,
   "source": null,
   "refreshedAt": null,
+  "googleRating": null,
 } satisfies DirectorySupplierSummary
 
 console.log(example)

@@ -51,7 +51,7 @@ The following decisions are fixed for implementation:
 | Dense map markers | Cluster overlapping Vendors when zoomed out; show individual labels as the map separates them |
 | Tier 2 marker label | Store name plus VPS; use “New Vendor” when the public minimum sample is not met |
 | Tier 1 marker label | Store name plus `Directory`; do not fabricate a VPS |
-| Tier 1 rating | A Google rating may appear only inside Place Details, labeled and attributed as Google data |
+| Tier 1 rating | A Google rating may appear on Directory cards and in Place Details, labeled and attributed as Google data; Directory-only minimum rating is allowed; the separate Directory distance filter is removed (owner requests 2026-10-24) |
 | Tier 2 marker interaction | Select marker, animate route, open preview sheet, then use explicit `View Store` action |
 | Route origin on Map Home | Buyer-selected location; current device location only after permission and explicit selection |
 | Route origin in a Project | Project site saved on the Work Package/Project |
@@ -198,13 +198,13 @@ Rules:
 
 | Entity/state | Marker treatment | Label |
 | --- | --- | --- |
-| Tier 2 Verified Vendor | Orange construction-pin shape with verified check | Store name + `VPS 4.7` or `New Vendor` |
-| Tier 1 Directory Supplier | Steel-gray outlined pin with directory/building glyph | Store name + `Directory` |
-| Favorite Tier 2 Vendor | Verified marker plus visible star tab | Same Tier 2 score label |
+| Tier 2 Verified Vendor | Orange teardrop with white verified check | Store name + `VPS 4.7` or `New Vendor` |
+| Tier 1 Directory Supplier | White teardrop, steel-gray outline and building glyph | Store name + `Directory` |
+| Favorite Supplier (either tier) | That tier's teardrop plus gold ring and path-drawn top-right star badge | Same score or `Directory` label |
 | Buyer-selected location | Blue location dot with white border | `Your selected location` in accessibility label |
 | Project site | Charcoal/orange hard-hat or project marker | Project/Work Package site name |
 | Selected Vendor | 2 px charcoal outer ring, raised label, increased z-order | Full untruncated label where space permits |
-| Cluster | Tier-aware segmented cluster with numeric count | Accessible count, e.g. `12 suppliers in this area` |
+| Cluster | Segmented orange/gray ring with total count and a gold star chip showing favorite count | Accessible count, e.g. `12 suppliers in this area` |
 
 Do not label a Google rating as VPS. Do not label a Tier 1 supplier as verified. A Tier 2 Vendor below the required score sample shows `New Vendor`, not an artificial neutral rating.
 
@@ -314,10 +314,10 @@ Every page implements loading, empty, populated, validation, disabled, permissio
 The authenticated Map Home is the Buyer's home page.
 
 1. **Top safe-area header:** `Location` label, selected location name, dropdown chevron, Search, Notifications with unread count, and Cart with item count.
-2. **Radius/filter bar:** Tune button followed by horizontally scrollable 5/10/20/30/40/50 km chips. The selected radius uses brand accent plus text/shape, not color alone.
+2. **Radius/filter bar:** Tune button followed by horizontally scrollable 5/10/20/30/40/50 km chips. The selected radius uses brand accent plus text/shape, not color alone. The filter sheet starts with its own Favorite Suppliers only section, which applies to both tiers (owner request 2026-10-25), then groups Supplier type and Material category beneath the Verified Vendors toggle, then places Minimum Google rating beneath the Directory Suppliers toggle. Only Supplier type and Material category hide Directory Suppliers. Use flat sections, a clear divider, consistent child indentation and a scrolling options area with Reset/Apply kept visible.
 3. **Map viewport:** selected-location marker, radius boundary, clustered Vendor markers, selected route, provider attribution.
 4. **Floating controls:** recenter, layers/legend, and `List view`. Place controls away from Google attribution and sheet drag area.
-5. **Context sheet:** collapsed handle and `Vendors near you` summary when no Vendor is selected; selected Vendor preview when a pin/list row is selected.
+5. **Context sheet:** collapsed handle and `Suppliers near you` summary with a reusable compact toolbar when no Vendor is selected: rounded accent-outline store-name search with trailing magnifier, wrapping Verified/Directory/Favorites chips, then inline Distance/Rating controls with an active underline and direction arrow. Tapping the active sort reverses it; switching modes starts nearest distance or highest rating. Controls retain 44 px targets and wrap at large text sizes. Selected Vendor preview appears when a pin/list row is selected.
 6. **Bottom navigation:** Map, Explore, Projects, Messages, Profile with text labels at all times.
 
 The sheet uses three snap positions:
@@ -328,12 +328,12 @@ The sheet uses three snap positions:
 
 ### 9.2 Marker rendering and clustering
 
-- Fetch only suppliers intersecting the current viewport/radius and authorized filters.
-- At low zoom, cluster spatially overlapping results. The initial tuning targets are: strong clustering below zoom 11, adaptive clustering from zoom 11–13.9, and individual labels near zoom 14+, subject to device/performance validation.
+- Discover suppliers through the API within the selected radius and authorized filters. Keep the complete eligible result set in the synchronized list; create native markers/labels only for the current viewport plus a 192 logical-pixel buffer, retaining the selection even outside that area. Panning brings suppliers into view without another provider search or a fixed marker-count cap.
+- At low zoom, cluster spatially overlapping results. Owner tuning 2026-10-24 uses greedy screen-distance clustering: radius 64 logical pixels below zoom 11, sliding linearly to 36 at zoom 13 (held through 13.49), and individual pins from 13.5. Re-cluster on each half-zoom band during camera movement, throttled to 60 ms, plus a 60 ms idle debounce. Coalesce result pages for 100 ms. Cluster taps fit member bounds; members within about 30 m, or clusters at maximum zoom, fan out in a small circle. Subject to device/performance validation.
 - A cluster announces its total and tier composition. Selecting it zooms to bounds or expands the cluster; it does not choose a Vendor arbitrarily.
 - When individual markers do not collide, display store name plus score/tier label.
 - On label collision, preserve the selected label, then nearest/highest-ranked visible labels, while keeping all suppliers discoverable through the synchronized list. This is a rendering rule, not a ranking change.
-- Marker virtualization must prevent rebuilding every marker on minor camera movement.
+- Marker virtualization must prevent rebuilding every marker on minor camera movement. Use spatial indexes for greedy clustering and label collision checks while preserving their result order and priority. Coalesce overlapping renders, skip unchanged marker data after discovery revalidation, and skip unchanged viewport candidates/settings. Read native viewport bounds during panning at most every 120 ms (60 ms for a changed half-zoom band), with the existing 60 ms idle debounce. Keep the bitmap LRU bounded.
 - Do not request a route for every visible marker. Request a route only for the selected Vendor.
 
 ### 9.3 Vendor selection sequence
@@ -394,9 +394,12 @@ Tier 1 remains information-only. The sheet may display only provider-returned an
 - Google attribution close to provider data.
 - Formatted address.
 - Public phone number, website, and opening hours when returned.
-- Google rating and rating count only when requested and shown as `Google rating`.
+- Google rating and rating count may appear on Directory cards and in Place Details, always labeled `Google rating` with Google attribution. Minimum Google rating applies only to Directory Suppliers. The separate Directory distance filter is removed by owner request on 2026-10-24; the shared selected radius remains the boundary. Verified Vendor eligibility and VPS are unchanged.
 - Distance and driving ETA from the selected origin.
 - `Call`, `Open in Google Maps`, `Website`, or `Share` when available.
+- A Favorite (bookmark) toggle. By owner request on 2026-10-25 a Directory Supplier may be saved as a Favorite Supplier; the Favorite stores only the Google Place ID, never provider content, and keeps the place informational.
+
+Both previews share one layout: header (image, name, Favorite, Close) with tier/score badges on a full-width row beneath, aligned status lines (open status, route), one filled primary action with a secondary icon action, then labelled groups (`Categories`, `Store details`; or `Opening hours`, `Contact`) in flat bordered cards, with notices and attribution as footnotes.
 
 Do not show Add to Cart, Buy, Message in MateryalPH, VPS, Verified Vendor, inventory, MateryalPH reviews, or a MateryalPH Storefront action. Missing provider fields are omitted rather than shown as misleading placeholders.
 
@@ -877,7 +880,7 @@ Implement the approved palette and Inter typography from the UI planner. Preserv
 
 Use the approved PRODUCT.md, DESIGN.md, semantic tokens and UI planner for design review.
 
-For Buyer Map Home, use Figma frame 1:17996 as composition reference and the planner as behavioral authority. Implement/test reusable contracts for LocationSelector, RadiusSelector, SupplierMarker, SupplierCluster, RouteOverlay, SupplierPreviewSheet, ScoreBadge, map/list switch, and map async states. Fixed radius options are 5/10/20/30/40/50 km with 5 km default and confirmation before automatic expansion. Cluster overlapping Vendors. Individual Tier 2 labels show store name plus VPS or New Vendor; Tier 1 labels show store name plus Directory. Tier 1 Google ratings appear only in Place Details with attribution and never as VPS.
+For Buyer Map Home, use Figma frame 1:17996 as composition reference and the planner as behavioral authority. Implement/test reusable contracts for LocationSelector, RadiusSelector, SupplierMarker, SupplierCluster, RouteOverlay, SupplierPreviewSheet, ScoreBadge, map/list switch, and map async states. Fixed radius options are 5/10/20/30/40/50 km with 5 km default and confirmation before automatic expansion. Cluster overlapping Vendors. Individual Tier 2 labels show store name plus VPS or New Vendor; Tier 1 labels show store name plus Directory. Tier 1 Google ratings may appear on Directory cards and in Place Details with attribution, always labeled Google rating and never as VPS. Directory-only minimum rating follows the owner decision of 2026-10-24; the later same-day request removes Directory distance. The Suppliers near you list uses Verified, Directory and Favorites tabs (Verified initially, no All), a store-name search and nearest/farthest or high/low score sorts. Search text and sort survive tab switches and background refresh. Google rating and published VPS remain separate by tier, with unrated/New Vendor entries last and nearest-distance ties.
 
 On Tier 2 selection: mark selected, safely adjust camera, request one driving route from the selected Buyer location, reveal the route, display distance/ETA, and open a preview sheet with an explicit View Store action. On Tier 1 selection: show policy-permitted Google Place Details and Call/Open in Google Maps/Website/Share actions only. Never show Tier 1 cart, messaging, VPS, verification, or storefront actions. Do not implement live GPS tracking or a moving vehicle animation. Respect Reduce Motion and prevent stale route responses from changing current selection.
 

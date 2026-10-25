@@ -67,6 +67,16 @@ abstract class MaterialsAnalyticsSerializer
         ];
     }
 
+    /**
+     * The identity-free description of one comparable group (name, material, category, specification, unit).
+     *
+     * @return array<string, mixed>
+     */
+    public function describe(object $group): array
+    {
+        return $this->group($group);
+    }
+
     /** @return array<string, mixed> */
     protected function group(object $group): array
     {

@@ -44,7 +44,7 @@ final class MaterialsAnalyticsService
      */
     public function groups(AnalyticsRequest $request, ?string $cursor, int $perPage): array
     {
-        $ids = Cache::remember($request->cacheKey('candidates').':'.EligibleOfferQuery::generation(), self::CURRENT_TTL_SECONDS, fn (): array => $this->candidateIds($request));
+        $ids = $this->candidates($request);
         if ($request->audience === 'VENDOR' && $ids !== []) {
             $ids = $this->vendorVisibleIds($request, $ids);
         }
@@ -65,6 +65,75 @@ final class MaterialsAnalyticsService
         $groups = $query->orderBy('mc.sort_order')->orderBy('mc.name')->orderBy('m.name')->orderBy('cg.display_name')->orderBy('cg.id')->offset($offset)->limit($perPage)->get()->all();
 
         return ['groups' => $groups, 'next_cursor' => $offset + $perPage < $total ? base64_encode((string) ($offset + $perPage)) : null, 'total' => $total];
+    }
+
+    /**
+     * Every candidate comparable group in the request's scope and window, before category or search filters.
+     *
+     * @return list<string>
+     */
+    public function candidates(AnalyticsRequest $request): array
+    {
+        return Cache::remember($request->cacheKey('candidates').':'.EligibleOfferQuery::generation(), self::CURRENT_TTL_SECONDS, fn (): array => $this->candidateIds($request));
+    }
+
+    /**
+     * Group metadata plus its canonical material's regulated flag and canonical unit, in display order.
+     *
+     * @param  list<string>  $groupIds
+     * @return list<object>
+     */
+    public function groupsWithMaterial(array $groupIds): array
+    {
+        if ($groupIds === []) {
+            return [];
+        }
+
+        return $this->groupMetadata()->whereIn('cg.id', $groupIds)->join('units as mu', 'mu.id', '=', 'm.canonical_unit_id')
+            ->addSelect(['m.code as material_code', 'm.regulated', 'gv.canonical_unit_id as group_unit_id', 'm.canonical_unit_id as material_unit_id', 'mu.code as material_unit_code',
+                'mu.name as material_unit_name', 'mc.sort_order as category_sort'])
+            ->orderBy('mc.sort_order')->orderBy('mc.name')->orderBy('m.name')->orderBy('cg.display_name')->orderBy('cg.id')->get()->all();
+    }
+
+    /**
+     * Current eligible offers for the groups, one entry per group and Vendor: that Vendor's lowest normalized price per
+     * canonical unit (so each seller counts once per variant), its listing count and its best public stock label.
+     * Cached like the other current counts and invalidated by eligibility changes.
+     *
+     * @param  list<string>  $groupIds
+     * @return array{as_of: string, offers: list<array{group_id: string, vendor_id: string, listings: int, normalized: string, availability: string}>}
+     */
+    public function vendorOffers(AnalyticsRequest $request, array $groupIds): array
+    {
+        sort($groupIds);
+        $key = $request->cacheKey('vendor-offers').':'.EligibleOfferQuery::generation().':'.hash('sha256', implode(',', $groupIds));
+
+        return Cache::remember($key, self::CURRENT_TTL_SECONDS, function () use ($request, $groupIds): array {
+            $entries = [];
+            if ($groupIds !== []) {
+                $rows = ComparableMappingService::joinComparable($this->currentScope($request))->whereIn('cg.id', $groupIds)->where('gv.review_state', 'APPROVED')
+                    ->whereRaw(ComparableMappingService::NORMALIZED_PRICE_SQL.' IS NOT NULL')
+                    ->selectRaw('cg.id AS group_id, o.id AS vendor_id, l.id AS listing_id, i.quantity_on_hand, i.hard_reserved_quantity, i.reorder_level, '.ComparableMappingService::NORMALIZED_PRICE_SQL.' AS normalized')
+                    ->orderBy('cg.id')->orderBy('o.id')->get();
+                $rank = [StockAvailability::IN_STOCK => 2, StockAvailability::LIMITED_STOCK => 1, StockAvailability::OUT_OF_STOCK => 0];
+                foreach ($rows as $row) {
+                    $key = $row->group_id.'|'.$row->vendor_id;
+                    $label = StockAvailability::label(StockAvailability::availableToSell((string) $row->quantity_on_hand, (string) $row->hard_reserved_quantity), $row->reorder_level === null ? null : (string) $row->reorder_level);
+                    $entry = $entries[$key] ?? ['group_id' => (string) $row->group_id, 'vendor_id' => (string) $row->vendor_id, 'listing_ids' => [], 'normalized' => (string) $row->normalized, 'availability' => $label];
+                    $entry['listing_ids'][(string) $row->listing_id] = true;
+                    if (bccomp((string) $row->normalized, $entry['normalized'], 8) < 0) {
+                        $entry['normalized'] = (string) $row->normalized;
+                    }
+                    if ($rank[$label] > $rank[$entry['availability']]) {
+                        $entry['availability'] = $label;
+                    }
+                    $entries[$key] = $entry;
+                }
+            }
+
+            return ['as_of' => now()->toIso8601String(), 'offers' => array_values(array_map(static fn (array $entry): array => ['group_id' => $entry['group_id'], 'vendor_id' => $entry['vendor_id'],
+                'listings' => count($entry['listing_ids']), 'normalized' => $entry['normalized'], 'availability' => $entry['availability']], $entries))];
+        });
     }
 
     /**

@@ -57,6 +57,7 @@ class DiscoveryController extends ChangeNotifier {
   bool directoryLoading = false;
 
   int _searchSequence = 0;
+  int? _pendingSearch;
   int _loadedPage = 0;
   int _routeSequence = 0;
   int _detailsSequence = 0;
@@ -135,6 +136,9 @@ class DiscoveryController extends ChangeNotifier {
   Future<void> selectRadius(int km) async {
     if (!kDiscoveryRadiiKm.contains(km) || km == radiusKm) return;
     radiusKm = km;
+    if ((filters.directoryMaxDistanceKm ?? 0) > km) {
+      filters = filters.copyWith(directoryMaxDistanceKm: () => null);
+    }
     _clearSelection();
     final save = _repository.saveRadius(km).then((_) {}, onError: (_) {});
     await search();
@@ -155,16 +159,49 @@ class DiscoveryController extends ChangeNotifier {
   /// Pull-to-refresh: reruns the search without changing saved preferences.
   Future<void> refresh() => search(keepSelection: true, force: true);
 
-  /// [force] skips the saved copy's fresh window (pull-to-refresh, retry) and always asks the server.
-  Future<void> search({bool keepSelection = false, bool force = false}) async {
+  /// Refresh visible results without overlapping a search or resetting the selected route.
+  Future<bool> revalidate() async {
+    if (_disposed || origin == null || _pendingSearch != null || loadingMore) {
+      return true;
+    }
+    await search(keepSelection: true, force: true, background: true);
+    return failure == null;
+  }
+
+  /// Saved results are a preview only. Every search checks the authoritative server.
+  Future<void> search({
+    bool keepSelection = false,
+    bool force = false,
+    bool background = false,
+  }) async {
+    final sequence = ++_searchSequence;
+    _pendingSearch = sequence;
+    try {
+      await _search(
+        sequence,
+        keepSelection: keepSelection,
+        force: force,
+        background: background,
+      );
+    } finally {
+      if (_pendingSearch == sequence) _pendingSearch = null;
+    }
+  }
+
+  Future<void> _search(
+    int sequence, {
+    required bool keepSelection,
+    required bool force,
+    required bool background,
+  }) async {
     final currentOrigin = origin;
     if (currentOrigin == null) {
       phase = DiscoveryPhase.needsOrigin;
       _notify();
       return;
     }
-    final sequence = ++_searchSequence;
     loadingMore = false;
+    showingSavedResults = false;
     final radius = radiusKm;
     final activeFilters = filters;
     final cacheKey = discoveryCacheKey(currentOrigin, radius, activeFilters);
@@ -179,24 +216,20 @@ class DiscoveryController extends ChangeNotifier {
       items = saved.items;
       _loadedPage = 1;
       failure = null;
-      resultsStale = false;
+      resultsStale = true;
       showingSavedResults = true;
       phase = DiscoveryPhase.ready;
       _notify();
-      // Recent enough: no request at all. The server's own place cache covers Google separately.
-      if (saved.isFresh(_now())) {
-        showingSavedResults = false;
-        _notify();
-        return;
-      }
       keepSelection = true;
     }
     // With a saved copy on screen the list stays visible while the server confirms it.
-    if (!showingSavedResults) phase = DiscoveryPhase.loading;
+    if (!keepSelection || page == null) phase = DiscoveryPhase.loading;
     failure = null;
-    _routeSequence++;
-    route = null;
-    routePhase = RoutePhase.idle;
+    if (!background) {
+      _routeSequence++;
+      route = null;
+      routePhase = RoutePhase.idle;
+    }
     if (!keepSelection) {
       _clearSelection();
       items = const [];
@@ -211,7 +244,7 @@ class DiscoveryController extends ChangeNotifier {
         filters: activeFilters,
       );
       if (!_current(sequence, currentOrigin, radius, activeFilters)) return;
-      if (showingSavedResults) {
+      if (keepSelection && page != null) {
         // Swap once, after every page arrived, so the visible list never shrinks to page 1 and regrows.
         var latest = result;
         var loaded = 1;
@@ -228,6 +261,8 @@ class DiscoveryController extends ChangeNotifier {
           loaded++;
           merged.addAll(latest.items.where((item) => known.add(item.resultId)));
         }
+        final previousSelection = selected;
+        final previousVersion = page?.originVersion;
         page = latest;
         items = merged;
         _loadedPage = loaded;
@@ -236,7 +271,17 @@ class DiscoveryController extends ChangeNotifier {
         phase = DiscoveryPhase.ready;
         if (selected == null) _clearSelection();
         _notify();
-        if (selected != null) await _requestRoute(selected!);
+        final currentSelection = selected;
+        if (currentSelection != null &&
+            (!background ||
+                previousVersion != latest.originVersion ||
+                previousSelection?.point.latitude !=
+                    currentSelection.point.latitude ||
+                previousSelection?.point.longitude !=
+                    currentSelection.point.longitude)) {
+          await _requestRoute(currentSelection);
+        }
+        if (!_current(sequence, currentOrigin, radius, activeFilters)) return;
         await _persist();
         return;
       }
@@ -257,11 +302,24 @@ class DiscoveryController extends ChangeNotifier {
         await loadMore();
         if (_loadedPage == before) break;
       }
-      await _persist();
+      if (_current(sequence, currentOrigin, radius, activeFilters)) {
+        await _persist();
+      }
     } on DiscoveryFailure catch (error) {
       if (!_current(sequence, currentOrigin, radius, activeFilters)) return;
       showingSavedResults = false;
       failure = error;
+      if (error.kind == DiscoveryFailureKind.sessionExpired ||
+          error.kind == DiscoveryFailureKind.forbidden) {
+        items = const [];
+        page = null;
+        resultsStale = false;
+        _clearSelection();
+        phase = DiscoveryPhase.failed;
+        await clearSavedResults();
+        _notify();
+        return;
+      }
       if (error.code == 'LOCATION_NOT_FOUND' ||
           error.code == 'LOCATION_OUTSIDE_PHILIPPINES') {
         origin = null;
@@ -274,6 +332,7 @@ class DiscoveryController extends ChangeNotifier {
       }
       // Keep earlier results visible but labelled, and never present an old ETA as current.
       resultsStale = items.isNotEmpty;
+      _routeSequence++;
       route = null;
       routePhase = RoutePhase.idle;
       phase = items.isEmpty ? DiscoveryPhase.failed : DiscoveryPhase.ready;
@@ -376,8 +435,8 @@ class DiscoveryController extends ChangeNotifier {
     }
   }
 
+  /// Saves or removes a Favorite Supplier of either tier, optimistically.
   Future<void> toggleFavorite(SupplierResultView supplier) async {
-    if (!supplier.isVerified) return;
     final next = !supplier.isFavorite;
     items = [
       for (final item in items)

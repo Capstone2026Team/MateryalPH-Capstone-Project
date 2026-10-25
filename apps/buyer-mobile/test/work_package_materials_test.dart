@@ -1,3 +1,5 @@
+import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
+import 'typed_project_fixtures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:materyalph/design_system/theme.dart';
@@ -150,7 +152,7 @@ void main() {
       host(
         StatefulBuilder(
           builder: (context, update) => MaterialSearchResults(
-            matches: many,
+            matches: many.map(typedMaterial).toList(),
             searching: false,
             query: 'cement',
             selectedId: null,
@@ -177,7 +179,7 @@ void main() {
     await tester.pumpWidget(
       host(
         MaterialSearchResults(
-          matches: const [cement, blended],
+          matches: [typedMaterial(cement), typedMaterial(blended)],
           searching: false,
           query: 'cement',
           selectedId: cement['id'] as String,
@@ -196,7 +198,7 @@ void main() {
     await tester.tap(find.text('Not listed — use “cement”'));
     expect(picked, isNull);
     await tester.tap(find.text('Blended cement'));
-    expect((picked as Map?)?['name'], 'Blended cement');
+    expect((picked as api.ProjectMaterial?)?.name, 'Blended cement');
   });
 
   testWidgets('estimate shows total, budget fit, reminder and line breakdown', (
@@ -210,7 +212,7 @@ void main() {
             {'name': 'Portland cement', 'quantity': '10', 'unit_code': 'BAG'},
             {'name': 'River sand', 'quantity': '2', 'unit_code': 'CUM'},
           ],
-          estimate: const {
+          estimate: typedBudgetEstimate({
             'materials_total_centavos': 220000,
             'priced_line_count': 1,
             'radius_km': 5,
@@ -223,7 +225,7 @@ void main() {
               },
               {'index': 1, 'status': 'UNLISTED'},
             ],
-          },
+          }),
           loading: false,
           error: null,
           budgetCentavos: 200000,
@@ -255,7 +257,7 @@ void main() {
             {'name': 'Portland cement', 'quantity': '10', 'unit_code': 'BAG'},
           ],
           // Complete: the server totals materials and delivery (none for pick-up).
-          estimate: const {
+          estimate: typedBudgetEstimate({
             'materials_total_centavos': 220000,
             'delivery_centavos': 0,
             'delivery_status': 'NOT_APPLICABLE',
@@ -270,7 +272,7 @@ void main() {
                 'amount_centavos': 220000,
               },
             ],
-          },
+          }),
           loading: false,
           error: null,
           budgetCentavos: 200000,

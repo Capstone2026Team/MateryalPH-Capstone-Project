@@ -20,7 +20,7 @@ DiscoveryController _controller(
 
 void main() {
   test(
-    'results survive an app restart and cost no request while fresh',
+    'recent saved results survive restart and always revalidate both tiers',
     () async {
       var now = DateTime.utc(2026, 10, 3, 8);
       final store = MemoryDiscoveryResultStore();
@@ -32,20 +32,33 @@ void main() {
 
       // A new launch: new controller and repository, same store, two minutes later.
       now = now.add(const Duration(minutes: 2));
-      final secondRepo = FakeDiscoveryRepository();
+      final secondRepo = FakeDiscoveryRepository(
+        page: resultPage([
+          verifiedSupplier('v-new'),
+          directorySupplier('d-new'),
+        ]),
+      )..manual = true;
       final second = _controller(secondRepo, store, () => now);
-      await second.setOrigin(_saved);
-      expect(secondRepo.searches, isEmpty);
+      final pending = second.setOrigin(_saved);
+      await Future<void>.delayed(Duration.zero);
+      expect(secondRepo.searches, hasLength(1));
       expect(second.phase, DiscoveryPhase.ready);
       expect(second.items.map((item) => item.resultId), ['v-1', 'd-1']);
       expect(second.items.first.name, 'Sampaloc Lumber Hardware');
+      expect(second.showingSavedResults, isTrue);
+      expect(second.resultsStale, isTrue);
+      secondRepo.searches.single.completer.complete(secondRepo.page);
+      await pending;
+      expect(second.items.map((item) => item.resultId), ['v-new', 'd-new']);
+      expect(second.showingSavedResults, isFalse);
+      expect(second.resultsStale, isFalse);
       first.dispose();
       second.dispose();
     },
   );
 
   test(
-    'a copy past the fresh window shows at once, then is confirmed by one request',
+    'an older saved copy shows at once, then is confirmed by one request',
     () async {
       var now = DateTime.utc(2026, 10, 3, 8);
       final store = MemoryDiscoveryResultStore();
@@ -105,8 +118,8 @@ void main() {
     await controller.selectRadius(10);
     expect(repo.searches.map((call) => call.radiusKm), [5, 10]);
     await controller.selectRadius(5);
-    // Back to a radius already scanned: nothing is requested.
-    expect(repo.searches, hasLength(2));
+    // Returning to a scanned radius must discover additions since the earlier visit.
+    expect(repo.searches.map((call) => call.radiusKm), [5, 10, 5]);
     expect(store.entries.keys.toSet(), {'loc-loc-1-r5', 'loc-loc-1-r10'});
     controller.dispose();
   });

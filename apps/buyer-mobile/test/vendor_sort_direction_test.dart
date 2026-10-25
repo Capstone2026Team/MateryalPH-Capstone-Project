@@ -1,3 +1,4 @@
+import 'typed_project_fixtures.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -79,7 +80,7 @@ Future<List<RequestOptions>> pumpScreen(WidgetTester tester) async {
       theme: BuyerTheme.light,
       home: VendorSelectionScreen(
         repository: repository(requests),
-        package: package(legacy: true),
+        package: typedPackage(package(legacy: true)),
         mapBuilder: (context, props) => const ColoredBox(color: Colors.white),
         links: links(),
       ),
@@ -106,11 +107,10 @@ Future<void> tapTab(WidgetTester tester, String label) async {
 Finder arrows(IconData icon) => find.byIcon(icon);
 
 /// The Vendor shown first; the list builds cards lazily.
-String firstStore(WidgetTester tester) =>
-    tester
-            .widget<VendorResultCard>(find.byType(VendorResultCard).first)
-            .candidate['store_name']!
-        as String;
+String firstStore(WidgetTester tester) => tester
+    .widget<VendorResultCard>(find.byType(VendorResultCard).first)
+    .candidate
+    .storeName;
 
 void main() {
   testWidgets('Best match has no arrow; the other three tabs have one each', (
@@ -245,7 +245,7 @@ void main() {
         theme: BuyerTheme.light,
         home: VendorSelectionScreen(
           repository: repository(requests),
-          package: package(legacy: true),
+          package: typedPackage(package(legacy: true)),
           mapBuilder: (context, props) => const ColoredBox(color: Colors.white),
           links: links(),
         ),

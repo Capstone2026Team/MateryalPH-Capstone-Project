@@ -44,6 +44,9 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->dontReport([AuthenticationException::class, ValidationException::class]);
+        $exceptions->dontReportWhen(fn (BaseThrowable $exception): bool => ($exception instanceof IdentityAuthenticationException && $exception->httpStatus >= 400 && $exception->httpStatus < 500)
+            || ($exception instanceof HttpExceptionInterface && $exception->getStatusCode() >= 400 && $exception->getStatusCode() < 500));
         $exceptions->dontFlash(['invitation_url', 'provider_account_id', 'x-callback-token', 'token', 'sealed_token', 'sealed_recipient']);
         $exceptions->render(function (IdentityAuthenticationException $exception) {
             return ApiResponse::error(

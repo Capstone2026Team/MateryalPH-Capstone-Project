@@ -147,11 +147,36 @@ Sign in with a Buyer account from the staging database.
 Sign-in details were written to /workspace/services/api/storage/app/demo-vendor-credentials.json (git-ignored). Passwords and authenticator secrets are never printed.
 
 ```powershell
-# For new machine run this
+#docker compose exec api php artisan migrate, 
+docker compose exec api php artisan migrate, 
+
+# which downloads photos for the new stores. Files that already exist are skipped.
 py tools/demo-assets/fetch_demo_photos.py
 
-# 12 Vendor Seeded 
+# 22 Vendor Seeded 
 docker compose exec api php artisan materyalph:demo-vendors-seed
+```
+
+## VPS Deploy Commands
+
+To deploy a new commit yourself:
+
+Commit and push to staging as usual.
+Open the VS Code terminal (Ctrl + `) in the project folder and run:
+
+```powershell
+# Deployement Command (VPS)
+./scripts/deployment/release-hostinger.ps1
+```
+
+Wait about 45–60 minutes. When it asks, type REOPEN to put the site back online.
+What the script does (the same steps I did manually today):
+
+
+```powershell
+# Deployement Command ( Application APK - VPS Connected)
+. C:\Users\RJ\materyalph-release-signing\use-signing.ps1
+./scripts/deployment/build-buyer-staging.ps1 -Deployment Hostinger -Release -BuildName 1.0.1 -BuildNumber 2
 ```
 
 ## Validation

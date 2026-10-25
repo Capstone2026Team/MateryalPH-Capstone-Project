@@ -1,3 +1,6 @@
+import 'package:built_value/built_value.dart';
+import 'package:built_collection/built_collection.dart';
+import 'package:built_value/json_object.dart';
 import 'dart:convert';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import '../../core/api_guard.dart';
@@ -30,31 +33,22 @@ final class ProjectsRepository {
   final api.MateryalphApiClient _client;
   final ApiGuard _guard;
   api.BuyerProjectsApi get _api => _client.getBuyerProjectsApi();
-  ProjectData _json(Object? value) {
-    final checked = _guard.required(value);
-    return Map<String, Object?>.from(
-      _client.serializers.serializeWith(
-            _client.serializers.serializerForType(checked.runtimeType)!,
-            checked,
-          )
-          as Map,
-    );
-  }
-
-  Future<ProjectData> list({int page = 1}) => _guard(
-    () async => _json((await _api.listProjects(page: page)).data?.data),
-  );
-  Future<ProjectData> project(String id, {int page = 1}) => _guard(
+  Future<api.ProjectPage> list({int page = 1}) => _guard(
     () async =>
-        _json((await _api.getProject(projectId: id, page: page)).data?.data),
+        _guard.required((await _api.listProjects(page: page)).data?.data),
   );
-  Future<ProjectData> package(String id, {int page = 1}) => _guard(
-    () async => _json(
+  Future<api.ProjectView> project(String id, {int page = 1}) => _guard(
+    () async => _guard.required(
+      (await _api.getProject(projectId: id, page: page)).data?.data,
+    ),
+  );
+  Future<api.WorkPackageView> package(String id, {int page = 1}) => _guard(
+    () async => _guard.required(
       (await _api.getWorkPackage(packageId: id, page: page)).data?.data,
     ),
   );
-  Future<ProjectData> create(ProjectData input, String key) => _guard(
-    () async => _json(
+  Future<api.ProjectView> create(ProjectData input, String key) => _guard(
+    () async => _guard.required(
       (await _api.createProject(
         idempotencyKey: key,
         projectCreate: _guard.required(
@@ -66,9 +60,9 @@ final class ProjectsRepository {
       )).data?.data,
     ),
   );
-  Future<ProjectData> update(String id, ProjectData input, String key) =>
+  Future<api.ProjectView> update(String id, ProjectData input, String key) =>
       _guard(
-        () async => _json(
+        () async => _guard.required(
           (await _api.updateProject(
             projectId: id,
             idempotencyKey: key,
@@ -81,7 +75,7 @@ final class ProjectsRepository {
           )).data?.data,
         ),
       );
-  Future<ProjectData> save(
+  Future<api.WorkPackageView> save(
     String projectId,
     ProjectData input,
     String key, {
@@ -93,7 +87,7 @@ final class ProjectsRepository {
         input,
       ),
     );
-    return _json(
+    return _guard.required(
       id == null
           ? (await _api.createWorkPackage(
               projectId: projectId,
@@ -107,30 +101,32 @@ final class ProjectsRepository {
             )).data?.data,
     );
   });
-  Future<ProjectData> activate(String id, int version, String key) => _guard(
-    () async => _json(
-      (await _api.activateWorkPackage(
-        packageId: id,
-        idempotencyKey: key,
-        projectVersionRequest: api.ProjectVersionRequest(
-          (b) => b..lockVersion = version,
+  Future<api.WorkPackageView> activate(String id, int version, String key) =>
+      _guard(
+        () async => _guard.required(
+          (await _api.activateWorkPackage(
+            packageId: id,
+            idempotencyKey: key,
+            projectVersionRequest: api.ProjectVersionRequest(
+              (b) => b..lockVersion = version,
+            ),
+          )).data?.data,
         ),
-      )).data?.data,
-    ),
-  );
-  Future<ProjectData> reactivate(String id, int lock, String key) => _guard(
-    () async => _json(
-      (await _api.reactivateWorkPackage(
-        packageId: id,
-        idempotencyKey: key,
-        projectVersionRequest: api.ProjectVersionRequest(
-          (b) => b..lockVersion = lock,
+      );
+  Future<api.WorkPackageView> reactivate(String id, int lock, String key) =>
+      _guard(
+        () async => _guard.required(
+          (await _api.reactivateWorkPackage(
+            packageId: id,
+            idempotencyKey: key,
+            projectVersionRequest: api.ProjectVersionRequest(
+              (b) => b..lockVersion = lock,
+            ),
+          )).data?.data,
         ),
-      )).data?.data,
-    ),
-  );
-  Future<ProjectData> close(String id, int version) => _guard(
-    () async => _json(
+      );
+  Future<api.WorkPackageView> close(String id, int version) => _guard(
+    () async => _guard.required(
       (await _api.closeWorkPackage(
         packageId: id,
         projectVersionRequest: api.ProjectVersionRequest(
@@ -153,7 +149,7 @@ final class ProjectsRepository {
       });
 
   /// Vendor results; sorting and filters run on the server so pages agree.
-  Future<ProjectData> estimates(
+  Future<api.ProjectEstimatePage> estimates(
     String id, {
     int page = 1,
     String sort = 'BEST_MATCH',
@@ -162,7 +158,7 @@ final class ProjectsRepository {
     bool completeOnly = false,
     bool withinBudget = false,
   }) => _guard(
-    () async => _json(
+    () async => _guard.required(
       (await _api.getProjectEstimates(
         packageId: id,
         page: page,
@@ -178,7 +174,7 @@ final class ProjectsRepository {
   /// Item-Based offers for a missing Work Package line within the fixed
   /// Project-Based radius. With [candidateId] the server sizes the quantity to
   /// what that Vendor's quotation still lacks after the separate purchases.
-  Future<ProjectData> alternatives(
+  Future<api.WorkPackageAlternativePage> alternatives(
     String packageId,
     String lineId, {
     int page = 1,
@@ -189,7 +185,7 @@ final class ProjectsRepository {
     String? arrangementId,
     bool replace = false,
   }) => _guard(
-    () async => _json(
+    () async => _guard.required(
       (await _api.listWorkPackageLineAlternatives(
         packageId: packageId,
         lineId: lineId,
@@ -204,7 +200,7 @@ final class ProjectsRepository {
     ),
   );
 
-  Future<ProjectData> arrangementOptions(
+  Future<api.ProjectArrangementPage> arrangementOptions(
     String id, {
     int page = 1,
     String sort = 'BEST_MATCH',
@@ -213,7 +209,7 @@ final class ProjectsRepository {
     bool completeOnly = false,
     bool withinBudget = false,
   }) => _guard(
-    () async => _json(
+    () async => _guard.required(
       (await _api.listProjectArrangementOptions(
         packageId: id,
         page: page,
@@ -226,13 +222,13 @@ final class ProjectsRepository {
     ),
   );
 
-  Future<ProjectData> createArrangement(
+  Future<api.ProjectArrangement> createArrangement(
     String packageId,
     String source,
     String key, {
     String? proposalToken,
   }) => _guard(
-    () async => _json(
+    () async => _guard.required(
       (await _api.createProjectArrangement(
         packageId: packageId,
         idempotencyKey: key,
@@ -245,21 +241,22 @@ final class ProjectsRepository {
     ),
   );
 
-  Future<ProjectData> arrangement(String packageId, String id) => _guard(
-    () async => _json(
-      (await _api.getProjectArrangement(
-        packageId: packageId,
-        arrangementId: id,
-      )).data?.data,
-    ),
-  );
+  Future<api.ProjectArrangement> arrangement(String packageId, String id) =>
+      _guard(
+        () async => _guard.required(
+          (await _api.getProjectArrangement(
+            packageId: packageId,
+            arrangementId: id,
+          )).data?.data,
+        ),
+      );
 
-  Future<ProjectData> editArrangement(
+  Future<api.ProjectArrangement> editArrangement(
     String packageId,
     String id,
     ProjectData input,
   ) => _guard(
-    () async => _json(
+    () async => _guard.required(
       (await _api.editProjectArrangement(
         packageId: packageId,
         arrangementId: id,
@@ -273,13 +270,13 @@ final class ProjectsRepository {
     ),
   );
 
-  Future<ProjectData> submitArrangement(
+  Future<api.ProjectArrangement> submitArrangement(
     String packageId,
     String id,
     ProjectData input,
     String key,
   ) => _guard(
-    () async => _json(
+    () async => _guard.required(
       (await _api.submitProjectArrangement(
         packageId: packageId,
         arrangementId: id,
@@ -294,13 +291,13 @@ final class ProjectsRepository {
     ),
   );
 
-  Future<ProjectData> arrangementInquiry(
+  Future<api.ProjectArrangement> arrangementInquiry(
     String packageId,
     String id,
     String vendorId,
     int version,
   ) => _guard(
-    () async => _json(
+    () async => _guard.required(
       (await _api.inquireProjectArrangementVendor(
         packageId: packageId,
         arrangementId: id,
@@ -317,7 +314,7 @@ final class ProjectsRepository {
     required String packageId,
     required String candidateId,
     required String lineId,
-    required ProjectData offer,
+    required api.WorkPackageAlternative offer,
     required int lockVersion,
     required Map<String, String> selections,
     required String fulfillmentMethod,
@@ -326,12 +323,12 @@ final class ProjectsRepository {
       packageId: packageId,
       candidateId: candidateId,
       lineId: lineId,
-      variantId: projectText(offer['variant_id']),
+      variantId: offer.variantId,
       projectDraftItemInput: _guard.required(
         _client.serializers
             .deserializeWith(api.ProjectDraftItemInput.serializer, {
               'lock_version': lockVersion,
-              'price_version_id': offer['price_version_id'],
+              'price_version_id': offer.priceVersionId,
               'selections': specificationSelections(selections),
               'fulfillment_method': fulfillmentMethod,
             }),
@@ -384,8 +381,8 @@ final class ProjectsRepository {
 
   /// Scans from the locked Project site at [projectSearchRadiusKm]; the radius
   /// is not a parameter because the server fixes it.
-  Future<ProjectData> compile(String id, int version) => _guard(
-    () async => _json(
+  Future<api.ProjectEstimatePage> compile(String id, int version) => _guard(
+    () async => _guard.required(
       (await _api.compileProjectEstimates(
         packageId: id,
         projectCompile: _guard.required(
@@ -435,13 +432,13 @@ final class ProjectsRepository {
   ///
   /// [fulfillmentMethod] re-prices a Vendor that offers both Delivery and
   /// Pickup for that method.
-  Future<ProjectData> selectionPreview(
+  Future<api.ProjectCandidate> selectionPreview(
     String id,
     String candidate,
     Map<String, String> selections, {
     String? fulfillmentMethod,
   }) => _guard(
-    () async => _json(
+    () async => _guard.required(
       (await _api.previewProjectSpecificationSelection(
         packageId: id,
         candidateId: candidate,
@@ -465,49 +462,53 @@ final class ProjectsRepository {
     final phone = profile?.mobileE164?.trim();
     return phone == null || phone.isEmpty ? null : phone;
   });
-  Future<ProjectData> route(String id, String candidate) => _guard(
-    () async => _json(
+  Future<api.ProjectRoute> route(String id, String candidate) => _guard(
+    () async => _guard.required(
       (await _api.getProjectCandidateRoute(
         packageId: id,
         candidateId: candidate,
       )).data?.data,
     ),
   );
-  Future<ProjectData> importCsv(String csv) => _guard(
-    () async => _json(
+  Future<api.ProjectImportPreview> importCsv(String csv) => _guard(
+    () async => _guard.required(
       (await _api.previewWorkPackageCsv(
         projectImportRequest: api.ProjectImportRequest((b) => b..csv = csv),
       )).data?.data,
     ),
   );
-  Future<ProjectData> materials(String query) => _guard(
-    () async =>
-        _json((await _api.searchProjectMaterials(query: query)).data?.data),
+  Future<api.ProjectMaterialPage> materials(String query) => _guard(
+    () async => _guard.required(
+      (await _api.searchProjectMaterials(query: query)).data?.data,
+    ),
   );
 
   /// Advisory, materials-only estimate; the server stores nothing.
-  Future<ProjectData> estimateBudget(String projectId, ProjectData input) =>
-      _guard(
-        () async => _json(
-          (await _api.estimateWorkPackageBudget(
-            projectId: projectId,
-            workPackageBudgetEstimateRequest: _guard.required(
-              _client.serializers.deserializeWith(
-                api.WorkPackageBudgetEstimateRequest.serializer,
-                input,
-              ),
-            ),
-          )).data?.data,
+  Future<api.WorkPackageBudgetEstimate> estimateBudget(
+    String projectId,
+    ProjectData input,
+  ) => _guard(
+    () async => _guard.required(
+      (await _api.estimateWorkPackageBudget(
+        projectId: projectId,
+        workPackageBudgetEstimateRequest: _guard.required(
+          _client.serializers.deserializeWith(
+            api.WorkPackageBudgetEstimateRequest.serializer,
+            input,
+          ),
         ),
-      );
-  Future<ProjectData> preferences() => _guard(
-    () async => _json((await _api.getProjectRankingPreferences()).data?.data),
+      )).data?.data,
+    ),
   );
-  Future<ProjectData> savePreferences(
+  Future<api.ProjectPreferences> preferences() => _guard(
+    () async =>
+        _guard.required((await _api.getProjectRankingPreferences()).data?.data),
+  );
+  Future<api.ProjectPreferences> savePreferences(
     ProjectData input, {
     bool reset = false,
   }) => _guard(
-    () async => _json(
+    () async => _guard.required(
       reset
           ? (await _api.resetProjectRankingPreferences(
               projectPreferenceReset: _guard.required(
@@ -527,21 +528,24 @@ final class ProjectsRepository {
             )).data?.data,
     ),
   );
-  Future<ProjectData> resolve(String id, String line, ProjectData input) =>
-      _guard(
-        () async => _json(
-          (await _api.resolveProjectMissingLine(
-            packageId: id,
-            lineId: line,
-            projectMissingResolve: _guard.required(
-              _client.serializers.deserializeWith(
-                api.ProjectMissingResolve.serializer,
-                input,
-              ),
-            ),
-          )).data?.data,
+  Future<api.WorkPackageView> resolve(
+    String id,
+    String line,
+    ProjectData input,
+  ) => _guard(
+    () async => _guard.required(
+      (await _api.resolveProjectMissingLine(
+        packageId: id,
+        lineId: line,
+        projectMissingResolve: _guard.required(
+          _client.serializers.deserializeWith(
+            api.ProjectMissingResolve.serializer,
+            input,
+          ),
         ),
-      );
+      )).data?.data,
+    ),
+  );
 }
 
 /// Request rows for chosen specification options.
@@ -549,11 +553,29 @@ List<ProjectData> specificationSelections(Map<String, String> selections) => [
   for (final e in selections.entries) {'line_id': e.key, 'option_id': e.value},
 ];
 
-ProjectData projectObject(Object? value) =>
-    value is Map ? Map<String, Object?>.from(value) : <String, Object?>{};
+/// Only contract-declared free-form JSON is unwrapped here. Generated response models stay typed.
+ProjectData projectObject(Object? value) {
+  if (value is JsonObject) return projectObject(value.value);
+  if (value is BuiltMap<String, JsonObject?>) {
+    return value.toMap().map((key, value) => MapEntry(key, value?.value));
+  }
+  return value is Map ? Map<String, Object?>.from(value) : <String, Object?>{};
+}
+
 List<ProjectData> projectRows(Object? value) =>
-    value is List ? value.map(projectObject).toList() : [];
-String projectText(Object? value) => value?.toString() ?? '';
+    value is Iterable ? value.map(projectObject).toList() : [];
+String projectText(Object? value) {
+  if (value is EnumClass) {
+    final name = value.name;
+    if (name.startsWith('number') &&
+        num.tryParse(name.substring(6).replaceFirst('Period', '.')) != null) {
+      return name.substring(6).replaceFirst('Period', '.');
+    }
+    return name;
+  }
+  return value?.toString() ?? '';
+}
+
 int projectInt(Object? value) =>
     value is num ? value.toInt() : int.tryParse(projectText(value)) ?? 0;
 String projectMoney(Object? value) {

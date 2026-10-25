@@ -15,48 +15,66 @@ import 'discovery_models.dart';
 import 'directory_photo_loader.dart';
 import 'map_geometry.dart';
 import 'google_place_content.dart';
+import 'supplier_browsing.dart';
 
-enum SupplierListView { all, verified, directory, favorites }
+// Preserve the original import surface while keeping a single canonical enum definition.
+export 'supplier_browsing.dart' show SupplierListView;
 
-/// The accessible peer of the map: the same suppliers in the same server order, selectable by
-/// touch, keyboard or screen reader at any time.
+/// The accessible peer of the map's eligible set, with local supplier tabs, name search and sort.
+/// Every row shares the map's selection and route behavior.
 class SupplierListPanel extends StatelessWidget {
   const SupplierListPanel({
     super.key,
     required this.controller,
     required this.view,
+    required this.sort,
+    required this.searchController,
+    required this.onQueryChanged,
+    required this.onSortChanged,
     required this.onViewChanged,
     required this.onExpand,
     required this.onChangeLocation,
     required this.onAdjustFilters,
     this.scrollController,
+    this.onSearchFocused,
   });
 
   final DiscoveryController controller;
   final SupplierListView view;
+  final SupplierListSort sort;
+  final TextEditingController searchController;
+  final ValueChanged<String> onQueryChanged;
+  final ValueChanged<SupplierListSort> onSortChanged;
+  final VoidCallback? onSearchFocused;
   final ValueChanged<SupplierListView> onViewChanged;
   final VoidCallback onExpand;
   final VoidCallback onChangeLocation;
   final VoidCallback onAdjustFilters;
   final ScrollController? scrollController;
 
-  List<SupplierResultView> get _visible => switch (view) {
-    SupplierListView.all => controller.items,
-    SupplierListView.verified =>
-      controller.items.where((item) => item.isVerified).toList(),
-    SupplierListView.directory =>
-      controller.items.where((item) => !item.isVerified).toList(),
-    SupplierListView.favorites =>
-      controller.items.where((item) => item.isFavorite).toList(),
-  };
-
   @override
   Widget build(BuildContext context) {
     final page = controller.page;
+    final availableViews = availableSupplierViews(controller.filters);
+    final view = availableViews.contains(this.view)
+        ? this.view
+        : availableViews.first;
+    final showDirectory = availableViews.contains(SupplierListView.directory);
     final loading =
         controller.phase == DiscoveryPhase.loading ||
         controller.phase == DiscoveryPhase.initializing;
-    final visible = _visible;
+    final visible = browseSuppliers(
+      controller.items,
+      view: view,
+      sort: sort,
+      query: searchController.text,
+    );
+    final summary = [
+      if (availableViews.contains(SupplierListView.verified))
+        '${page?.verifiedCount ?? 0} Verified',
+      if (showDirectory) '${page?.directoryCount ?? 0} Directory',
+      '${page?.radiusKm ?? controller.radiusKm} km',
+    ].join(' · ');
     return CustomScrollView(
       controller: scrollController,
       scrollCacheExtent: const ScrollCacheExtent.pixels(
@@ -64,14 +82,17 @@ class SupplierListPanel extends StatelessWidget {
       ), // Do not fetch Google photos for offscreen rows.
       slivers: [
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
           sliver: SliverList.list(
             children: [
               Semantics(
                 header: true,
                 child: Text(
                   'Suppliers near you',
-                  style: Theme.of(context).textTheme.titleLarge,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               const SizedBox(height: 4),
@@ -82,34 +103,33 @@ class SupplierListPanel extends StatelessWidget {
                       ? 'Finding suppliers within ${controller.radiusKm} km…'
                       : page == null
                       ? 'Choose a location to see suppliers.'
-                      : '${page.verifiedCount} Verified Vendor${page.verifiedCount == 1 ? '' : 's'} · ${page.directoryCount} Directory Supplier${page.directoryCount == 1 ? '' : 's'}\nwithin ${page.radiusKm} km · Updated ${_time(page.currentAsOf)}',
-                  style: const TextStyle(color: BuyerTheme.muted),
+                      : '$summary\nUpdated ${_time(page.currentAsOf)}',
+                  style: const TextStyle(
+                    color: BuyerTheme.muted,
+                    fontSize: 13,
+                    height: 1.35,
+                  ),
                 ),
               ),
-              const SizedBox(height: 12),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    for (final option in SupplierListView.values)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: ChoiceChip(
-                          selected: view == option,
-                          showCheckmark: true,
-                          label: Text(switch (option) {
-                            SupplierListView.all => 'All',
-                            SupplierListView.verified => 'Verified Vendors',
-                            SupplierListView.directory => 'Directory Suppliers',
-                            SupplierListView.favorites => 'Favorite Suppliers',
-                          }),
-                          onSelected: (_) => onViewChanged(option),
-                        ),
-                      ),
-                  ],
-                ),
+              const SizedBox(height: 8),
+              SupplierListControls(
+                searchController: searchController,
+                view: view,
+                availableViews: availableViews,
+                sort: sort,
+                resultCount: page == null ? null : visible.length,
+                onQueryChanged: onQueryChanged,
+                onViewChanged: onViewChanged,
+                onSortChanged: onSortChanged,
+                onSearchFocused: onSearchFocused,
               ),
-              if (controller.resultsStale) ...[
+              if (controller.showingSavedResults) ...[
+                const SizedBox(height: 12),
+                const AuthNotice(
+                  message:
+                      'Showing saved suppliers while checking for updates…',
+                ),
+              ] else if (controller.resultsStale) ...[
                 const SizedBox(height: 12),
                 AuthNotice(
                   message:
@@ -124,7 +144,9 @@ class SupplierListPanel extends StatelessWidget {
                   ),
                 ),
               ],
-              if (page != null && _directoryNotice(page) != null) ...[
+              if (showDirectory &&
+                  page != null &&
+                  _directoryNotice(page) != null) ...[
                 const SizedBox(height: 12),
                 AuthNotice(message: _directoryNotice(page)!),
               ],
@@ -139,9 +161,10 @@ class SupplierListPanel extends StatelessWidget {
                   page.eligibleVerifiedCount < 3 &&
                   !loading) ...[
                 const SizedBox(height: 12),
-                const AuthNotice(
-                  message:
-                      '50 km is the platform maximum. Directory Suppliers beyond Verified Vendors are shown only as off-platform contact references.',
+                AuthNotice(
+                  message: showDirectory
+                      ? '50 km is the platform maximum. Directory Suppliers beyond Verified Vendors are shown only as off-platform contact references.'
+                      : '50 km is the platform maximum.',
                 ),
               ],
             ],
@@ -173,18 +196,29 @@ class SupplierListPanel extends StatelessWidget {
               artwork: view == SupplierListView.favorites
                   ? StateArtwork.favorites
                   : StateArtwork.noResults,
-              title: view == SupplierListView.favorites
+              title: searchController.text.trim().isNotEmpty
+                  ? 'No matching stores'
+                  : view == SupplierListView.favorites
                   ? 'No Favorite Suppliers nearby'
                   : 'No suppliers found',
-              message: view == SupplierListView.favorites
-                  ? 'None of your Favorite Suppliers are within ${controller.radiusKm} km with current offerings.'
+              message: searchController.text.trim().isNotEmpty
+                  ? 'Try another store name or switch supplier type.'
+                  : view == SupplierListView.favorites
+                  ? 'None of your Favorite Suppliers are within ${controller.radiusKm} km right now.'
                   : controller.filters.activeCount > 0
                   ? 'No suppliers match your filters within ${controller.radiusKm} km.'
                   : 'No suppliers were found within ${controller.radiusKm} km of this location.',
-              secondaryLabel: controller.filters.activeCount > 0
+              secondaryLabel: searchController.text.trim().isNotEmpty
+                  ? 'Clear search'
+                  : controller.filters.activeCount > 0
                   ? 'Adjust filters'
                   : 'Change location',
-              onSecondary: controller.filters.activeCount > 0
+              onSecondary: searchController.text.trim().isNotEmpty
+                  ? () {
+                      searchController.clear();
+                      onQueryChanged('');
+                    }
+                  : controller.filters.activeCount > 0
                   ? onAdjustFilters
                   : onChangeLocation,
             ),
@@ -197,9 +231,7 @@ class SupplierListPanel extends StatelessWidget {
             itemBuilder: (context, index) => SupplierRow(
               key: ValueKey(visible[index].resultId),
               photoLoader: controller.directoryPhotos,
-              onToggleFavorite: visible[index].isVerified
-                  ? () => controller.toggleFavorite(visible[index])
-                  : null,
+              onToggleFavorite: () => controller.toggleFavorite(visible[index]),
               item: visible[index],
               selected: visible[index].resultId == controller.selectedId,
               onTap: () => controller.select(visible[index].resultId),
@@ -219,7 +251,7 @@ class SupplierListPanel extends StatelessWidget {
               ),
             ),
           ),
-        if (page != null && page.directoryCount > 0)
+        if (showDirectory && page != null && page.directoryCount > 0)
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -244,7 +276,7 @@ class SupplierListPanel extends StatelessWidget {
     'CACHED' =>
       'Directory Suppliers are shown from saved information as of ${_time(page.directoryAsOf)}.',
     'FILTERED_OUT' =>
-      'Directory Suppliers are hidden because a Verified Vendor filter is active.',
+      'Directory Suppliers are hidden because a supplier type or material category filter is active.',
     _ => null,
   };
 }
@@ -270,7 +302,7 @@ class SupplierRow extends StatefulWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  /// Save / remove Favorite Supplier. Null for a Directory Supplier, which cannot be saved.
+  /// Save / remove Favorite Supplier (either tier). Null hides the bookmark.
   final VoidCallback? onToggleFavorite;
 
   final DirectoryPhotoLoader? photoLoader;
@@ -359,7 +391,7 @@ class _SupplierRowState extends State<SupplierRow> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _SupplierAvatar(item: item, photo: _media?.photo),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -369,12 +401,12 @@ class _SupplierRowState extends State<SupplierRow> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                           fontSize: 16,
                           height: 1.2,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       Wrap(
                         spacing: 8,
                         runSpacing: 4,
@@ -389,7 +421,34 @@ class _SupplierRowState extends State<SupplierRow> {
                             ),
                         ],
                       ),
-                      const SizedBox(height: 6),
+                      if (!item.isVerified && item.googleRating != null) ...[
+                        const SizedBox(height: 4),
+                        Semantics(
+                          label:
+                              'Google rating ${item.googleRating!} out of 5${item.googleRatingCount == null ? '' : ', ${item.googleRatingCount} ratings'}',
+                          excludeSemantics: true,
+                          child: Row(
+                            children: [
+                              const Icon(
+                                LucideIcons.star,
+                                size: 14,
+                                color: BuyerTheme.action,
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  'Google rating ${item.googleRating!}${item.googleRatingCount == null ? '' : ' (${item.googleRatingCount})'}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 4),
                       Row(
                         children: [
                           const Icon(
@@ -427,6 +486,15 @@ class _SupplierRowState extends State<SupplierRow> {
                     icon: Icon(
                       item.isFavorite ? Icons.bookmark : Icons.bookmark_border,
                       color: BuyerTheme.action,
+                    ),
+                  )
+                else
+                  const Padding(
+                    padding: EdgeInsets.only(left: 8, top: 2),
+                    child: Icon(
+                      LucideIcons.chevronRight,
+                      size: 18,
+                      color: BuyerTheme.muted,
                     ),
                   ),
               ],
@@ -617,15 +685,17 @@ class _SkeletonRow extends StatelessWidget {
   );
 }
 
-/// Preview for the selected supplier.
+/// Preview for the selected supplier. Both tiers share one structure: a header (image, name, tier
+/// and score badges, Favorite, Close), status lines (hours, route), one filled primary action with
+/// a secondary icon action, then labelled detail groups.
 ///
-/// Tier 2: name with the Verified Vendor badge, Favorite bookmark, VPS or New Vendor, descriptive
-/// open status, distance/ETA, categories, one explicit View Store action and a secondary Message.
+/// Tier 2: VPS or New Vendor, descriptive open status, distance/ETA, View Storefront and Message,
+/// categories, and a Store details card with fulfillment, delivery area and address.
 ///
-/// Tier 1: information only. Name, `Directory Supplier`, distance/ETA, informational Call, Open
-/// in Google Maps, Website and Share actions, and attributed Place Details split into Overview
-/// and About. There is no Favorite, storefront, message, review tab, photo or VPS: Google
-/// reviews and photos are not requested, and a Google rating is labelled `Google rating`.
+/// Tier 1: information only. `Directory Supplier`, place type and attributed `Google rating`,
+/// informational Call, Open in Google Maps, Website and Share actions, and Place Details split into
+/// Overview, Reviews and About. A Directory Supplier can be saved as a Favorite Supplier; it has
+/// no storefront, message, order, MateryalPH review or VPS.
 class SupplierPreview extends StatefulWidget {
   const SupplierPreview({
     super.key,
@@ -670,196 +740,210 @@ class _SupplierPreviewState extends State<SupplierPreview> {
     );
   }
 
-  Widget _title(BuildContext context, SupplierResultView item) => Semantics(
-    header: true,
-    label:
-        '${item.name}, ${item.isVerified ? 'Verified Vendor' : 'Directory Supplier'}',
-    excludeSemantics: true,
-    child: Text(
-      item.name,
-      style: Theme.of(
-        context,
-      ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-    ),
-  );
-
-  Widget _closeButton() => IconButton(
-    tooltip: 'Close preview',
-    onPressed: widget.onClose,
-    icon: const Icon(LucideIcons.x),
-  );
-
-  List<Widget> _verified(BuildContext context, SupplierResultView item) => [
-    Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SupplierAvatar(item: item),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: _title(context, item),
-          ),
-        ),
-        IconButton(
-          tooltip: item.isFavorite
-              ? 'Remove from Favorite Suppliers'
-              : 'Save as Favorite Supplier',
-          onPressed: () => controller.toggleFavorite(item),
-          icon: Icon(
-            item.isFavorite ? Icons.bookmark : Icons.bookmark_border,
-            color: BuyerTheme.action,
-          ),
-        ),
-        _closeButton(),
-      ],
-    ),
-    Wrap(
-      spacing: 8,
-      runSpacing: 4,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        ScoreBadge(
-          kind: item.scoreKind,
-          text: item.scoreKind == ScoreKind.newVendor
-              ? 'New Vendor — Building Track Record'
-              : item.scoreText,
-        ),
-        const TierBadge(tier: SupplierTier.verified),
-      ],
-    ),
-    if (item.openState != null) ...[
-      const SizedBox(height: 8),
-      _OpenStatusLine(open: item.openState!),
-    ],
-    const SizedBox(height: 8),
-    Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: _RouteLine(controller: controller, item: item),
-        ),
-        if (item.delivery != null && item.delivery != 'NOT_OFFERED')
-          const Padding(
-            padding: EdgeInsets.only(left: 8),
-            child: Icon(
-              LucideIcons.truck,
-              size: 20,
-              color: BuyerTheme.action,
-              semanticLabel: 'Offers Vendor Delivery',
+  Widget _header(
+    BuildContext context,
+    SupplierResultView item, {
+    required List<Widget> badges,
+    PlacePhotoView? photo,
+  }) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _SupplierAvatar(item: item, photo: photo),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Semantics(
+              header: true,
+              label:
+                  '${item.name}, ${item.isVerified ? 'Verified Vendor' : 'Directory Supplier'}${item.isFavorite ? ', Favorite Supplier' : ''}',
+              excludeSemantics: true,
+              child: Text(
+                item.name,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  height: 1.2,
+                ),
+              ),
             ),
           ),
-      ],
-    ),
-    if (item.niches.isNotEmpty) ...[
+          IconButton(
+            tooltip: item.isFavorite
+                ? 'Remove from Favorite Suppliers'
+                : 'Save as Favorite Supplier',
+            onPressed: () => controller.toggleFavorite(item),
+            icon: Icon(
+              item.isFavorite ? Icons.bookmark : Icons.bookmark_border,
+              color: BuyerTheme.action,
+            ),
+          ),
+          IconButton(
+            tooltip: 'Close preview',
+            onPressed: widget.onClose,
+            icon: const Icon(LucideIcons.x),
+          ),
+        ],
+      ),
       const SizedBox(height: 12),
+      // Full width so long trust labels (e.g. New Vendor — Building Track Record) never truncate.
       Wrap(
         spacing: 8,
         runSpacing: 8,
-        children: [
-          for (final niche in item.niches) _CategoryChip(label: niche),
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: badges,
+      ),
+    ],
+  );
+
+  Widget _secondaryIconAction({
+    required String tooltip,
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) => IconButton.outlined(
+    tooltip: tooltip,
+    onPressed: onPressed,
+    style: IconButton.styleFrom(
+      minimumSize: const Size(48, 48),
+      foregroundColor: BuyerTheme.action,
+      side: const BorderSide(color: BuyerTheme.border),
+    ),
+    icon: Icon(icon),
+  );
+
+  List<Widget> _verified(BuildContext context, SupplierResultView item) {
+    final delivers = item.delivery != null && item.delivery != 'NOT_OFFERED';
+    return [
+      _header(
+        context,
+        item,
+        badges: [
+          const TierBadge(tier: SupplierTier.verified),
+          ScoreBadge(
+            kind: item.scoreKind,
+            text: item.scoreKind == ScoreKind.newVendor
+                ? 'New Vendor — Building Track Record'
+                : item.scoreText,
+          ),
         ],
       ),
-    ],
-    const SizedBox(height: 16),
-    Row(
-      children: [
-        Expanded(
-          child: FilledButton.icon(
-            onPressed: () => widget.onViewStore(item),
-            icon: const Icon(LucideIcons.store, size: 20),
-            label: const Text('View Storefront'),
-          ),
-        ),
-        const SizedBox(width: 12),
-        IconButton.outlined(
-          tooltip: 'Message this store',
-          onPressed: () => widget.onMessage(item),
-          style: IconButton.styleFrom(
-            minimumSize: const Size(48, 48),
-            foregroundColor: BuyerTheme.action,
-            side: const BorderSide(color: BuyerTheme.border),
-          ),
-          icon: const Icon(LucideIcons.messageCircle),
+      const SizedBox(height: 16),
+      if (item.openState != null) ...[
+        _OpenStatusLine.vendor(item.openState!),
+        const SizedBox(height: 10),
+      ],
+      _RouteLine(controller: controller, item: item),
+      if (item.vacationMode) ...[
+        const SizedBox(height: 12),
+        const AuthNotice(
+          message: 'Vacation Mode: this store has paused new procurement.',
         ),
       ],
-    ),
-    const Divider(height: 32),
-    Text(_fulfillment(item)),
-    if (item.address != null) ...[
-      const SizedBox(height: 8),
-      _DetailRow(icon: LucideIcons.mapPin, text: item.address!),
-    ],
-    if (item.vacationMode) ...[
-      const SizedBox(height: 8),
-      const AuthNotice(
-        message: 'Vacation Mode: this store has paused new procurement.',
+      const SizedBox(height: 16),
+      Row(
+        children: [
+          Expanded(
+            child: FilledButton.icon(
+              onPressed: () => widget.onViewStore(item),
+              icon: const Icon(LucideIcons.store, size: 20),
+              label: const Text('View Storefront'),
+            ),
+          ),
+          const SizedBox(width: 12),
+          _secondaryIconAction(
+            tooltip: 'Message this store',
+            icon: LucideIcons.messageCircle,
+            onPressed: () => widget.onMessage(item),
+          ),
+        ],
       ),
-    ],
-    if (item.openState != null) ...[
+      if (item.niches.isNotEmpty) ...[
+        const SizedBox(height: 20),
+        const _SectionLabel('Categories'),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final niche in item.niches) _CategoryChip(label: niche),
+          ],
+        ),
+      ],
+      const SizedBox(height: 20),
+      const _SectionLabel('Store details'),
       const SizedBox(height: 8),
-      Text(
-        'Hours are informational${item.openState!.fromDateOverride ? ' (date-specific hours today)' : ''} and do not guarantee stock or staff availability.',
-        style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
+      _DetailsCard(
+        children: [
+          _DetailRow(
+            icon: delivers ? LucideIcons.truck : LucideIcons.package,
+            label: 'Fulfillment',
+            text: _fulfillmentMethods(item),
+            note: _deliveryNote(item),
+          ),
+          if (item.address != null)
+            _DetailRow(
+              icon: LucideIcons.mapPin,
+              label: 'Address',
+              text: item.address!,
+            ),
+        ],
       ),
-    ],
-  ];
+      if (item.openState != null) ...[
+        const SizedBox(height: 12),
+        _Footnote(
+          'Hours are informational${item.openState!.fromDateOverride ? ' (date-specific hours today)' : ''} and do not guarantee stock or staff availability.',
+        ),
+      ],
+    ];
+  }
 
-  String _fulfillment(SupplierResultView item) {
+  String _fulfillmentMethods(SupplierResultView item) {
     final methods = <String>[
       if (item.pickupAvailable) 'Pickup',
       if (item.delivery != null && item.delivery != 'NOT_OFFERED')
         'Vendor Delivery',
     ];
-    final delivery = switch (item.delivery) {
-      'WITHIN_STATED_AREA' =>
-        ' Delivery is advertised up to ${item.deliveryMaximumKm} km (straight-line estimate; confirmed at checkout).',
-      'OUTSIDE_STATED_AREA' =>
-        ' This location appears outside the stated ${item.deliveryMaximumKm} km delivery area (estimate).',
-      _ => '',
-    };
-    return 'Fulfillment: ${methods.isEmpty ? 'Not stated' : methods.join(' and ')}.$delivery';
+    return methods.isEmpty ? 'Not stated' : methods.join(' and ');
   }
+
+  String? _deliveryNote(SupplierResultView item) => switch (item.delivery) {
+    'WITHIN_STATED_AREA' =>
+      'Delivery is advertised up to ${item.deliveryMaximumKm} km (straight-line estimate; confirmed at checkout).',
+    'OUTSIDE_STATED_AREA' =>
+      'This location appears outside the stated ${item.deliveryMaximumKm} km delivery area (estimate).',
+    _ => null,
+  };
 
   List<Widget> _directory(BuildContext context, SupplierResultView item) {
     final details = controller.directoryDetails;
     final type = _placeType(item.directoryType);
-    final today = details == null
-        ? null
-        : details.openNow == null
-        ? _todayHours(details.openingHours)
-        : '${details.openNow! ? 'Open' : 'Closed'}${details.openNow == true && details.nextCloseTime != null ? ' · Closes ${_time(details.nextCloseTime)}' : ''}';
+    final ratingValue = details?.googleRatingValue ?? item.googleRating;
+    final ratingCount = details?.googleRatingValue != null
+        ? details?.googleRatingCount
+        : item.googleRatingCount;
     final phone = details?.actions.contains('CALL') == true
         ? details?.publicPhone
         : null;
+    final status = details == null ? null : _directoryStatus(details);
     return [
-      Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: _title(context, item),
-            ),
-          ),
-          _closeButton(),
-        ],
-      ),
-      Wrap(
-        spacing: 8,
-        runSpacing: 4,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
+      _header(
+        context,
+        item,
+        photo: controller.directoryPhotos.cached(item.resultId)?.photo,
+        badges: [
           const TierBadge(tier: SupplierTier.directory),
           if (type != null)
-            Text(type, style: const TextStyle(color: BuyerTheme.muted)),
+            Text(
+              type,
+              style: const TextStyle(fontSize: 13, color: BuyerTheme.muted),
+            ),
+          if (ratingValue != null)
+            GoogleRatingBadge(value: ratingValue, count: ratingCount),
         ],
       ),
-      if (today != null) ...[
-        const SizedBox(height: 8),
-        _DetailRow(icon: LucideIcons.clock, text: today),
-      ],
-      const SizedBox(height: 8),
+      const SizedBox(height: 16),
+      if (status != null) ...[status, const SizedBox(height: 10)],
       _RouteLine(controller: controller, item: item),
       const SizedBox(height: 16),
       if (controller.directoryLoading)
@@ -899,8 +983,9 @@ class _SupplierPreviewState extends State<SupplierPreview> {
             ),
             if (details.actions.contains('SHARE')) ...[
               const SizedBox(width: 12),
-              IconButton.outlined(
+              _secondaryIconAction(
                 tooltip: 'Share',
+                icon: LucideIcons.share2,
                 onPressed: () => widget.onShare(
                   [
                     details.name,
@@ -908,12 +993,6 @@ class _SupplierPreviewState extends State<SupplierPreview> {
                     details.googleMapsUri,
                   ].whereType<String>().join('\n'),
                 ),
-                style: IconButton.styleFrom(
-                  minimumSize: const Size(48, 48),
-                  foregroundColor: BuyerTheme.action,
-                  side: const BorderSide(color: BuyerTheme.border),
-                ),
-                icon: const Icon(LucideIcons.share2),
               ),
             ],
           ],
@@ -936,103 +1015,132 @@ class _SupplierPreviewState extends State<SupplierPreview> {
           onSelectionChanged: (value) => setState(() => _section = value.first),
         ),
         const SizedBox(height: 16),
-        const Text(
-          'Information from Google Maps may not reflect current real-world conditions.',
-          style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
-        ),
-        const SizedBox(height: 12),
         if (_section == _DirectorySection.overview)
           ..._overview(details, item, phone != null)
-        else if (_section == _DirectorySection.reviews) ...[
-          if (details.googleRatingValue != null)
-            GoogleRatingBadge(
-              value: details.googleRatingValue!,
-              count: details.googleRatingCount,
-            ),
+        else if (_section == _DirectorySection.reviews)
           GooglePlaceReviews(
             reviews: details.reviews,
             onOpenLink: widget.onOpenLink,
-          ),
-        ] else
+          )
+        else
           ..._about(details),
-        const SizedBox(height: 12),
+        const Divider(height: 32),
         for (final author in details.providerAttributions)
           GooglePlaceAuthor(author: author, onOpenLink: widget.onOpenLink),
-        Text(
+        const _Footnote(
+          'Information from Google Maps may not reflect current real-world conditions.',
+        ),
+        const SizedBox(height: 4),
+        _Footnote(
           '${details.attribution} Retrieved ${_time(details.fetchedAt)}.',
-          style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
         ),
       ],
     ];
+  }
+
+  /// Open/closed from Google when known, otherwise today's listed hours.
+  Widget? _directoryStatus(DirectoryDetailsView details) {
+    final today = _todayHours(details.openingHours);
+    final open = details.openNow;
+    if (open == null) {
+      return today == null
+          ? null
+          : _InfoLine(
+              leading: const Icon(
+                LucideIcons.clock,
+                size: 18,
+                color: BuyerTheme.muted,
+              ),
+              child: Text(today),
+            );
+    }
+    return _OpenStatusLine(
+      status: open ? 'Open' : 'Closed',
+      color: open
+          ? BuyerTheme.success
+          : const Color(MateryalColorTokens.statusError),
+      detail: open
+          ? details.nextCloseTime == null
+                ? null
+                : 'Closes ${_time(details.nextCloseTime)}'
+          : today,
+    );
   }
 
   List<Widget> _overview(
     DirectoryDetailsView details,
     SupplierResultView item,
     bool callIsPrimary,
-  ) => [
-    GooglePlacePhotos(photos: details.photos, onOpenLink: widget.onOpenLink),
-    const SizedBox(height: 12),
-    if (details.openingHours.isNotEmpty) ...[
-      const Text(
-        'Opening hours',
-        style: TextStyle(fontWeight: FontWeight.w700),
-      ),
-      for (final line in details.openingHours)
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Text(line),
+  ) {
+    // Sized to their labels so they sit side by side and wrap only on narrow screens.
+    final linkStyle = OutlinedButton.styleFrom(minimumSize: const Size(0, 44));
+    final links = [
+      if (callIsPrimary && details.actions.contains('OPEN_IN_MAPS'))
+        OutlinedButton.icon(
+          style: linkStyle,
+          onPressed: () => _openInMaps(details, item),
+          icon: const Icon(LucideIcons.map, size: 18),
+          label: const Text('Open in Google Maps'),
         ),
-      const SizedBox(height: 12),
-    ],
-    if (details.publicPhone != null) ...[
-      _DetailRow(icon: LucideIcons.phone, text: details.publicPhone!),
-      const SizedBox(height: 12),
-    ],
-
-    if (details.formattedAddress != null)
-      _DetailRow(icon: LucideIcons.mapPin, text: details.formattedAddress!),
-    if (details.googleRatingValue != null) ...[
-      const SizedBox(height: 12),
-      GoogleRatingBadge(
-        value: details.googleRatingValue!,
-        count: details.googleRatingCount,
-      ),
-    ],
-    const SizedBox(height: 12),
-    Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        if (callIsPrimary && details.actions.contains('OPEN_IN_MAPS'))
-          OutlinedButton.icon(
-            onPressed: () => _openInMaps(details, item),
-            icon: const Icon(LucideIcons.map, size: 18),
-            label: const Text('Open in Google Maps'),
-          ),
-        if (details.actions.contains('WEBSITE') && details.websiteUri != null)
-          OutlinedButton.icon(
-            onPressed: () => widget.onOpenLink(Uri.parse(details.websiteUri!)),
-            icon: const Icon(LucideIcons.globe, size: 18),
-            label: const Text('Website'),
-          ),
+      if (details.actions.contains('WEBSITE') && details.websiteUri != null)
+        OutlinedButton.icon(
+          style: linkStyle,
+          onPressed: () => widget.onOpenLink(Uri.parse(details.websiteUri!)),
+          icon: const Icon(LucideIcons.globe, size: 18),
+          label: const Text('Website'),
+        ),
+    ];
+    return [
+      GooglePlacePhotos(photos: details.photos, onOpenLink: widget.onOpenLink),
+      if (details.openingHours.isNotEmpty) ...[
+        const SizedBox(height: 16),
+        const _SectionLabel('Opening hours'),
+        const SizedBox(height: 8),
+        _DetailsCard(children: [_HoursTable(lines: details.openingHours)]),
       ],
-    ),
-  ];
+      if (details.publicPhone != null || details.formattedAddress != null) ...[
+        const SizedBox(height: 16),
+        const _SectionLabel('Contact'),
+        const SizedBox(height: 8),
+        _DetailsCard(
+          children: [
+            if (details.publicPhone != null)
+              _DetailRow(
+                icon: LucideIcons.phone,
+                label: 'Phone',
+                text: details.publicPhone!,
+              ),
+            if (details.formattedAddress != null)
+              _DetailRow(
+                icon: LucideIcons.mapPin,
+                label: 'Address',
+                text: details.formattedAddress!,
+              ),
+          ],
+        ),
+      ],
+      if (links.isNotEmpty) ...[
+        const SizedBox(height: 12),
+        Wrap(spacing: 8, runSpacing: 8, children: links),
+      ],
+    ];
+  }
 
   List<Widget> _about(DirectoryDetailsView details) => [
     if (details.attributes.isEmpty)
       const Text(
         'Google Maps has not provided additional business attributes.',
         style: TextStyle(color: BuyerTheme.muted),
-      ),
-    for (final attribute in details.attributes)
-      Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: _DetailRow(
-          icon: attribute.available ? LucideIcons.check : LucideIcons.x,
-          text: '${attribute.label}: ${attribute.available ? 'Yes' : 'No'}',
-        ),
+      )
+    else
+      _DetailsCard(
+        children: [
+          for (final attribute in details.attributes)
+            _DetailRow(
+              icon: attribute.available ? LucideIcons.check : LucideIcons.x,
+              text: '${attribute.label}: ${attribute.available ? 'Yes' : 'No'}',
+            ),
+        ],
       ),
   ];
 
@@ -1054,69 +1162,210 @@ String? _placeType(String? type) {
   return '${words[0].toUpperCase()}${words.substring(1)}';
 }
 
+const _weekdays = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+];
+
+/// Today's weekday name in Asia/Manila.
+String _manilaWeekday() =>
+    _weekdays[DateTime.now().toUtc().add(const Duration(hours: 8)).weekday - 1];
+
 /// Match the provider's English weekday label; Google does not guarantee Monday-first ordering.
 String? _todayHours(List<String> weekdays) {
-  const names = [
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-    'Sunday',
-  ];
-  final today = DateTime.now().toUtc().add(const Duration(hours: 8)).weekday;
+  final today = _manilaWeekday();
   for (final line in weekdays) {
-    if (line.startsWith('${names[today - 1]}:')) {
+    if (line.startsWith('$today:')) {
       return 'Today:${line.substring(line.indexOf(':') + 1)}';
     }
   }
   return null;
 }
 
-class _OpenStatusLine extends StatelessWidget {
-  const _OpenStatusLine({required this.open});
-  final SupplierOpenState open;
+/// Google weekday descriptions as an aligned day/hours table with today emphasized.
+class _HoursTable extends StatelessWidget {
+  const _HoursTable({required this.lines});
+  final List<String> lines;
 
   @override
   Widget build(BuildContext context) {
-    final (String status, Color dot) = switch (open.status) {
+    final today = _manilaWeekday();
+    return Column(
+      children: [
+        for (final line in lines)
+          Builder(
+            builder: (context) {
+              final split = line.indexOf(':');
+              final day = split < 0 ? line : line.substring(0, split);
+              final hours = split < 0 ? '' : line.substring(split + 1).trim();
+              final isToday = day == today;
+              final style = TextStyle(
+                fontSize: 14,
+                height: 1.35,
+                fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
+                color: isToday ? BuyerTheme.ink : BuyerTheme.muted,
+              );
+              return Semantics(
+                label: '${isToday ? 'Today, ' : ''}$day: $hours',
+                excludeSemantics: true,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(flex: 2, child: Text(day, style: style)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 3,
+                        child: Text(
+                          hours,
+                          textAlign: TextAlign.end,
+                          style: style,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+      ],
+    );
+  }
+}
+
+/// A status or route line: a 20 dp leading glyph column so every line's text aligns.
+class _InfoLine extends StatelessWidget {
+  const _InfoLine({required this.leading, required this.child});
+  final Widget leading;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      SizedBox(width: 20, height: 22, child: Center(child: leading)),
+      const SizedBox(width: 10),
+      Expanded(child: child),
+    ],
+  );
+}
+
+class _OpenStatusLine extends StatelessWidget {
+  const _OpenStatusLine({
+    required this.status,
+    required this.color,
+    this.detail,
+  });
+
+  /// Vendor-saved hours. Descriptive only; never filters or ranks.
+  factory _OpenStatusLine.vendor(SupplierOpenState open) {
+    final (String status, Color color) = switch (open.status) {
       'OPEN' => ('Open', BuyerTheme.success),
+      'CLOSED' when open.opensAt == null => (
+        'Closed today',
+        const Color(MateryalColorTokens.statusError),
+      ),
       'CLOSED' => ('Closed', const Color(MateryalColorTokens.statusError)),
       _ => ('Hours unavailable', BuyerTheme.muted),
     };
     final detail = switch (open.status) {
       'OPEN' when open.closesAt != null => 'Closes ${_clock(open.closesAt!)}',
       'CLOSED' when open.opensAt != null => 'Opens ${_clock(open.opensAt!)}',
-      'CLOSED' => 'Closed today',
       _ => null,
     };
-    return Semantics(
-      label: [status, ?detail].join(', '),
-      excludeSemantics: true,
-      child: Row(
-        children: [
-          Icon(Icons.circle, size: 10, color: dot),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text.rich(
+    return _OpenStatusLine(status: status, color: color, detail: detail);
+  }
+
+  final String status;
+  final Color color;
+  final String? detail;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: [status, ?detail].join(', '),
+    excludeSemantics: true,
+    child: _InfoLine(
+      leading: Icon(Icons.circle, size: 10, color: color),
+      child: Text.rich(
+        TextSpan(
+          text: status,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+          children: [
+            if (detail != null)
               TextSpan(
-                text: status,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-                children: [
-                  if (detail != null && detail != 'Closed today')
-                    TextSpan(
-                      text: ' · $detail',
-                      style: const TextStyle(fontWeight: FontWeight.w400),
-                    ),
-                ],
+                text: ' · $detail',
+                style: const TextStyle(fontWeight: FontWeight.w400),
               ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    header: true,
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+        color: BuyerTheme.muted,
+        letterSpacing: 0.2,
+      ),
+    ),
+  );
+}
+
+class _Footnote extends StatelessWidget {
+  const _Footnote(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    text,
+    style: const TextStyle(fontSize: 12, height: 1.4, color: BuyerTheme.muted),
+  );
+}
+
+/// A flat bordered group of detail rows separated by hairlines.
+class _DetailsCard extends StatelessWidget {
+  const _DetailsCard({required this.children});
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      border: Border.all(color: BuyerTheme.border),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var index = 0; index < children.length; index++) ...[
+            if (index > 0) const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: children[index],
             ),
-          ),
+          ],
         ],
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _CategoryChip extends StatelessWidget {
@@ -1139,9 +1388,16 @@ class _CategoryChip extends StatelessWidget {
 }
 
 class _DetailRow extends StatelessWidget {
-  const _DetailRow({required this.icon, required this.text});
+  const _DetailRow({
+    required this.icon,
+    required this.text,
+    this.label,
+    this.note,
+  });
   final IconData icon;
   final String text;
+  final String? label;
+  final String? note;
 
   @override
   Widget build(BuildContext context) => Row(
@@ -1151,8 +1407,37 @@ class _DetailRow extends StatelessWidget {
         padding: const EdgeInsets.only(top: 2),
         child: Icon(icon, size: 18, color: BuyerTheme.muted),
       ),
-      const SizedBox(width: 8),
-      Expanded(child: Text(text)),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (label != null) ...[
+              Text(
+                label!,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: BuyerTheme.muted,
+                ),
+              ),
+              const SizedBox(height: 2),
+            ],
+            Text(text, style: const TextStyle(height: 1.35)),
+            if (note != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                note!,
+                style: const TextStyle(
+                  fontSize: 13,
+                  height: 1.4,
+                  color: BuyerTheme.muted,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     ],
   );
 }
@@ -1165,38 +1450,40 @@ class _RouteLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final route = controller.route;
+    const car = Icon(LucideIcons.car, size: 18, color: BuyerTheme.muted);
     final Widget content = switch (controller.routePhase) {
-      RoutePhase.ready when route != null => Text(
-        '${formatDistance(route.distanceMeters)} · ${formatDuration(route.durationSeconds)} drive · Estimated ${_time(route.computedAt)}${route.trafficAware ? ' with current traffic' : ''}',
-        style: const TextStyle(fontWeight: FontWeight.w600),
+      RoutePhase.ready when route != null => _InfoLine(
+        leading: car,
+        child: Text(
+          '${formatDistance(route.distanceMeters)} · ${formatDuration(route.durationSeconds)} drive · Estimated ${_time(route.computedAt)}${route.trafficAware ? ' with current traffic' : ''}',
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
       ),
-      RoutePhase.failed => Row(
-        children: [
-          Expanded(
-            child: Text(
-              'Driving time unavailable · ${formatDistance((controller.routeFailure?.details['straight_line_meters'] as int?) ?? item.distanceMeters)} straight-line',
+      RoutePhase.failed => _InfoLine(
+        leading: car,
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Driving time unavailable · ${formatDistance((controller.routeFailure?.details['straight_line_meters'] as int?) ?? item.distanceMeters)} straight-line',
+              ),
             ),
-          ),
-          TextButton(
-            onPressed: controller.retryRoute,
-            child: const Text('Retry'),
-          ),
-        ],
+            TextButton(
+              onPressed: controller.retryRoute,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
       ),
-      _ => Row(
-        children: [
-          const SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              '${formatDistance(item.distanceMeters)} straight-line · Calculating driving time…',
-            ),
-          ),
-        ],
+      _ => _InfoLine(
+        leading: const SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        child: Text(
+          '${formatDistance(item.distanceMeters)} straight-line · Calculating driving time…',
+        ),
       ),
     };
     return Semantics(liveRegion: true, child: content);

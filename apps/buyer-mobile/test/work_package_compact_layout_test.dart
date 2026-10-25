@@ -1,3 +1,4 @@
+import 'typed_project_fixtures.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -93,15 +94,15 @@ Map<String, Object?> line(int i, {Map<String, Object?>? specs}) => {
 Widget editor({int lines = 5, Map<String, Object?>? firstSpecs}) =>
     WorkPackageEditor(
       repository: repository(),
-      project: {
+      project: typedProject({
         'id': projectId,
         'budget_centavos': 100000000,
         'budget': {'unallocated_centavos': 100000000},
         'sites': [
           {'id': siteId, 'name': '629 J Nepomuceno St'},
         ],
-      },
-      package: {
+      }),
+      package: typedPackage({
         'id': '01995000-0000-7000-8000-000000000010',
         'status': 'DRAFT',
         'lock_version': 1,
@@ -117,7 +118,7 @@ Widget editor({int lines = 5, Map<String, Object?>? firstSpecs}) =>
             ],
           },
         },
-      },
+      }),
       chooseLocation: () async => null,
     );
 

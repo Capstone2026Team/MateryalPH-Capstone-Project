@@ -44,8 +44,6 @@ Artisan::command('materyalph:tax-reminders', function (): void {
     $this->info('Tax reminder recipients evaluated: '.app(TaxReminderService::class)->sweep());
 });
 Schedule::command('materyalph:tax-reminders')->dailyAt('08:00')->timezone('Asia/Manila')->withoutOverlapping();
-Schedule::command('materyalph:vendor-evidence-evaluate')->hourly()->withoutOverlapping();
-Schedule::command('materyalph:vendor-media-recover')->everyFifteenMinutes()->withoutOverlapping();
 Schedule::command('materyalph:vendor-expiry-scan')->dailyAt('01:00')->withoutOverlapping();
 Schedule::command('materyalph:discoverability-evaluate')->hourly()->withoutOverlapping();
 Schedule::command('materyalph:stock-confirmation-sweep')->everyFifteenMinutes()->withoutOverlapping();
@@ -135,7 +133,7 @@ Artisan::command('materyalph:demo-vendors-seed {--only=* : Seed only these Vendo
 
         return 1;
     }
-    if ($payments === 'xendit' && ! app()->environment('local', 'development', 'testing') && ! $this->confirm('Create real Xendit TEST sub-accounts for twelve demo Vendors?', false)) {
+    if ($payments === 'xendit' && ! app()->environment('local', 'development', 'testing') && ! $this->confirm('Create real Xendit TEST sub-accounts for the demo Vendors?', false)) {
         return 1;
     }
     $path = (string) ($this->option('credentials') ?: storage_path('app/demo-vendor-credentials.json'));

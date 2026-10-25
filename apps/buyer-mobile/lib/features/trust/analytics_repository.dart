@@ -5,14 +5,33 @@ import '../map_discovery/discovery_models.dart';
 import 'trust_models.dart';
 
 /// MAT-05 Buyer Materials Analytics through `/api/v1` only. The audience is the Buyer session; the
-/// origin and exact radius travel in request bodies and are inherited from Explore.
+/// Explore origin and the fixed analytics radius travel in request bodies.
 abstract interface class AnalyticsRepository {
   Future<MaterialsAnalyticsPage> list({
     required DiscoveryOrigin origin,
     required int radiusKm,
     required AnalyticsWindowChoice window,
     String? query,
+    String? categoryId,
     String? cursor,
+    int? perPage,
+  });
+
+  /// One row per canonical product, plus every in-scope category for the overview tiles.
+  Future<AnalyticsProductsPage> products({
+    required DiscoveryOrigin origin,
+    required int radiusKm,
+    required AnalyticsWindowChoice window,
+    String? query,
+    String? categoryId,
+    String? cursor,
+  });
+
+  Future<AnalyticsProductDetailView> product({
+    required String materialId,
+    required DiscoveryOrigin origin,
+    required int radiusKm,
+    required AnalyticsWindowChoice window,
   });
 
   Future<MaterialPriceDetailsView> details({
@@ -48,7 +67,9 @@ final class ApiAnalyticsRepository implements AnalyticsRepository {
     required int radiusKm,
     required AnalyticsWindowChoice window,
     String? query,
+    String? categoryId,
     String? cursor,
+    int? perPage,
   }) => _api(() async {
     final response = await _analytics.listBuyerMaterialsAnalytics(
       buyerMaterialsAnalyticsRequest: _request(
@@ -56,7 +77,9 @@ final class ApiAnalyticsRepository implements AnalyticsRepository {
         radiusKm,
         window: window,
         query: query,
+        categoryId: categoryId,
         cursor: cursor,
+        perPage: perPage,
       ),
     );
     final data = _api.required(response.data?.data);
@@ -71,6 +94,114 @@ final class ApiAnalyticsRepository implements AnalyticsRepository {
       ),
       items: data.items.map(_row).toList(growable: false),
       nextCursor: data.nextCursor,
+    );
+  });
+
+  @override
+  Future<AnalyticsProductsPage> products({
+    required DiscoveryOrigin origin,
+    required int radiusKm,
+    required AnalyticsWindowChoice window,
+    String? query,
+    String? categoryId,
+    String? cursor,
+  }) => _api(() async {
+    final response = await _analytics.listBuyerAnalyticsProducts(
+      buyerMaterialsAnalyticsRequest: _request(
+        origin,
+        radiusKm,
+        window: window,
+        query: query,
+        categoryId: categoryId,
+        cursor: cursor,
+      ),
+    );
+    final data = _api.required(response.data?.data);
+    return AnalyticsProductsPage(
+      envelope: _envelope(
+        data.dataset,
+        data.updateSchedule,
+        data.explanation,
+        data.currentAsOf,
+        data.snapshot,
+        data.window,
+      ),
+      categories: data.categories
+          .map(
+            (summary) => AnalyticsCategorySummaryView(
+              id: summary.category.id,
+              name: summary.category.name,
+              code: summary.category.code,
+              productCount: summary.productCount,
+              variantCount: summary.variantCount,
+            ),
+          )
+          .toList(growable: false),
+      items: data.items.map(_product).toList(growable: false),
+      notYetComparable: data.notYetComparableListings,
+      nextCursor: data.nextCursor,
+    );
+  });
+
+  @override
+  Future<AnalyticsProductDetailView> product({
+    required String materialId,
+    required DiscoveryOrigin origin,
+    required int radiusKm,
+    required AnalyticsWindowChoice window,
+  }) => _api(() async {
+    final response = await _analytics.getBuyerAnalyticsProduct(
+      materialId: materialId,
+      buyerMaterialsAnalyticsRequest: _request(
+        origin,
+        radiusKm,
+        window: window,
+      ),
+    );
+    final data = _api.required(response.data?.data);
+    final row = data.product;
+    final featured = data.featured;
+    return AnalyticsProductDetailView(
+      envelope: _envelope(
+        data.dataset,
+        data.updateSchedule,
+        data.explanation,
+        data.currentAsOf,
+        data.snapshot,
+        data.window,
+      ),
+      product: AnalyticsProductView(
+        materialId: row.material.id,
+        name: row.material.name,
+        categoryId: row.category.id,
+        categoryName: row.category.name,
+        categoryCode: row.category.code,
+        regulated: row.regulated,
+        unitName: row.unit.name,
+        variantCount: row.variantCount,
+        vendorCount: row.vendorCount,
+        price: _range(row.price),
+      ),
+      description: row.description,
+      featured: featured == null ? null : _detailGroup(featured.group),
+      series: featured?.series.map(_point).toList(growable: false) ?? const [],
+      variants: data.variants
+          .map(
+            (variant) => AnalyticsProductVariantView(
+              groupId: variant.groupId,
+              displayName: variant.displayName,
+              materialName: variant.material.name,
+              specification: _specification(variant.specification),
+              unitName: variant.unit.name,
+              vendorCount: variant.vendorCount,
+              listingCount: variant.listingCount,
+              price: _range(variant.price),
+              availability: variant.availability.name,
+              categoryCode: variant.category.code,
+              imageUrl: variant.image?.url,
+            ),
+          )
+          .toList(growable: false),
     );
   });
 
@@ -100,21 +231,7 @@ final class ApiAnalyticsRepository implements AnalyticsRepository {
         data.snapshot,
         data.window,
       ),
-      group: ComparableGroupView(
-        groupId: group.groupId,
-        displayName: group.displayName,
-        materialName: group.material.name,
-        categoryName: group.category.name,
-        categoryCode: group.category.code,
-        imageUrl: group.image?.url,
-        unitName: group.unit.name,
-        specification: _specification(group.specification),
-        startPoint: _point(group.startPoint),
-        endPoint: _point(group.endPoint),
-        trend: _trend(group.trend),
-        currentVendors: group.current.vendorCount,
-        currentListings: group.current.listingCount,
-      ),
+      group: _detailGroup(group),
       description: group.description,
       variants: data.variants
           .map(
@@ -161,7 +278,9 @@ final class ApiAnalyticsRepository implements AnalyticsRepository {
     int radiusKm, {
     AnalyticsWindowChoice? window,
     String? query,
+    String? categoryId,
     String? cursor,
+    int? perPage,
   }) => api.BuyerMaterialsAnalyticsRequest((b) {
     b
       ..locationId = origin.locationId
@@ -173,7 +292,9 @@ final class ApiAnalyticsRepository implements AnalyticsRepository {
       ..radiusKm = api.BuyerMaterialsAnalyticsRequestRadiusKmEnum.values
           .firstWhere((value) => value.name == 'number$radiusKm')
       ..q = query == null || query.trim().isEmpty ? null : query.trim()
-      ..cursor = cursor;
+      ..categoryId = categoryId
+      ..cursor = cursor
+      ..perPage = perPage;
     if (window != null) {
       if (window.isCustom) {
         b
@@ -230,6 +351,7 @@ final class ApiAnalyticsRepository implements AnalyticsRepository {
     displayName: row.displayName,
     materialName: row.material.name,
     categoryName: row.category.name,
+    categoryId: row.category.id,
     categoryCode: row.category.code,
     imageUrl: row.image?.url,
     unitName: row.unit.name,
@@ -239,6 +361,45 @@ final class ApiAnalyticsRepository implements AnalyticsRepository {
     trend: _trend(row.trend),
     currentVendors: row.current.vendorCount,
     currentListings: row.current.listingCount,
+  );
+
+  ComparableGroupView _detailGroup(
+    api.BuyerMaterialsAnalyticsDetailGroup group,
+  ) => ComparableGroupView(
+    groupId: group.groupId,
+    displayName: group.displayName,
+    materialName: group.material.name,
+    categoryName: group.category.name,
+    categoryId: group.category.id,
+    categoryCode: group.category.code,
+    imageUrl: group.image?.url,
+    unitName: group.unit.name,
+    specification: _specification(group.specification),
+    startPoint: _point(group.startPoint),
+    endPoint: _point(group.endPoint),
+    trend: _trend(group.trend),
+    currentVendors: group.current.vendorCount,
+    currentListings: group.current.listingCount,
+  );
+
+  AnalyticsProductView _product(api.BuyerAnalyticsProductRow row) =>
+      AnalyticsProductView(
+        materialId: row.material.id,
+        name: row.material.name,
+        categoryId: row.category.id,
+        categoryName: row.category.name,
+        categoryCode: row.category.code,
+        regulated: row.regulated,
+        unitName: row.unit.name,
+        variantCount: row.variantCount,
+        vendorCount: row.vendorCount,
+        price: _range(row.price),
+      );
+
+  static PriceRangeView _range(api.AnalyticsPriceRange range) => PriceRangeView(
+    min: range.minPhp,
+    median: range.medianPhp,
+    max: range.maxPhp,
   );
 
   AnalyticsPointView _point(api.BuyerAnalyticsPoint point) =>

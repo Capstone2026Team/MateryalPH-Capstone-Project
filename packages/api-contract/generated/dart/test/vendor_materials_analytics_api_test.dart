@@ -9,7 +9,7 @@ void main() {
   group(VendorMaterialsAnalyticsApi, () {
     // materials_analytics.view_competitors. Aggregate-only CSV with the same suppression; re-authorized on every request.
     //
-    //Future<Uint8List> exportVendorMaterialsAnalytics({ int presetDays, Date startDate, Date endDate, int radiusKm }) async
+    //Future<Uint8List> exportVendorMaterialsAnalytics({ int presetDays, Date startDate, Date endDate, int radiusKm, String q, String categoryId }) async
     test('test exportVendorMaterialsAnalytics', () async {
       // TODO
     });

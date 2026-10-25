@@ -130,3 +130,17 @@ test('the invoice log marks Vendor copies and overdue requests without any creat
   expect(screen.getByText(/1 request\(s\) are past the three-business-day target/)).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /(create|upload|issue) (a |tax )?invoice/i })).not.toBeInTheDocument()
 })
+
+ test('assignment disables repeat clicks and shows a recoverable failure on the case', async () => {
+  vi.mocked(api.getCase).mockResolvedValue(detail({ availableActions: ['ASSIGN_TO_ME'] }))
+  let reject!: (reason: unknown) => void
+  vi.mocked(api.assignToMe).mockImplementation(() => new Promise((_resolve, fail) => { reject = fail }))
+  at('/disputes/case-1')
+  fireEvent.click(await screen.findByRole('button', { name: 'Assign to me' }))
+  expect(screen.getByRole('button', { name: 'Assigning…' })).toBeDisabled()
+  reject(new Error('Assignment failed'))
+  expect(await screen.findByRole('button', { name: 'Assign to me' })).toBeEnabled()
+  expect(screen.getByRole('alert')).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'Original complaint' })).toBeInTheDocument()
+  expect(api.assignToMe).toHaveBeenCalledTimes(1)
+})

@@ -52,8 +52,8 @@ void main() {
       onSessionExpired: () async => expired = true,
     );
 
-    expect((await repository.compile(_packageId, 3))['items'], isEmpty);
-    expect((await repository.arrangementOptions(_packageId))['items'], isEmpty);
+    expect((await repository.compile(_packageId, 3)).items, isEmpty);
+    expect((await repository.arrangementOptions(_packageId)).items, isEmpty);
     expect(requests, [
       '/api/v1/buyers/work-packages/$_packageId/estimates',
       '/api/v1/buyers/work-packages/$_packageId/arrangement-options',

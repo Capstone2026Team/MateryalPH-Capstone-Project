@@ -69,6 +69,8 @@ class _$DirectorySupplierSummary extends DirectorySupplierSummary {
   final DirectorySupplierSummarySource_Enum source_;
   @override
   final DateTime refreshedAt;
+  @override
+  final GoogleRating? googleRating;
 
   factory _$DirectorySupplierSummary(
           [void Function(DirectorySupplierSummaryBuilder)? updates]) =>
@@ -78,7 +80,8 @@ class _$DirectorySupplierSummary extends DirectorySupplierSummary {
       {this.formattedAddress,
       this.primaryType,
       required this.source_,
-      required this.refreshedAt})
+      required this.refreshedAt,
+      this.googleRating})
       : super._();
   @override
   DirectorySupplierSummary rebuild(
@@ -96,7 +99,8 @@ class _$DirectorySupplierSummary extends DirectorySupplierSummary {
         formattedAddress == other.formattedAddress &&
         primaryType == other.primaryType &&
         source_ == other.source_ &&
-        refreshedAt == other.refreshedAt;
+        refreshedAt == other.refreshedAt &&
+        googleRating == other.googleRating;
   }
 
   @override
@@ -106,6 +110,7 @@ class _$DirectorySupplierSummary extends DirectorySupplierSummary {
     _$hash = $jc(_$hash, primaryType.hashCode);
     _$hash = $jc(_$hash, source_.hashCode);
     _$hash = $jc(_$hash, refreshedAt.hashCode);
+    _$hash = $jc(_$hash, googleRating.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -116,7 +121,8 @@ class _$DirectorySupplierSummary extends DirectorySupplierSummary {
           ..add('formattedAddress', formattedAddress)
           ..add('primaryType', primaryType)
           ..add('source_', source_)
-          ..add('refreshedAt', refreshedAt))
+          ..add('refreshedAt', refreshedAt)
+          ..add('googleRating', googleRating))
         .toString();
   }
 }
@@ -144,6 +150,12 @@ class DirectorySupplierSummaryBuilder
   DateTime? get refreshedAt => _$this._refreshedAt;
   set refreshedAt(DateTime? refreshedAt) => _$this._refreshedAt = refreshedAt;
 
+  GoogleRatingBuilder? _googleRating;
+  GoogleRatingBuilder get googleRating =>
+      _$this._googleRating ??= GoogleRatingBuilder();
+  set googleRating(GoogleRatingBuilder? googleRating) =>
+      _$this._googleRating = googleRating;
+
   DirectorySupplierSummaryBuilder() {
     DirectorySupplierSummary._defaults(this);
   }
@@ -155,6 +167,7 @@ class DirectorySupplierSummaryBuilder
       _primaryType = $v.primaryType;
       _source_ = $v.source_;
       _refreshedAt = $v.refreshedAt;
+      _googleRating = $v.googleRating?.toBuilder();
       _$v = null;
     }
     return this;
@@ -174,15 +187,29 @@ class DirectorySupplierSummaryBuilder
   DirectorySupplierSummary build() => _build();
 
   _$DirectorySupplierSummary _build() {
-    final _$result = _$v ??
-        _$DirectorySupplierSummary._(
-          formattedAddress: formattedAddress,
-          primaryType: primaryType,
-          source_: BuiltValueNullFieldError.checkNotNull(
-              source_, r'DirectorySupplierSummary', 'source_'),
-          refreshedAt: BuiltValueNullFieldError.checkNotNull(
-              refreshedAt, r'DirectorySupplierSummary', 'refreshedAt'),
-        );
+    _$DirectorySupplierSummary _$result;
+    try {
+      _$result = _$v ??
+          _$DirectorySupplierSummary._(
+            formattedAddress: formattedAddress,
+            primaryType: primaryType,
+            source_: BuiltValueNullFieldError.checkNotNull(
+                source_, r'DirectorySupplierSummary', 'source_'),
+            refreshedAt: BuiltValueNullFieldError.checkNotNull(
+                refreshedAt, r'DirectorySupplierSummary', 'refreshedAt'),
+            googleRating: _googleRating?.build(),
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'googleRating';
+        _googleRating?.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'DirectorySupplierSummary', _$failedField, e.toString());
+      }
+      rethrow;
+    }
     replace(_$result);
     return _$result;
   }

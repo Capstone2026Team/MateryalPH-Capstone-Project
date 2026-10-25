@@ -1,10 +1,10 @@
 # Demo Vendor marketplace (capstone demonstration)
 
-Twelve fictional, fully onboarded Tier 2 Vendors located across Metro Manila (Quezon City, Makati, Pasig, Mandaluyong,
-Marikina, Taguig, Parañaque, Caloocan, Valenzuela, Muntinlupa and Malabon), each with Owner and staff accounts, profile
-photos, a store logo and banner, verified SAMPLE documents, a Xendit TEST sub-account, delivery setup where offered, and
-published listings of real Philippine-market brands with retail prices, variants, volume tiers, search tags and photos:
-140 listings in total.
+Twenty-two fictional, fully onboarded Tier 2 Vendors located across Metro Manila (Quezon City, Manila, Makati, Pasig,
+Mandaluyong, San Juan, Marikina, Taguig, Pateros, Parañaque, Pasay, Las Piñas, Caloocan, Valenzuela, Muntinlupa, Malabon
+and Navotas), each with Owner and staff accounts, profile photos, a store logo and banner, verified SAMPLE documents, a
+Xendit TEST sub-account, delivery setup where offered, and published listings of real Philippine-market brands with
+retail prices, variants, volume tiers, search tags and photos: 260 listings in total.
 
 * Stores 1–10 (12 listings each) sell non-regulated goods (Boysen, Davies, Phelps Dodge, Royu, Firefly, Omni,
   Wassernison, Kitz, Makita, Bosch, Stanley, Yale, Bostik, Pioneer, Decolite, Acewell and more).
@@ -15,6 +15,25 @@ published listings of real Philippine-market brands with retail prices, variants
 * **Potrero Pipes, Tiles & Sanitary Center** (Malabon, 10 listings): Neltex Waterline, Powerguard and Saniguard, Atlanta
   HDPE pipe, Mariwasa 30×30/40×40 tile and HCG water closets and lavatory (PS Mark), plus LESSO drainage pipe and
   imported JBN 60×60 porcelain tile (ICC sticker).
+
+* Stores 13–22 (12 listings each, added 2026-10-25): Avenida Hardware (Santa Cruz, Manila), Tondo Steel & Cement
+  (Tondo, Manila), Dapitan Paint (Sampaloc, Manila), Greenhills Plumbing (San Juan), Taft Avenue Electrical (Pasay),
+  Talon Builders (Las Piñas), Tangos Roofing (Navotas), Pateros Floor & Tile, Cubao Doors & Windows (Quezon City) and
+  Kapitolyo Tools (Pasig). Most listings deliberately repeat an existing store's exact product (same brand, model, size
+  and, for PS/ICC goods, the same register number) at the store's own price, so Materials Analytics shows multi-seller
+  averages; their photo entries reuse that product's source. Four are new unbranded commodities (paint brush, garden
+  hose, adobe stone, nylon rope) with openly licensed Wikimedia Commons photos. Staff phone numbers for stores 13+ use
+  the 5xx block so they never reuse an earlier store's number.
+
+## Materials Analytics coverage
+
+Price comparison (MAT-03) only covers listings linked to a reference material that state every comparison key of their
+category in the material's canonical unit. Migration `2026_10_25_000001_add_common_hardware_reference_materials` adds
+unregulated hardware materials (enamel paint, sealants, anchors and screws, SPC flooring, hand tools, doors, windows,
+polycarbonate roofing and more) with a "Size" key for categories that had none, and `vendors.json` links those products
+with their size or fastener dimensions. DTI-regulated electrical goods, power tools, pumps, lumber and faucets stay
+"Other" (Not Yet Comparable). The seeder finishes each run with `deriveForUnmapped()`, which creates the comparable
+groups (equivalent to `php artisan analytics:derive-comparable-groups`).
 
 ## PS/ICC listings
 
@@ -79,9 +98,11 @@ marking image is drawn or fabricated.
 * Branded product photos are manufacturer or retailer images (Phelps Dodge, DIY Hardware, KHM Megatools, Gigatools,
   CBK Hardware, Builders Home, La Europa, Manyu Stores, Holcim, Republic Cement, SteelAsia, Neltex, LESSO, HCG). They are used only for this academic demonstration, are never
   committed, and must be replaced with the store's own photos before any public or commercial use.
-* Commodity photos (hollow blocks, sand, gravel, lumber, bamboo, doors, windows, glass, gutters), store banners and
-  delivery vehicles are openly licensed Wikimedia Commons / Openverse images; `photo-sources.json` records each author
-  and license for attribution. Five banners are composed from the store's own product photos.
+* Commodity photos (hollow blocks, sand, gravel, lumber, bamboo, doors, windows, glass, gutters, paint brushes, garden
+  hose, adobe stone, rope), store banners and delivery vehicles are openly licensed Wikimedia Commons / Openverse images;
+  `photo-sources.json` records each author and license for attribution. Five of the first twelve banners and every
+  banner of stores 13–22 are composed from the store's own product photos; stores 13–22 reuse the vehicle photo of the
+  store whose delivery setup they share.
 * Owner and staff portraits are AI-generated faces (no real person). Store names, owners, staff, TINs, IDs and phone
   numbers are fictional; the verification documents are obviously labelled SAMPLE images.
 

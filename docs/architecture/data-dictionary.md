@@ -2098,9 +2098,13 @@ Phase 1 platform foundation record.
 | `primary_type` | `character varying` | Yes | — | Primary type. |
 | `business_status` | `character varying` | Yes | — | Business status. |
 | `expires_at` | `timestamp with time zone` | Yes | — | Expires at. |
+| `google_rating` | `numeric` | Yes | — | Google rating. |
+| `google_rating_count` | `integer` | Yes | — | Google rating count. |
 
 **Constraints**
 
+- `directory_google_rating_count_range` — CHECK: `CHECK (google_rating_count IS NULL OR google_rating_count >= 0)`
+- `directory_google_rating_range` — CHECK: `CHECK (google_rating IS NULL OR google_rating >= 1.0 AND google_rating <= 5.0)`
 - `directory_supplier_cache_bound_check` — CHECK: `CHECK (expires_at IS NULL OR expires_at <= (refreshed_at + '30 days'::interval))`
 - `directory_suppliers_claimed_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (claimed_vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
 - `directory_suppliers_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
@@ -2737,6 +2741,31 @@ Phase 1 platform foundation record.
 
 - `failed_jobs_pkey` — `CREATE UNIQUE INDEX failed_jobs_pkey ON public.failed_jobs USING btree (id)`
 - `failed_jobs_uuid_unique` — `CREATE UNIQUE INDEX failed_jobs_uuid_unique ON public.failed_jobs USING btree (uuid)`
+
+## `favorite_directory_suppliers`
+
+Phase 1 platform foundation record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `buyer_profile_id` | `uuid` | No | — | Buyer profile id. |
+| `google_place_id` | `character varying` | No | — | Google place id. |
+| `created_at` | `timestamp with time zone` | Yes | — | Created at. |
+| `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+
+**Constraints**
+
+- `favorite_directory_place_id_check` — CHECK: `CHECK (btrim(google_place_id::text) <> ''::text)`
+- `favorite_directory_suppliers_buyer_profile_id_foreign` — FOREIGN KEY: `FOREIGN KEY (buyer_profile_id) REFERENCES buyer_profiles(id) ON DELETE RESTRICT`
+- `favorite_directory_suppliers_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `favorite_directory_suppliers_buyer_profile_id_google_place_id_u` — UNIQUE: `UNIQUE (buyer_profile_id, google_place_id)`
+
+**Indexes**
+
+- `favorite_directory_suppliers_buyer_profile_id_created_at_index` — `CREATE INDEX favorite_directory_suppliers_buyer_profile_id_created_at_index ON public.favorite_directory_suppliers USING btree (buyer_profile_id, created_at)`
+- `favorite_directory_suppliers_buyer_profile_id_google_place_id_u` — `CREATE UNIQUE INDEX favorite_directory_suppliers_buyer_profile_id_google_place_id_u ON public.favorite_directory_suppliers USING btree (buyer_profile_id, google_place_id)`
+- `favorite_directory_suppliers_pkey` — `CREATE UNIQUE INDEX favorite_directory_suppliers_pkey ON public.favorite_directory_suppliers USING btree (id)`
 
 ## `favorite_vendors`
 
@@ -5464,6 +5493,7 @@ Phase 1 platform foundation record.
 | `attempts` | `smallint` | No | `'0'::smallint` | Attempts. |
 | `created_at` | `timestamp with time zone` | Yes | — | Created at. |
 | `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+| `dispatched_until` | `timestamp with time zone` | Yes | — | Dispatched until. |
 
 **Constraints**
 
@@ -5471,6 +5501,7 @@ Phase 1 platform foundation record.
 
 **Indexes**
 
+- `outbox_events_dispatched_until_index` — `CREATE INDEX outbox_events_dispatched_until_index ON public.outbox_events USING btree (dispatched_until)`
 - `outbox_events_pkey` — `CREATE UNIQUE INDEX outbox_events_pkey ON public.outbox_events USING btree (id)`
 - `outbox_events_processed_at_available_at_index` — `CREATE INDEX outbox_events_processed_at_available_at_index ON public.outbox_events USING btree (processed_at, available_at)`
 

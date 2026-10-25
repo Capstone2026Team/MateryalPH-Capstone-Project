@@ -1,3 +1,4 @@
+import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../design_system/components/procurement_components.dart';
@@ -53,7 +54,7 @@ class WorkPackageCard extends StatelessWidget {
     required this.package,
     required this.onTap,
   });
-  final ProjectData package;
+  final api.WorkPackageSummary package;
   final VoidCallback onTap;
 
   @override
@@ -94,7 +95,7 @@ class WorkPackageCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        projectText(package['name']),
+                        projectText(package.name),
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
@@ -105,9 +106,11 @@ class WorkPackageCard extends StatelessWidget {
                         runSpacing: 6,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          WorkPackageStatusChip(projectText(package['status'])),
+                          WorkPackageStatusChip(
+                            projectText(package.status.name),
+                          ),
                           Text(
-                            projectMoney(package['budget_centavos']),
+                            projectMoney(package.budgetCentavos),
                             style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
@@ -131,14 +134,14 @@ class WorkPackageCard extends StatelessWidget {
 /// decision 2026-10-12: every non-cancelled package, Drafts included).
 class AllocationSummary extends StatelessWidget {
   const AllocationSummary({super.key, required this.budget});
-  final ProjectData budget;
+  final api.ProjectBudget budget;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final total = projectInt(budget['budget_centavos']);
-    final allocated = projectInt(budget['allocated_centavos']);
-    final available = projectInt(budget['unallocated_centavos']);
+    final total = projectInt(budget.budgetCentavos);
+    final allocated = projectInt(budget.allocatedCentavos);
+    final available = projectInt(budget.unallocatedCentavos);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

@@ -1,3 +1,4 @@
+import 'typed_project_fixtures.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -346,9 +347,8 @@ void main() {
         home: Scaffold(
           body: SingleChildScrollView(
             child: VendorResultCard(
-              candidate: candidate(
-                '01995000-0000-7000-8000-0000000000c1',
-                'BuildMart',
+              candidate: typedCandidate(
+                candidate('01995000-0000-7000-8000-0000000000c1', 'BuildMart'),
               ),
               selected: false,
               onSelect: () {},
@@ -390,7 +390,7 @@ void main() {
           theme: BuyerTheme.light,
           home: VendorSelectionScreen(
             repository: repository(requests),
-            package: package(),
+            package: typedPackage(package()),
             mapBuilder: (context, props) =>
                 const ColoredBox(color: Colors.white),
             links: links(),
@@ -438,7 +438,7 @@ void main() {
         theme: BuyerTheme.light,
         home: VendorSelectionScreen(
           repository: repository(requests),
-          package: package(legacy: true),
+          package: typedPackage(package(legacy: true)),
           mapBuilder: (context, props) {
             map = props;
             return const ColoredBox(color: Colors.white);
@@ -448,19 +448,21 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    expect(find.text('2 options'), findsOneWidget);
+    // 50 km is the only radius: one read-only label, none of the old options.
+    expect(find.text('Within 50 km'), findsOneWidget);
     expect(
-      find.text('2 procurement options · suppliers within 50 km'),
+      find.bySemanticsLabel('Search radius 50 kilometres, fixed'),
       findsOneWidget,
     );
-    // 50 km is the only radius: one fixed chip, none of the old options.
-    expect(find.widgetWithText(ChoiceChip, '50 km'), findsOneWidget);
     for (final km in [5, 10, 20, 30, 40]) {
       expect(find.text('$km km'), findsNothing);
     }
-    expect(
-      tester.widget<ChoiceChip>(find.byType(ChoiceChip)).onSelected,
-      isNull,
-    );
+    expect(find.byType(ChoiceChip), findsNothing);
+    final recenter = map!.recenterToken;
+    await tester.tap(find.byTooltip('Show the whole 50 km area'));
+    await tester.pumpAndSettle();
+    expect(map!.recenterToken, recenter + 1);
     expect(map?.items.length, 2);
     expect(map?.procurementContext, SupplierMapContext.projectBased);
     await tester.ensureVisible(find.text('Price'));
@@ -488,12 +490,11 @@ void main() {
           theme: BuyerTheme.light,
           home: VendorQuotationScreen(
             repository: repository(requests),
-            package: package(),
-            candidate: candidate(
-              '01995000-0000-7000-8000-0000000000c1',
-              'BuildMart',
+            package: typedPackage(package()),
+            candidate: typedCandidate(
+              candidate('01995000-0000-7000-8000-0000000000c1', 'BuildMart'),
             ),
-            estimate: estimate,
+            estimate: typedEstimate(estimate),
             links: links(),
           ),
         ),
@@ -620,7 +621,7 @@ void main() {
         theme: BuyerTheme.light,
         home: VendorSelectionScreen(
           repository: client,
-          package: package(),
+          package: typedPackage(package()),
           mapBuilder: (context, props) => const ColoredBox(color: Colors.white),
           links: links(),
         ),
@@ -656,9 +657,9 @@ void main() {
         theme: BuyerTheme.light,
         home: VendorQuotationScreen(
           repository: repository,
-          package: package(),
-          candidate: candidate,
-          estimate: estimate,
+          package: typedPackage(package()),
+          candidate: typedCandidate(candidate),
+          estimate: typedEstimate(estimate),
           links: links(),
         ),
       ),
@@ -752,7 +753,7 @@ void main() {
           home: Scaffold(
             body: SingleChildScrollView(
               child: VendorResultCard(
-                candidate: covered,
+                candidate: typedCandidate(covered),
                 selected: false,
                 onSelect: () {},
                 onMessage: null,
@@ -847,9 +848,12 @@ void main() {
   test('labels and totals', () {
     expect(fulfillmentLabel('DELIVERY'), 'Site delivery');
     expect(paymentLabel('IN_STORE'), 'In-store payment');
-    expect(fulfilledLines(candidate('x', 'y')), (1, 2));
-    expect(fulfillmentSummary(candidate('x', 'y')), '1/2');
-    expect(linesToSource(candidate('x', 'y')), 1);
-    expect(deliveryFee({'fulfillment_method': 'DELIVERY'}), 'Vendor review');
+    expect(fulfilledLines(typedCandidate(candidate('x', 'y'))), (1, 2));
+    expect(fulfillmentSummary(typedCandidate(candidate('x', 'y'))), '1/2');
+    expect(linesToSource(typedCandidate(candidate('x', 'y'))), 1);
+    expect(
+      deliveryFee(typedCandidate({'fulfillment_method': 'DELIVERY'})),
+      'Vendor review',
+    );
   });
 }

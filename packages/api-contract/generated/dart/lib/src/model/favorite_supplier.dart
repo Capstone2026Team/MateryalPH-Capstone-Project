@@ -4,6 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:materyalph_api_client/src/model/score_label.dart';
+import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -12,7 +13,8 @@ part 'favorite_supplier.g.dart';
 /// FavoriteSupplier
 ///
 /// Properties:
-/// * [vendorId]
+/// * [vendorId] - Verified Vendor id, Directory Supplier result id, or for a Directory Favorite outside the current cache the saved Favorite id (accepted by removeFavoriteSupplier).
+/// * [tier]
 /// * [name]
 /// * [logoUrl]
 /// * [scoreLabel]
@@ -20,8 +22,13 @@ part 'favorite_supplier.g.dart';
 /// * [savedAt]
 @BuiltValue()
 abstract class FavoriteSupplier implements Built<FavoriteSupplier, FavoriteSupplierBuilder> {
+  /// Verified Vendor id, Directory Supplier result id, or for a Directory Favorite outside the current cache the saved Favorite id (accepted by removeFavoriteSupplier).
   @BuiltValueField(wireName: r'vendor_id')
   String get vendorId;
+
+  @BuiltValueField(wireName: r'tier')
+  FavoriteSupplierTierEnum get tier;
+  // enum tierEnum {  VERIFIED_VENDOR,  DIRECTORY_SUPPLIER,  };
 
   @BuiltValueField(wireName: r'name')
   String get name;
@@ -65,6 +72,11 @@ class _$FavoriteSupplierSerializer implements PrimitiveSerializer<FavoriteSuppli
     yield serializers.serialize(
       object.vendorId,
       specifiedType: const FullType(String),
+    );
+    yield r'tier';
+    yield serializers.serialize(
+      object.tier,
+      specifiedType: const FullType(FavoriteSupplierTierEnum),
     );
     yield r'name';
     yield serializers.serialize(
@@ -120,6 +132,13 @@ class _$FavoriteSupplierSerializer implements PrimitiveSerializer<FavoriteSuppli
             specifiedType: const FullType(String),
           ) as String;
           result.vendorId = valueDes;
+          break;
+        case r'tier':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(FavoriteSupplierTierEnum),
+          ) as FavoriteSupplierTierEnum;
+          result.tier = valueDes;
           break;
         case r'name':
           final valueDes = serializers.deserialize(
@@ -186,4 +205,19 @@ class _$FavoriteSupplierSerializer implements PrimitiveSerializer<FavoriteSuppli
   }
 }
 
+
+class FavoriteSupplierTierEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'VERIFIED_VENDOR')
+  static const FavoriteSupplierTierEnum VERIFIED_VENDOR = _$favoriteSupplierTierEnum_VERIFIED_VENDOR;
+  @BuiltValueEnumConst(wireName: r'DIRECTORY_SUPPLIER')
+  static const FavoriteSupplierTierEnum DIRECTORY_SUPPLIER = _$favoriteSupplierTierEnum_DIRECTORY_SUPPLIER;
+
+  static Serializer<FavoriteSupplierTierEnum> get serializer => _$favoriteSupplierTierEnumSerializer;
+
+  const FavoriteSupplierTierEnum._(String name): super(name);
+
+  static BuiltSet<FavoriteSupplierTierEnum> get values => _$favoriteSupplierTierEnumValues;
+  static FavoriteSupplierTierEnum valueOf(String name) => _$favoriteSupplierTierEnumValueOf(name);
+}
 

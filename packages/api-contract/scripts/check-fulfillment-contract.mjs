@@ -120,5 +120,5 @@ assert.match(s.FulfillmentMilestoneForm.description, /signature and additional p
 assert.equal(s.FulfillmentMilestoneForm.properties.additional_photos.maxItems, 3)
 assert.ok(s.FulfillmentAssignment.properties.vehicle && s.FulfillmentAssignment.properties.acknowledged_at)
 for (const field of ['fee_centavos', 'final_fee_centavos', 'vehicle_id', 'number_of_vehicles']) assert.ok(!(field in s.FulfillmentAssignmentRequest.properties))
-assert.match(spec.info.version, /phase\.(1[2-9]|20)$/)
+assert.match(spec.info.version, /(?:phase\.(1[2-9]|20)|audit\.2026-10-24)$/)
 console.log(`Fulfillment contract passed: ${expected.size} operations, transports, idempotency and FIN-07 enums`)

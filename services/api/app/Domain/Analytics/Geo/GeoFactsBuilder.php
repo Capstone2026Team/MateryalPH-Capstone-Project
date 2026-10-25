@@ -52,32 +52,43 @@ final class GeoFactsBuilder
         $now ??= CarbonImmutable::now();
         $through = $now->setTimezone('Asia/Manila')->toDateString();
         $this->prepare();
-        $revision = (int) DB::table('analytics_geo_runs')->where('environment', self::ENVIRONMENT)->where('through_date', $through)->max('revision') + 1;
         $runId = (string) Str::uuid7();
-        DB::table('analytics_geo_runs')->insert(['id' => $runId, 'environment' => self::ENVIRONMENT, 'through_date' => $through, 'revision' => $revision, 'state' => 'RUNNING',
-            'trigger' => $trigger, 'psgc_version_id' => $this->versionId, 'requested_by_user_id' => $userId, 'started_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
-        try {
-            $counts = DB::transaction(function () use ($runId, $through): array {
-                DB::statement('SELECT pg_advisory_xact_lock(?)', [crc32('materyalph-geo-facts')]);
-                DB::statement('DELETE FROM analytics_order_line_facts WHERE analytics_order_fact_id IN (SELECT id FROM analytics_order_facts WHERE environment = ?)', [self::ENVIRONMENT]);
-                foreach (['analytics_order_facts', 'analytics_activity_facts', 'analytics_response_facts'] as $table) {
-                    DB::table($table)->where('environment', self::ENVIRONMENT)->delete();
-                }
-                DB::table('analytics_presence_facts')->where('environment', self::ENVIRONMENT)->where('snapshot_on', $through)->delete();
-                $counts = ['orders' => $this->orders($runId), 'activity' => $this->activity($runId), 'responses' => $this->responses($runId), 'presence' => $this->presence($runId, $through)];
-                DB::table('analytics_geo_runs')->where('environment', self::ENVIRONMENT)->where('state', 'PUBLISHED')->update(['state' => 'SUPERSEDED', 'updated_at' => now()]);
-                DB::table('analytics_geo_runs')->where('id', $runId)->update(['state' => 'PUBLISHED', 'published_at' => now(), 'counts' => json_encode($counts, JSON_THROW_ON_ERROR), 'updated_at' => now()]);
 
-                return $counts;
-            });
-        } catch (Throwable $exception) {
-            report($exception);
-            DB::table('analytics_geo_runs')->where('id', $runId)->update(['state' => 'FAILED', 'error_code' => 'AGGREGATION_FAILED', 'updated_at' => now()]);
+        return DB::transaction(function () use ($runId, $through, $trigger, $userId, $now): array {
+            DB::statement('SELECT pg_advisory_xact_lock(?)', [crc32('materyalph-geo-facts')]);
+            $revision = (int) DB::table('analytics_geo_runs')->where('environment', self::ENVIRONMENT)->where('through_date', $through)->max('revision') + 1;
+            DB::table('analytics_geo_runs')->insert(['id' => $runId, 'environment' => self::ENVIRONMENT, 'through_date' => $through, 'revision' => $revision, 'state' => 'RUNNING',
+                'trigger' => $trigger, 'psgc_version_id' => $this->versionId, 'requested_by_user_id' => $userId, 'started_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+            try {
+                $counts = DB::transaction(function () use ($runId, $through, $now): array {
+                    DB::statement('SELECT pg_advisory_xact_lock(?)', [crc32('materyalph-geo-facts')]);
+                    DB::statement('DELETE FROM analytics_order_line_facts WHERE analytics_order_fact_id IN (SELECT id FROM analytics_order_facts WHERE environment = ?)', [self::ENVIRONMENT]);
+                    foreach (['analytics_order_facts', 'analytics_activity_facts', 'analytics_response_facts'] as $table) {
+                        DB::table($table)->where('environment', self::ENVIRONMENT)->delete();
+                    }
+                    DB::table('analytics_presence_facts')->where('environment', self::ENVIRONMENT)->where('snapshot_on', $through)->delete();
+                    $counts = ['orders' => $this->orders($runId), 'activity' => $this->activity($runId), 'responses' => $this->responses($runId), 'presence' => $this->presence($runId, $through)];
+                    DB::table('analytics_geo_runs')->where('environment', self::ENVIRONMENT)->where('state', 'PUBLISHED')->update(['state' => 'SUPERSEDED', 'updated_at' => now()]);
+                    DB::table('analytics_geo_runs')->where('id', $runId)->update(['state' => 'PUBLISHED', 'published_at' => now(), 'counts' => json_encode($counts, JSON_THROW_ON_ERROR), 'updated_at' => now()]);
+                    // Owner decision 2026-10-24: retain run metadata for 30 days. Never remove a referenced run.
+                    $oldRuns = DB::table('analytics_geo_runs')->where('environment', self::ENVIRONMENT)
+                        ->whereIn('state', ['SUPERSEDED', 'FAILED'])->where('created_at', '<', $now->subDays(30));
+                    foreach (['analytics_order_facts', 'analytics_activity_facts', 'analytics_response_facts', 'analytics_presence_facts'] as $table) {
+                        $oldRuns->whereNotExists(fn ($query) => $query->selectRaw('1')->from($table)->whereColumn($table.'.analytics_geo_run_id', 'analytics_geo_runs.id'));
+                    }
+                    $oldRuns->delete();
 
-            return ['run_id' => $runId, 'state' => 'FAILED', 'revision' => $revision, 'counts' => []];
-        }
+                    return $counts;
+                });
+            } catch (Throwable $exception) {
+                report($exception);
+                DB::table('analytics_geo_runs')->where('id', $runId)->update(['state' => 'FAILED', 'error_code' => 'AGGREGATION_FAILED', 'updated_at' => now()]);
 
-        return ['run_id' => $runId, 'state' => 'PUBLISHED', 'revision' => $revision, 'counts' => $counts];
+                return ['run_id' => $runId, 'state' => 'FAILED', 'revision' => $revision, 'counts' => []];
+            }
+
+            return ['run_id' => $runId, 'state' => 'PUBLISHED', 'revision' => $revision, 'counts' => $counts];
+        });
     }
 
     /**

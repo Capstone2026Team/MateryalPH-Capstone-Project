@@ -1,3 +1,5 @@
+import 'project_supplier_view.dart';
+import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -34,8 +36,9 @@ class VendorQuotationScreen extends StatefulWidget {
     required this.links,
   });
   final ProjectsRepository repository;
-  final ProjectData package, candidate;
-  final ProjectData? estimate;
+  final api.WorkPackageView package;
+  final api.ProjectCandidate candidate;
+  final api.ProjectCompiledEstimate? estimate;
   final ProjectSourcingLinks links;
   @override
   State<VendorQuotationScreen> createState() => _VendorQuotationScreenState();
@@ -43,25 +46,25 @@ class VendorQuotationScreen extends StatefulWidget {
 
 class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
   final keys = <String, String>{};
-  final offers = <String, ProjectData>{};
+  final offers = <String, api.WorkPackageAlternativePage>{};
   final offerErrors = <String, String>{};
   final offerLoads = <String, int>{};
   String? error, adding;
   bool busy = false, pricing = false;
 
   /// The candidate as last priced by the server, with [selections] applied.
-  late ProjectData c = widget.candidate;
-  late ProjectData package = widget.package;
+  late api.ProjectCandidate c = widget.candidate;
+  late api.WorkPackageView package = widget.package;
 
   /// Specification choices: Work Package line id → option id.
   final selections = <String, String>{};
-  List<ProjectData> get missing => projectRows(c['missing_lines']);
+  List<ProjectData> get missing => projectRows(c.missingLines);
   bool get actionable =>
       !busy && !pricing && candidateActionable(package, widget.estimate, c);
 
   /// Lines where several specifications fit and none is chosen yet.
   List<ProjectData> get pendingChoices => [
-    for (final l in projectRows(c['lines']))
+    for (final l in projectRows(c.lines))
       if (l['selection_required'] == true) l,
   ];
   void _openProduct(String listingId, String? variantId) =>
@@ -70,7 +73,7 @@ class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
     final option = await showSpecificationChoice(
       context,
       line: line,
-      storeName: projectText(c['store_name']),
+      storeName: projectText(c.storeName),
       onOpenProduct: widget.links.openProduct == null ? null : _openProduct,
     );
     final lineId = projectText(line['line_id']);
@@ -105,7 +108,7 @@ class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
   /// Re-prices a Vendor that offers both Delivery and Pickup for the method the
   /// Buyer picked; the choices already made stay applied.
   Future<void> _chooseMethod(String method) async {
-    if (pricing || busy || method == projectText(c['fulfillment_method'])) {
+    if (pricing || busy || method == projectText(c.fulfillmentMethod)) {
       return;
     }
     setState(() {
@@ -129,14 +132,12 @@ class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
   /// Delivery or Pickup for a Vendor offering both; otherwise the current one stays.
   Future<void> _reprice({String? method}) async {
     final priced = await widget.repository.selectionPreview(
-      projectText(package['id']),
-      projectText(c['id']),
+      projectText(package.id),
+      projectText(c.id),
       Map.of(selections),
       fulfillmentMethod:
           method ??
-          (needsFulfillmentChoice(c)
-              ? projectText(c['fulfillment_method'])
-              : null),
+          (needsFulfillmentChoice(c) ? projectText(c.fulfillmentMethod) : null),
     );
     if (!mounted) return;
     setState(() => c = priced);
@@ -147,19 +148,19 @@ class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
 
   /// The method the Work Package was saved with; Both leaves the pick to the Buyer.
   String get packageMethod => projectText(
-    projectObject(
-      projectObject(package['version'])['content'],
-    )['fulfillment_method'],
+    projectObject(package.version?.content)['fulfillment_method'],
   );
 
   /// What this quotation covers, from the server: the Vendor's own supply plus
   /// the separate purchases tagged to its missing lines. Never recounted here.
-  ProjectData get fulfillment => candidateFulfillment(c);
+  api.ProjectFulfillment get fulfillment => candidateFulfillment(c);
 
   /// Draft supplements and earlier linked purchases for this Vendor's gaps.
-  List<ProjectData> get separate => projectRows(fulfillment['separate_items']);
-  int get separateTotal => projectInt(fulfillment['separate_total_centavos']);
-  List<ProjectData> get supplierGroups => projectRows(c['draft_groups']);
+  List<api.ProjectSeparatePurchase> get separate =>
+      fulfillment.separateItems.toList();
+  int get separateTotal => projectInt(fulfillment.separateTotalCentavos);
+  List<api.ProjectDraftVendorGroup> get supplierGroups =>
+      c.draftGroups?.toList() ?? [];
 
   Future<void> _loadArrangement() async {
     try {
@@ -177,7 +178,7 @@ class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
   @override
   void initState() {
     super.initState();
-    if (separate.isNotEmpty && !c.containsKey('draft_groups')) {
+    if (separate.isNotEmpty && c.draftGroups == null) {
       pricing = true;
       unawaited(_loadArrangement());
     } else {
@@ -193,12 +194,12 @@ class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
     if (mounted) setState(() => offerErrors.remove(lineId));
     try {
       final result = await widget.repository.alternatives(
-        projectText(package['id']),
+        projectText(package.id),
         lineId,
-        excludeVendorId: projectText(c['vendor_id']),
-        candidateId: projectText(c['id']),
+        excludeVendorId: projectText(c.vendorId),
+        candidateId: projectText(c.id),
         selections: Map.of(selections),
-        fulfillmentMethod: projectText(c['fulfillment_method']),
+        fulfillmentMethod: projectText(c.fulfillmentMethod),
       );
       if (mounted && offerLoads[lineId] == token) {
         setState(() => offers[lineId] = result);
@@ -211,25 +212,25 @@ class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
   }
 
   Future<void> _add(
-    ProjectData offer,
+    api.WorkPackageAlternative offer,
     ProjectData line,
-    ProjectData page,
+    api.WorkPackageAlternativePage page,
   ) async {
     if (adding != null || busy || pricing) return;
-    final variant = projectText(offer['variant_id']);
+    final variant = projectText(offer.variantId);
     setState(() {
       adding = variant;
       error = null;
     });
     try {
       await widget.repository.saveDraftItem(
-        packageId: projectText(package['id']),
-        candidateId: projectText(c['id']),
+        packageId: projectText(package.id),
+        candidateId: projectText(c.id),
         lineId: projectText(line['line_id']),
         offer: offer,
-        lockVersion: projectInt(package['lock_version']),
+        lockVersion: projectInt(package.lockVersion),
         selections: Map.of(selections),
-        fulfillmentMethod: projectText(c['fulfillment_method']),
+        fulfillmentMethod: projectText(c.fulfillmentMethod),
       );
       if (mounted) await _reprice();
     } on DiscoveryFailure catch (e) {
@@ -239,19 +240,19 @@ class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
     }
   }
 
-  Future<void> _remove(ProjectData item) async {
+  Future<void> _remove(api.ProjectSeparatePurchase item) async {
     if (adding != null || busy || pricing) return;
     setState(() {
-      adding = projectText(item['variant_id']);
+      adding = projectText(item.variantId);
       error = null;
     });
     try {
       await widget.repository.removeDraftItem(
-        packageId: projectText(package['id']),
-        candidateId: projectText(c['id']),
-        lineId: projectText(item['line_id']),
-        variantId: projectText(item['variant_id']),
-        lockVersion: projectInt(package['lock_version']),
+        packageId: projectText(package.id),
+        candidateId: projectText(c.id),
+        lineId: projectText(item.lineId),
+        variantId: projectText(item.variantId),
+        lockVersion: projectInt(package.lockVersion),
       );
       if (mounted) await _reprice();
     } on DiscoveryFailure catch (e) {
@@ -311,20 +312,20 @@ class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
       showDragHandle: true,
       builder: (context) => _OfferListSheet(
         repository: widget.repository,
-        packageId: projectText(package['id']),
+        packageId: projectText(package.id),
         line: line,
-        excludeVendorId: projectText(c['vendor_id']),
-        candidateId: projectText(c['id']),
+        excludeVendorId: projectText(c.vendorId),
+        candidateId: projectText(c.id),
         first: offers[lineId],
         remainingQuantity: () =>
-            materialQuantity(fulfillmentLine(c, lineId)['remaining_quantity']),
+            materialQuantity(fulfillmentLine(c, lineId)?.remainingQuantity),
         selections: Map.of(selections),
-        fulfillmentMethod: projectText(c['fulfillment_method']),
+        fulfillmentMethod: projectText(c.fulfillmentMethod),
         onAdd: (offer, page) => _add(offer, line, page),
         actionError: () => error,
         selectedItems: () => [
           for (final item in separate)
-            if (item['line_id'] == lineId && item['stage'] == 'DRAFT') item,
+            if (item.lineId == lineId && item.stage.name == 'DRAFT') item,
         ],
         onRemove: _remove,
         onOpen: widget.links.openProduct == null
@@ -340,14 +341,14 @@ class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final estimateState = projectText(widget.estimate?['state']);
-    final quotation = projectText(c['current_quotation_state']);
+    final estimateState = projectText(widget.estimate?.state);
+    final quotation = projectText(c.currentQuotationState);
     final pending = pendingChoices;
-    final store = projectText(c['store_name']);
+    final store = projectText(c.storeName);
     final hasSeparate = separate.isNotEmpty;
     final total = hasSeparate
-        ? c['procurement_total_centavos']
-        : c['projected_total_centavos'];
+        ? c.procurementTotalCentavos
+        : c.projectedTotalCentavos;
     final openProduct = widget.links.openProduct == null ? null : _openProduct;
     return Scaffold(
       appBar: buyerAppBar(context, 'Quotation'),
@@ -427,18 +428,18 @@ class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
           _StoreHeader(
             candidate: c,
             onOpenStore: () =>
-                widget.links.openStore(context, projectText(c['vendor_id'])),
+                widget.links.openStore(context, projectText(c.vendorId)),
           ),
           const SizedBox(height: 12),
           StatusBand(
-            tone: estimateState == 'ACTIVE' && c['stale'] != true
+            tone: estimateState == 'ACTIVE' && c.stale != true
                 ? BandTone.info
                 : BandTone.warning,
             title: 'System-compiled estimate · advisory',
-            message: c['stale'] == true
+            message: c.stale == true
                 ? 'Prices, stock or delivery rates changed. Refresh the estimate before selecting.'
                 : estimateState == 'ACTIVE'
-                ? 'Valid until ${formatManilaDateTime(DateTime.parse(projectText(widget.estimate!['expires_at'])))}. Vendor confirmation follows your request.'
+                ? 'Valid until ${formatManilaDateTime(DateTime.parse(projectText(widget.estimate!.expiresAt)))}. Vendor confirmation follows your request.'
                 : 'This estimate is no longer active. Refresh it from Vendor selection.',
           ),
           if (quotation != 'NO_INQUIRY') ...[
@@ -458,7 +459,7 @@ class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
             subtitle: 'Supplied by $store',
             children: [
               _FulfillmentHeader(candidate: c),
-              for (final l in projectRows(c['lines']))
+              for (final l in projectRows(c.lines))
                 if ((double.tryParse(projectText(l['matched_quantity'])) ?? 0) >
                         0 ||
                     l['selection_required'] == true)
@@ -475,11 +476,11 @@ class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
                 pending.isEmpty
                     ? 'Materials total'
                     : 'Materials total (lowest options)',
-                projectMoney(c['materials_centavos']),
+                projectMoney(c.materialsCentavos),
                 strong: true,
               ),
               Text(
-                'Includes VAT ${projectMoney(c['included_vat_centavos'])}',
+                'Includes VAT ${projectMoney(c.includedVatCentavos)}',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: BuyerTheme.muted,
                 ),
@@ -501,7 +502,7 @@ class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
                     error: offerErrors[projectText(m['line_id'])],
                     inCart: [
                       for (final s in separate)
-                        if (s['line_id'] == m['line_id']) s,
+                        if (s.lineId == m['line_id']) s,
                     ],
                     adding: adding,
                     onRemove: _remove,
@@ -513,13 +514,13 @@ class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
                 ],
               ],
             ),
-          if (separate.any((item) => item['stage'] != 'DRAFT'))
+          if (separate.any((item) => item.stage.name != 'DRAFT'))
             _Section(
               title: 'Earlier linked purchases',
               subtitle: 'Existing purchases linked to this Work Package.',
               children: [
                 for (final line in separate.where(
-                  (item) => item['stage'] != 'DRAFT',
+                  (item) => item.stage.name != 'DRAFT',
                 ))
                   _SeparateLine(line: line, onOpen: openProduct),
                 const Divider(height: 20),
@@ -543,7 +544,7 @@ class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
                 const SizedBox(height: 8),
               ],
               _ModeToggle(
-                method: projectText(c['fulfillment_method']),
+                method: projectText(c.fulfillmentMethod),
                 choices: needsFulfillmentChoice(c)
                     ? fulfillmentOptions(c)
                     : const [],
@@ -553,23 +554,25 @@ class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
               Text(
                 needsFulfillmentChoice(c)
                     ? 'This Vendor offers both. Pick one; the totals update for it.'
-                    : c['fulfillment_method'] == 'DELIVERY' &&
-                          projectRows(c['lines']).any(
+                    : c.fulfillmentMethod == 'DELIVERY' &&
+                          projectRows(c.lines).any(
                             (line) =>
                                 projectObject(line['load'])['material_kind'] ==
                                 'READY_MIXED_CONCRETE',
                           )
                     ? 'Ready-mixed concrete requires Site delivery by mixer truck. All items from this supplier use Site delivery.'
                     : packageMethod == 'BOTH'
-                    ? 'Your Work Package accepts either. This Vendor offers ${fulfillmentLabel(c['fulfillment_method']).toLowerCase()} only.'
+                    ? 'Your Work Package accepts either. This Vendor offers ${fulfillmentLabel(c.fulfillmentMethod).toLowerCase()} only.'
                     : 'Set in the activated Work Package. Change it with a new Work Package version.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: BuyerTheme.muted,
                 ),
               ),
-              if (projectText(c['fulfillment_method']) == 'DELIVERY') ...[
+              if (projectText(c.fulfillmentMethod) == 'DELIVERY') ...[
                 const SizedBox(height: 16),
-                ProjectDeliveryConfiguration(candidate: c),
+                ProjectDeliveryConfiguration(
+                  candidate: ProjectSupplierView.candidate(c),
+                ),
               ],
               if (supplierGroups.isNotEmpty) ...[
                 const Divider(height: 28),
@@ -590,11 +593,11 @@ class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
                 for (final (index, group) in supplierGroups.indexed) ...[
                   if (index > 0) const Divider(height: 24),
                   ProjectSupplierFulfillment(
-                    group: group,
+                    group: ProjectSupplierView.draft(group),
                     showStore: true,
                     showItems: true,
                   ),
-                  if (group['fulfillment_method'] == 'DELIVERY')
+                  if (group.fulfillmentMethod.name == 'DELIVERY')
                     ExpansionTile(
                       tilePadding: EdgeInsets.zero,
                       childrenPadding: const EdgeInsets.only(bottom: 8),
@@ -605,10 +608,12 @@ class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
                         ),
                       ),
                       children: [
-                        ProjectDeliveryConfiguration(candidate: group),
+                        ProjectDeliveryConfiguration(
+                          candidate: ProjectSupplierView.draft(group),
+                        ),
                       ],
                     ),
-                  for (final issue in (group['issues'] as List?) ?? const [])
+                  for (final issue in group.issues)
                     Text(
                       projectText(issue),
                       style: theme.textTheme.bodySmall?.copyWith(
@@ -624,7 +629,7 @@ class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
             children: [
               _AmountRow(
                 hasSeparate ? 'Primary supplier materials' : 'Materials',
-                projectMoney(c['materials_centavos']),
+                projectMoney(c.materialsCentavos),
               ),
               if (hasSeparate)
                 _AmountRow('Separate items', projectMoney(separateTotal)),
@@ -635,9 +640,9 @@ class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
               if (hasSeparate)
                 _AmountRow(
                   'Separate suppliers delivery',
-                  c['separate_delivery_centavos'] == null
+                  c.separateDeliveryCentavos == null
                       ? 'Vendor review'
-                      : projectMoney(c['separate_delivery_centavos']),
+                      : projectMoney(c.separateDeliveryCentavos),
                 ),
               const _AmountRow('Processing fee', 'Shown at payment'),
               const Divider(height: 24),
@@ -684,7 +689,7 @@ class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
                           ),
                         ),
                         Text(
-                          projectMoney(package['budget_centavos']),
+                          projectMoney(package.budgetCentavos),
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
@@ -695,8 +700,8 @@ class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
                   const SizedBox(width: 12),
                   BudgetStatusChip(
                     hasSeparate
-                        ? projectText(c['procurement_budget_label'])
-                        : projectText(c['budget_label']),
+                        ? projectText(c.procurementBudgetLabel?.name)
+                        : projectText(c.budgetLabel),
                   ),
                 ],
               ),
@@ -704,7 +709,10 @@ class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
           ),
           Padding(
             padding: const EdgeInsets.only(top: 16),
-            child: FulfillmentScoreTile(candidate: c),
+            child: FulfillmentScoreTile(
+              factors: projectObject(c.fms),
+              displayName: c.storeName,
+            ),
           ),
           const ProjectProcurementRules(),
         ],
@@ -777,7 +785,7 @@ class _AmountRow extends StatelessWidget {
 
 class _StoreHeader extends StatelessWidget {
   const _StoreHeader({required this.candidate, required this.onOpenStore});
-  final ProjectData candidate;
+  final api.ProjectCandidate candidate;
   final VoidCallback onOpenStore;
   @override
   Widget build(BuildContext context) {
@@ -814,14 +822,14 @@ class _StoreHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      projectText(candidate['store_name']),
+                      projectText(candidate.storeName),
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${kilometres(candidate['distance_meters'])} · ${projectText(candidate['score_label'])} · ${fulfillmentLabel(candidate['fulfillment_method'])}',
+                      '${kilometres(candidate.distanceMeters)} · ${projectText(candidate.scoreLabel)} · ${fulfillmentLabel(candidate.fulfillmentMethod)}',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: BuyerTheme.muted,
                       ),
@@ -842,12 +850,12 @@ class _StoreHeader extends StatelessWidget {
 /// above the lines it counts.
 class _FulfillmentHeader extends StatelessWidget {
   const _FulfillmentHeader({required this.candidate});
-  final ProjectData candidate;
+  final api.ProjectCandidate candidate;
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final f = candidateFulfillment(candidate);
-    final (text, color) = switch (projectText(f['status'])) {
+    final (text, color) = switch (f.status.name) {
       'COMPLETE' => ('Every material covered', BuyerTheme.successStrong),
       'NONE' => ('Nothing covered yet', BuyerTheme.actionPressed),
       _ => ('Partly covered', BuyerTheme.actionPressed),
@@ -898,7 +906,7 @@ class _SeparateLine extends StatelessWidget {
     required this.onOpen,
     this.onRemove,
   });
-  final ProjectData line;
+  final api.ProjectSeparatePurchase line;
   final OpenProduct? onOpen;
   final VoidCallback? onRemove;
   @override
@@ -907,14 +915,17 @@ class _SeparateLine extends StatelessWidget {
 }
 
 /// Why a search for a missing line found nothing, from what the server left out.
-String noAlternativeMessage(ProjectData offers, ProjectData line) {
-  final radius = projectInt(offers['radius_km']);
+String noAlternativeMessage(
+  api.WorkPackageAlternativePage offers,
+  ProjectData line,
+) {
+  final radius = projectSearchRadiusKm;
   final needed =
-      '${materialQuantity(offers['needed_quantity'])} ${projectText(line['unit_code'])}'
+      '${materialQuantity(offers.neededQuantity)} ${projectText(line['unit_code'])}'
           .trim();
-  final excluded = projectObject(offers['excluded']);
-  final out = projectInt(excluded['out_of_stock']);
-  final cannot = projectInt(excluded['cannot_serve_fulfillment']);
+  final excluded = offers.excluded;
+  final out = projectInt(excluded.outOfStock);
+  final cannot = projectInt(excluded.cannotServeFulfillment);
   return [
     'No suitable product within $radius km for the $needed still needed.',
     if (out > 0) '$out listing${out == 1 ? ' is' : 's are'} out of stock.',
@@ -940,24 +951,28 @@ class _MissingItem extends StatelessWidget {
   final ProjectData line;
 
   /// The server's fulfillment row for this line: what is still to source.
-  final ProjectData fulfillment;
-  final ProjectData? offers;
+  final api.ProjectFulfillmentLine? fulfillment;
+  final api.WorkPackageAlternativePage? offers;
   final String? error;
-  final List<ProjectData> inCart;
+  final List<api.ProjectSeparatePurchase> inCart;
   final String? adding;
   final VoidCallback onRetry, onViewList;
-  final void Function(ProjectData offer, ProjectData page) onAdd;
+  final void Function(
+    api.WorkPackageAlternative offer,
+    api.WorkPackageAlternativePage page,
+  )
+  onAdd;
   final OpenProduct? onOpenProduct;
-  final Future<void> Function(ProjectData item) onRemove;
+  final Future<void> Function(api.ProjectSeparatePurchase item) onRemove;
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final items = projectRows(offers?['items']);
-    final unlisted = offers?['status'] == 'UNLISTED';
-    final covered = fulfillment['status'] == 'FULFILLED';
-    final remaining = fulfillment.isEmpty
+    final items = (offers?.items.toList() ?? <api.WorkPackageAlternative>[]);
+    final unlisted = offers?.status.name == 'UNLISTED';
+    final covered = fulfillment?.status.name == 'FULFILLED';
+    final remaining = fulfillment == null
         ? missingQuantity(line)
-        : '${materialQuantity(fulfillment['remaining_quantity'])} ${projectText(line['unit_code'])}'
+        : '${materialQuantity(fulfillment?.remainingQuantity)} ${projectText(line['unit_code'])}'
               .trim();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1011,7 +1026,7 @@ class _MissingItem extends StatelessWidget {
           _SeparateLine(
             line: item,
             onOpen: onOpenProduct,
-            onRemove: item['stage'] == 'DRAFT' && adding == null
+            onRemove: item.stage.name == 'DRAFT' && adding == null
                 ? () => onRemove(item)
                 : null,
           ),
@@ -1030,7 +1045,7 @@ class _MissingItem extends StatelessWidget {
             'Unlisted materials have no comparable listings. Buy it from any store, then record a waiver on the Work Package.',
             style: theme.textTheme.bodySmall?.copyWith(color: BuyerTheme.muted),
           )
-        else if (offers!['status'] == 'COVERED')
+        else if (offers!.status.name == 'COVERED')
           Text(
             'Covered by the current arrangement. Remove a draft item to change the supplier.',
             style: theme.textTheme.bodySmall?.copyWith(
@@ -1044,7 +1059,7 @@ class _MissingItem extends StatelessWidget {
           )
         else ...[
           Text(
-            'Recommended from other stores within ${projectInt(offers!['radius_km'])} km',
+            'Recommended from other stores within $projectSearchRadiusKm km',
             style: theme.textTheme.labelLarge?.copyWith(
               color: BuyerTheme.muted,
               fontWeight: FontWeight.w700,
@@ -1052,28 +1067,25 @@ class _MissingItem extends StatelessWidget {
           ),
           for (final offer in items.take(3))
             OfferRow(
-              offer: {
-                ...offer,
-                'already_added':
-                    offer['already_added'] == true ||
-                    inCart.any(
-                      (item) => item['variant_id'] == offer['variant_id'],
-                    ),
-              },
+              offer: offer.rebuild(
+                (b) => b.alreadyAdded =
+                    offer.alreadyAdded == true ||
+                    inCart.any((item) => item.variantId == offer.variantId),
+              ),
               onRemove: adding != null
                   ? null
                   : () {
                       final item = inCart
                           .where(
                             (item) =>
-                                item['variant_id'] == offer['variant_id'] &&
-                                item['stage'] == 'DRAFT',
+                                item.variantId == offer.variantId &&
+                                item.stage.name == 'DRAFT',
                           )
                           .firstOrNull;
                       if (item != null) onRemove(item);
                     },
-              quantity: materialQuantity(offers!['needed_quantity']),
-              adding: adding == offer['variant_id'],
+              quantity: materialQuantity(offers!.neededQuantity),
+              adding: adding == offer.variantId,
               onAdd: adding == null ? () => onAdd(offer, offers!) : null,
               onOpen: onOpenProduct,
             ),
@@ -1082,7 +1094,7 @@ class _MissingItem extends StatelessWidget {
             child: TextButton.icon(
               onPressed: onViewList,
               icon: const Icon(LucideIcons.list, size: 18),
-              label: Text('View list (${projectInt(offers!['total'])})'),
+              label: Text('View list (${projectInt(offers!.total)})'),
             ),
           ),
         ],
@@ -1103,41 +1115,39 @@ class OfferRow extends StatelessWidget {
     this.quantity,
   });
   final String? quantity;
-  final ProjectData offer;
+  final api.WorkPackageAlternative offer;
   final bool adding;
   final VoidCallback? onAdd, onRemove;
   final OpenProduct? onOpen;
   @override
   Widget build(BuildContext context) {
-    final added = offer['already_added'] == true;
-    final listing = offer['listing_id'] as String?;
-    final exact = offer['exact_match'] == true;
+    final added = offer.alreadyAdded == true;
+    final listing = offer.listingId as String?;
+    final exact = offer.exactMatch == true;
     return ProductSummaryRow(
       name: [
-        projectText(offer['display_name']),
-        projectText(offer['variant_label']),
+        projectText(offer.displayName),
+        projectText(offer.variantLabel),
       ].where((s) => s.isNotEmpty).join(' · '),
-      imageUrl: projectObject(offer['image'])['url'] as String?,
-      specifications: specificationDetails(offer['specifications']),
+      imageUrl: offer.image?.url,
+      specifications: specificationDetails(offer.specifications),
       details:
-          '${projectText(offer['store_name'])} · ${kilometres(offer['distance_meters'])} · ${projectText(offer['stock_label'])}'
-          '${(offer['fulfillment_methods'] as List?)?.length == 1 && (offer['fulfillment_methods'] as List).first == 'DELIVERY' ? '\nSite delivery only' : ''}',
+          '${projectText(offer.storeName)} · ${kilometres(offer.distanceMeters)} · ${projectText(offer.stockLabel)}'
+          '${offer.fulfillmentMethods.length == 1 && offer.fulfillmentMethods.single.name == 'DELIVERY' ? '\nSite delivery only' : ''}',
       price: [
-        '${projectMoney(offer['unit_price_centavos'])} / ${projectText(offer['unit_code'])}',
-        if (quantity != null)
-          'Needed $quantity ${projectText(offer['unit_code'])}',
-        if (offer['estimated_total_centavos'] != null)
-          '${projectMoney(offer['estimated_total_centavos'])} estimate',
+        '${projectMoney(offer.unitPriceCentavos)} / ${projectText(offer.unitCode)}',
+        if (quantity != null) 'Needed $quantity ${projectText(offer.unitCode)}',
+        '${projectMoney(offer.estimatedTotalCentavos)} estimate',
       ].join(' · '),
       status: exact
-          ? (offer['availability'] == 'PARTIAL'
+          ? (offer.availability.name == 'PARTIAL'
                 ? 'Matches specifications · partial quantity'
                 : 'Matches specifications')
           : 'Different specifications — does not close the requirement',
       statusIsSuccess: exact,
       onOpen: onOpen == null || listing == null
           ? null
-          : () => onOpen!(listing, offer['variant_id'] as String?),
+          : () => onOpen!(listing, offer.variantId as String?),
       action: TextButton.icon(
         onPressed: adding
             ? null
@@ -1180,19 +1190,24 @@ class _OfferListSheet extends StatefulWidget {
   final Map<String, String> selections;
   final OpenProduct? onOpen;
   final ProjectData line;
-  final ProjectData? first;
+  final api.WorkPackageAlternativePage? first;
   final String Function() remainingQuantity;
-  final Future<void> Function(ProjectData offer, ProjectData page) onAdd;
-  final List<ProjectData> Function() selectedItems;
+  final Future<void> Function(
+    api.WorkPackageAlternative offer,
+    api.WorkPackageAlternativePage page,
+  )
+  onAdd;
+  final List<api.ProjectSeparatePurchase> Function() selectedItems;
   final String? Function() actionError;
-  final Future<void> Function(ProjectData item) onRemove;
+  final Future<void> Function(api.ProjectSeparatePurchase item) onRemove;
   @override
   State<_OfferListSheet> createState() => _OfferListSheetState();
 }
 
 class _OfferListSheetState extends State<_OfferListSheet> {
-  late ProjectData? page = widget.first;
-  late List<ProjectData> items = projectRows(widget.first?['items']);
+  late api.WorkPackageAlternativePage? page = widget.first;
+  late List<api.WorkPackageAlternative> items =
+      widget.first?.items.toList() ?? [];
   bool loading = false;
   String? adding, error;
   Future<void> _more({bool reset = false}) async {
@@ -1204,7 +1219,7 @@ class _OfferListSheetState extends State<_OfferListSheet> {
       final next = await widget.repository.alternatives(
         widget.packageId,
         projectText(widget.line['line_id']),
-        page: reset ? 1 : projectInt(page?['page']) + 1,
+        page: reset ? 1 : projectInt(page?.page) + 1,
         excludeVendorId: widget.excludeVendorId,
         candidateId: widget.candidateId,
         selections: widget.selections,
@@ -1213,12 +1228,9 @@ class _OfferListSheetState extends State<_OfferListSheet> {
       if (mounted) {
         setState(() {
           page = next;
-          items = {
-            for (final item in [
-              if (!reset) ...items,
-              ...projectRows(next['items']),
-            ])
-              projectText(item['variant_id']): item,
+          items = <String, api.WorkPackageAlternative>{
+            for (final item in [if (!reset) ...items, ...next.items])
+              projectText(item.variantId): item,
           }.values.toList();
         });
       }
@@ -1270,24 +1282,24 @@ class _OfferListSheetState extends State<_OfferListSheet> {
               onRemove: adding != null || loading
                   ? null
                   : () => _change(
-                      projectText(item['variant_id']),
+                      projectText(item.variantId),
                       () => widget.onRemove(item),
                     ),
             ),
           for (final offer in items.where(
             (offer) => !widget.selectedItems().any(
-              (item) => item['variant_id'] == offer['variant_id'],
+              (item) => item.variantId == offer.variantId,
             ),
           ))
             OfferRow(
               offer: offer,
-              quantity: materialQuantity(page?['needed_quantity']),
+              quantity: materialQuantity(page?.neededQuantity),
               onOpen: widget.onOpen,
-              adding: adding == offer['variant_id'],
+              adding: adding == offer.variantId,
               onAdd: adding != null || loading || page == null
                   ? null
                   : () => _change(
-                      projectText(offer['variant_id']),
+                      projectText(offer.variantId),
                       () => widget.onAdd(offer, page!),
                     ),
             ),
@@ -1296,7 +1308,7 @@ class _OfferListSheetState extends State<_OfferListSheet> {
               padding: const EdgeInsets.only(top: 12),
               child: Text(error!),
             ),
-          if (page?['has_more'] == true)
+          if (page?.hasMore == true)
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: OutlinedButton(
@@ -1399,11 +1411,11 @@ class _ModeToggle extends StatelessWidget {
 
 class ProjectDeliveryConfiguration extends StatelessWidget {
   const ProjectDeliveryConfiguration({super.key, required this.candidate});
-  final ProjectData candidate;
+  final ProjectSupplierView candidate;
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final delivery = projectObject(candidate['delivery']);
+    final delivery = candidate.delivery;
     final options = projectRows(projectObject(delivery['estimate'])['options']);
     final route = projectObject(delivery['route']);
     return Container(
@@ -1461,7 +1473,15 @@ class ProjectDeliveryConfiguration extends StatelessWidget {
             _AmountRow('Estimated fee', projectMoney(o['fee_centavos'])),
           ],
           const Divider(height: 20),
-          _AmountRow('Delivery fee', deliveryFee(candidate), strong: true),
+          _AmountRow(
+            'Delivery fee',
+            candidate.method == 'PICKUP'
+                ? 'Pick-up · ₱0.00'
+                : candidate.deliveryCentavos == null
+                ? 'Vendor review'
+                : projectMoney(candidate.deliveryCentavos),
+            strong: true,
+          ),
           const SizedBox(height: 4),
           Text(
             'Estimate only. The Vendor confirms vehicles, trips and the final fee before you pay.',

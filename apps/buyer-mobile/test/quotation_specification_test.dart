@@ -1,3 +1,4 @@
+import 'typed_project_fixtures.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -201,9 +202,9 @@ void main() {
           theme: BuyerTheme.light,
           home: VendorQuotationScreen(
             repository: repository(requests),
-            package: package(),
-            candidate: candidate(),
-            estimate: estimate,
+            package: typedPackage(package()),
+            candidate: typedCandidate(candidate()),
+            estimate: typedEstimate(estimate),
             links: ProjectSourcingLinks(
               openConversation: (_, _) {},
               openOrder: (_, id) => order = id,

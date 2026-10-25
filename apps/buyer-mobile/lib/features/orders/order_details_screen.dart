@@ -709,7 +709,10 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                   ),
           ),
           ProjectBudgetCard(
-            budget: projectObject(order.projectContext!['budget']),
+            budget: export_api.standardSerializers.deserializeWith(
+              export_api.ProjectBudget.serializer,
+              order.projectContext!['budget'],
+            )!,
           ),
           if (order.projectContext!['note'] != null)
             Text(

@@ -15,6 +15,9 @@ part 'work_package_view.g.dart';
 /// WorkPackageView
 ///
 /// Properties:
+/// * [selectedArrangementId]
+/// * [procurementCandidateId]
+/// * [vendorOrders]
 /// * [id]
 /// * [projectId]
 /// * [projectStatus]
@@ -33,6 +36,15 @@ part 'work_package_view.g.dart';
 /// * [canDelete] - True when has_order is false and the Project is Active. Cancelled order history is retained; deleting a package with locked history hides it instead of deleting commercial records.
 @BuiltValue()
 abstract class WorkPackageView implements Built<WorkPackageView, WorkPackageViewBuilder> {
+  @BuiltValueField(wireName: r'selected_arrangement_id')
+  String? get selectedArrangementId;
+
+  @BuiltValueField(wireName: r'procurement_candidate_id')
+  String? get procurementCandidateId;
+
+  @BuiltValueField(wireName: r'vendor_orders')
+  BuiltList<BuiltMap<String, JsonObject?>>? get vendorOrders;
+
   @BuiltValueField(wireName: r'id')
   String get id;
 
@@ -108,6 +120,27 @@ class _$WorkPackageViewSerializer implements PrimitiveSerializer<WorkPackageView
     WorkPackageView object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.selectedArrangementId != null) {
+      yield r'selected_arrangement_id';
+      yield serializers.serialize(
+        object.selectedArrangementId,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.procurementCandidateId != null) {
+      yield r'procurement_candidate_id';
+      yield serializers.serialize(
+        object.procurementCandidateId,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.vendorOrders != null) {
+      yield r'vendor_orders';
+      yield serializers.serialize(
+        object.vendorOrders,
+        specifiedType: const FullType(BuiltList, [FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])]),
+      );
+    }
     yield r'id';
     yield serializers.serialize(
       object.id,
@@ -223,6 +256,30 @@ class _$WorkPackageViewSerializer implements PrimitiveSerializer<WorkPackageView
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'selected_arrangement_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.selectedArrangementId = valueDes;
+          break;
+        case r'procurement_candidate_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.procurementCandidateId = valueDes;
+          break;
+        case r'vendor_orders':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)])]),
+          ) as BuiltList<BuiltMap<String, JsonObject?>>?;
+          if (valueDes == null) continue;
+          result.vendorOrders.replace(valueDes);
+          break;
         case r'id':
           final valueDes = serializers.deserialize(
             value,

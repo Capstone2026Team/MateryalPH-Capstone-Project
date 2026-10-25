@@ -74,6 +74,9 @@ class ExploreController extends ChangeNotifier {
 
   int _summarySequence = 0;
   int _searchSequence = 0;
+  int? _pendingSummary;
+  int? _pendingSearch;
+  int _loadedSearchPages = 1;
   String _scopeKey = '';
   bool _disposed = false;
 
@@ -82,23 +85,58 @@ class ExploreController extends ChangeNotifier {
   List<SavedLocationView> get savedLocations => _discovery.savedLocations;
   DiscoveryController get discovery => _discovery;
 
-  ListingSort get effectiveSort =>
-      sort ??
-      page?.defaultSort ??
-      (query.trim().isEmpty ? ListingSort.distance : ListingSort.bestDeal);
+  ListingSort get effectiveSort {
+    final browsing = query.trim().isEmpty;
+    final chosen = sort ?? page?.defaultSort;
+    if (chosen == null || (browsing && _isRelevance(chosen))) {
+      return browsing ? ListingSort.distance : ListingSort.bestDeal;
+    }
+    return chosen;
+  }
+
+  /// Best Deal and Favorites First rank a text query; browsing without one sorts by distance.
+  static bool _isRelevance(ListingSort sort) =>
+      sort == ListingSort.bestDeal || sort == ListingSort.favoritesFirst;
 
   String get _currentScopeKey => '${origin?.identity ?? '-'}|$radiusKm';
 
-  Future<void> loadSummary() async {
+  Future<bool> revalidateSummary() async {
+    if (_disposed || origin == null || _pendingSummary != null) return true;
+    await loadSummary(background: true);
+    return summaryFailure == null;
+  }
+
+  Future<bool> revalidateSearch() async {
+    if (_disposed ||
+        origin == null ||
+        !searchActive ||
+        _pendingSearch != null ||
+        loadingMore) {
+      return true;
+    }
+    await _runSearch(background: true);
+    return searchFailure == null;
+  }
+
+  Future<void> loadSummary({bool background = false}) async {
+    final sequence = ++_summarySequence;
+    _pendingSummary = sequence;
+    try {
+      await _loadSummary(sequence, background: background);
+    } finally {
+      if (_pendingSummary == sequence) _pendingSummary = null;
+    }
+  }
+
+  Future<void> _loadSummary(int sequence, {required bool background}) async {
     final currentOrigin = origin;
     if (currentOrigin == null) {
       summaryPhase = LoadPhase.needsOrigin;
       _notify();
       return;
     }
-    final sequence = ++_summarySequence;
     final scope = _currentScopeKey;
-    summaryPhase = LoadPhase.loading;
+    if (!background || summary == null) summaryPhase = LoadPhase.loading;
     summaryFailure = null;
     _notify();
     try {
@@ -121,6 +159,10 @@ class ExploreController extends ChangeNotifier {
         return;
       }
       summaryFailure = error;
+      if (error.kind == DiscoveryFailureKind.sessionExpired ||
+          error.kind == DiscoveryFailureKind.forbidden) {
+        summary = null;
+      }
       summaryStale = summary != null;
       summaryPhase = summary == null ? LoadPhase.failed : LoadPhase.ready;
     }
@@ -147,6 +189,9 @@ class ExploreController extends ChangeNotifier {
     }
     if (filters != null) this.filters = filters;
     if (sort != null) this.sort = sort();
+    if (this.query.isEmpty && this.sort != null && _isRelevance(this.sort!)) {
+      this.sort = null;
+    }
     if (previousQuery != this.query || previousFilters != this.filters) {
       results = const [];
       page = null;
@@ -165,6 +210,7 @@ class ExploreController extends ChangeNotifier {
         !current.hasMore ||
         current.nextCursor == null ||
         loadingMore ||
+        _pendingSearch != null ||
         currentOrigin == null) {
       return;
     }
@@ -188,6 +234,7 @@ class ExploreController extends ChangeNotifier {
         ...next.items.where((card) => !known.contains(card.listingId)),
       ];
       page = next;
+      _loadedSearchPages++;
       _applyFavoriteUpdates();
     } on DiscoveryFailure catch (error) {
       if (!_disposed && sequence == _searchSequence) searchFailure = error;
@@ -253,24 +300,33 @@ class ExploreController extends ChangeNotifier {
     _notify();
   }
 
-  Future<void> _runSearch() async {
+  Future<void> _runSearch({bool background = false}) async {
+    final sequence = ++_searchSequence;
+    _pendingSearch = sequence;
+    try {
+      await _fetchSearch(sequence, background: background);
+    } finally {
+      if (_pendingSearch == sequence) _pendingSearch = null;
+    }
+  }
+
+  Future<void> _fetchSearch(int sequence, {required bool background}) async {
     final currentOrigin = origin;
     if (currentOrigin == null) {
       searchPhase = LoadPhase.needsOrigin;
       _notify();
       return;
     }
-    final sequence = ++_searchSequence;
     final scope = _currentScopeKey;
     final requestedQuery = query;
     final requestedFilters = filters;
     final requestedSort = sort;
-    searchPhase = LoadPhase.loading;
+    if (!background || page == null) searchPhase = LoadPhase.loading;
     searchFailure = null;
     loadingMore = false;
     _notify();
     try {
-      final result = await _repository.search(
+      var result = await _repository.search(
         origin: currentOrigin,
         radiusKm: radiusKm,
         query: requestedQuery,
@@ -286,8 +342,36 @@ class ExploreController extends ChangeNotifier {
       )) {
         return;
       }
+      final merged = [...result.items];
+      final known = merged.map((card) => card.listingId).toSet();
+      var loaded = 1;
+      final targetPages = background ? _loadedSearchPages : 1;
+      while (loaded < targetPages &&
+          result.hasMore &&
+          result.nextCursor != null) {
+        result = await _repository.search(
+          origin: currentOrigin,
+          radiusKm: radiusKm,
+          query: requestedQuery,
+          filters: requestedFilters,
+          sort: requestedSort,
+          cursor: result.nextCursor,
+        );
+        if (!_stillCurrent(
+          sequence,
+          scope,
+          requestedQuery,
+          requestedFilters,
+          requestedSort,
+        )) {
+          return;
+        }
+        loaded++;
+        merged.addAll(result.items.where((card) => known.add(card.listingId)));
+      }
       page = result;
-      results = result.items;
+      results = merged;
+      _loadedSearchPages = loaded;
       _applyFavoriteUpdates();
       searchPhase = LoadPhase.ready;
     } on DiscoveryFailure catch (error) {
@@ -301,6 +385,11 @@ class ExploreController extends ChangeNotifier {
         return;
       }
       searchFailure = error;
+      if (error.kind == DiscoveryFailureKind.sessionExpired ||
+          error.kind == DiscoveryFailureKind.forbidden) {
+        results = const [];
+        page = null;
+      }
       searchPhase = results.isEmpty ? LoadPhase.failed : LoadPhase.ready;
     }
     _notify();

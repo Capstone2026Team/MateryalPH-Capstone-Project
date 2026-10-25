@@ -200,7 +200,7 @@ class _SavedLocationsScreenState extends State<SavedLocationsScreen> {
   );
 }
 
-/// Profile > Favorite Suppliers: the Buyer's personal list of Verified Vendors.
+/// Profile > Favorite Suppliers: the Buyer's saved Verified Vendors and Directory Suppliers.
 class FavoriteSuppliersScreen extends StatefulWidget {
   const FavoriteSuppliersScreen({
     super.key,
@@ -273,7 +273,7 @@ class _FavoriteSuppliersScreenState extends State<FavoriteSuppliersScreen> {
                 kind: StateKind.empty,
                 artwork: StateArtwork.favorites,
                 title: 'No Favorite Suppliers yet',
-                message: 'Save a Verified Vendor from its map preview.',
+                message: 'Save a supplier from its map preview.',
               ),
             )
           : RefreshIndicator(
@@ -293,19 +293,27 @@ class _FavoriteSuppliersScreenState extends State<FavoriteSuppliersScreen> {
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       minTileHeight: 64,
-                      leading: const Icon(LucideIcons.star),
-                      title: Text(favorite.name),
-                      subtitle: Text(
-                        '${favorite.scoreText} · ${favorite.currentlyDiscoverable ? 'Currently offering products' : 'No current eligible offerings'}',
+                      leading: Icon(
+                        favorite.isVerified
+                            ? LucideIcons.star
+                            : LucideIcons.building2,
                       ),
-                      trailing: widget.onOpenStore == null
+                      title: Text(favorite.name),
+                      // A Directory Supplier is informational: no Store Profile or Message.
+                      subtitle: Text(
+                        favorite.isVerified
+                            ? '${favorite.scoreText} · ${favorite.currentlyDiscoverable ? 'Currently offering products' : 'No current eligible offerings'}'
+                            : 'Directory Supplier · ${favorite.currentlyDiscoverable ? 'Find it on the Map for contact details' : 'Details return when it appears on the Map again'}',
+                      ),
+                      trailing:
+                          widget.onOpenStore == null || !favorite.isVerified
                           ? null
                           : const Icon(
                               LucideIcons.chevronRight,
                               size: 20,
                               color: BuyerTheme.muted,
                             ),
-                      onTap: widget.onOpenStore == null
+                      onTap: widget.onOpenStore == null || !favorite.isVerified
                           ? null
                           : () =>
                                 widget.onOpenStore!(context, favorite.vendorId),
@@ -316,7 +324,7 @@ class _FavoriteSuppliersScreenState extends State<FavoriteSuppliersScreen> {
                         spacing: 8,
                         runSpacing: 8,
                         children: [
-                          if (widget.onMessage != null)
+                          if (widget.onMessage != null && favorite.isVerified)
                             OutlinedButton.icon(
                               onPressed: () =>
                                   widget.onMessage!(context, favorite.vendorId),

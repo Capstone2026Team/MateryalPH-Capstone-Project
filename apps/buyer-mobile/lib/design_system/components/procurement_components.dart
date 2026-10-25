@@ -1155,60 +1155,99 @@ class SegmentedTabs extends StatelessWidget {
   final int selected;
   final ValueChanged<int> onChanged;
 
+  static const _gap = 3.0;
+
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(3),
+    padding: const EdgeInsets.all(_gap),
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(10),
       border: Border.all(color: BuyerTheme.border),
     ),
-    child: Row(
-      children: [
-        for (var index = 0; index < labels.length; index++)
-          Expanded(
-            child: Semantics(
-              button: true,
-              selected: index == selected,
-              label: '${labels[index]} tab',
-              excludeSemantics: true,
-              child: Material(
-                color: index == selected
-                    ? BuyerTheme.action
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: () => onChanged(index),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 40),
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 6,
-                        ),
-                        child: Text(
-                          labels[index],
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: index == selected
-                                ? FontWeight.w700
-                                : FontWeight.w500,
-                            color: index == selected
-                                ? Colors.white
-                                : BuyerTheme.ink,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+    child: LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = _columns(context, constraints.maxWidth);
+        if (columns >= labels.length) {
+          return Row(
+            children: [
+              for (var index = 0; index < labels.length; index++)
+                Expanded(child: _tab(index)),
+            ],
+          );
+        }
+        // Too narrow for one row (large text, small screens): wrap whole tabs onto further rows
+        // instead of breaking a label mid-word.
+        final width = (constraints.maxWidth - (columns - 1) * _gap) / columns;
+        return Wrap(
+          spacing: _gap,
+          runSpacing: _gap,
+          children: [
+            for (var index = 0; index < labels.length; index++)
+              SizedBox(width: width, child: _tab(index)),
+          ],
+        );
+      },
+    ),
+  );
+
+  /// The most equal columns that fit every label's widest word on one line at the current text
+  /// scale; multi-word labels may still wrap between words.
+  int _columns(BuildContext context, double maxWidth) {
+    final scaler = MediaQuery.textScalerOf(context);
+    final base = DefaultTextStyle.of(context).style;
+    var widest = 0.0;
+    for (final label in labels) {
+      for (final word in label.split(' ')) {
+        final painter = TextPainter(
+          text: TextSpan(text: word, style: base.merge(_style(true))),
+          textScaler: scaler,
+          textDirection: Directionality.of(context),
+          maxLines: 1,
+        )..layout();
+        if (painter.width > widest) widest = painter.width;
+        painter.dispose();
+      }
+    }
+    // Label padding plus a pixel of rounding slack.
+    final needed = widest + 2 * 4 + 1;
+    for (var columns = labels.length; columns > 1; columns--) {
+      if ((maxWidth - (columns - 1) * _gap) / columns >= needed) return columns;
+    }
+    return 1;
+  }
+
+  TextStyle _style(bool active) => TextStyle(
+    fontSize: 13,
+    fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+    color: active ? Colors.white : BuyerTheme.ink,
+  );
+
+  Widget _tab(int index) => Semantics(
+    button: true,
+    selected: index == selected,
+    label: '${labels[index]} tab',
+    excludeSemantics: true,
+    child: Material(
+      color: index == selected ? BuyerTheme.action : Colors.transparent,
+      borderRadius: BorderRadius.circular(8),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => onChanged(index),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 40),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+              child: Text(
+                labels[index],
+                textAlign: TextAlign.center,
+                style: _style(index == selected),
               ),
             ),
           ),
-      ],
+        ),
+      ),
     ),
   );
 }

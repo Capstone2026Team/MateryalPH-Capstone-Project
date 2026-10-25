@@ -38,9 +38,97 @@ final BuiltSet<DiscoverySearchRequestOriginSourceEnum>
   _$discoverySearchRequestOriginSourceEnum_SEARCH,
 ]);
 
+const DiscoverySearchRequestDirectoryMinRatingEnum
+    _$discoverySearchRequestDirectoryMinRatingEnum_number3Period0 =
+    const DiscoverySearchRequestDirectoryMinRatingEnum._('number3Period0');
+const DiscoverySearchRequestDirectoryMinRatingEnum
+    _$discoverySearchRequestDirectoryMinRatingEnum_number3Period5 =
+    const DiscoverySearchRequestDirectoryMinRatingEnum._('number3Period5');
+const DiscoverySearchRequestDirectoryMinRatingEnum
+    _$discoverySearchRequestDirectoryMinRatingEnum_number4Period0 =
+    const DiscoverySearchRequestDirectoryMinRatingEnum._('number4Period0');
+const DiscoverySearchRequestDirectoryMinRatingEnum
+    _$discoverySearchRequestDirectoryMinRatingEnum_number4Period5 =
+    const DiscoverySearchRequestDirectoryMinRatingEnum._('number4Period5');
+
+DiscoverySearchRequestDirectoryMinRatingEnum
+    _$discoverySearchRequestDirectoryMinRatingEnumValueOf(String name) {
+  switch (name) {
+    case 'number3Period0':
+      return _$discoverySearchRequestDirectoryMinRatingEnum_number3Period0;
+    case 'number3Period5':
+      return _$discoverySearchRequestDirectoryMinRatingEnum_number3Period5;
+    case 'number4Period0':
+      return _$discoverySearchRequestDirectoryMinRatingEnum_number4Period0;
+    case 'number4Period5':
+      return _$discoverySearchRequestDirectoryMinRatingEnum_number4Period5;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<DiscoverySearchRequestDirectoryMinRatingEnum>
+    _$discoverySearchRequestDirectoryMinRatingEnumValues = BuiltSet<
+        DiscoverySearchRequestDirectoryMinRatingEnum>(const <DiscoverySearchRequestDirectoryMinRatingEnum>[
+  _$discoverySearchRequestDirectoryMinRatingEnum_number3Period0,
+  _$discoverySearchRequestDirectoryMinRatingEnum_number3Period5,
+  _$discoverySearchRequestDirectoryMinRatingEnum_number4Period0,
+  _$discoverySearchRequestDirectoryMinRatingEnum_number4Period5,
+]);
+
+const DiscoverySearchRequestDirectoryMaxDistanceKmEnum
+    _$discoverySearchRequestDirectoryMaxDistanceKmEnum_number1 =
+    const DiscoverySearchRequestDirectoryMaxDistanceKmEnum._('number1');
+const DiscoverySearchRequestDirectoryMaxDistanceKmEnum
+    _$discoverySearchRequestDirectoryMaxDistanceKmEnum_number3 =
+    const DiscoverySearchRequestDirectoryMaxDistanceKmEnum._('number3');
+const DiscoverySearchRequestDirectoryMaxDistanceKmEnum
+    _$discoverySearchRequestDirectoryMaxDistanceKmEnum_number5 =
+    const DiscoverySearchRequestDirectoryMaxDistanceKmEnum._('number5');
+const DiscoverySearchRequestDirectoryMaxDistanceKmEnum
+    _$discoverySearchRequestDirectoryMaxDistanceKmEnum_number10 =
+    const DiscoverySearchRequestDirectoryMaxDistanceKmEnum._('number10');
+const DiscoverySearchRequestDirectoryMaxDistanceKmEnum
+    _$discoverySearchRequestDirectoryMaxDistanceKmEnum_number20 =
+    const DiscoverySearchRequestDirectoryMaxDistanceKmEnum._('number20');
+
+DiscoverySearchRequestDirectoryMaxDistanceKmEnum
+    _$discoverySearchRequestDirectoryMaxDistanceKmEnumValueOf(String name) {
+  switch (name) {
+    case 'number1':
+      return _$discoverySearchRequestDirectoryMaxDistanceKmEnum_number1;
+    case 'number3':
+      return _$discoverySearchRequestDirectoryMaxDistanceKmEnum_number3;
+    case 'number5':
+      return _$discoverySearchRequestDirectoryMaxDistanceKmEnum_number5;
+    case 'number10':
+      return _$discoverySearchRequestDirectoryMaxDistanceKmEnum_number10;
+    case 'number20':
+      return _$discoverySearchRequestDirectoryMaxDistanceKmEnum_number20;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<DiscoverySearchRequestDirectoryMaxDistanceKmEnum>
+    _$discoverySearchRequestDirectoryMaxDistanceKmEnumValues = BuiltSet<
+        DiscoverySearchRequestDirectoryMaxDistanceKmEnum>(const <DiscoverySearchRequestDirectoryMaxDistanceKmEnum>[
+  _$discoverySearchRequestDirectoryMaxDistanceKmEnum_number1,
+  _$discoverySearchRequestDirectoryMaxDistanceKmEnum_number3,
+  _$discoverySearchRequestDirectoryMaxDistanceKmEnum_number5,
+  _$discoverySearchRequestDirectoryMaxDistanceKmEnum_number10,
+  _$discoverySearchRequestDirectoryMaxDistanceKmEnum_number20,
+]);
+
 Serializer<DiscoverySearchRequestOriginSourceEnum>
     _$discoverySearchRequestOriginSourceEnumSerializer =
     _$DiscoverySearchRequestOriginSourceEnumSerializer();
+Serializer<DiscoverySearchRequestDirectoryMinRatingEnum>
+    _$discoverySearchRequestDirectoryMinRatingEnumSerializer =
+    _$DiscoverySearchRequestDirectoryMinRatingEnumSerializer();
+Serializer<DiscoverySearchRequestDirectoryMaxDistanceKmEnum>
+    _$discoverySearchRequestDirectoryMaxDistanceKmEnumSerializer =
+    _$DiscoverySearchRequestDirectoryMaxDistanceKmEnumSerializer();
 
 class _$DiscoverySearchRequestOriginSourceEnumSerializer
     implements PrimitiveSerializer<DiscoverySearchRequestOriginSourceEnum> {
@@ -76,6 +164,82 @@ class _$DiscoverySearchRequestOriginSourceEnumSerializer
           _fromWire[serialized] ?? (serialized is String ? serialized : ''));
 }
 
+class _$DiscoverySearchRequestDirectoryMinRatingEnumSerializer
+    implements
+        PrimitiveSerializer<DiscoverySearchRequestDirectoryMinRatingEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'number3Period0': '3.0',
+    'number3Period5': '3.5',
+    'number4Period0': '4.0',
+    'number4Period5': '4.5',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    '3.0': 'number3Period0',
+    '3.5': 'number3Period5',
+    '4.0': 'number4Period0',
+    '4.5': 'number4Period5',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    DiscoverySearchRequestDirectoryMinRatingEnum
+  ];
+  @override
+  final String wireName = 'DiscoverySearchRequestDirectoryMinRatingEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          DiscoverySearchRequestDirectoryMinRatingEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  DiscoverySearchRequestDirectoryMinRatingEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      DiscoverySearchRequestDirectoryMinRatingEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
+class _$DiscoverySearchRequestDirectoryMaxDistanceKmEnumSerializer
+    implements
+        PrimitiveSerializer<DiscoverySearchRequestDirectoryMaxDistanceKmEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'number1': 1,
+    'number3': 3,
+    'number5': 5,
+    'number10': 10,
+    'number20': 20,
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    1: 'number1',
+    3: 'number3',
+    5: 'number5',
+    10: 'number10',
+    20: 'number20',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    DiscoverySearchRequestDirectoryMaxDistanceKmEnum
+  ];
+  @override
+  final String wireName = 'DiscoverySearchRequestDirectoryMaxDistanceKmEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          DiscoverySearchRequestDirectoryMaxDistanceKmEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  DiscoverySearchRequestDirectoryMaxDistanceKmEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      DiscoverySearchRequestDirectoryMaxDistanceKmEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$DiscoverySearchRequest extends DiscoverySearchRequest {
   @override
   final String? locationId;
@@ -93,6 +257,11 @@ class _$DiscoverySearchRequest extends DiscoverySearchRequest {
   final bool? includeDirectory;
   @override
   final bool? favoritesOnly;
+  @override
+  final DiscoverySearchRequestDirectoryMinRatingEnum? directoryMinRating;
+  @override
+  final DiscoverySearchRequestDirectoryMaxDistanceKmEnum?
+      directoryMaxDistanceKm;
   @override
   final String? supplierType;
   @override
@@ -115,6 +284,8 @@ class _$DiscoverySearchRequest extends DiscoverySearchRequest {
       this.includeVerified,
       this.includeDirectory,
       this.favoritesOnly,
+      this.directoryMinRating,
+      this.directoryMaxDistanceKm,
       this.supplierType,
       this.categoryId,
       this.page,
@@ -141,6 +312,8 @@ class _$DiscoverySearchRequest extends DiscoverySearchRequest {
         includeVerified == other.includeVerified &&
         includeDirectory == other.includeDirectory &&
         favoritesOnly == other.favoritesOnly &&
+        directoryMinRating == other.directoryMinRating &&
+        directoryMaxDistanceKm == other.directoryMaxDistanceKm &&
         supplierType == other.supplierType &&
         categoryId == other.categoryId &&
         page == other.page &&
@@ -158,6 +331,8 @@ class _$DiscoverySearchRequest extends DiscoverySearchRequest {
     _$hash = $jc(_$hash, includeVerified.hashCode);
     _$hash = $jc(_$hash, includeDirectory.hashCode);
     _$hash = $jc(_$hash, favoritesOnly.hashCode);
+    _$hash = $jc(_$hash, directoryMinRating.hashCode);
+    _$hash = $jc(_$hash, directoryMaxDistanceKm.hashCode);
     _$hash = $jc(_$hash, supplierType.hashCode);
     _$hash = $jc(_$hash, categoryId.hashCode);
     _$hash = $jc(_$hash, page.hashCode);
@@ -177,6 +352,8 @@ class _$DiscoverySearchRequest extends DiscoverySearchRequest {
           ..add('includeVerified', includeVerified)
           ..add('includeDirectory', includeDirectory)
           ..add('favoritesOnly', favoritesOnly)
+          ..add('directoryMinRating', directoryMinRating)
+          ..add('directoryMaxDistanceKm', directoryMaxDistanceKm)
           ..add('supplierType', supplierType)
           ..add('categoryId', categoryId)
           ..add('page', page)
@@ -226,6 +403,21 @@ class DiscoverySearchRequestBuilder
   set favoritesOnly(bool? favoritesOnly) =>
       _$this._favoritesOnly = favoritesOnly;
 
+  DiscoverySearchRequestDirectoryMinRatingEnum? _directoryMinRating;
+  DiscoverySearchRequestDirectoryMinRatingEnum? get directoryMinRating =>
+      _$this._directoryMinRating;
+  set directoryMinRating(
+          DiscoverySearchRequestDirectoryMinRatingEnum? directoryMinRating) =>
+      _$this._directoryMinRating = directoryMinRating;
+
+  DiscoverySearchRequestDirectoryMaxDistanceKmEnum? _directoryMaxDistanceKm;
+  DiscoverySearchRequestDirectoryMaxDistanceKmEnum?
+      get directoryMaxDistanceKm => _$this._directoryMaxDistanceKm;
+  set directoryMaxDistanceKm(
+          DiscoverySearchRequestDirectoryMaxDistanceKmEnum?
+              directoryMaxDistanceKm) =>
+      _$this._directoryMaxDistanceKm = directoryMaxDistanceKm;
+
   String? _supplierType;
   String? get supplierType => _$this._supplierType;
   set supplierType(String? supplierType) => _$this._supplierType = supplierType;
@@ -257,6 +449,8 @@ class DiscoverySearchRequestBuilder
       _includeVerified = $v.includeVerified;
       _includeDirectory = $v.includeDirectory;
       _favoritesOnly = $v.favoritesOnly;
+      _directoryMinRating = $v.directoryMinRating;
+      _directoryMaxDistanceKm = $v.directoryMaxDistanceKm;
       _supplierType = $v.supplierType;
       _categoryId = $v.categoryId;
       _page = $v.page;
@@ -290,6 +484,8 @@ class DiscoverySearchRequestBuilder
           includeVerified: includeVerified,
           includeDirectory: includeDirectory,
           favoritesOnly: favoritesOnly,
+          directoryMinRating: directoryMinRating,
+          directoryMaxDistanceKm: directoryMaxDistanceKm,
           supplierType: supplierType,
           categoryId: categoryId,
           page: page,

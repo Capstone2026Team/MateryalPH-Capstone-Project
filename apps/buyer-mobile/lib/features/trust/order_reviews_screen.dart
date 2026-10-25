@@ -1,3 +1,4 @@
+import '../../design_system/components/form_dialog.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -481,7 +482,7 @@ class _OrderReviewsScreenState extends State<OrderReviewsScreen> {
         : review.ratings.serviceQuality;
     int? second = review.ratings.speedRating;
     final comment = TextEditingController(text: review.comment ?? '');
-    final saved = await showDialog<bool>(
+    final saved = await showBuyerFormDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialog) => BuyerDialog(

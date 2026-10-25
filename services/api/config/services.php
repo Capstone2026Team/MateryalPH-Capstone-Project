@@ -66,10 +66,13 @@ return [
         'timeout_seconds' => (int) env('GOOGLE_MAPS_TIMEOUT_SECONDS', 5),
         'places' => [
             'enabled' => (bool) env('GOOGLE_PLACES_ENABLED', true),
-            'included_types' => array_values(array_filter(array_map('trim', explode(',', (string) env('GOOGLE_PLACES_INCLUDED_TYPES', 'hardware_store,home_improvement_store'))))),
+            'included_types' => array_values(array_filter(array_map('trim', explode(',', (string) env('GOOGLE_PLACES_INCLUDED_TYPES', 'hardware_store,home_improvement_store,building_materials_store'))))),
             // Operational refresh target for permitted cached content; the database caps it at 30 days and a
             // shorter contractual limit in the current Google Maps Platform terms always prevails.
             'cache_ttl_hours' => (int) env('GOOGLE_PLACES_CACHE_TTL_HOURS', 168),
+            'text_queries' => array_values(array_filter(array_map('trim', explode(',', (string) env('GOOGLE_PLACES_TEXT_QUERIES', 'construction supply,building materials,hardware,lumber,steel,aggregates'))))),
+            'text_cell_km' => (int) env('GOOGLE_PLACES_TEXT_CELL_KM', 20),
+            'text_max_pages' => (int) env('GOOGLE_PLACES_TEXT_MAX_PAGES', 3),
             'max_search_cells' => (int) env('GOOGLE_PLACES_MAX_SEARCH_CELLS', 121),
             'max_calls_per_day' => (int) env('GOOGLE_PLACES_MAX_CALLS_PER_DAY', 2000),
             'max_cache_records' => (int) env('GOOGLE_PLACES_MAX_CACHE_RECORDS', 20000),

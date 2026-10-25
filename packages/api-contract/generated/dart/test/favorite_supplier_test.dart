@@ -7,8 +7,14 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(FavoriteSupplier, () {
+    // Verified Vendor id, Directory Supplier result id, or for a Directory Favorite outside the current cache the saved Favorite id (accepted by removeFavoriteSupplier).
     // String vendorId
     test('to test the property `vendorId`', () async {
+      // TODO
+    });
+
+    // String tier
+    test('to test the property `tier`', () async {
       // TODO
     });
 

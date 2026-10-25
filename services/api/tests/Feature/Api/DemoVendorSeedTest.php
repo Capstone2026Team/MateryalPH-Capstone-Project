@@ -169,10 +169,10 @@ final class DemoVendorSeedTest extends TestCase
     {
         $blueprint = app(DemoVendorMarketplace::class)->blueprint();
         $manifest = $this->manifest();
-        self::assertCount(12, $blueprint['vendors']);
+        self::assertCount(22, $blueprint['vendors']);
         $regulated = DB::table('materials')->where('regulated', true)->pluck('code')->all();
         foreach ($blueprint['vendors'] as $vendor) {
-            self::assertCount($vendor['n'] <= 10 ? 12 : 10, $vendor['products'], $vendor['slug']);
+            self::assertCount(in_array($vendor['n'], [11, 12], true) ? 10 : 12, $vendor['products'], $vendor['slug']);
             $assets = ['logo.png', 'owner.jpg', 'staff.jpg', 'doc-registration.jpg', 'doc-lgu-permit.jpg', 'doc-bir-cor.jpg', 'doc-identity.jpg'];
             if ($vendor['delivery'] !== null) {
                 $assets[] = 'fulfillment.jpg';
@@ -199,7 +199,7 @@ final class DemoVendorSeedTest extends TestCase
                 }
             }
         }
-        self::assertCount(140, $manifest['products']);
+        self::assertCount(260, $manifest['products']);
         $rows = $this->registerRows();
         $listed = array_map(static fn (array $row): string => RegisterNormalizer::number((string) $row[0]), array_slice($rows['List_of_PS_Licensee_MASTERLIST.csv'], 1));
         foreach ($blueprint['vendors'] as $vendor) {
@@ -299,23 +299,66 @@ final class DemoVendorSeedTest extends TestCase
         self::assertGreaterThan(0, DB::table('listing_price_versions')->where('price_kind', 'VOLUME_TIER')->count(), 'Bulk pricing tiers are seeded.');
     }
 
-    public function test_all_twelve_vendors_publish_every_listing_and_cover_both_fulfillment_modes(): void
+    public function test_every_vendor_publishes_every_listing_and_covers_both_fulfillment_modes(): void
     {
         $code = Artisan::call('materyalph:demo-vendors-seed', ['--payments' => 'simulate', '--credentials' => $this->credentials]);
         self::assertSame(0, $code, Artisan::output());
 
-        self::assertSame(12, DB::table('vendor_organizations')->where('store_activation_status', 'ACTIVE')->where('marketplace_discoverability_status', 'DISCOVERABLE')->count());
-        self::assertSame(140, DB::table('vendor_listings')->where('status', 'ACTIVE')->count(), Artisan::output());
-        self::assertSame(12, (int) app(EligibleOfferQuery::class)->currentCounts()['vendors']);
-        self::assertSame(140, (int) app(EligibleOfferQuery::class)->currentCounts()['listings']);
-        self::assertSame(9, DB::table('store_profiles')->whereIn('fulfillment_method', ['VENDOR_DELIVERY', 'BOTH'])->count());
-        self::assertSame(3, DB::table('store_profiles')->where('fulfillment_method', 'SELF_PICKUP')->count());
+        self::assertSame(22, DB::table('vendor_organizations')->where('store_activation_status', 'ACTIVE')->where('marketplace_discoverability_status', 'DISCOVERABLE')->count());
+        self::assertSame(260, DB::table('vendor_listings')->where('status', 'ACTIVE')->count(), Artisan::output());
+        self::assertSame(22, (int) app(EligibleOfferQuery::class)->currentCounts()['vendors']);
+        self::assertSame(260, (int) app(EligibleOfferQuery::class)->currentCounts()['listings']);
+        self::assertSame(16, DB::table('store_profiles')->whereIn('fulfillment_method', ['VENDOR_DELIVERY', 'BOTH'])->count());
+        self::assertSame(6, DB::table('store_profiles')->where('fulfillment_method', 'SELF_PICKUP')->count());
         foreach (DB::table('vendor_organizations')->pluck('id') as $id) {
             self::assertTrue(app(StoreActivationGate::class)->evaluate((string) $id)['ready']);
         }
         foreach (DB::table('store_profiles')->whereIn('fulfillment_method', ['VENDOR_DELIVERY', 'BOTH'])->pluck('vendor_organization_id') as $id) {
             self::assertTrue(app(VendorDeliveryEligibility::class)->available((string) $id));
         }
+
+        // Listings that state a reference material's full exact key are price-compared (MAT-03); "Other" listings are not.
+        $comparable = DB::table('listing_comparable_assignments as ca')->join('listing_variants as v', 'v.id', '=', 'ca.listing_variant_id')
+            ->whereNull('ca.effective_until')->where('ca.mapping_state', 'APPROVED')->distinct()->count('v.vendor_listing_id');
+        self::assertGreaterThanOrEqual(75, $comparable, "Only {$comparable} listings are comparable.");
+        $tapes = DB::table('material_comparable_groups as g')->join('materials as m', 'm.id', '=', 'g.material_id')->where('m.code', 'TAPE_MEASURE')->pluck('g.display_name')->sort()->values()->all();
+        self::assertSame(['Tape measure · Stanley · Size 3 m', 'Tape measure · Stanley · Size 5 m', 'Tape measure · Stanley · Size 8 m'], $tapes, 'Each size is its own variant of one product.');
+        // Stores deliberately overlap, so the same exact variant is offered by several Vendors.
+        $sellers = DB::table('listing_comparable_assignments as ca')->join('material_comparable_group_versions as gv', 'gv.id', '=', 'ca.material_comparable_group_version_id')
+            ->join('material_comparable_groups as g', 'g.id', '=', 'gv.material_comparable_group_id')->join('listing_variants as v', 'v.id', '=', 'ca.listing_variant_id')
+            ->join('vendor_listings as l', 'l.id', '=', 'v.vendor_listing_id')->where('g.display_name', 'Tape measure · Stanley · Size 5 m')->whereNull('ca.effective_until')
+            ->distinct()->count('l.vendor_organization_id');
+        self::assertSame(3, $sellers, 'Industrial Valley, Avenida and Kapitolyo all sell the Stanley 5 m tape.');
+        self::assertSame(0, DB::table('vendor_listings as l')->join('products as p', 'p.id', '=', 'l.product_id')->whereNull('p.material_id')
+            ->whereIn('l.other_label', ['LED bulb', 'Plug-in circuit breaker', 'Extension cord'])->where('l.regulated', true)->count(), 'Regulated electrical goods stay unclassified "Other".');
+    }
+
+    public function test_rerunning_links_an_already_published_listing_to_its_reference_material_without_touching_prices_or_stock(): void
+    {
+        $seed = fn () => $this->artisan('materyalph:demo-vendors-seed', ['--only' => ['industrial-valley-tools'], '--payments' => 'simulate', '--credentials' => $this->credentials])->assertSuccessful();
+        $seed();
+        $listing = DB::table('vendor_listings')->where('vendor_sku', 'ST-TAPE')->first(['id', 'product_id']);
+        $variants = DB::table('listing_variants')->where('vendor_listing_id', $listing->id)->pluck('id')->all();
+        // The state a store seeded before 2026-10-25 is in: an "Other" listing whose variants state no size.
+        DB::table('listing_comparable_assignments')->whereIn('listing_variant_id', $variants)->update(['mapping_state' => 'RETIRED', 'effective_until' => DB::raw("effective_from + interval '1 second'")]);
+        DB::table('products')->where('id', $listing->product_id)->update(['material_id' => null]);
+        DB::table('vendor_listings')->where('id', $listing->id)->update(['other_label' => 'Tape measure', 'material_match' => 'UNMATCHED']);
+        DB::table('listing_variants')->whereIn('id', $variants)->update(['attributes' => '{}']);
+        $snapshot = fn (): array => [DB::table('vendor_listings')->count(), DB::table('listing_price_versions')->count(), DB::table('inventory_items')->sum('quantity_on_hand'), DB::table('listing_media')->count()];
+        $before = $snapshot();
+
+        $seed();
+
+        self::assertSame('TAPE_MEASURE', DB::table('products as p')->join('materials as m', 'm.id', '=', 'p.material_id')->where('p.id', $listing->product_id)->value('m.code'));
+        self::assertSame('ACTIVE', DB::table('vendor_listings')->where('id', $listing->id)->value('status'));
+        self::assertSame(['3 m', '5 m', '8 m'], DB::table('listing_variants')->whereIn('id', $variants)->orderBy('sort_order')->pluck('attributes')
+            ->map(static fn (string $attributes): string => json_decode($attributes, true)['size'])->all());
+        self::assertSame(3, DB::table('listing_comparable_assignments')->whereIn('listing_variant_id', $variants)->whereNull('effective_until')->where('mapping_state', 'APPROVED')->count());
+        self::assertEquals($before, $snapshot(), 'No listing, price version, stock count or photo is added or changed.');
+
+        $lock = DB::table('vendor_listings')->where('id', $listing->id)->value('lock_version');
+        $seed();
+        self::assertSame($lock, DB::table('vendor_listings')->where('id', $listing->id)->value('lock_version'), 'A listing already in sync is not saved again.');
     }
 
     public function test_rerunning_is_idempotent_and_never_prints_or_commits_secrets(): void

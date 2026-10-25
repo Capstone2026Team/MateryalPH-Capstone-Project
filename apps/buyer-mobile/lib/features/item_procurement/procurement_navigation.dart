@@ -52,6 +52,7 @@ class ProcurementNavigation {
     String? originLabel,
   }) async {
     final repository = analytics;
+    // Only the origin carries over; analytics always covers 50 km.
     final origin = explore.origin;
     if (repository == null || origin == null) return;
     await _push(
@@ -59,7 +60,6 @@ class ProcurementNavigation {
       MaterialsAnalyticsScreen(
         repository: repository,
         origin: origin,
-        radiusKm: explore.radiusKm,
         originLabel: originLabel,
         onOpenListing: openListing,
       ),

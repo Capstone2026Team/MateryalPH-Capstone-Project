@@ -8,6 +8,7 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**load** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) | Public material load classification used for fulfillment guidance. | [optional]
 **stage** | **String** |  |
 **lineId** | **String** |  |
 **variantId** | **String** |  |

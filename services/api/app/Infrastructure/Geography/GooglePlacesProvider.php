@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Geography;
 
 use App\Domain\Geography\GeographyProviderUnavailable;
+use App\Domain\Geography\PhilippineBounds;
 use App\Domain\Geography\PlacesProvider;
 use App\Domain\Geography\ProviderBudget;
 use Illuminate\Http\Client\ConnectionException;
@@ -19,7 +20,7 @@ use Illuminate\Support\Facades\Http;
  */
 final class GooglePlacesProvider implements PlacesProvider
 {
-    public const SEARCH_FIELD_MASK = 'places.id,places.displayName,places.location,places.formattedAddress,places.primaryType,places.businessStatus';
+    public const SEARCH_FIELD_MASK = 'places.id,places.displayName,places.location,places.formattedAddress,places.primaryType,places.businessStatus,places.types,places.rating,places.userRatingCount';
 
     public const DETAILS_FIELD_MASK = 'id,displayName,formattedAddress,location,primaryType,nationalPhoneNumber,websiteUri,googleMapsUri,regularOpeningHours.weekdayDescriptions,currentOpeningHours.openNow,currentOpeningHours.nextCloseTime,rating,userRatingCount,businessStatus,photos,reviews,attributions,delivery,curbsidePickup,accessibilityOptions,paymentOptions';
 
@@ -111,13 +112,63 @@ final class GooglePlacesProvider implements PlacesProvider
                 'languageCode' => 'en',
                 'locationRestriction' => ['circle' => ['center' => ['latitude' => $cell['latitude'], 'longitude' => $cell['longitude']], 'radius' => (float) min(50000, $cell['radius_meters'])]],
             ]), $batch));
-            foreach ($responses as $response) {
+            foreach ($responses as $index => $response) {
                 foreach ($this->checked($response)->json('places') ?? [] as $place) {
                     $parsed = is_array($place) ? $this->summary($place) : null;
                     if ($parsed !== null) {
-                        $places[$parsed['place_id']] = $parsed;
+                        $keys = $places[$parsed['place_id']]['cell_keys'] ?? [];
+                        if (isset($batch[$index]['key'])) {
+                            $keys[] = $batch[$index]['key'];
+                        }
+                        $places[$parsed['place_id']] = $parsed + ['cell_keys' => array_values(array_unique($keys))];
                     }
                 }
+            }
+        }
+
+        return array_values($places);
+    }
+
+    public function searchText(array $cells): array
+    {
+        $this->assertConfigured();
+        $places = [];
+        $types = (array) config('services.google_maps.places.included_types', []);
+        $maximum = max(1, min(3, (int) config('services.google_maps.places.text_max_pages', 3)));
+        foreach (array_chunk($cells, 16) as $batch) {
+            $pending = $batch;
+            for ($page = 0; $page < $maximum && $pending !== []; $page++) {
+                // One reservation for each actual page, including continuation pages.
+                foreach ($pending as $_cell) {
+                    $this->budget->consume('places');
+                }
+                $responses = Http::pool(fn (Pool $pool): array => array_map(fn (array $cell): mixed => $pool->withHeaders($this->headers(self::SEARCH_FIELD_MASK.',nextPageToken'))->acceptJson()->asJson()
+                    ->connectTimeout(3)->timeout((int) config('services.google_maps.timeout_seconds', 5))
+                    ->post('https://places.googleapis.com/v1/places:searchText', [
+                        'textQuery' => $cell['query'], 'locationRestriction' => ['rectangle' => $cell['rectangle']],
+                        'regionCode' => 'PH', 'languageCode' => 'en', 'pageSize' => 20,
+                    ] + (isset($cell['page_token']) ? ['pageToken' => $cell['page_token']] : [])), $pending));
+                $next = [];
+                foreach ($responses as $index => $response) {
+                    $response = $this->checked($response);
+                    foreach ($response->json('places') ?? [] as $place) {
+                        if (! is_array($place) || ! is_array($place['types'] ?? null) || array_intersect($types, $place['types']) === []) {
+                            continue;
+                        }
+                        $parsed = $this->summary($place);
+                        if ($parsed === null) {
+                            continue;
+                        }
+                        $keys = $places[$parsed['place_id']]['cell_keys'] ?? [];
+                        $keys[] = $pending[$index]['key'];
+                        $places[$parsed['place_id']] = $parsed + ['cell_keys' => array_values(array_unique($keys))];
+                    }
+                    $token = $response->json('nextPageToken');
+                    if (is_string($token) && $token !== '') {
+                        $next[] = array_replace($pending[$index], ['page_token' => $token]);
+                    }
+                }
+                $pending = $next;
             }
         }
 
@@ -328,7 +379,7 @@ final class GooglePlacesProvider implements PlacesProvider
 
     /**
      * @param  array<string, mixed>  $place
-     * @return array{place_id: string, name: string, latitude: float, longitude: float, formatted_address: ?string, primary_type: ?string, business_status: ?string}|null
+     * @return array{place_id: string, name: string, latitude: float, longitude: float, formatted_address: ?string, primary_type: ?string, business_status: ?string, google_rating: ?float, google_rating_count: ?int}|null
      */
     private function summary(array $place): ?array
     {
@@ -338,12 +389,14 @@ final class GooglePlacesProvider implements PlacesProvider
         $longitude = $place['location']['longitude'] ?? null;
         $status = is_string($place['businessStatus'] ?? null) ? $place['businessStatus'] : null;
         if (! is_string($id) || preg_match('/^[A-Za-z0-9_-]{10,300}$/D', $id) !== 1 || $name === null || ! is_numeric($latitude) || ! is_numeric($longitude)
-            || in_array($status, ['CLOSED_PERMANENTLY', 'CLOSED_TEMPORARILY'], true)) {
+            || ! PhilippineBounds::contains((float) $latitude, (float) $longitude) || in_array($status, ['CLOSED_PERMANENTLY', 'CLOSED_TEMPORARILY'], true)) {
             return null;
         }
 
         return ['place_id' => $id, 'name' => $name, 'latitude' => (float) $latitude, 'longitude' => (float) $longitude,
-            'formatted_address' => $this->text($place['formattedAddress'] ?? null, 300), 'primary_type' => $this->text($place['primaryType'] ?? null, 64), 'business_status' => $status];
+            'formatted_address' => $this->text($place['formattedAddress'] ?? null, 300), 'primary_type' => $this->text($place['primaryType'] ?? null, 64), 'business_status' => $status,
+            'google_rating' => is_numeric($place['rating'] ?? null) && $place['rating'] >= 1 && $place['rating'] <= 5 ? round((float) $place['rating'], 1) : null,
+            'google_rating_count' => is_int($place['userRatingCount'] ?? null) && $place['userRatingCount'] >= 0 ? $place['userRatingCount'] : null];
     }
 
     private function text(mixed $value, int $max): ?string

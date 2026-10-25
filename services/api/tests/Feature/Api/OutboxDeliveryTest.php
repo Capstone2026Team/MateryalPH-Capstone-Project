@@ -165,6 +165,19 @@ final class OutboxDeliveryTest extends TestCase
         Queue::assertNotPushed(ProcessOutboxEvent::class, fn (ProcessOutboxEvent $job): bool => $job->eventId === $exhaustedId);
     }
 
+    public function test_dispatch_leases_an_event_until_its_job_completes_or_the_lease_expires(): void
+    {
+        Queue::fake();
+        $id = $this->insertPendingEvent(0);
+        $this->artisan('materyalph:outbox-dispatch')->assertSuccessful();
+        $this->artisan('materyalph:outbox-dispatch')->assertSuccessful();
+        Queue::assertPushed(ProcessOutboxEvent::class, 1);
+        self::assertNotNull(DB::table('outbox_events')->where('id', $id)->value('dispatched_until'));
+        $this->travel(61)->minutes();
+        $this->artisan('materyalph:outbox-dispatch')->assertSuccessful();
+        Queue::assertPushed(ProcessOutboxEvent::class, 2);
+    }
+
     private function publisher(): OutboxPublisher
     {
         return $this->app->make(OutboxPublisher::class);

@@ -43,8 +43,21 @@ void main() {
       // TODO
     });
 
+    // Limits both tiers to the Buyer's Favorite Suppliers. Unlike supplier_type and category_id, it does not hide Directory Suppliers.
     // bool favoritesOnly
     test('to test the property `favoritesOnly`', () async {
+      // TODO
+    });
+
+    // Inclusive minimum Google rating, Directory Suppliers only. Send a JSON number; a value of 3.0 keeps ratings from 3.0 through 5.0 and excludes lower-rated and unrated places. Verified Vendors and VPS are unchanged.
+    // double directoryMinRating
+    test('to test the property `directoryMinRating`', () async {
+      // TODO
+    });
+
+    // Directory Suppliers only. Must not exceed the effective selected radius.
+    // int directoryMaxDistanceKm
+    test('to test the property `directoryMaxDistanceKm`', () async {
       // TODO
     });
 

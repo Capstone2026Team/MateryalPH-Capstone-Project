@@ -43,14 +43,15 @@ final class ConversationProducts
         return $this->card($row);
     }
 
-    /** @return array<string, mixed>|null */
-    public function stored(object $message): ?array
+    /** @param list<string>|null $availableProductIds
+     * @return array<string, mixed>|null */
+    public function stored(object $message, ?array $availableProductIds = null): ?array
     {
         if ($message->product_snapshot === null) {
             return null;
         }
         $card = json_decode($message->product_snapshot, true, flags: JSON_THROW_ON_ERROR);
-        $card['available'] = app(EligibleOfferQuery::class)->variants()->where('v.id', $message->product_id)->exists();
+        $card['available'] = $availableProductIds === null ? app(EligibleOfferQuery::class)->variants()->where('v.id', $message->product_id)->exists() : in_array($message->product_id, $availableProductIds, true);
 
         return $card;
     }

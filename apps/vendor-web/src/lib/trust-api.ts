@@ -47,7 +47,7 @@ export async function getVendorAnalyticsDetail(groupId: string, filters: VendorA
 }
 
 export async function exportVendorAnalytics(filters: VendorAnalyticsFilters): Promise<Blob> {
-  return analytics().exportVendorMaterialsAnalytics(windowParams(filters))
+  return analytics().exportVendorMaterialsAnalytics({ ...windowParams(filters), ...(filters.q ? { q: filters.q } : {}), ...(filters.categoryId ? { categoryId: filters.categoryId } : {}) })
 }
 
 export async function getStorePerformance(): Promise<StorePerformance> {

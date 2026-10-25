@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design_system/components/buyer_overlays.dart';
+import '../../core/foreground_refresh.dart';
 import '../../design_system/components/discovery_controls.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/components/ranking_indicator.dart';
@@ -26,7 +27,11 @@ class SearchResultsScreen extends StatefulWidget {
   State<SearchResultsScreen> createState() => _SearchResultsScreenState();
 }
 
-class _SearchResultsScreenState extends State<SearchResultsScreen> {
+class _SearchResultsScreenState extends State<SearchResultsScreen>
+    with ForegroundRefresh<SearchResultsScreen> {
+  @override
+  Future<bool> refreshInForeground() => _controller.revalidateSearch();
+
   late final _scroll = ScrollController(
     initialScrollOffset: _controller.resultsScrollOffset,
   );
@@ -279,16 +284,18 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
           ),
           SortTabBar(
             items: [
-              SortTabItem(
-                label: sort == ListingSort.favoritesFirst
-                    ? ListingSort.favoritesFirst.label
-                    : ListingSort.bestDeal.label,
-                selected:
-                    sort == ListingSort.bestDeal ||
-                    sort == ListingSort.favoritesFirst,
-                menu: true,
-                onTap: _chooseRelevance,
-              ),
+              // Best Deal ranks a text query, so browsing the catalog offers only the plain sorts.
+              if (_controller.query.isNotEmpty)
+                SortTabItem(
+                  label: sort == ListingSort.favoritesFirst
+                      ? ListingSort.favoritesFirst.label
+                      : ListingSort.bestDeal.label,
+                  selected:
+                      sort == ListingSort.bestDeal ||
+                      sort == ListingSort.favoritesFirst,
+                  menu: true,
+                  onTap: _chooseRelevance,
+                ),
               for (final option in const [
                 ListingSort.distance,
                 ListingSort.rating,

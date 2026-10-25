@@ -12,6 +12,7 @@ Name | Type | Description | Notes
 **primaryType** | **String** |  |
 **source_** | **String** |  |
 **refreshedAt** | [**DateTime**](DateTime.md) |  |
+**googleRating** | [**GoogleRating**](GoogleRating.md) | Google-sourced rating for Directory Suppliers only. Never VPS. |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

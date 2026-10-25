@@ -1,3 +1,4 @@
+import { shouldRotateIdempotencyKey } from '@materyalph/web-ui'
 import { useNavigationRefresh } from '@materyalph/web-ui'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -245,7 +246,7 @@ function useSubmission() {
   const [error, setError] = useState<string | null>(null)
   async function run(task: (idempotencyKey: string) => Promise<void>) {
     setBusy(true); setError(null)
-    try { await task(key.current); key.current = newIdempotencyKey() } catch (cause) { key.current = newIdempotencyKey(); setError(await readableOrderError(cause)) } finally { setBusy(false) }
+    try { await task(key.current); key.current = newIdempotencyKey() } catch (cause) { if (shouldRotateIdempotencyKey(cause)) key.current = newIdempotencyKey(); setError(await readableOrderError(cause)) } finally { setBusy(false) }
   }
   return { busy, error, setError, run }
 }

@@ -4,6 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/google_rating.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -16,6 +17,7 @@ part 'directory_supplier_summary.g.dart';
 /// * [primaryType]
 /// * [source_]
 /// * [refreshedAt]
+/// * [googleRating] - Google-sourced rating for Directory Suppliers only. Never VPS.
 @BuiltValue()
 abstract class DirectorySupplierSummary implements Built<DirectorySupplierSummary, DirectorySupplierSummaryBuilder> {
   @BuiltValueField(wireName: r'formatted_address')
@@ -30,6 +32,10 @@ abstract class DirectorySupplierSummary implements Built<DirectorySupplierSummar
 
   @BuiltValueField(wireName: r'refreshed_at')
   DateTime get refreshedAt;
+
+  /// Google-sourced rating for Directory Suppliers only. Never VPS.
+  @BuiltValueField(wireName: r'google_rating')
+  GoogleRating? get googleRating;
 
   DirectorySupplierSummary._();
 
@@ -73,6 +79,11 @@ class _$DirectorySupplierSummarySerializer implements PrimitiveSerializer<Direct
     yield serializers.serialize(
       object.refreshedAt,
       specifiedType: const FullType(DateTime),
+    );
+    yield r'google_rating';
+    yield object.googleRating == null ? null : serializers.serialize(
+      object.googleRating,
+      specifiedType: const FullType.nullable(GoogleRating),
     );
   }
 
@@ -126,6 +137,14 @@ class _$DirectorySupplierSummarySerializer implements PrimitiveSerializer<Direct
             specifiedType: const FullType(DateTime),
           ) as DateTime;
           result.refreshedAt = valueDes;
+          break;
+        case r'google_rating':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(GoogleRating),
+          ) as GoogleRating?;
+          if (valueDes == null) continue;
+          result.googleRating.replace(valueDes);
           break;
         default:
           unhandled.add(key);

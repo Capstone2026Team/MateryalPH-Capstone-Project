@@ -1,3 +1,4 @@
+import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import 'package:flutter/material.dart';
 
 import '../../design_system/components/buyer_app_bar.dart';
@@ -33,9 +34,17 @@ class CheckoutProjectScreen extends StatefulWidget {
   State<CheckoutProjectScreen> createState() => _CheckoutProjectScreenState();
 }
 
+typedef _Choice = ({
+  String id,
+  String name,
+  int budgetCentavos,
+  int lockVersion,
+  api.ProjectSummary? project,
+});
+
 class _CheckoutProjectScreenState extends State<CheckoutProjectScreen> {
-  final List<ProjectData> _items = [];
-  ProjectData? _project;
+  final List<_Choice> _items = [];
+  api.ProjectSummary? _project;
   bool _loading = true;
   bool _hasMore = false;
   int _page = 0;
@@ -58,27 +67,54 @@ class _CheckoutProjectScreenState extends State<CheckoutProjectScreen> {
     });
     try {
       final page = reset ? 1 : _page + 1;
-      final data = _project == null
-          ? await widget.repository.list(page: page)
-          : projectObject(
-              (await widget.repository.project(
-                projectText(_project!['id']),
-                page: page,
-              ))['packages'],
-            );
+      final choices = <_Choice>[];
+      final bool hasMore;
+      if (_project == null) {
+        final data = await widget.repository.list(page: page);
+        hasMore = data.hasMore;
+        choices.addAll(
+          data.items
+              .where((item) => item.status.name == 'ACTIVE')
+              .map(
+                (item) => (
+                  id: item.id,
+                  name: item.name,
+                  budgetCentavos: item.budgetCentavos,
+                  lockVersion: item.lockVersion,
+                  project: item,
+                ),
+              ),
+        );
+      } else {
+        final data = (await widget.repository.project(
+          _project!.id,
+          page: page,
+        )).packages;
+        hasMore = data.hasMore;
+        choices.addAll(
+          data.items
+              .where(
+                (item) =>
+                    !['COMPLETED', 'CANCELLED'].contains(item.status.name) &&
+                    item.currentVersionId != null,
+              )
+              .map(
+                (item) => (
+                  id: item.id,
+                  name: item.name,
+                  budgetCentavos: item.budgetCentavos,
+                  lockVersion: item.lockVersion,
+                  project: null,
+                ),
+              ),
+        );
+      }
       if (!mounted) return;
       setState(() {
         if (reset) _items.clear();
-        _items.addAll(
-          projectRows(data['items']).where(
-            (item) => _project == null
-                ? item['status'] == 'ACTIVE'
-                : !['COMPLETED', 'CANCELLED'].contains(item['status']) &&
-                      item['current_version_id'] != null,
-          ),
-        );
+        _items.addAll(choices);
         _page = page;
-        _hasMore = data['has_more'] == true;
+        _hasMore = hasMore;
       });
     } on DiscoveryFailure catch (error) {
       if (mounted) setState(() => _failure = error);
@@ -110,7 +146,7 @@ class _CheckoutProjectScreenState extends State<CheckoutProjectScreen> {
           if (_project != null) ...[
             const SizedBox(height: 12),
             Text(
-              projectText(_project!['name']),
+              projectText(_project!.name),
               style: Theme.of(context).textTheme.titleMedium,
             ),
             TextButton(
@@ -146,16 +182,16 @@ class _CheckoutProjectScreenState extends State<CheckoutProjectScreen> {
             ListTile(
               enabled: !_loading,
               contentPadding: EdgeInsets.zero,
-              title: Text(projectText(item['name'])),
+              title: Text(projectText(item.name)),
               subtitle: Text(
                 _project == null
                     ? 'Active Project'
-                    : 'Work Package budget: ${projectMoney(item['budget_centavos'])}',
+                    : 'Work Package budget: ${projectMoney(item.budgetCentavos)}',
               ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 if (_project == null) {
-                  _project = item;
+                  _project = item.project;
                   _items.clear();
                   _page = 0;
                   _load(reset: true);
@@ -163,10 +199,10 @@ class _CheckoutProjectScreenState extends State<CheckoutProjectScreen> {
                   Navigator.pop(
                     context,
                     CheckoutProjectLink(
-                      projectName: projectText(_project!['name']),
-                      packageName: projectText(item['name']),
-                      packageId: projectText(item['id']),
-                      lockVersion: projectInt(item['lock_version']),
+                      projectName: projectText(_project!.name),
+                      packageName: projectText(item.name),
+                      packageId: projectText(item.id),
+                      lockVersion: projectInt(item.lockVersion),
                     ),
                   );
                 }

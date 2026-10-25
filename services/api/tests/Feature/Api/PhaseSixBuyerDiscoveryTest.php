@@ -54,6 +54,74 @@ final class PhaseSixBuyerDiscoveryTest extends TestCase
         $this->app->instance(AddressGeocoder::class, $this->geocoder);
     }
 
+    public function test_directory_google_rating_and_distance_filters_leave_verified_vendors_unchanged(): void
+    {
+        [$store] = $this->activeStore('Verified Supplier');
+        $this->buyer();
+        $base = ['latitude' => $this->originLatitude, 'longitude' => $this->originLongitude, 'formatted_address' => 'Manila', 'primary_type' => 'hardware_store', 'business_status' => 'OPERATIONAL'];
+        $this->places->places = [
+            $base + ['place_id' => 'ChIJratedDirectory01', 'name' => 'Rated Hardware', 'google_rating' => 4.5, 'google_rating_count' => 25],
+            array_replace($base, ['place_id' => 'ChIJlowDirectory0001', 'name' => 'Lower Rating', 'google_rating' => 3.5, 'google_rating_count' => 2]),
+            array_replace($base, ['place_id' => 'ChIJunratedDirect01', 'name' => 'Unrated Hardware']),
+            array_replace($base, ['place_id' => 'ChIJfarDirectory0001', 'name' => 'Far Hardware', 'latitude' => $this->originLatitude + 0.025, 'google_rating' => 4.8]),
+        ];
+        $all = $this->search()->assertOk()->assertJsonPath('meta.counts.directory_suppliers', 4)->json('data');
+        $verified = array_values(array_filter($all, static fn (array $row): bool => $row['tier'] === 'VERIFIED_VENDOR'));
+        $filtered = $this->search(['directory_min_rating' => 4.0, 'directory_max_distance_km' => 1])->assertOk()
+            ->assertJsonPath('meta.counts.directory_suppliers', 1)->json('data');
+        self::assertSame($verified, array_values(array_filter($filtered, static fn (array $row): bool => $row['tier'] === 'VERIFIED_VENDOR')));
+        $directory = array_values(array_filter($filtered, static fn (array $row): bool => $row['tier'] === 'DIRECTORY_SUPPLIER'))[0];
+        self::assertSame(['source' => 'GOOGLE', 'label' => 'Google rating', 'value' => '4.5', 'count' => 25], $directory['directory']['google_rating']);
+        self::assertSame('DIRECTORY', $directory['score_label']['kind']);
+        self::assertNull($directory['score_label']['value']);
+        $this->search(['directory_min_rating' => 4.5, 'supplier_type' => 'OTHER'])->assertOk()->assertJsonPath('meta.directory.status', 'FILTERED_OUT')->assertJsonPath('meta.counts.directory_suppliers', 0);
+        // Favorites span both tiers: nothing is saved yet, but Directory is filtered, not hidden.
+        $this->search(['directory_min_rating' => 4.5, 'favorites_only' => true])->assertOk()->assertJsonPath('meta.directory.status', 'AVAILABLE')->assertJsonPath('meta.counts.directory_suppliers', 0);
+        $this->search(['directory_min_rating' => 2.5])->assertUnprocessable();
+        $this->search(['directory_max_distance_km' => 2])->assertUnprocessable();
+        $this->search(['directory_max_distance_km' => 10, 'radius_km' => 5])->assertUnprocessable();
+        $this->search(['directory_min_rating' => 4.5])->assertOk();
+        self::assertSame(1, $this->places->nearbyCalls);
+        self::assertSame(1, $this->places->textCalls);
+    }
+
+    public function test_directory_minimum_google_rating_is_inclusive_for_every_supported_value(): void
+    {
+        [$store] = $this->activeStore('Verified Supplier');
+        $this->placeStore($store->id, 1000);
+        $this->buyer();
+        foreach ([2.9, 3.0, 3.5, 4.0, 4.5, 5.0, null] as $index => $rating) {
+            $this->places->places[] = [
+                'place_id' => 'ChIJminimumRating0'.$index,
+                'name' => $rating === null ? 'Unrated Hardware' : 'Hardware '.number_format($rating, 1),
+                'latitude' => $this->originLatitude,
+                'longitude' => $this->originLongitude,
+                'formatted_address' => 'Manila',
+                'primary_type' => 'hardware_store',
+                'business_status' => 'OPERATIONAL',
+                'google_rating' => $rating,
+            ];
+        }
+        $all = $this->search()->assertOk()->assertJsonPath('meta.counts.directory_suppliers', 7)->json('data');
+        // Global row numbers close up when Directory rows are removed; Vendor data stays the same.
+        $verifiedRows = static fn (array $rows): array => array_map(
+            static fn (array $row): array => array_diff_key($row, ['rank' => true]),
+            array_values(array_filter($rows, static fn (array $row): bool => $row['tier'] === 'VERIFIED_VENDOR')),
+        );
+        $verified = $verifiedRows($all);
+        self::assertNotEmpty($verified);
+        foreach ([3.0, 3.5, 4.0, 4.5] as $minimum) {
+            $rows = $this->search(['directory_min_rating' => $minimum])->assertOk()->json('data');
+            self::assertSame($verified, $verifiedRows($rows));
+            $names = array_column(array_filter($rows, static fn (array $row): bool => $row['tier'] === 'DIRECTORY_SUPPLIER'), 'name');
+            $expected = array_map(static fn (float $rating): string => 'Hardware '.number_format($rating, 1), array_values(array_filter([3.0, 3.5, 4.0, 4.5, 5.0], static fn (float $rating): bool => $rating >= $minimum)));
+            self::assertEqualsCanonicalizing($expected, $names, 'The selected rating itself and all higher ratings remain visible.');
+        }
+        $this->search()->assertOk()->assertJsonPath('meta.counts.directory_suppliers', 7);
+        self::assertSame(1, $this->places->nearbyCalls);
+        self::assertSame(1, $this->places->textCalls);
+    }
+
     public function test_directory_thumbnail_is_lazy_attributed_and_rejects_expired_or_claimed_suppliers(): void
     {
         $this->getJson('/api/v1/buyers/discovery/directory-suppliers/'.Str::uuid().'/photo')->assertUnauthorized();
@@ -314,12 +382,59 @@ final class PhaseSixBuyerDiscoveryTest extends TestCase
         self::assertSame(2, $this->places->detailCalls, 'Place Details media is fetched on demand, never cached.');
         self::assertSame(0, DB::table('place_cache_entries')->where('kind', 'PLACE_DETAILS')->count());
 
-        $this->putJson('/api/v1/buyers/favorite-suppliers/'.$directory['result_id'])->assertStatus(422)->assertJsonPath('errors.0.code', 'FAVORITE_REQUIRES_VERIFIED_VENDOR');
         $this->getJson('/api/v1/stores/'.$directory['result_id'].'/profile')->assertNotFound();
         $this->search(['supplier_type' => 'RETAIL_HARDWARE_STORE'])->assertOk()->assertJsonPath('meta.directory.status', 'FILTERED_OUT')->assertJsonCount(1, 'data');
 
         DB::table('directory_suppliers')->where('google_place_id', 'ChIJdirectoryInside01')->update(['claimed_vendor_organization_id' => $store->id]);
         self::assertSame(['VERIFIED_VENDOR'], array_column($this->search()->json('data'), 'tier'), 'A verified claim replaces the Tier 1 marker.');
+    }
+
+    public function test_directory_suppliers_are_saved_as_favorites_by_place_id_and_survive_cache_expiry(): void
+    {
+        [$store] = $this->activeStore('Verified Twin');
+        $this->placeStore($store->id, 1000);
+        $this->places->places = [
+            ['place_id' => 'ChIJdirectoryInside01', 'name' => 'Panda Construction Supply', 'latitude' => 14.6200, 'longitude' => 121.0000, 'formatted_address' => 'Sampaloc, Manila', 'primary_type' => 'hardware_store', 'business_status' => 'OPERATIONAL', 'google_rating' => 4.2, 'google_rating_count' => 9],
+        ];
+        $this->buyer();
+        $directory = collect($this->search()->assertOk()->json('data'))->firstWhere('tier', 'DIRECTORY_SUPPLIER');
+
+        $this->putJson('/api/v1/buyers/favorite-suppliers/'.$directory['result_id'])->assertOk()->assertJsonPath('data.is_favorite', true);
+        $this->putJson('/api/v1/buyers/favorite-suppliers/'.$directory['result_id'])->assertOk();
+        $saved = DB::table('favorite_directory_suppliers')->get();
+        self::assertCount(1, $saved);
+        self::assertSame('ChIJdirectoryInside01', $saved[0]->google_place_id);
+        self::assertSame(['id', 'buyer_profile_id', 'google_place_id', 'created_at', 'updated_at'], array_keys((array) $saved[0]), 'Only the Place ID is stored, never Google content.');
+
+        $items = $this->search()->assertOk()->assertJsonPath('meta.counts.favorite_suppliers', 1)->json('data');
+        self::assertTrue(collect($items)->firstWhere('tier', 'DIRECTORY_SUPPLIER')['is_favorite']);
+        self::assertFalse(collect($items)->firstWhere('tier', 'VERIFIED_VENDOR')['is_favorite']);
+        $favorites = $this->search(['favorites_only' => true])->assertOk()->assertJsonPath('meta.directory.status', 'AVAILABLE')->json('data');
+        self::assertSame(['DIRECTORY_SUPPLIER'], array_column($favorites, 'tier'), 'Favorites only keeps saved Directory Suppliers and drops unsaved Verified Vendors.');
+        $this->search(['favorites_only' => true, 'directory_min_rating' => 4.5])->assertOk()->assertJsonCount(0, 'data');
+        $this->search(['favorites_only' => true, 'supplier_type' => 'OTHER'])->assertOk()->assertJsonPath('meta.directory.status', 'FILTERED_OUT');
+        $this->getJson('/api/v1/buyers/favorite-suppliers')->assertOk()
+            ->assertJsonPath('data.0.tier', 'DIRECTORY_SUPPLIER')->assertJsonPath('data.0.vendor_id', $directory['result_id'])
+            ->assertJsonPath('data.0.name', 'Panda Construction Supply')->assertJsonPath('data.0.currently_discoverable', true)
+            ->assertJsonPath('data.0.score_label.kind', 'DIRECTORY')->assertJsonPath('data.0.logo_url', null);
+        $this->getJson('/api/v1/stores/'.$directory['result_id'].'/profile')->assertNotFound();
+
+        // The bounded Google cache expires and is pruned; the Favorite keeps only the Place ID.
+        DB::table('directory_suppliers')->delete();
+        DB::table('place_cache_entries')->update(['expires_at' => now()->subMinute()]);
+        $orphan = $this->getJson('/api/v1/buyers/favorite-suppliers')->assertOk()
+            ->assertJsonPath('data.0.name', 'Saved Directory Supplier')->assertJsonPath('data.0.currently_discoverable', false)->json('data.0');
+        self::assertSame((string) $saved[0]->id, $orphan['vendor_id']);
+        $this->putJson('/api/v1/buyers/favorite-suppliers/'.$directory['result_id'])->assertNotFound()->assertJsonPath('errors.0.code', 'VENDOR_NOT_FOUND');
+
+        $refreshed = collect($this->search()->assertOk()->json('data'))->firstWhere('tier', 'DIRECTORY_SUPPLIER');
+        self::assertNotSame($directory['result_id'], $refreshed['result_id']);
+        self::assertTrue($refreshed['is_favorite'], 'A re-cached place is still the Buyer\'s Favorite.');
+        DB::table('directory_suppliers')->update(['expires_at' => now()->subMinute()]);
+        $this->putJson('/api/v1/buyers/favorite-suppliers/'.$refreshed['result_id'])->assertNotFound()->assertJsonPath('errors.0.code', 'DIRECTORY_SUPPLIER_NOT_FOUND');
+        $this->deleteJson('/api/v1/buyers/favorite-suppliers/'.$refreshed['result_id'])->assertOk()->assertJsonPath('data.is_favorite', false);
+        self::assertSame(0, DB::table('favorite_directory_suppliers')->count());
+        $this->getJson('/api/v1/buyers/favorite-suppliers')->assertOk()->assertJsonCount(0, 'data');
     }
 
     public function test_provider_timeouts_degrade_to_verified_vendors_and_permitted_cache(): void

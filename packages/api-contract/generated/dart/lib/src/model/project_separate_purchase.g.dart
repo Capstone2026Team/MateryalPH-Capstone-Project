@@ -76,6 +76,8 @@ class _$ProjectSeparatePurchaseStageEnumSerializer
 
 class _$ProjectSeparatePurchase extends ProjectSeparatePurchase {
   @override
+  final BuiltMap<String, JsonObject?>? load;
+  @override
   final ProjectSeparatePurchaseStageEnum stage;
   @override
   final String lineId;
@@ -119,7 +121,8 @@ class _$ProjectSeparatePurchase extends ProjectSeparatePurchase {
       (ProjectSeparatePurchaseBuilder()..update(updates))._build();
 
   _$ProjectSeparatePurchase._(
-      {required this.stage,
+      {this.load,
+      required this.stage,
       required this.lineId,
       required this.variantId,
       required this.listingId,
@@ -152,6 +155,7 @@ class _$ProjectSeparatePurchase extends ProjectSeparatePurchase {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is ProjectSeparatePurchase &&
+        load == other.load &&
         stage == other.stage &&
         lineId == other.lineId &&
         variantId == other.variantId &&
@@ -176,6 +180,7 @@ class _$ProjectSeparatePurchase extends ProjectSeparatePurchase {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, load.hashCode);
     _$hash = $jc(_$hash, stage.hashCode);
     _$hash = $jc(_$hash, lineId.hashCode);
     _$hash = $jc(_$hash, variantId.hashCode);
@@ -202,6 +207,7 @@ class _$ProjectSeparatePurchase extends ProjectSeparatePurchase {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'ProjectSeparatePurchase')
+          ..add('load', load)
           ..add('stage', stage)
           ..add('lineId', lineId)
           ..add('variantId', variantId)
@@ -229,6 +235,11 @@ class ProjectSeparatePurchaseBuilder
     implements
         Builder<ProjectSeparatePurchase, ProjectSeparatePurchaseBuilder> {
   _$ProjectSeparatePurchase? _$v;
+
+  MapBuilder<String, JsonObject?>? _load;
+  MapBuilder<String, JsonObject?> get load =>
+      _$this._load ??= MapBuilder<String, JsonObject?>();
+  set load(MapBuilder<String, JsonObject?>? load) => _$this._load = load;
 
   ProjectSeparatePurchaseStageEnum? _stage;
   ProjectSeparatePurchaseStageEnum? get stage => _$this._stage;
@@ -320,6 +331,7 @@ class ProjectSeparatePurchaseBuilder
   ProjectSeparatePurchaseBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _load = $v.load?.toBuilder();
       _stage = $v.stage;
       _lineId = $v.lineId;
       _variantId = $v.variantId;
@@ -362,6 +374,7 @@ class ProjectSeparatePurchaseBuilder
     try {
       _$result = _$v ??
           _$ProjectSeparatePurchase._(
+            load: _load?.build(),
             stage: BuiltValueNullFieldError.checkNotNull(
                 stage, r'ProjectSeparatePurchase', 'stage'),
             lineId: BuiltValueNullFieldError.checkNotNull(
@@ -402,6 +415,9 @@ class ProjectSeparatePurchaseBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'load';
+        _load?.build();
+
         _$failedField = 'image';
         _image?.build();
         _$failedField = 'specifications';

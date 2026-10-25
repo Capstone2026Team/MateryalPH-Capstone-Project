@@ -1,3 +1,4 @@
+import 'typed_project_fixtures.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -191,9 +192,9 @@ Future<void> pumpQuotation(
       theme: BuyerTheme.light,
       home: VendorQuotationScreen(
         repository: repository(requests),
-        package: package(method: packageMethod),
-        candidate: candidate,
-        estimate: estimate,
+        package: typedPackage(package(method: packageMethod)),
+        candidate: typedCandidate(candidate),
+        estimate: typedEstimate(estimate),
         links: ProjectSourcingLinks(
           openConversation: (_, _) {},
           openOrder: (_, id) => onOrder?.call(id),
@@ -298,16 +299,20 @@ void main() {
 
   test('the card names the priced method and the other one on offer', () {
     expect(
-      candidateFulfillmentLabel(candidate()),
+      candidateFulfillmentLabel(typedCandidate(candidate())),
       'Self pick-up · site delivery also offered',
     );
     expect(
-      candidateFulfillmentLabel(candidate(options: const ['PICKUP'])),
+      candidateFulfillmentLabel(
+        typedCandidate(candidate(options: const ['PICKUP'])),
+      ),
       'Self pick-up',
     );
-    expect(needsFulfillmentChoice(candidate()), isTrue);
+    expect(needsFulfillmentChoice(typedCandidate(candidate())), isTrue);
     expect(
-      needsFulfillmentChoice(candidate(options: const ['PICKUP'])),
+      needsFulfillmentChoice(
+        typedCandidate(candidate(options: const ['PICKUP'])),
+      ),
       isFalse,
     );
   });

@@ -1,3 +1,4 @@
+import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -87,8 +88,9 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
       quantity = TextEditingController(),
       brand = TextEditingController();
   final details = <String, TextEditingController>{};
-  List<ProjectData> matches = [], units = [];
-  ProjectData? material;
+  List<api.ProjectMaterial> matches = [];
+  List<api.ProjectMaterialUnit> units = [];
+  api.ProjectMaterial? material;
   bool unlisted = false, searching = false;
 
   /// Result list re-opened from the collapsed choice with "Change".
@@ -103,15 +105,17 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
   bool get chosen => material != null || unlisted;
 
   /// Ready-mixed concrete is ordered by volume, not by a count of pieces.
-  bool get readyMixed => !unlisted && material?['code'] == readyMixedCode;
+  bool get readyMixed => !unlisted && material?.code == readyMixedCode;
 
-  List<ProjectData> get unitChoices =>
-      unlisted ? units : projectRows(material?['compatible_units']);
+  List<api.ProjectMaterialUnit> get unitChoices =>
+      unlisted ? units : material?.compatibleUnits.toList() ?? [];
 
   /// Detail codes that apply to the current choice.
   Iterable<String> get detailCodes => unlisted
       ? unlistedDetails.map((d) => d.$1)
-      : projectRows(material?['attributes']).map((a) => projectText(a['code']));
+      : (material?.attributes.toList() ?? <api.ProjectMaterialAttribute>[]).map(
+          (a) => projectText(a.code),
+        );
 
   /// Stated technical details, shown as "N set" while the section is closed.
   int get detailsSet => [
@@ -181,13 +185,13 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
       final result = await widget.repository.materials(query.trim());
       if (!mounted || token != sequence) return;
       setState(() {
-        matches = projectRows(result['items']);
-        units = projectRows(result['units']);
+        matches = result.items.toList();
+        units = result.units.toList();
         lookedUp = query.trim();
         searching = false;
         if (keep && !unlisted) {
           material = matches
-              .where((m) => m['id'] == widget.initial?['material_id'])
+              .where((m) => m.id == widget.initial?['material_id'])
               .firstOrNull;
         }
       });
@@ -214,12 +218,12 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
     debounce = Timer(const Duration(milliseconds: 350), () => _lookup(value));
   }
 
-  void _choose(ProjectData? m) => setState(() {
+  void _choose(api.ProjectMaterial? m) => setState(() {
     material = m;
     unlisted = m == null;
     browsing = false;
     final choices = unitChoices;
-    unit = choices.length == 1 ? projectText(choices.first['id']) : null;
+    unit = choices.length == 1 ? projectText(choices.first.id) : null;
     error = null;
     detailsOpen = detailsSet > 0;
   });
@@ -245,8 +249,8 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
 
   void _submit() {
     final typedName = name.text.trim();
-    final choice = unitChoices.where((u) => u['id'] == unit).firstOrNull;
-    final precision = projectInt(choice?['precision']);
+    final choice = unitChoices.where((u) => u.id == unit).firstOrNull;
+    final precision = projectInt(choice?.precision);
     final qty = quantity.text.trim();
     final decimals = qty.contains('.') ? qty.split('.').last.length : 0;
     final failure = !chosen || typedName.length < 2
@@ -276,13 +280,13 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
     String? optional(TextEditingController c) =>
         c.text.trim().isEmpty ? null : c.text.trim();
     widget.onSubmit({
-      'material_id': unlisted ? null : material!['id'],
+      'material_id': unlisted ? null : material!.id,
       'material_kind': unlisted ? 'UNLISTED' : 'CATALOG',
-      'name': unlisted ? typedName : projectText(material!['name']),
-      'category_name': unlisted ? null : material!['category_name'],
-      'regulated': unlisted ? false : material!['regulated'] == true,
+      'name': unlisted ? typedName : projectText(material!.name),
+      'category_name': unlisted ? null : material!.categoryName,
+      'regulated': unlisted ? false : material!.regulated == true,
       'unit_id': unit,
-      'unit_code': choice!['code'],
+      'unit_code': choice!.code,
       'quantity': qty,
       'preferred_brand': optional(brand),
       'description': optional(description),
@@ -349,7 +353,7 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
                     matches: matches,
                     searching: searching,
                     query: lookedUp,
-                    selectedId: material?['id'] as String?,
+                    selectedId: material?.id,
                     unlisted: unlisted,
                     onChoose: _choose,
                   ),
@@ -396,17 +400,15 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
           const SizedBox(width: CompactDensity.gap),
           Expanded(
             child: DropdownButtonFormField<String>(
-              key: ValueKey('unit-${material?['id']}-$unlisted'),
-              initialValue: unitChoices.any((u) => u['id'] == unit)
-                  ? unit
-                  : null,
+              key: ValueKey('unit-${material?.id}-$unlisted'),
+              initialValue: unitChoices.any((u) => u.id == unit) ? unit : null,
               isExpanded: true,
               decoration: const InputDecoration(labelText: 'Unit'),
               // The closed field shows the code; the menu shows full names.
               selectedItemBuilder: (context) => [
                 for (final u in unitChoices)
                   Text(
-                    projectText(u['code']),
+                    projectText(u.code),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -414,9 +416,9 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
               items: [
                 for (final u in unitChoices)
                   DropdownMenuItem(
-                    value: projectText(u['id']),
+                    value: projectText(u.id),
                     child: Text(
-                      '${projectText(u['name'])} (${projectText(u['code'])})',
+                      '${projectText(u.name)} (${projectText(u.code)})',
                     ),
                   ),
               ],
@@ -441,14 +443,17 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
 
   Widget _technicalDetails() => TechnicalDetailsSection(
     // Re-keyed per choice so a newly chosen material re-applies auto-expand.
-    key: ValueKey('details-${material?['id']}-$unlisted'),
+    key: ValueKey('details-${material?.id}-$unlisted'),
     helper: unlisted
         ? 'Describe the size and dimensions so Vendors can quote it.'
         : 'Only details you state are required of a Vendor match. Details you leave open let you choose between the products a Vendor offers. "Listed" values are what products are sold with now.',
     setCount: detailsSet,
     expanded: detailsOpen,
     onExpansionChanged: (open) => setState(() => detailsOpen = open),
-    emptyNote: !unlisted && projectRows(material?['attributes']).isEmpty
+    emptyNote:
+        !unlisted &&
+            (material?.attributes.toList() ?? <api.ProjectMaterialAttribute>[])
+                .isEmpty
         ? 'This material has no technical details to state.'
         : null,
     cells: [
@@ -496,11 +501,11 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
     ],
   );
 
-  String _attributeLabel(ProjectData a) {
-    final unitCode = projectText(a['unit_code']);
+  String _attributeLabel(api.ProjectMaterialAttribute a) {
+    final unitCode = projectText(a.unitCode);
     return unitCode.isEmpty
-        ? projectText(a['label'])
-        : '${projectText(a['label'])} ($unitCode)';
+        ? projectText(a.label)
+        : '${projectText(a.label)} ($unitCode)';
   }
 
   List<TechnicalDetailCell> _detailFields() {
@@ -519,15 +524,15 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
       ];
     }
     final fields = <TechnicalDetailCell>[];
-    for (final a in projectRows(material?['attributes'])) {
-      final code = projectText(a['code']);
+    for (final a
+        in (material?.attributes.toList() ??
+            <api.ProjectMaterialAttribute>[])) {
+      final code = projectText(a.code);
       final label = _attributeLabel(a);
-      final allowed = (a['allowed_values'] as List?)?.map((v) => '$v').toList();
-      final listed = [
-        for (final v in (a['offered_values'] as List?) ?? const []) '$v',
-      ];
+      final allowed = a.allowedValues?.map(projectText).toList();
+      final listed = [for (final v in a.offeredValues ?? []) '$v'];
       final current = _detail(code).text;
-      final Widget input = a['value_type'] == 'ENUM' && allowed != null
+      final Widget input = a.valueType.name == 'ENUM' && allowed != null
           ? DropdownButtonFormField<String>(
               // Re-keyed so tapping a listed value shows it.
               key: ValueKey('detail-$code-$current'),
@@ -545,10 +550,10 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
               controller: _detail(code),
               maxLength: 200,
               buildCounter: noCounter,
-              keyboardType: a['value_type'] == 'NUMBER'
+              keyboardType: a.valueType.name == 'NUMBER'
                   ? const TextInputType.numberWithOptions(decimal: true)
                   : TextInputType.text,
-              inputFormatters: a['value_type'] == 'NUMBER'
+              inputFormatters: a.valueType.name == 'NUMBER'
                   ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))]
                   : null,
               decoration: InputDecoration(labelText: label),
@@ -580,12 +585,14 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
   /// A stated number must be one the matching can compare.
   String? _invalidDetail() {
     if (unlisted) return null;
-    for (final a in projectRows(material?['attributes'])) {
-      final value = (details[projectText(a['code'])]?.text ?? '').trim();
-      if (value.isEmpty || a['value_type'] != 'NUMBER') continue;
+    for (final a
+        in (material?.attributes.toList() ??
+            <api.ProjectMaterialAttribute>[])) {
+      final value = (details[projectText(a.code)]?.text ?? '').trim();
+      if (value.isEmpty || a.valueType.name != 'NUMBER') continue;
       if (!RegExp(r'^\d+(\.\d+)?$').hasMatch(value) ||
           (double.tryParse(value) ?? 0) <= 0) {
-        return '${projectText(a['label'])} must be a number above zero, without units.';
+        return '${projectText(a.label)} must be a number above zero, without units.';
       }
     }
     return null;

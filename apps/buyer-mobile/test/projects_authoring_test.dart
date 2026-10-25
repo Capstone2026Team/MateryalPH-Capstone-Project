@@ -1,3 +1,4 @@
+import 'typed_project_fixtures.dart';
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -107,7 +108,7 @@ void main() {
           theme: BuyerTheme.light,
           home: WorkPackageEditor(
             repository: repo,
-            project: {
+            project: typedProject({
               ...projectFixture(),
               'sites': [
                 {
@@ -116,8 +117,8 @@ void main() {
                   'point': <String, Object?>{},
                 },
               ],
-            },
-            package: const {
+            }),
+            package: typedPackage({
               'id': packageId,
               'status': 'ACTIVE',
               'lock_version': 9,
@@ -140,7 +141,7 @@ void main() {
                   ],
                 },
               },
-            },
+            }),
             chooseLocation: () async => null,
           ),
         ),
@@ -247,7 +248,7 @@ void main() {
             'package',
             WorkPackageEditor(
               repository: repo,
-              project: projectFixture(),
+              project: typedProject(projectFixture()),
               chooseLocation: () async => null,
             ),
           ),
@@ -353,7 +354,7 @@ void main() {
       (tester) async {
         final completion = Completer<void>();
         var requests = 0;
-        ProjectData? saved;
+        api.ProjectView? saved;
         final repo = repository((options, handler) async {
           requests++;
           expect(options.method, editing ? 'PATCH' : 'POST');
@@ -370,11 +371,13 @@ void main() {
               builder: (context) => Scaffold(
                 body: TextButton(
                   onPressed: () async {
-                    saved = await Navigator.of(context).push<ProjectData>(
+                    saved = await Navigator.of(context).push<api.ProjectView>(
                       MaterialPageRoute(
                         builder: (_) => ProjectEditor(
                           repository: repo,
-                          project: editing ? projectFixture() : null,
+                          project: editing
+                              ? typedProject(projectFixture())
+                              : null,
                           chooseLocation: () async =>
                               const DiscoveryOrigin.saved(
                                 locationId: locationId,
@@ -430,7 +433,7 @@ void main() {
         );
         completion.complete();
         await tester.pumpAndSettle();
-        expect(saved?['id'], projectId);
+        expect(saved?.id, projectId);
         expect(find.text('Open'), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
@@ -467,7 +470,7 @@ void main() {
           theme: BuyerTheme.light,
           home: ProjectEditor(
             repository: repo,
-            project: projectFixture(),
+            project: typedProject(projectFixture()),
             chooseLocation: () async => null,
           ),
         ),
@@ -609,7 +612,7 @@ void main() {
           theme: BuyerTheme.light,
           home: WorkPackageEditor(
             repository: repo,
-            project: projectFixture(),
+            project: typedProject(projectFixture()),
             chooseLocation: () async => null,
           ),
         ),
@@ -667,7 +670,7 @@ void main() {
           theme: BuyerTheme.light,
           home: WorkPackageEditor(
             repository: repo,
-            project: {
+            project: typedProject({
               ...projectFixture(),
               'sites': [
                 {
@@ -677,7 +680,7 @@ void main() {
                   'point': <String, Object?>{},
                 },
               ],
-            },
+            }),
             chooseLocation: () async => null,
           ),
         ),
@@ -758,7 +761,7 @@ void main() {
           ),
           home: WorkPackageEditor(
             repository: repo,
-            project: projectFixture(),
+            project: typedProject(projectFixture()),
             chooseLocation: () async => null,
           ),
         ),

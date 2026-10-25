@@ -6,6 +6,7 @@
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/listing_image.dart';
 import 'package:materyalph_api_client/src/model/project_specification_detail.dart';
+import 'package:built_value/json_object.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -14,6 +15,7 @@ part 'project_separate_purchase.g.dart';
 /// ProjectSeparatePurchase
 ///
 /// Properties:
+/// * [load] - Public material load classification used for fulfillment guidance.
 /// * [stage]
 /// * [lineId]
 /// * [variantId]
@@ -35,6 +37,10 @@ part 'project_separate_purchase.g.dart';
 /// * [coverageQuantity] - Currently available matching quantity used for fulfillment; selected quantity stays unchanged.
 @BuiltValue()
 abstract class ProjectSeparatePurchase implements Built<ProjectSeparatePurchase, ProjectSeparatePurchaseBuilder> {
+  /// Public material load classification used for fulfillment guidance.
+  @BuiltValueField(wireName: r'load')
+  BuiltMap<String, JsonObject?>? get load;
+
   @BuiltValueField(wireName: r'stage')
   ProjectSeparatePurchaseStageEnum get stage;
   // enum stageEnum {  IN_CART,  ORDERED,  DRAFT,  };
@@ -117,6 +123,13 @@ class _$ProjectSeparatePurchaseSerializer implements PrimitiveSerializer<Project
     ProjectSeparatePurchase object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.load != null) {
+      yield r'load';
+      yield serializers.serialize(
+        object.load,
+        specifiedType: const FullType.nullable(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+      );
+    }
     yield r'stage';
     yield serializers.serialize(
       object.stage,
@@ -251,6 +264,14 @@ class _$ProjectSeparatePurchaseSerializer implements PrimitiveSerializer<Project
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'load':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+          ) as BuiltMap<String, JsonObject?>?;
+          if (valueDes == null) continue;
+          result.load.replace(valueDes);
+          break;
         case r'stage':
           final valueDes = serializers.deserialize(
             value,

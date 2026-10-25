@@ -19,16 +19,30 @@ final class DispatchOutbox extends Command
     public function handle(): int
     {
         $limit = max(1, min(1000, (int) $this->option('limit')));
-        $ids = ImportedOutboxBoundary::apply(DB::table('outbox_events'))
-            ->whereNull('processed_at')
-            ->where('attempts', '<', OutboxProcessor::MAX_ATTEMPTS)
-            ->where('available_at', '<=', now())
-            ->orderBy('available_at')
-            ->limit($limit)
-            ->pluck('id');
+        $ids = DB::transaction(function () use ($limit) {
+            $ids = ImportedOutboxBoundary::apply(DB::table('outbox_events'))
+                ->whereNull('processed_at')
+                ->where('attempts', '<', OutboxProcessor::MAX_ATTEMPTS)
+                ->where('available_at', '<=', now())
+                ->where(fn ($query) => $query->whereNull('dispatched_until')->orWhere('dispatched_until', '<=', now()))
+                ->orderBy('available_at')
+                ->orderBy('id')
+                ->lock('FOR UPDATE SKIP LOCKED')
+                ->limit($limit)
+                ->pluck('id');
+            // Cover the queue's retry/backoff window. A lost queue job becomes eligible again.
+            DB::table('outbox_events')->whereIn('id', $ids)->update(['dispatched_until' => now()->addHour()]);
+
+            return $ids;
+        });
 
         foreach ($ids as $id) {
-            ProcessOutboxEvent::dispatch((string) $id);
+            try {
+                ProcessOutboxEvent::dispatch((string) $id);
+            } catch (\Throwable $exception) {
+                DB::table('outbox_events')->where('id', $id)->whereNull('processed_at')->update(['dispatched_until' => null]);
+                throw $exception;
+            }
         }
 
         $this->components->info(sprintf('Enqueued %d pending outbox event(s).', $ids->count()));

@@ -320,6 +320,56 @@ void main() {
       },
     );
 
+    testWidgets(
+      'Best Deal is offered only for a text search, which defaults to it',
+      (tester) async {
+        final repository = FakeProcurementRepository(
+          page: searchPage([listingCard('l-1')]),
+        );
+        final h = await _harness(repository);
+        await _pump(
+          tester,
+          SearchResultsScreen(controller: h.explore, navigation: h.navigation),
+        );
+        await h.explore.search(query: '', sort: () => null);
+        await tester.pumpAndSettle();
+        expect(find.text('Product Catalog'), findsOneWidget);
+        expect(find.bySemanticsLabel('Sort by Best Deal'), findsNothing);
+        expect(
+          find.bySemanticsLabel('Sort by Distance, ascending'),
+          findsOneWidget,
+        );
+        expect(h.explore.effectiveSort, ListingSort.distance);
+
+        await tester.tap(find.bySemanticsLabel(RegExp('^Sort by Price')));
+        await tester.pumpAndSettle();
+        expect(h.explore.effectiveSort.family, ListingSort.price);
+
+        await tester.tap(find.text('Search any materials'));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField), 'roofing');
+        await tester.testTextInput.receiveAction(TextInputAction.search);
+        await tester.pumpAndSettle();
+        expect(repository.searches.last.query, 'roofing');
+        // The Price choice made while browsing does not carry into the search.
+        expect(h.explore.sort, isNull);
+        expect(h.explore.effectiveSort, ListingSort.bestDeal);
+        expect(find.bySemanticsLabel('Sort by Best Deal'), findsOneWidget);
+
+        // A relevance sort never carries back into browsing.
+        await h.explore.search(
+          query: '',
+          sort: () => ListingSort.favoritesFirst,
+        );
+        await tester.pumpAndSettle();
+        expect(h.explore.sort, isNull);
+        expect(
+          find.bySemanticsLabel(RegExp('^Sort by (Best Deal|Favorites First)')),
+          findsNothing,
+        );
+      },
+    );
+
     testWidgets('a stale search response never replaces newer results', (
       tester,
     ) async {

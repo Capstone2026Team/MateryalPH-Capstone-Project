@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Demo;
 
 use App\Domain\Authorization\AccountAccess;
+use App\Domain\Catalog\ComparableMappingService;
 use App\Domain\Catalog\MarketplaceDiscoverability;
 use App\Domain\Catalog\VendorCatalogService;
 use App\Domain\Compliance\ComplianceRegisterImporter;
@@ -33,7 +34,7 @@ use RuntimeException;
 use Throwable;
 
 /**
- * Seeds twelve fictional, fully onboarded Tier 2 Vendors for the capstone demonstration: Owner and staff accounts with
+ * Seeds twenty-two fictional, fully onboarded Tier 2 Vendors for the capstone demonstration: Owner and staff accounts with
  * profile photos and authenticator factors, a verified Store Profile (logo, banner, hours, address), approved
  * verification evidence, an approved TEST tax profile, a Xendit TEST sub-account, delivery configuration (area,
  * vehicle, Fulfillment Staff), accepted agreements, an activated Store, and published catalog listings with photos,
@@ -60,8 +61,10 @@ final class DemoVendorMarketplace
 
     /** Fictional team members; only their roles and fixed demo names are used. */
     private const STAFF_NAMES = [
-        'STORE_STAFF' => ['Mario Reyes', 'Cynthia Lopez', 'Rolando Cruz', 'Grace Tolentino', 'Dennis Alcantara', 'Josephine Rivera', 'Ernesto Flores', 'Marites Soriano', 'Rodel Estrada', 'Liza Manalo', 'Teresita Ramos', 'Arnold Pascual'],
-        'FULFILLMENT' => ['Jun Macaraeg', 'Paolo Salazar', 'Noel Abad', 'Ramil Cabrera', 'Arnel Dizon', 'Edwin Mercado', 'Gilbert Tan', 'Rey Sison', 'Alvin Bernal', 'Joey Padilla', 'Ronaldo Javier', 'Efren Galang'],
+        'STORE_STAFF' => ['Mario Reyes', 'Cynthia Lopez', 'Rolando Cruz', 'Grace Tolentino', 'Dennis Alcantara', 'Josephine Rivera', 'Ernesto Flores', 'Marites Soriano', 'Rodel Estrada', 'Liza Manalo', 'Teresita Ramos', 'Arnold Pascual',
+            'Kristine Ocampo', 'Jerome Santiago', 'Angelica Torres', 'Mark Anthony Gomez', 'Rowena Castro', 'Jayson Villareal', 'Diana Robles', 'Ramon Del Rosario', 'Sheila Marquez', 'Nico Fernandez'],
+        'FULFILLMENT' => ['Jun Macaraeg', 'Paolo Salazar', 'Noel Abad', 'Ramil Cabrera', 'Arnel Dizon', 'Edwin Mercado', 'Gilbert Tan', 'Rey Sison', 'Alvin Bernal', 'Joey Padilla', 'Ronaldo Javier', 'Efren Galang',
+            'Danilo Ramos', 'Ronnie Aguilar', 'Benjie Tolentino', 'Rogelio Santos', 'Wilfredo Navarro', 'Allan Medina', 'Romeo Castañeda', 'Jomar Dela Paz', 'Ferdinand Uy', 'Leonardo Perez'],
     ];
 
     /** Register copies imported only when no snapshot of that kind is active (DTI-BPS lists, as downloaded). */
@@ -99,10 +102,11 @@ final class DemoVendorMarketplace
         private readonly XenditAccountVerificationGateway $xendit,
         private readonly ProductComplianceService $compliance,
         private readonly ComplianceRegisterImporter $registers,
+        private readonly ComparableMappingService $comparability,
     ) {}
 
     /**
-     * @param  list<string>  $only  Vendor slugs to seed; empty seeds all twelve.
+     * @param  list<string>  $only  Vendor slugs to seed; empty seeds every Store in vendors.json.
      * @param  'xendit'|'simulate'  $payments  xendit provisions real TEST sub-accounts; simulate is for automated tests only.
      * @return list<array<string, mixed>>
      */
@@ -132,6 +136,8 @@ final class DemoVendorMarketplace
         if ($payments === 'xendit' && ! $refreshOnly) {
             $report = $this->finishWhenSubAccountsGoLive($selected, $report, $password, $admin === null ? null : (int) $admin, $credentials, $credentialsPath);
         }
+        // Listings that state a full exact key become comparable in Materials Analytics (idempotent; Admin groups win).
+        $this->comparability->deriveForUnmapped();
 
         return $report;
     }
@@ -294,7 +300,7 @@ final class DemoVendorMarketplace
             }
             foreach ($roles as $role) {
                 $name = self::STAFF_NAMES[$role][($v['n'] - 1) % count(self::STAFF_NAMES[$role])];
-                $account = $this->createUser($name, $this->taggedEmail($v['n'], $role === 'FULFILLMENT' ? 'ful' : 'stf'), '+639170000'.sprintf('%03d', 200 + $v['n'] + ($role === 'FULFILLMENT' ? 20 : 0)), $password);
+                $account = $this->createUser($name, $this->taggedEmail($v['n'], $role === 'FULFILLMENT' ? 'ful' : 'stf'), $this->staffMobile((int) $v['n'], $role), $password);
                 DB::table('vendor_memberships')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organizationId, 'user_id' => $account['id'], 'role' => $role, 'status' => 'ACTIVE', 'can_manage_staff' => false, 'activated_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
                 $credentials['vendors'][$v['slug']]['accounts'][] = ['role' => $role, 'email' => $account['email'], 'totp_secret' => $account['totp_secret']];
             }
@@ -375,6 +381,17 @@ final class DemoVendorMarketplace
         if ($profile->banner_file_id === null) {
             $this->onboarding->uploadMedia($request, $this->upload($this->photo('vendors/'.$v['slug'].'/banner.jpg'), 'demo-'.$v['slug'].'-banner.jpg', 'image/jpeg'), 'BANNER', $v['store_name'].' banner');
         }
+    }
+
+    /**
+     * Fictional staff numbers: Stores 1-12 keep 2xx (staff 200 + n, fulfillment 220 + n); later Stores use 5xx so a
+     * Store numbered past 20 never reuses an earlier Store's fulfillment number.
+     */
+    private function staffMobile(int $n, string $role): string
+    {
+        $base = ($n <= 12 ? 200 : 500) + ($role === 'FULFILLMENT' ? 20 : 0);
+
+        return '+639170000'.sprintf('%03d', $base + $n);
     }
 
     /** @param array<string, mixed> $v */
@@ -722,6 +739,8 @@ final class DemoVendorMarketplace
     {
         $listingId = DB::table('vendor_listings')->where('vendor_organization_id', $organizationId)->whereNull('removed_at')->where('vendor_sku', $p['sku'])->value('id');
         if ($listingId !== null && DB::table('vendor_listings')->where('id', $listingId)->value('status') === 'ACTIVE') {
+            $this->syncComparability($p, (string) $listingId, $owner, $materials);
+
             return;
         }
         $request = $this->requestFor($owner);
@@ -760,15 +779,93 @@ final class DemoVendorMarketplace
         if (! DB::table('listing_variants')->where('vendor_listing_id', $listingId)->exists()) {
             $this->catalog->saveVariants($request, (string) $listingId, ['lock_version' => $this->lock((string) $listingId), 'variants' => $rows]);
         }
-        if (! DB::table('listing_media')->where('vendor_listing_id', $listingId)->where('status', 'READY')->exists()) {
-            foreach (array_slice($this->productPhotos($v['slug'], $p['sku']), 0, VendorCatalogService::MAX_MEDIA) as $n => $path) {
-                $this->catalog->uploadMedia($request, (string) $listingId, $this->upload($path, basename($path), 'image/jpeg'), $n === 0 ? $p['name'] : $p['name'].', photo '.($n + 1), null);
-            }
+        // Uploads only the photos still missing, so a run interrupted by the image provider resumes where it stopped.
+        $photos = array_slice($this->productPhotos($v['slug'], $p['sku']), 0, VendorCatalogService::MAX_MEDIA);
+        $ready = DB::table('listing_media')->where('vendor_listing_id', $listingId)->where('status', 'READY')->count();
+        foreach (array_slice($photos, $ready, null, true) as $n => $path) {
+            $this->uploadPhoto($request, (string) $listingId, $path, $n === 0 ? $p['name'] : $p['name'].', photo '.($n + 1));
         }
         if (isset($p['compliance'])) {
             $this->verifyCompliance($v, $p, (string) $listingId, $owner);
         }
         $this->catalog->publish($this->withKey($request), (string) $listingId, $this->lock((string) $listingId));
+    }
+
+    /**
+     * Uploads one listing photo through the catalog service, retrying a briefly unreachable image provider a few times
+     * so a flaky connection does not leave the listing in Draft. Configuration and authorization failures are not retried.
+     */
+    private function uploadPhoto(Request $request, string $listingId, string $path, string $altText): void
+    {
+        for ($attempt = 1; ; $attempt++) {
+            try {
+                $this->catalog->uploadMedia($request, $listingId, $this->upload($path, basename($path), 'image/jpeg'), $altText, null);
+
+                return;
+            } catch (AuthenticationException $error) {
+                $transient = $error->errorCode === 'PUBLIC_MEDIA_STORAGE_UNAVAILABLE' && ! str_contains($error->getMessage(), 'not configured') && ! str_contains($error->getMessage(), 'not authorized');
+                if (! $transient || $attempt >= 4) {
+                    throw $error;
+                }
+                Sleep::for(3 * $attempt)->seconds();
+            }
+        }
+    }
+
+    /**
+     * An already published listing keeps its prices, tiers, stock and photos; only a later reference-material link
+     * (vendors.json "mat") and the variants' comparison attributes are brought up to date, through the same catalog
+     * services a Vendor edit uses. Nothing is saved when both already match, so re-runs stay idempotent.
+     *
+     * @param  array<string, mixed>  $p
+     * @param  Collection<int|string, \stdClass>  $materials
+     */
+    private function syncComparability(array $p, string $listingId, User $owner, $materials): void
+    {
+        if ($p['mat'] === null) {
+            return;
+        }
+        $material = $materials[$p['mat']] ?? throw new RuntimeException('Unknown material '.$p['mat']);
+        $request = $this->requestFor($owner);
+        $current = DB::table('vendor_listings as l')->join('products as p', 'p.id', '=', 'l.product_id')->where('l.id', $listingId)->value('p.material_id');
+        if ((string) $current !== (string) $material->id) {
+            if ($material->regulated) {
+                throw new RuntimeException('Regulated material '.$p['mat'].' cannot be linked to an already published listing by the seeder.');
+            }
+            $this->catalog->update($request, $listingId, ['material_id' => (string) $material->id, 'material_category_id' => (string) $material->material_category_id,
+                'material_match' => 'EXACT', 'technical_attributes' => $p['attr'], 'lock_version' => $this->lock($listingId)]);
+        }
+
+        $wanted = [];
+        foreach ($p['v'] as $variant) {
+            $wanted[$variant['sku']] = $variant['attr'] ?? [];
+        }
+        $stored = DB::table('listing_variants')->where('vendor_listing_id', $listingId)->where('active', true)->orderBy('sort_order')->orderBy('id')
+            ->get(['id', 'sku', 'label', 'unit_id', 'pack_quantity', 'attributes', 'weight_kg', 'length_cm', 'width_cm', 'height_cm']);
+        $differs = $stored->contains(static function (object $row) use ($wanted): bool {
+            $attributes = json_decode((string) $row->attributes, true) ?: [];
+            $target = $wanted[$row->sku] ?? $attributes;
+            ksort($attributes);
+            ksort($target);
+
+            return array_map('strval', $attributes) !== array_map('strval', $target);
+        });
+        if (! $differs) {
+            return;
+        }
+        $rows = [];
+        foreach ($stored as $row) {
+            // The current ordinary price is passed back unchanged, so no price version is created.
+            $price = DB::table('listing_price_versions')->where('listing_variant_id', $row->id)->where('price_kind', 'ORDINARY')->whereNull('retired_at')
+                ->orderByDesc('version')->first(['amount_centavos', 'tax_category']);
+            if ($price === null) {
+                return;
+            }
+            $rows[] = ['id' => (string) $row->id, 'sku' => (string) $row->sku, 'label' => $row->label, 'unit_id' => (string) $row->unit_id, 'pack_quantity' => (string) $row->pack_quantity,
+                'attributes' => $wanted[$row->sku] ?? (json_decode((string) $row->attributes, true) ?: []), 'weight_kg' => $row->weight_kg, 'length_cm' => $row->length_cm,
+                'width_cm' => $row->width_cm, 'height_cm' => $row->height_cm, 'price_centavos' => (int) $price->amount_centavos, 'tax_category' => (string) $price->tax_category];
+        }
+        $this->catalog->saveVariants($request, $listingId, ['lock_version' => $this->lock($listingId), 'variants' => $rows]);
     }
 
     /**

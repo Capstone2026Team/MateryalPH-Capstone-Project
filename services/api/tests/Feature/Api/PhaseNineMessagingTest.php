@@ -196,6 +196,79 @@ final class PhaseNineMessagingTest extends TestCase
         $this->getJson($endpoint)->assertNotFound();
     }
 
+    public function test_buyer_can_read_a_thread_after_the_other_participant_is_deactivated(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Inactive staff thread');
+        $buyer = $this->buyer();
+        $id = $this->inquiry($store->id, $this->variantIds($listing)[0]);
+        $staff = $this->teamMember($store, 'CUSTOMER_SERVICE');
+        DB::table('conversations')->where('id', $id)->update(['handler_user_id' => $staff->id]);
+        app(ConversationService::class)->participant($id, (int) $staff->id, 'CUSTOMER_SERVICE');
+        app(ConversationService::class)->append(DB::table('conversations')->where('id', $id)->first(), $staff, 'A recorded reply.', 'TEXT');
+        DB::table('vendor_memberships')->where('user_id', $staff->id)->update(['status' => 'DEACTIVATED']);
+        $this->getJson('/api/v1/buyers/conversations/'.$id)->assertOk()->assertJsonPath('data.conversation.handler', null);
+        $this->getJson('/api/v1/buyers/conversations/'.$id)->assertOk()
+            ->assertJsonPath('data.messages.items.0.sender.role', 'CUSTOMER_SERVICE');
+        self::assertFalse(app(ConversationAccess::class)->allows($staff, DB::table('conversations')->where('id', $id)->first()));
+    }
+
+    public function test_inbox_query_count_does_not_grow_with_rows(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Batched inbox');
+        $counts = [];
+        foreach (range(1, 6) as $index) {
+            $this->buyer();
+            $this->inquiry($store->id, $this->variantIds($listing)[0]);
+            if (! in_array($index, [1, 6], true)) {
+                continue;
+            }
+            $this->signInStoreMember($owner);
+            DB::enableQueryLog();
+            $this->getJson('/api/v1/vendor/conversations')->assertOk()->assertJsonCount($index, 'data.items');
+            $counts[] = count(DB::getQueryLog());
+            DB::disableQueryLog();
+            DB::flushQueryLog();
+        }
+        self::assertLessThanOrEqual($counts[0] + 2, $counts[1]);
+        self::assertLessThan(40, $counts[1]);
+    }
+
+    public function test_message_page_query_count_does_not_grow_with_messages(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Batched messages');
+        $buyer = $this->buyer();
+        $id = $this->inquiry($store->id, $this->variantIds($listing)[0]);
+        $thread = DB::table('conversations')->where('id', $id)->first();
+        $counts = [];
+        foreach (range(1, 20) as $index) {
+            app(ConversationService::class)->append($thread, $buyer, 'Reply '.$index, 'TEXT');
+            if (! in_array($index, [1, 20], true)) {
+                continue;
+            }
+            DB::enableQueryLog();
+            $this->getJson('/api/v1/buyers/conversations/'.$id)->assertOk()->assertJsonCount($index, 'data.messages.items');
+            $counts[] = count(DB::getQueryLog());
+            DB::disableQueryLog();
+            DB::flushQueryLog();
+        }
+        self::assertLessThanOrEqual($counts[0] + 1, $counts[1]);
+        self::assertLessThan(60, $counts[1]);
+    }
+
+    public function test_store_still_opens_a_conversation_after_the_buyer_account_is_no_longer_active(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Inactive Buyer thread');
+        [$buyer] = $this->pickupOrder($store, $listing);
+        $main = $this->inquiry($store->id, $this->variantIds($listing)[0]);
+        DB::table('users')->where('id', $buyer->id)->update(['account_status' => 'SUSPENDED']);
+
+        $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/vendor/conversations/'.$main)->assertOk()
+            ->assertJsonPath('data.conversation.buyer.role', 'BUYER');
+        $this->getJson('/api/v1/vendor/conversations')->assertOk()
+            ->assertJsonPath('data.items.0.id', $main)->assertJsonPath('data.items.0.buyer.role', 'BUYER');
+    }
+
     public function test_grouped_project_navigation_never_exposes_another_handlers_threads(): void
     {
         [$store, $owner, $listing] = $this->pickupStore('Scoped grouped inquiries');

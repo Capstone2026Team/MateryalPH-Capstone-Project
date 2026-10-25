@@ -29,6 +29,8 @@ class VendorMaterialsAnalyticsApi {
   /// * [startDate]
   /// * [endDate]
   /// * [radiusKm] - Around your own verified store point (default 50 km). Any origin or competitor field is refused.
+  /// * [q]
+  /// * [categoryId]
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -43,6 +45,8 @@ class VendorMaterialsAnalyticsApi {
     Date? startDate,
     Date? endDate,
     int? radiusKm,
+    String? q,
+    String? categoryId,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -81,6 +85,8 @@ class VendorMaterialsAnalyticsApi {
       if (startDate != null) r'start_date': encodeQueryParameter(_serializers, startDate, const FullType(Date)),
       if (endDate != null) r'end_date': encodeQueryParameter(_serializers, endDate, const FullType(Date)),
       if (radiusKm != null) r'radius_km': encodeQueryParameter(_serializers, radiusKm, const FullType(int)),
+      if (q != null) r'q': encodeQueryParameter(_serializers, q, const FullType(String)),
+      if (categoryId != null) r'category_id': encodeQueryParameter(_serializers, categoryId, const FullType(String)),
     };
 
     final _response = await _dio.request<Object>(

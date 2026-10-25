@@ -75,6 +75,8 @@ class DiscoveryFilters {
     this.favoritesOnly = false,
     this.supplierType,
     this.categoryId,
+    this.directoryMinRating,
+    this.directoryMaxDistanceKm,
   });
 
   final bool includeVerified;
@@ -82,16 +84,20 @@ class DiscoveryFilters {
   final bool favoritesOnly;
   final String? supplierType;
   final String? categoryId;
+  final double? directoryMinRating;
+  final int? directoryMaxDistanceKm;
 
-  bool get tierSpecific =>
-      favoritesOnly || supplierType != null || categoryId != null;
+  /// Verified-only filters that hide Directory Suppliers. Favorites apply to both tiers.
+  bool get tierSpecific => supplierType != null || categoryId != null;
 
   int get activeCount =>
       (includeVerified ? 0 : 1) +
       (includeDirectory ? 0 : 1) +
       (favoritesOnly ? 1 : 0) +
       (supplierType != null ? 1 : 0) +
-      (categoryId != null ? 1 : 0);
+      (categoryId != null ? 1 : 0) +
+      (directoryMinRating != null ? 1 : 0) +
+      (directoryMaxDistanceKm != null ? 1 : 0);
 
   DiscoveryFilters copyWith({
     bool? includeVerified,
@@ -99,12 +105,20 @@ class DiscoveryFilters {
     bool? favoritesOnly,
     ValueGetter<String?>? supplierType,
     ValueGetter<String?>? categoryId,
+    ValueGetter<double?>? directoryMinRating,
+    ValueGetter<int?>? directoryMaxDistanceKm,
   }) => DiscoveryFilters(
     includeVerified: includeVerified ?? this.includeVerified,
     includeDirectory: includeDirectory ?? this.includeDirectory,
     favoritesOnly: favoritesOnly ?? this.favoritesOnly,
     supplierType: supplierType != null ? supplierType() : this.supplierType,
     categoryId: categoryId != null ? categoryId() : this.categoryId,
+    directoryMinRating: directoryMinRating != null
+        ? directoryMinRating()
+        : this.directoryMinRating,
+    directoryMaxDistanceKm: directoryMaxDistanceKm != null
+        ? directoryMaxDistanceKm()
+        : this.directoryMaxDistanceKm,
   );
 }
 
@@ -150,6 +164,8 @@ class SupplierResultView {
     this.deliveryMaximumKm,
     this.directoryAddress,
     this.directoryType,
+    this.googleRating,
+    this.googleRatingCount,
   });
 
   final String resultId;
@@ -180,6 +196,10 @@ class SupplierResultView {
   /// Google primary place type of a Directory Supplier, e.g. `hardware_store`.
   final String? directoryType;
 
+  /// Google-sourced Directory data; separate from MateryalPH scores.
+  final String? googleRating;
+  final int? googleRatingCount;
+
   bool get isVerified => tier == SupplierTier.verified;
 
   /// Label shown with the store name on the marker and list row.
@@ -209,6 +229,8 @@ class SupplierResultView {
     deliveryMaximumKm: deliveryMaximumKm,
     directoryAddress: directoryAddress,
     directoryType: directoryType,
+    googleRating: googleRating,
+    googleRatingCount: googleRatingCount,
   );
 }
 
@@ -482,12 +504,18 @@ class FavoriteSupplierView {
     required this.name,
     required this.scoreText,
     required this.currentlyDiscoverable,
+    this.tier = SupplierTier.verified,
   });
 
+  /// Verified Vendor id, Directory Supplier result id, or the saved Favorite id for a Directory
+  /// Favorite outside the current Google cache. Always accepted for removal.
   final String vendorId;
   final String name;
   final String scoreText;
   final bool currentlyDiscoverable;
+  final SupplierTier tier;
+
+  bool get isVerified => tier == SupplierTier.verified;
 }
 
 enum DiscoveryFailureKind {

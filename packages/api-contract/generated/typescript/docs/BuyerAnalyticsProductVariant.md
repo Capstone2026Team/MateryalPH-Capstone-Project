@@ -1,0 +1,54 @@
+
+# BuyerAnalyticsProductVariant
+
+
+## Properties
+
+Name | Type
+------------ | -------------
+`groupId` | string
+`displayName` | string
+`material` | [AnalyticsMaterialRef](AnalyticsMaterialRef.md)
+`category` | [AnalyticsCategoryRef](AnalyticsCategoryRef.md)
+`specification` | [ComparableSpecification](ComparableSpecification.md)
+`unit` | [AnalyticsUnit](AnalyticsUnit.md)
+`vendorCount` | number
+`listingCount` | number
+`price` | [AnalyticsPriceRange](AnalyticsPriceRange.md)
+`availability` | string
+`image` | [ListingImage](ListingImage.md)
+
+## Example
+
+```typescript
+import type { BuyerAnalyticsProductVariant } from '@materyalph/api-client-ts'
+
+// TODO: Update the object below with actual values
+const example = {
+  "groupId": null,
+  "displayName": null,
+  "material": null,
+  "category": null,
+  "specification": null,
+  "unit": null,
+  "vendorCount": null,
+  "listingCount": null,
+  "price": null,
+  "availability": null,
+  "image": null,
+} satisfies BuyerAnalyticsProductVariant
+
+console.log(example)
+
+// Convert the instance to a JSON string
+const exampleJSON: string = JSON.stringify(example)
+console.log(exampleJSON)
+
+// Parse the JSON string back to an object
+const exampleParsed = JSON.parse(exampleJSON) as BuyerAnalyticsProductVariant
+console.log(exampleParsed)
+```
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+

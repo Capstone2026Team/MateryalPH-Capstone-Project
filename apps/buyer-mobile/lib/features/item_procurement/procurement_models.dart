@@ -3,8 +3,9 @@ import 'package:flutter/foundation.dart';
 
 enum LoadPhase { needsOrigin, loading, ready, failed }
 
-/// Item-Based sorts. Browsing defaults to distance and a text query to Best Deal (SRS); Favorites
-/// First is a separate explicit choice that never changes Best Deal. Top Selling ranks by the card's
+/// Item-Based sorts. Browsing defaults to distance and a text query to Best Deal (SRS); Best Deal
+/// and Favorites First are offered only for a text query. Favorites First is a separate explicit
+/// choice that never changes Best Deal. Top Selling ranks by the card's
 /// "sold" figure (quantity on completed orders) and is offered on a store's own page.
 enum ListingSort {
   bestDeal,

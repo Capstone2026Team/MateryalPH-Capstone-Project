@@ -98,7 +98,8 @@ final class ComparableMappingService
             return ['status' => 'COMPARABLE', 'group_version_id' => $candidate, 'assignment_id' => (string) $current->id];
         }
         if ($current !== null) {
-            DB::table('listing_comparable_assignments')->where('id', $current->id)->update(['mapping_state' => 'RETIRED', 'effective_until' => DB::raw("GREATEST(clock_timestamp(), effective_from + interval '1 millisecond')"), 'updated_at' => now()]);
+            // The effective columns store whole seconds, so a remap within the mapping's own second still ends after it starts.
+            DB::table('listing_comparable_assignments')->where('id', $current->id)->update(['mapping_state' => 'RETIRED', 'effective_until' => DB::raw("GREATEST(clock_timestamp(), effective_from + interval '1 second')"), 'updated_at' => now()]);
         }
         if ($candidate === null) {
             return ['status' => 'NOT_YET_COMPARABLE', 'group_version_id' => null, 'assignment_id' => null];

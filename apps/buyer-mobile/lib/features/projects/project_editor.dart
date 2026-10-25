@@ -1,3 +1,4 @@
+import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import 'package:flutter/material.dart';
 import '../../design_system/components/buyer_app_bar.dart';
 import '../../design_system/components/peso_amount_field.dart';
@@ -15,7 +16,7 @@ class ProjectEditor extends StatefulWidget {
   });
   final ProjectsRepository repository;
   final Future<DiscoveryOrigin?> Function() chooseLocation;
-  final ProjectData? project;
+  final api.ProjectView? project;
   @override
   State<ProjectEditor> createState() => _ProjectEditorState();
 }
@@ -33,13 +34,13 @@ class _ProjectEditorState extends State<ProjectEditor> {
     super.initState();
     final p = widget.project;
     if (p == null) return;
-    _name.text = projectText(p['name']);
-    _budget.text = pesoFieldText(projectInt(p['budget_centavos']));
-    _start.text = projectText(p['starts_on']);
-    _end.text = projectText(p['ends_on']);
-    final site = projectRows(p['sites']).firstOrNull;
-    _location = projectObject(site?['point'])['location_id'] as String?;
-    _locationLabel = site?['name'] as String?;
+    _name.text = projectText(p.name);
+    _budget.text = pesoFieldText(projectInt(p.budgetCentavos));
+    _start.text = projectText(p.startsOn);
+    _end.text = projectText(p.endsOn);
+    final site = p.sites.firstOrNull;
+    _location = projectObject(site?.point)['location_id'] as String?;
+    _locationLabel = site?.name;
   }
 
   @override
@@ -103,9 +104,9 @@ class _ProjectEditorState extends State<ProjectEditor> {
         if (_location != null) 'location_id': _location,
       };
       final result = _editing
-          ? await widget.repository.update(projectText(widget.project!['id']), {
+          ? await widget.repository.update(projectText(widget.project!.id), {
               ...input,
-              'lock_version': widget.project!['lock_version'],
+              'lock_version': widget.project!.lockVersion,
             }, _key)
           : await widget.repository.create(input, _key);
       if (mounted) Navigator.of(context).pop(result);

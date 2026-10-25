@@ -9,6 +9,7 @@ use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Map and list discovery. One server response feeds both surfaces with one result identifier and one order:
@@ -40,13 +41,20 @@ final class SupplierDiscoveryService
     {
         $buyerId = $this->profiles->idFor($request);
         $scope = $this->scopes->forBuyer($buyerId, $input);
+        if (isset($input['directory_max_distance_km']) && (int) $input['directory_max_distance_km'] > $scope->radiusKm) {
+            throw ValidationException::withMessages(['directory_max_distance_km' => 'Choose a Directory distance within the selected radius.']);
+        }
         $includeVerified = (bool) ($input['include_verified'] ?? true);
-        $tierSpecific = (bool) ($input['favorites_only'] ?? false) || isset($input['supplier_type']) || isset($input['category_id']);
+        // Favorites apply to both tiers; supplier type and material category exist only for Verified Vendors.
+        $favoritesOnly = (bool) ($input['favorites_only'] ?? false);
+        $tierSpecific = isset($input['supplier_type']) || isset($input['category_id']);
         $includeDirectory = (bool) ($input['include_directory'] ?? true) && ! $tierSpecific;
 
         $verified = $includeVerified ? $this->verified($scope, $buyerId, $input)->get()->all() : [];
         $eligibleVerifiedCount = $this->withinScope($this->vendors->members(), $scope)->count();
-        $directory = $includeDirectory ? $this->directory->within($scope) : ['rows' => [], 'status' => $tierSpecific ? 'FILTERED_OUT' : 'HIDDEN', 'as_of' => null];
+        $directory = $includeDirectory
+            ? $this->directory->within($scope, isset($input['directory_min_rating']) ? (float) $input['directory_min_rating'] : null, isset($input['directory_max_distance_km']) ? (int) $input['directory_max_distance_km'] : null, $favoritesOnly ? $buyerId : null)
+            : ['rows' => [], 'status' => $tierSpecific ? 'FILTERED_OUT' : 'HIDDEN', 'as_of' => null];
 
         $merged = [];
         foreach ($verified as $row) {
@@ -62,13 +70,14 @@ final class SupplierDiscoveryService
         $slice = array_slice($merged, ($page - 1) * $perPage, $perPage);
         $summaries = $this->vendors->summaries(array_values(array_map(static fn (array $item): string => $item['id'], array_filter($slice, static fn (array $item): bool => $item['tier'] === self::TIER_VERIFIED))));
         $favorites = DB::table('favorite_vendors')->where('buyer_profile_id', $buyerId)->pluck('vendor_organization_id')->map(static fn (mixed $id): string => (string) $id)->flip()->all();
+        $favoritePlaces = DB::table('favorite_directory_suppliers')->where('buyer_profile_id', $buyerId)->pluck('google_place_id')->map(static fn (mixed $id): string => (string) $id)->flip()->all();
 
         $items = [];
         foreach ($slice as $offset => $item) {
             $rank = ($page - 1) * $perPage + $offset + 1;
             $items[] = $item['tier'] === self::TIER_VERIFIED
                 ? $this->verifiedItem($item, $summaries[$item['id']] ?? null, isset($favorites[$item['id']]), $rank)
-                : $this->directoryItem($item, $rank);
+                : $this->directoryItem($item, isset($favoritePlaces[(string) $item['row']->google_place_id]), $rank);
         }
         $items = array_values(array_filter($items));
         $next = $eligibleVerifiedCount < RadiusPolicy::expansionThreshold() ? RadiusPolicy::next((int) $scope->radiusKm) : null;
@@ -81,7 +90,8 @@ final class SupplierDiscoveryService
             'counts' => [
                 'verified_vendors' => count($verified),
                 'directory_suppliers' => count($directory['rows']),
-                'favorite_suppliers' => count(array_filter($verified, static fn (object $row): bool => isset($favorites[(string) $row->id]))),
+                'favorite_suppliers' => count(array_filter($verified, static fn (object $row): bool => isset($favorites[(string) $row->id])))
+                    + count(array_filter($directory['rows'], static fn (object $row): bool => isset($favoritePlaces[(string) $row->google_place_id]))),
             ],
             'directory' => ['status' => $directory['status'], 'as_of' => $directory['as_of'], 'attribution' => DirectorySupplierService::ATTRIBUTION,
                 'coverage_note' => 'Directory Suppliers come from Google Maps and are not a complete list of suppliers.'],
@@ -162,7 +172,7 @@ final class SupplierDiscoveryService
      * @param  array{tier: string, id: string, distance: float, row: object}  $item
      * @return array<string, mixed>
      */
-    private function directoryItem(array $item, int $rank): array
+    private function directoryItem(array $item, bool $favorite, int $rank): array
     {
         $row = $item['row'];
 
@@ -172,10 +182,11 @@ final class SupplierDiscoveryService
             'marker' => ['latitude' => round((float) $row->latitude, 5), 'longitude' => round((float) $row->longitude, 5)],
             'distance_meters' => (int) round($item['distance']),
             'score_label' => ['kind' => 'DIRECTORY', 'value' => null, 'text' => 'Directory'],
-            'is_favorite' => false,
+            'is_favorite' => $favorite,
             'vendor' => null,
             'directory' => ['formatted_address' => $row->formatted_address, 'primary_type' => $row->primary_type, 'source' => 'GOOGLE',
-                'refreshed_at' => Carbon::parse((string) $row->refreshed_at)->toIso8601String()],
+                'refreshed_at' => Carbon::parse((string) $row->refreshed_at)->toIso8601String(),
+                'google_rating' => $row->google_rating === null ? null : ['source' => 'GOOGLE', 'label' => 'Google rating', 'value' => number_format((float) $row->google_rating, 1, '.', ''), 'count' => $row->google_rating_count === null ? null : (int) $row->google_rating_count]],
         ];
     }
 }

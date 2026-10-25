@@ -1,5 +1,7 @@
 import 'terms_fixtures.dart';
+
 import 'package:materyalph/screens/terms_screen.dart';
+
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -13,6 +15,40 @@ import 'package:materyalph/onboarding/onboarding_repository.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart';
 
 void main() {
+  testWidgets('bootstrap storage failures leave Splash and show Welcome', (
+    tester,
+  ) async {
+    final store = _MemoryTokenStore()..failRead = true;
+    await tester.pumpWidget(
+      BuyerApp(
+        authRepository: AuthRepository(tokenStore: store),
+        onboardingRepository: _MemoryOnboardingRepository(),
+        deepLinkSource: _MemoryDeepLinkSource(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Welcome to'), findsOneWidget);
+    expect(store.clears, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'bootstrap onboarding failure clears the session and shows Welcome',
+    (tester) async {
+      final store = _MemoryTokenStore();
+      await tester.pumpWidget(
+        BuyerApp(
+          authRepository: AuthRepository(tokenStore: store),
+          onboardingRepository: _MemoryOnboardingRepository()..failRead = true,
+          deepLinkSource: _MemoryDeepLinkSource(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Welcome to'), findsOneWidget);
+      expect(store.clears, 1);
+      expect(tester.takeException(), isNull);
+    },
+  );
   for (final size in const [
     Size(320, 568),
     Size(375, 667),
@@ -104,7 +140,7 @@ void main() {
     );
   }
   test(
-    'stored tokens do not create an authenticated session while offline',
+    'stored tokens retain offline shell access until the session can be revalidated',
     () async {
       final tokenStore = _MemoryTokenStore()
         ..tokens = const AuthTokens(
@@ -131,7 +167,7 @@ void main() {
         apiClient: client,
       ).restoreSession();
 
-      expect(restored, isFalse);
+      expect(restored, isTrue);
       expect(tokenStore.tokens, isNotNull);
     },
   );
@@ -314,12 +350,20 @@ final class _MemoryDeepLinkSource implements DeepLinkSource {
 
 final class _MemoryTokenStore implements TokenStore {
   AuthTokens? tokens;
+  bool failRead = false;
+  int clears = 0;
 
   @override
-  Future<void> clear() async => tokens = null;
+  Future<void> clear() async {
+    clears++;
+    tokens = null;
+  }
 
   @override
-  Future<AuthTokens?> read() async => tokens;
+  Future<AuthTokens?> read() async {
+    if (failRead) throw StateError('Unavailable storage');
+    return tokens;
+  }
 
   @override
   Future<void> write(AuthTokens value) async => tokens = value;
@@ -330,10 +374,14 @@ final class _MemoryOnboardingRepository implements OnboardingRepository {
     : completeValue = complete;
 
   bool completeValue;
+  bool failRead = false;
 
   @override
   Future<void> complete() async => completeValue = true;
 
   @override
-  Future<bool> isComplete() async => completeValue;
+  Future<bool> isComplete() async {
+    if (failRead) throw StateError('Unavailable preferences');
+    return completeValue;
+  }
 }

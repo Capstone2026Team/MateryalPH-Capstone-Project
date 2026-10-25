@@ -76,6 +76,12 @@ class _$WorkPackageViewProjectStatusEnumSerializer
 
 class _$WorkPackageView extends WorkPackageView {
   @override
+  final String? selectedArrangementId;
+  @override
+  final String? procurementCandidateId;
+  @override
+  final BuiltList<BuiltMap<String, JsonObject?>>? vendorOrders;
+  @override
   final String id;
   @override
   final String projectId;
@@ -112,7 +118,10 @@ class _$WorkPackageView extends WorkPackageView {
       (WorkPackageViewBuilder()..update(updates))._build();
 
   _$WorkPackageView._(
-      {required this.id,
+      {this.selectedArrangementId,
+      this.procurementCandidateId,
+      this.vendorOrders,
+      required this.id,
       required this.projectId,
       required this.projectStatus,
       required this.name,
@@ -140,6 +149,9 @@ class _$WorkPackageView extends WorkPackageView {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is WorkPackageView &&
+        selectedArrangementId == other.selectedArrangementId &&
+        procurementCandidateId == other.procurementCandidateId &&
+        vendorOrders == other.vendorOrders &&
         id == other.id &&
         projectId == other.projectId &&
         projectStatus == other.projectStatus &&
@@ -161,6 +173,9 @@ class _$WorkPackageView extends WorkPackageView {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, selectedArrangementId.hashCode);
+    _$hash = $jc(_$hash, procurementCandidateId.hashCode);
+    _$hash = $jc(_$hash, vendorOrders.hashCode);
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, projectId.hashCode);
     _$hash = $jc(_$hash, projectStatus.hashCode);
@@ -184,6 +199,9 @@ class _$WorkPackageView extends WorkPackageView {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'WorkPackageView')
+          ..add('selectedArrangementId', selectedArrangementId)
+          ..add('procurementCandidateId', procurementCandidateId)
+          ..add('vendorOrders', vendorOrders)
           ..add('id', id)
           ..add('projectId', projectId)
           ..add('projectStatus', projectStatus)
@@ -207,6 +225,22 @@ class _$WorkPackageView extends WorkPackageView {
 class WorkPackageViewBuilder
     implements Builder<WorkPackageView, WorkPackageViewBuilder> {
   _$WorkPackageView? _$v;
+
+  String? _selectedArrangementId;
+  String? get selectedArrangementId => _$this._selectedArrangementId;
+  set selectedArrangementId(String? selectedArrangementId) =>
+      _$this._selectedArrangementId = selectedArrangementId;
+
+  String? _procurementCandidateId;
+  String? get procurementCandidateId => _$this._procurementCandidateId;
+  set procurementCandidateId(String? procurementCandidateId) =>
+      _$this._procurementCandidateId = procurementCandidateId;
+
+  ListBuilder<BuiltMap<String, JsonObject?>>? _vendorOrders;
+  ListBuilder<BuiltMap<String, JsonObject?>> get vendorOrders =>
+      _$this._vendorOrders ??= ListBuilder<BuiltMap<String, JsonObject?>>();
+  set vendorOrders(ListBuilder<BuiltMap<String, JsonObject?>>? vendorOrders) =>
+      _$this._vendorOrders = vendorOrders;
 
   String? _id;
   String? get id => _$this._id;
@@ -288,6 +322,9 @@ class WorkPackageViewBuilder
   WorkPackageViewBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _selectedArrangementId = $v.selectedArrangementId;
+      _procurementCandidateId = $v.procurementCandidateId;
+      _vendorOrders = $v.vendorOrders?.toBuilder();
       _id = $v.id;
       _projectId = $v.projectId;
       _projectStatus = $v.projectStatus;
@@ -327,6 +364,9 @@ class WorkPackageViewBuilder
     try {
       _$result = _$v ??
           _$WorkPackageView._(
+            selectedArrangementId: selectedArrangementId,
+            procurementCandidateId: procurementCandidateId,
+            vendorOrders: _vendorOrders?.build(),
             id: BuiltValueNullFieldError.checkNotNull(
                 id, r'WorkPackageView', 'id'),
             projectId: BuiltValueNullFieldError.checkNotNull(
@@ -354,6 +394,9 @@ class WorkPackageViewBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'vendorOrders';
+        _vendorOrders?.build();
+
         _$failedField = 'version';
         _version?.build();
         _$failedField = 'budget';

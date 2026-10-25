@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design_system/components/buyer_overlays.dart';
+import '../../design_system/components/page_dots.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/generated/color_tokens.dart';
 import '../../design_system/theme.dart';
@@ -1118,30 +1119,9 @@ class _GalleryState extends State<_Gallery> {
           ),
         ),
         if (widget.images.length > 1)
-          Semantics(
-            label: 'Photo ${_page + 1} of ${widget.images.length}',
-            excludeSemantics: true,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  for (var index = 0; index < widget.images.length; index++)
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 160),
-                      margin: const EdgeInsets.symmetric(horizontal: 3),
-                      width: index == _page ? 16 : 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: index == _page
-                            ? BuyerTheme.action
-                            : BuyerTheme.border,
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                    ),
-                ],
-              ),
-            ),
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: PageDots(count: widget.images.length, index: _page),
           ),
       ],
     );

@@ -1,3 +1,4 @@
+import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import 'package:flutter/material.dart';
 import '../../design_system/components/ranking_preferences_editor.dart';
 import 'projects_repository.dart';
@@ -10,16 +11,16 @@ class ProjectRankingPreferencesScreen extends StatelessWidget {
   });
   final ProjectsRepository repository;
   final VoidCallback? onChanged;
-  RankingPreferenceSnapshot _snapshot(ProjectData p) =>
+  RankingPreferenceSnapshot _snapshot(api.ProjectPreferences p) =>
       RankingPreferenceSnapshot(
         weights: projectObject(
-          p['weights'],
+          p.weights,
         ).map((key, value) => MapEntry(key, projectInt(value))),
         defaults: projectObject(
-          p['default_weights'],
+          p.defaultWeights,
         ).map((key, value) => MapEntry(key, projectInt(value))),
-        personalized: p['personalized'] == true,
-        version: projectInt(p['version']),
+        personalized: p.personalized == true,
+        version: projectInt(p.version),
       );
   @override
   Widget build(BuildContext context) => RankingPreferencesEditor(

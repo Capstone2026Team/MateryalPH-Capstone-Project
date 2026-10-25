@@ -251,6 +251,9 @@ erDiagram
     FAILED_JOBS {
         bigint id PK
     }
+    FAVORITE_DIRECTORY_SUPPLIERS {
+        uuid id PK
+    }
     FAVORITE_VENDORS {
         uuid id PK
     }
@@ -906,6 +909,7 @@ erDiagram
     BUYER_PROFILES ||--|{ CONVERSATIONS : "buyer_profile_id → id"
     BUYER_PROFILES ||--o{ DISPUTE_CASES : "buyer_profile_id → id"
     BUYER_PROFILES ||--o{ DISPUTE_PARTIES : "buyer_profile_id → id"
+    BUYER_PROFILES ||--|{ FAVORITE_DIRECTORY_SUPPLIERS : "buyer_profile_id → id"
     BUYER_PROFILES ||--|{ FAVORITE_VENDORS : "buyer_profile_id → id"
     BUYER_PROFILES ||--|{ INVOICE_REQUESTS : "buyer_profile_id → id"
     BUYER_PROFILES ||--|{ LISTING_VIEW_DAYS : "buyer_profile_id → id"

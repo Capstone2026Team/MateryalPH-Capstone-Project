@@ -99,36 +99,70 @@ class _BuyerAppState extends State<BuyerApp> {
     _deepLinkSource = widget.deepLinkSource ?? AppLinksDeepLinkSource();
     _linkSubscription = _deepLinkSource.links.listen(_handleDeepLink);
     _bootstrap();
+    _sessionRetry = Timer.periodic(
+      const Duration(seconds: 15),
+      (_) => unawaited(_retryOfflineSession()),
+    );
   }
 
   @override
   void dispose() {
     _linkSubscription?.cancel();
+    _sessionRetry?.cancel();
     _notifications.dispose();
     super.dispose();
   }
 
-  Future<void> _bootstrap() async {
-    final initialLink = await _deepLinkSource.getInitialLink();
-    if (initialLink != null && _isOidcCallback(initialLink)) {
-      await _handleDeepLink(initialLink);
+  Timer? _sessionRetry;
+  bool _revalidating = false;
+
+  Future<void> _retryOfflineSession() async {
+    if (_stage != _AppStage.home ||
+        !_authRepository.sessionOffline ||
+        _revalidating) {
       return;
     }
+    _revalidating = true;
+    try {
+      final restored = await _authRepository.revalidateSession();
+      if (mounted) {
+        setState(() {
+          if (!restored) _stage = _AppStage.welcome;
+        });
+      }
+    } finally {
+      _revalidating = false;
+    }
+  }
 
-    final results = await Future.wait([
-      _authRepository.restoreSession(),
-      _onboardingRepository.isComplete(),
-    ]);
-    if (!mounted) return;
-    final authenticated = results[0];
-    final onboardingComplete = results[1];
-    setState(() {
-      _stage = authenticated
-          ? _AppStage.home
-          : onboardingComplete
-          ? _AppStage.welcome
-          : _AppStage.onboarding;
-    });
+  Future<void> _bootstrap() async {
+    try {
+      final initialLink = await _deepLinkSource.getInitialLink();
+      if (initialLink != null && _isOidcCallback(initialLink)) {
+        await _handleDeepLink(initialLink);
+        return;
+      }
+
+      final results = await Future.wait([
+        _authRepository.restoreSession(),
+        _onboardingRepository.isComplete(),
+      ]);
+      if (!mounted) return;
+      final authenticated = results[0];
+      final onboardingComplete = results[1];
+      setState(() {
+        _stage = _authRepository.restorationFailed
+            ? _AppStage.welcome
+            : authenticated
+            ? _AppStage.home
+            : onboardingComplete
+            ? _AppStage.welcome
+            : _AppStage.onboarding;
+      });
+    } catch (_) {
+      await _authRepository.clearAccountSession();
+      if (mounted) setState(() => _stage = _AppStage.welcome);
+    }
   }
 
   Future<void> _completeOnboarding() async {

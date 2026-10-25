@@ -17,8 +17,8 @@ export function Panel({ title, description, actions, children, id }: { title: st
 export function Paged<T>({ state, empty, children, embedded = false }: { state: PagedState<T>; empty: string; children: (items: T[]) => ReactNode; embedded?: boolean }) {
   if (state.error) return <ErrorState message={state.error} onRetry={state.reload} />
   if (!state.data) return <LoadingState />
-  if (state.data.items.length === 0) return <p className={`text-center text-sm text-text-secondary ${embedded ? 'px-4 py-6' : 'rounded-surface border border-dashed border-border-default bg-surface-primary p-8'}`}>{empty}</p>
-  return <div className="grid gap-4">{children(state.data.items)}
+  const emptyContent = <p className={`text-center text-sm text-text-secondary ${embedded ? 'px-4 py-6' : 'rounded-surface border border-dashed border-border-default bg-surface-primary p-8'}`}>{empty}</p>
+  return <div className="grid gap-4">{state.data.items.length === 0 ? emptyContent : children(state.data.items)}
     {(state.page > 1 || state.data.hasMore) && <Pagination page={state.page} hasMore={state.data.hasMore} total={state.data.total} onChange={state.setPage} />}
   </div>
 }

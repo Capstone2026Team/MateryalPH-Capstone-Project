@@ -133,6 +133,166 @@ class BuyerSectionLabel extends StatelessWidget {
   );
 }
 
+/// One titled area of an account page: a tinted icon, a heading, a short purpose line, then the
+/// section's fields or details. Sections sit on the page surface and are separated by dividers.
+class BuyerAccountSection extends StatelessWidget {
+  const BuyerAccountSection({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.children,
+  });
+  final IconData icon;
+  final String title;
+  final String description;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: BuyerTheme.brandSoft,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, size: 22, color: BuyerTheme.action),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Semantics(
+                  header: true,
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: BuyerTheme.ink,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: BuyerTheme.muted,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 20),
+      ...children,
+    ],
+  );
+}
+
+/// Read-only account details in one outlined group, one row per detail.
+class BuyerDetailGroup extends StatelessWidget {
+  const BuyerDetailGroup({super.key, required this.rows});
+  final List<Widget> rows;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: BuyerTheme.border),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < rows.length; i++) ...[
+          if (i > 0) const Divider(height: 1, indent: 52),
+          rows[i],
+        ],
+      ],
+    ),
+  );
+}
+
+/// A labelled detail: the label above its value, an optional action on the right, and an
+/// optional action or note underneath.
+class BuyerDetailRow extends StatelessWidget {
+  const BuyerDetailRow({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.valueMuted = false,
+    this.trailing,
+    this.footer,
+  });
+  final IconData icon;
+  final String label;
+  final String value;
+
+  /// Shows [value] as supporting text, for a placeholder or a hidden detail.
+  final bool valueMuted;
+  final Widget? trailing;
+  final Widget? footer;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, 14, trailing == null ? 16 : 4, 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Icon(icon, size: 20, color: BuyerTheme.muted),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: text.labelMedium?.copyWith(
+                    color: BuyerTheme.muted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                valueMuted
+                    ? Text(
+                        value,
+                        style: text.bodyMedium?.copyWith(
+                          color: BuyerTheme.muted,
+                          height: 1.45,
+                        ),
+                      )
+                    : SelectableText(
+                        value,
+                        style: text.bodyLarge?.copyWith(
+                          color: BuyerTheme.ink,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                ?footer,
+              ],
+            ),
+          ),
+          if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+        ],
+      ),
+    );
+  }
+}
+
 class BuyerIdentity extends StatelessWidget {
   const BuyerIdentity({
     super.key,

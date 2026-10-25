@@ -15,7 +15,7 @@ Method | HTTP request | Description
 
 
 # **exportVendorMaterialsAnalytics**
-> Uint8List exportVendorMaterialsAnalytics(presetDays, startDate, endDate, radiusKm)
+> Uint8List exportVendorMaterialsAnalytics(presetDays, startDate, endDate, radiusKm, q, categoryId)
 
 
 
@@ -38,9 +38,11 @@ final int presetDays = 56; // int |
 final Date startDate = 2013-10-20; // Date |
 final Date endDate = 2013-10-20; // Date |
 final int radiusKm = 56; // int | Around your own verified store point (default 50 km). Any origin or competitor field is refused.
+final String q = q_example; // String |
+final String categoryId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 
 try {
-    final response = api.exportVendorMaterialsAnalytics(presetDays, startDate, endDate, radiusKm);
+    final response = api.exportVendorMaterialsAnalytics(presetDays, startDate, endDate, radiusKm, q, categoryId);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling VendorMaterialsAnalyticsApi->exportVendorMaterialsAnalytics: $e\n');
@@ -55,6 +57,8 @@ Name | Type | Description  | Notes
  **startDate** | **Date**|  | [optional]
  **endDate** | **Date**|  | [optional]
  **radiusKm** | **int**| Around your own verified store point (default 50 km). Any origin or competitor field is refused. | [optional]
+ **q** | **String**|  | [optional]
+ **categoryId** | **String**|  | [optional]
 
 ### Return type
 

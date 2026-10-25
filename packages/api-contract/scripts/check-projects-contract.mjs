@@ -33,6 +33,8 @@ for (const route of routes.filter(route => /buyers\/(projects|work-packages|proj
   for (const method of route.method.split('|').filter(method => method !== 'HEAD')) assert.ok(expected.has(`${method} ${route.uri.replace(/\{[^}]+\}/g, '{}')}`), `Undocumented Project route ${route.uri}`)
 }
 const schemas = spec.components.schemas
+for (const field of ['selected_arrangement_id', 'procurement_candidate_id', 'vendor_orders']) assert.ok(schemas.WorkPackageView.properties[field], 'Work Package detail must retain procurement resume fields')
+assert.ok(schemas.ProjectSeparatePurchase.properties.load, 'Typed separate purchases retain delivery material classification')
 assert.match(schemas.ProjectPreferenceSave.properties.weights.description, /persisted unchanged/)
 assert.match(spec.paths['/buyers/project-ranking-preferences'].put.description, /WEIGHTS_ALL_ZERO/)
 // Owner request 2026-10-17: 50 km is the only Project-Based radius, optional on every request that used to choose one.

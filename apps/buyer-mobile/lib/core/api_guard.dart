@@ -5,7 +5,7 @@ import '../features/map_discovery/discovery_models.dart';
 
 /// Centralized mapping from `/api/v1` failures to [DiscoveryFailure]: stable error codes, safe
 /// messages and details from the canonical `{data, meta, errors}` envelope. Raw exceptions, stack
-/// traces and provider payloads never reach the UI. A 401 ends the local session exactly once.
+/// traces and provider payloads never reach the UI. Auth refresh runs before this mapper.
 final class ApiGuard {
   const ApiGuard(this._onSessionExpired);
 
@@ -80,6 +80,12 @@ final class ApiGuard {
       );
     }
     if (status == 401) {
+      if (error.requestOptions.extra['buyerRetried'] == true) {
+        return const DiscoveryFailure(
+          DiscoveryFailureKind.forbidden,
+          'This request could not be authorized. Please retry.',
+        );
+      }
       await _onSessionExpired();
       return const DiscoveryFailure(
         DiscoveryFailureKind.sessionExpired,

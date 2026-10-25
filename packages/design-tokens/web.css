@@ -5,6 +5,11 @@
   --mp-color-brand-orange-300: #FDBA74;
   --mp-color-brand-orange-500: #F97316;
   --mp-color-brand-orange-600: #EA580C;
+  --mp-color-map-tier2-fill: #C2410C;
+  --mp-color-map-tier1-outline: #475569;
+  --mp-color-map-favorite-ring: #D4A017;
+  --mp-color-map-cluster-tier2: #C2410C;
+  --mp-color-map-cluster-tier1: #475569;
   --mp-color-action-primary: #C2410C;
   --mp-color-action-primary-pressed: #9A3412;
   --mp-color-text-strong: #1F2937;
@@ -65,6 +70,11 @@
   --color-brand-orange-300: var(--mp-color-brand-orange-300);
   --color-brand-orange-500: var(--mp-color-brand-orange-500);
   --color-brand-orange-600: var(--mp-color-brand-orange-600);
+  --color-map-tier2-fill: var(--mp-color-map-tier2-fill);
+  --color-map-tier1-outline: var(--mp-color-map-tier1-outline);
+  --color-map-favorite-ring: var(--mp-color-map-favorite-ring);
+  --color-map-cluster-tier2: var(--mp-color-map-cluster-tier2);
+  --color-map-cluster-tier1: var(--mp-color-map-cluster-tier1);
   --color-action-primary: var(--mp-color-action-primary);
   --color-action-primary-pressed: var(--mp-color-action-primary-pressed);
   --color-text-strong: var(--mp-color-text-strong);

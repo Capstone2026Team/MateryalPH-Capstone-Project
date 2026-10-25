@@ -75,7 +75,7 @@ for (const name of ['InvoiceRecordView', 'VendorOrderInvoices', 'DisputeDetail',
 }
 assert.ok(s.OrderDetail.properties.available_actions.items.enum.includes('FILE_DISPUTE') && s.OrderDetail.properties.available_actions.items.enum.includes('REQUEST_INVOICE'))
 assert.ok(s.OrderDetail.properties.dispute && s.OrderDetail.properties.invoice && s.VendorOrderPermissions.properties.can_upload_invoice)
-assert.match(spec.info.version, /phase\.(1[3-9]|20)$/)
+assert.match(spec.info.version, /(?:phase\.(1[3-9]|20)|audit\.2026-10-24)$/)
 // PHP must receive arrays even when only one line or upload is selected.
 for (const audience of ['buyer', 'vendor']) {
   const dart = readFileSync(new URL(`../generated/dart/lib/src/api/${audience}_disputes_api.dart`, import.meta.url), 'utf8')

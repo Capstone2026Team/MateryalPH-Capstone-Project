@@ -51,6 +51,8 @@ void main() {
     displayName: name,
     materialName: 'Concrete hollow block',
     categoryName: 'Masonry',
+    categoryId: 'cat-masonry',
+    categoryCode: 'MASONRY',
     unitName: 'Piece',
     specification: const ['DemoBlock', 'thickness mm: 100'],
     startPoint: const AnalyticsPointView(
@@ -111,6 +113,140 @@ void main() {
       ),
   ];
 
+  // Product-level fixtures: a realistic overview, one category table and one product.
+  AnalyticsCategorySummaryView summary(
+    String name,
+    String code,
+    int products,
+  ) => AnalyticsCategorySummaryView(
+    id: 'cat-$code',
+    name: name,
+    code: code,
+    productCount: products,
+    variantCount: products * 2,
+  );
+  AnalyticsProductView product(
+    String id,
+    String name,
+    String category,
+    String code, {
+    required bool regulated,
+    required String unit,
+    required int variants,
+    required int vendors,
+    PriceRangeView price = const PriceRangeView(),
+  }) => AnalyticsProductView(
+    materialId: id,
+    name: name,
+    categoryId: 'cat-$code',
+    categoryName: category,
+    categoryCode: code,
+    regulated: regulated,
+    unitName: unit,
+    variantCount: variants,
+    vendorCount: vendors,
+    price: price,
+  );
+  final chb = product(
+    'm-chb',
+    'Concrete hollow block',
+    'Masonry',
+    'MASONRY',
+    regulated: false,
+    unit: 'Piece',
+    variants: 2,
+    vendors: 6,
+    price: const PriceRangeView(min: '16.50', median: '18.42', max: '26.10'),
+  );
+  final productsPage = AnalyticsProductsPage(
+    envelope: envelope,
+    categories: [
+      summary('Cement and Concrete', 'CEMENT_AND_CONCRETE', 2),
+      summary('Masonry', 'MASONRY', 1),
+      summary('Ready-Mixed Concrete', 'READY_MIXED_CONCRETE', 1),
+      summary('Steel and Reinforcement', 'STEEL_AND_REINFORCEMENT', 2),
+      summary('Electrical Supplies', 'ELECTRICAL_SUPPLIES', 3),
+      summary('Paints and Finishes', 'PAINTS_AND_FINISHES', 4),
+    ],
+    items: [
+      product(
+        'm-portland',
+        'Portland cement',
+        'Cement and Concrete',
+        'CEMENT_AND_CONCRETE',
+        regulated: true,
+        unit: 'Bag',
+        variants: 4,
+        vendors: 5,
+        price: const PriceRangeView(
+          min: '238.00',
+          median: '252.50',
+          max: '275.00',
+        ),
+      ),
+      product(
+        'm-blended',
+        'Blended cement',
+        'Cement and Concrete',
+        'CEMENT_AND_CONCRETE',
+        regulated: true,
+        unit: 'Bag',
+        variants: 2,
+        vendors: 1,
+        price: const PriceRangeView(
+          min: '229.00',
+          median: '229.00',
+          max: '229.00',
+        ),
+      ),
+      chb,
+      product(
+        'm-latex',
+        'Latex paint',
+        'Paints and Finishes',
+        'PAINTS_AND_FINISHES',
+        regulated: false,
+        unit: 'Gallon (3.785 L can)',
+        variants: 3,
+        vendors: 0,
+      ),
+    ],
+    notYetComparable: 117,
+  );
+  final productDetail = AnalyticsProductDetailView(
+    envelope: envelope,
+    product: chb,
+    description:
+        'Load-bearing and partition masonry unit sold by the piece; size is the wall thickness.',
+    featured: rows.first,
+    series: series,
+    variants: [
+      for (final (index, row) in rows.indexed)
+        AnalyticsProductVariantView(
+          groupId: row.groupId,
+          displayName: row.displayName,
+          materialName: row.materialName,
+          specification: row.specification,
+          unitName: row.unitName,
+          vendorCount: row.currentVendors,
+          listingCount: row.currentListings,
+          price: index == 0
+              ? const PriceRangeView(
+                  min: '16.50',
+                  median: '18.40',
+                  max: '19.75',
+                )
+              : const PriceRangeView(
+                  min: '26.10',
+                  median: '26.10',
+                  max: '26.10',
+                ),
+          availability: index == 0 ? 'IN_STOCK' : 'LIMITED_STOCK',
+          categoryCode: 'MASONRY',
+        ),
+    ],
+  );
+
   Future<void> capture(
     WidgetTester tester,
     String name,
@@ -139,33 +275,97 @@ void main() {
     );
   }
 
-  testWidgets('materials analytics list', (tester) async {
-    final repository = FakeAnalyticsRepository()
-      ..page = MaterialsAnalyticsPage(envelope: envelope, items: rows);
+  testWidgets('materials analytics overview', (tester) async {
     await capture(
       tester,
       '390-materials-analytics',
       MaterialsAnalyticsScreen(
-        repository: repository,
+        repository: FakeAnalyticsRepository()..productsPage = productsPage,
         origin: origin,
-        radiusKm: 10,
         onOpenListing: (_, _) {},
       ),
     );
   });
 
-  testWidgets('materials analytics list at 320 px with 2x text', (
+  testWidgets('materials analytics overview at 320 px with 2x text', (
     tester,
   ) async {
-    final repository = FakeAnalyticsRepository()
-      ..page = MaterialsAnalyticsPage(envelope: envelope, items: rows);
     await capture(
       tester,
       '320-materials-analytics-2x-text',
       MaterialsAnalyticsScreen(
-        repository: repository,
+        repository: FakeAnalyticsRepository()..productsPage = productsPage,
         origin: origin,
-        radiusKm: 10,
+        onOpenListing: (_, _) {},
+      ),
+      scale: 2,
+      width: 320,
+    );
+  });
+
+  testWidgets('materials analytics product table', (tester) async {
+    await capture(
+      tester,
+      '390-materials-analytics-products',
+      MaterialsAnalyticsProductsScreen(
+        repository: FakeAnalyticsRepository()..productsPage = productsPage,
+        origin: origin,
+        place: 'Quezon City site',
+        window: const AnalyticsWindowChoice.preset(30),
+        title: 'All materials',
+        onOpenListing: (_, _) {},
+      ),
+    );
+  });
+
+  testWidgets('materials analytics product table at 320 px with 2x text', (
+    tester,
+  ) async {
+    await capture(
+      tester,
+      '320-materials-analytics-products-2x-text',
+      MaterialsAnalyticsProductsScreen(
+        repository: FakeAnalyticsRepository()..productsPage = productsPage,
+        origin: origin,
+        place: 'Quezon City site',
+        window: const AnalyticsWindowChoice.preset(30),
+        title: 'All materials',
+        onOpenListing: (_, _) {},
+      ),
+      scale: 2,
+      width: 320,
+    );
+  });
+
+  testWidgets('materials analytics product', (tester) async {
+    await capture(
+      tester,
+      '390-materials-analytics-product',
+      MaterialsAnalyticsProductScreen(
+        repository: FakeAnalyticsRepository()..productDetail = productDetail,
+        origin: origin,
+        place: 'Quezon City site',
+        window: const AnalyticsWindowChoice.preset(30),
+        materialId: 'm-chb',
+        name: 'Concrete hollow block',
+        onOpenListing: (_, _) {},
+      ),
+    );
+  });
+
+  testWidgets('materials analytics product at 320 px with 2x text', (
+    tester,
+  ) async {
+    await capture(
+      tester,
+      '320-materials-analytics-product-2x-text',
+      MaterialsAnalyticsProductScreen(
+        repository: FakeAnalyticsRepository()..productDetail = productDetail,
+        origin: origin,
+        place: 'Quezon City site',
+        window: const AnalyticsWindowChoice.preset(30),
+        materialId: 'm-chb',
+        name: 'Concrete hollow block',
         onOpenListing: (_, _) {},
       ),
       scale: 2,

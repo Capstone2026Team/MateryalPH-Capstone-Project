@@ -27,5 +27,11 @@ void main() {
       // TODO
     });
 
+    // Google-sourced rating for Directory Suppliers only. Never VPS.
+    // GoogleRating googleRating
+    test('to test the property `googleRating`', () async {
+      // TODO
+    });
+
   });
 }

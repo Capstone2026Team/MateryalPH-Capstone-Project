@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design_system/components/buyer_app_bar.dart';
+import '../../design_system/components/category_tile.dart';
+import '../../core/foreground_refresh.dart';
 import '../../design_system/components/discovery_controls.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
@@ -34,7 +36,11 @@ class ExploreScreen extends StatefulWidget {
   State<ExploreScreen> createState() => _ExploreScreenState();
 }
 
-class _ExploreScreenState extends State<ExploreScreen> {
+class _ExploreScreenState extends State<ExploreScreen>
+    with ForegroundRefresh<ExploreScreen> {
+  @override
+  Future<bool> refreshInForeground() => _controller.revalidateSummary();
+
   late final ScrollController _scroll = ScrollController(
     initialScrollOffset: widget.controller.exploreScrollOffset,
   );
@@ -262,125 +268,45 @@ class _ExploreScreenState extends State<ExploreScreen> {
         ? null
         : _controller.summary;
     if (_controller.origin == null) return const SizedBox.shrink();
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final scale = MediaQuery.textScalerOf(context).scale(1);
-        final minimum = scale > 1.3 ? 150.0 : 100.0;
-        final columns = (constraints.maxWidth / minimum).floor().clamp(1, 8);
-        final width = (constraints.maxWidth - (columns - 1) * 10) / columns;
-        if (summary == null) {
-          return Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              for (var index = 0; index < 6; index++)
-                SizedBox(width: width, child: const SkeletonBox(height: 104)),
-            ],
-          );
-        }
-        return Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            SizedBox(
-              width: width,
-              child: _CategoryTile(
-                name: 'All',
-                icon: LucideIcons.layoutGrid,
-                vendorListings: summary.vendorListings,
-                onTap: () => _openCategory(),
-              ),
-            ),
-            for (final category in summary.categories)
-              SizedBox(
-                width: width,
-                child: _CategoryTile(
-                  name: category.name,
-                  icon: categoryIcon(category.code),
-                  vendorListings: category.vendorListings,
-                  onTap: () => _openCategory(category),
-                ),
-              ),
-          ],
-        );
-      },
+    if (summary == null) {
+      return CategoryTileGrid(
+        children: [
+          for (var index = 0; index < 6; index++)
+            const SkeletonBox(height: 104),
+        ],
+      );
+    }
+    CategoryTile tile(
+      String name,
+      IconData icon,
+      int listings,
+      VoidCallback onTap,
+    ) => CategoryTile(
+      name: name,
+      icon: icon,
+      countLabel: '$listings listing${listings == 1 ? '' : 's'}',
+      semanticsLabel:
+          '$name, $listings Vendor listing${listings == 1 ? '' : 's'}',
+      onTap: onTap,
+    );
+    return CategoryTileGrid(
+      children: [
+        tile(
+          'All',
+          LucideIcons.layoutGrid,
+          summary.vendorListings,
+          _openCategory,
+        ),
+        for (final category in summary.categories)
+          tile(
+            category.name,
+            categoryIcon(category.code),
+            category.vendorListings,
+            () => _openCategory(category),
+          ),
+      ],
     );
   }
-}
-
-class _CategoryTile extends StatelessWidget {
-  const _CategoryTile({
-    required this.name,
-    required this.icon,
-    required this.vendorListings,
-    required this.onTap,
-  });
-
-  final String name;
-  final IconData icon;
-  final int vendorListings;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    container: true,
-    button: true,
-    label:
-        '$name, $vendorListings Vendor listing${vendorListings == 1 ? '' : 's'}',
-    excludeSemantics: true,
-    child: Material(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: const BorderSide(color: BuyerTheme.border),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 104),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(8, 12, 8, 10),
-            child: Column(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: const BoxDecoration(
-                    color: BuyerTheme.brandSoft,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, size: 22, color: BuyerTheme.actionPressed),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: MediaQuery.textScalerOf(context).scale(12) * 1.25 * 2,
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    child: Text(
-                      name,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        height: 1.25,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-                Text(
-                  '$vendorListings listing${vendorListings == 1 ? '' : 's'}',
-                  style: const TextStyle(fontSize: 11, color: BuyerTheme.muted),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
 }
 
 IconData categoryIcon(String code) => switch (code) {

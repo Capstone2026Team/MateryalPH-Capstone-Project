@@ -1,3 +1,4 @@
+import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
@@ -7,9 +8,11 @@ typedef SpecificationDetail = ({String label, String value, String? unit});
 
 /// Reads `{code, label, value, unit_code}` rows from an API response.
 List<SpecificationDetail> specificationDetails(Object? rows) => [
-  if (rows is List)
+  if (rows is Iterable)
     for (final row in rows)
-      if (row is Map && '${row['value'] ?? ''}'.trim().isNotEmpty)
+      if (row is api.ProjectSpecificationDetail && row.value.trim().isNotEmpty)
+        (label: row.label, value: row.value, unit: row.unitCode)
+      else if (row is Map && '${row['value'] ?? ''}'.trim().isNotEmpty)
         (
           label: '${row['label'] ?? row['code'] ?? ''}',
           value: '${row['value']}',

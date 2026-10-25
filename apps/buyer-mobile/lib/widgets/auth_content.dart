@@ -25,6 +25,54 @@ class AuthContent extends StatelessWidget {
   );
 }
 
+/// A password input with a lock icon and a show/hide toggle. Never autocorrected or suggested.
+class PasswordField extends StatefulWidget {
+  const PasswordField({
+    super.key,
+    required this.controller,
+    required this.label,
+    this.enabled = true,
+    this.helper,
+    this.autofillHints,
+    this.onSubmitted,
+  });
+  final TextEditingController controller;
+  final String label;
+  final bool enabled;
+  final String? helper;
+  final Iterable<String>? autofillHints;
+  final ValueChanged<String>? onSubmitted;
+
+  @override
+  State<PasswordField> createState() => _PasswordFieldState();
+}
+
+class _PasswordFieldState extends State<PasswordField> {
+  bool _obscure = true;
+
+  @override
+  Widget build(BuildContext context) => TextField(
+    controller: widget.controller,
+    enabled: widget.enabled,
+    obscureText: _obscure,
+    autocorrect: false,
+    enableSuggestions: false,
+    autofillHints: widget.autofillHints,
+    onSubmitted: widget.onSubmitted,
+    decoration: InputDecoration(
+      labelText: widget.label,
+      helperText: widget.helper,
+      helperMaxLines: 3,
+      prefixIcon: const Icon(LucideIcons.lock),
+      suffixIcon: IconButton(
+        tooltip: _obscure ? 'Show password' : 'Hide password',
+        onPressed: () => setState(() => _obscure = !_obscure),
+        icon: Icon(_obscure ? LucideIcons.eye : LucideIcons.eyeOff),
+      ),
+    ),
+  );
+}
+
 class AuthNotice extends StatelessWidget {
   const AuthNotice({super.key, required this.message, this.isError = false});
   final String message;

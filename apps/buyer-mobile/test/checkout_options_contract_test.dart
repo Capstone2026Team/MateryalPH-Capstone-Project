@@ -55,7 +55,7 @@ void main() {
       );
       // No separately injected Projects repository is needed by a checkout using the API Orders repository.
       final page = await orders.projects.list();
-      expect(page['items'], isEmpty);
+      expect(page.items, isEmpty);
       expect(sent!.path, '/buyers/projects');
       expect(sent!.headers['Authorization'], 'Bearer checkout-project-fixture');
       expect(expired, isFalse);

@@ -6,6 +6,7 @@ import 'package:materyalph/features/map_discovery/discovery_controller.dart';
 import 'package:materyalph/features/map_discovery/discovery_models.dart';
 import 'package:materyalph/features/map_discovery/map_geometry.dart';
 import 'package:materyalph/features/map_discovery/map_home_screen.dart';
+import 'package:materyalph/features/map_discovery/supplier_browsing.dart';
 import 'package:materyalph/features/map_discovery/supplier_map.dart';
 
 import 'map_discovery_fakes.dart';
@@ -22,7 +23,7 @@ void main() {
     });
 
     test(
-      'clusters when zoomed out, separates from zoom 14 and never hides the selection',
+      'clusters when zoomed out, separates from zoom 13.5 and never hides the selection',
       () {
         final items = [
           verifiedSupplier(
@@ -53,7 +54,10 @@ void main() {
             '3 suppliers in this area: 2 Verified Vendors and 1 Directory Supplier',
           ),
         );
-        expect(clusterSuppliers(items, 15), hasLength(3));
+        expect(clusterSuppliers(items, 13.5), hasLength(3));
+        expect(MapGroup(items).id, MapGroup(items.reversed.toList()).id);
+        expect(clusterCellSize(10), 64);
+        expect(clusterCellSize(13), 36);
         final withSelection = clusterSuppliers(items, 10, selectedId: 'b');
         expect(
           withSelection
@@ -226,16 +230,30 @@ void main() {
       },
     );
 
-    test('favorites apply only to Verified Vendors', () async {
-      final repository = FakeDiscoveryRepository();
-      final controller = DiscoveryController(repository: repository);
-      await controller.initialize();
-      await controller.toggleFavorite(controller.items.last);
-      expect(repository.favoriteChanges, isEmpty);
-      await controller.toggleFavorite(controller.items.first);
-      expect(repository.favoriteChanges, [('v-1', true)]);
-      expect(controller.items.first.isFavorite, isTrue);
-    });
+    test(
+      'Verified Vendors and Directory Suppliers can both be favorites',
+      () async {
+        final repository = FakeDiscoveryRepository();
+        final controller = DiscoveryController(repository: repository);
+        await controller.initialize();
+        final directory = controller.items.last;
+        expect(directory.isVerified, isFalse);
+        await controller.toggleFavorite(directory);
+        expect(repository.favoriteChanges, [(directory.resultId, true)]);
+        expect(controller.items.last.isFavorite, isTrue);
+        await controller.toggleFavorite(controller.items.first);
+        expect(repository.favoriteChanges.last, ('v-1', true));
+        expect(controller.items.first.isFavorite, isTrue);
+        expect(
+          browseSuppliers(
+            controller.items,
+            view: SupplierListView.favorites,
+            sort: SupplierListSort.nearest,
+          ).map((item) => item.resultId),
+          containsAll(['v-1', directory.resultId]),
+        );
+      },
+    );
   });
 
   group('Map Home', () {
@@ -398,29 +416,82 @@ void main() {
     });
 
     testWidgets(
-      'the list and map receive the same suppliers in the same order',
+      'the supplier tabs browse both tiers from the map without an All section',
       (tester) async {
         final (_, map) = await pumpMapHome(tester);
         expect(map.last.items.map((item) => item.resultId), ['v-1', 'd-1']);
-        final listed =
-            tester
-                .widgetList<Text>(find.text('Sampaloc Lumber Hardware'))
-                .length +
-            tester
-                .widgetList<Text>(find.text('Panda Construction Supply'))
-                .length;
-        expect(listed, 2);
-        expect(
-          tester.getTopLeft(find.text('Sampaloc Lumber Hardware')).dy,
-          lessThan(
-            tester.getTopLeft(find.text('Panda Construction Supply')).dy,
-          ),
-        );
+        expect(find.widgetWithText(ChoiceChip, 'All'), findsNothing);
+        expect(find.text('Sampaloc Lumber Hardware'), findsOneWidget);
+        expect(find.text('Panda Construction Supply'), findsNothing);
+        await tester.tap(find.byKey(const ValueKey('supplier-view-directory')));
+        await tester.pumpAndSettle();
+        expect(find.text('Sampaloc Lumber Hardware'), findsNothing);
+        expect(find.text('Panda Construction Supply'), findsOneWidget);
         expect(
           find.textContaining('°'),
           findsNothing,
           reason: 'No weather widget.',
         );
+      },
+    );
+
+    testWidgets('Directory-only filters move the list to the Directory tab', (
+      tester,
+    ) async {
+      await pumpMapHome(tester);
+      await tester.tap(find.byTooltip('Filters'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Show Verified Vendors'));
+      await tester.scrollUntilVisible(
+        find.text('Apply'),
+        150,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Apply'));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('supplier-view-verified')),
+        findsNothing,
+      );
+      expect(find.textContaining(' Verified ·'), findsNothing);
+      expect(
+        tester
+            .widget<ChoiceChip>(
+              find.byKey(const ValueKey('supplier-view-directory')),
+            )
+            .selected,
+        isTrue,
+      );
+      expect(find.text('Panda Construction Supply'), findsOneWidget);
+    });
+
+    testWidgets(
+      'hot reload rebuilds the supplier list with the current view type',
+      (tester) async {
+        await pumpMapHome(tester);
+        await tester.tap(find.byKey(const ValueKey('supplier-view-directory')));
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .widget<ChoiceChip>(
+                find.byKey(const ValueKey('supplier-view-directory')),
+              )
+              .selected,
+          isTrue,
+        );
+        tester.binding.buildOwner!.reassemble(tester.binding.rootElement!);
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .widget<ChoiceChip>(
+                find.byKey(const ValueKey('supplier-view-verified')),
+              )
+              .selected,
+          isTrue,
+        );
+        expect(find.text('Sampaloc Lumber Hardware'), findsOneWidget);
+        expect(tester.takeException(), isNull);
       },
     );
 
@@ -481,11 +552,20 @@ void main() {
           'Add to Cart',
           'Order',
           'Review',
-          'Save as Favorite Supplier',
         ]) {
           expect(find.text(forbidden), findsNothing);
         }
-        expect(find.byTooltip('Save as Favorite Supplier'), findsNothing);
+        // A Directory Supplier can be saved as a Favorite but stays informational.
+        expect(find.byTooltip('Save as Favorite Supplier'), findsOneWidget);
+        await tester.ensureVisible(find.byTooltip('Save as Favorite Supplier'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byTooltip('Save as Favorite Supplier'));
+        await tester.pumpAndSettle();
+        expect(repository.favoriteChanges, [('d-1', true)]);
+        expect(
+          find.byTooltip('Remove from Favorite Suppliers'),
+          findsOneWidget,
+        );
         expect(find.byTooltip('Message this store'), findsNothing);
         expect(find.textContaining('VPS'), findsNothing);
       },
@@ -529,6 +609,7 @@ void main() {
         100,
         scrollable: find.byType(Scrollable).last,
       );
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Search within 10 km'));
       await tester.pumpAndSettle();
       expect(find.text('Search within 10 km?'), findsOneWidget);

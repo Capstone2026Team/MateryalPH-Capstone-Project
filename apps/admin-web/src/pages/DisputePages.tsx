@@ -65,6 +65,8 @@ export function AdminDisputeCasePage() {
   const [detail, setDetail] = useState<DisputeDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [assignBusy, setAssignBusy] = useState(false)
+  const [assignError, setAssignError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
   const reload = useCallback(() => setAttempt(value => value + 1), [])
   useEffect(() => {
@@ -83,9 +85,14 @@ export function AdminDisputeCasePage() {
     {back}
     <PageHeader compact eyebrow={`${disputeIssueLabel(detail.issueType)} · ${detail.caseKind === 'POST_COMPLETION_RETURN' ? 'post-completion return' : 'transaction case'}`} title={detail.reference}
       description={`Order ${detail.order.reference} · ${admin?.buyer.displayName ?? 'Buyer'} v. ${admin?.vendor.displayName ?? 'Store'} · requested ${disputeRemedyLabel(detail.requestedRemedy).toLowerCase()}${detail.requestedAmountCentavos ? ` (${formatPesoCentavos(detail.requestedAmountCentavos)})` : ''}`}
-      actions={<><DisputeStatusBadge status={detail.status} />{actions.has('ASSIGN_TO_ME') && <Button variant="secondary" onClick={() => void assignToMe(detail.id).then(next => changed(next, 'The case is assigned to you.'))}><UserRoundCheck size={16} aria-hidden="true" />Assign to me</Button>}
+      actions={<><DisputeStatusBadge status={detail.status} />{actions.has('ASSIGN_TO_ME') && <Button variant="secondary" disabled={assignBusy} aria-busy={assignBusy} onClick={() => {
+        if (assignBusy) return
+        setAssignBusy(true); setAssignError(null)
+        void assignToMe(detail.id).then(next => changed(next, 'The case is assigned to you.')).catch(async cause => setAssignError(await readableVerificationError(cause))).finally(() => setAssignBusy(false))
+      }}><UserRoundCheck size={16} aria-hidden="true" />{assignBusy ? 'Assigning…' : 'Assign to me'}</Button>}
         <Button variant="secondary" onClick={reload}><RefreshCw size={16} aria-hidden="true" />Refresh</Button></>} />
     {notice && <StatusMessage tone="success">{notice}</StatusMessage>}
+    {assignError && <StatusMessage tone="error">{assignError}</StatusMessage>}
     <DisputeDeadlines deadlines={detail.deadlines} onExpire={reload} />
     <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_28rem]">
       <div className="grid min-w-0 content-start gap-6">

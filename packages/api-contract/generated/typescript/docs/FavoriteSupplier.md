@@ -7,6 +7,7 @@
 Name | Type
 ------------ | -------------
 `vendorId` | string
+`tier` | string
 `name` | string
 `logoUrl` | string
 `scoreLabel` | [ScoreLabel](ScoreLabel.md)
@@ -21,6 +22,7 @@ import type { FavoriteSupplier } from '@materyalph/api-client-ts'
 // TODO: Update the object below with actual values
 const example = {
   "vendorId": null,
+  "tier": null,
   "name": null,
   "logoUrl": null,
   "scoreLabel": null,

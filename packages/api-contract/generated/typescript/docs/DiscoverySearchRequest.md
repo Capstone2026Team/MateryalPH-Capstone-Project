@@ -15,6 +15,8 @@ Name | Type
 `includeVerified` | boolean
 `includeDirectory` | boolean
 `favoritesOnly` | boolean
+`directoryMinRating` | number
+`directoryMaxDistanceKm` | number
 `supplierType` | string
 `categoryId` | string
 `page` | number
@@ -35,6 +37,8 @@ const example = {
   "includeVerified": null,
   "includeDirectory": null,
   "favoritesOnly": null,
+  "directoryMinRating": null,
+  "directoryMaxDistanceKm": null,
   "supplierType": null,
   "categoryId": null,
   "page": null,

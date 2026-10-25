@@ -103,6 +103,46 @@ for (const args of generations) {
     let contents = originalContents;
     if (relativePath.endsWith(".dart") && relativePath.startsWith("lib/")) {
       if (relativePath === "lib/src/serializers.dart") {
+        // dart-dio emits decimal enum wires as strings. Discovery ratings are
+        // OpenAPI numbers; preserve the enum API but encode/decode numeric JSON.
+        const ratingModel = readFileSync(resolve(output, "lib/src/model/discovery_search_request.dart"), "utf8");
+        const ratingMembers = [...ratingModel.matchAll(/@BuiltValueEnumConst\(wireName: r'(-?\d+\.\d+)'\)\s+static const DiscoverySearchRequestDirectoryMinRatingEnum (\w+)/gu)];
+        if (ratingMembers.length === 0) throw new Error("Directory rating enum normalization did not match generated members");
+        const ratingValues = ratingMembers.map(([, value, member]) => `        DiscoverySearchRequestDirectoryMinRatingEnum.${member}: ${value},`).join("\n");
+        contents = contents.replace('      ..add(const DateSerializer())', `      ..add(_NumericEnumSerializer<DiscoverySearchRequestDirectoryMinRatingEnum>({\n${ratingValues}\n      }))\n      ..add(const DateSerializer())`);
+        contents += `
+// Generated normalization for the numeric Directory minimum-rating enum.
+class _NumericEnumSerializer<T> implements PrimitiveSerializer<T> {
+  const _NumericEnumSerializer(this.values);
+
+  final Map<T, num> values;
+
+  @override
+  Iterable<Type> get types => [T];
+
+  @override
+  String get wireName => T.toString();
+
+  @override
+  Object serialize(Serializers serializers, T object,
+      {FullType specifiedType = FullType.unspecified}) {
+    final value = values[object];
+    if (value == null) throw ArgumentError('Invalid numeric enum value');
+    return value;
+  }
+
+  @override
+  T deserialize(Serializers serializers, Object serialized,
+      {FullType specifiedType = FullType.unspecified}) {
+    if (serialized is num) {
+      for (final entry in values.entries) {
+        if (entry.value == serialized) return entry.key;
+      }
+    }
+    throw ArgumentError('Invalid numeric enum value');
+  }
+}
+`;
         // dart-dio represents boolean const schemas as singleton EnumClass
         // values, but built_value's default enum serializer uses string wires.
         // Keep the generated public types and strict const validation while

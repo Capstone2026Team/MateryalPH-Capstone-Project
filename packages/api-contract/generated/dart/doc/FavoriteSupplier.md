@@ -8,7 +8,8 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**vendorId** | **String** |  |
+**vendorId** | **String** | Verified Vendor id, Directory Supplier result id, or for a Directory Favorite outside the current cache the saved Favorite id (accepted by removeFavoriteSupplier). |
+**tier** | **String** |  |
 **name** | **String** |  |
 **logoUrl** | **String** |  |
 **scoreLabel** | [**ScoreLabel**](ScoreLabel.md) |  |

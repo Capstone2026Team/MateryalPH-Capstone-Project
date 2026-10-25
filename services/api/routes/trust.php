@@ -22,6 +22,8 @@ Route::prefix('buyers')->middleware($buyer)->group(function (): void {
     Route::get('/stores/{vendorId}/reviews', [R::class, 'storeReviews'])->whereUuid('vendorId');
     // Origins stay in request bodies, so these read-only analytics queries use POST.
     Route::post('/materials-analytics', [A::class, 'buyerList']);
+    Route::post('/materials-analytics/products', [A::class, 'buyerProducts']);
+    Route::post('/materials-analytics/products/{materialId}', [A::class, 'buyerProduct'])->whereUuid('materialId');
     Route::post('/materials-analytics/{groupId}', [A::class, 'buyerDetail'])->whereUuid('groupId');
     Route::post('/materials-analytics/{groupId}/offers', [A::class, 'buyerOffers'])->whereUuid('groupId');
 });

@@ -509,6 +509,69 @@ final class PhaseFourteenAnalyticsTest extends TestCase
         self::assertStringNotContainsString('cdn.example.test', $aggregate->getContent());
     }
 
+    public function test_products_roll_variants_up_per_material_with_vendor_counts_price_range_and_the_most_offered_variant(): void
+    {
+        $group100 = $this->comparableGroup();
+        $group150 = $this->comparableGroup('150', 'CHB_BRANDCO_150');
+        $this->analyticsStore('Alpha', 10000, 1000);
+        $this->analyticsStore('Bravo', 11000, 1500, 30);
+        $this->analyticsStore('Charlie', 12000, 2000, 200);
+        [, , $wideListing, $wideVariant] = $this->analyticsStore('Wide Block', 15000, 2500, 270);
+        // The fourth store sells the 150 mm block: a different variant of the same canonical product.
+        foreach (['vendor_listings' => ['id', $wideListing, 'technical_attributes'], 'listing_variants' => ['id', $wideVariant, 'attributes']] as $table => [$key, $id, $column]) {
+            $attributes = json_decode((string) DB::table($table)->where($key, $id)->value($column), true) ?: [];
+            DB::table($table)->where($key, $id)->update([$column => json_encode(['thickness_mm' => '150'] + $attributes)]);
+        }
+        app(ComparableMappingService::class)->assign($wideVariant);
+        EligibleOfferQuery::invalidate();
+        self::assertSame('PUBLISHED', app(MaterialPriceCaptureService::class)->capture(CarbonImmutable::now())['state']);
+        $this->buyer();
+
+        $list = $this->postJson('/api/v1/buyers/materials-analytics/products', $this->origin() + ['preset_days' => 7])->assertOk();
+        $row = collect($list->json('data.items'))->firstWhere('material.name', 'Concrete hollow block');
+        self::assertSame(2, $row['variant_count']);
+        self::assertSame(4, $row['vendor_count'], 'Distinct Vendors across both variants.');
+        self::assertFalse($row['regulated']);
+        self::assertSame('PC', $row['unit']['code']);
+        self::assertSame(['min_php' => '100.00', 'median_php' => '115.00', 'max_php' => '150.00'], $row['price'], 'Median of 100/110/120/150 is the mean of the middle two.');
+        $masonry = collect($list->json('data.categories'))->firstWhere('category.code', 'MASONRY');
+        self::assertSame(1, $masonry['product_count']);
+        self::assertSame(2, $masonry['variant_count']);
+        self::assertIsInt($list->json('data.not_yet_comparable_listings'));
+        self::assertSame('Recorded Marketplace Prices', $list->json('data.dataset.label'));
+        foreach (['Alpha', 'Bravo', 'quantity_on_hand', 'vendor_id'] as $leak) {
+            self::assertStringNotContainsString($leak, $list->getContent());
+        }
+
+        // Category and search filters narrow the rows but not the overview tiles.
+        $other = (string) DB::table('material_categories')->where('code', 'ELECTRICAL_SUPPLIES')->value('id');
+        $filtered = $this->postJson('/api/v1/buyers/materials-analytics/products', $this->origin() + ['category_id' => $other])->assertOk();
+        self::assertSame([], $filtered->json('data.items'));
+        self::assertNotNull(collect($filtered->json('data.categories'))->firstWhere('category.code', 'MASONRY'));
+        self::assertCount(1, $this->postJson('/api/v1/buyers/materials-analytics/products', $this->origin() + ['q' => 'BRANDCO'])->json('data.items'));
+        self::assertSame([], $this->postJson('/api/v1/buyers/materials-analytics/products', $this->origin() + ['q' => 'no such thing'])->json('data.items'));
+
+        $detail = $this->postJson('/api/v1/buyers/materials-analytics/products/'.$row['material']['id'], $this->origin() + ['preset_days' => 7])->assertOk();
+        self::assertSame(4, $detail->json('data.product.vendor_count'));
+        $variants = collect($detail->json('data.variants'))->keyBy('group_id');
+        self::assertCount(2, $variants);
+        self::assertSame(3, $variants[$group100]['vendor_count']);
+        self::assertSame(['min_php' => '100.00', 'median_php' => '110.00', 'max_php' => '120.00'], $variants[$group100]['price']);
+        self::assertSame('IN_STOCK', $variants[$group100]['availability']);
+        self::assertSame(1, $variants[$group150]['vendor_count']);
+        self::assertSame('150.00', $variants[$group150]['price']['min_php']);
+        // The average and trend never blend variants: they belong to the most-offered one, named.
+        self::assertSame($group100, $detail->json('data.featured.group.group_id'));
+        self::assertSame('CHB 100 mm BrandCo', $detail->json('data.featured.group.display_name'));
+        self::assertSame('110.00', $detail->json('data.featured.group.end_point.average_php'));
+        self::assertCount(8, $detail->json('data.featured.series'));
+        self::assertNotNull($detail->json('data.snapshot'));
+        self::assertStringNotContainsString('Alpha', $detail->getContent());
+
+        $this->postJson('/api/v1/buyers/materials-analytics/products/'.Str::uuid7(), $this->origin())->assertNotFound()->assertJsonPath('errors.0.code', 'MATERIAL_NOT_FOUND');
+        $this->postJson('/api/v1/buyers/materials-analytics/products', $this->origin() + ['include_competitors' => true])->assertStatus(422)->assertJsonPath('errors.0.code', 'ANALYTICS_FILTER_UNSUPPORTED');
+    }
+
     private function freeze(CarbonImmutable $instant): void
     {
         CarbonImmutable::setTestNow($instant);

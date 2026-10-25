@@ -105,6 +105,9 @@ assert.deepEqual(s.ReviewModerationRequest.properties.action.enum, ['DISMISS_FLA
 assert.deepEqual(s.BadgeSuppressionRequest.properties.reason_code.enum, ['FRAUD', 'COMPLIANCE'])
 assert.ok(!s.BadgeSuppressionRequest.properties.badge_code.enum.includes('BEST_PRICE'), 'Best Price is evaluated at query time and never stored')
 assert.deepEqual(s.ScoreExclusionRequest.properties.reason_code.enum, ['FRAUD', 'DUPLICATE', 'TEST', 'INVALID_SOURCE'])
+// Export and on-screen aggregate analytics use the same text/category filters.
+const exportParams = spec.paths['/vendor/materials-analytics/export'].get.parameters.map(p => p.name)
+assert.ok(['q', 'category_id'].every(name => exportParams.includes(name)))
 // Vendor analytics resources: aggregates only, no identities, no offers, no exact sub-threshold count.
 const identity = /store_name|vendor_id|organization|listing_id|offer|coordinate|latitude|longitude|minimum|maximum|vendor_ids|average_php_exact|logo/i
 for (const name of ['VendorAnalyticsPoint', 'VendorCurrentCompetitors', 'VendorMaterialsAnalyticsList']) {
@@ -133,5 +136,5 @@ for (const audience of ['buyers', 'vendor', 'admin']) {
 }
 assert.match(readFileSync(new URL('../generated/dart/lib/src/api/buyer_reviews_api.dart', import.meta.url), 'utf8'), /r'files\[\]': files.toList\(\)/, 'Dart uploads a PHP multipart array');
 assert.match(readFileSync(new URL('../generated/typescript/src/apis/BuyerReviewsApi.ts', import.meta.url), 'utf8'), /append\('files\[\]'/, 'TypeScript uploads a PHP multipart array');
-assert.match(spec.info.version, /phase\.(1[4-9]|20)$/)
+assert.match(spec.info.version, /(?:phase\.(1[4-9]|20)|audit\.2026-10-24)$/)
 console.log(`Trust and analytics contract passed: ${expected.size} operations, transports, signed links, idempotency, no delete/award path and aggregate-only Vendor analytics`)

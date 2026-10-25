@@ -168,6 +168,7 @@ export 'package:materyalph_api_client/src/model/analytics_correction_request.dar
 export 'package:materyalph_api_client/src/model/analytics_correction_result.dart';
 export 'package:materyalph_api_client/src/model/analytics_current_counts.dart';
 export 'package:materyalph_api_client/src/model/analytics_material_ref.dart';
+export 'package:materyalph_api_client/src/model/analytics_price_range.dart';
 export 'package:materyalph_api_client/src/model/analytics_run.dart';
 export 'package:materyalph_api_client/src/model/analytics_run_list_envelope.dart';
 export 'package:materyalph_api_client/src/model/analytics_snapshot_ref.dart';
@@ -221,7 +222,16 @@ export 'package:materyalph_api_client/src/model/buyer_account_deletion_request.d
 export 'package:materyalph_api_client/src/model/buyer_account_deletion_result.dart';
 export 'package:materyalph_api_client/src/model/buyer_account_deletion_result_envelope.dart';
 export 'package:materyalph_api_client/src/model/buyer_account_retained_record.dart';
+export 'package:materyalph_api_client/src/model/buyer_analytics_category_summary.dart';
+export 'package:materyalph_api_client/src/model/buyer_analytics_featured_variant.dart';
 export 'package:materyalph_api_client/src/model/buyer_analytics_point.dart';
+export 'package:materyalph_api_client/src/model/buyer_analytics_product_detail.dart';
+export 'package:materyalph_api_client/src/model/buyer_analytics_product_detail_envelope.dart';
+export 'package:materyalph_api_client/src/model/buyer_analytics_product_detail_product.dart';
+export 'package:materyalph_api_client/src/model/buyer_analytics_product_list.dart';
+export 'package:materyalph_api_client/src/model/buyer_analytics_product_list_envelope.dart';
+export 'package:materyalph_api_client/src/model/buyer_analytics_product_row.dart';
+export 'package:materyalph_api_client/src/model/buyer_analytics_product_variant.dart';
 export 'package:materyalph_api_client/src/model/buyer_analytics_row.dart';
 export 'package:materyalph_api_client/src/model/buyer_cancel_request.dart';
 export 'package:materyalph_api_client/src/model/buyer_cancellation_preview.dart';

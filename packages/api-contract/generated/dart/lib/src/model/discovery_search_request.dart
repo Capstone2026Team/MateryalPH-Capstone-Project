@@ -19,7 +19,9 @@ part 'discovery_search_request.g.dart';
 /// * [radiusKm] - Must be one of 5, 10, 20, 30, 40 or 50; otherwise 422 RADIUS_UNSUPPORTED.
 /// * [includeVerified]
 /// * [includeDirectory]
-/// * [favoritesOnly]
+/// * [favoritesOnly] - Limits both tiers to the Buyer's Favorite Suppliers. Unlike supplier_type and category_id, it does not hide Directory Suppliers.
+/// * [directoryMinRating] - Inclusive minimum Google rating, Directory Suppliers only. Send a JSON number; a value of 3.0 keeps ratings from 3.0 through 5.0 and excludes lower-rated and unrated places. Verified Vendors and VPS are unchanged.
+/// * [directoryMaxDistanceKm] - Directory Suppliers only. Must not exceed the effective selected radius.
 /// * [supplierType] - WHOLESALER_DISTRIBUTOR, RETAIL_HARDWARE_STORE, SPECIALIZED_SUPPLIER or OTHER. Tier-specific filters hide Directory Suppliers.
 /// * [categoryId]
 /// * [page]
@@ -49,8 +51,19 @@ abstract class DiscoverySearchRequest implements Built<DiscoverySearchRequest, D
   @BuiltValueField(wireName: r'include_directory')
   bool? get includeDirectory;
 
+  /// Limits both tiers to the Buyer's Favorite Suppliers. Unlike supplier_type and category_id, it does not hide Directory Suppliers.
   @BuiltValueField(wireName: r'favorites_only')
   bool? get favoritesOnly;
+
+  /// Inclusive minimum Google rating, Directory Suppliers only. Send a JSON number; a value of 3.0 keeps ratings from 3.0 through 5.0 and excludes lower-rated and unrated places. Verified Vendors and VPS are unchanged.
+  @BuiltValueField(wireName: r'directory_min_rating')
+  DiscoverySearchRequestDirectoryMinRatingEnum? get directoryMinRating;
+  // enum directoryMinRatingEnum {  3.0,  3.5,  4.0,  4.5,  ,  };
+
+  /// Directory Suppliers only. Must not exceed the effective selected radius.
+  @BuiltValueField(wireName: r'directory_max_distance_km')
+  DiscoverySearchRequestDirectoryMaxDistanceKmEnum? get directoryMaxDistanceKm;
+  // enum directoryMaxDistanceKmEnum {  1,  3,  5,  10,  20,  ,  };
 
   /// WHOLESALER_DISTRIBUTOR, RETAIL_HARDWARE_STORE, SPECIALIZED_SUPPLIER or OTHER. Tier-specific filters hide Directory Suppliers.
   @BuiltValueField(wireName: r'supplier_type')
@@ -142,6 +155,20 @@ class _$DiscoverySearchRequestSerializer implements PrimitiveSerializer<Discover
       yield serializers.serialize(
         object.favoritesOnly,
         specifiedType: const FullType(bool),
+      );
+    }
+    if (object.directoryMinRating != null) {
+      yield r'directory_min_rating';
+      yield serializers.serialize(
+        object.directoryMinRating,
+        specifiedType: const FullType.nullable(DiscoverySearchRequestDirectoryMinRatingEnum),
+      );
+    }
+    if (object.directoryMaxDistanceKm != null) {
+      yield r'directory_max_distance_km';
+      yield serializers.serialize(
+        object.directoryMaxDistanceKm,
+        specifiedType: const FullType.nullable(DiscoverySearchRequestDirectoryMaxDistanceKmEnum),
       );
     }
     if (object.supplierType != null) {
@@ -259,6 +286,22 @@ class _$DiscoverySearchRequestSerializer implements PrimitiveSerializer<Discover
           if (valueDes == null) continue;
           result.favoritesOnly = valueDes;
           break;
+        case r'directory_min_rating':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(DiscoverySearchRequestDirectoryMinRatingEnum),
+          ) as DiscoverySearchRequestDirectoryMinRatingEnum?;
+          if (valueDes == null) continue;
+          result.directoryMinRating = valueDes;
+          break;
+        case r'directory_max_distance_km':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(DiscoverySearchRequestDirectoryMaxDistanceKmEnum),
+          ) as DiscoverySearchRequestDirectoryMaxDistanceKmEnum?;
+          if (valueDes == null) continue;
+          result.directoryMaxDistanceKm = valueDes;
+          break;
         case r'supplier_type':
           final valueDes = serializers.deserialize(
             value,
@@ -336,5 +379,47 @@ class DiscoverySearchRequestOriginSourceEnum extends EnumClass {
 
   static BuiltSet<DiscoverySearchRequestOriginSourceEnum> get values => _$discoverySearchRequestOriginSourceEnumValues;
   static DiscoverySearchRequestOriginSourceEnum valueOf(String name) => _$discoverySearchRequestOriginSourceEnumValueOf(name);
+}
+
+/// Inclusive minimum Google rating, Directory Suppliers only. Send a JSON number; a value of 3.0 keeps ratings from 3.0 through 5.0 and excludes lower-rated and unrated places. Verified Vendors and VPS are unchanged.
+class DiscoverySearchRequestDirectoryMinRatingEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'3.0')
+  static const DiscoverySearchRequestDirectoryMinRatingEnum number3Period0 = _$discoverySearchRequestDirectoryMinRatingEnum_number3Period0;
+  @BuiltValueEnumConst(wireName: r'3.5')
+  static const DiscoverySearchRequestDirectoryMinRatingEnum number3Period5 = _$discoverySearchRequestDirectoryMinRatingEnum_number3Period5;
+  @BuiltValueEnumConst(wireName: r'4.0')
+  static const DiscoverySearchRequestDirectoryMinRatingEnum number4Period0 = _$discoverySearchRequestDirectoryMinRatingEnum_number4Period0;
+  @BuiltValueEnumConst(wireName: r'4.5')
+  static const DiscoverySearchRequestDirectoryMinRatingEnum number4Period5 = _$discoverySearchRequestDirectoryMinRatingEnum_number4Period5;
+
+  static Serializer<DiscoverySearchRequestDirectoryMinRatingEnum> get serializer => _$discoverySearchRequestDirectoryMinRatingEnumSerializer;
+
+  const DiscoverySearchRequestDirectoryMinRatingEnum._(String name): super(name);
+
+  static BuiltSet<DiscoverySearchRequestDirectoryMinRatingEnum> get values => _$discoverySearchRequestDirectoryMinRatingEnumValues;
+  static DiscoverySearchRequestDirectoryMinRatingEnum valueOf(String name) => _$discoverySearchRequestDirectoryMinRatingEnumValueOf(name);
+}
+
+/// Directory Suppliers only. Must not exceed the effective selected radius.
+class DiscoverySearchRequestDirectoryMaxDistanceKmEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireNumber: 1)
+  static const DiscoverySearchRequestDirectoryMaxDistanceKmEnum number1 = _$discoverySearchRequestDirectoryMaxDistanceKmEnum_number1;
+  @BuiltValueEnumConst(wireNumber: 3)
+  static const DiscoverySearchRequestDirectoryMaxDistanceKmEnum number3 = _$discoverySearchRequestDirectoryMaxDistanceKmEnum_number3;
+  @BuiltValueEnumConst(wireNumber: 5)
+  static const DiscoverySearchRequestDirectoryMaxDistanceKmEnum number5 = _$discoverySearchRequestDirectoryMaxDistanceKmEnum_number5;
+  @BuiltValueEnumConst(wireNumber: 10)
+  static const DiscoverySearchRequestDirectoryMaxDistanceKmEnum number10 = _$discoverySearchRequestDirectoryMaxDistanceKmEnum_number10;
+  @BuiltValueEnumConst(wireNumber: 20)
+  static const DiscoverySearchRequestDirectoryMaxDistanceKmEnum number20 = _$discoverySearchRequestDirectoryMaxDistanceKmEnum_number20;
+
+  static Serializer<DiscoverySearchRequestDirectoryMaxDistanceKmEnum> get serializer => _$discoverySearchRequestDirectoryMaxDistanceKmEnumSerializer;
+
+  const DiscoverySearchRequestDirectoryMaxDistanceKmEnum._(String name): super(name);
+
+  static BuiltSet<DiscoverySearchRequestDirectoryMaxDistanceKmEnum> get values => _$discoverySearchRequestDirectoryMaxDistanceKmEnumValues;
+  static DiscoverySearchRequestDirectoryMaxDistanceKmEnum valueOf(String name) => _$discoverySearchRequestDirectoryMaxDistanceKmEnumValueOf(name);
 }
 

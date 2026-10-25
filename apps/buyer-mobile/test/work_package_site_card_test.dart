@@ -1,3 +1,4 @@
+import 'typed_project_fixtures.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:dio/dio.dart';
@@ -90,15 +91,15 @@ Widget _editor(
   theme: BuyerTheme.light,
   home: WorkPackageEditor(
     repository: repository,
-    project: {
+    project: typedProject({
       'id': _projectId,
       'budget_centavos': 100000000,
       'budget': {'unallocated_centavos': 100000000},
       'sites': [
         {'id': _siteId, 'name': siteName},
       ],
-    },
-    package: {
+    }),
+    package: typedPackage({
       'id': '01995000-0000-7000-8000-000000000010',
       'status': 'DRAFT',
       'lock_version': 1,
@@ -125,7 +126,7 @@ Widget _editor(
           ],
         },
       },
-    },
+    }),
     chooseLocation: () async => null,
   ),
 );

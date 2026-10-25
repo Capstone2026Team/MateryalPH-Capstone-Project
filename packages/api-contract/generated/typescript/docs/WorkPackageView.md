@@ -6,6 +6,9 @@
 
 Name | Type
 ------------ | -------------
+`selectedArrangementId` | string
+`procurementCandidateId` | string
+`vendorOrders` | Array&lt;{ [key: string]: any; }&gt;
 `id` | string
 `projectId` | string
 `projectStatus` | string
@@ -30,6 +33,9 @@ import type { WorkPackageView } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "selectedArrangementId": null,
+  "procurementCandidateId": null,
+  "vendorOrders": null,
   "id": null,
   "projectId": null,
   "projectStatus": null,

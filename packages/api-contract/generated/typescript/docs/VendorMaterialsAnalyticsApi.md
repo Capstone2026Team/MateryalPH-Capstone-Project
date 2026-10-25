@@ -12,7 +12,7 @@ All URIs are relative to */api/v1*
 
 ## exportVendorMaterialsAnalytics
 
-> Blob exportVendorMaterialsAnalytics(presetDays, startDate, endDate, radiusKm)
+> Blob exportVendorMaterialsAnalytics(presetDays, startDate, endDate, radiusKm, q, categoryId)
 
 
 
@@ -46,6 +46,10 @@ async function example() {
     endDate: 2013-10-20,
     // 5 | 10 | 20 | 30 | 40 | 50 | Around your own verified store point (default 50 km). Any origin or competitor field is refused. (optional)
     radiusKm: 56,
+    // string (optional)
+    q: q_example,
+    // string (optional)
+    categoryId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
   } satisfies ExportVendorMaterialsAnalyticsRequest;
 
   try {
@@ -69,6 +73,8 @@ example().catch(console.error);
 | **startDate** | `Date` |  | [Optional] [Defaults to `undefined`] |
 | **endDate** | `Date` |  | [Optional] [Defaults to `undefined`] |
 | **radiusKm** | `5`, `10`, `20`, `30`, `40`, `50` | Around your own verified store point (default 50 km). Any origin or competitor field is refused. | [Optional] [Defaults to `undefined`] [Enum: 5, 10, 20, 30, 40, 50] |
+| **q** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **categoryId** | `string` |  | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 

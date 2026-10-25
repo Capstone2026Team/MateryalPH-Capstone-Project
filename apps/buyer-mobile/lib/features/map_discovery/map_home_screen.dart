@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../design_system/components/buyer_overlays.dart';
+import '../../core/foreground_refresh.dart';
 import '../../design_system/components/discovery_controls.dart';
 import '../../design_system/motion.dart';
 import '../../design_system/theme.dart';
@@ -22,6 +23,7 @@ import 'select_location_screen.dart';
 import 'supplier_map.dart';
 import 'supplier_preview_sheet.dart';
 import 'supplier_panels.dart';
+import 'supplier_browsing.dart';
 
 typedef StoreProfileOpener =
     void Function(BuildContext context, SupplierResultView supplier);
@@ -66,11 +68,17 @@ class MapHomeScreen extends StatefulWidget {
   State<MapHomeScreen> createState() => _MapHomeScreenState();
 }
 
-class _MapHomeScreenState extends State<MapHomeScreen> {
+class _MapHomeScreenState extends State<MapHomeScreen>
+    with ForegroundRefresh<MapHomeScreen> {
+  @override
+  Future<bool> refreshInForeground() => _controller.revalidate();
+
   late final DiscoveryController _controller =
       widget.controller ?? DiscoveryController(repository: widget.repository);
   final DraggableScrollableController _sheet = DraggableScrollableController();
-  SupplierListView _view = SupplierListView.all;
+  SupplierListView _view = SupplierListView.verified;
+  SupplierListSort _sort = SupplierListSort.nearest;
+  final TextEditingController _storeSearch = TextEditingController();
   bool? _listMode;
   int _recenter = 0;
   double _sheetExtent = 0.25;
@@ -95,8 +103,18 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
   }
 
   @override
+  void reassemble() {
+    super.reassemble();
+    // Hot reload retains State fields even when their enum moves to another library.
+    // Assign the current enum before build reads an instance from the old library.
+    _view = SupplierListView.verified;
+    _sort = SupplierListSort.nearest;
+  }
+
+  @override
   void dispose() {
     _settleTimer?.cancel();
+    _storeSearch.dispose();
     _controller.removeListener(_onChanged);
     if (widget.controller == null) _controller.dispose();
     _sheet.dispose();
@@ -202,7 +220,22 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
         categories: _controller.onboarding?.categories ?? const [],
       ),
     );
-    if (next != null) await _controller.applyFilters(next);
+    if (next == null || !mounted) return;
+    // Removing All must not strand the list on a tier excluded by the new filters.
+    setState(() {
+      if (next.favoritesOnly) {
+        _view = SupplierListView.favorites;
+      } else if (_view == SupplierListView.directory &&
+          (!next.includeDirectory || next.tierSpecific)) {
+        _view = SupplierListView.verified;
+      } else if (_view != SupplierListView.directory &&
+          !next.includeVerified &&
+          next.includeDirectory &&
+          !next.tierSpecific) {
+        _view = SupplierListView.directory;
+      }
+    });
+    await _controller.applyFilters(next);
   }
 
   Future<void> _openOnboarding() async {
@@ -435,20 +468,18 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
   );
 
   Widget _floating(IconData icon, String label, VoidCallback onPressed) =>
-      MapFloatingSurface(
-        radius: 999,
-        child: IconButton(
-          tooltip: label,
-          onPressed: onPressed,
-          icon: Icon(icon),
-        ),
-      );
+      MapFloatingIconButton(icon: icon, label: label, onPressed: onPressed);
 
   Widget _panel(ScrollController? scroll) => _controller.selected == null
       ? SupplierListPanel(
           controller: _controller,
           view: _view,
-          onViewChanged: (view) => setState(() => _view = view),
+          sort: _sort,
+          searchController: _storeSearch,
+          onQueryChanged: (_) => _updateBrowse(() {}, scroll),
+          onSearchFocused: _expandForSearch,
+          onSortChanged: (sort) => _updateBrowse(() => _sort = sort, scroll),
+          onViewChanged: (view) => _updateBrowse(() => _view = view, scroll),
           onExpand: _expand,
           onChangeLocation: _chooseLocation,
           onAdjustFilters: _openFilters,
@@ -470,6 +501,24 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
             ),
           ],
         );
+
+  void _updateBrowse(VoidCallback change, ScrollController? scroll) {
+    setState(change);
+    if (scroll?.hasClients == true) scroll!.jumpTo(0);
+  }
+
+  void _expandForSearch() {
+    if (!_sheet.isAttached || _sheet.size >= _expanded) return;
+    if (BuyerMotion.reduced(context)) {
+      _sheet.jumpTo(_expanded);
+    } else {
+      _sheet.animateTo(
+        _expanded,
+        duration: MateryalMotionTokens.sheet,
+        curve: BuyerMotion.enter,
+      );
+    }
+  }
 
   Widget _stacked(
     BoxConstraints constraints,
@@ -571,7 +620,8 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
           ),
           _LegendRow(
             icon: LucideIcons.star,
-            text: 'Favorite Supplier: star tab on a Verified Vendor pin',
+            text:
+                'Favorite Supplier: gold ring and star badge on a Verified or Directory pin',
           ),
           _LegendRow(
             icon: LucideIcons.circleDot,
@@ -579,7 +629,8 @@ class _MapHomeScreenState extends State<MapHomeScreen> {
           ),
           _LegendRow(
             icon: LucideIcons.circleDashed,
-            text: 'Numbered circle: several suppliers. Select it to zoom in',
+            text:
+                'Split orange/gray ring: supplier count; gold star chip: favorites. Select to zoom in or spread nearby pins',
           ),
         ],
       ),
@@ -733,8 +784,8 @@ class _LegendRow extends StatelessWidget {
   );
 }
 
-/// The approved safe filter set: tier toggles, Favorites only, Supplier Type and Material
-/// Category. There is deliberately no Open Now, rating or review-count filter.
+/// Favorites (both tiers), then tier toggles with Verified-only Supplier Type and Material Category
+/// filters. Directory distance is controlled by the common radius; rating remains Directory-only.
 class DiscoveryFilterSheet extends StatefulWidget {
   const DiscoveryFilterSheet({
     super.key,
@@ -749,7 +800,9 @@ class DiscoveryFilterSheet extends StatefulWidget {
 }
 
 class _DiscoveryFilterSheetState extends State<DiscoveryFilterSheet> {
-  late DiscoveryFilters _filters = widget.filters;
+  late DiscoveryFilters _filters = widget.filters.copyWith(
+    directoryMaxDistanceKm: () => null,
+  );
 
   static const _types = {
     'WHOLESALER_DISTRIBUTOR': 'Wholesaler or distributor',
@@ -760,95 +813,207 @@ class _DiscoveryFilterSheetState extends State<DiscoveryFilterSheet> {
 
   @override
   Widget build(BuildContext context) => SafeArea(
-    child: ListView(
-      shrinkWrap: true,
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+    top: false,
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Semantics(
-          header: true,
-          child: Text('Filters', style: Theme.of(context).textTheme.titleLarge),
-        ),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Show Verified Vendors'),
-          value: _filters.includeVerified,
-          onChanged: (value) => setState(
-            () => _filters = _filters.copyWith(includeVerified: value),
-          ),
-        ),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Show Directory Suppliers'),
-          subtitle: const Text('Informational listings from Google Maps'),
-          value: _filters.includeDirectory,
-          onChanged: (value) => setState(
-            () => _filters = _filters.copyWith(includeDirectory: value),
-          ),
-        ),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Favorite Suppliers only'),
-          value: _filters.favoritesOnly,
-          onChanged: (value) => setState(
-            () => _filters = _filters.copyWith(favoritesOnly: value),
-          ),
-        ),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String?>(
-          initialValue: _filters.supplierType,
-          isExpanded: true,
-          decoration: const InputDecoration(labelText: 'Supplier type'),
-          items: [
-            const DropdownMenuItem(
-              value: null,
-              child: Text('Any supplier type'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Semantics(
+            header: true,
+            child: Text(
+              'Filters',
+              style: Theme.of(context).textTheme.titleLarge,
             ),
-            for (final entry in _types.entries)
-              DropdownMenuItem(value: entry.key, child: Text(entry.value)),
-          ],
-          onChanged: (value) => setState(
-            () => _filters = _filters.copyWith(supplierType: () => value),
           ),
         ),
-        const SizedBox(height: 16),
-        DropdownButtonFormField<String?>(
-          initialValue: _filters.categoryId,
-          isExpanded: true,
-          decoration: const InputDecoration(labelText: 'Material category'),
-          items: [
-            const DropdownMenuItem(value: null, child: Text('Any category')),
-            for (final category in widget.categories)
-              DropdownMenuItem(value: category.id, child: Text(category.name)),
-          ],
-          onChanged: (value) => setState(
-            () => _filters = _filters.copyWith(categoryId: () => value),
-          ),
-        ),
-        if (_filters.tierSpecific) ...[
-          const SizedBox(height: 12),
-          const Text(
-            'Favorite, supplier type and category filters apply to Verified Vendors only, so Directory Suppliers are hidden while they are on.',
-            style: TextStyle(color: BuyerTheme.muted),
-          ),
-        ],
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () =>
-                    setState(() => _filters = const DiscoveryFilters()),
-                child: const Text('Reset'),
+        Flexible(
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+            children: [
+              SupplierFilterSection(
+                key: const ValueKey('favorite-supplier-filters'),
+                title: 'Favorite Suppliers only',
+                subtitle: 'Your saved Verified Vendors and Directory Suppliers',
+                icon: LucideIcons.bookmark,
+                value: _filters.favoritesOnly,
+                onChanged: (value) => setState(
+                  () => _filters = _filters.copyWith(favoritesOnly: value),
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: FilledButton(
-                onPressed: () => Navigator.of(context).pop(_filters),
-                child: const Text('Apply'),
+              const Padding(
+                padding: EdgeInsets.only(top: 12, bottom: 8),
+                child: Divider(height: 1),
               ),
-            ),
-          ],
+              SupplierFilterSection(
+                key: const ValueKey('verified-supplier-filters'),
+                title: 'Show Verified Vendors',
+                value: _filters.includeVerified,
+                onChanged: (value) => setState(
+                  () => _filters = _filters.copyWith(includeVerified: value),
+                ),
+                children: [
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String?>(
+                    initialValue: _filters.supplierType,
+                    isExpanded: true,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    decoration: const InputDecoration(
+                      labelText: 'Supplier type',
+                    ),
+                    items: [
+                      const DropdownMenuItem(
+                        value: null,
+                        child: Text(
+                          'Any supplier type',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      for (final entry in _types.entries)
+                        DropdownMenuItem(
+                          value: entry.key,
+                          child: Text(
+                            entry.value,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                    onChanged: (value) => setState(
+                      () => _filters = _filters.copyWith(
+                        supplierType: () => value,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String?>(
+                    initialValue: _filters.categoryId,
+                    isExpanded: true,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    decoration: const InputDecoration(
+                      labelText: 'Material category',
+                    ),
+                    items: [
+                      const DropdownMenuItem(
+                        value: null,
+                        child: Text(
+                          'Any category',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      for (final category in widget.categories)
+                        DropdownMenuItem(
+                          value: category.id,
+                          child: Text(
+                            category.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                    onChanged: (value) => setState(
+                      () =>
+                          _filters = _filters.copyWith(categoryId: () => value),
+                    ),
+                  ),
+                ],
+              ),
+              const Padding(
+                padding: EdgeInsets.only(top: 20, bottom: 8),
+                child: Divider(height: 1),
+              ),
+              SupplierFilterSection(
+                key: const ValueKey('directory-supplier-filters'),
+                title: 'Show Directory Suppliers',
+                subtitle: 'Informational listings from Google Maps',
+                value: _filters.includeDirectory,
+                onChanged: (value) => setState(
+                  () => _filters = _filters.copyWith(includeDirectory: value),
+                ),
+                children: [
+                  if (_filters.tierSpecific) ...[
+                    const Text(
+                      'Directory Suppliers are hidden while supplier type or material category filters are active.',
+                      style: TextStyle(
+                        color: BuyerTheme.muted,
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Minimum Google rating',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      for (final value in <double?>[null, 3, 3.5, 4, 4.5])
+                        ChoiceChip(
+                          label: Text(
+                            value == null
+                                ? 'Any'
+                                : '${value.toStringAsFixed(1)}+',
+                          ),
+                          selected: _filters.directoryMinRating == value,
+                          materialTapTargetSize: MaterialTapTargetSize.padded,
+                          onSelected:
+                              _filters.tierSpecific ||
+                                  !_filters.includeDirectory
+                              ? null
+                              : (_) => setState(
+                                  () => _filters = _filters.copyWith(
+                                    directoryMinRating: () => value,
+                                  ),
+                                ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Google ratings apply only to Directory Suppliers.',
+                    style: TextStyle(
+                      color: BuyerTheme.muted,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        Container(
+          decoration: const BoxDecoration(
+            border: Border(top: BorderSide(color: BuyerTheme.border)),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () =>
+                      setState(() => _filters = const DiscoveryFilters()),
+                  child: const Text('Reset'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () => Navigator.of(context).pop(_filters),
+                  child: const Text('Apply'),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     ),

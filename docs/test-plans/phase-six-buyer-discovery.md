@@ -8,6 +8,10 @@
 - **Map filters:** tier toggles, Favorites only, Supplier Type and Material Category. There is no Open Now, rating or review-count filter.
 - **Industry classification:** a controlled list plus Other with a description. Recorded in the Buyer workflow.
 
+## Owner revision (2026-10-24)
+
+The earlier no-rating-filter decision is superseded. Directory-only minimum Google rating remains supported; the separate maximum-distance filter is removed by the later owner request on 2026-10-24. Unrated suppliers are excluded while a minimum is set, and Verified Vendor/VPS results stay unchanged. The supplier list adds name search, Verified/Directory/Favorites tabs without All, and distance/public-score sorting; see [supplier list browsing](buyer-supplier-browsing.md). Coverage combines Nearby cells with paginated, allowlisted Text Search under the same daily budget and seven-day cache. Teardrops distinguish tiers and favorites; screen-distance clusters separate at zoom 13.5 and can fan out when co-located. See [the system audit](system-audit-2026-10-24.md) for regression evidence and pending device acceptance.
+
 ## Acceptance coverage
 
 | Requirement | Evidence |
@@ -24,7 +28,7 @@
 | Unresolved PSGC is saved as UNRESOLVED; the resolver uses the active version only; import, activation and immutability | API saved-location and PSGC tests |
 | Provider timeout: Tier 2 still returned; Tier 1 served as CACHED or UNAVAILABLE; details and route return 503 with the straight-line distance | API timeout and route tests; adapter tests (`tests/Unit/GeographyProviderAdapterTest.php`) |
 | Cache expiry: expired cells are re-queried, expired records are never served, and the prune command runs | API stale and cache test |
-| Tier 1 restrictions: no VPS, favorite, storefront, message or order; Google rating is attributed; actions are only Call, Open in Maps, Website and Share | API Tier 1 test; contract check; Flutter Tier 1 widget test |
+| Tier 1 restrictions: no VPS, storefront, message or order (Favorite allowed since 2026-10-25, Place ID only — see buyer-favorite-directory-suppliers.md); Google rating is attributed; actions are only Call, Open in Maps, Website and Share | API Tier 1 test; contract check; Flutter Tier 1 widget test |
 | MAT-01: a Vendor scope rejects a competitor or arbitrary origin; Admin uses a PSGC scope with no 50 km ceiling | API `test_mat01_scope_resolution_rejects_competitor_origins_for_vendors_and_validates_admin_psgc` |
 | Ownership, optimistic versions, primary rule, idempotent save and address versioning | API location versions test |
 | Minimum field masks, daily budgets, closed-business filtering, https-only links | Adapter tests |
@@ -35,7 +39,7 @@
 | Drop Pin has no latitude or longitude fields and no coordinates in the confirmation | Flutter `denied GPS keeps manual address and pin paths complete` |
 | Selecting a supplier isolates its pin until the preview closes; the list keeps every result | Flutter `selecting a supplier isolates its pin until the selection closes` and the isolation unit test |
 | Basemap switches between Map and Satellite; the legend stays reachable | Flutter `the layers control switches between Map and Satellite` |
-| Tier 2 sheet has Favorite bookmark, View Storefront and the existing Message action; Tier 1 has Overview, Google Reviews and About with no marketplace Favorite, message or VPS | Flutter Tier 1 and Tier 2 selection tests |
+| Tier 2 sheet has Favorite bookmark, View Storefront and the existing Message action; Tier 1 has Overview, Google Reviews and About with a Favorite bookmark but no message or VPS | Flutter Tier 1 and Tier 2 selection tests |
 
 ## Commands
 

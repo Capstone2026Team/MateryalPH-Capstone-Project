@@ -13,20 +13,88 @@ class FakeAnalyticsRepository implements AnalyticsRepository {
   final List<String> calls = [];
   final List<AnalyticsWindowChoice> windows = [];
   final List<int> radii = [];
+  final List<String?> categoryIds = [];
+  final List<String?> queries = [];
 
+  /// Applies [categoryId] to [page] the way the API's `category_id` filter does.
   @override
   Future<MaterialsAnalyticsPage> list({
     required DiscoveryOrigin origin,
     required int radiusKm,
     required AnalyticsWindowChoice window,
     String? query,
+    String? categoryId,
     String? cursor,
+    int? perPage,
   }) async {
     calls.add('list');
     windows.add(window);
     radii.add(radiusKm);
+    categoryIds.add(categoryId);
+    queries.add(query);
     if (failure != null) throw failure!;
-    return page!;
+    final result = page!;
+    if (categoryId == null) return result;
+    return MaterialsAnalyticsPage(
+      envelope: result.envelope,
+      items: result.items
+          .where((item) => item.categoryId == categoryId)
+          .toList(growable: false),
+      nextCursor: result.nextCursor,
+    );
+  }
+
+  AnalyticsProductsPage? productsPage;
+  AnalyticsProductDetailView? productDetail;
+  final List<String> productIds = [];
+
+  /// Applies [categoryId] and [query] to [productsPage] the way the API filters do; the
+  /// overview categories always cover the whole scope.
+  @override
+  Future<AnalyticsProductsPage> products({
+    required DiscoveryOrigin origin,
+    required int radiusKm,
+    required AnalyticsWindowChoice window,
+    String? query,
+    String? categoryId,
+    String? cursor,
+  }) async {
+    calls.add('products');
+    windows.add(window);
+    radii.add(radiusKm);
+    categoryIds.add(categoryId);
+    queries.add(query);
+    if (failure != null) throw failure!;
+    final page = productsPage!;
+    final term = query?.toLowerCase();
+    return AnalyticsProductsPage(
+      envelope: page.envelope,
+      categories: page.categories,
+      items: page.items
+          .where(
+            (item) =>
+                (categoryId == null || item.categoryId == categoryId) &&
+                (term == null || item.name.toLowerCase().contains(term)),
+          )
+          .toList(growable: false),
+      notYetComparable: page.notYetComparable,
+      nextCursor: page.nextCursor,
+    );
+  }
+
+  @override
+  Future<AnalyticsProductDetailView> product({
+    required String materialId,
+    required DiscoveryOrigin origin,
+    required int radiusKm,
+    required AnalyticsWindowChoice window,
+  }) async {
+    calls.add('product:$materialId');
+    productIds.add(materialId);
+    windows.add(window);
+    radii.add(radiusKm);
+    if (failure != null) throw failure!;
+    return productDetail!;
   }
 
   @override

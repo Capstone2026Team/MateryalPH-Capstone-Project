@@ -8,6 +8,7 @@ use App\Domain\Authorization\AccountAccess;
 use App\Domain\Authorization\VendorTeamActivityBroadcast;
 use App\Domain\Authorization\VendorTeamActivityQuery;
 use App\Domain\Catalog\CatalogAccess;
+use App\Domain\Catalog\EligibleOfferQuery;
 use App\Domain\Enforcement\BuyerCommerceRestriction;
 use App\Domain\Geography\BuyerProfiles;
 use App\Domain\Identity\AuditRecorder;
@@ -273,19 +274,7 @@ final class ConversationService
         $this->filterArchived($request, $query);
         $page = $query->orderByDesc('inbox_updated_at')->orderByDesc('id')->paginate(25);
 
-        return ['items' => array_map(function (object $c) use ($request): array {
-            $header = $this->header($request, $c);
-            if ($c->purpose === 'SALES') {
-                $threads = $this->salesFor($request, $c);
-                $latest = DB::table('messages')->whereIn('conversation_id', (clone $threads)->select('c.id'))->orderByDesc('id')->first();
-                $product = $latest?->product_snapshot === null ? null : json_decode($latest->product_snapshot, true);
-                $header['unread_count'] = $this->unreadQueryCount($request, $threads);
-                $header['last_message_preview'] = $product === null ? ($latest->body ?? '') : 'Sent a product: '.$product['name'];
-                $header['updated_at'] = Carbon::parse($c->inbox_updated_at)->toIso8601String();
-            }
-
-            return $header;
-        }, $page->items()), 'page' => $page->currentPage(), 'has_more' => $page->hasMorePages()];
+        return ['items' => app(ConversationHeaders::class)->build($request, $page->items(), $this->inboxQuery($request, filterArchived: false)->where('c.purpose', 'SALES'), $this->activeProjectInquiries($request), true), 'page' => $page->currentPage(), 'has_more' => $page->hasMorePages()];
     }
 
     /** Uses the same current role, assignment and canonical-thread scope as the inbox, across every page. */
@@ -318,7 +307,7 @@ final class ConversationService
                 $this->filterArchived($request, $query);
             }
         } else {
-            $scope = app(AccountAccess::class)->resolve($request->user());
+            $scope = $request->attributes->get('account_scope') ?? app(AccountAccess::class)->resolve($request->user());
             $query->where('vendor_organization_id', $scope['organization_id']);
             if ($scope['role'] === 'FULFILLMENT') {
                 $query->where('purpose', 'FULFILLMENT')->whereIn('order_id', DB::table('order_fulfillment_assignments')->select('order_id')->where('user_id', $request->user()->id)->whereNull('ended_at'));
@@ -361,13 +350,13 @@ final class ConversationService
         }
         $page = $this->activeProjectInquiries($request, $source)->orderByDesc('c.updated_at')->orderByDesc('c.id')->paginate(25);
 
-        return ['items' => array_map(fn (object $c): array => $this->header($request, $c), $page->items()), 'page' => $page->currentPage(), 'has_more' => $page->hasMorePages()];
+        return ['items' => app(ConversationHeaders::class)->build($request, $page->items(), $this->inboxQuery($request, filterArchived: false)->where('c.purpose', 'SALES'), $this->activeProjectInquiries($request)), 'page' => $page->currentPage(), 'has_more' => $page->hasMorePages()];
     }
 
     /** Navigation covers open quotation workflows only; history remains directly authorized and readable. */
-    private function activeProjectInquiries(Request $request, object $source): Builder
+    private function activeProjectInquiries(Request $request, ?object $source = null): Builder
     {
-        return $this->salesFor($request, $source)->where('c.context_type', 'PROJECT_BASED')
+        return ($source === null ? $this->inboxQuery($request, filterArchived: false)->where('c.purpose', 'SALES') : $this->salesFor($request, $source))->where('c.context_type', 'PROJECT_BASED')
             ->whereExists(fn (Builder $query) => $query->selectRaw('1')->from('work_packages as w')
                 ->join('projects as p', 'p.id', '=', 'w.project_id')
                 ->whereColumn('w.id', 'c.context_id')->whereColumn('p.buyer_profile_id', 'c.buyer_profile_id')
@@ -389,58 +378,13 @@ final class ConversationService
      * @return array<string, mixed> */
     public function header(Request $request, object $c): array
     {
-        $store = DB::table('store_profiles')->where('vendor_organization_id', $c->vendor_organization_id)->first();
-        $logo = $store?->logo_file_id === null ? null : DB::table('files as f')->join('store_media as m', 'm.file_id', '=', 'f.id')->where('f.id', $store->logo_file_id)->where('f.visibility', 'PUBLIC')->where('f.scan_state', 'CLEAN')->where('m.status', 'READY')->value('f.metadata');
-        $logoData = is_string($logo) ? json_decode($logo, true) : [];
-        $handler = $c->handler_user_id === null ? null : User::find($c->handler_user_id);
-        $handlerIdentity = $handler !== null && $this->access->allows($handler, $c) ? $this->identity($handler, $c) : null;
-        $unread = $this->unreadCount($request, (string) $c->id);
-        $canListFulfillment = $this->canListFulfillment($request, $c);
-
-        $latest = DB::table('messages')->where('conversation_id', $c->id)->orderByDesc('id')->first();
-        $product = $latest?->product_snapshot === null ? null : json_decode($latest->product_snapshot, true);
-        $buyerUser = User::find(DB::table('buyer_profiles')->where('id', $c->buyer_profile_id)->value('user_id'));
-        $legacy = DB::table('conversations')->where('canonical_conversation_id', $c->id)->orderBy('id')->paginate(25, ['id'], 'legacy_page');
-        $sales = $this->salesFor($request, $c);
-        $projects = $this->activeProjectInquiries($request, $c);
-        $reference = json_decode((string) $c->locked_reference, true);
-
-        return ['id' => $c->id, 'purpose' => $c->purpose, 'context_type' => $c->context_type, 'order_id' => $c->order_id, 'lock_version' => (int) $c->lock_version,
-            'buyer' => $buyerUser === null ? null : $this->identity($buyerUser, $c),
-            'last_message_preview' => $product === null ? ($latest->body ?? '') : 'Sent a product: '.$product['name'],
-            'latest_product_id' => DB::table('messages')->where('conversation_id', $c->id)->whereNotNull('product_id')->orderByDesc('id')->value('product_id'),
-            'canonical_conversation_id' => $c->canonical_conversation_id,
-            'legacy_conversation_ids' => array_column($legacy->items(), 'id'), 'legacy_has_more' => $legacy->hasMorePages(), 'legacy_page' => $legacy->currentPage(),
-            'store' => ['id' => $c->vendor_organization_id, 'name' => $store->public_store_name ?? 'Store', 'logo_url' => $logoData['public_url'] ?? null,
-                'verified' => DB::table('vendor_organizations')->where('id', $c->vendor_organization_id)->where('store_verification_status', 'APPROVED')->exists()],
-            'handler' => $handlerIdentity, 'unread_count' => $unread, 'channel' => $this->access->channel($request->user(), $c),
-            'locked_reference' => (object) json_decode((string) $c->locked_reference, true), 'updated_at' => Carbon::parse($c->updated_at)->toIso8601String(),
-            'can_transfer' => $request->user()->account_type === 'VENDOR' && $c->purpose === 'SALES',
-            'can_list_fulfillment_conversations' => $canListFulfillment,
-            'main_conversation_id' => $c->purpose === 'SALES' ? (clone $sales)->where('c.context_type', 'ITEM_BASED')->value('c.id') : null,
-            'project_inquiry_count' => $c->purpose === 'SALES' ? (clone $projects)->count() : 0,
-            'project_unread_count' => $c->purpose === 'SALES' ? $this->unreadQueryCount($request, $projects) : 0,
-            'inquiry_label' => $c->context_type === 'PROJECT_BASED' ? ($reference['work_package']['name'] ?? 'Project inquiry') : 'Inquiry',
-            'fulfillment_unread_count' => $canListFulfillment ? $this->fulfillmentUnreadCount($request, $c) : 0,
-            'fulfillment_entry_enabled' => $c->purpose === 'FULFILLMENT',
-            'order_reference' => $c->purpose === 'FULFILLMENT' ? DB::table('orders')->where('id', $c->order_id)->value('reference') : null] + $this->writableFields($c);
+        return app(ConversationHeaders::class)->build($request, [$c], $this->inboxQuery($request, filterArchived: false)->where('c.purpose', 'SALES'), $this->activeProjectInquiries($request))[0];
     }
 
     public function canListFulfillment(Request $request, object $conversation): bool
     {
         return $request->user()->account_type === 'VENDOR' && $conversation->purpose === 'SALES'
-            && in_array($this->access->role($request->user()), ['OWNER', 'STORE_MANAGER'], true);
-    }
-
-    /** All linked fulfillment pages, including unread history; only the authorized supervising roles may count them. */
-    private function fulfillmentUnreadCount(Request $request, object $source): int
-    {
-        $userId = (int) $request->user()->id;
-
-        return DB::table('messages as m')->join('conversations as c', 'c.id', '=', 'm.conversation_id')
-            ->where('c.purpose', 'FULFILLMENT')->where('c.buyer_profile_id', $source->buyer_profile_id)
-            ->where('c.vendor_organization_id', $source->vendor_organization_id)->where('m.sender_user_id', '<>', $userId)
-            ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('message_read_receipts as r')->whereColumn('r.message_id', 'm.id')->where('r.user_id', $userId))->count();
+            && in_array(($request->attributes->get('account_scope') ?? app(AccountAccess::class)->resolve($request->user()))['role'], ['OWNER', 'STORE_MANAGER'], true);
     }
 
     /** Existing threads for this inquiry's buyer/store pair; opening the list never creates a thread.
@@ -496,7 +440,7 @@ final class ConversationService
     {
         $profile = DB::table('user_profiles')->where('user_id', $user->id)->first();
 
-        return ['display_name' => $profile?->full_name ?: ($user->account_type === 'BUYER' ? 'Buyer' : 'Store team'), 'role' => $this->access->role($user),
+        return ['display_name' => $profile?->full_name ?: ($user->account_type === 'BUYER' ? 'Buyer' : 'Store team'), 'role' => $this->access->displayRole($user, $c),
             'avatar_path' => $user->profile_photo_key === null ? null : '/conversations/'.$c->id.'/avatars/'.$user->id];
     }
 
@@ -516,8 +460,18 @@ final class ConversationService
         $hasMore = $rows->count() > 50;
         $rows = $rows->take(50);
 
-        return ['items' => $rows->reverse()->map(function (object $m) use ($request): array {
-            $attachments = DB::table('message_attachments')->where('message_id', $m->id)->get(['id', 'display_name', 'media_type', 'size_bytes', 'scan_state']);
+        $attachmentsByMessage = DB::table('message_attachments')->whereIn('message_id', $rows->pluck('id'))->get(['message_id', 'id', 'display_name', 'media_type', 'size_bytes', 'scan_state'])->groupBy('message_id');
+        $readMessages = DB::table('message_read_receipts as r')->join('messages as m', 'm.id', '=', 'r.message_id')->whereIn('m.id', $rows->pluck('id'))
+            ->whereColumn('r.user_id', '<>', 'm.sender_user_id')->pluck('m.id')->flip();
+        $productIds = $rows->pluck('product_id')->filter()->unique()->all();
+        $availableProducts = $productIds === [] ? [] : app(EligibleOfferQuery::class)->variants()->whereIn('v.id', $productIds)->pluck('v.id')->all();
+
+        return ['items' => $rows->reverse()->map(function (object $m) use ($request, $attachmentsByMessage, $readMessages, $availableProducts): array {
+            $attachments = $attachmentsByMessage->get($m->id, collect())->map(function (object $attachment): object {
+                unset($attachment->message_id);
+
+                return $attachment;
+            });
             $sender = json_decode($m->public_sender, true);
             // Resolve the original sender's current name without changing their recorded role or message history.
             if ($m->kind !== 'SYSTEM' && is_string($m->current_sender_name) && trim($m->current_sender_name) !== '') {
@@ -525,9 +479,9 @@ final class ConversationService
             }
 
             return ['id' => $m->id, 'client_message_id' => $m->client_message_id, 'body' => $m->body, 'kind' => $m->kind, 'sender' => $sender,
-                'product' => app(ConversationProducts::class)->stored($m),
+                'product' => app(ConversationProducts::class)->stored($m, $availableProducts),
                 'sent_at' => Carbon::parse($m->sent_at)->toIso8601String(), 'mine' => (int) $m->sender_user_id === (int) $request->user()->id, 'attachments' => $attachments->all(),
-                'read_by_recipient' => DB::table('message_read_receipts')->where('message_id', $m->id)->where('user_id', '<>', $m->sender_user_id)->exists()];
+                'read_by_recipient' => $readMessages->has($m->id)];
         })->values()->all(), 'has_more' => $hasMore, 'next_before' => $hasMore ? $rows->last()->id : null];
     }
 

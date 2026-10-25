@@ -1,3 +1,4 @@
+import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../design_system/theme.dart';
@@ -23,11 +24,11 @@ class MaterialSearchResults extends StatelessWidget {
     required this.unlisted,
     required this.onChoose,
   });
-  final List<ProjectData> matches;
+  final List<api.ProjectMaterial> matches;
   final bool searching, unlisted;
   final String query;
   final String? selectedId;
-  final ValueChanged<ProjectData?> onChoose;
+  final ValueChanged<api.ProjectMaterial?> onChoose;
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +41,7 @@ class MaterialSearchResults extends StatelessWidget {
     if (query.isEmpty) return const SizedBox.shrink();
     final visible = matches.take(maxVisibleMatches).toList();
     // A revised line keeps its current choice visible even past the cap.
-    final chosen = matches.where((m) => m['id'] == selectedId).firstOrNull;
+    final chosen = matches.where((m) => m.id == selectedId).firstOrNull;
     if (chosen != null && !visible.contains(chosen)) visible.add(chosen);
     return Container(
       margin: const EdgeInsets.only(top: 8),
@@ -54,11 +55,11 @@ class MaterialSearchResults extends StatelessWidget {
         children: [
           for (final m in visible) ...[
             _MatchTile(
-              selected: m['id'] == selectedId,
-              title: projectText(m['name']),
+              selected: m.id == selectedId,
+              title: projectText(m.name),
               meta: _MatchMeta(match: m),
-              note: m['match_type'] == 'FUZZY'
-                  ? 'Confirm it is the same product as “${projectText(m['matched_text'])}”.'
+              note: m.matchType.name == 'FUZZY'
+                  ? 'Confirm it is the same product as “${projectText(m.matchedText)}”.'
                   : null,
               onTap: () => onChoose(m),
             ),
@@ -95,7 +96,7 @@ class SelectedMaterialRow extends StatelessWidget {
   });
 
   /// The catalog choice, or null for an unlisted material named [name].
-  final ProjectData? material;
+  final api.ProjectMaterial? material;
   final String name;
   final VoidCallback onChange;
 
@@ -124,7 +125,7 @@ class SelectedMaterialRow extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  m == null ? name : projectText(m['name']),
+                  m == null ? name : projectText(m.name),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodyLarge?.copyWith(
@@ -159,15 +160,15 @@ class SelectedMaterialRow extends StatelessWidget {
 /// One line: regulated badge, match kind and category, ellipsized together.
 class _MatchMeta extends StatelessWidget {
   const _MatchMeta({required this.match});
-  final ProjectData match;
+  final api.ProjectMaterial match;
 
   @override
   Widget build(BuildContext context) {
-    final category = projectText(match['category_name']);
+    final category = projectText(match.categoryName);
     return LayoutBuilder(
       builder: (context, constraints) => Row(
         children: [
-          if (match['regulated'] == true) ...[
+          if (match.regulated == true) ...[
             // Leaves room for the match chip on very narrow rows.
             ConstrainedBox(
               constraints: BoxConstraints(maxWidth: constraints.maxWidth * 0.6),
@@ -175,15 +176,15 @@ class _MatchMeta extends StatelessWidget {
             ),
             const SizedBox(width: 6),
           ],
-          switch (match['match_type']) {
+          switch (match.matchType.name) {
             'EXACT' => const _MatchChip(label: 'Exact name', exact: true),
             'ALIAS' => _MatchChip(
-              label: 'Also called “${projectText(match['matched_text'])}”',
+              label: 'Also called “${projectText(match.matchedText)}”',
               exact: true,
             ),
             _ => _MatchChip(
               label:
-                  'Close match ${((match['similarity'] as num? ?? 0) * 100).round()}%',
+                  'Close match ${((match.similarity as num? ?? 0) * 100).round()}%',
               exact: false,
             ),
           },
