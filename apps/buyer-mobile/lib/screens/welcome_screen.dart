@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../design_system/theme.dart';
 import '../widgets/brandwithoutname_lockup.dart';
+import '../widgets/google_sign_in_button.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({
@@ -100,23 +101,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                           child: const Text('Create buyer account'),
                         ),
                         const SizedBox(height: 12),
-                        OutlinedButton(
+                        GoogleSignInButton(
                           onPressed: _openingGoogle ? null : _google,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.g_mobiledata, size: 32),
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: Text(
-                                  _openingGoogle
-                                      ? 'Opening Google…'
-                                      : 'Continue with Google',
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ],
-                          ),
+                          label: _openingGoogle
+                              ? 'Opening Google…'
+                              : 'Continue with Google',
                         ),
                         const SizedBox(height: 8),
                         TextButton(

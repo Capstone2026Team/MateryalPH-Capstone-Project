@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../design_system/components/buyer_app_bar.dart';
 
 import '../widgets/auth_content.dart';
+import '../widgets/google_sign_in_button.dart';
 import '../widgets/password_requirements.dart';
 import '../widgets/phone_number_field.dart';
 
@@ -298,10 +299,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       style: TextStyle(color: BuyerTheme.muted),
                     ),
                   ),
-                  OutlinedButton.icon(
+                  GoogleSignInButton(
                     onPressed: _submitting ? null : widget.onGoogleRegister,
-                    icon: const Icon(Icons.g_mobiledata, size: 32),
-                    label: const Text('Sign up with Google'),
+                    label: 'Sign up with Google',
                   ),
                   const SizedBox(height: 12),
                   TextButton(

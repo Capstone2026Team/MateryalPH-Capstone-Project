@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../design_system/components/buyer_app_bar.dart';
 
 import '../widgets/auth_content.dart';
+import '../widgets/google_sign_in_button.dart';
 
 import '../auth/auth_repository.dart';
 import '../design_system/theme.dart';
@@ -189,7 +190,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: TextStyle(color: BuyerTheme.muted),
                       ),
                     ),
-                    OutlinedButton(
+                    GoogleSignInButton(
                       onPressed: _submitting
                           ? null
                           : () async {
@@ -202,19 +203,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 }
                               }
                             },
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.g_mobiledata, size: 32),
-                          SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              'Continue with Google',
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ],
-                      ),
+                      label: 'Continue with Google',
                     ),
                   ],
                   const SizedBox(height: 20),

@@ -26,6 +26,17 @@ describe('Vendor public portal', () => {
     vi.restoreAllMocks()
   })
 
+  test('carries the Vendor sign-in email into the shared recovery choices', () => {
+    window.history.replaceState({}, '', '/login')
+    render(<App />)
+    fireEvent.change(screen.getByRole('textbox', { name: /Email address/ }), { target: { value: 'owner@example.test' } })
+    fireEvent.click(screen.getByRole('link', { name: 'Forgot password?' }))
+    expect(screen.getByRole('heading', { name: 'Recover your account' })).toBeVisible()
+    expect(screen.getByText('o••••@example.test')).toBeVisible()
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Use recovery codes' })).toBeVisible()
+  })
+
   test('shows invitation acceptance validation beside the affected field', async () => {
     const renderWidget = installRecaptcha()
     const fetchMock = vi.fn()

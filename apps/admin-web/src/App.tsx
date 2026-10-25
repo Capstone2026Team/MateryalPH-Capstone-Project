@@ -59,6 +59,7 @@ function AdminLogin() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const check = useWebBotProtection(readableApiError)
+  const [email, setEmail] = useState('')
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -77,9 +78,9 @@ function AdminLogin() {
     {check.message && <StatusMessage tone="error">{check.message}</StatusMessage>}
     {check.stepUp ? <AdminEmailSecurityCheck check={check} /> : <form aria-busy={check.busy} onSubmit={submit}>
       {successMessage && <StatusMessage tone="success">{successMessage}</StatusMessage>}
-      <Field label="Email address" name="email" type="email" autoComplete="email" required />
+      <Field label="Email address" name="email" type="email" autoComplete="email" value={email} onChange={event => setEmail(event.currentTarget.value)} required />
       <Field label="Password" name="password" type="password" autoComplete="current-password" required />
-      <div className="admin-help"><span>Access attempts are audited.</span><Link to="/forgot-password">Forgot password?</Link></div>
+      <div className="admin-help"><span>Access attempts are audited.</span><Link to="/forgot-password" state={{ email }}>Forgot password?</Link></div>
       <AdminSecurityFields action="admin_login" check={check}>
         <Button className="w-full" type="submit" disabled={check.busy}>{check.busy ? 'Verifying access…' : 'Sign in securely'} <ArrowRight aria-hidden="true" /></Button>
       </AdminSecurityFields>

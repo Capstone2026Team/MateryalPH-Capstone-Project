@@ -62,6 +62,14 @@ export function resetPassword(email: string, code: string, password: string, pas
   return withWebAuthApi((api) => api.resetPassword({ passwordResetRequest: { email, code, password, passwordConfirmation } }))
 }
 
+export function verifyPasswordRecovery(input: { email: string; code?: string; recoveryCode?: string; challengeId?: string }) {
+  return withWebAuthApi(api => api.verifyWebPasswordRecovery({ verifyWebPasswordRecoveryRequest: { ...input, portal: 'ADMIN' } }))
+}
+
+export function completePasswordRecovery(email: string, password: string, passwordConfirmation: string) {
+  return withWebAuthApi(api => api.completeWebPasswordRecovery({ completeWebPasswordRecoveryRequest: { email, password, passwordConfirmation, portal: 'ADMIN' } }))
+}
+
 export async function readableApiError(error: unknown): Promise<string> {
   const transportMessage = webRequestErrorMessage(error)
   if (transportMessage) return transportMessage

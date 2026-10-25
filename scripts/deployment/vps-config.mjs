@@ -63,6 +63,8 @@ export function validateApi(config, api, reverb, appPassword) {
     TRUSTED_PROXIES: '172.30.240.0/24', REVERB_HOST: 'reverb', REVERB_PORT: '10000',
     REVERB_SCHEME: 'http', REVERB_PUBLIC_SCHEME: 'https', REVERB_PUBLIC_PORT: '443',
     FRONTEND_BUYER_REDIRECT_URI: 'materyalph://auth/callback', BROADCAST_CONNECTION: 'reverb',
+    // Sign-in verifies only Argon2 hashes; any other driver locks out every reset or new account.
+    HASH_DRIVER: 'argon2id',
   }
   for (const [key, value] of Object.entries(fixed)) if (api[key] !== value) throw new Error(`Invalid staging setting: ${key}.`)
   if (!/^materyalph_(?:staging|restore_\d{14})$/.test(api.DB_DATABASE ?? '')) throw new Error('Use the dedicated staging database or a newly restored staging database.')

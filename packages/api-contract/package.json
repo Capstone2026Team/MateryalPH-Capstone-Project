@@ -4,6 +4,8 @@
   "version": "0.0.0",
   "description": "OpenAPI 3.1 source and generated-client boundary for MateryalPH",
   "scripts": {
+    "test:web-password-recovery-contract": "node scripts/check-web-password-recovery-contract.mjs",
+    "test:web-password-recovery-dart": "dart run scripts/check-web-password-recovery.dart",
     "test:bot-protection-contract": "node scripts/check-bot-protection-contract.mjs",
     "test:rate-limit-contract": "node scripts/check-rate-limit-contract.mjs",
     "validate": "openapi-generator-cli validate -i openapi.yaml",

@@ -2,7 +2,7 @@ import { VendorContactPage, VendorSupportRequestsPage, VendorSupportTicketPage, 
 import { VendorNotificationsPage } from './pages/NotificationPages'
 import { VendorPlaceholderPage } from './pages/PhaseThreeVendorPages'
 import { AcceptStaffInvitation } from './pages/AcceptStaffInvitation'
-import { BotProtectionFields, Button, Field, PasswordField, PhoneField, StatusMessage, PortalIdentityProvider, PortalResourceProvider } from '@materyalph/web-ui'
+import { BotProtectionFields, Button, Field, GoogleButton, GoogleMark, googleButtonClassName, PasswordField, PhoneField, StatusMessage, PortalIdentityProvider, PortalResourceProvider } from '@materyalph/web-ui'
 import { ArrowRight } from 'lucide-react'
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Link, Outlet, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
@@ -110,6 +110,7 @@ function App() {
 function LoginPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const [email, setEmail] = useState('')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [useEmailCheck, setUseEmailCheck] = useState(false)
@@ -172,11 +173,11 @@ function LoginPage() {
         : <form className="auth-form" aria-busy={busy} onSubmit={submit}>
             {successMessage && <StatusMessage tone="success">{successMessage}</StatusMessage>}
             {message && <StatusMessage tone="error">{message}</StatusMessage>}
-            <Button className="w-full" variant="secondary" onClick={() => void googleSignIn()} disabled={busy}>Continue with Google</Button>
+            <GoogleButton onClick={() => void googleSignIn()} disabled={busy}>Continue with Google</GoogleButton>
             <div className="auth-divider"><span>or sign in with email</span></div>
-            <Field label="Email address" name="email" type="email" autoComplete="email" required />
+            <Field label="Email address" name="email" type="email" autoComplete="email" value={email} onChange={event => setEmail(event.currentTarget.value)} required />
             <Field label="Password" name="password" type="password" autoComplete="current-password" required />
-            <div className="form-row"><span>Your account, securely accessed.</span><Link to="/forgot-password">Forgot password?</Link></div>
+            <div className="form-row"><span>Your account, securely accessed.</span><Link to="/forgot-password" state={{ email }}>Forgot password?</Link></div>
             <BotProtectionFields disabled={busy} emailCheckSelected={useEmailCheck} onEmailCheckClick={() => { captchaRef.current?.reset(); setUseEmailCheck((value) => !value) }} checkbox={
               !useEmailCheck && <VendorRecaptchaCheckbox ref={captchaRef} action="vendor_login" disabled={busy} onTokenChange={setCaptchaToken} />
             }>
@@ -277,7 +278,7 @@ function RegisterPage() {
         ? <RiskOtpPanel challenge={challenge} email={pending.email} onCancel={() => { setChallenge(null); setPending(null) }} onVerified={() => attempt(pending, true)} />
         : <form className="auth-form" onSubmit={submit}>
             {displayedMessage && <div id="registration-form-error" tabIndex={displayedMessage.tone === 'error' ? -1 : undefined}><StatusMessage tone={displayedMessage.tone}>{displayedMessage.text}</StatusMessage></div>}
-            <Link className="button button--secondary" to="/register/google">Register with Google</Link>
+            <Link className={googleButtonClassName} to="/register/google"><GoogleMark />Register with Google</Link>
             <div className="auth-divider"><span>or register with email</span></div>
             <Field error={fieldError('full_name')} label="Account Owner Name" name="full_name" autoComplete="name" maxLength={160} onChange={() => clearFieldErrors('full_name')} required />
             <Field error={fieldError('email')} label="Email address" name="email" type="email" autoComplete="email" onChange={() => clearFieldErrors('email')} required />

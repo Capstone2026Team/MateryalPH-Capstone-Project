@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\Auth\ResendVerificationController;
 use App\Http\Controllers\Api\Auth\SessionController;
 use App\Http\Controllers\Api\Auth\VerifyEmailController;
+use App\Http\Controllers\Api\Auth\WebPasswordRecoveryController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\PublicStoreProfileController;
 use App\Http\Controllers\Api\XenditAccountVerificationWebhookController;
@@ -49,6 +50,8 @@ Route::prefix('auth')->middleware('auth.transport:WEB')->group(function (): void
         Route::post('/google/start', [GoogleOidcController::class, 'start']);
         Route::post('/password/forgot', [PasswordRecoveryController::class, 'request']);
         Route::post('/password/reset', [PasswordRecoveryController::class, 'reset']);
+        Route::post('/password/verify', [WebPasswordRecoveryController::class, 'verify']);
+        Route::post('/password/complete', [WebPasswordRecoveryController::class, 'reset']);
         Route::post('/bot-challenges/{challengeId}/verify', [BotChallengeController::class, 'verify']);
         Route::post('/bot-challenges/{challengeId}/resend', [BotChallengeController::class, 'resend']);
     });

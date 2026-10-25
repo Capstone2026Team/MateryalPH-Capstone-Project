@@ -1,21 +1,22 @@
-import { AuthenticatorCodeField, Button, Field, StatusMessage, useWebBotProtection } from '@materyalph/web-ui'
+import { AuthenticatorCodeField, Button, Field, PasswordRecoveryFlow, StatusMessage } from '@materyalph/web-ui'
 import { QRCodeSVG } from 'qrcode.react'
 import { downloadRecoveryCodes } from '../lib/recovery-codes'
 import { ShieldCheck } from 'lucide-react'
 import { type FormEvent, useEffect, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { AdminAuthShell } from '../components/AdminAuthShell'
-import { AdminEmailSecurityCheck, AdminSecurityFields } from '../components/AdminBotProtection'
 import {
   completeMfaChallenge,
   confirmMfaEnrollment,
+  completePasswordRecovery,
   getMfaStatus,
   readableApiError,
   recoverMfaChallenge,
   requestPasswordRecovery,
-  resetPassword,
+  resendRiskChallenge,
   startMfaEnrollment,
+  verifyPasswordRecovery,
 } from '../lib/auth-api'
 
 type Enrollment = { secret: string; provisioningUri: string }
@@ -29,32 +30,30 @@ export function AdminMfaPage() {
 }
 
 export function AdminForgotPasswordPage() {
-  const check = useWebBotProtection(readableApiError)
-  const [sent, setSent] = useState(false)
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const email = String(new FormData(event.currentTarget).get('email'))
-    await check.run(email, async evidence => {
-      await requestPasswordRecovery(email, evidence)
-      setSent(true)
-    }, (event.nativeEvent as SubmitEvent).submitter?.getAttribute('data-email-check') === 'true')
-  }
-  return <AdminAuthShell title="Recover Admin access" description="A short-lived, single-use code is sent only to an existing invited account.">
-    {check.message && <StatusMessage tone="error">{check.message}</StatusMessage>}
-    {check.stepUp ? <AdminEmailSecurityCheck check={check} /> : <form onSubmit={submit} aria-busy={check.busy}>
-      {sent && <StatusMessage tone="success">If that invited account exists, a six-digit recovery code has been sent.</StatusMessage>}
-      <Field label="Email address" name="email" type="email" autoComplete="email" required />
-      <AdminSecurityFields action="admin_password_recovery" check={check}>
-        <Button className="w-full" type="submit" disabled={check.busy}>{check.busy ? 'Requesting…' : 'Send recovery code'}</Button>
-      </AdminSecurityFields>
-      <Link className="admin-return admin-return--centered" to="/reset-password">I already have a code</Link>
-      <Link className="admin-return admin-return--centered" to="/login">Back to sign in</Link>
-    </form>}
-  </AdminAuthShell>
+  return <AdminPasswordRecovery />
 }
 
 export function AdminResetPasswordPage() {
-  const navigate = useNavigate(); const [searchParams] = useSearchParams(); const [busy, setBusy] = useState(false); const [message, setMessage] = useState<string | null>(null)
-  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setBusy(true); setMessage(null); const data = new FormData(event.currentTarget); try { await resetPassword(String(data.get('email')), String(data.get('code')), String(data.get('password')), String(data.get('password_confirmation'))); navigate('/login?reset=success', { replace: true }) } catch (error) { setMessage(await readableApiError(error)) } finally { setBusy(false) } }
-  return <AdminAuthShell title="Set a new password" description="Changing the password revokes prior sessions."><form onSubmit={submit}>{message && <StatusMessage tone="error">{message}</StatusMessage>}<Field label="Email address" name="email" type="email" defaultValue={searchParams.get('email') ?? ''} autoComplete="email" required /><Field label="Six-digit recovery code" name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required /><Field label="New password" name="password" type="password" autoComplete="new-password" minLength={14} required /><Field label="Confirm new password" name="password_confirmation" type="password" autoComplete="new-password" minLength={14} required /><Button className="w-full" type="submit" disabled={busy}>{busy ? 'Updating…' : 'Update password'}</Button></form></AdminAuthShell>
+  return <AdminPasswordRecovery initialCodeEntry />
+}
+
+function AdminPasswordRecovery({ initialCodeEntry = false }: { initialCodeEntry?: boolean }) {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
+  const state: unknown = location.state
+  const email = typeof state === 'object' && state !== null && 'email' in state && typeof state.email === 'string' ? state.email : searchParams.get('email') ?? ''
+
+  return <AdminAuthShell title="Recover Admin access" description="Verify your identity and set a new password for your invited Admin account.">
+    <PasswordRecoveryFlow portal="admin" initialEmail={email} initialCodeEntry={initialCodeEntry} siteKey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+      requestCode={async (address, evidence) => (await requestPasswordRecovery(address, evidence)).data}
+      verifyIdentity={async input => {
+        const result = await verifyPasswordRecovery(input)
+        if (!result.data.verified) throw new Error('Your identity could not be verified. Try again.')
+        return result.data
+      }}
+      completePassword={completePasswordRecovery} resendSecurityCode={resendRiskChallenge} readableError={readableApiError}
+      onDownloadCodes={downloadRecoveryCodes} onComplete={() => navigate('/login?reset=success', { replace: true })} />
+    <Link className="admin-return admin-return--centered" to="/login">Back to sign in</Link>
+  </AdminAuthShell>
 }

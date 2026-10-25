@@ -210,6 +210,7 @@ Class | Method | HTTP request | Description
 [*AuthenticationApi*](doc/AuthenticationApi.md) | [**completeBuyerMobileMfaChallenge**](doc/AuthenticationApi.md#completebuyermobilemfachallenge) | **POST** /mobile/auth/mfa/challenge |
 [*AuthenticationApi*](doc/AuthenticationApi.md) | [**completeGoogleOidc**](doc/AuthenticationApi.md#completegoogleoidc) | **GET** /auth/google/callback |
 [*AuthenticationApi*](doc/AuthenticationApi.md) | [**completeMfaChallenge**](doc/AuthenticationApi.md#completemfachallenge) | **POST** /auth/mfa/challenge |
+[*AuthenticationApi*](doc/AuthenticationApi.md) | [**completeWebPasswordRecovery**](doc/AuthenticationApi.md#completewebpasswordrecovery) | **POST** /auth/password/complete |
 [*AuthenticationApi*](doc/AuthenticationApi.md) | [**confirmMfaEnrollment**](doc/AuthenticationApi.md#confirmmfaenrollment) | **POST** /auth/mfa/enrollment/confirm |
 [*AuthenticationApi*](doc/AuthenticationApi.md) | [**exchangeBuyerMobileGoogleCode**](doc/AuthenticationApi.md#exchangebuyermobilegooglecode) | **POST** /mobile/auth/google/exchange |
 [*AuthenticationApi*](doc/AuthenticationApi.md) | [**getBuyerMobileSession**](doc/AuthenticationApi.md#getbuyermobilesession) | **GET** /mobile/auth/session |
@@ -241,6 +242,7 @@ Class | Method | HTTP request | Description
 [*AuthenticationApi*](doc/AuthenticationApi.md) | [**verifyBuyerMobileEmail**](doc/AuthenticationApi.md#verifybuyermobileemail) | **POST** /mobile/auth/verify-email |
 [*AuthenticationApi*](doc/AuthenticationApi.md) | [**verifyEmail**](doc/AuthenticationApi.md#verifyemail) | **POST** /auth/verify-email |
 [*AuthenticationApi*](doc/AuthenticationApi.md) | [**verifyWebBotChallenge**](doc/AuthenticationApi.md#verifywebbotchallenge) | **POST** /auth/bot-challenges/{challenge_id}/verify |
+[*AuthenticationApi*](doc/AuthenticationApi.md) | [**verifyWebPasswordRecovery**](doc/AuthenticationApi.md#verifywebpasswordrecovery) | **POST** /auth/password/verify |
 [*BuyerCartApi*](doc/BuyerCartApi.md) | [**addBuyerCartItem**](doc/BuyerCartApi.md#addbuyercartitem) | **POST** /buyers/cart/items |
 [*BuyerCartApi*](doc/BuyerCartApi.md) | [**getBuyerCart**](doc/BuyerCartApi.md#getbuyercart) | **GET** /buyers/cart |
 [*BuyerCartApi*](doc/BuyerCartApi.md) | [**previewBuyerCheckout**](doc/BuyerCartApi.md#previewbuyercheckout) | **POST** /buyers/cart/checkout-preview |
@@ -916,6 +918,7 @@ Class | Method | HTTP request | Description
  - [ComparableSpecificationAttributesInner](doc/ComparableSpecificationAttributesInner.md)
  - [ComparableStatus](doc/ComparableStatus.md)
  - [ComparableVariant](doc/ComparableVariant.md)
+ - [CompleteWebPasswordRecoveryRequest](doc/CompleteWebPasswordRecoveryRequest.md)
  - [ComplianceEvidence](doc/ComplianceEvidence.md)
  - [ComplianceEvidenceEnvelope](doc/ComplianceEvidenceEnvelope.md)
  - [ComplianceExtraction](doc/ComplianceExtraction.md)
@@ -1336,6 +1339,8 @@ Class | Method | HTTP request | Description
  - [OverlapResolveRequest](doc/OverlapResolveRequest.md)
  - [OwnReview](doc/OwnReview.md)
  - [PageMeta](doc/PageMeta.md)
+ - [PasswordRecoveryEnvelope](doc/PasswordRecoveryEnvelope.md)
+ - [PasswordRecoveryEnvelopeAllOfData](doc/PasswordRecoveryEnvelopeAllOfData.md)
  - [PasswordRecoveryRequest](doc/PasswordRecoveryRequest.md)
  - [PasswordResetRequest](doc/PasswordResetRequest.md)
  - [PaymentAttempt](doc/PaymentAttempt.md)
@@ -1751,7 +1756,11 @@ Class | Method | HTTP request | Description
  - [VerifiedVendorSummary](doc/VerifiedVendorSummary.md)
  - [VerifyBotChallengeRequest](doc/VerifyBotChallengeRequest.md)
  - [VerifyEmailRequest](doc/VerifyEmailRequest.md)
+ - [VerifyWebPasswordRecoveryRequest](doc/VerifyWebPasswordRecoveryRequest.md)
  - [VolumeTier](doc/VolumeTier.md)
+ - [WebPasswordRecoveryEnvelope](doc/WebPasswordRecoveryEnvelope.md)
+ - [WebPasswordRecoveryEnvelopeAllOfData](doc/WebPasswordRecoveryEnvelopeAllOfData.md)
+ - [WebPasswordRecoveryPortal](doc/WebPasswordRecoveryPortal.md)
  - [WebResendBotChallengeRequest](doc/WebResendBotChallengeRequest.md)
  - [WebVerifyBotChallengeRequest](doc/WebVerifyBotChallengeRequest.md)
  - [WithholdingAccumulatorDetail](doc/WithholdingAccumulatorDetail.md)

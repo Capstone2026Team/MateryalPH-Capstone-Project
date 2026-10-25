@@ -86,6 +86,8 @@ A Team Account sees only the sections and records permitted by its role. An empl
 
 ## 1.1 Forgot Password
 
+**Owner correction — 2026-10-26: shared Vendor/Admin recovery.** Carry the sign-in email into recovery and ask for it only when missing or explicitly changed. Offer “Send authentication code” and “Use recovery codes,” with reCAPTCHA below the choices and the accessible email fallback integrated into the send action. Verify the emailed code or an unused saved authenticator backup code before showing the new-password fields. A matching Vendor password-recovery email security challenge can authorize that step directly without sending a second code. Login, invitation, Admin, and Buyer challenges cannot authorize Vendor recovery. Keep the Vendor minimum of 12 password characters with mixed case and a number. Saved backup-code use replaces all recovery codes and revokes sessions; the replacement set is shown once for saving. Recovery preserves onboarding, email-verification, membership, account, and organization access decisions. Owners and Store Managers still complete MFA at sign-in.
+
 The user submits an email address and receives a generic response. If the account is eligible, the system sends a unique, time-limited, single-use reset link or OTP. Reset requests are rate-limited and older active recovery credentials are invalidated when a newer reset is completed.
 
 After a successful reset, the system invalidates the recovery credential, revokes active sessions and refresh tokens, records the event, and sends a security confirmation. An expired or used credential cannot change the password. Privileged accounts must complete their enrolled TOTP or an approved recovery process.

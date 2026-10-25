@@ -18,6 +18,7 @@ import 'package:materyalph_api_client/src/model/buyer_mobile_mfa_recovery_reques
 import 'package:materyalph_api_client/src/model/buyer_mobile_password_recovery_request.dart';
 import 'package:materyalph_api_client/src/model/buyer_mobile_refresh_request.dart';
 import 'package:materyalph_api_client/src/model/buyer_mobile_register_request.dart';
+import 'package:materyalph_api_client/src/model/complete_web_password_recovery_request.dart';
 import 'package:materyalph_api_client/src/model/csrf_envelope.dart';
 import 'package:materyalph_api_client/src/model/email_request.dart';
 import 'package:materyalph_api_client/src/model/google_mobile_exchange_request.dart';
@@ -27,6 +28,7 @@ import 'package:materyalph_api_client/src/model/mfa_code_request.dart';
 import 'package:materyalph_api_client/src/model/mfa_enrollment_envelope.dart';
 import 'package:materyalph_api_client/src/model/mfa_recovery_request.dart';
 import 'package:materyalph_api_client/src/model/mfa_status_envelope.dart';
+import 'package:materyalph_api_client/src/model/password_recovery_envelope.dart';
 import 'package:materyalph_api_client/src/model/password_recovery_request.dart';
 import 'package:materyalph_api_client/src/model/password_reset_request.dart';
 import 'package:materyalph_api_client/src/model/register_request.dart';
@@ -35,6 +37,8 @@ import 'package:materyalph_api_client/src/model/resend_bot_challenge_request.dar
 import 'package:materyalph_api_client/src/model/success_envelope.dart';
 import 'package:materyalph_api_client/src/model/verify_bot_challenge_request.dart';
 import 'package:materyalph_api_client/src/model/verify_email_request.dart';
+import 'package:materyalph_api_client/src/model/verify_web_password_recovery_request.dart';
+import 'package:materyalph_api_client/src/model/web_password_recovery_envelope.dart';
 import 'package:materyalph_api_client/src/model/web_resend_bot_challenge_request.dart';
 import 'package:materyalph_api_client/src/model/web_verify_bot_challenge_request.dart';
 
@@ -394,6 +398,108 @@ class AuthenticationApi {
     }
 
     return Response<AuthEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// completeWebPasswordRecovery
+  /// Requires the matching unexpired single-use Vendor or Admin recovery proof cookie. Changes the password, revokes sessions, records a security event and queues a security notice. Admin and privileged Vendor authenticator MFA remains required at sign-in.
+  ///
+  /// Parameters:
+  /// * [completeWebPasswordRecoveryRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [SuccessEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<SuccessEnvelope>> completeWebPasswordRecovery({
+    required CompleteWebPasswordRecoveryRequest completeWebPasswordRecoveryRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/auth/password/complete';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(CompleteWebPasswordRecoveryRequest);
+      _bodyData = _serializers.serialize(completeWebPasswordRecoveryRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    SuccessEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(SuccessEnvelope),
+      ) as SuccessEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<SuccessEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -1961,9 +2067,9 @@ class AuthenticationApi {
   /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
   /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
   ///
-  /// Returns a [Future] containing a [Response] with a [SuccessEnvelope] as data
+  /// Returns a [Future] containing a [Response] with a [PasswordRecoveryEnvelope] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<SuccessEnvelope>> requestPasswordRecovery({
+  Future<Response<PasswordRecoveryEnvelope>> requestPasswordRecovery({
     required PasswordRecoveryRequest passwordRecoveryRequest,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
@@ -2020,14 +2126,14 @@ class AuthenticationApi {
       onReceiveProgress: onReceiveProgress,
     );
 
-    SuccessEnvelope? _responseData;
+    PasswordRecoveryEnvelope? _responseData;
 
     try {
       final rawResponse = _response.data;
       _responseData = rawResponse == null ? null : _serializers.deserialize(
         rawResponse,
-        specifiedType: const FullType(SuccessEnvelope),
-      ) as SuccessEnvelope;
+        specifiedType: const FullType(PasswordRecoveryEnvelope),
+      ) as PasswordRecoveryEnvelope;
 
     } catch (error, stackTrace) {
       throw DioException(
@@ -2039,7 +2145,7 @@ class AuthenticationApi {
       );
     }
 
-    return Response<SuccessEnvelope>(
+    return Response<PasswordRecoveryEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -3315,6 +3421,108 @@ class AuthenticationApi {
     }
 
     return Response<BotProofEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// verifyWebPasswordRecovery
+  /// Verify one Vendor or Admin email password-reset code or saved authenticator recovery code before password entry. A challenge_id may identify the matching portal&#39;s password-recovery email security check so a second email code is not needed. Login and invitation challenges cannot authorize a password reset. Saved recovery codes are replaced after use and all sessions revoked. The single-use reset proof is returned only in a Secure HttpOnly cookie, scoped to the password API path and selected portal, and bound to the current password.
+  ///
+  /// Parameters:
+  /// * [verifyWebPasswordRecoveryRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [WebPasswordRecoveryEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<WebPasswordRecoveryEnvelope>> verifyWebPasswordRecovery({
+    VerifyWebPasswordRecoveryRequest? verifyWebPasswordRecoveryRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/auth/password/verify';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(VerifyWebPasswordRecoveryRequest);
+      _bodyData = _serializers.serialize(verifyWebPasswordRecoveryRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    WebPasswordRecoveryEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(WebPasswordRecoveryEnvelope),
+      ) as WebPasswordRecoveryEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<WebPasswordRecoveryEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

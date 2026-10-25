@@ -371,6 +371,7 @@ doc/ComparableSpecification.md
 doc/ComparableSpecificationAttributesInner.md
 doc/ComparableStatus.md
 doc/ComparableVariant.md
+doc/CompleteWebPasswordRecoveryRequest.md
 doc/ComplianceEvidence.md
 doc/ComplianceEvidenceEnvelope.md
 doc/ComplianceExtraction.md
@@ -793,6 +794,8 @@ doc/OrderVolumeTier.md
 doc/OverlapResolveRequest.md
 doc/OwnReview.md
 doc/PageMeta.md
+doc/PasswordRecoveryEnvelope.md
+doc/PasswordRecoveryEnvelopeAllOfData.md
 doc/PasswordRecoveryRequest.md
 doc/PasswordResetRequest.md
 doc/PaymentAttempt.md
@@ -1229,7 +1232,11 @@ doc/VendorWorkstreamsVerification.md
 doc/VerifiedVendorSummary.md
 doc/VerifyBotChallengeRequest.md
 doc/VerifyEmailRequest.md
+doc/VerifyWebPasswordRecoveryRequest.md
 doc/VolumeTier.md
+doc/WebPasswordRecoveryEnvelope.md
+doc/WebPasswordRecoveryEnvelopeAllOfData.md
+doc/WebPasswordRecoveryPortal.md
 doc/WebResendBotChallengeRequest.md
 doc/WebVerifyBotChallengeRequest.md
 doc/WithholdingAccumulatorDetail.md
@@ -1658,6 +1665,7 @@ lib/src/model/comparable_specification.dart
 lib/src/model/comparable_specification_attributes_inner.dart
 lib/src/model/comparable_status.dart
 lib/src/model/comparable_variant.dart
+lib/src/model/complete_web_password_recovery_request.dart
 lib/src/model/compliance_evidence.dart
 lib/src/model/compliance_evidence_envelope.dart
 lib/src/model/compliance_extraction.dart
@@ -2079,6 +2087,8 @@ lib/src/model/order_volume_tier.dart
 lib/src/model/overlap_resolve_request.dart
 lib/src/model/own_review.dart
 lib/src/model/page_meta.dart
+lib/src/model/password_recovery_envelope.dart
+lib/src/model/password_recovery_envelope_all_of_data.dart
 lib/src/model/password_recovery_request.dart
 lib/src/model/password_reset_request.dart
 lib/src/model/payment_attempt.dart
@@ -2494,7 +2504,11 @@ lib/src/model/vendor_workstreams_verification.dart
 lib/src/model/verified_vendor_summary.dart
 lib/src/model/verify_bot_challenge_request.dart
 lib/src/model/verify_email_request.dart
+lib/src/model/verify_web_password_recovery_request.dart
 lib/src/model/volume_tier.dart
+lib/src/model/web_password_recovery_envelope.dart
+lib/src/model/web_password_recovery_envelope_all_of_data.dart
+lib/src/model/web_password_recovery_portal.dart
 lib/src/model/web_resend_bot_challenge_request.dart
 lib/src/model/web_verify_bot_challenge_request.dart
 lib/src/model/withholding_accumulator_detail.dart
@@ -2893,6 +2907,7 @@ test/comparable_specification_attributes_inner_test.dart
 test/comparable_specification_test.dart
 test/comparable_status_test.dart
 test/comparable_variant_test.dart
+test/complete_web_password_recovery_request_test.dart
 test/compliance_evidence_envelope_test.dart
 test/compliance_evidence_test.dart
 test/compliance_extraction_test.dart
@@ -3315,6 +3330,8 @@ test/order_volume_tier_test.dart
 test/overlap_resolve_request_test.dart
 test/own_review_test.dart
 test/page_meta_test.dart
+test/password_recovery_envelope_all_of_data_test.dart
+test/password_recovery_envelope_test.dart
 test/password_recovery_request_test.dart
 test/password_reset_request_test.dart
 test/payment_attempt_envelope_test.dart
@@ -3746,7 +3763,11 @@ test/vendor_workstreams_verification_test.dart
 test/verified_vendor_summary_test.dart
 test/verify_bot_challenge_request_test.dart
 test/verify_email_request_test.dart
+test/verify_web_password_recovery_request_test.dart
 test/volume_tier_test.dart
+test/web_password_recovery_envelope_all_of_data_test.dart
+test/web_password_recovery_envelope_test.dart
+test/web_password_recovery_portal_test.dart
 test/web_resend_bot_challenge_request_test.dart
 test/web_verify_bot_challenge_request_test.dart
 test/withholding_accumulator_detail_envelope_test.dart

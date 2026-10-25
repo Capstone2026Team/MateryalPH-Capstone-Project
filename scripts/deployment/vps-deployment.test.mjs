@@ -39,7 +39,7 @@ test('provider draft pins callback, portal origins, captcha identities and broad
   for (const key of ['APP_KEY', 'REVERB_APP_KEY', 'REVERB_APP_SECRET']) reverb[key] = api[key]
   validateApi(control(), api, reverb, api.DB_PASSWORD)
   for (const key of ['FRONTEND_VENDOR_URL', 'FRONTEND_ADMIN_URL', 'GOOGLE_OIDC_REDIRECT_URI', 'CORS_ALLOWED_ORIGINS',
-    'RECAPTCHA_VENDOR_WEB_ALLOWED_HOSTNAMES', 'RECAPTCHA_ADMIN_WEB_ALLOWED_HOSTNAMES', 'BROADCAST_CONNECTION']) {
+    'RECAPTCHA_VENDOR_WEB_ALLOWED_HOSTNAMES', 'RECAPTCHA_ADMIN_WEB_ALLOWED_HOSTNAMES', 'BROADCAST_CONNECTION', 'HASH_DRIVER']) {
     assert.throws(() => validateApi(control(), { ...api, [key]: 'stale-deployment' }, reverb, api.DB_PASSWORD))
   }
 })

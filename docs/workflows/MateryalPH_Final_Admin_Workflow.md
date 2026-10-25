@@ -24,6 +24,8 @@ The authentication service applies HTTPS, server-side validation, adaptive passw
 
 The Admin Portal uses `Secure`, `HttpOnly` cookies and must not store authentication tokens in browser local storage. Sensitive actions—including Admin-role changes, permanent bans, platform-setting changes, data exports, and security-factor recovery—require recent reauthentication.
 
+**Owner correction — 2026-10-26: Admin password recovery.** Carry the email entered on sign-in into recovery; ask for it only when missing or explicitly changed. Offer “Send authentication code” or “Use recovery codes,” with reCAPTCHA below these choices and the accessible email security check integrated into the send action. Verify the emailed code or an unused saved authenticator backup code before showing new-password fields. An email security challenge scoped to Admin password recovery may authorize this step directly, without sending a second code; login and invitation challenges cannot do so. Verification issues a short-lived, single-use, password-bound proof in a portal-isolated HttpOnly cookie. Saved backup-code use revokes sessions, replaces all recovery codes, and shows the new set once for offline storage. Password reset revokes sessions, records a security event, and sends a notice; authenticator MFA is still required at sign-in.
+
 ---
 
 ### Admin Account Creation

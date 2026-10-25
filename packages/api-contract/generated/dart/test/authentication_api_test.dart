@@ -33,6 +33,13 @@ void main() {
       // TODO
     });
 
+    // Requires the matching unexpired single-use Vendor or Admin recovery proof cookie. Changes the password, revokes sessions, records a security event and queues a security notice. Admin and privileged Vendor authenticator MFA remains required at sign-in.
+    //
+    //Future<SuccessEnvelope> completeWebPasswordRecovery(CompleteWebPasswordRecoveryRequest completeWebPasswordRecoveryRequest) async
+    test('test completeWebPasswordRecovery', () async {
+      // TODO
+    });
+
     //Future<AuthEnvelope> confirmMfaEnrollment(MfaCodeRequest mfaCodeRequest) async
     test('test confirmMfaEnrollment', () async {
       // TODO
@@ -124,7 +131,7 @@ void main() {
       // TODO
     });
 
-    //Future<SuccessEnvelope> requestPasswordRecovery(PasswordRecoveryRequest passwordRecoveryRequest) async
+    //Future<PasswordRecoveryEnvelope> requestPasswordRecovery(PasswordRecoveryRequest passwordRecoveryRequest) async
     test('test requestPasswordRecovery', () async {
       // TODO
     });
@@ -195,6 +202,13 @@ void main() {
 
     //Future<BotProofEnvelope> verifyWebBotChallenge(String challengeId, WebVerifyBotChallengeRequest webVerifyBotChallengeRequest) async
     test('test verifyWebBotChallenge', () async {
+      // TODO
+    });
+
+    // Verify one Vendor or Admin email password-reset code or saved authenticator recovery code before password entry. A challenge_id may identify the matching portal's password-recovery email security check so a second email code is not needed. Login and invitation challenges cannot authorize a password reset. Saved recovery codes are replaced after use and all sessions revoked. The single-use reset proof is returned only in a Secure HttpOnly cookie, scoped to the password API path and selected portal, and bound to the current password.
+    //
+    //Future<WebPasswordRecoveryEnvelope> verifyWebPasswordRecovery(VerifyWebPasswordRecoveryRequest verifyWebPasswordRecoveryRequest) async
+    test('test verifyWebPasswordRecovery', () async {
       // TODO
     });
 

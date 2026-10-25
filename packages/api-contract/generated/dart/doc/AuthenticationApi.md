@@ -13,6 +13,7 @@ Method | HTTP request | Description
 [**completeBuyerMobileMfaChallenge**](AuthenticationApi.md#completebuyermobilemfachallenge) | **POST** /mobile/auth/mfa/challenge |
 [**completeGoogleOidc**](AuthenticationApi.md#completegoogleoidc) | **GET** /auth/google/callback |
 [**completeMfaChallenge**](AuthenticationApi.md#completemfachallenge) | **POST** /auth/mfa/challenge |
+[**completeWebPasswordRecovery**](AuthenticationApi.md#completewebpasswordrecovery) | **POST** /auth/password/complete |
 [**confirmMfaEnrollment**](AuthenticationApi.md#confirmmfaenrollment) | **POST** /auth/mfa/enrollment/confirm |
 [**exchangeBuyerMobileGoogleCode**](AuthenticationApi.md#exchangebuyermobilegooglecode) | **POST** /mobile/auth/google/exchange |
 [**getBuyerMobileSession**](AuthenticationApi.md#getbuyermobilesession) | **GET** /mobile/auth/session |
@@ -44,6 +45,7 @@ Method | HTTP request | Description
 [**verifyBuyerMobileEmail**](AuthenticationApi.md#verifybuyermobileemail) | **POST** /mobile/auth/verify-email |
 [**verifyEmail**](AuthenticationApi.md#verifyemail) | **POST** /auth/verify-email |
 [**verifyWebBotChallenge**](AuthenticationApi.md#verifywebbotchallenge) | **POST** /auth/bot-challenges/{challenge_id}/verify |
+[**verifyWebPasswordRecovery**](AuthenticationApi.md#verifywebpasswordrecovery) | **POST** /auth/password/verify |
 
 
 # **acceptAdminInvitation**
@@ -221,6 +223,53 @@ Name | Type | Description  | Notes
 ### Authorization
 
 [mfaChallengeCookie](../README.md#mfaChallengeCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **completeWebPasswordRecovery**
+> SuccessEnvelope completeWebPasswordRecovery(completeWebPasswordRecoveryRequest)
+
+
+
+Requires the matching unexpired single-use Vendor or Admin recovery proof cookie. Changes the password, revokes sessions, records a security event and queues a security notice. Admin and privileged Vendor authenticator MFA remains required at sign-in.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAuthenticationApi();
+final CompleteWebPasswordRecoveryRequest completeWebPasswordRecoveryRequest = ; // CompleteWebPasswordRecoveryRequest |
+
+try {
+    final response = api.completeWebPasswordRecovery(completeWebPasswordRecoveryRequest);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AuthenticationApi->completeWebPasswordRecovery: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **completeWebPasswordRecoveryRequest** | [**CompleteWebPasswordRecoveryRequest**](CompleteWebPasswordRecoveryRequest.md)|  |
+
+### Return type
+
+[**SuccessEnvelope**](SuccessEnvelope.md)
+
+### Authorization
+
+[webCsrf](../README.md#webCsrf)
 
 ### HTTP request headers
 
@@ -949,7 +998,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **requestPasswordRecovery**
-> SuccessEnvelope requestPasswordRecovery(passwordRecoveryRequest)
+> PasswordRecoveryEnvelope requestPasswordRecovery(passwordRecoveryRequest)
 
 
 
@@ -980,7 +1029,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-[**SuccessEnvelope**](SuccessEnvelope.md)
+[**PasswordRecoveryEnvelope**](PasswordRecoveryEnvelope.md)
 
 ### Authorization
 
@@ -1554,6 +1603,53 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**BotProofEnvelope**](BotProofEnvelope.md)
+
+### Authorization
+
+[webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **verifyWebPasswordRecovery**
+> WebPasswordRecoveryEnvelope verifyWebPasswordRecovery(verifyWebPasswordRecoveryRequest)
+
+
+
+Verify one Vendor or Admin email password-reset code or saved authenticator recovery code before password entry. A challenge_id may identify the matching portal's password-recovery email security check so a second email code is not needed. Login and invitation challenges cannot authorize a password reset. Saved recovery codes are replaced after use and all sessions revoked. The single-use reset proof is returned only in a Secure HttpOnly cookie, scoped to the password API path and selected portal, and bound to the current password.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAuthenticationApi();
+final VerifyWebPasswordRecoveryRequest verifyWebPasswordRecoveryRequest = ; // VerifyWebPasswordRecoveryRequest |
+
+try {
+    final response = api.verifyWebPasswordRecovery(verifyWebPasswordRecoveryRequest);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AuthenticationApi->verifyWebPasswordRecovery: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **verifyWebPasswordRecoveryRequest** | [**VerifyWebPasswordRecoveryRequest**](VerifyWebPasswordRecoveryRequest.md)|  |
+
+### Return type
+
+[**WebPasswordRecoveryEnvelope**](WebPasswordRecoveryEnvelope.md)
 
 ### Authorization
 

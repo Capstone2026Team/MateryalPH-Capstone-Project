@@ -1909,11 +1909,59 @@ paths:
           description: Generic anti-enumeration response.
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/SuccessEnvelope" }
+              schema: { $ref: "#/components/schemas/PasswordRecoveryEnvelope" }
         "403": { $ref: "#/components/responses/BotStepUpResponse" }
         "422": { $ref: "#/components/responses/ErrorResponse" }
         "429": { $ref: "#/components/responses/ErrorResponse" }
         "503": { $ref: "#/components/responses/ErrorResponse" }
+  /auth/password/verify:
+    post:
+      operationId: verifyWebPasswordRecovery
+      tags: [ Authentication ]
+      security: [ { webCsrf: [] } ]
+      description: >-
+        Verify one Vendor or Admin email password-reset code or saved authenticator recovery
+        code before password entry. A challenge_id may identify the matching portal's
+        password-recovery email security check so a second email code is not
+        needed. Login and invitation challenges cannot authorize a password reset.
+        Saved recovery codes are replaced after use and all sessions revoked.
+        The single-use reset proof is returned only in a Secure HttpOnly cookie,
+        scoped to the password API path and selected portal, and bound to the current password.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VerifyWebPasswordRecoveryRequest" }
+      responses:
+        "200":
+          description: Identity verified. Replacement backup codes are shown once when used.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WebPasswordRecoveryEnvelope" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+        "429": { $ref: "#/components/responses/ErrorResponse" }
+  /auth/password/complete:
+    post:
+      operationId: completeWebPasswordRecovery
+      tags: [ Authentication ]
+      security: [ { webCsrf: [] } ]
+      description: >-
+        Requires the matching unexpired single-use Vendor or Admin recovery proof cookie.
+        Changes the password, revokes sessions, records a security event and queues
+        a security notice. Admin and privileged Vendor authenticator MFA remains required at sign-in.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CompleteWebPasswordRecoveryRequest" }
+      responses:
+        "200":
+          description: Password changed; proof consumed and cookie expired.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SuccessEnvelope" }
+        "422": { $ref: "#/components/responses/ErrorResponse" }
+        "429": { $ref: "#/components/responses/ErrorResponse" }
   /auth/password/reset:
     post:
       operationId: resetPassword
@@ -27208,6 +27256,65 @@ components:
         - required: [ recaptcha_token ]
         - required: [ request_email_step_up ]
         - maxProperties: 0
+    PasswordRecoveryEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/SuccessEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [ message, resend_after_seconds, expires_in ]
+              properties:
+                message: { type: string }
+                resend_after_seconds: { type: integer, minimum: 1 }
+                expires_in: { type: integer, minimum: 1 }
+    WebPasswordRecoveryPortal:
+      type: string
+      enum: [ VENDOR, ADMIN ]
+    VerifyWebPasswordRecoveryRequest:
+      type: object
+      required: [ email, portal ]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        portal: { $ref: "#/components/schemas/WebPasswordRecoveryPortal" }
+        code: { type: string, pattern: '^\d{6}$', writeOnly: true }
+        recovery_code: { type: string, minLength: 1, maxLength: 128, writeOnly: true }
+        challenge_id:
+          type: string
+          format: uuid
+          description: Only the matching portal's WEB password-recovery challenge is accepted.
+      oneOf:
+        - required: [ code ]
+          not: { required: [ recovery_code ] }
+        - required: [ recovery_code ]
+          not:
+            anyOf:
+              - required: [ code ]
+              - required: [ challenge_id ]
+    CompleteWebPasswordRecoveryRequest:
+      type: object
+      description: Vendor passwords require at least 12 characters; Admin passwords require at least 14. Both require mixed case and a number.
+      required: [ email, portal, password, password_confirmation ]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        portal: { $ref: "#/components/schemas/WebPasswordRecoveryPortal" }
+        password: { type: string, format: password, minLength: 12, writeOnly: true }
+        password_confirmation: { type: string, format: password, minLength: 12, writeOnly: true }
+    WebPasswordRecoveryEnvelope:
+      allOf:
+        - $ref: "#/components/schemas/SuccessEnvelope"
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [ verified, expires_in, recovery_codes ]
+              properties:
+                verified: { type: boolean }
+                expires_in: { type: integer, minimum: 1 }
+                recovery_codes:
+                  type: [ array, "null" ]
+                  items: { type: string }
+                  description: Replacement authenticator recovery codes, returned once after backup-code verification.
     PasswordRecoveryRequest:
       type: object
       description: Vendor/Admin browser password recovery. The WEB transport is

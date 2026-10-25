@@ -12,7 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
 /** Cookie namespaces select credentials only; account access still authorizes every request. */
 final class IsolatePortalCookies
 {
-    private const NAMES = ['mp_access', 'mp_refresh', 'mp_csrf', 'mp_mfa_challenge', 'mp_bot_proof'];
+    private const NAMES = ['mp_access', 'mp_refresh', 'mp_csrf', 'mp_mfa_challenge', 'mp_bot_proof', 'mp_password_recovery'];
 
     public function handle(Request $request, Closure $next): Response
     {

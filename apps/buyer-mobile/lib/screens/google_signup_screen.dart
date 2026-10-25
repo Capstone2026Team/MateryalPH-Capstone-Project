@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../design_system/components/buyer_app_bar.dart';
 
 import '../widgets/auth_content.dart';
+import '../widgets/google_sign_in_button.dart';
 import '../widgets/phone_number_field.dart';
 
 import '../design_system/theme.dart';
@@ -154,12 +155,11 @@ class _GoogleSignupScreenState extends State<GoogleSignupScreen> {
                   ),
                 ],
                 const SizedBox(height: 20),
-                FilledButton.icon(
+                GoogleSignInButton(
                   onPressed: _submitting ? null : _submit,
-                  icon: const Icon(Icons.g_mobiledata, size: 32),
-                  label: Text(
-                    _submitting ? 'Opening Google…' : 'Continue with Google',
-                  ),
+                  label: _submitting
+                      ? 'Opening Google…'
+                      : 'Continue with Google',
                 ),
               ],
             ),

@@ -69,6 +69,11 @@ import {
     BuyerMobileRegisterRequestToJSON,
 } from '../models/BuyerMobileRegisterRequest';
 import {
+    type CompleteWebPasswordRecoveryRequest,
+    CompleteWebPasswordRecoveryRequestFromJSON,
+    CompleteWebPasswordRecoveryRequestToJSON,
+} from '../models/CompleteWebPasswordRecoveryRequest';
+import {
     type CsrfEnvelope,
     CsrfEnvelopeFromJSON,
     CsrfEnvelopeToJSON,
@@ -119,6 +124,11 @@ import {
     MfaStatusEnvelopeToJSON,
 } from '../models/MfaStatusEnvelope';
 import {
+    type PasswordRecoveryEnvelope,
+    PasswordRecoveryEnvelopeFromJSON,
+    PasswordRecoveryEnvelopeToJSON,
+} from '../models/PasswordRecoveryEnvelope';
+import {
     type PasswordRecoveryRequest,
     PasswordRecoveryRequestFromJSON,
     PasswordRecoveryRequestToJSON,
@@ -158,6 +168,16 @@ import {
     VerifyEmailRequestFromJSON,
     VerifyEmailRequestToJSON,
 } from '../models/VerifyEmailRequest';
+import {
+    type VerifyWebPasswordRecoveryRequest,
+    VerifyWebPasswordRecoveryRequestFromJSON,
+    VerifyWebPasswordRecoveryRequestToJSON,
+} from '../models/VerifyWebPasswordRecoveryRequest';
+import {
+    type WebPasswordRecoveryEnvelope,
+    WebPasswordRecoveryEnvelopeFromJSON,
+    WebPasswordRecoveryEnvelopeToJSON,
+} from '../models/WebPasswordRecoveryEnvelope';
 import {
     type WebResendBotChallengeRequest,
     WebResendBotChallengeRequestFromJSON,
@@ -199,6 +219,13 @@ export interface CompleteMfaChallengeRequest {
      *
      */
     mfaCodeRequest: MfaCodeRequest;
+}
+
+export interface CompleteWebPasswordRecoveryOperationRequest {
+    /**
+     *
+     */
+    completeWebPasswordRecoveryRequest: CompleteWebPasswordRecoveryRequest;
 }
 
 export interface ConfirmMfaEnrollmentRequest {
@@ -376,6 +403,13 @@ export interface VerifyWebBotChallengeRequest {
      *
      */
     webVerifyBotChallengeRequest: WebVerifyBotChallengeRequest;
+}
+
+export interface VerifyWebPasswordRecoveryOperationRequest {
+    /**
+     *
+     */
+    verifyWebPasswordRecoveryRequest: VerifyWebPasswordRecoveryRequest | null;
 }
 
 /**
@@ -585,6 +619,57 @@ export class AuthenticationApi extends runtime.BaseAPI {
      */
     async completeMfaChallenge(requestParameters: CompleteMfaChallengeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AuthEnvelope> {
         const response = await this.completeMfaChallengeRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for completeWebPasswordRecovery without sending the request
+     */
+    async completeWebPasswordRecoveryRequestOpts(requestParameters: CompleteWebPasswordRecoveryOperationRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['completeWebPasswordRecoveryRequest'] == null) {
+            throw new runtime.RequiredError(
+                'completeWebPasswordRecoveryRequest',
+                'Required parameter "completeWebPasswordRecoveryRequest" was null or undefined when calling completeWebPasswordRecovery().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/auth/password/complete`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: CompleteWebPasswordRecoveryRequestToJSON(requestParameters['completeWebPasswordRecoveryRequest']),
+        };
+    }
+
+    /**
+     * Requires the matching unexpired single-use Vendor or Admin recovery proof cookie. Changes the password, revokes sessions, records a security event and queues a security notice. Admin and privileged Vendor authenticator MFA remains required at sign-in.
+     */
+    async completeWebPasswordRecoveryRaw(requestParameters: CompleteWebPasswordRecoveryOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SuccessEnvelope>> {
+        const requestOptions = await this.completeWebPasswordRecoveryRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => SuccessEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Requires the matching unexpired single-use Vendor or Admin recovery proof cookie. Changes the password, revokes sessions, records a security event and queues a security notice. Admin and privileged Vendor authenticator MFA remains required at sign-in.
+     */
+    async completeWebPasswordRecovery(requestParameters: CompleteWebPasswordRecoveryOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SuccessEnvelope> {
+        const response = await this.completeWebPasswordRecoveryRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1364,16 +1449,16 @@ export class AuthenticationApi extends runtime.BaseAPI {
 
     /**
      */
-    async requestPasswordRecoveryRaw(requestParameters: RequestPasswordRecoveryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SuccessEnvelope>> {
+    async requestPasswordRecoveryRaw(requestParameters: RequestPasswordRecoveryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PasswordRecoveryEnvelope>> {
         const requestOptions = await this.requestPasswordRecoveryRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => SuccessEnvelopeFromJSON(jsonValue));
+        return new runtime.JSONApiResponse(response, (jsonValue) => PasswordRecoveryEnvelopeFromJSON(jsonValue));
     }
 
     /**
      */
-    async requestPasswordRecovery(requestParameters: RequestPasswordRecoveryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SuccessEnvelope> {
+    async requestPasswordRecovery(requestParameters: RequestPasswordRecoveryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PasswordRecoveryEnvelope> {
         const response = await this.requestPasswordRecoveryRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -2014,6 +2099,57 @@ export class AuthenticationApi extends runtime.BaseAPI {
      */
     async verifyWebBotChallenge(requestParameters: VerifyWebBotChallengeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<BotProofEnvelope> {
         const response = await this.verifyWebBotChallengeRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for verifyWebPasswordRecovery without sending the request
+     */
+    async verifyWebPasswordRecoveryRequestOpts(requestParameters: VerifyWebPasswordRecoveryOperationRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['verifyWebPasswordRecoveryRequest'] === undefined) {
+            throw new runtime.RequiredError(
+                'verifyWebPasswordRecoveryRequest',
+                'Required parameter "verifyWebPasswordRecoveryRequest" was undefined when calling verifyWebPasswordRecovery().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/auth/password/verify`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: VerifyWebPasswordRecoveryRequestToJSON(requestParameters['verifyWebPasswordRecoveryRequest']),
+        };
+    }
+
+    /**
+     * Verify one Vendor or Admin email password-reset code or saved authenticator recovery code before password entry. A challenge_id may identify the matching portal\'s password-recovery email security check so a second email code is not needed. Login and invitation challenges cannot authorize a password reset. Saved recovery codes are replaced after use and all sessions revoked. The single-use reset proof is returned only in a Secure HttpOnly cookie, scoped to the password API path and selected portal, and bound to the current password.
+     */
+    async verifyWebPasswordRecoveryRaw(requestParameters: VerifyWebPasswordRecoveryOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WebPasswordRecoveryEnvelope>> {
+        const requestOptions = await this.verifyWebPasswordRecoveryRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => WebPasswordRecoveryEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Verify one Vendor or Admin email password-reset code or saved authenticator recovery code before password entry. A challenge_id may identify the matching portal\'s password-recovery email security check so a second email code is not needed. Login and invitation challenges cannot authorize a password reset. Saved recovery codes are replaced after use and all sessions revoked. The single-use reset proof is returned only in a Secure HttpOnly cookie, scoped to the password API path and selected portal, and bound to the current password.
+     */
+    async verifyWebPasswordRecovery(requestParameters: VerifyWebPasswordRecoveryOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WebPasswordRecoveryEnvelope> {
+        const response = await this.verifyWebPasswordRecoveryRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

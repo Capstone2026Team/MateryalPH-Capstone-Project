@@ -484,6 +484,7 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(ComparableStatus.serializer)
       ..add(ComparableStatusStatusEnum.serializer)
       ..add(ComparableVariant.serializer)
+      ..add(CompleteWebPasswordRecoveryRequest.serializer)
       ..add(ComplianceEvidence.serializer)
       ..add(ComplianceEvidenceEnvelope.serializer)
       ..add(ComplianceEvidenceEvidenceKindEnum.serializer)
@@ -1171,6 +1172,8 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(OwnReviewTypeEnum.serializer)
       ..add(OwnReviewVisibilityEnum.serializer)
       ..add(PageMeta.serializer)
+      ..add(PasswordRecoveryEnvelope.serializer)
+      ..add(PasswordRecoveryEnvelopeAllOfData.serializer)
       ..add(PasswordRecoveryRequest.serializer)
       ..add(PasswordRecoveryRequestPortalEnum.serializer)
       ..add(PasswordResetRequest.serializer)
@@ -1751,7 +1754,11 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(VerifiedVendorSummary.serializer)
       ..add(VerifyBotChallengeRequest.serializer)
       ..add(VerifyEmailRequest.serializer)
+      ..add(VerifyWebPasswordRecoveryRequest.serializer)
       ..add(VolumeTier.serializer)
+      ..add(WebPasswordRecoveryEnvelope.serializer)
+      ..add(WebPasswordRecoveryEnvelopeAllOfData.serializer)
+      ..add(WebPasswordRecoveryPortal.serializer)
       ..add(WebResendBotChallengeRequest.serializer)
       ..add(WebResendBotChallengeRequestPortalEnum.serializer)
       ..add(WebVerifyBotChallengeRequest.serializer)
@@ -3557,6 +3564,9 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(
               BuiltList, const [const FullType(VendorSetupDraftVehiclesInner)]),
           () => ListBuilder<VendorSetupDraftVehiclesInner>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(String)]),
+          () => ListBuilder<String>())
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(String)]),
           () => ListBuilder<String>())
@@ -6748,6 +6758,38 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(BuiltList,
               const [const FullType(TaxAdjustmentAllowedActionsEnum)]),
           () => ListBuilder<TaxAdjustmentAllowedActionsEnum>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType.nullable(JsonObject)]),
+          () => ListBuilder<JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType.nullable(JsonObject)]),
+          () => ListBuilder<JsonObject?>())
       ..addBuilderFactory(
           const FullType(BuiltMap, const [
             const FullType(String),

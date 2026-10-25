@@ -204,6 +204,7 @@ All URIs are relative to */api/v1*
 *AuthenticationApi* | [**completeBuyerMobileMfaChallenge**](docs/AuthenticationApi.md#completebuyermobilemfachallenge) | **POST** /mobile/auth/mfa/challenge |
 *AuthenticationApi* | [**completeGoogleOidc**](docs/AuthenticationApi.md#completegoogleoidc) | **GET** /auth/google/callback |
 *AuthenticationApi* | [**completeMfaChallenge**](docs/AuthenticationApi.md#completemfachallenge) | **POST** /auth/mfa/challenge |
+*AuthenticationApi* | [**completeWebPasswordRecovery**](docs/AuthenticationApi.md#completewebpasswordrecoveryoperation) | **POST** /auth/password/complete |
 *AuthenticationApi* | [**confirmMfaEnrollment**](docs/AuthenticationApi.md#confirmmfaenrollment) | **POST** /auth/mfa/enrollment/confirm |
 *AuthenticationApi* | [**exchangeBuyerMobileGoogleCode**](docs/AuthenticationApi.md#exchangebuyermobilegooglecode) | **POST** /mobile/auth/google/exchange |
 *AuthenticationApi* | [**getBuyerMobileSession**](docs/AuthenticationApi.md#getbuyermobilesession) | **GET** /mobile/auth/session |
@@ -235,6 +236,7 @@ All URIs are relative to */api/v1*
 *AuthenticationApi* | [**verifyBuyerMobileEmail**](docs/AuthenticationApi.md#verifybuyermobileemail) | **POST** /mobile/auth/verify-email |
 *AuthenticationApi* | [**verifyEmail**](docs/AuthenticationApi.md#verifyemailoperation) | **POST** /auth/verify-email |
 *AuthenticationApi* | [**verifyWebBotChallenge**](docs/AuthenticationApi.md#verifywebbotchallenge) | **POST** /auth/bot-challenges/{challenge_id}/verify |
+*AuthenticationApi* | [**verifyWebPasswordRecovery**](docs/AuthenticationApi.md#verifywebpasswordrecoveryoperation) | **POST** /auth/password/verify |
 *BuyerCartApi* | [**addBuyerCartItem**](docs/BuyerCartApi.md#addbuyercartitem) | **POST** /buyers/cart/items |
 *BuyerCartApi* | [**getBuyerCart**](docs/BuyerCartApi.md#getbuyercart) | **GET** /buyers/cart |
 *BuyerCartApi* | [**previewBuyerCheckout**](docs/BuyerCartApi.md#previewbuyercheckout) | **POST** /buyers/cart/checkout-preview |
@@ -910,6 +912,7 @@ All URIs are relative to */api/v1*
 - [ComparableSpecificationAttributesInner](docs/ComparableSpecificationAttributesInner.md)
 - [ComparableStatus](docs/ComparableStatus.md)
 - [ComparableVariant](docs/ComparableVariant.md)
+- [CompleteWebPasswordRecoveryRequest](docs/CompleteWebPasswordRecoveryRequest.md)
 - [ComplianceEvidence](docs/ComplianceEvidence.md)
 - [ComplianceEvidenceEnvelope](docs/ComplianceEvidenceEnvelope.md)
 - [ComplianceExtraction](docs/ComplianceExtraction.md)
@@ -1330,6 +1333,8 @@ All URIs are relative to */api/v1*
 - [OverlapResolveRequest](docs/OverlapResolveRequest.md)
 - [OwnReview](docs/OwnReview.md)
 - [PageMeta](docs/PageMeta.md)
+- [PasswordRecoveryEnvelope](docs/PasswordRecoveryEnvelope.md)
+- [PasswordRecoveryEnvelopeAllOfData](docs/PasswordRecoveryEnvelopeAllOfData.md)
 - [PasswordRecoveryRequest](docs/PasswordRecoveryRequest.md)
 - [PasswordResetRequest](docs/PasswordResetRequest.md)
 - [PaymentAttempt](docs/PaymentAttempt.md)
@@ -1745,7 +1750,11 @@ All URIs are relative to */api/v1*
 - [VerifiedVendorSummary](docs/VerifiedVendorSummary.md)
 - [VerifyBotChallengeRequest](docs/VerifyBotChallengeRequest.md)
 - [VerifyEmailRequest](docs/VerifyEmailRequest.md)
+- [VerifyWebPasswordRecoveryRequest](docs/VerifyWebPasswordRecoveryRequest.md)
 - [VolumeTier](docs/VolumeTier.md)
+- [WebPasswordRecoveryEnvelope](docs/WebPasswordRecoveryEnvelope.md)
+- [WebPasswordRecoveryEnvelopeAllOfData](docs/WebPasswordRecoveryEnvelopeAllOfData.md)
+- [WebPasswordRecoveryPortal](docs/WebPasswordRecoveryPortal.md)
 - [WebResendBotChallengeRequest](docs/WebResendBotChallengeRequest.md)
 - [WebVerifyBotChallengeRequest](docs/WebVerifyBotChallengeRequest.md)
 - [WithholdingAccumulatorDetail](docs/WithholdingAccumulatorDetail.md)

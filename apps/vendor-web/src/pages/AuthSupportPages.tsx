@@ -1,32 +1,29 @@
-import { AuthenticatorCodeField, BotProtectionFields, Button, Field, PhoneField, StatusMessage } from '@materyalph/web-ui'
+import { AuthenticatorCodeField, Button, Field, GoogleButton, PasswordRecoveryFlow, PhoneField, StatusMessage } from '@materyalph/web-ui'
 import { Copy, Download, LogOut, ShieldCheck } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
-import { type FormEvent, useEffect, useRef, useState } from 'react'
+import { type FormEvent, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 
-import { RiskOtpPanel } from '../components/auth/RiskOtpPanel'
 import { VendorAuthShell } from '../components/auth/VendorAuthShell'
-import { VendorRecaptchaCheckbox, type VendorRecaptchaCheckboxRef } from '../components/auth/VendorRecaptchaCheckbox'
 import {
-  asBotStepUpRequired,
   asValidationFailure,
   completeMfaChallenge,
   confirmMfaEnrollment,
+  completePasswordRecovery,
   getMfaStatus,
   getSession,
   readableApiError,
   recoverMfaChallenge,
   requestPasswordRecovery,
+  resendRiskChallenge,
   resendVendorVerification,
-  resetPassword,
   signOut,
   startGoogleRegistration,
   startGoogleSignIn,
   startMfaEnrollment,
   verifyVendorEmail,
-  type RiskChallenge,
+  verifyPasswordRecovery,
 } from '../lib/auth-api'
-import { vendorBotEvidence, webCookieBotEvidence } from '../lib/recaptcha-enterprise'
 import { downloadRecoveryCodes } from '../lib/recovery-codes'
 
 type Enrollment = { secret: string; provisioningUri: string }
@@ -141,62 +138,32 @@ function mfaModeFromLocationState(state: unknown): MfaMode {
 }
 
 export function VendorForgotPasswordPage() {
-  const [busy, setBusy] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
-  const [useEmailCheck, setUseEmailCheck] = useState(false)
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
-  const captchaRef = useRef<VendorRecaptchaCheckboxRef>(null)
-  const [challenge, setChallenge] = useState<RiskChallenge | null>(null)
-  const [email, setEmail] = useState('')
-
-  async function attempt(address: string, verified = false) {
-    const evidence = verified
-      ? webCookieBotEvidence()
-      : vendorBotEvidence(captchaToken, useEmailCheck)
-    await requestPasswordRecovery(address, evidence)
-    setChallenge(null)
-    setMessage('If that account exists, a six-digit recovery code is being delivered. Continue to reset your password.')
-  }
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setBusy(true)
-    setMessage(null)
-    const address = String(new FormData(event.currentTarget).get('email'))
-    setEmail(address)
-    try {
-      await attempt(address)
-    } catch (error) {
-      const stepUp = await asBotStepUpRequired(error)
-      if (stepUp) setChallenge(stepUp.challenge)
-      else setMessage(await readableApiError(error))
-    } finally {
-      captchaRef.current?.reset()
-      setBusy(false)
-    }
-  }
-
-  return <VendorAuthShell title="Recover your account" description="We will send a short-lived, single-use code to the account email.">
-    {challenge
-      ? <RiskOtpPanel challenge={challenge} email={email} onCancel={() => setChallenge(null)} onVerified={() => attempt(email, true)} />
-      : <form className="auth-form" onSubmit={submit}>
-          {message && <StatusMessage>{message}</StatusMessage>}
-          <Field label="Email address" name="email" type="email" autoComplete="email" required />
-          <BotProtectionFields disabled={busy} emailCheckSelected={useEmailCheck} onEmailCheckClick={() => { captchaRef.current?.reset(); setUseEmailCheck((value) => !value) }} checkbox={
-            !useEmailCheck && <VendorRecaptchaCheckbox ref={captchaRef} action="vendor_password_recovery" disabled={busy} onTokenChange={setCaptchaToken} />
-          }>
-            <Button className="w-full" type="submit" disabled={busy}>{busy ? 'Requesting…' : 'Send recovery code'}</Button>
-          </BotProtectionFields>
-          <Link className="auth-cancel" to="/reset-password">I already have a code</Link>
-          <Link className="auth-cancel" to="/login">Back to sign in</Link>
-        </form>}
-  </VendorAuthShell>
+  return <VendorPasswordRecovery />
 }
 
 export function VendorResetPasswordPage() {
-  const navigate = useNavigate(); const [searchParams] = useSearchParams(); const [busy, setBusy] = useState(false); const [message, setMessage] = useState<string | null>(null)
-  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setBusy(true); setMessage(null); const data = new FormData(event.currentTarget); try { await resetPassword(String(data.get('email')), String(data.get('code')), String(data.get('password')), String(data.get('password_confirmation'))); navigate('/login?reset=success', { replace: true }) } catch (error) { setMessage(await readableApiError(error)) } finally { setBusy(false) } }
-  return <VendorAuthShell title="Set a new password" description="The recovery code expires after ten minutes and cannot be reused."><form className="auth-form" onSubmit={submit}>{message && <StatusMessage tone="error">{message}</StatusMessage>}<Field label="Email address" name="email" type="email" defaultValue={searchParams.get('email') ?? ''} autoComplete="email" required /><Field label="Six-digit recovery code" name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required /><Field label="New password" name="password" type="password" autoComplete="new-password" minLength={12} hint="At least 12 characters with uppercase, lowercase, and a number." required /><Field label="Confirm new password" name="password_confirmation" type="password" autoComplete="new-password" minLength={12} required /><Button className="w-full" type="submit" disabled={busy}>{busy ? 'Updating…' : 'Update password'}</Button></form></VendorAuthShell>
+  return <VendorPasswordRecovery initialCodeEntry />
+}
+
+function VendorPasswordRecovery({ initialCodeEntry = false }: { initialCodeEntry?: boolean }) {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
+  const state: unknown = location.state
+  const email = typeof state === 'object' && state !== null && 'email' in state && typeof state.email === 'string' ? state.email : searchParams.get('email') ?? ''
+
+  return <VendorAuthShell title="Recover your account" description="Verify your identity and set a new password for your Vendor account." storyDescription="Recover your access securely and return to managing your store.">
+    <PasswordRecoveryFlow portal="vendor" initialEmail={email} initialCodeEntry={initialCodeEntry} siteKey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+      requestCode={async (address, evidence) => (await requestPasswordRecovery(address, evidence)).data}
+      verifyIdentity={async input => {
+        const result = await verifyPasswordRecovery(input)
+        if (!result.data.verified) throw new Error('Your identity could not be verified. Try again.')
+        return result.data
+      }}
+      completePassword={completePasswordRecovery} resendSecurityCode={resendRiskChallenge} readableError={readableApiError}
+      onDownloadCodes={downloadRecoveryCodes} onComplete={() => navigate('/login?reset=success', { replace: true })} />
+    <Link className="auth-cancel" to="/login">Back to sign in</Link>
+  </VendorAuthShell>
 }
 
 export function VendorVerifyEmailPage() {
@@ -274,7 +241,7 @@ export function VendorVerifyEmailPage() {
 export function VendorGoogleRegisterPage() {
   const [busy, setBusy] = useState(false); const [message, setMessage] = useState<string | null>(null)
   async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setBusy(true); setMessage(null); const data = new FormData(event.currentTarget); try { await startGoogleRegistration({ mobileE164: String(data.get('mobile')) }) } catch (error) { setMessage(await readableApiError(error)); setBusy(false) } }
-  return <VendorAuthShell scrollPanel title="Register with Google" description="Provide the Vendor details Google does not supply before continuing to its secure consent screen."><form className="auth-form" onSubmit={submit}>{message && <StatusMessage tone="error">{message}</StatusMessage>}<PhoneField label="Mobile number" name="mobile" required /><label className="consent"><input type="checkbox" required /><span>I accept the versioned <Link to="/legal/terms-of-service" target="_blank" rel="noopener noreferrer" aria-label="Terms of Service (opens in a new tab)">Terms of Service</Link>.</span></label><label className="consent"><input type="checkbox" required /><span>I acknowledge the separate <Link to="/legal/privacy-notice" target="_blank" rel="noopener noreferrer" aria-label="Privacy Notice (opens in a new tab)">Privacy Notice</Link>.</span></label><Button className="w-full" type="submit" disabled={busy}>{busy ? 'Opening Google…' : 'Continue with Google'}</Button></form></VendorAuthShell>
+  return <VendorAuthShell scrollPanel title="Register with Google" description="Provide the Vendor details Google does not supply before continuing to its secure consent screen."><form className="auth-form" onSubmit={submit}>{message && <StatusMessage tone="error">{message}</StatusMessage>}<PhoneField label="Mobile number" name="mobile" required /><label className="consent"><input type="checkbox" required /><span>I accept the versioned <Link to="/legal/terms-of-service" target="_blank" rel="noopener noreferrer" aria-label="Terms of Service (opens in a new tab)">Terms of Service</Link>.</span></label><label className="consent"><input type="checkbox" required /><span>I acknowledge the separate <Link to="/legal/privacy-notice" target="_blank" rel="noopener noreferrer" aria-label="Privacy Notice (opens in a new tab)">Privacy Notice</Link>.</span></label><GoogleButton type="submit" disabled={busy}>{busy ? 'Opening Google…' : 'Continue with Google'}</GoogleButton></form></VendorAuthShell>
 }
 
 export function VendorDashboardFoundation() {

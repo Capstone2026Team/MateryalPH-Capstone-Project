@@ -59,7 +59,8 @@ describe('Admin verification case review', () => {
     const list = await screen.findByRole('region', { name: 'Verification requirements' })
     expect(within(list).getAllByRole('button', { name: 'Review Business information' })).toHaveLength(1)
     expect(within(list).queryByRole('button', { name: /review business_type/i })).not.toBeInTheDocument()
-    expect(screen.getAllByText('Test Supply Inc.')).toHaveLength(2)
+    fireEvent.click(within(list).getByRole('button', { name: 'Review Business information' }))
+    expect(await screen.findAllByText('Test Supply Inc.')).toHaveLength(2)
     fireEvent.click(within(list).getByRole('button', { name: 'Review Government ID — Registered legal identity' }))
     expect(screen.getByText('Juan Dela Cruz')).toBeVisible()
     // The selection settles through an effect; wait for its previews rather than the first render.
@@ -68,9 +69,23 @@ describe('Admin verification case review', () => {
     expect(screen.getByLabelText('Verified document number')).toBeVisible()
   })
 
-  test('sends one version guarded business decision', async () => {
+  test('locks business information until every other requirement is approved', async () => {
+    renderCase()
+    const list = await screen.findByRole('region', { name: 'Verification requirements' })
+    expect(await screen.findByText('Inline preview: Government ID — Back')).toBeVisible()
+    fireEvent.click(within(list).getByRole('button', { name: 'Review Business information' }))
+    expect(await screen.findByText(/decided after every other requirement is approved/)).toBeVisible()
+    expect(screen.getByText(/BIR Certificate of Registration/, { selector: 'li' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Record requirement decision' })).toBeDisabled()
+    expect(screen.getByLabelText('Decision')).toBeDisabled()
+  })
+
+  test('sends one version guarded business decision as the final acceptance', async () => {
+    const approved = { ...caseDetail, sections: { STORE_VERIFICATION: caseDetail.sections.STORE_VERIFICATION.map(step => step.key.startsWith('business') ? step : { ...step, status: 'APPROVED' }) } }
+    api.getVendorVerificationCase.mockResolvedValue(approved)
     renderCase()
     await screen.findByRole('region', { name: 'Verification requirements' })
+    expect(screen.queryByText(/decided after every other requirement is approved/)).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Record requirement decision' }))
     await waitFor(() => expect(api.decideVendorVerificationRequirement).toHaveBeenCalledWith('case-1', 'business_information_group', expect.objectContaining({
       decision: 'APPROVED', requirementVersions: { business_type: 2, business_information: 3 },

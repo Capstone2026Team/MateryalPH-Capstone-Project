@@ -2049,6 +2049,13 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         $this->postJson('/api/v1/admin/vendor-verification/'.$organization->id.'/requirements/business_information_group/decision', [
             'decision' => 'APPROVED', 'requirement_versions' => $versions,
         ], ['Idempotency-Key' => (string) Str::uuid7()])->assertConflict()->assertJsonPath('errors.0.code', 'RESOURCE_VERSION_CONFLICT');
+        // Business information is the final acceptance: it cannot be approved while documents are still pending.
+        $current = collect($this->getJson('/api/v1/admin/vendor-verification/'.$organization->id)->assertOk()->json('data.sections.STORE_VERIFICATION'))
+            ->whereIn('key', array_keys($versions))->pluck('lock_version', 'key')->all();
+        $this->postJson('/api/v1/admin/vendor-verification/'.$organization->id.'/requirements/business_information_group/decision', [
+            'decision' => 'APPROVED', 'requirement_versions' => $current,
+        ], ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable()->assertJsonPath('errors.0.code', 'VERIFICATION_PREREQUISITES_PENDING');
+        $this->assertDatabaseHas('vendor_onboarding_steps', ['vendor_organization_id' => $organization->id, 'requirement_key' => 'business_information', 'status' => 'CHANGES_REQUIRED']);
 
         $identity = $steps->firstWhere('key', 'representative_identity');
         $this->postJson('/api/v1/admin/vendor-verification/'.$organization->id.'/requirements/representative_id/decision', [

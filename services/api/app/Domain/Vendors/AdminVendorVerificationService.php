@@ -337,6 +337,16 @@ final class AdminVendorVerificationService
             if ($decision !== 'APPROVED' && ($reason === null || strlen($reason) < 3)) {
                 throw new AuthenticationException('DECISION_REASON_REQUIRED', 'A reason is required for correction or rejection.', 422);
             }
+            if ($groupKey === 'business_information_group' && $decision === 'APPROVED') {
+                // Business information is the final acceptance: every other required verification item is decided first.
+                $pending = DB::table('vendor_onboarding_steps')->where('vendor_organization_id', $organizationId)
+                    ->where('section', 'STORE_VERIFICATION')->where('is_current', true)->where('level', '!=', 'OPTIONAL')
+                    ->whereNotIn('requirement_key', [...self::REVIEW_GROUPS[$groupKey], 'commission_terms'])
+                    ->whereNotIn('status', ['APPROVED', 'NOT_APPLICABLE'])->exists();
+                if ($pending) {
+                    throw new AuthenticationException('VERIFICATION_PREREQUISITES_PENDING', 'Approve every other verification requirement before approving Business information.', 422);
+                }
+            }
             if ($groupKey === 'business_information_group' && $decision === 'APPROVED' && $steps->contains('requirement_key', 'tax_profile')) {
                 $tax = DB::table('vendor_tax_profiles as p')->join('vendor_tax_profile_versions as v', 'v.id', '=', 'p.current_version_id')->where('p.vendor_organization_id', $organizationId)->first(['v.owner_attested_at', 'v.vat_category', 'v.vat_verified_category']);
                 if ($tax === null || $tax->owner_attested_at === null || $tax->vat_verified_category === null || $tax->vat_verified_category !== $tax->vat_category) {

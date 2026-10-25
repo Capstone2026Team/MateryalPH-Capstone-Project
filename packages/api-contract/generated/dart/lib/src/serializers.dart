@@ -349,6 +349,7 @@ import 'package:materyalph_api_client/src/model/comparable_specification.dart';
 import 'package:materyalph_api_client/src/model/comparable_specification_attributes_inner.dart';
 import 'package:materyalph_api_client/src/model/comparable_status.dart';
 import 'package:materyalph_api_client/src/model/comparable_variant.dart';
+import 'package:materyalph_api_client/src/model/complete_web_password_recovery_request.dart';
 import 'package:materyalph_api_client/src/model/compliance_evidence.dart';
 import 'package:materyalph_api_client/src/model/compliance_evidence_envelope.dart';
 import 'package:materyalph_api_client/src/model/compliance_extraction.dart';
@@ -769,6 +770,8 @@ import 'package:materyalph_api_client/src/model/order_volume_tier.dart';
 import 'package:materyalph_api_client/src/model/overlap_resolve_request.dart';
 import 'package:materyalph_api_client/src/model/own_review.dart';
 import 'package:materyalph_api_client/src/model/page_meta.dart';
+import 'package:materyalph_api_client/src/model/password_recovery_envelope.dart';
+import 'package:materyalph_api_client/src/model/password_recovery_envelope_all_of_data.dart';
 import 'package:materyalph_api_client/src/model/password_recovery_request.dart';
 import 'package:materyalph_api_client/src/model/password_reset_request.dart';
 import 'package:materyalph_api_client/src/model/payment_attempt.dart';
@@ -1184,7 +1187,11 @@ import 'package:materyalph_api_client/src/model/vendor_workstreams_verification.
 import 'package:materyalph_api_client/src/model/verified_vendor_summary.dart';
 import 'package:materyalph_api_client/src/model/verify_bot_challenge_request.dart';
 import 'package:materyalph_api_client/src/model/verify_email_request.dart';
+import 'package:materyalph_api_client/src/model/verify_web_password_recovery_request.dart';
 import 'package:materyalph_api_client/src/model/volume_tier.dart';
+import 'package:materyalph_api_client/src/model/web_password_recovery_envelope.dart';
+import 'package:materyalph_api_client/src/model/web_password_recovery_envelope_all_of_data.dart';
+import 'package:materyalph_api_client/src/model/web_password_recovery_portal.dart';
 import 'package:materyalph_api_client/src/model/web_resend_bot_challenge_request.dart';
 import 'package:materyalph_api_client/src/model/web_verify_bot_challenge_request.dart';
 import 'package:materyalph_api_client/src/model/withholding_accumulator_detail.dart';
@@ -1552,6 +1559,7 @@ part 'serializers.g.dart';
   ComparableSpecificationAttributesInner,
   ComparableStatus,
   ComparableVariant,
+  CompleteWebPasswordRecoveryRequest,
   ComplianceEvidence,
   ComplianceEvidenceEnvelope,
   ComplianceExtraction,
@@ -1972,6 +1980,8 @@ part 'serializers.g.dart';
   OverlapResolveRequest,
   OwnReview,
   PageMeta,
+  PasswordRecoveryEnvelope,
+  PasswordRecoveryEnvelopeAllOfData,
   PasswordRecoveryRequest,
   PasswordResetRequest,
   PaymentAttempt,
@@ -2387,7 +2397,11 @@ part 'serializers.g.dart';
   VerifiedVendorSummary,
   VerifyBotChallengeRequest,
   VerifyEmailRequest,
+  VerifyWebPasswordRecoveryRequest,
   VolumeTier,
+  WebPasswordRecoveryEnvelope,
+  WebPasswordRecoveryEnvelopeAllOfData,
+  WebPasswordRecoveryPortal,
   WebResendBotChallengeRequest,
   WebVerifyBotChallengeRequest,
   WithholdingAccumulatorDetail,

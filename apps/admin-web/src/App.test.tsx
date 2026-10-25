@@ -58,10 +58,14 @@ describe('Admin authentication portal', () => {
   test('connects password recovery to a real route', async () => {
     render(<App />)
     await screen.findByRole('button', { name: /sign in securely/i })
+    fireEvent.change(screen.getByRole('textbox', { name: /email address/i }), { target: { value: 'admin@example.test' } })
     fireEvent.click(screen.getByRole('link', { name: 'Forgot password?' }))
 
     expect(screen.getByRole('heading', { name: /recover admin access/i })).toBeVisible()
-    expect(screen.getByRole('textbox', { name: /email address/i })).toBeRequired()
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Send authentication code' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Use recovery codes' })).toBeVisible()
+    expect(screen.getByText('a••••@example.test')).toBeVisible()
   })
 
   test.each(['/', '/login'])('returns an active Admin session from %s to the dashboard', async path => {

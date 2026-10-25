@@ -58,7 +58,12 @@ final class PasswordRecoveryController extends Controller
             'portal' => $portal,
         ]);
 
-        $response = ApiResponse::success(['message' => 'If the account exists, a recovery code is being delivered.']);
+        $response = ApiResponse::success([
+            'message' => 'If the account exists, a recovery code is being delivered.',
+        ] + ($transport === AuthTransport::WEB ? [
+            'resend_after_seconds' => (int) config('materyalph.auth.otp_resend_seconds', 60),
+            'expires_in' => (int) config('materyalph.auth.otp_ttl_minutes', 10) * 60,
+        ] : []));
 
         return $usedProof && $transport === AuthTransport::WEB
             ? $response->withCookie($cookies->forgetBotProof())

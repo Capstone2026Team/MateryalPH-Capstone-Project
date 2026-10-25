@@ -46,6 +46,11 @@ final class AuthCookieFactory
         return $this->forget('mp_bot_proof', '/api/v1/auth');
     }
 
+    public function passwordRecovery(#[\SensitiveParameter] string $token, int $expiresIn): Cookie
+    {
+        return $this->make('mp_password_recovery', $token, $expiresIn, true, '/api/v1/auth/password');
+    }
+
     public function forget(string $name, string $path = '/'): Cookie
     {
         return Cookie::create($name, '', 1, $path, config('materyalph.auth.cookie_domain'), $this->secure(), true, false, $this->sameSite());

@@ -371,6 +371,7 @@ docs/ComparableSpecification.md
 docs/ComparableSpecificationAttributesInner.md
 docs/ComparableStatus.md
 docs/ComparableVariant.md
+docs/CompleteWebPasswordRecoveryRequest.md
 docs/ComplianceEvidence.md
 docs/ComplianceEvidenceEnvelope.md
 docs/ComplianceExtraction.md
@@ -793,6 +794,8 @@ docs/OrderVolumeTier.md
 docs/OverlapResolveRequest.md
 docs/OwnReview.md
 docs/PageMeta.md
+docs/PasswordRecoveryEnvelope.md
+docs/PasswordRecoveryEnvelopeAllOfData.md
 docs/PasswordRecoveryRequest.md
 docs/PasswordResetRequest.md
 docs/PaymentAttempt.md
@@ -1229,7 +1232,11 @@ docs/VendorWorkstreamsVerification.md
 docs/VerifiedVendorSummary.md
 docs/VerifyBotChallengeRequest.md
 docs/VerifyEmailRequest.md
+docs/VerifyWebPasswordRecoveryRequest.md
 docs/VolumeTier.md
+docs/WebPasswordRecoveryEnvelope.md
+docs/WebPasswordRecoveryEnvelopeAllOfData.md
+docs/WebPasswordRecoveryPortal.md
 docs/WebResendBotChallengeRequest.md
 docs/WebVerifyBotChallengeRequest.md
 docs/WithholdingAccumulatorDetail.md
@@ -1652,6 +1659,7 @@ src/models/ComparableSpecification.ts
 src/models/ComparableSpecificationAttributesInner.ts
 src/models/ComparableStatus.ts
 src/models/ComparableVariant.ts
+src/models/CompleteWebPasswordRecoveryRequest.ts
 src/models/ComplianceEvidence.ts
 src/models/ComplianceEvidenceEnvelope.ts
 src/models/ComplianceExtraction.ts
@@ -2072,6 +2080,8 @@ src/models/OrderVolumeTier.ts
 src/models/OverlapResolveRequest.ts
 src/models/OwnReview.ts
 src/models/PageMeta.ts
+src/models/PasswordRecoveryEnvelope.ts
+src/models/PasswordRecoveryEnvelopeAllOfData.ts
 src/models/PasswordRecoveryRequest.ts
 src/models/PasswordResetRequest.ts
 src/models/PaymentAttempt.ts
@@ -2487,7 +2497,11 @@ src/models/VendorWorkstreamsVerification.ts
 src/models/VerifiedVendorSummary.ts
 src/models/VerifyBotChallengeRequest.ts
 src/models/VerifyEmailRequest.ts
+src/models/VerifyWebPasswordRecoveryRequest.ts
 src/models/VolumeTier.ts
+src/models/WebPasswordRecoveryEnvelope.ts
+src/models/WebPasswordRecoveryEnvelopeAllOfData.ts
+src/models/WebPasswordRecoveryPortal.ts
 src/models/WebResendBotChallengeRequest.ts
 src/models/WebVerifyBotChallengeRequest.ts
 src/models/WithholdingAccumulatorDetail.ts
