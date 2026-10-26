@@ -23,7 +23,7 @@ final class VendorExpiryService
             ->get(['d.id as document_id', 'd.vendor_organization_id', 'd.onboarding_step_id', 'd.requirement_key', 'd.current_version_id', 'd.status', 'v.version', 'v.id as version_id']);
 
         foreach ($versions as $version) {
-            $review = DB::table('business_document_reviews')->where('business_document_version_id', $version->version_id)->orderByDesc('reviewed_at')->first();
+            $review = DB::table('business_document_reviews')->where('business_document_version_id', $version->version_id)->orderByDesc('reviewed_at')->orderByDesc('id')->first();
             if ($review === null || $review->decision !== 'APPROVED' || $review->expiration_kind !== 'DATE' || $review->verified_expiration_date === null) {
                 continue;
             }

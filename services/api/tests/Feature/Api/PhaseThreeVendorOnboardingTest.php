@@ -818,6 +818,105 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         self::assertSame(1, DB::table('business_document_reviews')->where('business_document_version_id', $versionId)->count());
     }
 
+    public function test_same_second_document_reviews_preserve_history_latest_metadata_and_idempotency(): void
+    {
+        $this->freezeTime();
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $versionId = $this->submittedEvidenceFixture('business_registration', 'registration.pdf');
+        $this->signInAdmin($this->adminFixture('ADMIN_VENDOR_VERIFICATION'));
+        $url = '/api/v1/admin/vendor-verification/'.$organization->id.'/requirements/business_registration/decision';
+
+        // Exercise the upgrade with an existing immutable review in the original schema.
+        $migration = require database_path('migrations/2026_10_31_000000_allow_same_second_business_document_reviews.php');
+        $migration->down();
+        $this->postJson($url, [
+            'decision' => 'APPROVED', 'expiration_kind' => 'DATE',
+            'verified_issue_date' => now()->subYear()->toDateString(),
+            'verified_expiration_date' => now()->addDay()->toDateString(),
+            'remarks' => 'Initial expiration review.',
+        ], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
+        $original = DB::table('business_document_reviews')->where('business_document_version_id', $versionId)->first();
+        $migration->up();
+        self::assertEquals($original, DB::table('business_document_reviews')->where('id', $original->id)->first());
+
+        $input = ['decision' => 'APPROVED', 'expiration_kind' => 'NO_EXPIRATION', 'remarks' => 'Corrected expiration review.'];
+        $headers = ['Idempotency-Key' => (string) Str::uuid7()];
+        $response = $this->postJson($url, $input, $headers)->assertOk();
+        self::assertSame('Corrected expiration review.', $response->json('data.reviews.0.remarks'));
+        $reviews = DB::table('business_document_reviews')->where('business_document_version_id', $versionId)->get();
+        self::assertCount(2, $reviews);
+        self::assertCount(1, $reviews->pluck('reviewed_at')->unique());
+        self::assertEquals($original, DB::table('business_document_reviews')->where('id', $original->id)->first());
+
+        $this->postJson($url, $input, $headers)->assertOk();
+        self::assertSame(2, DB::table('business_document_reviews')->where('business_document_version_id', $versionId)->count());
+        foreach (['update', 'delete'] as $mutation) {
+            try {
+                DB::transaction(function () use ($original, $mutation): void {
+                    $review = DB::table('business_document_reviews')->where('id', $original->id);
+                    if ($mutation === 'update') {
+                        $review->update(['remarks' => 'Attempted history rewrite.']);
+                    } else {
+                        $review->delete();
+                    }
+                });
+                self::fail('Document review history must remain immutable.');
+            } catch (QueryException $exception) {
+                self::assertStringContainsString('history is immutable', $exception->getMessage());
+            }
+        }
+        try {
+            $migration->down();
+            self::fail('Rollback must preserve same-second review history.');
+        } catch (\RuntimeException $exception) {
+            self::assertStringContainsString('history must be retained', $exception->getMessage());
+        }
+        self::assertSame(2, DB::table('business_document_reviews')->where('business_document_version_id', $versionId)->count());
+
+        $this->signInVendor($owner);
+        $document = collect($this->getJson('/api/v1/vendors/onboarding')->assertOk()->json('data.verification.documents'))->firstWhere('id', $versionId);
+        self::assertSame('NO_EXPIRATION', $document['review']['expiration_kind']);
+        self::assertSame('Corrected expiration review.', $document['review']['remarks']);
+        $this->travel(2)->days();
+        self::assertSame(0, app(VendorExpiryService::class)->scan());
+        self::assertSame(0, DB::table('vendor_document_expiry_notices')->where('business_document_version_id', $versionId)->count());
+        $this->assertDatabaseHas('vendor_documents', ['current_version_id' => $versionId, 'status' => 'APPROVED']);
+    }
+
+    public function test_grouped_document_reviews_in_same_second_keep_version_checks_and_idempotency(): void
+    {
+        $this->freezeTime();
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $this->saveVerificationDraft($organization, attest: false);
+        $this->signInAdmin($this->adminFixture('ADMIN_VENDOR_VERIFICATION'));
+        $url = '/api/v1/admin/vendor-verification/'.$organization->id.'/requirements/representative_id/decision';
+        $versions = DB::table('vendor_onboarding_steps')->where('vendor_organization_id', $organization->id)
+            ->where('is_current', true)->whereIn('requirement_key', ['representative_identity', 'representative_identity_back'])
+            ->where('status', '!=', 'NOT_APPLICABLE')->where('level', '!=', 'OPTIONAL')->pluck('lock_version', 'requirement_key')->all();
+        $input = ['decision' => 'APPROVED', 'expiration_kind' => 'NO_EXPIRATION', 'requirement_versions' => $versions];
+        $this->postJson($url, $input, ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
+        $versionId = DB::table('vendor_documents')->where('vendor_organization_id', $organization->id)->where('requirement_key', 'representative_identity')->value('current_version_id');
+        $original = DB::table('business_document_reviews')->where('business_document_version_id', $versionId)->first();
+
+        $headers = ['Idempotency-Key' => (string) Str::uuid7()];
+        $input = ['decision' => 'CHANGES_REQUIRED', 'reason' => 'Clarify the identity document.', 'requirement_versions' => $versions];
+        $this->postJson($url, $input, $headers)->assertConflict()->assertJsonPath('errors.0.code', 'RESOURCE_VERSION_CONFLICT');
+        $input['requirement_versions'] = DB::table('vendor_onboarding_steps')->where('vendor_organization_id', $organization->id)
+            ->where('is_current', true)->whereIn('requirement_key', array_keys($versions))->pluck('lock_version', 'requirement_key')->all();
+        $response = $this->postJson($url, $input, $headers)->assertOk();
+        self::assertSame('CHANGES_REQUIRED', $response->json('data.reviews.0.decision'));
+        $this->postJson($url, $input, $headers)->assertOk();
+        $reviews = DB::table('business_document_reviews')->where('business_document_version_id', $versionId)->get();
+        self::assertCount(2, $reviews);
+        self::assertCount(1, $reviews->pluck('reviewed_at')->unique());
+        self::assertEquals($original, DB::table('business_document_reviews')->where('id', $original->id)->first());
+        $this->signInVendor($owner);
+        $document = collect($this->getJson('/api/v1/vendors/onboarding')->assertOk()->json('data.verification.documents'))->firstWhere('id', $versionId);
+        self::assertSame('CHANGES_REQUIRED', $document['review']['decision']);
+    }
+
     public function test_test_account_creation_is_private_immediate_durable_and_not_duplicated(): void
     {
         [$organization, $owner] = $this->vendorFixture('OWNER', null, false, ['business_type' => 'SOLE_PROPRIETORSHIP']);
@@ -2032,6 +2131,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
 
     public function test_admin_approves_store_documents_without_owner_tax_attestation_but_requires_matching_vat(): void
     {
+        $this->freezeTime();
         [$organization, $owner] = $this->vendorFixture('OWNER');
         $this->signInVendor($owner);
         $this->saveVerificationDraft($organization, attest: false);

@@ -205,7 +205,7 @@ final class VendorOnboardingService
                     $versions = DB::table('vendor_document_versions as v')->join('files as f', 'f.id', '=', 'v.file_id')->where('v.business_document_id', $row->business_document_id)->orderByDesc('v.version')->limit(5)->get(['v.id', 'v.file_id', 'v.version', 'v.scan_state', 'f.original_name'])->map(fn (object $version): array => (array) $version)->all();
                     unset($row->business_document_id);
 
-                    return (array) $row + ['recent_versions' => $versions, 'review' => DB::table('business_document_reviews')->where('business_document_version_id', $row->id)->orderByDesc('reviewed_at')->first(['decision', 'reason', 'verified_document_number', 'verified_issue_date', 'expiration_kind', 'verified_expiration_date', 'evidence_source', 'remarks', 'reviewed_at'])];
+                    return (array) $row + ['recent_versions' => $versions, 'review' => DB::table('business_document_reviews')->where('business_document_version_id', $row->id)->orderByDesc('reviewed_at')->orderByDesc('id')->first(['decision', 'reason', 'verified_document_number', 'verified_issue_date', 'expiration_kind', 'verified_expiration_date', 'evidence_source', 'remarks', 'reviewed_at'])];
                 })->all(),
                 'form_state' => $this->verificationFormState($organizationId, true),
                 'pending_documents' => DB::table('vendor_pending_documents as p')->join('files as f', 'f.id', '=', 'p.file_id')->where('p.vendor_organization_id', $organizationId)->get(['p.requirement_key', 'p.file_id', 'f.original_name', 'f.byte_size', 'f.content_type'])->map(fn (object $row): array => (array) $row + ['status' => 'PENDING_SUBMISSION'])->all(),
