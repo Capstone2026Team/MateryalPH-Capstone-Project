@@ -349,25 +349,8 @@ function VendorOnboardingPage({ initialSection }: { initialSection: OnboardingSe
 
 function VerificationWorkspace({ snapshot, onSaved, onRefresh }: { snapshot: VendorOnboardingSnapshot; onSaved: (snapshot: VendorOnboardingSnapshot) => void; onRefresh: () => Promise<void> }) {
   const [reviewing, setReviewing] = useState(false)
-  if (record(snapshot.verification).status === 'PENDING_VERIFICATION' && !reviewing) return <section className="mx-auto max-w-2xl space-y-6 border-y border-border-default py-10 text-center"><CheckCircle2 className="mx-auto text-status-success" size={40} aria-hidden="true" /><h2 className="text-2xl font-semibold">Business information and documentation successfully submitted.</h2><p className="text-text-secondary">Your Store Verification is awaiting Admin review. You may start Store Setup now; Store Activation remains subject to all required approvals.</p><PendingTaxAttestation snapshot={snapshot} onSaved={onSaved} /><div className="flex flex-wrap justify-center gap-4"><Link className="inline-flex min-h-11 items-center rounded-control bg-action-primary px-5 font-semibold text-white" to="/onboarding/setup">Proceed to Store Setup</Link><Button variant="secondary" onClick={() => setReviewing(true)}>Review submitted information</Button></div></section>
+  if (record(snapshot.verification).status === 'PENDING_VERIFICATION' && !reviewing) return <section className="mx-auto max-w-2xl space-y-6 border-y border-border-default py-10 text-center"><CheckCircle2 className="mx-auto text-status-success" size={40} aria-hidden="true" /><h2 className="text-2xl font-semibold">Business information and documentation successfully submitted.</h2><p className="text-text-secondary">Your Store Verification is awaiting Admin review. You may start Store Setup now; Store Activation remains subject to all required approvals.</p><div className="flex flex-wrap justify-center gap-4"><Link className="inline-flex min-h-11 items-center rounded-control bg-action-primary px-5 font-semibold text-white" to="/onboarding/setup">Proceed to Store Setup</Link><Button variant="secondary" onClick={() => setReviewing(true)}>Review submitted information</Button></div></section>
   return <VerificationForm key={['PENDING_VERIFICATION', 'APPROVED'].includes(stringValue(record(snapshot.verification).status)) ? 'submitted' : 'editable'} snapshot={snapshot} onSaved={onSaved} onRefresh={onRefresh} />
-}
-
-function PendingTaxAttestation({ snapshot, onSaved }: { snapshot: VendorOnboardingSnapshot; onSaved: (snapshot: VendorOnboardingSnapshot) => void }) {
-  const verification = record(snapshot.verification)
-  const review = record(verification.authorityReview)
-  const tax = record(verification.taxProfile)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const approved = sectionFor(snapshot, 'STORE_VERIFICATION').steps.some(step => step.key === 'authority_to_act' && step.status === 'APPROVED')
-  if (tax.ownerAttested || !snapshot.permissions.includes('vendor.onboarding.submit') || !record(verification.representative).sameAsOwner || !approved || review.decision !== 'APPROVED' || !stringValue(review.scope).split(',').includes('TAX_DECLARATIONS')) return null
-  async function attest() {
-    setBusy(true); setError('')
-    try { onSaved(await saveVendorVerificationDraft({ lockVersion: numberValue(record(snapshot.organization).lockVersion, 1), taxProfile: { ownerAttested: true } })) }
-    catch (cause) { setError(await readableOnboardingError(cause)) }
-    finally { setBusy(false) }
-  }
-  return <div className="grid gap-3 rounded-control border border-border-default p-4 text-left"><p>Admin approved your Authority to Act. Confirm that the submitted tax information is accurate to complete your declaration.</p><Button type="button" disabled={busy} onClick={() => void attest()}>{busy ? 'Confirming…' : 'Confirm tax declaration'}</Button>{error && <p role="alert" className="text-sm text-status-error">{error}</p>}</div>
 }
 
 type PendingDocumentContext = {
@@ -587,8 +570,7 @@ function VerificationForm({ snapshot, onSaved, onRefresh, editing = false, regis
     const tin = stringValue(data.get('tin')).trim()
     const declarationChoice = stringValue(data.get('tax_relief_claimed'))
     const taxReliefClaimed = declarationChoice === 'yes'
-    const ownerAttested = data.get('owner_attested') === 'on'
-    const taxFieldsPresent = taxpayerKey || tin || stringValue(data.get('vat_category')) || declarationChoice || stringValue(data.get('bir_cor_reference')).trim() || stringValue(data.get('declaration_type')).trim() || stringValue(data.get('threshold_position')).trim() || stringValue(data.get('submission_date')) || stringValue(data.get('outside_platform_as_of')) || taxReliefClaimed || ownerAttested || numberValue(tax.version, 0) > 0
+    const taxFieldsPresent = taxpayerKey || tin || stringValue(data.get('vat_category')) || declarationChoice || stringValue(data.get('bir_cor_reference')).trim() || stringValue(data.get('declaration_type')).trim() || stringValue(data.get('threshold_position')).trim() || stringValue(data.get('submission_date')) || stringValue(data.get('outside_platform_as_of')) || taxReliefClaimed || numberValue(tax.version, 0) > 0
     if (taxFieldsPresent) {
       const birCorReference = stringValue(data.get('bir_cor_reference')).trim()
       const entityClass = businessType === 'SOLE_PROPRIETORSHIP' ? 'INDIVIDUAL' : businessType === 'ONE_PERSON_CORPORATION' ? 'CORPORATION' : businessType
@@ -615,7 +597,6 @@ function VerificationForm({ snapshot, onSaved, onRefresh, editing = false, regis
         ...(withholdingScenario ? { withholdingScenario: withholdingScenario as NonNullable<import('@materyalph/api-client-ts').VendorVerificationDraftTaxProfile['withholdingScenario']> } : {}),
         ...(declarationChoice ? { taxReliefClaimed } : {}),
         declarationYear: data.get('declaration_year') ? Number(data.get('declaration_year')) : null,
-        ownerAttested,
       }
     }
     const invalidFields: Record<string, string> = {}
@@ -680,7 +661,7 @@ function VerificationForm({ snapshot, onSaved, onRefresh, editing = false, regis
         {companyIdentityRequired && <RepresentativeInformation representative={{ ...record(verification.representative), ...(savedValue('authority_document_type') ? { authorityDocumentType: savedValue('authority_document_type') } : {}) }} owner={record(verification.owner)} documents={arrayValue(verification.documents)} review={record(verification.authorityReview)} role={representativeRole} idType={representativeIdType} authorityEvidence={<DocumentChecklist embedded reviewUploads keys={['authority_to_act']} snapshot={snapshot} onRefresh={onRefresh} preview={preview} pendingChanges={selectedBusinessType !== stringValue(org.businessType)} />} identityEvidence={representativeIdType ? <DocumentChecklist key={representativeIdType} identityLayout embedded keys={['representative_identity', ...(representativeIdType !== 'PASSPORT' ? ['representative_identity_back'] : [])]} snapshot={snapshot} onRefresh={onRefresh} preview={preview} pendingChanges={dirty || busy || selectedBusinessType !== stringValue(org.businessType)} /> : null} />}
         <FormSection panel title="Business identity" description="The registered business name and public Store name are separate values."><FieldRow>{companyIdentityRequired && <Field label="Registered Business Name" name="legal_business_name" required maxLength={200} defaultValue={stringValue(org.legalBusinessName, stringValue(org.registeredName))} />}<Field label="Date established" name="date_established" required type="date" max={new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Manila' }).format(new Date())} defaultValue={dateInput(org.dateEstablished)} /></FieldRow><Field label="Public Store Name" name="store_name" required maxLength={100} defaultValue={stringValue(org.storeName)} /></FormSection>
         <StoreContactInformation snapshot={snapshot} onSaved={onSaved} initialEmail={savedValue('store_email', stringValue(org.storeEmail))} />
-        <BusinessTaxInformation tax={tax} details={details} businessType={selectedBusinessType} canAttest={(selectedBusinessType === 'SOLE_PROPRIETORSHIP' && representativeRole === 'PROPRIETOR') || (record(verification.authorityReview).decision === 'APPROVED' && stringValue(record(verification.authorityReview).scope).split(',').includes('TAX_DECLARATIONS'))} errors={{ ...(savedTaxReason.startsWith('Enter your 9-digit TIN') ? { tin: savedTaxReason } : {}), ...fieldErrors }} evidence={<DocumentChecklist embedded reviewUploads keys={['bir_cor']} declarationClaim={declarationClaim} snapshot={snapshot} onRefresh={onRefresh} preview={preview} pendingChanges={selectedBusinessType !== stringValue(org.businessType)} />} declarationEvidence={<DocumentChecklist embedded reviewUploads keys={['tax_relief_evidence']} declarationClaim={declarationClaim} snapshot={snapshot} onRefresh={onRefresh} preview={preview} pendingChanges={selectedBusinessType !== stringValue(org.businessType)} />} />
+        <BusinessTaxInformation tax={tax} details={details} errors={{ ...(savedTaxReason.startsWith('Enter your 9-digit TIN') ? { tin: savedTaxReason } : {}), ...fieldErrors }} evidence={<DocumentChecklist embedded reviewUploads keys={['bir_cor']} declarationClaim={declarationClaim} snapshot={snapshot} onRefresh={onRefresh} preview={preview} pendingChanges={selectedBusinessType !== stringValue(org.businessType)} />} declarationEvidence={<DocumentChecklist embedded reviewUploads keys={['tax_relief_evidence']} declarationClaim={declarationClaim} snapshot={snapshot} onRefresh={onRefresh} preview={preview} pendingChanges={selectedBusinessType !== stringValue(org.businessType)} />} />
         <FormSection panel title="Business and Compliance Evidence" description="Select the required documents. They stay pending until you submit for Admin Review."><DocumentChecklist embedded reviewUploads keys={['business_registration', 'lgu_permit']} snapshot={snapshot} onRefresh={onRefresh} preview={preview} pendingChanges={selectedBusinessType !== stringValue(org.businessType)} /></FormSection>
       </div></OnboardingStepContent>
       <OnboardingStepContent active={step === 1}><div className="grid gap-5"><p className="text-sm text-text-secondary">Find your registered business address on Google Maps or enter it manually. Check that the details match your business documents.</p><InlineError name="address_payload" /><VendorBusinessAddress initial={address} restoreDraft={Boolean(savedValue('address_payload'))} active={step === 1} onDirty={markDirty} /></div></OnboardingStepContent>
@@ -755,7 +736,7 @@ function RepresentativeInformation({ representative, owner, documents, role, rev
   </FormSection>
 }
 
-function BusinessTaxInformation({ tax, details, businessType, canAttest, errors, evidence, declarationEvidence }: { tax: JsonRecord; details: JsonRecord; businessType: string; canAttest: boolean; errors: Record<string, string>; evidence: ReactNode; declarationEvidence: ReactNode }) {
+function BusinessTaxInformation({ tax, details, errors, evidence, declarationEvidence }: { tax: JsonRecord; details: JsonRecord; errors: Record<string, string>; evidence: ReactNode; declarationEvidence: ReactNode }) {
   const [declaration, setDeclaration] = useState(typeof details.taxReliefClaimed === 'boolean' ? (details.taxReliefClaimed ? 'yes' : 'no') : '')
   return <><FormSection panel title="Tax Information" description="Your tax information is reviewed with Business Information. Payment Configuration references this Tax Profile; you will not need to enter it again. Only masked TIN values are returned after saving.">
     <FormSection title="Tax Identity" description="Use the identifiers shown on your BIR registration record.">
@@ -780,8 +761,6 @@ function BusinessTaxInformation({ tax, details, businessType, canAttest, errors,
       <InlineError name="tax_relief_claimed" />
       {declaration === 'yes' && <><div className="max-w-xl"><Field label="Declaration taxable year" name="declaration_year" type="number" min="2000" max="2100" defaultValue={stringValue(details.declarationYear, String(new Date().getFullYear()))} /></div><p className="text-sm text-text-secondary">Select the BIR-received / BIR-stamped PDF to include with your submission.</p>{declarationEvidence}</>}
     </FormSection>
-    <label className="flex min-h-11 items-start gap-3 text-sm leading-6"><input disabled={!canAttest} className="mt-1 h-5 w-5 accent-action-primary" type="checkbox" id="owner_attested" aria-invalid={Boolean(errors.owner_attested)} name="owner_attested" defaultChecked={false} />I am the Vendor Owner and attest that this tax information is accurate.</label><InlineError name="owner_attested" />{booleanValue(tax.ownerAttested) && <p className="text-sm text-text-secondary">Your saved tax version is already attested. A correction creates a new version and requires a new attestation.</p>}
-    {businessType && !canAttest && <p className="text-sm text-text-secondary">Organizational tax attestation requires Admin-approved Authority to Act for the current representative. You can save draft information and submit evidence for review first.</p>}
   </FormSection>
       <StatusMessage tone="info"><div className="grid gap-2"><span className="font-semibold">Verified VAT status: {statusLabel(stringValue(tax.vatVerifiedCategory, 'PENDING_VERIFICATION'))}</span><p>Admin reviews your declared VAT status against your BIR Certificate of Registration. Uploading a COR does not verify this Tax Profile. Expiration may be Not Applicable.</p></div></StatusMessage>
     <StatusMessage tone="info" dismissLabel="Dismiss withholding information"><p className="font-semibold">Withholding information · FIN-04A</p><ul className="mt-2 list-disc space-y-2 pl-5"><li>Cumulative gross remittances reaching ₱500,000.01 in a taxable year make the entire crossing remittance and every later remittance that year subject to withholding.</li><li>This applies regardless of an uploaded declaration. Uploading a declaration grants no exemption, reduced withholding or threshold relief.</li></ul></StatusMessage>

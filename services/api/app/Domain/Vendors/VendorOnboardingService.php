@@ -1815,9 +1815,6 @@ final class VendorOnboardingService
         if ($tax === null || ! is_string($tax->taxpayer_key_hash) || trim($tax->taxpayer_key_hash) === '' || $tax->tin_last4 === null || $tax->tin_last4 === '') {
             $blockers[] = ['key' => 'tax_profile', 'reason' => 'Complete the private tax registration information.'];
         }
-        if (($tax->owner_attested_at ?? null) === null && ! $this->authority->required($organizationId)) {
-            $blockers[] = ['key' => 'owner_attested', 'reason' => 'Confirm the tax information declaration.'];
-        }
         if ($tax !== null && (! is_string($tax->tin_encrypted) || preg_match('/^[0-9]{12,14}$/D', Crypt::decryptString($tax->tin_encrypted)) !== 1)) {
             $blockers[] = ['key' => 'tax_profile.tin', 'reason' => 'Enter the 9-digit TIN followed by a 3- to 5-digit branch code.'];
         }

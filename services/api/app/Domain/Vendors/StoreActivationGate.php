@@ -96,9 +96,9 @@ final class StoreActivationGate
                 $block(4, $requirement->requirement_key.'_review', 'Resolve the '.$requirement->status.' requirement.');
             }
         }
-        $tax = DB::table('vendor_tax_profiles as p')->leftJoin('vendor_tax_profile_versions as v', 'v.id', '=', 'p.current_version_id')->where('p.vendor_organization_id', $organizationId)->first(['p.status', 'p.environment', 'v.owner_attested_at', 'v.vat_category', 'v.vat_verified_category', 'v.representative_version_id']);
-        if ($tax === null || $tax->status !== 'APPROVED' || ! in_array($tax->environment, ['TEST', 'DEMO'], true) || $tax->owner_attested_at === null || $tax->vat_verified_category === null || $tax->vat_category !== $tax->vat_verified_category) {
-            $block(5, 'tax_profile', 'An attested and reviewed TEST/DEMO Tax Profile with verified VAT classification is required.');
+        $tax = DB::table('vendor_tax_profiles as p')->leftJoin('vendor_tax_profile_versions as v', 'v.id', '=', 'p.current_version_id')->where('p.vendor_organization_id', $organizationId)->first(['p.status', 'p.environment', 'v.vat_category', 'v.vat_verified_category']);
+        if ($tax === null || $tax->status !== 'APPROVED' || ! in_array($tax->environment, ['TEST', 'DEMO'], true) || $tax->vat_verified_category === null || $tax->vat_category !== $tax->vat_verified_category) {
+            $block(5, 'tax_profile', 'An Admin-reviewed TEST/DEMO Tax Profile with verified VAT classification is required.');
         }
         if ($setup->isEmpty() || $organization?->store_setup_status !== 'COMPLETED') {
             $block(6, 'store_setup', 'Complete Store Setup.');

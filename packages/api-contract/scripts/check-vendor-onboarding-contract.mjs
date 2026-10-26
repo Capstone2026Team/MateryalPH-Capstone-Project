@@ -129,6 +129,8 @@ for (const path of [
 
 const draft = spec.components.schemas.VendorVerificationDraft.properties
 const tax = draft.tax_profile.properties
+assert.equal(tax.owner_attested.deprecated, true)
+assert.match(tax.owner_attested.description, /do not require it/)
 assert.equal(tax.tin.pattern, '^(?:[0-9]{12,14}|[0-9]{3}-[0-9]{3}-[0-9]{3}-[0-9]{3,5})$')
 assert.equal(tax.tin.writeOnly, true)
 assert.equal(tax.branch_code, undefined)

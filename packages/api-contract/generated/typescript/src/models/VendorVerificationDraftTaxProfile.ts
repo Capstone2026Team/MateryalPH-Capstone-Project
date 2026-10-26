@@ -77,7 +77,8 @@ export interface VendorVerificationDraftTaxProfile {
      */
     taxReliefClaimed?: boolean;
     /**
-     *
+     * Legacy optional attestation. Store Verification submission, Admin document approval and Store Activation do not require it. Existing attestation history is retained.
+     * @deprecated
      */
     ownerAttested?: boolean;
 }

@@ -245,9 +245,9 @@ final class AdminVendorVerificationService
                 $this->authority->review($request, $organizationId, $input);
             }
             if ($decision === 'APPROVED' && $requirementKey === 'tax_profile') {
-                $tax = DB::table('vendor_tax_profiles as p')->join('vendor_tax_profile_versions as v', 'v.id', '=', 'p.current_version_id')->where('p.vendor_organization_id', $organizationId)->first(['v.owner_attested_at', 'v.vat_category', 'v.vat_verified_category']);
-                if ($tax === null || $tax->owner_attested_at === null || $tax->vat_verified_category === null || $tax->vat_verified_category !== $tax->vat_category) {
-                    throw new AuthenticationException('TAX_REVIEW_INCOMPLETE', 'Owner attestation and a matching VAT classification verified against BIR evidence are required.', 422);
+                $tax = DB::table('vendor_tax_profiles as p')->join('vendor_tax_profile_versions as v', 'v.id', '=', 'p.current_version_id')->where('p.vendor_organization_id', $organizationId)->first(['v.vat_category', 'v.vat_verified_category']);
+                if ($tax === null || $tax->vat_verified_category === null || $tax->vat_verified_category !== $tax->vat_category) {
+                    throw new AuthenticationException('TAX_REVIEW_INCOMPLETE', 'Verify the VAT classification against BIR evidence and resolve any mismatch with the Vendor declaration.', 422);
                 }
             }
             $document = DB::table('vendor_documents')->where('vendor_organization_id', $organizationId)->where('requirement_key', $requirementKey)->first();
@@ -348,9 +348,9 @@ final class AdminVendorVerificationService
                 }
             }
             if ($groupKey === 'business_information_group' && $decision === 'APPROVED' && $steps->contains('requirement_key', 'tax_profile')) {
-                $tax = DB::table('vendor_tax_profiles as p')->join('vendor_tax_profile_versions as v', 'v.id', '=', 'p.current_version_id')->where('p.vendor_organization_id', $organizationId)->first(['v.owner_attested_at', 'v.vat_category', 'v.vat_verified_category']);
-                if ($tax === null || $tax->owner_attested_at === null || $tax->vat_verified_category === null || $tax->vat_verified_category !== $tax->vat_category) {
-                    throw new AuthenticationException('TAX_REVIEW_INCOMPLETE', 'Owner attestation and a matching VAT classification verified against BIR evidence are required.', 422);
+                $tax = DB::table('vendor_tax_profiles as p')->join('vendor_tax_profile_versions as v', 'v.id', '=', 'p.current_version_id')->where('p.vendor_organization_id', $organizationId)->first(['v.vat_category', 'v.vat_verified_category']);
+                if ($tax === null || $tax->vat_verified_category === null || $tax->vat_verified_category !== $tax->vat_category) {
+                    throw new AuthenticationException('TAX_REVIEW_INCOMPLETE', 'Verify the VAT classification against BIR evidence and resolve any mismatch with the Vendor declaration.', 422);
                 }
             }
             $documentGroup = $groupKey !== 'business_information_group';

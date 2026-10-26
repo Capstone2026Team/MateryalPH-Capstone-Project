@@ -342,7 +342,6 @@ function CaseInformation({ detail, selectedKey }: { detail: VerificationDetail; 
     ['BIR COR reference', stringValue(tax.bir_cor_reference, stringValue(tax.birCorReference))],
     ['Tax relief claimed', typeof taxDetails.tax_relief_claimed === 'boolean' ? taxDetails.tax_relief_claimed ? 'Yes' : 'No' : ''],
     ['Sworn Declaration year', taxDetails.declaration_year == null ? '' : String(taxDetails.declaration_year)],
-    ['Owner tax attestation', Object.keys(tax).length ? tax.owner_attested === true || tax.ownerAttested === true ? 'Yes' : 'No' : ''],
     ['Privacy acknowledgement', privacyStep ? statusLabel(stringValue(privacyStep.status)) : ''],
   ] : selectedKey === 'legal_identity_id' ? [
     ['Full legal name', fullName],

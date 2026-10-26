@@ -578,7 +578,6 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
             'tax_profile' => [
                 'taxpayer_key' => 'TEST-TAXPAYER-002',
                 'tin' => '98765432100000',
-                'owner_attested' => true,
             ],
         ])->assertOk();
 
@@ -590,6 +589,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         $blockers = $response->json('errors.0.details.blockers');
         self::assertIsArray($blockers);
         self::assertContains('tax_relief_claimed', array_column($blockers, 'key'));
+        self::assertNotContains('owner_attested', array_column($blockers, 'key'));
     }
 
     public function test_failed_or_expired_store_email_otp_preserves_the_verified_email(): void
@@ -1250,6 +1250,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
     public function test_ready_setup_and_verification_can_activate_without_making_the_store_discoverable(): void
     {
         [$organization] = $this->activationReadyFixture();
+        self::assertNull(DB::table('vendor_tax_profiles')->where('vendor_organization_id', $organization->id)->value('attested_at'));
         $this->postJson('/api/v1/vendors/onboarding/activation', [], ['Idempotency-Key' => (string) Str::uuid7()])
             ->assertStatus(202)->assertJsonPath('data.activation.status', 'ACTIVE')
             ->assertJsonPath('data.activation.marketplace_discoverability_status', 'NOT_DISCOVERABLE');
@@ -1490,7 +1491,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         [$organization, $owner] = $this->vendorFixture('OWNER', null, false, ['business_type' => 'SOLE_PROPRIETORSHIP', 'store_email' => 'ready@example.test', 'store_email_verified_at' => now()]);
         $this->signInVendor($owner);
         $this->getJson('/api/v1/vendor/onboarding')->assertOk();
-        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => 1, 'tax_profile' => ['taxpayer_key' => 'TEST-READY', 'tin' => '12345678900000', 'vat_category' => 'NON_VAT', 'owner_attested' => true, 'tax_relief_claimed' => false]])->assertOk();
+        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => 1, 'tax_profile' => ['taxpayer_key' => 'TEST-READY', 'tin' => '12345678900000', 'vat_category' => 'NON_VAT', 'tax_relief_claimed' => false]])->assertOk();
         foreach (['business_registration', 'lgu_permit', 'bir_cor', 'identity_evidence'] as $key) {
             $this->submittedEvidenceFixture($key, $key.'.pdf');
         }
@@ -2029,6 +2030,49 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         $this->assertDatabaseCount('vendor_documents', 0);
     }
 
+    public function test_admin_approves_store_documents_without_owner_tax_attestation_but_requires_matching_vat(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $this->saveVerificationDraft($organization, attest: false);
+        $this->signInAdmin($this->adminFixture('ADMIN_VENDOR_VERIFICATION'));
+        foreach (['lgu_permit', 'representative_identity', 'bir_cor'] as $key) {
+            $this->postJson('/api/v1/admin/vendor-verification/'.$organization->id.'/requirements/'.$key.'/decision', [
+                'decision' => 'APPROVED', 'expiration_kind' => 'NO_EXPIRATION',
+            ], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
+        }
+        $keys = ['business_type', 'business_information', 'legal_identity', 'registered_business_address', 'supplier_classification', 'tax_profile', 'privacy_acknowledgement'];
+        $versions = collect($this->getJson('/api/v1/admin/vendor-verification/'.$organization->id)->assertOk()->json('data.sections.STORE_VERIFICATION'))
+            ->whereIn('key', $keys)->where('status', '!=', 'NOT_APPLICABLE')->pluck('lock_version', 'key')->all();
+        foreach ([null, 'NON_VAT', 'VAT'] as $verifiedVat) {
+            if ($verifiedVat !== null) {
+                $this->postJson('/api/v1/admin/vendor-verification/'.$organization->id.'/requirements/bir_cor/decision', [
+                    'decision' => 'APPROVED', 'expiration_kind' => 'NO_EXPIRATION', 'verified_vat_category' => $verifiedVat,
+                ], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
+            }
+            $taxDecision = $this->postJson('/api/v1/admin/vendor-verification/'.$organization->id.'/requirements/tax_profile/decision', [
+                'decision' => 'APPROVED',
+            ], ['Idempotency-Key' => (string) Str::uuid7()]);
+            if ($verifiedVat !== 'VAT') {
+                $taxDecision->assertUnprocessable()->assertJsonPath('errors.0.code', 'TAX_REVIEW_INCOMPLETE');
+                $this->postJson('/api/v1/admin/vendor-verification/'.$organization->id.'/requirements/business_information_group/decision', [
+                    'decision' => 'APPROVED', 'requirement_versions' => $versions,
+                ], ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable()->assertJsonPath('errors.0.code', 'TAX_REVIEW_INCOMPLETE');
+            } else {
+                $taxDecision->assertOk();
+            }
+        }
+        $versions = collect($this->getJson('/api/v1/admin/vendor-verification/'.$organization->id)->assertOk()->json('data.sections.STORE_VERIFICATION'))
+            ->whereIn('key', $keys)->where('status', '!=', 'NOT_APPLICABLE')->pluck('lock_version', 'key')->all();
+        $this->postJson('/api/v1/admin/vendor-verification/'.$organization->id.'/requirements/business_information_group/decision', [
+            'decision' => 'APPROVED', 'requirement_versions' => $versions,
+        ], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
+        $this->assertDatabaseHas('vendor_organizations', ['id' => $organization->id, 'store_verification_status' => 'APPROVED']);
+        $this->assertDatabaseHas('vendor_tax_profiles', ['vendor_organization_id' => $organization->id, 'status' => 'APPROVED', 'attested_at' => null]);
+        $this->signInVendor($owner);
+        $this->getJson('/api/v1/vendors/onboarding')->assertOk()->assertJsonPath('data.verification.tax_profile.owner_attested', false);
+    }
+
     public function test_grouped_admin_review_updates_information_once_and_keeps_documents_independent(): void
     {
         [$organization, $owner] = $this->vendorFixture('OWNER');
@@ -2224,7 +2268,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         $this->assertDatabaseCount('vendor_classifications', 0);
     }
 
-    private function saveVerificationDraft(VendorOrganization $organization, bool $review = true): void
+    private function saveVerificationDraft(VendorOrganization $organization, bool $review = true, bool $attest = true): void
     {
         DB::table('vendor_organizations')->where('id', $organization->id)->update(['store_email_verified_at' => now()]);
         $this->patchJson('/api/v1/vendors/onboarding/verification', [
@@ -2269,7 +2313,9 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         $this->postJson('/api/v1/admin/vendor-verification/'.$organization->getKey().'/requirements/business_registration/decision', ['decision' => 'APPROVED', 'expiration_kind' => 'NO_EXPIRATION'], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
         $this->postJson('/api/v1/admin/vendor-verification/'.$organization->getKey().'/requirements/authority_to_act/decision', ['decision' => 'APPROVED', 'expiration_kind' => 'NO_EXPIRATION', 'authority_evidence_version_id' => $evidenceId, 'authority_scopes' => ['TAX_DECLARATIONS', 'COMMISSION_AGREEMENT', 'PAYMENT_CONFIGURATION']], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
         $this->signInVendor($owner);
-        $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'tax_profile' => ['owner_attested' => true]])->assertOk();
+        if ($attest) {
+            $this->patchJson('/api/v1/vendors/onboarding/verification', ['lock_version' => $organization->refresh()->lock_version, 'tax_profile' => ['owner_attested' => true]])->assertOk();
+        }
     }
 
     private function pdf(string $name): UploadedFile

@@ -28173,7 +28173,10 @@ components:
                 enum: [ DEMO_PLATFORM_WITHHOLDER, DEMO_PROVIDER_WITHHOLDER ]
               }
             tax_relief_claimed: { type: boolean }
-            owner_attested: { type: boolean }
+            owner_attested:
+              type: boolean
+              deprecated: true
+              description: Legacy optional attestation. Store Verification submission, Admin document approval and Store Activation do not require it. Existing attestation history is retained.
     VendorVerificationSubmit:
       type: object
       required: [ lock_version, privacy_acknowledged ]

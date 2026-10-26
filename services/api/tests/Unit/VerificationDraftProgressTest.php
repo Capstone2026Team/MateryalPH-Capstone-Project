@@ -54,6 +54,13 @@ final class VerificationDraftProgressTest extends TestCase
         self::assertSame('COMPLETED', (new VerificationDraftProgress)->formStatuses('vendor', $state, $this->source())['tax_profile']);
     }
 
+    public function test_tax_information_is_complete_without_owner_attestation(): void
+    {
+        $state = $this->state();
+        unset($state['owner_attested']);
+        self::assertSame('COMPLETED', (new VerificationDraftProgress)->formStatuses('vendor', $state, $this->source())['tax_profile']);
+    }
+
     public function test_resolved_map_fields_match_independently_of_json_key_order(): void
     {
         $state = $this->state();

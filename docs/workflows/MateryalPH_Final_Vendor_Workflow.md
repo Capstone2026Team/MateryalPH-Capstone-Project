@@ -304,6 +304,8 @@ The system shows only requirements applicable to the selected Business Type. All
 
 Tax information is collected once in Store Verification and is the source for the Vendor Tax Profile. Payment Configuration references the approved or effective Vendor Tax Profile and must not collect duplicate legal tax information.
 
+**Owner decision — 26 October 2026: document-based Store Verification.** Admin reviews the submitted business information and applicable documents. No separate Owner tax-attestation checkbox or post-submission tax confirmation is required for Store Verification submission, Admin approval, or Store Activation. BIR evidence review and matching declared/verified VAT classification remain required. Existing attestation history is retained; separate legal declarations and commercial agreements keep their applicable authorization rules.
+
 The Vendor provides the applicable TIN and branch code exactly as shown on BIR records. The system validates structure, rejects clearly malformed values, stores the full value as private business-tax information, and masks it in authorized displays. The full TIN is never exposed on public Store Profiles, Buyer search, Vendor maps, public listings, public analytics, or another Vendor's interface.
 
 The Vendor declares **VAT Registered** or **Non-VAT Registered**. The system keeps **Declared VAT Status** separate from **Verified VAT Status**. Admin verifies the declaration against the BIR evidence. An inconsistency produces `CHANGES_REQUIRED` or another documented review decision; it does not silently change the Vendor's declaration.

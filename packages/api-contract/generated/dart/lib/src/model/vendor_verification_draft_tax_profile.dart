@@ -27,7 +27,7 @@ part 'vendor_verification_draft_tax_profile.g.dart';
 /// * [outsidePlatformAsOf]
 /// * [withholdingScenario]
 /// * [taxReliefClaimed]
-/// * [ownerAttested]
+/// * [ownerAttested] - Legacy optional attestation. Store Verification submission, Admin document approval and Store Activation do not require it. Existing attestation history is retained.
 @BuiltValue()
 abstract class VendorVerificationDraftTaxProfile implements Built<VendorVerificationDraftTaxProfile, VendorVerificationDraftTaxProfileBuilder> {
   @BuiltValueField(wireName: r'taxpayer_key')
@@ -76,6 +76,8 @@ abstract class VendorVerificationDraftTaxProfile implements Built<VendorVerifica
   @BuiltValueField(wireName: r'tax_relief_claimed')
   bool? get taxReliefClaimed;
 
+  /// Legacy optional attestation. Store Verification submission, Admin document approval and Store Activation do not require it. Existing attestation history is retained.
+  @Deprecated('ownerAttested has been deprecated')
   @BuiltValueField(wireName: r'owner_attested')
   bool? get ownerAttested;
 

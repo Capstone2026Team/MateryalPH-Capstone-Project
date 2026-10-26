@@ -78,6 +78,7 @@ void main() {
       // TODO
     });
 
+    // Legacy optional attestation. Store Verification submission, Admin document approval and Store Activation do not require it. Existing attestation history is retained.
     // bool ownerAttested
     test('to test the property `ownerAttested`', () async {
       // TODO

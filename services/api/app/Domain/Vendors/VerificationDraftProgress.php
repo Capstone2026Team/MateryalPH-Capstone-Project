@@ -129,8 +129,7 @@ final class VerificationDraftProgress
         $taxFields = ['tax_profile.tin' => $value('tin', ! empty($tax->tin_encrypted) ? Crypt::decryptString($tax->tin_encrypted) : ''),
             'tax_profile.vat_category' => $value('vat_category', ($taxDetails['vat_declared'] ?? false) ? ($tax->vat_category ?? '') : '')];
         $statuses['tax_profile'] = $group($taxFields, array_keys($taxFields));
-        if (! in_array($relief, ['yes', 'no'], true) || ($relief === 'yes' && ! preg_match('/^(20[0-9]{2}|2100)$/D', (string) $value('declaration_year', $taxDetails['declaration_year'] ?? '')))
-            || (! $company && $role === 'PROPRIETOR' && $value('owner_attested', ! empty($tax->owner_attested_at) ? 'on' : '') !== 'on')) {
+        if (! in_array($relief, ['yes', 'no'], true) || ($relief === 'yes' && ! preg_match('/^(20[0-9]{2}|2100)$/D', (string) $value('declaration_year', $taxDetails['declaration_year'] ?? '')))) {
             $statuses['tax_profile'] = 'IN_PROGRESS';
         }
         $representativeFields = [];

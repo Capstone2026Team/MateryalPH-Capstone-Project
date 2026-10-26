@@ -22,7 +22,7 @@ Name | Type | Description | Notes
 **outsidePlatformAsOf** | [**Date**](Date.md) |  | [optional]
 **withholdingScenario** | **String** |  | [optional]
 **taxReliefClaimed** | **bool** |  | [optional]
-**ownerAttested** | **bool** |  | [optional]
+**ownerAttested** | **bool** | Legacy optional attestation. Store Verification submission, Admin document approval and Store Activation do not require it. Existing attestation history is retained. | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

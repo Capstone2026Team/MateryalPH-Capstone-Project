@@ -873,16 +873,22 @@ test('multiple invalid fields have their own errors and retain the selected docu
 })
 
 
-test('an approved Owner-linked authority can attest pending tax information without replacing evidence', async () => {
+test('pending document verification needs no additional Owner tax confirmation', async () => {
   snapshot.verification = { ...snapshot.verification, status: 'PENDING_VERIFICATION', representative: { same_as_owner: true }, authority_review: { decision: 'APPROVED', scope: 'TAX_DECLARATIONS' }, tax_profile: { owner_attested: false } }
   snapshot.sections = { STORE_VERIFICATION: { key: 'STORE_VERIFICATION', label: 'Store Verification', status: 'PENDING_VERIFICATION', complete: 1, total: 2, progress: { complete: 1, total: 2 }, steps: [{ id: 'authority', key: 'authority_to_act', label: 'Authority to Act', level: 'REQUIRED', status: 'APPROVED', lockVersion: 1 }] } }
-  vi.mocked(api.saveVendorVerificationDraft).mockImplementation(async () => ({ ...snapshot, verification: { ...snapshot.verification, tax_profile: { owner_attested: true } } }))
   open('/onboarding/verification')
-  fireEvent.click(await screen.findByRole('button', { name: 'Confirm tax declaration' }))
-  await waitFor(() => expect(api.saveVendorVerificationDraft).toHaveBeenCalledWith({ lockVersion: 1, taxProfile: { ownerAttested: true } }))
-  await waitFor(() => expect(screen.queryByRole('button', { name: 'Confirm tax declaration' })).not.toBeInTheDocument())
+  expect(await screen.findByText('Business information and documentation successfully submitted.')).toBeVisible()
+  expect(screen.queryByRole('button', { name: 'Confirm tax declaration' })).not.toBeInTheDocument()
+  expect(api.saveVendorVerificationDraft).not.toHaveBeenCalled()
   expect(api.submitVendorVerification).not.toHaveBeenCalled()
   expect(api.uploadVendorDocument).not.toHaveBeenCalled()
+})
+
+test('tax registration collects evidence without an Owner attestation checkbox', async () => {
+  open('/onboarding/verification')
+  await screen.findByRole('heading', { name: 'Store Verification', level: 1 })
+  expect(screen.queryByRole('checkbox', { name: /attest that this tax information/ })).not.toBeInTheDocument()
+  expect(screen.queryByText(/Organizational tax attestation requires/)).not.toBeInTheDocument()
 })
 
 
