@@ -9,8 +9,7 @@ import { dateQuery } from '../lib/admin-format'
 const basePath = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'
 export function AdminNotificationsPage() {
   const navigate = useNavigate()
-  const actions = <nav aria-label="Notification administration" className="flex flex-wrap gap-x-5 text-sm"><Link className="inline-flex min-h-11 items-center font-medium text-action-primary underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" to="/reports/tax">Tax support packages</Link><Link className="inline-flex min-h-11 items-center font-medium text-action-primary underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" to="/notifications/failures">Delivery exceptions</Link></nav>
-  return <AdminShell activeHref="/notifications"><NotificationsWorkspace basePath={basePath} audience="admin" navigate={navigate} headerActions={actions} {...(import.meta.env.VITE_FIREBASE_PUSH_ENABLED === 'true' ? { enablePush: () => enableWebPush(basePath, 'admin', { apiKey: import.meta.env.VITE_FIREBASE_API_KEY, appId: import.meta.env.VITE_FIREBASE_APP_ID, projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID, messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID }, import.meta.env.VITE_FIREBASE_VAPID_KEY) } : {})} /></AdminShell>
+  return <AdminShell activeHref="/notifications"><NotificationsWorkspace basePath={basePath} audience="admin" navigate={navigate} {...(import.meta.env.VITE_FIREBASE_PUSH_ENABLED === 'true' ? { enablePush: () => enableWebPush(basePath, 'admin', { apiKey: import.meta.env.VITE_FIREBASE_API_KEY, appId: import.meta.env.VITE_FIREBASE_APP_ID, projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID, messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID }, import.meta.env.VITE_FIREBASE_VAPID_KEY) } : {})} /></AdminShell>
 }
 
 export function AdminDeliveryFailuresPage() {
