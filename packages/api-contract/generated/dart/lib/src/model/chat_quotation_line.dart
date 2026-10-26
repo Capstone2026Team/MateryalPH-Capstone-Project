@@ -4,6 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/quantity_policy.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -12,6 +13,7 @@ part 'chat_quotation_line.g.dart';
 /// ChatQuotationLine
 ///
 /// Properties:
+/// * [quantityPolicy]
 /// * [variantId]
 /// * [quantity]
 /// * [unitPriceCentavos]
@@ -25,6 +27,9 @@ part 'chat_quotation_line.g.dart';
 /// * [sourceTaxVersionId]
 @BuiltValue()
 abstract class ChatQuotationLine implements Built<ChatQuotationLine, ChatQuotationLineBuilder> {
+  @BuiltValueField(wireName: r'quantity_policy')
+  QuantityPolicy? get quantityPolicy;
+
   @BuiltValueField(wireName: r'variant_id')
   String get variantId;
 
@@ -84,6 +89,13 @@ class _$ChatQuotationLineSerializer implements PrimitiveSerializer<ChatQuotation
     ChatQuotationLine object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.quantityPolicy != null) {
+      yield r'quantity_policy';
+      yield serializers.serialize(
+        object.quantityPolicy,
+        specifiedType: const FullType(QuantityPolicy),
+      );
+    }
     yield r'variant_id';
     yield serializers.serialize(
       object.variantId,
@@ -168,6 +180,14 @@ class _$ChatQuotationLineSerializer implements PrimitiveSerializer<ChatQuotation
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'quantity_policy':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(QuantityPolicy),
+          ) as QuantityPolicy?;
+          if (valueDes == null) continue;
+          result.quantityPolicy.replace(valueDes);
+          break;
         case r'variant_id':
           final valueDes = serializers.deserialize(
             value,

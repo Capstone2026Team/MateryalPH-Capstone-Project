@@ -919,6 +919,7 @@ docs/PublicStoreListEnvelopeMeta.md
 docs/PublicStoreProfile.md
 docs/PublicStoreProfileEnvelope.md
 docs/PublicStoreSummary.md
+docs/QuantityPolicy.md
 docs/RadiusExpansion.md
 docs/RadiusKm.md
 docs/RankingComponent.md
@@ -2204,6 +2205,7 @@ src/models/PublicStoreListEnvelopeMeta.ts
 src/models/PublicStoreProfile.ts
 src/models/PublicStoreProfileEnvelope.ts
 src/models/PublicStoreSummary.ts
+src/models/QuantityPolicy.ts
 src/models/RadiusExpansion.ts
 src/models/RadiusKm.ts
 src/models/RankingComponent.ts

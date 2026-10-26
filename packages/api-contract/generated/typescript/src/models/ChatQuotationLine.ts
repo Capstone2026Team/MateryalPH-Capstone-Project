@@ -13,12 +13,24 @@
  */
 
 import { mapValues } from '../runtime';
+import type { QuantityPolicy } from './QuantityPolicy';
+import {
+    QuantityPolicyFromJSON,
+    QuantityPolicyFromJSONTyped,
+    QuantityPolicyToJSON,
+    QuantityPolicyToJSONTyped,
+} from './QuantityPolicy';
+
 /**
  *
  * @export
  * @interface ChatQuotationLine
  */
 export interface ChatQuotationLine {
+    /**
+     *
+     */
+    readonly quantityPolicy?: QuantityPolicy;
     /**
      *
      */
@@ -90,6 +102,7 @@ export function ChatQuotationLineFromJSONTyped(json: any, ignoreDiscriminator: b
     }
     return {
 
+        'quantityPolicy': json['quantity_policy'] == null ? undefined : QuantityPolicyFromJSON(json['quantity_policy']),
         'variantId': json['variant_id'],
         'quantity': json['quantity'],
         'unitPriceCentavos': json['unit_price_centavos'],
@@ -108,7 +121,7 @@ export function ChatQuotationLineToJSON(json: any): ChatQuotationLine {
     return ChatQuotationLineToJSONTyped(json, false);
 }
 
-export function ChatQuotationLineToJSONTyped(value?: ChatQuotationLine | null, ignoreDiscriminator: boolean = false): any {
+export function ChatQuotationLineToJSONTyped(value?: Omit<ChatQuotationLine, 'quantityPolicy'> | null, ignoreDiscriminator: boolean = false): any {
     if (value == null) {
         return value;
     }

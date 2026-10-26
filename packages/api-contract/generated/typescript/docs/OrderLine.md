@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`quantityPolicy` | [QuantityPolicy](QuantityPolicy.md)
 `id` | string
 `lineNumber` | number
 `listingId` | string
@@ -42,6 +43,7 @@ import type { OrderLine } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "quantityPolicy": null,
   "id": null,
   "lineNumber": null,
   "listingId": null,

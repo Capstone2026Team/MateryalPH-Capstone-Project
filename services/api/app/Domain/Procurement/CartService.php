@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Procurement;
 
 use App\Domain\Catalog\CatalogAccess;
+use App\Domain\Catalog\QuantityPolicy;
 use App\Domain\Catalog\ReadyMixedConcrete;
 use App\Domain\Catalog\VolumePricing;
 use App\Domain\Finance\FinancialSnapshotService;
@@ -78,7 +79,7 @@ final class CartService
         if (! in_array('DELIVERY', self::fulfillmentOptions((string) $offer->fulfillment_method, (string) $offer->organization_id), true)) {
             throw new AuthenticationException('DELIVERY_NOT_OFFERED', 'This store does not offer Site Delivery.', 422);
         }
-        $quantity = $this->quantity($input['quantity'], (int) $offer->unit_precision);
+        $quantity = $this->quantity($input['quantity'], QuantityPolicy::fromUnit($offer)->precision);
         $this->assertAvailable($quantity, (string) $offer->available);
         $load = [];
         foreach (['weight_kg', 'length_cm', 'width_cm', 'height_cm'] as $field) {
@@ -120,7 +121,7 @@ final class CartService
                     ['current_price_version_id' => (string) $offer->price_version_id, 'current_unit_price_centavos' => (int) $offer->amount_centavos]);
             }
             $tag = $input['work_package_line_id'] ?? null;
-            $quantity = $this->quantity($input['quantity'] ?? null, (int) $offer->unit_precision);
+            $quantity = $this->quantity($input['quantity'] ?? null, QuantityPolicy::fromUnit($offer)->precision);
             if ($tag !== null) {
                 $this->assertMissingLineTag($buyerId, (string) $tag, $variantId, $quantity);
                 // A store that holds only part of the missing quantity may be added for what it can confirm; the rest stays open on the Work Package.
@@ -174,7 +175,7 @@ final class CartService
                     if ($offer->vacation_mode) {
                         throw new AuthenticationException('STORE_ON_VACATION', 'This store has paused new procurement.', 409);
                     }
-                    $this->putLine($cart, $offer, $this->quantity($line['quantity'], (int) $offer->unit_precision), $fulfillmentMethod);
+                    $this->putLine($cart, $offer, $this->quantity($line['quantity'], QuantityPolicy::fromUnit($offer)->precision), $fulfillmentMethod);
                     $added[] = ['display_name' => $line['display_name'], 'quantity' => $line['quantity']];
                 } catch (AuthenticationException $exception) {
                     $skipped[] = ['display_name' => $line['display_name'], 'reason_code' => $exception->errorCode, 'message' => $exception->getMessage()];
@@ -290,7 +291,7 @@ final class CartService
                 if ($offer === null) {
                     throw new AuthenticationException('LISTING_UNAVAILABLE', 'This product is no longer available. Remove it or save it for later.', 409);
                 }
-                $update['quantity'] = $this->quantity($input['quantity'], (int) $offer->unit_precision);
+                $update['quantity'] = $this->quantity($input['quantity'], QuantityPolicy::fromUnit($offer)->precision);
                 $this->assertAvailable($update['quantity'], (string) $offer->available);
             }
             if (($input['accept_current_price'] ?? false) === true) {
@@ -430,7 +431,7 @@ final class CartService
         $items = DB::table('cart_items as c')->join('listing_variants as v', 'v.id', '=', 'c.listing_variant_id')->join('vendor_listings as l', 'l.id', '=', 'v.vendor_listing_id')
             ->join('units as u', 'u.id', '=', 'v.unit_id')->where('c.cart_id', $cartId)->orderBy('c.created_at')->orderBy('c.id')
             ->select(['c.*', 'v.label as variant_label', 'v.weight_kg', 'v.length_cm', 'v.width_cm', 'v.height_cm', 'l.id as listing_id', 'l.display_name', 'l.vendor_organization_id', 'l.publication_version as current_publication_version',
-                'u.code as unit_code', 'u.name as unit_name', 'u.precision as unit_precision'])->selectRaw(ReadyMixedConcrete::listingSql('l').' AS ready_mixed_concrete')->get();
+                'u.code as unit_code', 'u.name as unit_name', 'u.dimension', 'u.precision as unit_precision'])->selectRaw(ReadyMixedConcrete::listingSql('l').' AS ready_mixed_concrete')->get();
         $variantIds = $items->pluck('listing_variant_id')->map(static fn (mixed $id): string => (string) $id)->all();
         $offers = $variantIds === [] ? collect() : $this->offerQuery($this->offers->anywhere())->whereIn('v.id', $variantIds)->get()->keyBy('variant_id');
         $tiers = $this->facts->volumeTiers($variantIds);
@@ -467,7 +468,7 @@ final class CartService
                 'vendor_id' => (string) $item->vendor_organization_id, 'display_name' => (string) $item->display_name, 'variant_label' => $item->variant_label,
                 'work_package_line_id' => $item->work_package_line_id === null ? null : (string) $item->work_package_line_id,
                 'image' => $images[(string) $item->listing_id][0] ?? null,
-                'unit_code' => (string) $item->unit_code, 'unit_name' => (string) $item->unit_name, 'quantity' => $quantity, 'quantity_step' => self::quantityStep((int) $item->unit_precision),
+                'unit_code' => (string) $item->unit_code, 'unit_name' => (string) $item->unit_name, 'quantity' => $quantity, 'quantity_step' => QuantityPolicy::fromUnit($item)->step(), 'quantity_policy' => QuantityPolicy::fromUnit($item)->toArray(),
                 'saved_for_later' => $item->saved_for_later_at !== null,
                 'snapshot' => ['price_version_id' => $item->listing_price_version_id === null ? null : (string) $item->listing_price_version_id, 'unit_price_centavos' => $item->unit_price_centavos === null ? null : (int) $item->unit_price_centavos,
                     'stock_label' => $item->stock_label, 'publication_version' => $item->listing_publication_version === null ? null : (int) $item->listing_publication_version,
@@ -621,7 +622,7 @@ final class CartService
     {
         return $offers->join('units as u', 'u.id', '=', 'v.unit_id')
             ->select(['v.id as variant_id', 'l.id as listing_id', 'o.id as organization_id', 'l.publication_version', 'pv.id as price_version_id', 'pv.amount_centavos', 'pv.tax_category',
-                'i.reorder_level', 'p.fulfillment_method', 'p.vacation_mode', 'u.precision as unit_precision'])
+                'i.reorder_level', 'p.fulfillment_method', 'p.vacation_mode', 'u.dimension', 'u.precision as unit_precision'])
             ->selectRaw('i.quantity_on_hand - i.hard_reserved_quantity AS available')
             ->selectRaw(ReadyMixedConcrete::listingSql('l').' AS ready_mixed_concrete');
     }
@@ -643,7 +644,7 @@ final class CartService
             throw new AuthenticationException('QUANTITY_INVALID', 'Enter a quantity greater than zero.', 422, ['quantity' => ['Enter a quantity greater than zero and up to 1,000,000.']]);
         }
         $normalized = StockAvailability::quantity($text);
-        if (bccomp($normalized, bcadd($normalized, '0', max(0, min(4, $unitPrecision))), 4) !== 0) {
+        if (! (new QuantityPolicy('', $unitPrecision))->valid($normalized)) {
             throw new AuthenticationException('QUANTITY_INVALID', $unitPrecision <= 0 ? 'This item is sold in whole units.' : 'Use at most '.$unitPrecision.' decimal places.', 422,
                 ['quantity' => [$unitPrecision <= 0 ? 'Enter a whole number.' : 'Use at most '.$unitPrecision.' decimal places.']]);
         }

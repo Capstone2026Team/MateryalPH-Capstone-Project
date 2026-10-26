@@ -919,6 +919,7 @@ doc/PublicStoreListEnvelopeMeta.md
 doc/PublicStoreProfile.md
 doc/PublicStoreProfileEnvelope.md
 doc/PublicStoreSummary.md
+doc/QuantityPolicy.md
 doc/RadiusExpansion.md
 doc/RadiusKm.md
 doc/RankingComponent.md
@@ -2211,6 +2212,7 @@ lib/src/model/public_store_list_envelope_meta.dart
 lib/src/model/public_store_profile.dart
 lib/src/model/public_store_profile_envelope.dart
 lib/src/model/public_store_summary.dart
+lib/src/model/quantity_policy.dart
 lib/src/model/radius_expansion.dart
 lib/src/model/radius_km.dart
 lib/src/model/ranking_component.dart
@@ -3450,6 +3452,7 @@ test/public_store_list_envelope_test.dart
 test/public_store_profile_envelope_test.dart
 test/public_store_profile_test.dart
 test/public_store_summary_test.dart
+test/quantity_policy_test.dart
 test/radius_expansion_test.dart
 test/radius_km_test.dart
 test/ranking_component_test.dart

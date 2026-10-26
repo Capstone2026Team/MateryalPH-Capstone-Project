@@ -7,6 +7,11 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(InventoryRow, () {
+    // QuantityPolicy quantityPolicy
+    test('to test the property `quantityPolicy`', () async {
+      // TODO
+    });
+
     // String listingVariantId
     test('to test the property `listingVariantId`', () async {
       // TODO

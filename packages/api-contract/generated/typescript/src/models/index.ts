@@ -881,6 +881,7 @@ export * from './PublicStoreListEnvelopeMeta';
 export * from './PublicStoreProfile';
 export * from './PublicStoreProfileEnvelope';
 export * from './PublicStoreSummary';
+export * from './QuantityPolicy';
 export * from './RadiusExpansion';
 export * from './RadiusKm';
 export * from './RankingComponent';

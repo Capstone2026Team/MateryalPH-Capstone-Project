@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Projects;
 
 use App\Domain\Catalog\CatalogAccess;
+use App\Domain\Catalog\QuantityPolicy;
 use App\Domain\Enforcement\BuyerCommerceRestriction;
 use App\Domain\Finance\Money;
 use App\Domain\Geography\BuyerProfiles;
@@ -214,6 +215,8 @@ final class ProjectInquiryService
             if ($l['variant_id'] === null || bccomp($l['matched_quantity'], '0', 4) <= 0) {
                 continue;
             }
+            $policy = QuantityPolicy::historical($l) ?? QuantityPolicy::forUnit((string) $l['unit_id']);
+            $l += ['quantity_policy' => $policy->toArray(), 'unit_precision' => $policy->precision, 'quantity_step' => $policy->step()];
             DB::table('order_lines')->insert(['id' => (string) Str::uuid7(), 'order_id' => $orderId, 'line_number' => ++$lineNumber, 'listing_variant_id' => $l['variant_id'], 'vendor_listing_id' => $l['listing_id'],
                 'work_package_line_id' => $allocations[$l['variant_id']][0]['line_id'] ?? null,
                 'unit_id' => $l['unit_id'], 'quantity' => $l['matched_quantity'], 'unit_price_centavos' => $l['unit_price_centavos'], 'payable_centavos' => $l['amount_centavos'], 'included_vat_centavos' => $l['included_vat_centavos'],

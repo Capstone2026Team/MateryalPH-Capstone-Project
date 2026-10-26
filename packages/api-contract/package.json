@@ -8,6 +8,7 @@
     "test:web-password-recovery-dart": "dart run scripts/check-web-password-recovery.dart",
     "test:bot-protection-contract": "node scripts/check-bot-protection-contract.mjs",
     "test:rate-limit-contract": "node scripts/check-rate-limit-contract.mjs",
+    "test:quantity-policy-contract": "node scripts/check-quantity-policy-contract.mjs",
     "validate": "openapi-generator-cli validate -i openapi.yaml",
     "test:vendor-address-contract": "dart run scripts/check-vendor-address.dart",
     "test:onboarding-progress-contract": "dart run scripts/check-onboarding-progress.dart",

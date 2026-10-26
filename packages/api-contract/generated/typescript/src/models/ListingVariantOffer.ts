@@ -13,6 +13,13 @@
  */
 
 import { mapValues, parseDate, parseDateTime, serializeDate, serializeDateTime } from '../runtime';
+import type { QuantityPolicy } from './QuantityPolicy';
+import {
+    QuantityPolicyFromJSON,
+    QuantityPolicyFromJSONTyped,
+    QuantityPolicyToJSON,
+    QuantityPolicyToJSONTyped,
+} from './QuantityPolicy';
 import type { ListingVariantPrice } from './ListingVariantPrice';
 import {
     ListingVariantPriceFromJSON,
@@ -41,6 +48,10 @@ import {
  * @interface ListingVariantOffer
  */
 export interface ListingVariantOffer {
+    /**
+     *
+     */
+    readonly quantityPolicy?: QuantityPolicy;
     /**
      *
      */
@@ -151,6 +162,7 @@ export function ListingVariantOfferFromJSONTyped(json: any, ignoreDiscriminator:
     }
     return {
 
+        'quantityPolicy': json['quantity_policy'] == null ? undefined : QuantityPolicyFromJSON(json['quantity_policy']),
         'variantId': json['variant_id'],
         'sku': json['sku'],
         'label': json['label'],
@@ -174,7 +186,7 @@ export function ListingVariantOfferToJSON(json: any): ListingVariantOffer {
     return ListingVariantOfferToJSONTyped(json, false);
 }
 
-export function ListingVariantOfferToJSONTyped(value?: ListingVariantOffer | null, ignoreDiscriminator: boolean = false): any {
+export function ListingVariantOfferToJSONTyped(value?: Omit<ListingVariantOffer, 'quantityPolicy'> | null, ignoreDiscriminator: boolean = false): any {
     if (value == null) {
         return value;
     }

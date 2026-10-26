@@ -7,6 +7,11 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(CartLine, () {
+    // QuantityPolicy quantityPolicy
+    test('to test the property `quantityPolicy`', () async {
+      // TODO
+    });
+
     // String id
     test('to test the property `id`', () async {
       // TODO

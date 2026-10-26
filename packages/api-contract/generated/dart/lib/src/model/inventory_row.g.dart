@@ -8,6 +8,8 @@ part of 'inventory_row.dart';
 
 class _$InventoryRow extends InventoryRow {
   @override
+  final QuantityPolicy? quantityPolicy;
+  @override
   final String listingVariantId;
   @override
   final String listingId;
@@ -42,7 +44,8 @@ class _$InventoryRow extends InventoryRow {
       (InventoryRowBuilder()..update(updates))._build();
 
   _$InventoryRow._(
-      {required this.listingVariantId,
+      {this.quantityPolicy,
+      required this.listingVariantId,
       required this.listingId,
       required this.listingName,
       required this.listingStatus,
@@ -69,6 +72,7 @@ class _$InventoryRow extends InventoryRow {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is InventoryRow &&
+        quantityPolicy == other.quantityPolicy &&
         listingVariantId == other.listingVariantId &&
         listingId == other.listingId &&
         listingName == other.listingName &&
@@ -89,6 +93,7 @@ class _$InventoryRow extends InventoryRow {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, quantityPolicy.hashCode);
     _$hash = $jc(_$hash, listingVariantId.hashCode);
     _$hash = $jc(_$hash, listingId.hashCode);
     _$hash = $jc(_$hash, listingName.hashCode);
@@ -111,6 +116,7 @@ class _$InventoryRow extends InventoryRow {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'InventoryRow')
+          ..add('quantityPolicy', quantityPolicy)
           ..add('listingVariantId', listingVariantId)
           ..add('listingId', listingId)
           ..add('listingName', listingName)
@@ -133,6 +139,12 @@ class _$InventoryRow extends InventoryRow {
 class InventoryRowBuilder
     implements Builder<InventoryRow, InventoryRowBuilder> {
   _$InventoryRow? _$v;
+
+  QuantityPolicyBuilder? _quantityPolicy;
+  QuantityPolicyBuilder get quantityPolicy =>
+      _$this._quantityPolicy ??= QuantityPolicyBuilder();
+  set quantityPolicy(QuantityPolicyBuilder? quantityPolicy) =>
+      _$this._quantityPolicy = quantityPolicy;
 
   String? _listingVariantId;
   String? get listingVariantId => _$this._listingVariantId;
@@ -214,6 +226,7 @@ class InventoryRowBuilder
   InventoryRowBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _quantityPolicy = $v.quantityPolicy?.toBuilder();
       _listingVariantId = $v.listingVariantId;
       _listingId = $v.listingId;
       _listingName = $v.listingName;
@@ -252,6 +265,7 @@ class InventoryRowBuilder
     try {
       _$result = _$v ??
           _$InventoryRow._(
+            quantityPolicy: _quantityPolicy?.build(),
             listingVariantId: BuiltValueNullFieldError.checkNotNull(
                 listingVariantId, r'InventoryRow', 'listingVariantId'),
             listingId: BuiltValueNullFieldError.checkNotNull(
@@ -279,6 +293,9 @@ class InventoryRowBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'quantityPolicy';
+        _quantityPolicy?.build();
+
         _$failedField = 'inventory';
         _inventory?.build();
 

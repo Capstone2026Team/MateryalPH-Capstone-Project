@@ -23203,6 +23203,9 @@ components:
         - source_price_version_id
         - source_tax_version_id
       properties:
+        quantity_policy:
+          $ref: '#/components/schemas/QuantityPolicy'
+          readOnly: true
         variant_id:
           type: string
           format: uuid
@@ -23749,6 +23752,8 @@ components:
         - quantity
         - unit_price_centavos
       properties:
+        unit_code: { type: string, readOnly: true }
+        quantity_policy: { $ref: '#/components/schemas/QuantityPolicy', readOnly: true }
         description: { type: string, maxLength: 200 }
         specifications: { type: object, additionalProperties: { type: string } }
         variant_id:
@@ -24591,6 +24596,9 @@ components:
           comparable
         ]
       properties:
+        quantity_policy:
+          $ref: '#/components/schemas/QuantityPolicy'
+          readOnly: true
         variant_id: { type: string, format: uuid }
         sku: { type: string }
         label: { type: [ string, 'null' ] }
@@ -24925,6 +24933,9 @@ components:
           status
         ]
       properties:
+        quantity_policy:
+          $ref: '#/components/schemas/QuantityPolicy'
+          readOnly: true
         id: { type: string, format: uuid }
         lock_version: { type: integer }
         listing_id: { type: string, format: uuid }
@@ -29287,10 +29298,22 @@ components:
         id: { type: string, format: uuid }
         code: { type: string }
         name: { type: string }
+    QuantityPolicy:
+      type: object
+      description: Selling quantities in the selected unit. GAL is a whole can; US_GAL is measured volume. Absent on older records; use recorded selling unit and precision without converting quantities.
+      required: [mode, dimension, precision, step]
+      properties:
+        mode: { type: string, enum: [COUNT, PACK, MEASURED] }
+        dimension: { type: string }
+        precision: { type: integer, minimum: 0, maximum: 4 }
+        step: { type: string, pattern: '^(1|0\.0{0,3}1)$' }
     CatalogUnit:
       type: object
       required: [ id, code, name, dimension, precision ]
       properties:
+        quantity_policy:
+          $ref: '#/components/schemas/QuantityPolicy'
+          readOnly: true
         id: { type: string, format: uuid }
         code: { type: string }
         name: { type: string }
@@ -29635,6 +29658,9 @@ components:
           comparability
         ]
       properties:
+        quantity_policy:
+          $ref: '#/components/schemas/QuantityPolicy'
+          readOnly: true
         id: { type: string, format: uuid }
         sku: { type: string }
         label: { type: [ string, 'null' ] }
@@ -30538,6 +30564,9 @@ components:
           auto_accept
         ]
       properties:
+        quantity_policy:
+          $ref: '#/components/schemas/QuantityPolicy'
+          readOnly: true
         listing_variant_id: { type: string, format: uuid }
         listing_id: { type: string, format: uuid }
         listing_name: { type: string }
@@ -31746,6 +31775,9 @@ components:
           price_version_id
         ]
       properties:
+        quantity_policy:
+          $ref: '#/components/schemas/QuantityPolicy'
+          readOnly: true
         id: { type: string, format: uuid }
         line_number: { type: integer }
         listing_id: { type: string, format: uuid }
@@ -47762,6 +47794,9 @@ components:
         - "name"
         - "precision"
       "properties":
+        quantity_policy:
+          $ref: '#/components/schemas/QuantityPolicy'
+          readOnly: true
         "id":
           "type": "string"
           "format": "uuid"

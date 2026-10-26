@@ -134,3 +134,5 @@ export { MaterialThumbnail, categoryIcon } from './material-thumbnail'
 export { shouldRotateIdempotencyKey } from './idempotency'
 export { openPendingWindow } from './pending-window'
 export { useScrollReveal } from './landing-motion'
+
+export { QuantityField, sellingQuantityLabel, validSellingQuantity } from './quantity-field'

@@ -52,9 +52,10 @@ export function quotationChangeNotes(content: ChatQuotationContent): QuotationCh
       if (!line[2]) { product(before ?? after, index, before == null); continue }
       const item = content.lines[index]
       const name = item?.description ?? `Product ${index + 1}`
-      const unit = (value: unknown) => quantity(value) === undefined ? undefined : `${quantity(value)} ${item?.unitCode ?? ''}`.trim()
+      const changedUnit = content.changes.find(row => row.path === `lines.${index}.unit_code`)
+      const unit = (value: unknown, code = item?.unitCode) => quantity(value) === undefined ? undefined : `${quantity(value)} ${code ?? ''}`.trim()
       switch (line[2]) {
-        case 'quantity': add(`${name} · Quantity`, unit(before), unit(after)); break
+        case 'quantity': add(`${name} · Quantity`, unit(before, text(changedUnit?.before) ?? item?.unitCode), unit(after)); break
         case 'unit_price_centavos': add(`${name} · Unit price`, money(before), money(after)); break
         case 'description': add(`${name} · Item`, text(before), text(after)); break
         case 'brand': case 'preferred_brand': add(`${name} · Brand`, text(before), text(after)); break

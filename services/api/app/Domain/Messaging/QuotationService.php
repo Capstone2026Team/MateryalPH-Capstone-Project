@@ -7,6 +7,7 @@ namespace App\Domain\Messaging;
 use App\Domain\Authorization\VendorTeamActivityBroadcast;
 use App\Domain\Authorization\VendorTeamActivityQuery;
 use App\Domain\Catalog\CatalogAccess;
+use App\Domain\Catalog\QuantityPolicy;
 use App\Domain\Enforcement\BuyerCommerceRestriction;
 use App\Domain\Finance\Money;
 use App\Domain\Identity\AuthenticationException;
@@ -288,7 +289,7 @@ final class QuotationService
         }
 
         return ['quotation' => ['id' => $q->id, 'state' => $q->state, 'lock_version' => (int) $q->lock_version, 'current_version_id' => $q->current_version_id,
-            'accepted_order_id' => $q->accepted_order_id, 'response_due_at' => $q->response_due_at, 'draft' => $buyer ? null : json_decode((string) ($q->draft ?? 'null'), true),
+            'accepted_order_id' => $q->accepted_order_id, 'response_due_at' => $q->response_due_at, 'draft' => $buyer ? null : $this->draftView($q->draft),
             'can_draft' => ! $buyer && $q->state !== 'ACCEPTED', 'can_publish' => $publish && $q->state !== 'ACCEPTED'],
             'versions' => array_map(function (object $v) use ($q, $buyer, $publish, $methods, $requests): array {
                 $latest = $q->current_version_id === $v->id;
@@ -307,6 +308,27 @@ final class QuotationService
                         'viewed' => DB::table('quotation_events')->where('quotation_version_id', $v->id)->where('event_type', 'VIEWED')->exists(),
                         'actions' => $latest && in_array($q->state, self::OPEN, true) ? ($buyer ? ['view', 'accept', 'reject', 'counter'] : ($publish ? ['withdraw'] : [])) : []];
             }, $page->items()), 'has_more' => $page->hasMorePages(), 'page' => $page->currentPage()];
+    }
+
+    /** @return array<string, mixed>|null */
+    private function draftView(?string $json): ?array
+    {
+        $draft = json_decode($json ?? 'null', true);
+        if (! is_array($draft)) {
+            return null;
+        }
+        $units = DB::table('listing_variants as v')->join('units as u', 'u.id', '=', 'v.unit_id')
+            ->whereIn('v.id', array_column($draft['lines'] ?? [], 'variant_id'))->get(['v.id', 'u.code', 'u.dimension', 'u.precision'])->keyBy('id');
+        foreach ($draft['lines'] as &$line) {
+            $unit = $units->get($line['variant_id']);
+            if ($unit !== null) {
+                $line['unit_code'] = $unit->code;
+                $line['quantity_policy'] = QuantityPolicy::fromUnit($unit)->toArray();
+            }
+        }
+        unset($line);
+
+        return $draft;
     }
 
     private function quotation(object $c, bool $create): object

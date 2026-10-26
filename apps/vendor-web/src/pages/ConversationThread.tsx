@@ -275,7 +275,7 @@ export function ConversationThread({ selected, role, onBack, onRead, onMessage, 
 function QuotationDraftEditor({ open, onClose, conversationId, quotation, role, onSaved, reference, sourceNames = {} }: { open: boolean; onClose: () => void; conversationId: string; quotation?: ChatQuotation | null; role: string; onSaved: () => Promise<void>; reference?: unknown; sourceNames?: Record<string, string> }) {
   const [draft, setDraft] = useState<ChatDraftContent>(() => quotation?.draft ? ChatDraftContentFromJSON(quotation.draft) : { lines: [], fulfillmentMethod: 'PICKUP', fulfillmentDate: '', deadlineHours: 24, discount: { scope: 'MATERIALS', percent: '' } })
   const [names, setNames] = useState<Record<string, string>>({})
-  const [productDetails, setProductDetails] = useState<Record<string, { variantLabel: string; specifications: Record<string, string> }>>({})
+  const [productDetails, setProductDetails] = useState<Record<string, { variantLabel: string; specifications: Record<string, string>; unitCode?: string; quantityPolicy?: import('@materyalph/api-client-ts').QuantityPolicy | undefined }>>({})
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [dirty, setDirty] = useState(false)
@@ -298,7 +298,7 @@ function QuotationDraftEditor({ open, onClose, conversationId, quotation, role, 
     <CatalogProductPicker active={open} disabled={busy} selectedVariantIds={draft.lines.map(line => line.variantId)} loadProducts={loadQuotationProducts} loadProduct={getListing} readableError={readableCatalogError} onAdd={(listing, variant) => {
       if (busy || !variant.price || draft.lines.some(line => line.variantId === variant.id)) return
       setNames(current => ({ ...current, [variant.id]: `${listing.displayName} · ${variant.label ?? variant.sku}` }))
-      setProductDetails(current => ({ ...current, [variant.id]: { variantLabel: variant.label?.trim() || variant.sku, specifications: { ...listing.technicalAttributes, ...variant.attributes } } }))
+      setProductDetails(current => ({ ...current, [variant.id]: { variantLabel: variant.label?.trim() || variant.sku, unitCode: variant.unitCode, quantityPolicy: variant.quantityPolicy, specifications: { ...listing.technicalAttributes, ...variant.attributes } } }))
       edit({ ...draft, lines: [...draft.lines, { variantId: variant.id, quantity: '1', unitPriceCentavos: variant.price.amountCentavos }] })
     }} />
     </div>

@@ -13,12 +13,24 @@
  */
 
 import { mapValues } from '../runtime';
+import type { QuantityPolicy } from './QuantityPolicy';
+import {
+    QuantityPolicyFromJSON,
+    QuantityPolicyFromJSONTyped,
+    QuantityPolicyToJSON,
+    QuantityPolicyToJSONTyped,
+} from './QuantityPolicy';
+
 /**
  *
  * @export
  * @interface ProjectMaterialUnit
  */
 export interface ProjectMaterialUnit {
+    /**
+     *
+     */
+    readonly quantityPolicy?: QuantityPolicy;
     /**
      *
      */
@@ -58,6 +70,7 @@ export function ProjectMaterialUnitFromJSONTyped(json: any, ignoreDiscriminator:
     }
     return {
 
+        'quantityPolicy': json['quantity_policy'] == null ? undefined : QuantityPolicyFromJSON(json['quantity_policy']),
         'id': json['id'],
         'code': json['code'],
         'name': json['name'],
@@ -69,7 +82,7 @@ export function ProjectMaterialUnitToJSON(json: any): ProjectMaterialUnit {
     return ProjectMaterialUnitToJSONTyped(json, false);
 }
 
-export function ProjectMaterialUnitToJSONTyped(value?: ProjectMaterialUnit | null, ignoreDiscriminator: boolean = false): any {
+export function ProjectMaterialUnitToJSONTyped(value?: Omit<ProjectMaterialUnit, 'quantityPolicy'> | null, ignoreDiscriminator: boolean = false): any {
     if (value == null) {
         return value;
     }

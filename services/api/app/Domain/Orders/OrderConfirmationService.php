@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Orders;
 
 use App\Domain\Catalog\CatalogAccess;
+use App\Domain\Catalog\QuantityPolicy;
 use App\Domain\Finance\VendorDiscount;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
@@ -286,7 +287,8 @@ final class OrderConfirmationService
             $value = $byId[(string) $line->id] ?? null;
             unset($byId[(string) $line->id]);
             $snapshot = json_decode((string) $line->snapshot, true);
-            $precision = is_array($snapshot) ? (int) ($snapshot['unit_precision'] ?? 4) : 4;
+            $policy = QuantityPolicy::historical(is_array($snapshot) ? $snapshot : []);
+            $precision = $policy?->precision;
             if ($value === null || preg_match('/^\d{1,7}(\.\d{1,4})?$/', $value) !== 1) {
                 $errors['lines.'.$index.'.confirmed_quantity'][] = 'Enter a confirmed quantity of zero or more.';
 
@@ -295,8 +297,8 @@ final class OrderConfirmationService
             $quantity = StockAvailability::quantity($value);
             if (bccomp($quantity, StockAvailability::quantity($line->quantity), 4) > 0) {
                 $errors['lines.'.$index.'.confirmed_quantity'][] = 'A confirmed quantity cannot exceed the requested quantity.';
-            } elseif (bccomp($quantity, bcadd($quantity, '0', max(0, min(4, $precision))), 4) !== 0) {
-                $errors['lines.'.$index.'.confirmed_quantity'][] = $precision <= 0 ? 'This item is sold in whole units.' : 'Use at most '.$precision.' decimal places.';
+            } elseif ($policy === null || ! $policy->valid($quantity, true)) {
+                $errors['lines.'.$index.'.confirmed_quantity'][] = $policy === null ? 'Review this historical line’s selling unit before changing quantity.' : ($precision <= 0 ? 'This item is sold in whole units.' : 'Use at most '.$precision.' decimal places.');
             }
             $quantities[(string) $line->id] = $quantity;
         }

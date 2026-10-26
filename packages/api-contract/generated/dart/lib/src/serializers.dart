@@ -894,6 +894,7 @@ import 'package:materyalph_api_client/src/model/public_store_list_envelope_meta.
 import 'package:materyalph_api_client/src/model/public_store_profile.dart';
 import 'package:materyalph_api_client/src/model/public_store_profile_envelope.dart';
 import 'package:materyalph_api_client/src/model/public_store_summary.dart';
+import 'package:materyalph_api_client/src/model/quantity_policy.dart';
 import 'package:materyalph_api_client/src/model/radius_expansion.dart';
 import 'package:materyalph_api_client/src/model/radius_km.dart';
 import 'package:materyalph_api_client/src/model/ranking_component.dart';
@@ -2104,6 +2105,7 @@ part 'serializers.g.dart';
   PublicStoreProfile,
   PublicStoreProfileEnvelope,
   PublicStoreSummary,
+  QuantityPolicy,
   RadiusExpansion,
   RadiusKm,
   RankingComponent,

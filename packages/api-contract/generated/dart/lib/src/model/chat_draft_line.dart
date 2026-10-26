@@ -4,6 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/quantity_policy.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -12,6 +13,8 @@ part 'chat_draft_line.g.dart';
 /// ChatDraftLine
 ///
 /// Properties:
+/// * [unitCode]
+/// * [quantityPolicy]
 /// * [description]
 /// * [specifications]
 /// * [variantId]
@@ -19,6 +22,12 @@ part 'chat_draft_line.g.dart';
 /// * [unitPriceCentavos]
 @BuiltValue()
 abstract class ChatDraftLine implements Built<ChatDraftLine, ChatDraftLineBuilder> {
+  @BuiltValueField(wireName: r'unit_code')
+  String? get unitCode;
+
+  @BuiltValueField(wireName: r'quantity_policy')
+  QuantityPolicy? get quantityPolicy;
+
   @BuiltValueField(wireName: r'description')
   String? get description;
 
@@ -57,6 +66,20 @@ class _$ChatDraftLineSerializer implements PrimitiveSerializer<ChatDraftLine> {
     ChatDraftLine object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.unitCode != null) {
+      yield r'unit_code';
+      yield serializers.serialize(
+        object.unitCode,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.quantityPolicy != null) {
+      yield r'quantity_policy';
+      yield serializers.serialize(
+        object.quantityPolicy,
+        specifiedType: const FullType(QuantityPolicy),
+      );
+    }
     if (object.description != null) {
       yield r'description';
       yield serializers.serialize(
@@ -109,6 +132,22 @@ class _$ChatDraftLineSerializer implements PrimitiveSerializer<ChatDraftLine> {
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'unit_code':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.unitCode = valueDes;
+          break;
+        case r'quantity_policy':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(QuantityPolicy),
+          ) as QuantityPolicy?;
+          if (valueDes == null) continue;
+          result.quantityPolicy.replace(valueDes);
+          break;
         case r'description':
           final valueDes = serializers.deserialize(
             value,

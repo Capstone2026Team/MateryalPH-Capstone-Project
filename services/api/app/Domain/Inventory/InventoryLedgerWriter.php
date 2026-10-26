@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Inventory;
 
+use App\Domain\Catalog\QuantityPolicy;
 use App\Domain\Identity\AuthenticationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -31,6 +32,10 @@ final class InventoryLedgerWriter
         }
         if (! in_array($reasonCode, self::REASONS, true)) {
             throw new AuthenticationException('VALIDATION_FAILED', 'Review the highlighted fields and try again.', 422, ['reason_code' => ['Choose why the quantity changed.']]);
+        }
+        $policy = QuantityPolicy::forVariant($variantId);
+        if (! $policy->valid($quantity, true)) {
+            throw new AuthenticationException('VALIDATION_FAILED', $policy->message(), 422, ['quantity_on_hand' => [$policy->message()]]);
         }
         $quantity = StockAvailability::quantity($quantity);
         $item = DB::table('inventory_items')->where('listing_variant_id', $variantId)->lockForUpdate()->first();
@@ -81,6 +86,28 @@ final class InventoryLedgerWriter
     public function reserve(object $lockedItem, string $quantity, ?int $actorId, string $orderId, string $orderLineId, ?string $autoAcceptPolicyVersionId = null): object
     {
         $this->assertTransaction();
+        $lockedItem = DB::table('inventory_items')->where('id', $lockedItem->id)->lockForUpdate()->first();
+        if ($lockedItem === null) {
+            throw new \LogicException('The locked inventory item is unavailable.');
+        }
+        $existing = DB::table('inventory_holds')->where('order_line_id', $orderLineId)->where('hold_type', 'HARD')->where('state', 'ACTIVE')->first();
+        if ($existing !== null) {
+            if ($existing->source_id !== $orderId || $existing->inventory_item_id !== $lockedItem->id || bccomp((string) $existing->quantity, $quantity, 4) !== 0) {
+                throw new AuthenticationException('STOCK_RESERVATION_CONFLICT', 'The existing reservation differs. Review the current order.', 409);
+            }
+
+            return $lockedItem;
+        }
+        $line = DB::table('order_lines as ol')->join('listing_variants as v', 'v.id', '=', 'ol.listing_variant_id')
+            ->where('ol.id', $orderLineId)->where('ol.order_id', $orderId)->first(['ol.unit_id', 'ol.snapshot', 'v.unit_id as current_unit_id']);
+        if ($line === null) {
+            throw new \LogicException('The reservation must reference its recorded order line.');
+        }
+        $snapshot = json_decode((string) $line->snapshot, true) ?: [];
+        $policy = QuantityPolicy::historical($snapshot + ['unit_code' => DB::table('units')->where('id', $line->unit_id)->value('code')]);
+        if ($line->unit_id !== $line->current_unit_id || $policy === null || ! $policy->valid($quantity)) {
+            throw new AuthenticationException('QUANTITY_INVALID', 'Review the quantity and recorded selling unit before reserving stock.', 422);
+        }
         $quantity = StockAvailability::quantity($quantity);
         $onHand = StockAvailability::quantity($lockedItem->quantity_on_hand);
         $reserved = StockAvailability::quantity($lockedItem->hard_reserved_quantity);
@@ -112,7 +139,14 @@ final class InventoryLedgerWriter
         $items = DB::table('inventory_items')->whereIn('id', $holds->pluck('inventory_item_id')->all())->orderBy('id')->lockForUpdate()->get()->keyBy('id');
         $released = [];
         foreach ($holds as $hold) {
+            $hold = DB::table('inventory_holds')->where('id', $hold->id)->where('state', 'ACTIVE')->lockForUpdate()->first();
+            if ($hold === null) {
+                continue;
+            }
             $item = $items->get($hold->inventory_item_id);
+            if ($item === null) {
+                throw new \LogicException('The reserved inventory item is unavailable.');
+            }
             $quantity = StockAvailability::quantity($hold->quantity);
             $reserved = StockAvailability::quantity($item->hard_reserved_quantity);
             $after = bcsub($reserved, $quantity, 4);
@@ -122,7 +156,9 @@ final class InventoryLedgerWriter
             DB::table('inventory_items')->where('id', $item->id)->update(['hard_reserved_quantity' => $after, 'lock_version' => DB::raw('lock_version + 1'), 'updated_at' => now()]);
             $this->reservationMovement((string) $item->id, 'HARD_RELEASE', bcmul($quantity, '-1', 4), StockAvailability::quantity($item->quantity_on_hand), $reserved, $after, StockAvailability::quantity($item->soft_held_quantity), $actorId, $reasonCode, $orderId, null);
             DB::table('inventory_holds')->where('id', $hold->id)->update(['state' => 'RELEASED', 'released_at' => now(), 'release_reason' => $reasonCode, 'updated_at' => now()]);
-            $released[(string) $item->listing_variant_id] = $quantity;
+            $item->hard_reserved_quantity = $after;
+            $items[$item->id] = $item;
+            $released[(string) $item->listing_variant_id] = bcadd($released[(string) $item->listing_variant_id] ?? '0', $quantity, 4);
         }
 
         return $released;
@@ -146,7 +182,14 @@ final class InventoryLedgerWriter
         $items = DB::table('inventory_items')->whereIn('id', $holds->pluck('inventory_item_id')->all())->orderBy('id')->lockForUpdate()->get()->keyBy('id');
         $fulfilled = [];
         foreach ($holds as $hold) {
+            $hold = DB::table('inventory_holds')->where('id', $hold->id)->where('state', 'ACTIVE')->lockForUpdate()->first();
+            if ($hold === null) {
+                continue;
+            }
             $item = $items->get($hold->inventory_item_id);
+            if ($item === null) {
+                throw new \LogicException('The reserved inventory item is unavailable.');
+            }
             $quantity = StockAvailability::quantity($hold->quantity);
             $onHand = StockAvailability::quantity($item->quantity_on_hand);
             $reserved = StockAvailability::quantity($item->hard_reserved_quantity);
@@ -163,7 +206,10 @@ final class InventoryLedgerWriter
                 'reason_code' => 'ORDER_FULFILLED', 'note' => null, 'actor_user_id' => $actorId, 'source_type' => 'ORDER', 'source_id' => $orderId, 'created_at' => now(), 'updated_at' => now(),
             ]);
             DB::table('inventory_holds')->where('id', $hold->id)->update(['state' => 'FULFILLED', 'released_at' => now(), 'updated_at' => now()]);
-            $fulfilled[(string) $item->listing_variant_id] = $quantity;
+            $item->quantity_on_hand = $onHandAfter;
+            $item->hard_reserved_quantity = $reservedAfter;
+            $items[$item->id] = $item;
+            $fulfilled[(string) $item->listing_variant_id] = bcadd($fulfilled[(string) $item->listing_variant_id] ?? '0', $quantity, 4);
         }
 
         return $fulfilled;
@@ -174,6 +220,10 @@ final class InventoryLedgerWriter
         $this->assertTransaction();
         if ($reorderLevel !== null && preg_match(self::QUANTITY_PATTERN, $reorderLevel) !== 1) {
             throw new AuthenticationException('VALIDATION_FAILED', 'Review the highlighted fields and try again.', 422, ['reorder_level' => ['Enter a reorder level of zero or more, with up to four decimals, or leave it empty.']]);
+        }
+        $policy = QuantityPolicy::forVariant((string) $item->listing_variant_id);
+        if ($reorderLevel !== null && ! $policy->valid($reorderLevel, true)) {
+            throw new AuthenticationException('VALIDATION_FAILED', $policy->message(), 422, ['reorder_level' => [$policy->message()]]);
         }
         DB::table('inventory_items')->where('id', $item->id)->update(['reorder_level' => $reorderLevel === null ? null : StockAvailability::quantity($reorderLevel), 'updated_by_user_id' => $actorId, 'lock_version' => DB::raw('lock_version + 1'), 'updated_at' => now()]);
     }

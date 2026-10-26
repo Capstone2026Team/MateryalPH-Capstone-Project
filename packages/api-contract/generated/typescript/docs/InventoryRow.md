@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`quantityPolicy` | [QuantityPolicy](QuantityPolicy.md)
 `listingVariantId` | string
 `listingId` | string
 `listingName` | string
@@ -29,6 +30,7 @@ import type { InventoryRow } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "quantityPolicy": null,
   "listingVariantId": null,
   "listingId": null,
   "listingName": null,

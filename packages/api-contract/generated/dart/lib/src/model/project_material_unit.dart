@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:materyalph_api_client/src/model/quantity_policy.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -11,12 +12,16 @@ part 'project_material_unit.g.dart';
 /// ProjectMaterialUnit
 ///
 /// Properties:
+/// * [quantityPolicy]
 /// * [id]
 /// * [code]
 /// * [name]
 /// * [precision]
 @BuiltValue()
 abstract class ProjectMaterialUnit implements Built<ProjectMaterialUnit, ProjectMaterialUnitBuilder> {
+  @BuiltValueField(wireName: r'quantity_policy')
+  QuantityPolicy? get quantityPolicy;
+
   @BuiltValueField(wireName: r'id')
   String get id;
 
@@ -52,6 +57,13 @@ class _$ProjectMaterialUnitSerializer implements PrimitiveSerializer<ProjectMate
     ProjectMaterialUnit object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.quantityPolicy != null) {
+      yield r'quantity_policy';
+      yield serializers.serialize(
+        object.quantityPolicy,
+        specifiedType: const FullType(QuantityPolicy),
+      );
+    }
     yield r'id';
     yield serializers.serialize(
       object.id,
@@ -95,6 +107,14 @@ class _$ProjectMaterialUnitSerializer implements PrimitiveSerializer<ProjectMate
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'quantity_policy':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(QuantityPolicy),
+          ) as QuantityPolicy?;
+          if (valueDes == null) continue;
+          result.quantityPolicy.replace(valueDes);
+          break;
         case r'id':
           final valueDes = serializers.deserialize(
             value,

@@ -1,3 +1,4 @@
+import '../../design_system/quantity_policy.dart';
 import '../../design_system/components/buyer_cart_button.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -579,18 +580,24 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         crossAxisAlignment: WrapCrossAlignment.center,
         spacing: 12,
         children: [
-          if (variant == null || variant.wholeUnits) ...[
+          if (variant == null ||
+              (variant.wholeUnits && validDecimalQuantity(_quantity, 0))) ...[
             const _Label('Quantity', bottom: 0),
             QuantityStepper(
               compact: true,
-              quantity: int.tryParse(_quantity) ?? 1,
+              quantity: int.tryParse(_quantity.split('.').first) ?? 1,
               unitName: variant?.unitName ?? '',
               enabled: variant != null,
               onChanged: (value) => setState(() => _quantity = '$value'),
             ),
           ] else
             DecimalQuantityField(
-              label: detail.readyMixed?.quantityLabel ?? 'Quantity',
+              label:
+                  detail.readyMixed?.quantityLabel ??
+                  sellingQuantityLabel(
+                    variant.unitCode,
+                    dimension: variant.quantityDimension,
+                  ),
               value: _quantity,
               unitName: variant.unitName,
               decimals: stepDecimals(variant.quantityStep),

@@ -16,7 +16,7 @@ export const listingSteps = [
 
 export type DetailsForm = { displayName: string; vendorSku: string; description: string; materialId: string | null; materialMatch: 'EXACT' | 'ALIAS' | 'FUZZY_CONFIRMED'; otherLabel: string; categoryId: string; tagIds: string[]; customTags: string[]; brand: string; model: string; manufacturer: string; manufacturerAddress: string; countryOfManufacture: string; technicalAttributes: Record<string, string> }
 export type TierRow = { minimum: string; price: string }
-export type VariantRow = { id?: string; sku: string; label: string; unitId: string; packQuantity: string; price: string; taxCategory: string; taxBasis: string; weightKg: string; lengthCm: string; widthCm: string; heightCm: string; quantityOnHand: string; tiers: TierRow[]; attributes: Record<string, string>; publicAvailability?: string; priceVersion?: number; includedVat?: number }
+export type VariantRow = { sellingBasis?: 'COUNT_PACK' | 'MEASURED'; id?: string; sku: string; label: string; unitId: string; packQuantity: string; price: string; taxCategory: string; taxBasis: string; weightKg: string; lengthCm: string; widthCm: string; heightCm: string; quantityOnHand: string; tiers: TierRow[]; attributes: Record<string, string>; publicAvailability?: string; priceVersion?: number; includedVat?: number }
 
 export const MAX_TIERS = 5
 const QUANTITY = /^\d{1,14}(\.\d{1,4})?$/

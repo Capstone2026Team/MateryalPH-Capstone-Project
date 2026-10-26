@@ -34,6 +34,13 @@ import {
     InventoryPriceToJSON,
     InventoryPriceToJSONTyped,
 } from './InventoryPrice';
+import type { QuantityPolicy } from './QuantityPolicy';
+import {
+    QuantityPolicyFromJSON,
+    QuantityPolicyFromJSONTyped,
+    QuantityPolicyToJSON,
+    QuantityPolicyToJSONTyped,
+} from './QuantityPolicy';
 import type { InventoryComparability } from './InventoryComparability';
 import {
     InventoryComparabilityFromJSON,
@@ -69,6 +76,10 @@ import {
  * @interface InventoryRow
  */
 export interface InventoryRow {
+    /**
+     *
+     */
+    readonly quantityPolicy?: QuantityPolicy;
     /**
      *
      */
@@ -164,6 +175,7 @@ export function InventoryRowFromJSONTyped(json: any, ignoreDiscriminator: boolea
     }
     return {
 
+        'quantityPolicy': json['quantity_policy'] == null ? undefined : QuantityPolicyFromJSON(json['quantity_policy']),
         'listingVariantId': json['listing_variant_id'],
         'listingId': json['listing_id'],
         'listingName': json['listing_name'],
@@ -186,7 +198,7 @@ export function InventoryRowToJSON(json: any): InventoryRow {
     return InventoryRowToJSONTyped(json, false);
 }
 
-export function InventoryRowToJSONTyped(value?: InventoryRow | null, ignoreDiscriminator: boolean = false): any {
+export function InventoryRowToJSONTyped(value?: Omit<InventoryRow, 'quantityPolicy'> | null, ignoreDiscriminator: boolean = false): any {
     if (value == null) {
         return value;
     }

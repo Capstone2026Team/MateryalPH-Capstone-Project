@@ -70,30 +70,31 @@ void main() {
     });
   });
 
-  testWidgets('decimal quantity field reports only valid volumes', (
-    tester,
-  ) async {
-    final values = <String>[];
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: DecimalQuantityField(
-            label: 'Order volume (m³)',
-            value: '',
-            unitName: 'cubic meter',
-            decimals: 3,
-            onChanged: values.add,
+  testWidgets(
+    'decimal quantity field preserves invalid text for parent validation',
+    (tester) async {
+      final values = <String>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: DecimalQuantityField(
+              label: 'Order volume (m³)',
+              value: '',
+              unitName: 'cubic meter',
+              decimals: 3,
+              onChanged: values.add,
+            ),
           ),
         ),
-      ),
-    );
-    await tester.enterText(find.byType(TextField), '7.5005');
-    await tester.pump();
-    expect(find.textContaining('up to 3 decimal places'), findsOneWidget);
-    await tester.enterText(find.byType(TextField), '7.5');
-    await tester.pump();
-    expect(values, ['7.5']);
-  });
+      );
+      await tester.enterText(find.byType(TextField), '7.5005');
+      await tester.pump();
+      expect(find.textContaining('up to 3 decimal places'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), '7.5');
+      await tester.pump();
+      expect(values, ['7.5005', '7.5']);
+    },
+  );
 
   testWidgets('site inspection sheet sends the chosen site, date and notes', (
     tester,

@@ -227,7 +227,7 @@ void main() {
         for (final visible in [
           find.text('Material name'),
           find.text('Change'),
-          find.text('Quantity'),
+          find.text('Pieces'),
           find.text('Unit'),
           find.text('Technical details'),
         ]) {
@@ -288,7 +288,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byWidgetPredicate(
-        (w) => w is TextField && w.decoration?.labelText == 'Quantity',
+        (w) => w is TextField && w.decoration?.labelText == 'Pieces',
       ),
       '75',
     );

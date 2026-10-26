@@ -8,6 +8,8 @@ part of 'catalog_unit.dart';
 
 class _$CatalogUnit extends CatalogUnit {
   @override
+  final QuantityPolicy? quantityPolicy;
+  @override
   final String id;
   @override
   final String code;
@@ -22,7 +24,8 @@ class _$CatalogUnit extends CatalogUnit {
       (CatalogUnitBuilder()..update(updates))._build();
 
   _$CatalogUnit._(
-      {required this.id,
+      {this.quantityPolicy,
+      required this.id,
       required this.code,
       required this.name,
       required this.dimension,
@@ -39,6 +42,7 @@ class _$CatalogUnit extends CatalogUnit {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is CatalogUnit &&
+        quantityPolicy == other.quantityPolicy &&
         id == other.id &&
         code == other.code &&
         name == other.name &&
@@ -49,6 +53,7 @@ class _$CatalogUnit extends CatalogUnit {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, quantityPolicy.hashCode);
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, code.hashCode);
     _$hash = $jc(_$hash, name.hashCode);
@@ -61,6 +66,7 @@ class _$CatalogUnit extends CatalogUnit {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'CatalogUnit')
+          ..add('quantityPolicy', quantityPolicy)
           ..add('id', id)
           ..add('code', code)
           ..add('name', name)
@@ -72,6 +78,12 @@ class _$CatalogUnit extends CatalogUnit {
 
 class CatalogUnitBuilder implements Builder<CatalogUnit, CatalogUnitBuilder> {
   _$CatalogUnit? _$v;
+
+  QuantityPolicyBuilder? _quantityPolicy;
+  QuantityPolicyBuilder get quantityPolicy =>
+      _$this._quantityPolicy ??= QuantityPolicyBuilder();
+  set quantityPolicy(QuantityPolicyBuilder? quantityPolicy) =>
+      _$this._quantityPolicy = quantityPolicy;
 
   String? _id;
   String? get id => _$this._id;
@@ -100,6 +112,7 @@ class CatalogUnitBuilder implements Builder<CatalogUnit, CatalogUnitBuilder> {
   CatalogUnitBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _quantityPolicy = $v.quantityPolicy?.toBuilder();
       _id = $v.id;
       _code = $v.code;
       _name = $v.name;
@@ -124,18 +137,32 @@ class CatalogUnitBuilder implements Builder<CatalogUnit, CatalogUnitBuilder> {
   CatalogUnit build() => _build();
 
   _$CatalogUnit _build() {
-    final _$result = _$v ??
-        _$CatalogUnit._(
-          id: BuiltValueNullFieldError.checkNotNull(id, r'CatalogUnit', 'id'),
-          code: BuiltValueNullFieldError.checkNotNull(
-              code, r'CatalogUnit', 'code'),
-          name: BuiltValueNullFieldError.checkNotNull(
-              name, r'CatalogUnit', 'name'),
-          dimension: BuiltValueNullFieldError.checkNotNull(
-              dimension, r'CatalogUnit', 'dimension'),
-          precision: BuiltValueNullFieldError.checkNotNull(
-              precision, r'CatalogUnit', 'precision'),
-        );
+    _$CatalogUnit _$result;
+    try {
+      _$result = _$v ??
+          _$CatalogUnit._(
+            quantityPolicy: _quantityPolicy?.build(),
+            id: BuiltValueNullFieldError.checkNotNull(id, r'CatalogUnit', 'id'),
+            code: BuiltValueNullFieldError.checkNotNull(
+                code, r'CatalogUnit', 'code'),
+            name: BuiltValueNullFieldError.checkNotNull(
+                name, r'CatalogUnit', 'name'),
+            dimension: BuiltValueNullFieldError.checkNotNull(
+                dimension, r'CatalogUnit', 'dimension'),
+            precision: BuiltValueNullFieldError.checkNotNull(
+                precision, r'CatalogUnit', 'precision'),
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'quantityPolicy';
+        _quantityPolicy?.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'CatalogUnit', _$failedField, e.toString());
+      }
+      rethrow;
+    }
     replace(_$result);
     return _$result;
   }

@@ -68,6 +68,8 @@ class _$ListingVariantOfferStockLabelEnumSerializer
 
 class _$ListingVariantOffer extends ListingVariantOffer {
   @override
+  final QuantityPolicy? quantityPolicy;
+  @override
   final String variantId;
   @override
   final String sku;
@@ -105,7 +107,8 @@ class _$ListingVariantOffer extends ListingVariantOffer {
       (ListingVariantOfferBuilder()..update(updates))._build();
 
   _$ListingVariantOffer._(
-      {required this.variantId,
+      {this.quantityPolicy,
+      required this.variantId,
       required this.sku,
       this.label,
       required this.attributes,
@@ -135,6 +138,7 @@ class _$ListingVariantOffer extends ListingVariantOffer {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is ListingVariantOffer &&
+        quantityPolicy == other.quantityPolicy &&
         variantId == other.variantId &&
         sku == other.sku &&
         label == other.label &&
@@ -156,6 +160,7 @@ class _$ListingVariantOffer extends ListingVariantOffer {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, quantityPolicy.hashCode);
     _$hash = $jc(_$hash, variantId.hashCode);
     _$hash = $jc(_$hash, sku.hashCode);
     _$hash = $jc(_$hash, label.hashCode);
@@ -179,6 +184,7 @@ class _$ListingVariantOffer extends ListingVariantOffer {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'ListingVariantOffer')
+          ..add('quantityPolicy', quantityPolicy)
           ..add('variantId', variantId)
           ..add('sku', sku)
           ..add('label', label)
@@ -202,6 +208,12 @@ class _$ListingVariantOffer extends ListingVariantOffer {
 class ListingVariantOfferBuilder
     implements Builder<ListingVariantOffer, ListingVariantOfferBuilder> {
   _$ListingVariantOffer? _$v;
+
+  QuantityPolicyBuilder? _quantityPolicy;
+  QuantityPolicyBuilder get quantityPolicy =>
+      _$this._quantityPolicy ??= QuantityPolicyBuilder();
+  set quantityPolicy(QuantityPolicyBuilder? quantityPolicy) =>
+      _$this._quantityPolicy = quantityPolicy;
 
   String? _variantId;
   String? get variantId => _$this._variantId;
@@ -284,6 +296,7 @@ class ListingVariantOfferBuilder
   ListingVariantOfferBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _quantityPolicy = $v.quantityPolicy?.toBuilder();
       _variantId = $v.variantId;
       _sku = $v.sku;
       _label = $v.label;
@@ -323,6 +336,7 @@ class ListingVariantOfferBuilder
     try {
       _$result = _$v ??
           _$ListingVariantOffer._(
+            quantityPolicy: _quantityPolicy?.build(),
             variantId: BuiltValueNullFieldError.checkNotNull(
                 variantId, r'ListingVariantOffer', 'variantId'),
             sku: BuiltValueNullFieldError.checkNotNull(
@@ -351,6 +365,9 @@ class ListingVariantOfferBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'quantityPolicy';
+        _quantityPolicy?.build();
+
         _$failedField = 'attributes';
         attributes.build();
 

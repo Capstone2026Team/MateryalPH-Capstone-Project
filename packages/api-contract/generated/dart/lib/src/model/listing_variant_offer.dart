@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:materyalph_api_client/src/model/comparable_status.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/quantity_policy.dart';
 import 'package:materyalph_api_client/src/model/listing_variant_price.dart';
 import 'package:materyalph_api_client/src/model/volume_tier.dart';
 import 'package:built_value/json_object.dart';
@@ -16,6 +17,7 @@ part 'listing_variant_offer.g.dart';
 /// ListingVariantOffer
 ///
 /// Properties:
+/// * [quantityPolicy]
 /// * [variantId]
 /// * [sku]
 /// * [label]
@@ -34,6 +36,9 @@ part 'listing_variant_offer.g.dart';
 /// * [comparable]
 @BuiltValue()
 abstract class ListingVariantOffer implements Built<ListingVariantOffer, ListingVariantOfferBuilder> {
+  @BuiltValueField(wireName: r'quantity_policy')
+  QuantityPolicy? get quantityPolicy;
+
   @BuiltValueField(wireName: r'variant_id')
   String get variantId;
 
@@ -107,6 +112,13 @@ class _$ListingVariantOfferSerializer implements PrimitiveSerializer<ListingVari
     ListingVariantOffer object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.quantityPolicy != null) {
+      yield r'quantity_policy';
+      yield serializers.serialize(
+        object.quantityPolicy,
+        specifiedType: const FullType(QuantityPolicy),
+      );
+    }
     yield r'variant_id';
     yield serializers.serialize(
       object.variantId,
@@ -210,6 +222,14 @@ class _$ListingVariantOfferSerializer implements PrimitiveSerializer<ListingVari
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'quantity_policy':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(QuantityPolicy),
+          ) as QuantityPolicy?;
+          if (valueDes == null) continue;
+          result.quantityPolicy.replace(valueDes);
+          break;
         case r'variant_id':
           final valueDes = serializers.deserialize(
             value,

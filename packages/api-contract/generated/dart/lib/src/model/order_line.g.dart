@@ -61,6 +61,8 @@ class _$OrderLineChangeEnumSerializer
 
 class _$OrderLine extends OrderLine {
   @override
+  final QuantityPolicy? quantityPolicy;
+  @override
   final String id;
   @override
   final int lineNumber;
@@ -121,7 +123,8 @@ class _$OrderLine extends OrderLine {
       (OrderLineBuilder()..update(updates))._build();
 
   _$OrderLine._(
-      {required this.id,
+      {this.quantityPolicy,
+      required this.id,
       required this.lineNumber,
       required this.listingId,
       required this.listingVariantId,
@@ -161,6 +164,7 @@ class _$OrderLine extends OrderLine {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is OrderLine &&
+        quantityPolicy == other.quantityPolicy &&
         id == other.id &&
         lineNumber == other.lineNumber &&
         listingId == other.listingId &&
@@ -194,6 +198,7 @@ class _$OrderLine extends OrderLine {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, quantityPolicy.hashCode);
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, lineNumber.hashCode);
     _$hash = $jc(_$hash, listingId.hashCode);
@@ -229,6 +234,7 @@ class _$OrderLine extends OrderLine {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'OrderLine')
+          ..add('quantityPolicy', quantityPolicy)
           ..add('id', id)
           ..add('lineNumber', lineNumber)
           ..add('listingId', listingId)
@@ -263,6 +269,12 @@ class _$OrderLine extends OrderLine {
 
 class OrderLineBuilder implements Builder<OrderLine, OrderLineBuilder> {
   _$OrderLine? _$v;
+
+  QuantityPolicyBuilder? _quantityPolicy;
+  QuantityPolicyBuilder get quantityPolicy =>
+      _$this._quantityPolicy ??= QuantityPolicyBuilder();
+  set quantityPolicy(QuantityPolicyBuilder? quantityPolicy) =>
+      _$this._quantityPolicy = quantityPolicy;
 
   String? _id;
   String? get id => _$this._id;
@@ -400,6 +412,7 @@ class OrderLineBuilder implements Builder<OrderLine, OrderLineBuilder> {
   OrderLineBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _quantityPolicy = $v.quantityPolicy?.toBuilder();
       _id = $v.id;
       _lineNumber = $v.lineNumber;
       _listingId = $v.listingId;
@@ -451,6 +464,7 @@ class OrderLineBuilder implements Builder<OrderLine, OrderLineBuilder> {
     try {
       _$result = _$v ??
           _$OrderLine._(
+            quantityPolicy: _quantityPolicy?.build(),
             id: BuiltValueNullFieldError.checkNotNull(id, r'OrderLine', 'id'),
             lineNumber: BuiltValueNullFieldError.checkNotNull(
                 lineNumber, r'OrderLine', 'lineNumber'),
@@ -500,6 +514,9 @@ class OrderLineBuilder implements Builder<OrderLine, OrderLineBuilder> {
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'quantityPolicy';
+        _quantityPolicy?.build();
+
         _$failedField = 'image';
         _image?.build();
 

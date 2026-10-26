@@ -183,7 +183,7 @@ test('variant rows validate per row inline and show server row errors in the mat
   expect(await within(second).findByText('Choose a sale unit.')).toBeVisible()
   // The message appears in the row summary and inline on its field, which is marked invalid.
   expect(within(second).getAllByText('Enter a price in pesos, for example 285.50.')).toHaveLength(2)
-  expect(within(second).getByRole('textbox', { name: 'Price (PHP)' })).toHaveAttribute('aria-invalid', 'true')
+  expect(within(second).getByRole('textbox', { name: /^Price \(PHP/ })).toHaveAttribute('aria-invalid', 'true')
   expect(within(screen.getByRole('region', { name: 'Variant 1 — 40 kg' })).queryByRole('alert')).not.toBeInTheDocument()
   expect(catalog.saveVariants).not.toHaveBeenCalled()
   expect(catalog.updateListing).not.toHaveBeenCalled()

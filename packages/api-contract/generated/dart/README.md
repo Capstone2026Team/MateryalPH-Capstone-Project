@@ -1463,6 +1463,7 @@ Class | Method | HTTP request | Description
  - [PublicStoreProfile](doc/PublicStoreProfile.md)
  - [PublicStoreProfileEnvelope](doc/PublicStoreProfileEnvelope.md)
  - [PublicStoreSummary](doc/PublicStoreSummary.md)
+ - [QuantityPolicy](doc/QuantityPolicy.md)
  - [RadiusExpansion](doc/RadiusExpansion.md)
  - [RadiusKm](doc/RadiusKm.md)
  - [RankingComponent](doc/RankingComponent.md)

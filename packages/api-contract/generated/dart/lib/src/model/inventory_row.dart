@@ -7,6 +7,7 @@ import 'package:materyalph_api_client/src/model/inventory_balance.dart';
 import 'package:materyalph_api_client/src/model/stock_confirmation_schedule.dart';
 import 'package:materyalph_api_client/src/model/inventory_price.dart';
 import 'package:materyalph_api_client/src/model/listing_status.dart';
+import 'package:materyalph_api_client/src/model/quantity_policy.dart';
 import 'package:materyalph_api_client/src/model/auto_accept_policy.dart';
 import 'package:materyalph_api_client/src/model/inventory_comparability.dart';
 import 'package:materyalph_api_client/src/model/stock_label.dart';
@@ -18,6 +19,7 @@ part 'inventory_row.g.dart';
 /// InventoryRow
 ///
 /// Properties:
+/// * [quantityPolicy]
 /// * [listingVariantId]
 /// * [listingId]
 /// * [listingName]
@@ -35,6 +37,9 @@ part 'inventory_row.g.dart';
 /// * [autoAccept]
 @BuiltValue()
 abstract class InventoryRow implements Built<InventoryRow, InventoryRowBuilder> {
+  @BuiltValueField(wireName: r'quantity_policy')
+  QuantityPolicy? get quantityPolicy;
+
   @BuiltValueField(wireName: r'listing_variant_id')
   String get listingVariantId;
 
@@ -106,6 +111,13 @@ class _$InventoryRowSerializer implements PrimitiveSerializer<InventoryRow> {
     InventoryRow object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.quantityPolicy != null) {
+      yield r'quantity_policy';
+      yield serializers.serialize(
+        object.quantityPolicy,
+        specifiedType: const FullType(QuantityPolicy),
+      );
+    }
     yield r'listing_variant_id';
     yield serializers.serialize(
       object.listingVariantId,
@@ -206,6 +218,14 @@ class _$InventoryRowSerializer implements PrimitiveSerializer<InventoryRow> {
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'quantity_policy':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(QuantityPolicy),
+          ) as QuantityPolicy?;
+          if (valueDes == null) continue;
+          result.quantityPolicy.replace(valueDes);
+          break;
         case r'listing_variant_id':
           final valueDes = serializers.deserialize(
             value,

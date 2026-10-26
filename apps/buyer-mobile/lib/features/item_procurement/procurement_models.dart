@@ -107,12 +107,19 @@ String formatQuantity(String quantity) {
 /// Advisory line amount for a decimal quantity, rounded half-up to the
 /// centavo like the server; the server's amount stays authoritative.
 int lineAmountCentavos(String quantity, int unitPriceCentavos) {
+  if (!RegExp(r'^\d{1,14}(\.\d{1,4})?$').hasMatch(quantity.trim()) ||
+      unitPriceCentavos < 0) {
+    throw ArgumentError(
+      'Use a nonnegative price and a supported decimal quantity.',
+    );
+  }
   final parts = quantity.trim().split('.');
   final fraction = (parts.length > 1 ? parts[1] : '').padRight(4, '0');
   final scaled =
-      int.parse(parts[0].isEmpty ? '0' : parts[0]) * 10000 +
-      int.parse(fraction.substring(0, 4));
-  return (unitPriceCentavos * scaled + 5000) ~/ 10000;
+      BigInt.parse(parts[0]) * BigInt.from(10000) + BigInt.parse(fraction);
+  return ((BigInt.from(unitPriceCentavos) * scaled + BigInt.from(5000)) ~/
+          BigInt.from(10000))
+      .toInt();
 }
 
 @immutable
@@ -463,6 +470,8 @@ class VariantOfferView {
     this.comparable = false,
     this.attributes = const {},
     this.sku,
+    this.unitCode = '',
+    this.quantityDimension,
   });
 
   final String variantId;
@@ -481,13 +490,22 @@ class VariantOfferView {
   final bool comparable;
   final Map<String, String> attributes;
   final String? sku;
+  final String unitCode;
+  final String? quantityDimension;
 
-  int? priceForQuantity(num quantity) {
+  int? priceForQuantity(String quantity) {
     var price = unitPriceCentavos;
-    var threshold = 0.0;
+    BigInt scaled(String value) {
+      final parts = value.split('.');
+      return BigInt.parse(parts[0]) * BigInt.from(10000) +
+          BigInt.parse((parts.length > 1 ? parts[1] : '').padRight(4, '0'));
+    }
+
+    var threshold = BigInt.zero;
+    final requested = scaled(quantity);
     for (final tier in volumeTiers) {
-      final minimum = double.parse(tier.minimumQuantity);
-      if (minimum <= quantity && minimum >= threshold) {
+      final minimum = scaled(tier.minimumQuantity);
+      if (minimum <= requested && minimum >= threshold) {
         price = tier.amountCentavos;
         threshold = minimum;
       }
@@ -673,6 +691,7 @@ class CartLineView {
     this.stockLabel,
     this.lineTotalCentavos,
     this.readyMixedConcrete = false,
+    this.unitCode = '',
   });
 
   final String id;
@@ -699,6 +718,7 @@ class CartLineView {
   final bool volumeTierApplied;
   final String? stockLabel;
   final int? lineTotalCentavos;
+  final String unitCode;
 
   bool get available => currentUnitPriceCentavos != null;
   bool get priceChanged => issues.any((issue) => issue.code == 'PRICE_CHANGED');

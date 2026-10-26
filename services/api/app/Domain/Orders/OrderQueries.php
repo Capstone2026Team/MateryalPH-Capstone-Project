@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Orders;
 
+use App\Domain\Catalog\QuantityPolicy;
 use App\Domain\Disputes\DisputeFilingService;
 use App\Domain\Disputes\DisputeRules;
 use App\Domain\Finance\FinancialCalculator;
@@ -403,11 +404,12 @@ final class OrderQueries
             $confirmed = $vendorVersion ? ($confirmedLines[(string) $line->id]['confirmed_quantity'] ?? null) : null;
             $amounts = $computed[(string) $line->id] ?? null;
             $requested = StockAvailability::quantity($line->quantity);
+            $policy = QuantityPolicy::historical($snapshot);
             $lines[] = [
                 'id' => (string) $line->id, 'line_number' => (int) $line->line_number, 'listing_id' => (string) $line->vendor_listing_id, 'listing_variant_id' => (string) $line->listing_variant_id,
                 'display_name' => (string) ($snapshot['display_name'] ?? ''), 'variant_label' => $snapshot['variant_label'] ?? null, 'brand' => $snapshot['brand'] ?? null,
                 'category' => $snapshot['category'] ?? null, 'image' => $snapshot['image'] ?? null, 'unit_code' => (string) ($snapshot['unit_code'] ?? ''), 'unit_name' => (string) ($snapshot['unit_name'] ?? ''),
-                'unit_precision' => (int) ($snapshot['unit_precision'] ?? 0), 'quantity_step' => (string) ($snapshot['quantity_step'] ?? '1'),
+                'unit_precision' => $policy === null ? (int) ($snapshot['unit_precision'] ?? 4) : $policy->precision, 'quantity_step' => $policy === null ? ($snapshot['quantity_step'] ?? '0.0001') : $policy->step(), ...($policy === null ? [] : ['quantity_policy' => $policy->toArray()]),
                 'requested_quantity' => $requested, 'confirmed_quantity' => $confirmed,
                 'unit_price_centavos' => $amounts['unit_price_centavos'] ?? (int) $line->unit_price_centavos, 'ordinary_unit_price_centavos' => $line->ordinary_unit_price_centavos === null ? null : (int) $line->ordinary_unit_price_centavos,
                 'volume_tier_applied' => (bool) ($snapshot['volume_tier_applied'] ?? false), 'volume_tiers' => json_decode((string) ($line->volume_tiers ?? '[]'), true) ?: [],

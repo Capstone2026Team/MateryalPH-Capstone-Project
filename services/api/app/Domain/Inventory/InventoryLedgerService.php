@@ -8,6 +8,7 @@ use App\Domain\Catalog\ComparableMappingService;
 use App\Domain\Catalog\ListingTransitions;
 use App\Domain\Catalog\MarketplaceDiscoverability;
 use App\Domain\Catalog\PriceVersionService;
+use App\Domain\Catalog\QuantityPolicy;
 use App\Domain\Catalog\VolumePricing;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
@@ -298,7 +299,7 @@ final class InventoryLedgerService
             ->leftJoin('inventory_items as i', 'i.listing_variant_id', '=', 'v.id')
             ->leftJoin('listing_price_versions as pv', fn ($join) => $join->on('pv.listing_variant_id', '=', 'v.id')->where('pv.price_kind', 'ORDINARY')->whereNull('pv.retired_at'))
             ->whereIn('v.id', $variantIds)
-            ->get(['v.id', 'v.sku', 'v.label', 'u.code as unit_code', 'l.id as listing_id', 'l.display_name', 'l.status as listing_status',
+            ->get(['v.id', 'v.sku', 'v.label', 'u.code as unit_code', 'u.dimension', 'u.precision', 'l.id as listing_id', 'l.display_name', 'l.status as listing_status',
                 'i.id as item_id', 'i.quantity_on_hand', 'i.hard_reserved_quantity', DB::raw("(SELECT COALESCE(SUM(h.quantity), 0) FROM inventory_holds h WHERE h.inventory_item_id = i.id AND h.hold_type = 'SOFT' AND h.state = 'ACTIVE' AND (h.expires_at IS NULL OR h.expires_at > CURRENT_TIMESTAMP)) as soft_held_quantity"), 'i.reorder_level', 'i.confirmed_at', 'i.lock_version', 'i.updated_at',
                 'pv.id as price_id', 'pv.version as price_version', 'pv.amount_centavos', 'pv.tax_category', 'pv.effective_at'])->keyBy('id');
         $policies = DB::table('auto_accept_policies')->whereIn('listing_variant_id', $variantIds)->get()->keyBy('listing_variant_id');
@@ -315,7 +316,7 @@ final class InventoryLedgerService
             $reorder = $row->reorder_level === null ? null : StockAvailability::quantity($row->reorder_level);
             $result[] = [
                 'listing_variant_id' => $row->id, 'listing_id' => $row->listing_id, 'listing_name' => $row->display_name, 'listing_status' => $row->listing_status,
-                'variant_label' => $row->label, 'sku' => $row->sku, 'unit_code' => $row->unit_code, 'lock_version' => $row->item_id === null ? 0 : (int) $row->lock_version,
+                'variant_label' => $row->label, 'sku' => $row->sku, 'unit_code' => $row->unit_code, 'quantity_policy' => QuantityPolicy::fromUnit($row)->toArray(), 'lock_version' => $row->item_id === null ? 0 : (int) $row->lock_version,
                 'inventory' => $row->item_id === null ? null : [
                     'quantity_on_hand' => StockAvailability::quantity($row->quantity_on_hand), 'hard_reserved_quantity' => StockAvailability::quantity($row->hard_reserved_quantity),
                     'soft_held_quantity' => StockAvailability::quantity($row->soft_held_quantity), 'available_to_sell' => $available, 'reorder_level' => $reorder,
@@ -347,7 +348,7 @@ final class InventoryLedgerService
         if (! is_int($amount) || $amount <= 0) {
             throw new AuthenticationException('VALIDATION_FAILED', 'Review the highlighted fields and try again.', 422, ['price.amount_centavos' => ['Enter a price greater than zero.']]);
         }
-        $tierErrors = VolumePricing::errors($this->prices->currentTierRows($variantId), $amount);
+        $tierErrors = VolumePricing::errors($this->prices->currentTierRows($variantId), $amount, QuantityPolicy::forVariant($variantId));
         if ($tierErrors !== []) {
             throw new AuthenticationException('VALIDATION_FAILED', 'Review the highlighted fields and try again.', 422, ['price.amount_centavos' => ['This price is not above every volume tier price. Update the tiers in the product editor first.']]);
         }

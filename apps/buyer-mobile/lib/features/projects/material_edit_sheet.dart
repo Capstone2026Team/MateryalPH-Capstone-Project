@@ -1,3 +1,6 @@
+import '../../design_system/quantity_policy.dart';
+import '../../design_system/components/procurement_components.dart'
+    show DecimalQuantityField;
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -97,7 +100,7 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
   bool browsing = false;
   bool detailsOpen = false, showDescription = false;
   String lookedUp = '';
-  String? unit, error;
+  String? unit, error, sellingBasis;
   int sequence = 0;
   Timer? debounce;
 
@@ -107,8 +110,21 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
   /// Ready-mixed concrete is ordered by volume, not by a count of pieces.
   bool get readyMixed => !unlisted && material?.code == readyMixedCode;
 
-  List<api.ProjectMaterialUnit> get unitChoices =>
-      unlisted ? units : material?.compatibleUnits.toList() ?? [];
+  bool _measured(api.ProjectMaterialUnit value) =>
+      value.quantityPolicy?.mode.name == 'MEASURED' ||
+      (value.quantityPolicy == null &&
+          measuredQuantityUnit(projectText(value.code)));
+
+  List<api.ProjectMaterialUnit> get unitChoices => unlisted
+      ? sellingBasis == null
+            ? []
+            : units
+                  .where((u) => _measured(u) == (sellingBasis == 'MEASURED'))
+                  .toList()
+      : material?.compatibleUnits.toList() ?? [];
+
+  api.ProjectMaterialUnit? get selectedUnit =>
+      unitChoices.where((u) => u.id == unit).firstOrNull;
 
   /// Detail codes that apply to the current choice.
   Iterable<String> get detailCodes => unlisted
@@ -187,6 +203,12 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
       setState(() {
         matches = result.items.toList();
         units = result.units.toList();
+        if (keep && unlisted) {
+          final savedUnit = units.where((u) => u.id == unit).firstOrNull;
+          if (savedUnit != null) {
+            sellingBasis = _measured(savedUnit) ? 'MEASURED' : 'COUNT_PACK';
+          }
+        }
         lookedUp = query.trim();
         searching = false;
         if (keep && !unlisted) {
@@ -213,6 +235,7 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
       material = null;
       unlisted = false;
       unit = null;
+      sellingBasis = null;
       browsing = false;
     });
     debounce = Timer(const Duration(milliseconds: 350), () => _lookup(value));
@@ -221,6 +244,7 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
   void _choose(api.ProjectMaterial? m) => setState(() {
     material = m;
     unlisted = m == null;
+    sellingBasis = null;
     browsing = false;
     final choices = unitChoices;
     unit = choices.length == 1 ? projectText(choices.first.id) : null;
@@ -250,11 +274,16 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
   void _submit() {
     final typedName = name.text.trim();
     final choice = unitChoices.where((u) => u.id == unit).firstOrNull;
-    final precision = projectInt(choice?.precision);
+    final precision =
+        choice?.quantityPolicy?.precision ?? projectInt(choice?.precision);
     final qty = quantity.text.trim();
-    final decimals = qty.contains('.') ? qty.split('.').last.length : 0;
+    final decimals = qty.contains('.')
+        ? qty.split('.').last.replaceFirst(RegExp(r'0+$'), '').length
+        : 0;
     final failure = !chosen || typedName.length < 2
         ? 'Type a material name, then choose a match or keep it as an unlisted material.'
+        : unlisted && sellingBasis == null
+        ? 'Choose whether this material is sold by count/package or measurement.'
         : choice == null
         ? 'Choose a unit.'
         : !RegExp(r'^\d{1,7}(\.\d{1,4})?$').hasMatch(qty) ||
@@ -379,28 +408,50 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
   Widget _quantityAndUnit(ThemeData theme) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
+      if (unlisted) ...[
+        DropdownButtonFormField<String>(
+          initialValue: sellingBasis,
+          decoration: const InputDecoration(labelText: 'Selling basis'),
+          items: const [
+            DropdownMenuItem(
+              value: 'COUNT_PACK',
+              child: Text('Count / package'),
+            ),
+            DropdownMenuItem(value: 'MEASURED', child: Text('Measurement')),
+          ],
+          onChanged: (value) => setState(() {
+            sellingBasis = value;
+            unit = null;
+          }),
+        ),
+        const SizedBox(height: CompactDensity.gap),
+      ],
       Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             flex: 2,
-            child: TextField(
-              controller: quantity,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-              ],
-              decoration: InputDecoration(
-                labelText: readyMixed ? 'Order volume (m³)' : 'Quantity',
-              ),
+            child: DecimalQuantityField(
+              label: readyMixed
+                  ? 'Order volume (m³)'
+                  : sellingQuantityLabel(
+                      projectText(selectedUnit?.code),
+                      dimension: selectedUnit?.quantityPolicy?.dimension,
+                    ),
+              value: quantity.text,
+              unitName: '',
+              decimals:
+                  selectedUnit?.quantityPolicy?.precision ??
+                  selectedUnit?.precision ??
+                  4,
+              enabled: selectedUnit != null && !searching,
+              onChanged: (value) => quantity.text = value,
             ),
           ),
           const SizedBox(width: CompactDensity.gap),
           Expanded(
             child: DropdownButtonFormField<String>(
-              key: ValueKey('unit-${material?.id}-$unlisted'),
+              key: ValueKey('unit-${material?.id}-$unlisted-$sellingBasis'),
               initialValue: unitChoices.any((u) => u.id == unit) ? unit : null,
               isExpanded: true,
               decoration: const InputDecoration(labelText: 'Unit'),
@@ -430,7 +481,7 @@ class _MaterialEditSheetState extends State<MaterialEditSheet> {
       const SizedBox(height: 4),
       Text(
         unlisted
-            ? 'Any normalized unit, e.g. bag, meter, sheet, cu.m.'
+            ? 'Choose the selling basis and unit. Quantities are not converted.'
             : readyMixed
             ? 'Cubic meters of concrete to deliver to your site.'
             : 'Units this material is sold in.',

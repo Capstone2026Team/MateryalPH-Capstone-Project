@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Messaging;
 
 use App\Domain\Catalog\ListingTaxPolicy;
+use App\Domain\Catalog\QuantityPolicy;
 use App\Domain\Catalog\ReadyMixedConcrete;
 use App\Domain\Finance\FinancialCalculator;
 use App\Domain\Finance\FinancialSnapshotService;
@@ -117,12 +118,12 @@ final class QuotationTerms
             }
             $qty = StockAvailability::quantity($line['quantity']);
             $product = DB::table('vendor_listings as l')->join('products as p', 'p.id', '=', 'l.product_id')->where('l.id', $v->vendor_listing_id)->first(['p.material_id', 'p.brand', 'l.technical_attributes']);
-            if (bccomp($qty, bcadd($qty, '0', (int) $v->precision), 4) !== 0) {
+            if (! QuantityPolicy::fromUnit($v)->valid($qty)) {
                 throw new AuthenticationException('INVALID_QUANTITY', 'Use the product unit precision.', 422);
             }
             $lines[] = ['line_id' => (string) $v->id, 'variant_id' => (string) $v->id, 'listing_id' => (string) $v->vendor_listing_id, 'unit_id' => (string) $v->unit_id,
                 'description' => $line['description'] ?? (string) $v->display_name, 'specifications' => $line['specifications'] ?? array_merge(json_decode($product->technical_attributes ?? '{}', true), json_decode($v->attributes ?? '{}', true)),
-                'material_id' => $product->material_id, 'brand' => $product->brand, 'preferred_brand' => $product->brand, 'variant_label' => (string) $v->label, 'unit_code' => $v->unit_code, 'quantity' => $qty,
+                'material_id' => $product->material_id, 'brand' => $product->brand, 'preferred_brand' => $product->brand, 'variant_label' => (string) $v->label, 'unit_code' => $v->unit_code, 'unit_precision' => QuantityPolicy::fromUnit($v)->precision, 'quantity_step' => QuantityPolicy::fromUnit($v)->step(), 'quantity_policy' => QuantityPolicy::fromUnit($v)->toArray(), 'quantity' => $qty,
                 'unit_price_centavos' => (int) $line['unit_price_centavos'], 'tax_category' => (string) $v->tax_category, 'tax_basis' => $v->tax_basis,
                 'source_price_version_id' => (string) $v->price_version_id, 'source_tax_version_id' => $taxVersion, 'publication_version' => (int) $v->publication_version,
                 'load' => ['weight_kg' => $v->weight_kg, 'length_cm' => $v->length_cm, 'width_cm' => $v->width_cm, 'height_cm' => $v->height_cm] + $this->materialLoad($v)];
@@ -184,7 +185,7 @@ final class QuotationTerms
     {
         $changes = [];
         foreach (array_unique([...array_keys($before), ...array_keys($after)]) as $key) {
-            if (in_array($key, ['changes', 'original_changes'], true)) {
+            if (in_array($key, ['changes', 'original_changes', 'quantity_policy', 'unit_precision', 'quantity_step'], true)) {
                 continue;
             }
             $old = $before[$key] ?? null;

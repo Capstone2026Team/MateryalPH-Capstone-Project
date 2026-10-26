@@ -631,12 +631,12 @@ void main() {
       await tester.tap(find.text('Technical details'));
       await tester.pumpAndSettle();
       expect(field('Mass per bag (kg)'), findsOneWidget);
-      await tester.enterText(field('Quantity'), '0');
+      await tester.enterText(field('Bags'), '0');
       await tester.ensureVisible(find.widgetWithText(FilledButton, 'Add Item'));
       await tester.tap(find.widgetWithText(FilledButton, 'Add Item'));
       await tester.pumpAndSettle();
       expect(find.textContaining('Use a quantity above zero'), findsOneWidget);
-      await tester.enterText(field('Quantity'), '2.5');
+      await tester.enterText(field('Bags'), '2.5');
       await tester.tap(find.widgetWithText(FilledButton, 'Add Item'));
       await tester.pumpAndSettle();
       expect(
@@ -693,6 +693,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Not listed — use “Washed sand”'));
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Selling basis'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Measurement').last);
+      await tester.pumpAndSettle();
       await tester.tap(
         find
             .byWidgetPredicate(
@@ -705,7 +709,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Cubic meter (CUM)').last);
       await tester.pumpAndSettle();
-      await tester.enterText(field('Quantity'), '2.5');
+      await tester.enterText(field('Volume (m³)'), '2.5');
       await tester.tap(find.text('Technical details'));
       await tester.pumpAndSettle();
       await tester.enterText(field('Size'), 'S-1');

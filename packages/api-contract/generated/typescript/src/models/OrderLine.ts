@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { QuantityPolicy } from './QuantityPolicy';
+import {
+    QuantityPolicyFromJSON,
+    QuantityPolicyFromJSONTyped,
+    QuantityPolicyToJSON,
+    QuantityPolicyToJSONTyped,
+} from './QuantityPolicy';
 import type { OrderLineInventory } from './OrderLineInventory';
 import {
     OrderLineInventoryFromJSON,
@@ -48,6 +55,10 @@ import {
  * @interface OrderLine
  */
 export interface OrderLine {
+    /**
+     *
+     */
+    readonly quantityPolicy?: QuantityPolicy;
     /**
      *
      */
@@ -217,6 +228,7 @@ export function OrderLineFromJSONTyped(json: any, ignoreDiscriminator: boolean):
     }
     return {
 
+        'quantityPolicy': json['quantity_policy'] == null ? undefined : QuantityPolicyFromJSON(json['quantity_policy']),
         'id': json['id'],
         'lineNumber': json['line_number'],
         'listingId': json['listing_id'],
@@ -252,7 +264,7 @@ export function OrderLineToJSON(json: any): OrderLine {
     return OrderLineToJSONTyped(json, false);
 }
 
-export function OrderLineToJSONTyped(value?: OrderLine | null, ignoreDiscriminator: boolean = false): any {
+export function OrderLineToJSONTyped(value?: Omit<OrderLine, 'quantityPolicy'> | null, ignoreDiscriminator: boolean = false): any {
     if (value == null) {
         return value;
     }

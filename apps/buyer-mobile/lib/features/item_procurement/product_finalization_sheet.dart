@@ -1,3 +1,4 @@
+import '../../design_system/quantity_policy.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -108,11 +109,18 @@ class _ProductFinalizationSheetState extends State<ProductFinalizationSheet> {
   Future<void> _refreshDelivery() async {
     _deliveryDebounce?.cancel();
     final sequence = ++_deliverySequence;
+    final variant = widget
+        .detail()
+        .variants
+        .where((item) => item.variantId == _variantId)
+        .firstOrNull;
     setState(() {
       _delivery = null;
       _deliveryError = null;
       _deliveryLoading =
-          _fulfillment == 'DELIVERY' && validDecimalQuantity(_quantity, 4);
+          _fulfillment == 'DELIVERY' &&
+          variant != null &&
+          validDecimalQuantity(_quantity, stepDecimals(variant.quantityStep));
     });
     if (!_deliveryLoading) return;
     _deliveryDebounce = Timer(const Duration(milliseconds: 300), () async {
@@ -159,10 +167,12 @@ class _ProductFinalizationSheetState extends State<ProductFinalizationSheet> {
     final variant = detail.variants
         .where((item) => item.variantId == _variantId)
         .firstOrNull;
-    final quantity = validDecimalQuantity(_quantity, 4) ? _quantity : null;
-    final price = quantity == null
-        ? null
-        : variant?.priceForQuantity(num.parse(quantity));
+    final quantity =
+        variant != null &&
+            validDecimalQuantity(_quantity, stepDecimals(variant.quantityStep))
+        ? _quantity
+        : null;
+    final price = quantity == null ? null : variant?.priceForQuantity(quantity);
     final materials = price == null
         ? null
         : lineAmountCentavos(quantity!, price);
@@ -362,18 +372,25 @@ class _ProductFinalizationSheetState extends State<ProductFinalizationSheet> {
                     crossAxisAlignment: WrapCrossAlignment.center,
                     spacing: 12,
                     children: [
-                      if (variant.wholeUnits) ...[
+                      if (variant.wholeUnits &&
+                          validDecimalQuantity(_quantity, 0)) ...[
                         const _Label('Quantity', bottom: 0),
                         QuantityStepper(
                           compact: true,
-                          quantity: int.tryParse(_quantity) ?? 1,
+                          quantity:
+                              int.tryParse(_quantity.split('.').first) ?? 1,
                           unitName: variant.unitName,
                           enabled: !_busy && variant.available,
                           onChanged: _setQuantity,
                         ),
                       ] else
                         DecimalQuantityField(
-                          label: readyMixed?.quantityLabel ?? 'Quantity',
+                          label:
+                              readyMixed?.quantityLabel ??
+                              sellingQuantityLabel(
+                                variant.unitCode,
+                                dimension: variant.quantityDimension,
+                              ),
                           value: _quantity,
                           unitName: variant.unitName,
                           decimals: stepDecimals(variant.quantityStep),

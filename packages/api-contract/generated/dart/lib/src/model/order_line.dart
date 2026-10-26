@@ -6,6 +6,7 @@
 import 'package:materyalph_api_client/src/model/tax_category.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/listing_image.dart';
+import 'package:materyalph_api_client/src/model/quantity_policy.dart';
 import 'package:materyalph_api_client/src/model/order_volume_tier.dart';
 import 'package:materyalph_api_client/src/model/order_line_inventory.dart';
 import 'package:built_value/built_value.dart';
@@ -16,6 +17,7 @@ part 'order_line.g.dart';
 /// OrderLine
 ///
 /// Properties:
+/// * [quantityPolicy]
 /// * [id]
 /// * [lineNumber]
 /// * [listingId]
@@ -46,6 +48,9 @@ part 'order_line.g.dart';
 /// * [inventory]
 @BuiltValue()
 abstract class OrderLine implements Built<OrderLine, OrderLineBuilder> {
+  @BuiltValueField(wireName: r'quantity_policy')
+  QuantityPolicy? get quantityPolicy;
+
   @BuiltValueField(wireName: r'id')
   String get id;
 
@@ -157,6 +162,13 @@ class _$OrderLineSerializer implements PrimitiveSerializer<OrderLine> {
     OrderLine object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.quantityPolicy != null) {
+      yield r'quantity_policy';
+      yield serializers.serialize(
+        object.quantityPolicy,
+        specifiedType: const FullType(QuantityPolicy),
+      );
+    }
     yield r'id';
     yield serializers.serialize(
       object.id,
@@ -322,6 +334,14 @@ class _$OrderLineSerializer implements PrimitiveSerializer<OrderLine> {
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'quantity_policy':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(QuantityPolicy),
+          ) as QuantityPolicy?;
+          if (valueDes == null) continue;
+          result.quantityPolicy.replace(valueDes);
+          break;
         case r'id':
           final valueDes = serializers.deserialize(
             value,

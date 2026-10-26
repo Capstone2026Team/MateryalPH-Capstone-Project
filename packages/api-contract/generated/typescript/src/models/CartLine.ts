@@ -20,6 +20,13 @@ import {
     CartLineCurrentToJSON,
     CartLineCurrentToJSONTyped,
 } from './CartLineCurrent';
+import type { QuantityPolicy } from './QuantityPolicy';
+import {
+    QuantityPolicyFromJSON,
+    QuantityPolicyFromJSONTyped,
+    QuantityPolicyToJSON,
+    QuantityPolicyToJSONTyped,
+} from './QuantityPolicy';
 import type { CartIssue } from './CartIssue';
 import {
     CartIssueFromJSON,
@@ -48,6 +55,10 @@ import {
  * @interface CartLine
  */
 export interface CartLine {
+    /**
+     *
+     */
+    readonly quantityPolicy?: QuantityPolicy;
     /**
      *
      */
@@ -177,6 +188,7 @@ export function CartLineFromJSONTyped(json: any, ignoreDiscriminator: boolean): 
     }
     return {
 
+        'quantityPolicy': json['quantity_policy'] == null ? undefined : QuantityPolicyFromJSON(json['quantity_policy']),
         'id': json['id'],
         'lockVersion': json['lock_version'],
         'listingId': json['listing_id'],
@@ -204,7 +216,7 @@ export function CartLineToJSON(json: any): CartLine {
     return CartLineToJSONTyped(json, false);
 }
 
-export function CartLineToJSONTyped(value?: CartLine | null, ignoreDiscriminator: boolean = false): any {
+export function CartLineToJSONTyped(value?: Omit<CartLine, 'quantityPolicy'> | null, ignoreDiscriminator: boolean = false): any {
     if (value == null) {
         return value;
     }

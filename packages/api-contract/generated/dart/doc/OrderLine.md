@@ -8,6 +8,7 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**quantityPolicy** | [**QuantityPolicy**](QuantityPolicy.md) |  | [optional]
 **id** | **String** |  |
 **lineNumber** | **int** |  |
 **listingId** | **String** |  |

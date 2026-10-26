@@ -51,6 +51,31 @@ final class PhaseTenProjectsTest extends TestCase
         parent::tearDown();
     }
 
+    public function test_gravel_bags_never_satisfy_cubic_meters_without_a_buyer_unit_revision(): void
+    {
+        [$store, , $listing] = $this->pickupStore('Bagged gravel');
+        $gravel = DB::table('materials')->where('code', 'GRAVEL')->first();
+        $bag = DB::table('units')->where('code', 'BAG')->first();
+        $listingRow = DB::table('vendor_listings')->where('id', $listing)->first();
+        DB::table('products')->where('id', $listingRow->product_id)->update(['material_id' => $gravel->id]);
+        DB::table('vendor_listings')->where('id', $listing)->update(['material_category_id' => $gravel->material_category_id]);
+        DB::table('listing_variants')->where('vendor_listing_id', $listing)->update(['unit_id' => $bag->id]);
+        $this->bulk($store->id);
+        $this->buyer();
+        [, $w, $input] = $this->package(extra: ['lines' => [[
+            'name' => 'Crushed gravel', 'material_id' => $gravel->id, 'unit_id' => $gravel->canonical_unit_id,
+            'quantity' => '1.25', 'specifications' => [],
+        ]]]);
+        self::assertSame([], $this->scan($w)['items']);
+        $original = DB::table('work_package_versions')->where('id', $w['current_version_id'])->first();
+        $input['lines'][0]['unit_id'] = $bag->id;
+        $input['lines'][0]['quantity'] = '5';
+        $revised = $this->putJson('/api/v1/buyers/work-packages/'.$w['id'], $input + ['lock_version' => $w['lock_version']], $this->key())->assertOk()->json('data');
+        self::assertNotEmpty($this->scan($revised)['items']);
+        self::assertSame($original->content, DB::table('work_package_versions')->where('id', $original->id)->value('content'));
+        self::assertSame($original->content_hash, DB::table('work_package_versions')->where('id', $original->id)->value('content_hash'));
+    }
+
     private function key(): array
     {
         return ['Idempotency-Key' => (string) Str::uuid7()];

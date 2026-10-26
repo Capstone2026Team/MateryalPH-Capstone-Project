@@ -8,6 +8,8 @@ part of 'project_material_unit.dart';
 
 class _$ProjectMaterialUnit extends ProjectMaterialUnit {
   @override
+  final QuantityPolicy? quantityPolicy;
+  @override
   final String id;
   @override
   final String code;
@@ -21,7 +23,8 @@ class _$ProjectMaterialUnit extends ProjectMaterialUnit {
       (ProjectMaterialUnitBuilder()..update(updates))._build();
 
   _$ProjectMaterialUnit._(
-      {required this.id,
+      {this.quantityPolicy,
+      required this.id,
       required this.code,
       required this.name,
       required this.precision})
@@ -39,6 +42,7 @@ class _$ProjectMaterialUnit extends ProjectMaterialUnit {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is ProjectMaterialUnit &&
+        quantityPolicy == other.quantityPolicy &&
         id == other.id &&
         code == other.code &&
         name == other.name &&
@@ -48,6 +52,7 @@ class _$ProjectMaterialUnit extends ProjectMaterialUnit {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, quantityPolicy.hashCode);
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, code.hashCode);
     _$hash = $jc(_$hash, name.hashCode);
@@ -59,6 +64,7 @@ class _$ProjectMaterialUnit extends ProjectMaterialUnit {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'ProjectMaterialUnit')
+          ..add('quantityPolicy', quantityPolicy)
           ..add('id', id)
           ..add('code', code)
           ..add('name', name)
@@ -70,6 +76,12 @@ class _$ProjectMaterialUnit extends ProjectMaterialUnit {
 class ProjectMaterialUnitBuilder
     implements Builder<ProjectMaterialUnit, ProjectMaterialUnitBuilder> {
   _$ProjectMaterialUnit? _$v;
+
+  QuantityPolicyBuilder? _quantityPolicy;
+  QuantityPolicyBuilder get quantityPolicy =>
+      _$this._quantityPolicy ??= QuantityPolicyBuilder();
+  set quantityPolicy(QuantityPolicyBuilder? quantityPolicy) =>
+      _$this._quantityPolicy = quantityPolicy;
 
   String? _id;
   String? get id => _$this._id;
@@ -94,6 +106,7 @@ class ProjectMaterialUnitBuilder
   ProjectMaterialUnitBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _quantityPolicy = $v.quantityPolicy?.toBuilder();
       _id = $v.id;
       _code = $v.code;
       _name = $v.name;
@@ -117,17 +130,31 @@ class ProjectMaterialUnitBuilder
   ProjectMaterialUnit build() => _build();
 
   _$ProjectMaterialUnit _build() {
-    final _$result = _$v ??
-        _$ProjectMaterialUnit._(
-          id: BuiltValueNullFieldError.checkNotNull(
-              id, r'ProjectMaterialUnit', 'id'),
-          code: BuiltValueNullFieldError.checkNotNull(
-              code, r'ProjectMaterialUnit', 'code'),
-          name: BuiltValueNullFieldError.checkNotNull(
-              name, r'ProjectMaterialUnit', 'name'),
-          precision: BuiltValueNullFieldError.checkNotNull(
-              precision, r'ProjectMaterialUnit', 'precision'),
-        );
+    _$ProjectMaterialUnit _$result;
+    try {
+      _$result = _$v ??
+          _$ProjectMaterialUnit._(
+            quantityPolicy: _quantityPolicy?.build(),
+            id: BuiltValueNullFieldError.checkNotNull(
+                id, r'ProjectMaterialUnit', 'id'),
+            code: BuiltValueNullFieldError.checkNotNull(
+                code, r'ProjectMaterialUnit', 'code'),
+            name: BuiltValueNullFieldError.checkNotNull(
+                name, r'ProjectMaterialUnit', 'name'),
+            precision: BuiltValueNullFieldError.checkNotNull(
+                precision, r'ProjectMaterialUnit', 'precision'),
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'quantityPolicy';
+        _quantityPolicy?.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'ProjectMaterialUnit', _$failedField, e.toString());
+      }
+      rethrow;
+    }
     replace(_$result);
     return _$result;
   }

@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { QuantityPolicy } from './QuantityPolicy';
+import {
+    QuantityPolicyFromJSON,
+    QuantityPolicyFromJSONTyped,
+    QuantityPolicyToJSON,
+    QuantityPolicyToJSONTyped,
+} from './QuantityPolicy';
 import type { CatalogInventory } from './CatalogInventory';
 import {
     CatalogInventoryFromJSON,
@@ -41,6 +48,10 @@ import {
  * @interface CatalogVariant
  */
 export interface CatalogVariant {
+    /**
+     *
+     */
+    readonly quantityPolicy?: QuantityPolicy;
     /**
      *
      */
@@ -164,6 +175,7 @@ export function CatalogVariantFromJSONTyped(json: any, ignoreDiscriminator: bool
     }
     return {
 
+        'quantityPolicy': json['quantity_policy'] == null ? undefined : QuantityPolicyFromJSON(json['quantity_policy']),
         'id': json['id'],
         'sku': json['sku'],
         'label': json['label'] === undefined ? undefined : json['label'] === null ? null : json['label'],
@@ -189,7 +201,7 @@ export function CatalogVariantToJSON(json: any): CatalogVariant {
     return CatalogVariantToJSONTyped(json, false);
 }
 
-export function CatalogVariantToJSONTyped(value?: CatalogVariant | null, ignoreDiscriminator: boolean = false): any {
+export function CatalogVariantToJSONTyped(value?: Omit<CatalogVariant, 'quantityPolicy'> | null, ignoreDiscriminator: boolean = false): any {
     if (value == null) {
         return value;
     }

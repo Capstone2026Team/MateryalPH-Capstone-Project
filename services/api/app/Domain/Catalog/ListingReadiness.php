@@ -80,7 +80,7 @@ final class ListingReadiness
         $listingAttributes = ComparableMappingService::decode($listing->technical_attributes);
         $required = $listing->material_category_id === null ? collect() : DB::table('technical_attribute_definitions')->where('material_category_id', $listing->material_category_id)->where('required', true)->get(['code', 'label']);
 
-        $variants = DB::table('listing_variants as v')->leftJoin('inventory_items as i', 'i.listing_variant_id', '=', 'v.id')->where('v.vendor_listing_id', $listingId)->where('v.active', true)->orderBy('v.sort_order')->get(['v.*', 'i.id as inventory_id']);
+        $variants = DB::table('listing_variants as v')->leftJoin('inventory_items as i', 'i.listing_variant_id', '=', 'v.id')->where('v.vendor_listing_id', $listingId)->where('v.active', true)->orderBy('v.sort_order')->get(['v.*', 'i.id as inventory_id', 'i.quantity_on_hand']);
         $allowedTax = $this->tax->allowedCategories((string) $listing->vendor_organization_id);
         $compatible = $listing->material_id === null ? null : DB::table('material_compatible_units')->where('material_id', $listing->material_id)->pluck('unit_id')->all();
         if ($variants->isEmpty()) {
@@ -88,13 +88,18 @@ final class ListingReadiness
         }
         foreach ($variants as $index => $variant) {
             $row = 'variants.'.$index;
+            $policy = QuantityPolicy::forUnit((string) $variant->unit_id);
+            $quantity = $variant->quantity_on_hand;
+            if ($quantity !== null && ! $policy->valid((string) $quantity, true)) {
+                $block('variants_pricing', $row.'.quantity_on_hand', $policy->message());
+            }
             $attributes = array_merge($listingAttributes, ComparableMappingService::decode($variant->attributes));
             foreach ($required as $definition) {
                 if (! isset($attributes[$definition->code]) || trim((string) $attributes[$definition->code]) === '') {
                     $block('product_details', 'technical_attributes.'.$definition->code, $definition->label.' is required for '.($variant->label ?: $variant->sku).'.');
                 }
             }
-            if ($compatible !== null && $compatible !== [] && ! in_array($variant->unit_id, $compatible, true)) {
+            if ($compatible !== null && ! in_array($variant->unit_id, $compatible, true)) {
                 $block('variants_pricing', $row.'.unit_id', 'Choose a unit compatible with the selected material.');
             }
             // Ready-mixed concrete has no cargo dimensions: the mixer carries its volume, limited by payload.

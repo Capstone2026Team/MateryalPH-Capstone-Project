@@ -8,6 +8,7 @@ use App\Domain\Analytics\Products\ProductViewRecorder;
 use App\Domain\Catalog\ComparableMappingService;
 use App\Domain\Catalog\EligibleOfferQuery;
 use App\Domain\Catalog\ListingTaxPolicy;
+use App\Domain\Catalog\QuantityPolicy;
 use App\Domain\Catalog\ReadyMixedConcrete;
 use App\Domain\Geography\BuyerProfiles;
 use App\Domain\Geography\GeographyScopeResolver;
@@ -78,7 +79,7 @@ final class ListingDetailService
         }
         $rating = $this->facts->productRatings([$listingId])[$listingId] ?? ['average' => null, 'count' => 0];
         $variants = DB::table('listing_variants as v')->join('units as u', 'u.id', '=', 'v.unit_id')->where('v.vendor_listing_id', $listingId)->where('v.active', true)
-            ->orderBy('v.sort_order')->orderBy('v.id')->get(['v.id', 'v.sku', 'v.label', 'v.attributes', 'v.pack_quantity', 'u.code as unit_code', 'u.name as unit_name', 'u.precision as unit_precision', 'v.weight_kg', 'v.length_cm', 'v.width_cm', 'v.height_cm']);
+            ->orderBy('v.sort_order')->orderBy('v.id')->get(['v.id', 'v.sku', 'v.label', 'v.attributes', 'v.pack_quantity', 'u.code as unit_code', 'u.name as unit_name', 'u.dimension', 'u.precision as unit_precision', 'v.weight_kg', 'v.length_cm', 'v.width_cm', 'v.height_cm']);
         $deliveryMaximum = $vendor['delivery_maximum_km'];
         $readyMixed = ReadyMixedConcrete::listing($listingId);
         $this->views->record($buyerId, $listingId, $organizationId);
@@ -133,7 +134,7 @@ final class ListingDetailService
                 $offer = $eligible->get($variant->id);
                 $base = ['variant_id' => (string) $variant->id, 'sku' => (string) $variant->sku, 'label' => $variant->label, 'attributes' => ComparableMappingService::decode($variant->attributes),
                     'unit_code' => (string) $variant->unit_code, 'unit_name' => (string) $variant->unit_name, 'pack_quantity' => StockAvailability::quantity($variant->pack_quantity),
-                    'quantity_step' => CartService::quantityStep((int) $variant->unit_precision)];
+                    'quantity_step' => QuantityPolicy::fromUnit($variant)->step(), 'quantity_policy' => QuantityPolicy::fromUnit($variant)->toArray()];
                 if ($offer === null) {
                     return $base + ['available' => false, 'availability_note' => 'Not currently offered', 'stock_label' => null, 'stock_confirmed_at' => null, 'price' => null, 'volume_tiers' => [], 'best_price' => false, 'comparable' => null];
                 }

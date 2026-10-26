@@ -8,6 +8,10 @@ part of 'chat_draft_line.dart';
 
 class _$ChatDraftLine extends ChatDraftLine {
   @override
+  final String? unitCode;
+  @override
+  final QuantityPolicy? quantityPolicy;
+  @override
   final String? description;
   @override
   final BuiltMap<String, String>? specifications;
@@ -22,7 +26,9 @@ class _$ChatDraftLine extends ChatDraftLine {
       (ChatDraftLineBuilder()..update(updates))._build();
 
   _$ChatDraftLine._(
-      {this.description,
+      {this.unitCode,
+      this.quantityPolicy,
+      this.description,
       this.specifications,
       required this.variantId,
       required this.quantity,
@@ -39,6 +45,8 @@ class _$ChatDraftLine extends ChatDraftLine {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is ChatDraftLine &&
+        unitCode == other.unitCode &&
+        quantityPolicy == other.quantityPolicy &&
         description == other.description &&
         specifications == other.specifications &&
         variantId == other.variantId &&
@@ -49,6 +57,8 @@ class _$ChatDraftLine extends ChatDraftLine {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, unitCode.hashCode);
+    _$hash = $jc(_$hash, quantityPolicy.hashCode);
     _$hash = $jc(_$hash, description.hashCode);
     _$hash = $jc(_$hash, specifications.hashCode);
     _$hash = $jc(_$hash, variantId.hashCode);
@@ -61,6 +71,8 @@ class _$ChatDraftLine extends ChatDraftLine {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'ChatDraftLine')
+          ..add('unitCode', unitCode)
+          ..add('quantityPolicy', quantityPolicy)
           ..add('description', description)
           ..add('specifications', specifications)
           ..add('variantId', variantId)
@@ -73,6 +85,16 @@ class _$ChatDraftLine extends ChatDraftLine {
 class ChatDraftLineBuilder
     implements Builder<ChatDraftLine, ChatDraftLineBuilder> {
   _$ChatDraftLine? _$v;
+
+  String? _unitCode;
+  String? get unitCode => _$this._unitCode;
+  set unitCode(String? unitCode) => _$this._unitCode = unitCode;
+
+  QuantityPolicyBuilder? _quantityPolicy;
+  QuantityPolicyBuilder get quantityPolicy =>
+      _$this._quantityPolicy ??= QuantityPolicyBuilder();
+  set quantityPolicy(QuantityPolicyBuilder? quantityPolicy) =>
+      _$this._quantityPolicy = quantityPolicy;
 
   String? _description;
   String? get description => _$this._description;
@@ -104,6 +126,8 @@ class ChatDraftLineBuilder
   ChatDraftLineBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _unitCode = $v.unitCode;
+      _quantityPolicy = $v.quantityPolicy?.toBuilder();
       _description = $v.description;
       _specifications = $v.specifications?.toBuilder();
       _variantId = $v.variantId;
@@ -132,6 +156,8 @@ class ChatDraftLineBuilder
     try {
       _$result = _$v ??
           _$ChatDraftLine._(
+            unitCode: unitCode,
+            quantityPolicy: _quantityPolicy?.build(),
             description: description,
             specifications: _specifications?.build(),
             variantId: BuiltValueNullFieldError.checkNotNull(
@@ -144,6 +170,9 @@ class ChatDraftLineBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'quantityPolicy';
+        _quantityPolicy?.build();
+
         _$failedField = 'specifications';
         _specifications?.build();
       } catch (e) {

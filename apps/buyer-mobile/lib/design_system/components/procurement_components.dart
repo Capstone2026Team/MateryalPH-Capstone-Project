@@ -1,3 +1,4 @@
+import '../quantity_policy.dart';
 import 'count_badge.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -493,14 +494,16 @@ int stepDecimals(String step) {
 
 /// Whether [text] is a positive quantity with at most [decimals] decimals.
 bool validDecimalQuantity(String text, int decimals) {
-  final pattern = decimals == 0
-      ? RegExp(r'^\d{1,7}$')
-      : RegExp('^\\d{1,7}(\\.\\d{1,$decimals})?\$');
-  return pattern.hasMatch(text.trim()) && (num.tryParse(text.trim()) ?? 0) > 0;
+  if (!validSellingQuantity(text, decimals)) return false;
+  final parts = text.trim().split('.');
+  final whole = BigInt.parse(parts.first);
+  return whole < BigInt.from(1000000) ||
+      (whole == BigInt.from(1000000) &&
+          (parts.length == 1 || !RegExp(r'[1-9]').hasMatch(parts.last)));
 }
 
 /// Quantity entry for units sold in fractions, such as ready-mixed concrete in
-/// m³. Reports only valid values; [commitOnSubmit] waits for Done so a cart line
+/// m³. Edits report their text for parent validation; [commitOnSubmit] waits for Done so a cart line
 /// is not updated on every keystroke.
 class DecimalQuantityField extends StatefulWidget {
   const DecimalQuantityField({
@@ -537,6 +540,13 @@ class _DecimalQuantityFieldState extends State<DecimalQuantityField> {
   @override
   void didUpdateWidget(DecimalQuantityField old) {
     super.didUpdateWidget(old);
+    if (widget.decimals != old.decimals) {
+      _error =
+          _text.text.isEmpty ||
+              validDecimalQuantity(_text.text, widget.decimals)
+          ? null
+          : 'Review the quantity for this selling unit.';
+    }
     final current = num.tryParse(_text.text.trim());
     if (widget.value != old.value && num.tryParse(widget.value) != current) {
       _text.text = widget.value;
@@ -556,7 +566,7 @@ class _DecimalQuantityFieldState extends State<DecimalQuantityField> {
           ? null
           : 'Enter an amount above zero with up to ${widget.decimals} decimal place${widget.decimals == 1 ? '' : 's'}.',
     );
-    if (valid && (commit || !widget.commitOnSubmit)) {
+    if (!widget.commitOnSubmit || (valid && commit)) {
       widget.onChanged(text.trim());
     }
   }
@@ -567,7 +577,9 @@ class _DecimalQuantityFieldState extends State<DecimalQuantityField> {
     child: TextField(
       controller: _text,
       enabled: widget.enabled,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      keyboardType: TextInputType.numberWithOptions(
+        decimal: widget.decimals > 0,
+      ),
       textInputAction: TextInputAction.done,
       decoration: InputDecoration(
         labelText: widget.label,

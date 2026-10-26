@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`quantityPolicy` | [QuantityPolicy](QuantityPolicy.md)
 `id` | string
 `code` | string
 `name` | string
@@ -18,6 +19,7 @@ import type { ProjectMaterialUnit } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "quantityPolicy": null,
   "id": null,
   "code": null,
   "name": null,

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Orders;
 
 use App\Domain\Catalog\CatalogAccess;
+use App\Domain\Catalog\QuantityPolicy;
 use App\Domain\Catalog\ReadyMixedConcrete;
 use App\Domain\Enforcement\BuyerCommerceRestriction;
 use App\Domain\Finance\Money;
@@ -277,14 +278,20 @@ final class OrderSubmissionService
         $variantIds = array_column($lines, 'variant_id');
         $facts = DB::table('listing_variants as v')->join('vendor_listings as l', 'l.id', '=', 'v.vendor_listing_id')->join('products as p', 'p.id', '=', 'l.product_id')
             ->join('units as u', 'u.id', '=', 'v.unit_id')->leftJoin('materials as m', 'm.id', '=', 'p.material_id')->leftJoin('material_categories as c', 'c.id', '=', 'l.material_category_id')
-            ->whereIn('v.id', $variantIds)->get(['v.id', 'v.sku', 'v.unit_id', 'v.weight_kg', 'v.length_cm', 'v.width_cm', 'v.height_cm', 'u.precision', 'u.code as unit_code', 'l.vendor_sku', 'l.regulated',
+            ->whereIn('v.id', $variantIds)->get(['v.id', 'v.sku', 'v.unit_id', 'v.weight_kg', 'v.length_cm', 'v.width_cm', 'v.height_cm', 'u.dimension', 'u.precision', 'u.code as unit_code', 'l.vendor_sku', 'l.regulated',
                 'l.compliance_status', 'l.current_compliance_submission_id', 'l.publication_version', 'p.brand', 'm.name as material_name', 'm.code as material_code', 'c.name as category_name'])->keyBy('id');
         $tiers = $this->facts->volumeTiers($variantIds);
         $materials = 0;
         $rows = [];
         foreach ($lines as $index => $line) {
             $fact = $facts->get($line['variant_id']);
+            if ($fact === null) {
+                throw new AuthenticationException('LINE_NOT_ELIGIBLE', 'A product is no longer available. Review the cart.', 409);
+            }
             $quantity = StockAvailability::quantity($line['quantity']);
+            if (! QuantityPolicy::fromUnit($fact)->valid($quantity)) {
+                throw new AuthenticationException('QUANTITY_INVALID', 'Review the quantity for this selling unit before checkout.', 422);
+            }
             $unit = (int) $line['current']['applied_unit_price_centavos'];
             $gross = Money::lineAmount($quantity, $unit);
             $materials += $gross;
@@ -297,7 +304,7 @@ final class OrderSubmissionService
                 'volume_tiers' => json_encode($tiers[$line['variant_id']] ?? [], JSON_THROW_ON_ERROR),
                 'snapshot' => json_encode([
                     'display_name' => $line['display_name'], 'variant_label' => $line['variant_label'], 'sku' => $fact->sku, 'vendor_sku' => $fact->vendor_sku,
-                    'unit_code' => $line['unit_code'], 'unit_name' => $line['unit_name'], 'unit_precision' => (int) $fact->precision, 'quantity_step' => $line['quantity_step'],
+                    'unit_code' => $line['unit_code'], 'unit_name' => $line['unit_name'], 'unit_precision' => QuantityPolicy::fromUnit($fact)->precision, 'quantity_step' => $line['quantity_step'], 'quantity_policy' => QuantityPolicy::fromUnit($fact)->toArray(),
                     'brand' => $fact->brand, 'material' => $fact->material_name, 'category' => $fact->category_name, 'image' => $line['image'],
                     'regulated' => (bool) $fact->regulated, 'compliance_status' => $fact->compliance_status, 'compliance_submission_id' => $fact->current_compliance_submission_id,
                     'publication_version' => (int) $fact->publication_version, 'stock_label_at_submission' => $line['current']['stock_label'],

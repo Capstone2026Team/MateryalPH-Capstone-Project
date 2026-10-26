@@ -8,6 +8,8 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**unitCode** | **String** |  | [optional]
+**quantityPolicy** | [**QuantityPolicy**](QuantityPolicy.md) |  | [optional]
 **description** | **String** |  | [optional]
 **specifications** | **BuiltMap&lt;String, String&gt;** |  | [optional]
 **variantId** | **String** |  |

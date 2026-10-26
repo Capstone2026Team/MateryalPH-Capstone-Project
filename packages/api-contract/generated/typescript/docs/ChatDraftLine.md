@@ -6,6 +6,8 @@
 
 Name | Type
 ------------ | -------------
+`unitCode` | string
+`quantityPolicy` | [QuantityPolicy](QuantityPolicy.md)
 `description` | string
 `specifications` | { [key: string]: string; }
 `variantId` | string
@@ -19,6 +21,8 @@ import type { ChatDraftLine } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "unitCode": null,
+  "quantityPolicy": null,
   "description": null,
   "specifications": null,
   "variantId": null,

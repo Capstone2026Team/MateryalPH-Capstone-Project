@@ -13,12 +13,28 @@
  */
 
 import { mapValues } from '../runtime';
+import type { QuantityPolicy } from './QuantityPolicy';
+import {
+    QuantityPolicyFromJSON,
+    QuantityPolicyFromJSONTyped,
+    QuantityPolicyToJSON,
+    QuantityPolicyToJSONTyped,
+} from './QuantityPolicy';
+
 /**
  *
  * @export
  * @interface ChatDraftLine
  */
 export interface ChatDraftLine {
+    /**
+     *
+     */
+    readonly unitCode?: string;
+    /**
+     *
+     */
+    readonly quantityPolicy?: QuantityPolicy;
     /**
      *
      */
@@ -61,6 +77,8 @@ export function ChatDraftLineFromJSONTyped(json: any, ignoreDiscriminator: boole
     }
     return {
 
+        'unitCode': json['unit_code'] == null ? undefined : json['unit_code'],
+        'quantityPolicy': json['quantity_policy'] == null ? undefined : QuantityPolicyFromJSON(json['quantity_policy']),
         'description': json['description'] == null ? undefined : json['description'],
         'specifications': json['specifications'] == null ? undefined : json['specifications'],
         'variantId': json['variant_id'],
@@ -73,7 +91,7 @@ export function ChatDraftLineToJSON(json: any): ChatDraftLine {
     return ChatDraftLineToJSONTyped(json, false);
 }
 
-export function ChatDraftLineToJSONTyped(value?: ChatDraftLine | null, ignoreDiscriminator: boolean = false): any {
+export function ChatDraftLineToJSONTyped(value?: Omit<ChatDraftLine, 'unitCode'|'quantityPolicy'> | null, ignoreDiscriminator: boolean = false): any {
     if (value == null) {
         return value;
     }

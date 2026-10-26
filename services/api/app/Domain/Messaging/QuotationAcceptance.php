@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Messaging;
 
+use App\Domain\Catalog\QuantityPolicy;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Inventory\InventoryLedgerWriter;
 use App\Domain\Inventory\InventoryLocks;
@@ -15,6 +16,7 @@ use App\Domain\Orders\OrderDeliveryPlanner;
 use App\Domain\Orders\OrderEligibility;
 use App\Domain\Orders\OrderTransitionService;
 use App\Domain\Payments\PaymentMethodPolicy;
+use App\Domain\Projects\ProjectArrangementTerms;
 use App\Domain\Projects\ProjectBudget;
 use App\Domain\Projects\ProjectInquiryService;
 use App\Domain\Vendors\VendorDeliveryEligibility;
@@ -53,6 +55,11 @@ final class QuotationAcceptance
         }
         $currentTax = DB::table('vendor_tax_profiles')->where('vendor_organization_id', $org->id)->value('current_version_id');
         foreach ($content['lines'] as $line) {
+            $unitId = DB::table('listing_variants')->where('id', $line['variant_id'])->value('unit_id');
+            $policy = QuantityPolicy::historical($line);
+            if ($unitId !== $line['unit_id'] || $policy === null || ! $policy->valid((string) $line['quantity'])) {
+                throw new AuthenticationException('QUOTATION_REVALIDATION_REQUIRED', 'The selling unit or quantity needs review. Ask the Vendor for a new quotation version.', 409);
+            }
             if ($line['source_tax_version_id'] !== $currentTax) {
                 throw new AuthenticationException('QUOTATION_REVALIDATION_REQUIRED', 'The tax profile changed. Ask the Vendor for a new version.', 409);
             }
@@ -62,6 +69,7 @@ final class QuotationAcceptance
         }
         $nrpc = $content['nrpc'];
         $reference = json_decode((string) $c->locked_reference, true);
+        ProjectArrangementTerms::allocate($c, $content['lines']);
         $arrangementId = $reference['arrangement_id'] ?? null;
         $memberId = $reference['arrangement_vendor_id'] ?? null;
         $package = null;

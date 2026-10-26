@@ -8,6 +8,8 @@ part of 'chat_quotation_line.dart';
 
 class _$ChatQuotationLine extends ChatQuotationLine {
   @override
+  final QuantityPolicy? quantityPolicy;
+  @override
   final String variantId;
   @override
   final String quantity;
@@ -35,7 +37,8 @@ class _$ChatQuotationLine extends ChatQuotationLine {
       (ChatQuotationLineBuilder()..update(updates))._build();
 
   _$ChatQuotationLine._(
-      {required this.variantId,
+      {this.quantityPolicy,
+      required this.variantId,
       required this.quantity,
       required this.unitPriceCentavos,
       required this.description,
@@ -59,6 +62,7 @@ class _$ChatQuotationLine extends ChatQuotationLine {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is ChatQuotationLine &&
+        quantityPolicy == other.quantityPolicy &&
         variantId == other.variantId &&
         quantity == other.quantity &&
         unitPriceCentavos == other.unitPriceCentavos &&
@@ -75,6 +79,7 @@ class _$ChatQuotationLine extends ChatQuotationLine {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, quantityPolicy.hashCode);
     _$hash = $jc(_$hash, variantId.hashCode);
     _$hash = $jc(_$hash, quantity.hashCode);
     _$hash = $jc(_$hash, unitPriceCentavos.hashCode);
@@ -93,6 +98,7 @@ class _$ChatQuotationLine extends ChatQuotationLine {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'ChatQuotationLine')
+          ..add('quantityPolicy', quantityPolicy)
           ..add('variantId', variantId)
           ..add('quantity', quantity)
           ..add('unitPriceCentavos', unitPriceCentavos)
@@ -111,6 +117,12 @@ class _$ChatQuotationLine extends ChatQuotationLine {
 class ChatQuotationLineBuilder
     implements Builder<ChatQuotationLine, ChatQuotationLineBuilder> {
   _$ChatQuotationLine? _$v;
+
+  QuantityPolicyBuilder? _quantityPolicy;
+  QuantityPolicyBuilder get quantityPolicy =>
+      _$this._quantityPolicy ??= QuantityPolicyBuilder();
+  set quantityPolicy(QuantityPolicyBuilder? quantityPolicy) =>
+      _$this._quantityPolicy = quantityPolicy;
 
   String? _variantId;
   String? get variantId => _$this._variantId;
@@ -168,6 +180,7 @@ class ChatQuotationLineBuilder
   ChatQuotationLineBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _quantityPolicy = $v.quantityPolicy?.toBuilder();
       _variantId = $v.variantId;
       _quantity = $v.quantity;
       _unitPriceCentavos = $v.unitPriceCentavos;
@@ -202,6 +215,7 @@ class ChatQuotationLineBuilder
     try {
       _$result = _$v ??
           _$ChatQuotationLine._(
+            quantityPolicy: _quantityPolicy?.build(),
             variantId: BuiltValueNullFieldError.checkNotNull(
                 variantId, r'ChatQuotationLine', 'variantId'),
             quantity: BuiltValueNullFieldError.checkNotNull(
@@ -227,6 +241,9 @@ class ChatQuotationLineBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'quantityPolicy';
+        _quantityPolicy?.build();
+
         _$failedField = 'specifications';
         _specifications?.build();
       } catch (e) {

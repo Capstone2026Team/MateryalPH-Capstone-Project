@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Projects;
 
 use App\Domain\Catalog\CatalogAccess;
+use App\Domain\Catalog\QuantityPolicy;
 use App\Domain\Geography\BuyerProfiles;
 use App\Domain\Geography\RadiusPolicy;
 use App\Domain\Identity\AuditRecorder;
@@ -364,7 +365,7 @@ final class ProjectService
                 $material = $unlisted ? null : $materials->get($line['material_id']);
                 // An unlisted material may use any normalized unit; a catalog material only its compatible units.
                 $unitAllowed = $unit !== null && ($unlisted || ($material !== null && DB::table('material_compatible_units')->where('material_id', $line['material_id'])->where('unit_id', $line['unit_id'])->exists()));
-                if (! $unitAllowed || ($unlisted && trim((string) $line['name']) === '') || bccomp($line['quantity'], bcadd($line['quantity'], '0', (int) $unit->precision), 4) !== 0) {
+                if (! $unitAllowed || ($unlisted && trim((string) $line['name']) === '') || ! QuantityPolicy::fromUnit($unit)->valid((string) $line['quantity'])) {
                     throw new AuthenticationException('INVALID_MATERIAL_LINE', 'Use a known or named material, a normalized unit and supported quantity precision.', 422, ['line' => $i + 1]);
                 }
                 $line['material_id'] = $unlisted ? null : $line['material_id'];
@@ -376,6 +377,7 @@ final class ProjectService
                 $line['material_kind'] = $unlisted ? 'UNLISTED' : 'CATALOG';
                 $line['id'] = (string) Str::uuid7();
                 $line['unit_code'] = $unit->code;
+                $line['quantity_policy'] = QuantityPolicy::fromUnit($unit)->toArray();
             }
             unset($line);
             $content = array_intersect_key($input, array_flip(['name', 'description', 'budget_centavos', 'site_id', 'radius_km', 'fulfillment_method', 'payment_method', 'site_contact', 'access_instructions']));

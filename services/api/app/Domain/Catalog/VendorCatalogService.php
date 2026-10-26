@@ -51,7 +51,7 @@ final class VendorCatalogService
 
         return [
             'categories' => DB::table('material_categories')->where('active', true)->orderBy('sort_order')->orderBy('name')->get(['id', 'code', 'name'])->all(),
-            'units' => DB::table('units')->orderBy('name')->get(['id', 'code', 'name', 'dimension', 'precision'])->all(),
+            'units' => DB::table('units')->orderBy('name')->get(['id', 'code', 'name', 'dimension', 'precision'])->map(QuantityPolicy::present(...))->all(),
             'tags' => DB::table('material_tags')->orderBy('name')->get(['id', 'code', 'name'])->all(),
             'attribute_definitions' => DB::table('technical_attribute_definitions')->orderBy('material_category_id')->orderBy('sort_order')->get(['id', 'material_category_id', 'code', 'label', 'value_type', 'required', 'allowed_values', 'unit_code', 'comparability_key'])
                 ->map(fn (object $row): array => ['id' => $row->id, 'material_category_id' => $row->material_category_id, 'code' => $row->code, 'label' => $row->label, 'value_type' => $row->value_type, 'required' => (bool) $row->required, 'allowed_values' => $row->allowed_values === null ? null : ComparableMappingService::decode($row->allowed_values), 'unit_code' => $row->unit_code, 'comparability_key' => (bool) $row->comparability_key])->all(),
@@ -556,7 +556,7 @@ final class VendorCatalogService
         $permissions = $this->accounts->resolve($request->user())['permissions'];
         $variants = DB::table('listing_variants as v')->join('units as u', 'u.id', '=', 'v.unit_id')->leftJoin('inventory_items as i', 'i.listing_variant_id', '=', 'v.id')
             ->where('v.vendor_listing_id', $listing->id)->orderByDesc('v.active')->orderBy('v.sort_order')->orderBy('v.id')
-            ->get(['v.*', 'u.code as unit_code', 'i.quantity_on_hand', 'i.hard_reserved_quantity', 'i.soft_held_quantity', 'i.reorder_level', 'i.confirmed_at']);
+            ->get(['v.*', 'u.code as unit_code', 'u.dimension', 'u.precision', 'i.quantity_on_hand', 'i.hard_reserved_quantity', 'i.soft_held_quantity', 'i.reorder_level', 'i.confirmed_at']);
         $submissions = DB::table('compliance_submissions')->where('vendor_listing_id', $listing->id)->orderByDesc('version')->limit(20)->get();
         $readiness = $this->readiness->evaluate((string) $listing->id);
 
@@ -601,7 +601,7 @@ final class VendorCatalogService
         $reorder = $variant->reorder_level === null ? null : StockAvailability::quantity($variant->reorder_level);
 
         return [
-            'id' => $variant->id, 'sku' => $variant->sku, 'label' => $variant->label, 'unit_id' => $variant->unit_id, 'unit_code' => $variant->unit_code,
+            'id' => $variant->id, 'sku' => $variant->sku, 'label' => $variant->label, 'unit_id' => $variant->unit_id, 'unit_code' => $variant->unit_code, 'quantity_policy' => QuantityPolicy::fromUnit($variant)->toArray(),
             'pack_quantity' => (string) $variant->pack_quantity, 'attributes' => ComparableMappingService::decode($variant->attributes), 'active' => (bool) $variant->active,
             'weight_kg' => $variant->weight_kg === null ? null : (string) $variant->weight_kg, 'length_cm' => $variant->length_cm === null ? null : (string) $variant->length_cm,
             'width_cm' => $variant->width_cm === null ? null : (string) $variant->width_cm, 'height_cm' => $variant->height_cm === null ? null : (string) $variant->height_cm,
@@ -717,7 +717,8 @@ final class VendorCatalogService
         if (count($rows) > self::MAX_VARIANTS) {
             $errors['variants'] = ['A listing can have up to '.self::MAX_VARIANTS.' variants.'];
         }
-        $units = DB::table('units')->pluck('id')->all();
+        $unitRows = DB::table('units')->get()->keyBy('id');
+        $units = $unitRows->keys()->all();
         $materialId = DB::table('products')->where('id', $listing->product_id)->value('material_id');
         $compatible = $materialId === null ? [] : DB::table('material_compatible_units')->where('material_id', $materialId)->pluck('unit_id')->all();
         $allowedTax = $this->tax->allowedCategories((string) $listing->vendor_organization_id);
@@ -738,8 +739,22 @@ final class VendorCatalogService
             $skus[] = $sku;
             if (! in_array($row['unit_id'] ?? null, $units, true)) {
                 $add('unit_id', 'Choose a sale unit.');
-            } elseif ($compatible !== [] && ! in_array($row['unit_id'], $compatible, true)) {
+            } elseif ($materialId !== null && ! in_array($row['unit_id'], $compatible, true)) {
                 $add('unit_id', 'Choose a unit compatible with the selected material.');
+            }
+            $policy = isset($row['unit_id']) && $unitRows->has($row['unit_id']) ? QuantityPolicy::fromUnit($unitRows->get($row['unit_id'])) : null;
+            if (isset($row['quantity_on_hand']) && $policy !== null && ! $policy->valid((string) $row['quantity_on_hand'], true)) {
+                $add('quantity_on_hand', $policy->message());
+            }
+            if (isset($row['id'])) {
+                $oldUnit = DB::table('listing_variants')->where('id', $row['id'])->value('unit_id');
+                if ($oldUnit !== null && $oldUnit !== ($row['unit_id'] ?? null)
+                    && (DB::table('inventory_items')->where('listing_variant_id', $row['id'])->exists()
+                        || DB::table('order_lines')->where('listing_variant_id', $row['id'])->exists()
+                        || DB::table('quotation_lines')->where('listing_variant_id', $row['id'])->exists()
+                        || DB::table('listing_publication_snapshots')->where('vendor_listing_id', $listing->id)->whereJsonContains('snapshot->variants', [['variant_id' => $row['id']]])->exists())) {
+                    $add('unit_id', 'Create a replacement variant to change the selling unit of recorded stock or commercial history.');
+                }
             }
             if (! is_numeric($row['pack_quantity'] ?? null) || bccomp((string) $row['pack_quantity'], '0', 4) <= 0) {
                 $add('pack_quantity', 'Enter a pack quantity greater than zero.');
@@ -764,7 +779,7 @@ final class VendorCatalogService
                 $add('quantity_on_hand', 'Enter a counted quantity of zero or more, with up to four decimals.');
             }
             $ordinary = is_int($row['price_centavos'] ?? null) && $row['price_centavos'] > 0 ? $row['price_centavos'] : null;
-            foreach (VolumePricing::errors($this->requestedTiers($row), $ordinary) as $field => $messages) {
+            foreach (VolumePricing::errors($this->requestedTiers($row), $ordinary, $policy) as $field => $messages) {
                 foreach ($messages as $message) {
                     $add($field === 'tiers' ? 'volume_tiers' : 'volume_tiers.'.$field, $message);
                 }

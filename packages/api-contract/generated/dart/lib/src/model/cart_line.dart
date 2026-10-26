@@ -7,6 +7,7 @@ import 'package:materyalph_api_client/src/model/cart_line_current.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/listing_image.dart';
 import 'package:materyalph_api_client/src/model/cart_issue.dart';
+import 'package:materyalph_api_client/src/model/quantity_policy.dart';
 import 'package:materyalph_api_client/src/model/cart_line_snapshot.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -16,6 +17,7 @@ part 'cart_line.g.dart';
 /// CartLine
 ///
 /// Properties:
+/// * [quantityPolicy]
 /// * [id]
 /// * [lockVersion]
 /// * [listingId]
@@ -38,6 +40,9 @@ part 'cart_line.g.dart';
 /// * [readyMixedConcrete] - Ready-mixed concrete; its Vendor group is Site Delivery only and Self-Pickup adds a SITE_DELIVERY_REQUIRED issue.
 @BuiltValue()
 abstract class CartLine implements Built<CartLine, CartLineBuilder> {
+  @BuiltValueField(wireName: r'quantity_policy')
+  QuantityPolicy? get quantityPolicy;
+
   @BuiltValueField(wireName: r'id')
   String get id;
 
@@ -125,6 +130,13 @@ class _$CartLineSerializer implements PrimitiveSerializer<CartLine> {
     CartLine object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.quantityPolicy != null) {
+      yield r'quantity_policy';
+      yield serializers.serialize(
+        object.quantityPolicy,
+        specifiedType: const FullType(QuantityPolicy),
+      );
+    }
     yield r'id';
     yield serializers.serialize(
       object.id,
@@ -252,6 +264,14 @@ class _$CartLineSerializer implements PrimitiveSerializer<CartLine> {
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'quantity_policy':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(QuantityPolicy),
+          ) as QuantityPolicy?;
+          if (valueDes == null) continue;
+          result.quantityPolicy.replace(valueDes);
+          break;
         case r'id':
           final valueDes = serializers.deserialize(
             value,

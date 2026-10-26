@@ -1,3 +1,4 @@
+import '../../design_system/quantity_policy.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -621,7 +622,7 @@ class _LineTile extends StatelessWidget {
                   DecimalQuantityField(
                     label: line.readyMixedConcrete
                         ? 'Order volume (m³)'
-                        : 'Quantity',
+                        : sellingQuantityLabel(line.unitCode),
                     value: formatQuantity(line.quantity),
                     unitName: line.unitName,
                     decimals: stepDecimals(line.quantityStep),

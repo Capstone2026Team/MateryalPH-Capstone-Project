@@ -948,6 +948,7 @@ export 'package:materyalph_api_client/src/model/public_store_list_envelope_meta.
 export 'package:materyalph_api_client/src/model/public_store_profile.dart';
 export 'package:materyalph_api_client/src/model/public_store_profile_envelope.dart';
 export 'package:materyalph_api_client/src/model/public_store_summary.dart';
+export 'package:materyalph_api_client/src/model/quantity_policy.dart';
 export 'package:materyalph_api_client/src/model/radius_expansion.dart';
 export 'package:materyalph_api_client/src/model/radius_km.dart';
 export 'package:materyalph_api_client/src/model/ranking_component.dart';

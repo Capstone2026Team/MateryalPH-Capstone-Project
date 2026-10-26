@@ -1,13 +1,14 @@
 import { useId, useState } from 'react'
-import type { ChatDraftLine } from '@materyalph/api-client-ts'
+import type { ChatDraftLine, QuantityPolicy } from '@materyalph/api-client-ts'
 import { ChevronDown, Trash2 } from 'lucide-react'
 import { Button } from './button'
 import { Field } from './field'
+import { QuantityField } from './quantity-field'
 import { MoneyField } from './money-field'
 import { formatPesoCentavos } from './order-patterns'
 import { SpecificationFields } from './specification-fields'
 
-type MaterialDetails = { variantLabel: string; specifications: Record<string, string> }
+type MaterialDetails = { variantLabel: string; specifications: Record<string, string>; unitCode?: string; quantityPolicy?: QuantityPolicy | undefined }
 
 /** Compact material rows with one optional details editor open at a time. */
 export function QuotationMaterialsEditor({ lines, names, productDetails, disabled = false, onChange, onRemove }: {
@@ -42,7 +43,7 @@ export function QuotationMaterialsEditor({ lines, names, productDetails, disable
               <p className="mt-0.5 truncate text-xs text-text-secondary" title={preview}>{line.unitPriceCentavos > 0 ? formatPesoCentavos(line.unitPriceCentavos) : 'Enter a unit price'}{preview ? ` · ${preview}` : ''}</p>
             </div>
             <div className="col-start-1 row-start-2 min-w-0 sm:col-start-2 sm:row-start-1 sm:[&_label]:sr-only">
-              <Field label="Quantity" aria-label={`Quantity for ${name}`} disabled={disabled} inputMode="decimal" value={line.quantity} onChange={event => onChange(line.variantId, { quantity: event.target.value })} />
+              <QuantityField unitCode={details?.unitCode ?? line.unitCode ?? ''} policy={details?.quantityPolicy ?? line.quantityPolicy} label={details?.unitCode || line.unitCode ? undefined : 'Quantity'} aria-label={`Quantity for ${name}`} disabled={disabled} inputMode="decimal" value={line.quantity} onChange={event => onChange(line.variantId, { quantity: event.target.value })} />
             </div>
             <div className="col-span-2 col-start-2 row-start-2 min-w-0 sm:col-span-1 sm:col-start-3 sm:row-start-1 sm:[&_label]:sr-only">
               <MoneyField label="Unit price (₱)" aria-label={`Unit price in pesos for ${name}`} disabled={disabled} valueCentavos={line.unitPriceCentavos > 0 ? line.unitPriceCentavos : null} minCentavos={1} maxCentavos={100000000000} onChange={value => onChange(line.variantId, { unitPriceCentavos: value ?? 0 })} />

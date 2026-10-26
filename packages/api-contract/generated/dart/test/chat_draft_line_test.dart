@@ -7,6 +7,16 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(ChatDraftLine, () {
+    // String unitCode
+    test('to test the property `unitCode`', () async {
+      // TODO
+    });
+
+    // QuantityPolicy quantityPolicy
+    test('to test the property `quantityPolicy`', () async {
+      // TODO
+    });
+
     // String description
     test('to test the property `description`', () async {
       // TODO

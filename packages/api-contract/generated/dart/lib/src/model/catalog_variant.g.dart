@@ -137,6 +137,8 @@ class _$CatalogVariantComparabilityEnumSerializer
 
 class _$CatalogVariant extends CatalogVariant {
   @override
+  final QuantityPolicy? quantityPolicy;
+  @override
   final String id;
   @override
   final String sku;
@@ -177,7 +179,8 @@ class _$CatalogVariant extends CatalogVariant {
       (CatalogVariantBuilder()..update(updates))._build();
 
   _$CatalogVariant._(
-      {required this.id,
+      {this.quantityPolicy,
+      required this.id,
       required this.sku,
       this.label,
       required this.unitId,
@@ -207,6 +210,7 @@ class _$CatalogVariant extends CatalogVariant {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is CatalogVariant &&
+        quantityPolicy == other.quantityPolicy &&
         id == other.id &&
         sku == other.sku &&
         label == other.label &&
@@ -230,6 +234,7 @@ class _$CatalogVariant extends CatalogVariant {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, quantityPolicy.hashCode);
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, sku.hashCode);
     _$hash = $jc(_$hash, label.hashCode);
@@ -255,6 +260,7 @@ class _$CatalogVariant extends CatalogVariant {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'CatalogVariant')
+          ..add('quantityPolicy', quantityPolicy)
           ..add('id', id)
           ..add('sku', sku)
           ..add('label', label)
@@ -280,6 +286,12 @@ class _$CatalogVariant extends CatalogVariant {
 class CatalogVariantBuilder
     implements Builder<CatalogVariant, CatalogVariantBuilder> {
   _$CatalogVariant? _$v;
+
+  QuantityPolicyBuilder? _quantityPolicy;
+  QuantityPolicyBuilder get quantityPolicy =>
+      _$this._quantityPolicy ??= QuantityPolicyBuilder();
+  set quantityPolicy(QuantityPolicyBuilder? quantityPolicy) =>
+      _$this._quantityPolicy = quantityPolicy;
 
   String? _id;
   String? get id => _$this._id;
@@ -370,6 +382,7 @@ class CatalogVariantBuilder
   CatalogVariantBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _quantityPolicy = $v.quantityPolicy?.toBuilder();
       _id = $v.id;
       _sku = $v.sku;
       _label = $v.label;
@@ -411,6 +424,7 @@ class CatalogVariantBuilder
     try {
       _$result = _$v ??
           _$CatalogVariant._(
+            quantityPolicy: _quantityPolicy?.build(),
             id: BuiltValueNullFieldError.checkNotNull(
                 id, r'CatalogVariant', 'id'),
             sku: BuiltValueNullFieldError.checkNotNull(
@@ -442,6 +456,9 @@ class CatalogVariantBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'quantityPolicy';
+        _quantityPolicy?.build();
+
         _$failedField = 'attributes';
         attributes.build();
 

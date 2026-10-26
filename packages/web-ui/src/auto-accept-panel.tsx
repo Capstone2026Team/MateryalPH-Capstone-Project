@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { CircleOff, PauseCircle, PlayCircle, ShieldCheck } from 'lucide-react'
 import { Button } from './button'
 import { ConfirmDialog } from './confirm-dialog'
@@ -23,8 +23,14 @@ export function AutoAcceptPanel({ policy, unit, canConfigure, canUpdateAllotment
   const [values, setValues] = useState<AutoAcceptPanelValues>(initial)
   const [confirmResume, setConfirmResume] = useState(false)
   const switchId = useId()
-  // A saved policy replaces the draft so the form always starts from the current version.
-  useEffect(() => { setValues(initial()) }, [policy.status, policy.remainingAllotment, policy.maxUnitCount, policy.maxOrderAmountPesos]) // eslint-disable-line react-hooks/exhaustive-deps
+  const policySignature = JSON.stringify([policy.status, policy.remainingAllotment, policy.maxUnitCount, policy.maxOrderAmountPesos])
+  const savedPolicy = useRef(policySignature)
+  // Only changed saved values replace the draft. A delayed mount effect must not erase typing.
+  useEffect(() => {
+    if (savedPolicy.current === policySignature) return
+    savedPolicy.current = policySignature
+    setValues(initial())
+  }, [policySignature]) // eslint-disable-line react-hooks/exhaustive-deps
   const state = policy.status === 'ACTIVE'
     ? { icon: PlayCircle, text: 'Active — eligible Item-Based orders are accepted automatically', className: 'text-status-success' }
     : policy.status === 'PAUSED'

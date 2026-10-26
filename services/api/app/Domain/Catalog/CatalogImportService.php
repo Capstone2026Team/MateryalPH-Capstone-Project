@@ -207,7 +207,7 @@ final class CatalogImportService
             $unitId = $units[strtoupper($payload['unit_code'])] ?? null;
             if ($payload['unit_code'] !== '' && $unitId === null) {
                 $error('unit_code', 'Unknown unit code.');
-            } elseif ($material !== null && $unitId !== null && ($compatible[$material->id] ?? []) !== [] && ! in_array($unitId, $compatible[$material->id], true)) {
+            } elseif ($material !== null && $unitId !== null && ! in_array($unitId, $compatible[$material->id] ?? [], true)) {
                 $error('unit_code', 'This unit is not compatible with the material.');
             }
             if ($payload['pack_quantity'] !== '' && (! is_numeric($payload['pack_quantity']) || (float) $payload['pack_quantity'] <= 0)) {
@@ -232,6 +232,9 @@ final class CatalogImportService
             }
             if ($payload['quantity_on_hand'] !== '' && preg_match('/^\d{1,14}(\.\d{1,4})?$/', $payload['quantity_on_hand']) !== 1) {
                 $error('quantity_on_hand', 'Enter a counted quantity of zero or more, with up to four decimals.');
+            }
+            if ($unitId !== null && $payload['quantity_on_hand'] !== '' && ! QuantityPolicy::forUnit((string) $unitId)->valid($payload['quantity_on_hand'], true)) {
+                $error('quantity_on_hand', QuantityPolicy::forUnit((string) $unitId)->message());
             }
             $result[] = ['row_number' => $rowNumbers[$index] ?? $index + 2, 'payload' => $payload, 'errors' => $errors];
         }

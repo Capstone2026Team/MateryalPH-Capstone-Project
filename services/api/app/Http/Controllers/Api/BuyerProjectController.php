@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Domain\Catalog\EligibleOfferQuery;
 use App\Domain\Catalog\MaterialSearch;
+use App\Domain\Catalog\QuantityPolicy;
 use App\Domain\Geography\BuyerProfiles;
 use App\Domain\Geography\RadiusPolicy;
 use App\Domain\Identity\AuthenticationException;
@@ -323,7 +324,7 @@ final class BuyerProjectController extends Controller
             ->get(['material_category_id', 'code', 'label', 'value_type', 'allowed_values', 'unit_code'])->groupBy('material_category_id');
         $offered = $this->offeredValues(array_column($matches, 'id'));
         foreach ($matches as &$match) {
-            $match['compatible_units'] = DB::table('material_compatible_units as m')->join('units as u', 'u.id', '=', 'm.unit_id')->where('m.material_id', $match['id'])->orderBy('u.code')->get(['u.id', 'u.code', 'u.name', 'u.precision'])->all();
+            $match['compatible_units'] = DB::table('material_compatible_units as m')->join('units as u', 'u.id', '=', 'm.unit_id')->where('m.material_id', $match['id'])->orderBy('u.code')->get(['u.id', 'u.code', 'u.name', 'u.dimension', 'u.precision'])->map(QuantityPolicy::present(...))->all();
             // Category technical details the Buyer may state; matching compares them by code.
             $match['attributes'] = ($attributes->get($match['category_id']) ?? collect())->map(static fn (object $a): array => ['code' => $a->code, 'label' => $a->label, 'value_type' => $a->value_type,
                 'allowed_values' => $a->allowed_values === null ? null : json_decode($a->allowed_values, true), 'unit_code' => $a->unit_code,
@@ -332,7 +333,7 @@ final class BuyerProjectController extends Controller
         unset($match);
 
         // Every normalized unit, for a material the Buyer names that is not listed.
-        return ApiResponse::success(['items' => $matches, 'units' => DB::table('units')->orderBy('code')->get(['id', 'code', 'name', 'precision'])->all()]);
+        return ApiResponse::success(['items' => $matches, 'units' => DB::table('units')->orderBy('code')->get(['id', 'code', 'name', 'dimension', 'precision'])->map(QuantityPolicy::present(...))->all()]);
     }
 
     /**

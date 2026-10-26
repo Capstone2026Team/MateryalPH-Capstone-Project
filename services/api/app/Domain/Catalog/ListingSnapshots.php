@@ -35,7 +35,7 @@ final class ListingSnapshots
             ->where('l.id', $listingId)
             ->first(['l.id', 'l.vendor_organization_id', 'l.display_name', 'l.vendor_sku', 'l.material_category_id', 'l.other_label', 'l.regulated', 'l.compliance_status', 'l.current_compliance_submission_id', 'l.technical_attributes', 'p.material_id', 'p.brand', 'p.model', 'p.manufacturer', 'p.country_of_manufacture', 's.public_store_name', 'r.id as rule_id', 'r.version as rule_version', 'r.required_marking']);
         $variants = DB::table('listing_variants as v')->join('units as u', 'u.id', '=', 'v.unit_id')->where('v.vendor_listing_id', $listingId)->where('v.active', true)->orderBy('v.sort_order')->orderBy('v.id')
-            ->get(['v.id', 'v.sku', 'v.label', 'v.unit_id', 'u.code as unit_code', 'v.pack_quantity', 'v.attributes', 'v.weight_kg', 'v.length_cm', 'v.width_cm', 'v.height_cm']);
+            ->get(['v.id', 'v.sku', 'v.label', 'v.unit_id', 'u.code as unit_code', 'u.dimension', 'u.precision', 'v.pack_quantity', 'v.attributes', 'v.weight_kg', 'v.length_cm', 'v.width_cm', 'v.height_cm']);
         $reviewId = $listing?->current_compliance_submission_id === null ? null
             : DB::table('compliance_reviews')->where('compliance_submission_id', $listing->current_compliance_submission_id)->orderByDesc('created_at')->orderByDesc('id')->value('id');
 
@@ -70,7 +70,7 @@ final class ListingSnapshots
         $normalized = $price === null || $assignment === null ? null : $this->comparability->normalizedPrice((int) $price->amount_centavos, (string) $variant->pack_quantity, (string) $variant->unit_id, (string) $assignment->material_comparable_group_version_id);
 
         return [
-            'variant_id' => $variant->id, 'sku' => $variant->sku, 'label' => $variant->label, 'unit_code' => $variant->unit_code, 'pack_quantity' => (string) $variant->pack_quantity,
+            'variant_id' => $variant->id, 'sku' => $variant->sku, 'label' => $variant->label, 'unit_code' => $variant->unit_code, 'quantity_policy' => QuantityPolicy::fromUnit($variant)->toArray(), 'pack_quantity' => (string) $variant->pack_quantity,
             'attributes' => ComparableMappingService::decode($variant->attributes),
             'weight_kg' => $variant->weight_kg === null ? null : (string) $variant->weight_kg,
             'dimensions_cm' => [$variant->length_cm === null ? null : (string) $variant->length_cm, $variant->width_cm === null ? null : (string) $variant->width_cm, $variant->height_cm === null ? null : (string) $variant->height_cm],

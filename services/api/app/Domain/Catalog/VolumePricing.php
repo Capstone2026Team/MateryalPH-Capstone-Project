@@ -20,7 +20,7 @@ final class VolumePricing
      * @param  list<array<string, mixed>>  $tiers  Vendor input rows: minimum_quantity (decimal string), price_centavos (int).
      * @return array<string, list<string>> Errors keyed by `<index>.<field>` or `tiers`.
      */
-    public static function errors(array $tiers, ?int $ordinaryCentavos): array
+    public static function errors(array $tiers, ?int $ordinaryCentavos, ?QuantityPolicy $policy = null): array
     {
         $errors = [];
         if (count($tiers) > self::MAX_TIERS) {
@@ -31,9 +31,11 @@ final class VolumePricing
         foreach ($tiers as $index => $tier) {
             $minimum = is_scalar($tier['minimum_quantity'] ?? null) ? (string) $tier['minimum_quantity'] : '';
             $price = $tier['price_centavos'] ?? null;
-            $minimumValid = preg_match(self::QUANTITY_PATTERN, $minimum) === 1 && bccomp($minimum, '1', 4) > 0;
+            $minimumValid = preg_match(self::QUANTITY_PATTERN, $minimum) === 1 && bccomp($minimum, '1', 4) > 0 && ($policy === null || $policy->valid($minimum));
             if (! $minimumValid) {
-                $errors[$index.'.minimum_quantity'][] = 'Enter a minimum quantity greater than 1, with up to four decimals.';
+                $errors[$index.'.minimum_quantity'][] = $policy !== null && preg_match(self::QUANTITY_PATTERN, $minimum) === 1 && bccomp($minimum, '1', 4) > 0
+                    ? $policy->message()
+                    : 'Enter a minimum quantity greater than 1, with up to four decimals.';
             } elseif ($previousMinimum !== null && bccomp($minimum, $previousMinimum, 4) <= 0) {
                 $errors[$index.'.minimum_quantity'][] = 'Each tier needs a higher minimum quantity than the tier before it.';
             }

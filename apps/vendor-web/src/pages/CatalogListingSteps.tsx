@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { AlertCircle, Camera, Check, CheckCircle2, ClipboardCheck, ClipboardList, Package, Pencil, QrCode, RefreshCw, Search, ShieldAlert, Trash2, Truck, UploadCloud } from 'lucide-react'
 import type { CatalogAttributeDefinition, CompliancePath, MarkingType } from '@materyalph/api-client-ts'
-import { Button, Field, MediaUploadField, RowGroup, StatusMessage, type MediaItem } from '@materyalph/web-ui'
+import { Button, Field, QuantityField, MediaUploadField, RowGroup, StatusMessage, type MediaItem } from '@materyalph/web-ui'
 import {
   formatCentavos, getMaterial, readableCatalogError, catalogFieldErrors, lookupCompliance, refusedComplianceLookup, submitCompliance, uploadComplianceEvidence,
   type CatalogListing, type CatalogMaterial, type CatalogMaterialMatch, type CatalogTaxonomy, type ComplianceEvidence, type ComplianceLookup,
@@ -184,6 +184,11 @@ function VariantRows({ listing, form, rows, setRows, taxonomy, material, errors,
       onAdd={() => setRows([...rows, emptyVariant(listing.vendorSku, rows.length + 1)])} onRemove={index => setRows(rows.filter((_, position) => position !== index))}
       renderRow={(row, index) => {
         const unitCode = taxonomy.units.find(item => item.id === row.unitId)?.code ?? null
+        const selectedUnit = taxonomy.units.find(item => item.id === row.unitId)
+        const quantityPolicy = selectedUnit?.quantityPolicy
+        const measured = (item: typeof units[number]) => item.quantityPolicy?.mode === 'MEASURED' || ['VOLUME', 'MASS', 'LENGTH', 'AREA'].includes(item.dimension)
+        const basis = row.sellingBasis ?? (selectedUnit ? measured(selectedUnit) ? 'MEASURED' : 'COUNT_PACK' : '')
+        const offeredUnits = form.materialId ? units : units.filter(item => basis && measured(item) === (basis === 'MEASURED'))
         const unit = unitName(taxonomy, unitCode)
         const suggestion = suggestMeasurements({ materialCode, categoryCode, unitCode, packQuantity: row.packQuantity, attributes: form.technicalAttributes })
         const labelSuggestion = readyMixed ? strengthLabel(row.attributes[STRENGTH_ATTRIBUTE]) : listingLabelSuggestion
@@ -202,13 +207,14 @@ function VariantRows({ listing, form, rows, setRows, taxonomy, material, errors,
                   <Field label="Label" name={`variants.${index}.label`} value={row.label} disabled={readOnly} hint={`For example ${labelSuggestion ?? '40 kg or 10 mm × 6 m'}`} onChange={event => update(index, { label: event.target.value })} />
                   {!readOnly && labelSuggestion && !row.label.trim() && <Button variant="quiet" className="w-fit text-action-primary" onClick={() => update(index, { label: labelSuggestion })}>Use “{labelSuggestion}”</Button>}
                 </div>
-                <label className="grid min-w-0 gap-2 text-sm font-semibold">Sale unit<select className={select(Boolean(rowError(index, 'unit_id')))} value={row.unitId} disabled={readOnly} aria-invalid={Boolean(rowError(index, 'unit_id'))} onChange={event => update(index, { unitId: event.target.value })}><option value="">Choose unit</option>{units.map(item => <option key={item.id} value={item.id}>{item.name} ({item.code})</option>)}</select></label>
+                {!form.materialId && <label className="grid min-w-0 gap-2 text-sm font-semibold">Selling basis<select className={select(false)} value={basis} disabled={readOnly} onChange={event => update(index, { sellingBasis: event.target.value as 'COUNT_PACK' | 'MEASURED', unitId: '' })}><option value="">Choose basis</option><option value="COUNT_PACK">Count / package</option><option value="MEASURED">Measurement</option></select></label>}
+                <label className="grid min-w-0 gap-2 text-sm font-semibold">Sale unit<select className={select(Boolean(rowError(index, 'unit_id')))} value={row.unitId} disabled={readOnly} aria-invalid={Boolean(rowError(index, 'unit_id'))} onChange={event => update(index, { unitId: event.target.value })}><option value="">Choose unit</option>{offeredUnits.map(item => <option key={item.id} value={item.id}>{item.name} ({item.code})</option>)}</select></label>
                 <Field label="Pack quantity" name={`variants.${index}.pack_quantity`} value={row.packQuantity} inputMode="decimal" disabled={readOnly} error={rowError(index, 'pack_quantity')} onChange={event => update(index, { packQuantity: event.target.value })} />
               </>}
-            <Field label="Price (PHP)" name={`variants.${index}.price`} value={row.price} inputMode="decimal" disabled={readOnly} error={rowError(index, 'price_centavos')} hint={`VAT-inclusive${row.priceVersion ? ` · version ${row.priceVersion}` : ''}${row.includedVat ? ` · includes ${formatCentavos(row.includedVat)} VAT` : ''}`} onChange={event => update(index, { price: event.target.value })} />
+            <Field label={`Price (PHP / ${unitCode ?? 'selling unit'})`} name={`variants.${index}.price`} value={row.price} inputMode="decimal" disabled={readOnly} error={rowError(index, 'price_centavos')} hint={`VAT-inclusive${row.priceVersion ? ` · version ${row.priceVersion}` : ''}${row.includedVat ? ` · includes ${formatCentavos(row.includedVat)} VAT` : ''}`} onChange={event => update(index, { price: event.target.value })} />
             <label className="grid min-w-0 gap-2 text-sm font-semibold">Tax classification<select className={select(Boolean(rowError(index, 'tax_category')))} value={row.taxCategory} disabled={readOnly} aria-invalid={Boolean(rowError(index, 'tax_category'))} onChange={event => update(index, { taxCategory: event.target.value })}><option value="">Choose</option>{(allowedTax.length ? allowedTax : taxonomy.taxCategories).map(category => <option key={category} value={category}>{TAX_LABELS[category] ?? statusLabel(category)}</option>)}</select></label>
             <div className="grid min-w-0 content-start gap-3">
-              <Field label={readyMixed ? 'Volume you can batch (m³, private)' : 'Counted stock (private)'} name={`variants.${index}.quantity_on_hand`} value={row.quantityOnHand} inputMode="decimal" disabled={readOnly} error={rowError(index, 'quantity_on_hand')} hint={readyMixed ? 'Cubic meters you can supply now. Recording it confirms stock today.' : 'Recording a count confirms stock today.'} onChange={event => update(index, { quantityOnHand: event.target.value })} />
+              <QuantityField unitCode={unitCode ?? ''} policy={quantityPolicy} label={readyMixed ? 'Volume you can batch (m³, private)' : `Stock (${unitCode ?? 'choose unit'}, private)`} name={`variants.${index}.quantity_on_hand`} value={row.quantityOnHand} inputMode="decimal" disabled={readOnly} error={rowError(index, 'quantity_on_hand')} hint={readyMixed ? 'Cubic meters you can supply now. Recording it confirms stock today.' : 'Recording a count confirms stock today.'} onChange={event => update(index, { quantityOnHand: event.target.value })} />
               {readyMixed && <MixerVolumeSuggestion fleet={fleet} row={row} readOnly={readOnly} onUse={quantityOnHand => update(index, { quantityOnHand })} />}
             </div>
             <div className="grid content-start gap-2 text-sm"><span className="font-semibold">Buyers see</span><span className="flex min-h-12 items-center">{row.publicAvailability === 'IN_STOCK' ? <span className="inline-flex items-center gap-1.5 font-semibold text-status-success"><CheckCircle2 size={16} aria-hidden="true" />In Stock</span> : row.id ? 'Out of Stock' : 'Shown after saving'}</span></div>

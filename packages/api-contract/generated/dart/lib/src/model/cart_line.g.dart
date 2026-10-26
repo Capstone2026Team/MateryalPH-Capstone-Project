@@ -68,6 +68,8 @@ class _$CartLineStatusEnumSerializer
 
 class _$CartLine extends CartLine {
   @override
+  final QuantityPolicy? quantityPolicy;
+  @override
   final String id;
   @override
   final int lockVersion;
@@ -112,7 +114,8 @@ class _$CartLine extends CartLine {
       (CartLineBuilder()..update(updates))._build();
 
   _$CartLine._(
-      {required this.id,
+      {this.quantityPolicy,
+      required this.id,
       required this.lockVersion,
       required this.listingId,
       required this.variantId,
@@ -144,6 +147,7 @@ class _$CartLine extends CartLine {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is CartLine &&
+        quantityPolicy == other.quantityPolicy &&
         id == other.id &&
         lockVersion == other.lockVersion &&
         listingId == other.listingId &&
@@ -169,6 +173,7 @@ class _$CartLine extends CartLine {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, quantityPolicy.hashCode);
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, lockVersion.hashCode);
     _$hash = $jc(_$hash, listingId.hashCode);
@@ -196,6 +201,7 @@ class _$CartLine extends CartLine {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'CartLine')
+          ..add('quantityPolicy', quantityPolicy)
           ..add('id', id)
           ..add('lockVersion', lockVersion)
           ..add('listingId', listingId)
@@ -222,6 +228,12 @@ class _$CartLine extends CartLine {
 
 class CartLineBuilder implements Builder<CartLine, CartLineBuilder> {
   _$CartLine? _$v;
+
+  QuantityPolicyBuilder? _quantityPolicy;
+  QuantityPolicyBuilder get quantityPolicy =>
+      _$this._quantityPolicy ??= QuantityPolicyBuilder();
+  set quantityPolicy(QuantityPolicyBuilder? quantityPolicy) =>
+      _$this._quantityPolicy = quantityPolicy;
 
   String? _id;
   String? get id => _$this._id;
@@ -318,6 +330,7 @@ class CartLineBuilder implements Builder<CartLine, CartLineBuilder> {
   CartLineBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _quantityPolicy = $v.quantityPolicy?.toBuilder();
       _id = $v.id;
       _lockVersion = $v.lockVersion;
       _listingId = $v.listingId;
@@ -361,6 +374,7 @@ class CartLineBuilder implements Builder<CartLine, CartLineBuilder> {
     try {
       _$result = _$v ??
           _$CartLine._(
+            quantityPolicy: _quantityPolicy?.build(),
             id: BuiltValueNullFieldError.checkNotNull(id, r'CartLine', 'id'),
             lockVersion: BuiltValueNullFieldError.checkNotNull(
                 lockVersion, r'CartLine', 'lockVersion'),
@@ -396,6 +410,9 @@ class CartLineBuilder implements Builder<CartLine, CartLineBuilder> {
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'quantityPolicy';
+        _quantityPolicy?.build();
+
         _$failedField = 'image';
         _image?.build();
 

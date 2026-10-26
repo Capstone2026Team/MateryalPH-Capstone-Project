@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Projects;
 
 use App\Domain\Catalog\EligibleOfferQuery;
+use App\Domain\Catalog\QuantityPolicy;
 use App\Domain\Catalog\ReadyMixedConcrete;
 use App\Domain\Finance\Money;
 use App\Domain\Geography\GeographyProviderUnavailable;
@@ -558,7 +559,7 @@ final class ProjectEstimateService
     {
         $offers = $this->offers->variants([$vendor])->join('products as p', 'p.id', '=', 'l.product_id')->join('units as u', 'u.id', '=', 'v.unit_id')->join('materials as m', 'm.id', '=', 'p.material_id')
             ->when($fulfillment === 'PICKUP', static fn ($query) => $query->where('m.code', '<>', ReadyMixedConcrete::MATERIAL_CODE))
-            ->orderBy('pv.amount_centavos')->orderBy('v.id')->get(['v.*', 'l.id as listing_id', 'l.display_name', 'l.technical_attributes', 'l.publication_version', 'm.material_category_id', 'p.material_id', 'p.brand', 'pv.id as price_version_id', 'pv.amount_centavos', 'pv.tax_category', 'i.confirmed_at', 'u.code as unit_code', 'u.name as unit_name', 'u.precision as unit_precision', 'm.code as material_code', DB::raw('i.quantity_on_hand - i.hard_reserved_quantity AS available')]);
+            ->orderBy('pv.amount_centavos')->orderBy('v.id')->get(['v.*', 'l.id as listing_id', 'l.display_name', 'l.technical_attributes', 'l.publication_version', 'm.material_category_id', 'p.material_id', 'p.brand', 'pv.id as price_version_id', 'pv.amount_centavos', 'pv.tax_category', 'i.confirmed_at', 'u.code as unit_code', 'u.name as unit_name', 'u.dimension', 'u.precision as unit_precision', 'm.code as material_code', DB::raw('i.quantity_on_hand - i.hard_reserved_quantity AS available')]);
         $definitions = SpecificationMatch::definitions($offers->pluck('material_category_id')->map(static fn (mixed $id): string => (string) $id)->all());
         $remaining = [];
         $result = [];
@@ -622,7 +623,7 @@ final class ProjectEstimateService
                     'option_id' => $chosen, 'offered_specifications' => $attributes,
                     'matched_quantity' => $quantity, 'unit_price_centavos' => (int) $offer->amount_centavos, 'amount_centavos' => $amount, 'included_vat_centavos' => Money::includedVat($amount, $offer->tax_category),
                     'tax_category' => $offer->tax_category, 'source_price_version_id' => $offer->price_version_id, 'stock_confirmed_at' => $offer->confirmed_at, 'publication_version' => $offer->publication_version,
-                    'unit_name' => $offer->unit_name, 'unit_precision' => (int) $offer->unit_precision, 'load' => $load];
+                    'unit_name' => $offer->unit_name, 'unit_precision' => QuantityPolicy::fromUnit($offer)->precision, 'quantity_step' => QuantityPolicy::fromUnit($offer)->step(), 'quantity_policy' => QuantityPolicy::fromUnit($offer)->toArray(), 'load' => $load];
             }
             $first = $allocations[0] ?? ['variant_id' => null, 'listing_id' => null, 'unit_price_centavos' => null, 'brand' => null, 'tax_category' => null, 'source_price_version_id' => null,
                 'load' => ['weight_kg' => null, 'length_cm' => null, 'width_cm' => null, 'height_cm' => null]];

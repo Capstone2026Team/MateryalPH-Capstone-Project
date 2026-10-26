@@ -1457,6 +1457,7 @@ All URIs are relative to */api/v1*
 - [PublicStoreProfile](docs/PublicStoreProfile.md)
 - [PublicStoreProfileEnvelope](docs/PublicStoreProfileEnvelope.md)
 - [PublicStoreSummary](docs/PublicStoreSummary.md)
+- [QuantityPolicy](docs/QuantityPolicy.md)
 - [RadiusExpansion](docs/RadiusExpansion.md)
 - [RadiusKm](docs/RadiusKm.md)
 - [RankingComponent](docs/RankingComponent.md)
