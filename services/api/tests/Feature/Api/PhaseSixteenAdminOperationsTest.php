@@ -488,7 +488,8 @@ final class PhaseSixteenAdminOperationsTest extends TestCase
             ->assertJsonPath('meta.label', 'DEMO — No real funds or BIR filing');
         $corrected = max(0, (int) $assessment->withheld_centavos - 500);
         $this->postJson('/api/v1/admin/finance/tax-adjustments/'.$adjustmentId.'/prepare', ['corrected_withheld_centavos' => $corrected, 'reason' => 'Refund reduced the qualifying base.',
-            'certificate_impact' => 'REISSUE_REQUIRED', 'evidence_reference' => 'Refund event reference'])->assertOk()->assertJsonPath('data.state', 'UNDER_REVIEW')->assertJsonPath('data.allowed_actions', []);
+            'certificate_impact' => 'REISSUE_REQUIRED', 'evidence_reference' => 'Refund event reference'])->assertOk()->assertJsonPath('data.state', 'UNDER_REVIEW')->assertJsonPath('data.allowed_actions', [])
+            ->assertJsonPath('data.after_values.gross_basis_centavos', (int) $assessment->gross_basis_centavos)->assertJsonPath('data.after_values.withheld_centavos', $corrected);
         $this->postJson('/api/v1/admin/finance/tax-adjustments/'.$adjustmentId.'/review', ['decision' => 'APPROVED', 'reason' => 'Self-approval must be refused.'])->assertStatus(409)
             ->assertJsonPath('errors.0.code', 'PREPARER_CANNOT_REVIEW');
         $this->signInAdmin($reviewer);
@@ -498,6 +499,14 @@ final class PhaseSixteenAdminOperationsTest extends TestCase
         self::assertTrue(DB::table('financial_posting_batches')->where('source_event_key', 'DEMO_FLOW:CWT_ADJUSTMENT:'.$adjustmentId)->exists() || (int) $assessment->withheld_centavos === $corrected);
         self::assertSame((int) $assessment->withheld_centavos, (int) DB::table('remittance_assessments')->where('id', $assessment->id)->value('withheld_centavos'), 'The posted assessment is never rewritten.');
         self::assertSame($accumulatorBefore, DB::table('vendor_withholding_accumulators')->where('organization_id', $store->id)->value('g_accumulated_centavos'), 'Refunds never restore FIN-04A relief.');
+
+        $collectedAt = DB::table('remittance_collections')->where('remittance_group_id', $assessment->remittance_group_id)->min('collected_at');
+        $package = $this->withHeader('Idempotency-Key', (string) Str::uuid7())->postJson('/api/v1/admin/reports/tax', [
+            'form' => '1601-EQ', 'period_start' => CarbonImmutable::parse((string) $collectedAt)->setTimezone('Asia/Manila')->startOfQuarter()->toDateString(),
+            'withholding_entity' => $assessment->assigned_withholding_entity, 'vendor_organization_id' => $store->id,
+        ])->assertCreated()->json('data');
+        self::assertNotContains('TAX_ADJUSTMENT_REVIEW_REQUIRED', $package['snapshot']['blockers'], 'A posted reviewed correction can be included in a new report.');
+        self::assertSame($corrected, $package['snapshot']['tax_centavos']);
 
         $kpis = $this->getJson('/api/v1/admin/finance/kpis')->assertOk()->json('data');
         self::assertSame(['gross_gmv', 'cancelled_gmv', 'refunded_gmv', 'net_gmv', 'online_payments', 'buyer_processing_fees', 'cash_on_delivery', 'in_store', 'buyer_payments',

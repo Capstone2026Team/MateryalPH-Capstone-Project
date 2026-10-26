@@ -71,6 +71,7 @@ final class TaxAdjustmentService
             $original = (int) ($before['withheld_centavos'] ?? 0);
             DB::table('tax_adjustments')->where('id', $row->id)->update(['state' => 'UNDER_REVIEW', 'prepared_by_user_id' => $preparer, 'reviewed_by_user_id' => null, 'reviewed_at' => null,
                 'after_values' => json_encode(['proposed_withheld_centavos' => $input['corrected_withheld_centavos'], 'difference_centavos' => $input['corrected_withheld_centavos'] - $original,
+                    'gross_basis_centavos' => $before['gross_basis_centavos'] ?? null, 'withheld_centavos' => $input['corrected_withheld_centavos'],
                     'certificate_impact' => $input['certificate_impact'], 'evidence_reference' => mb_substr(trim((string) ($input['evidence_reference'] ?? '')), 0, 200) ?: null,
                     'preparer_reason' => mb_substr(trim($input['reason']), 0, 2000)], JSON_THROW_ON_ERROR), 'updated_at' => now()]);
         });

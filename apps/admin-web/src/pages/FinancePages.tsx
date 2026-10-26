@@ -16,12 +16,13 @@ import { Paged, Panel, Table } from '../components/OperationsKit'
 import { FinanceKpiPanel, RemittanceQueue } from './FinanceOperationsPanels'
 import { usePaged } from '../lib/operations-hooks'
 import { CommissionPolicyPanel } from './CommissionPolicyPanel'
+import { FinanceTaxRecords } from './FinanceTaxPages'
 
-type View = 'overview' | 'payments' | 'queue' | 'remittances' | 'withholding' | 'statements' | 'overdue' | 'channels'
+type View = 'overview' | 'payments' | 'queue' | 'remittances' | 'withholding' | 'statements' | 'overdue' | 'channels' | 'tax'
 const VIEWS: { value: View; label: string }[] = [
   { value: 'overview', label: 'Overview' }, { value: 'statements', label: 'Commission management' }, { value: 'overdue', label: 'Overdue debt' }, { value: 'payments', label: 'Payment log' },
   { value: 'queue', label: 'Work queue' }, { value: 'remittances', label: 'Remittance reconciliation' },
-  { value: 'withholding', label: 'Withholding threshold' }, { value: 'channels', label: 'Channel fees' },
+  { value: 'withholding', label: 'Withholding threshold' }, { value: 'tax', label: 'Tax records' }, { value: 'channels', label: 'Channel fees' },
 ]
 const PRIMARY_VIEWS = [{ value: 'overview', label: 'Overview' }, { value: 'statements', label: 'Commission management' }, { value: 'payments', label: 'Payments and refunds' }, { value: 'queue', label: 'Reconciliation' }]
 
@@ -31,7 +32,7 @@ const PRIMARY_VIEWS = [{ value: 'overview', label: 'Overview' }, { value: 'state
  */
 export function AdminFinancePage() {
   const [params, setParams] = useSearchParams()
-  const view = (VIEWS.some(item => item.value === params.get('view')) ? params.get('view') : 'overview') as View
+  const view = (params.get('view') === 'adjustments' ? 'tax' : VIEWS.some(item => item.value === params.get('view')) ? params.get('view') : 'overview') as View
   const primary = ['statements', 'overdue'].includes(view) ? 'statements' : ['payments', 'channels'].includes(view) ? 'payments' : view === 'overview' ? 'overview' : 'queue'
   const [refresh, setRefresh] = useState(0)
   const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
@@ -48,13 +49,14 @@ export function AdminFinancePage() {
     {notice && <StatusMessage tone={notice.tone}>{notice.text}</StatusMessage>}
     <FilterTabs label="Finance view" chips={PRIMARY_VIEWS} value={primary} appearance="tabs" onChange={value => setParams({ view: value })} />
     {primary === 'payments' && <FilterChips label="Payment sections" chips={VIEWS.filter(item => ['payments', 'channels'].includes(item.value))} value={view} onChange={value => setParams({ view: value })} />}
-    {primary === 'queue' && <FilterChips label="Reconciliation sections" chips={VIEWS.filter(item => ['queue', 'remittances', 'withholding'].includes(item.value))} value={view} onChange={value => setParams({ view: value })} />}
+    {primary === 'queue' && <FilterChips label="Reconciliation sections" chips={VIEWS.filter(item => ['queue', 'remittances', 'withholding', 'tax'].includes(item.value))} value={view} onChange={value => setParams({ view: value })} />}
     <div key={`${view}-${refresh}`} className="grid min-w-0 gap-6">
     {view === 'overview' && <FinanceKpiPanel />}
     {view === 'queue' && <ReviewQueue />}
     {view === 'remittances' && <RemittanceQueue />}
     {view === 'payments' && <PaymentLog />}
     {view === 'withholding' && <Accumulators />}
+    {view === 'tax' && <FinanceTaxRecords />}
     {primary === 'statements' && <>
       <CommissionPolicyPanel />
       <div className="grid min-w-0 gap-4">

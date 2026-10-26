@@ -72,6 +72,7 @@ void main() {
       // TODO
     });
 
+    // Prepared corrections retain the original gross_basis_centavos and the explicitly corrected withheld_centavos for report snapshots, alongside proposed_withheld_centavos, difference_centavos, certificate impact and evidence. Missing original bases remain null and block report review. Original assessments and posted entries are not rewritten.
     // BuiltMap<String, JsonObject> afterValues
     test('to test the property `afterValues`', () async {
       // TODO

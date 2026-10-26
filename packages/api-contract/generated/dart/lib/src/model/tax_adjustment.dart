@@ -27,7 +27,7 @@ part 'tax_adjustment.g.dart';
 /// * [periodEnd]
 /// * [amountCentavos]
 /// * [beforeValues]
-/// * [afterValues]
+/// * [afterValues] - Prepared corrections retain the original gross_basis_centavos and the explicitly corrected withheld_centavos for report snapshots, alongside proposed_withheld_centavos, difference_centavos, certificate impact and evidence. Missing original bases remain null and block report review. Original assessments and posted entries are not rewritten.
 /// * [reason]
 /// * [preparer]
 /// * [reviewer]
@@ -79,6 +79,7 @@ abstract class TaxAdjustment implements Built<TaxAdjustment, TaxAdjustmentBuilde
   @BuiltValueField(wireName: r'before_values')
   BuiltMap<String, JsonObject?> get beforeValues;
 
+  /// Prepared corrections retain the original gross_basis_centavos and the explicitly corrected withheld_centavos for report snapshots, alongside proposed_withheld_centavos, difference_centavos, certificate impact and evidence. Missing original bases remain null and block report review. Original assessments and posted entries are not rewritten.
   @BuiltValueField(wireName: r'after_values')
   BuiltMap<String, JsonObject?> get afterValues;
 

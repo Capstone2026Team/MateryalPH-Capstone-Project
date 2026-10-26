@@ -11,6 +11,7 @@ vi.mock('../lib/finance-api', async original => ({ ...await original<typeof impo
   financeKpis: vi.fn(), listPayments: vi.fn(), getAccumulator: vi.fn(), resolveOverlap: vi.fn(), listAccumulators: vi.fn(), listStatements: vi.fn(), approveStatement: vi.fn(), draftStatements: vi.fn(), listChannelFees: vi.fn(), runReconciliation: vi.fn(),
   listCommissionPolicies: vi.fn(), publishCommissionPolicy: vi.fn() }))
 vi.mock('./PhaseThreeAdminPages', async original => ({ ...await original<typeof import('./PhaseThreeAdminPages')>(), AdminShell: ({ children }: { children: React.ReactNode }) => <main>{children}</main> }))
+vi.mock('../lib/finance-tax-api', async original => ({ ...await original<typeof import('../lib/finance-tax-api')>(), listTaxAdjustments: vi.fn().mockResolvedValue({ items: [], hasMore: false, total: 0 }) }))
 
 const item = (overrides: Partial<FinanceReviewItem> = {}): FinanceReviewItem => ({ id: 'item-1', kind: 'PAYMENT_MISMATCH', state: 'OPEN', reasonCode: 'AMOUNT_MISMATCH', summary: 'A provider webhook did not match the stored payment attempt; nothing was marked paid.',
   vendor: { id: 'v1', name: 'Test Supply' }, sourceType: 'PAYMENT', sourceId: 'pay-1', expected: { total_centavos: 1026441 }, reported: { amount_centavos: 100 }, createdAt: new Date(), ...overrides })
@@ -197,14 +198,14 @@ test('the work queue shows the mismatch and requires a reasoned resolution', asy
   await waitFor(() => expect(finance.resolveReviewItem).toHaveBeenCalledWith('item-1', 'Provider confirmed the forged amount; no capture exists.'))
 })
 
-test('Tax adjustments is no longer a finance view; an old link opens the Platform Finance overview', async () => {
-  vi.mocked(finance.financeKpis).mockResolvedValue({ label: 'Recorded transactions', scenario: 'Event dates.', period: { from: null, to: null }, commerce: [], finance: [], counts: {}, trendGranularity: 'DAY', trend: [] })
+test('restored tax tools stay under Reconciliation and old adjustment links open tax records', async () => {
   at('/finance?view=adjustments', <AdminFinancePage />, '/finance')
   expect(await screen.findByRole('heading', { name: 'Platform Finance' })).toBeInTheDocument()
-  expect(await screen.findByText('No financial activity is recorded for these dates.')).toBeInTheDocument()
-  expect(screen.queryByRole('heading', { name: 'Finance actions' })).not.toBeInTheDocument()
-  expect(screen.queryByRole('heading', { name: 'Tax adjustments' })).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /Tax adjustments/ })).not.toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: 'Reconciliation' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getAllByRole('tab')).toHaveLength(4)
+  expect(await screen.findByRole('heading', { name: 'Tax records' })).toBeInTheDocument()
+  expect(screen.getByRole('combobox', { name: 'Tax records view' })).toHaveValue('adjustments')
+  expect(await screen.findByText('No tax adjustments match these filters.')).toBeInTheDocument()
 })
 
 test('a role without finance.view sees the server explanation instead of data', async () => {

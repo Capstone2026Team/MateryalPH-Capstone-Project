@@ -1,5 +1,7 @@
 # Admin recorded finance and commission reporting — 2026-10-15
 
+Tax-control navigation was subsequently restored by the 2026-10-26 owner decision. See [Admin supporting tax tools](admin-finance-tax-records.md) for the compact Reconciliation grouping and current acceptance checks. The financial rules below remain in force.
+
 ## Outcome and financial rules
 
 Admin Transactions and Finance defaults to Platform Earnings. The simulated-figures badge and Tax Adjustments controls are removed. Threshold and overlap reviews use the existing work queue. The page retains shared cards, tables, status badges, date filters, charts, authorization and protected exports.
