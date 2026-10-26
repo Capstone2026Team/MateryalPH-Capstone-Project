@@ -176,8 +176,10 @@ What the script does (the same steps I did manually today):
 ```powershell
 # Deployement Command ( Application APK - VPS Connected)
 . C:\Users\RJ\materyalph-release-signing\use-signing.ps1
-./scripts/deployment/build-buyer-staging.ps1 -Deployment Hostinger -Release -BuildName 1.0.1 -BuildNumber 2
+./scripts/deployment/build-buyer-staging.ps1 -Deployment Hostinger -Release -BuildName 1.0.1 -BuildNumber 3
 ```
+
+Use a higher build number for each subsequent APK. The script verifies the release signature before creating the delivery folder under `.tmp/apk-delivery/Hostinger/`.
 
 ## Validation
 

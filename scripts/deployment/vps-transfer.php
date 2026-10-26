@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Domain\Operations\ImportedOutboxBoundary;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Encryption\Encrypter;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -204,12 +206,18 @@ function recoveryExportObjects(string $directory): array
         }
         $objects[$identity] = ['disk' => $disk, 'key' => $key, 'sha256' => $hash, 'bytes' => $bytes];
     };
-    foreach (DB::table('files')->orderBy('id')->cursor() as $file) {
+    $files = DB::table('files as f')->leftJoin('message_attachments as a', 'a.file_id', '=', 'f.id')
+        ->select('f.*', 'a.disk as attachment_disk', 'a.storage_key as attachment_storage_key')->orderBy('f.id');
+    foreach ($files->cursor() as $file) {
         $metadata = json_decode($file->metadata ?? '{}', true, flags: JSON_THROW_ON_ERROR) ?? [];
         if (($metadata['storage_provider'] ?? '') === 'CLOUDINARY') {
             $external[] = ['provider' => 'CLOUDINARY', 'object_key' => $file->object_key, 'url' => $metadata['public_url'] ?? null];
         } else {
-            $add($metadata['disk'] ?? config('materyalph.files.disk', 'local'), $file->object_key, $file->checksum_sha256);
+            // Chat downloads use the attachment's disk. Imported files may predate the current default disk.
+            if ($file->attachment_disk !== null && $file->attachment_storage_key !== $file->object_key) {
+                throw new RuntimeException('ATTACHMENT_OBJECT_REFERENCE_MISMATCH');
+            }
+            $add($file->attachment_disk ?? $metadata['disk'] ?? config('materyalph.files.disk', 'local'), $file->object_key, $file->checksum_sha256);
         }
     }
     foreach (DB::table('users')->whereNotNull('profile_photo_key')->orderBy('id')->cursor() as $user) {
@@ -266,6 +274,7 @@ function recoveryRestore(string $directory, array $manifest): void
             if (! hash_equals($object['sha256'], hash_final($hash))) {
                 throw new RuntimeException('DESTINATION_OBJECT_COLLISION');
             }
+
             continue;
         }
         $stream = fopen($directory.'/objects/'.$object['sha256'], 'rb');
@@ -349,11 +358,11 @@ if (! defined('MATERYALPH_RECOVERY_LIBRARY')) {
                 throw new RuntimeException('RECOVERY_ENVIRONMENT_GUARD_FAILED');
             }
             if ($command === 'inspect') {
-                $pending = App\Domain\Operations\ImportedOutboxBoundary::apply(DB::table('outbox_events'))->whereNull('processed_at')->where('available_at', '<=', now());
+                $pending = ImportedOutboxBoundary::apply(DB::table('outbox_events'))->whereNull('processed_at')->where('available_at', '<=', now());
                 $oldest = (clone $pending)->min('created_at');
                 echo json_encode(['database_bytes' => (int) DB::selectOne('SELECT pg_database_size(current_database()) AS bytes')->bytes,
                     'eligible_pending_outbox' => (clone $pending)->count(), 'oldest_eligible_outbox_at' => $oldest,
-                    'default_queue_length' => Illuminate\Support\Facades\Redis::connection((string) config('queue.connections.redis.connection', 'default'))->llen('queues:default'),
+                    'default_queue_length' => Redis::connection((string) config('queue.connections.redis.connection', 'default'))->llen('queues:default'),
                     'scheduler_last_finished_at' => DB::table('scheduled_task_runs')->max('finished_at'), 'migrations' => DB::table('migrations')->count()], JSON_THROW_ON_ERROR)."\n";
                 exit(0);
             }

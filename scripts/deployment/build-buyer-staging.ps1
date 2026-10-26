@@ -8,6 +8,34 @@ param(
     [string] $Device
 )
 $ErrorActionPreference = 'Stop'
+
+function Find-AndroidApkSigner {
+    param([string] $AndroidPath)
+
+    $localSdk = $null
+    $localProperties = Join-Path $AndroidPath 'local.properties'
+    if (Test-Path -LiteralPath $localProperties) {
+        $sdkProperty = Get-Content -LiteralPath $localProperties | Select-String '^\s*sdk\.dir\s*=\s*(.+)$' | Select-Object -Last 1
+        if ($sdkProperty) {
+            $localSdk = $sdkProperty.Matches[0].Groups[1].Value.Trim() -replace '\\([\\: ])', '$1'
+        }
+    }
+    $candidates = @($localSdk, $env:ANDROID_HOME, $env:ANDROID_SDK_ROOT)
+    if ($env:LOCALAPPDATA) { $candidates += Join-Path $env:LOCALAPPDATA 'Android/Sdk' }
+    foreach ($sdk in ($candidates | Where-Object { $_ } | Select-Object -Unique)) {
+        $toolsPath = Join-Path $sdk 'build-tools'
+        if (-not (Test-Path -LiteralPath $toolsPath -PathType Container)) { continue }
+        $versions = Get-ChildItem -LiteralPath $toolsPath -Directory |
+            Where-Object { $_.Name -match '^\d+\.\d+\.\d+$' } |
+            Sort-Object { [version] $_.Name } -Descending
+        foreach ($version in $versions) {
+            $signerPath = Join-Path $version.FullName 'apksigner.bat'
+            if (Test-Path -LiteralPath $signerPath -PathType Leaf) { return $signerPath }
+        }
+    }
+    throw 'Android apksigner is required. Install stable Android SDK Build-Tools and configure android/local.properties (sdk.dir), ANDROID_HOME or ANDROID_SDK_ROOT.'
+}
+
 $taskRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $buyerPath = Join-Path $taskRoot 'apps/buyer-mobile'
 $profile = if ($Deployment -eq 'Hostinger') { 'hostinger' } else { 'staging' }
@@ -43,6 +71,13 @@ if ($Release) {
     $androidClient = @($native.client | Where-Object { $_.client_info.android_client_info.package_name -eq 'ph.materyal.buyer' })
     if ($native.project_info.project_id -cne $configuration.FIREBASE_PROJECT_ID -or $androidClient.Count -ne 1 -or
         $androidClient[0].client_info.mobilesdk_app_id -cne $configuration.FIREBASE_APP_ID) { throw 'Native Firebase identity must match the selected public deployment profile.' }
+    $signer = Find-AndroidApkSigner -AndroidPath (Join-Path $buyerPath 'android')
+}
+if (-not $Run) {
+    $variant = if ($Release) { 'release' } else { 'debug' }
+    $artifactVersion = if ($Release) { "$BuildName-$BuildNumber" } else { [DateTime]::UtcNow.ToString('yyyyMMddHHmmss') }
+    $delivery = Join-Path $taskRoot ".tmp/apk-delivery/$Deployment/$artifactVersion"
+    if (Test-Path -LiteralPath $delivery) { throw 'This artifact version already exists. Use the next build number or a new debug build time.' }
 }
 Push-Location $buyerPath
 try {
@@ -57,25 +92,20 @@ try {
     & flutter @arguments
     if ($LASTEXITCODE -ne 0) { throw 'Flutter staging command failed.' }
     if (-not $Run) {
-        $variant = if ($Release) { 'release' } else { 'debug' }
-        $artifactVersion = if ($Release) { "$BuildName-$BuildNumber" } else { [DateTime]::UtcNow.ToString('yyyyMMddHHmmss') }
-        $delivery = Join-Path $taskRoot ".tmp/apk-delivery/$Deployment/$artifactVersion"
-        if (Test-Path -LiteralPath $delivery) { throw 'This artifact version already exists. Use the next build number or a new debug build time.' }
-        New-Item -ItemType Directory -Force -Path $delivery | Out-Null
-        $target = Join-Path $delivery "MateryalPH-$Deployment-$variant.apk"
-        Copy-Item -LiteralPath (Join-Path $buyerPath "build/app/outputs/flutter-apk/app-$variant.apk") -Destination $target
-        $metadata = [ordered]@{ deployment=$Deployment; variant=$variant; api=$selected.apiBaseUrl; version=$BuildName; buildNumber=$BuildNumber; sha256=(Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash.ToLowerInvariant(); builtAt=[DateTime]::UtcNow.ToString('o') }
+        $sourceApk = Join-Path $buyerPath "build/app/outputs/flutter-apk/app-$variant.apk"
+        $certificateSha256 = $null
         if ($Release) {
-            $sdk = $env:ANDROID_HOME
-            if (-not $sdk) { $sdk = Join-Path $env:LOCALAPPDATA 'Android/Sdk' }
-            $signer = Get-ChildItem -LiteralPath (Join-Path $sdk 'build-tools') -Filter apksigner.bat -Recurse | Sort-Object FullName -Descending | Select-Object -First 1
-            if (-not $signer) { throw 'Android apksigner is required to verify the delivered APK.' }
-            $verification = & $signer.FullName verify --verbose --print-certs $target 2>&1
+            $verification = & $signer verify --verbose --print-certs $sourceApk 2>&1
             if ($LASTEXITCODE -ne 0) { throw 'APK signing verification failed.' }
             $certificate = @($verification | Select-String '^Signer #1 certificate SHA-256 digest: (.+)$')
             if ($certificate.Count -ne 1) { throw 'Cannot identify the APK signing certificate.' }
-            $metadata.certificateSha256 = $certificate[0].Matches[0].Groups[1].Value
+            $certificateSha256 = $certificate[0].Matches[0].Groups[1].Value
         }
+        New-Item -ItemType Directory -Path $delivery | Out-Null
+        $target = Join-Path $delivery "MateryalPH-$Deployment-$variant.apk"
+        Copy-Item -LiteralPath $sourceApk -Destination $target
+        $metadata = [ordered]@{ deployment=$Deployment; variant=$variant; api=$selected.apiBaseUrl; version=$BuildName; buildNumber=$BuildNumber; sha256=(Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash.ToLowerInvariant(); builtAt=[DateTime]::UtcNow.ToString('o') }
+        if ($Release) { $metadata.certificateSha256 = $certificateSha256 }
         $metadata | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $delivery 'release.json') -Encoding utf8
         Write-Output "APK and checksum metadata: $delivery"
     }
