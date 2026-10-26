@@ -6,4 +6,6 @@ Synthetic fixtures illustrate layout and interaction; they do not establish live
 - Vendor locked original / editable duplicate: 320, 375, 390, 768, 1024, 1280, 1440 and 1920 pixels, captured by `e2e/project-quotation.spec.ts` with reduced motion. The original/proposal are side by side at 1024px and above and stacked below; chat content scrolls inside its existing workspace.
 - Existing Phase 6 goldens were visually reviewed after extracting the shared SupplierPreviewSheet. Original handle spacing, corner shape, elevation and shadow were retained; reviewed corner rasterization changes were refreshed.
 
+The two Buyer Project map baselines were reviewed and refreshed on 2026-10-26 using Flutter 3.47.3 on Windows, matching CI. They retain the current radius/recenter controls and compact package, locked-site and budget summary. The other Project baselines were unchanged. Regenerate with `flutter test test/projects_phase_ten_test.dart --update-goldens` from `apps/buyer-mobile`; normal test runs compare the committed images.
+
 Automated checks verify no horizontal browser overflow, accessible original/proposal regions, disabled Phase 15 PDF controls, Project-only map context, frozen origin, archived controls and exact budget text. See `docs/test-plans/phase-ten-projects.md` for full gates and remaining live checks.

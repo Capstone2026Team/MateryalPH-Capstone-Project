@@ -78,9 +78,7 @@ void main() {
     'Favorites stand alone; Verified and Directory controls stay under their own tier toggle',
     (tester) async {
       await _openFilters(tester);
-      final favorites = find.byKey(
-        const ValueKey('favorite-supplier-filters'),
-      );
+      final favorites = find.byKey(const ValueKey('favorite-supplier-filters'));
       final verified = find.byKey(const ValueKey('verified-supplier-filters'));
       final directory = find.byKey(
         const ValueKey('directory-supplier-filters'),

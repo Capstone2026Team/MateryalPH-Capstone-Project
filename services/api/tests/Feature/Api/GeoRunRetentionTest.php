@@ -18,7 +18,7 @@ final class GeoRunRetentionTest extends TestCase
     {
         $old = (string) Str::uuid7();
         DB::table('analytics_geo_runs')->insert(['id' => $old, 'environment' => 'TEST', 'through_date' => now()->subDays(31)->toDateString(), 'revision' => 1,
-            'state' => 'FAILED', 'trigger' => 'COMMAND', 'started_at' => now()->subDays(31), 'created_at' => now()->subDays(31), 'updated_at' => now()->subDays(31)]);
+            'state' => 'FAILED', 'error_code' => 'AGGREGATION_FAILED', 'trigger' => 'COMMAND', 'started_at' => now()->subDays(31), 'created_at' => now()->subDays(31), 'updated_at' => now()->subDays(31)]);
         $builder = app(GeoFactsBuilder::class);
         $first = $builder->build('COMMAND');
         self::assertSame('PUBLISHED', $first['state']);

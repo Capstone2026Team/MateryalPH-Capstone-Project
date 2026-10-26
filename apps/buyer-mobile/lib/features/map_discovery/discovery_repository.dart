@@ -504,8 +504,7 @@ final class ApiDiscoveryRepository implements DiscoveryRepository {
             scoreText: favorite.scoreLabel.text,
             currentlyDiscoverable: favorite.currentlyDiscoverable,
             tier:
-                favorite.tier ==
-                    api.FavoriteSupplierTierEnum.DIRECTORY_SUPPLIER
+                favorite.tier == api.FavoriteSupplierTierEnum.DIRECTORY_SUPPLIER
                 ? SupplierTier.directory
                 : SupplierTier.verified,
           ),
