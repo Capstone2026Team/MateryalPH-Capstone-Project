@@ -169,6 +169,14 @@ Open the VS Code terminal (Ctrl + `) in the project folder and run:
 ./scripts/deployment/release-hostinger.ps1
 ```
 
+The script checks SSH access before waiting for CI or building. If an upload fails after packaging, restore SSH connectivity and reuse the package path printed in the terminal:
+
+```powershell
+./scripts/deployment/release-hostinger.ps1 -ReleaseDirectory 'D:\materyalph-releases\COMMIT-TIMESTAMP'
+```
+
+Resume verifies the archive checksums and successful quality gates for the packaged commit, then uploads without rebuilding. For SSH timeouts, check that your current public IPv4 is allowed for TCP 22 in the Hostinger firewall and that your VPN/network permits SSH.
+
 Wait about 45–60 minutes. When it asks, type REOPEN to put the site back online.
 What the script does (the same steps I did manually today):
 

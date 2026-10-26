@@ -539,6 +539,9 @@ jobs:
       - run: mkdir -p .tmp && python scripts/deployment/test-vps-compose.py
       - run: python scripts/deployment/test-vps-database.py
       - run: node --test scripts/deployment/vps-deployment.test.mjs
+      - name: Test Hostinger SSH preflight and release resume guards
+        shell: pwsh
+        run: ./scripts/deployment/test-release-hostinger.ps1
       - run: python scripts/deployment/test-vps-host.py
       - run: bash -n scripts/deployment/vpsctl.sh && sh -n infrastructure/vps/init-database.sh
       - run: bash -n scripts/deployment/bootstrap-vps.sh && sh -n infrastructure/vps/postgres-entrypoint.sh

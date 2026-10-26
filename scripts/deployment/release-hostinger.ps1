@@ -17,10 +17,12 @@
 .EXAMPLE
   ./scripts/deployment/release-hostinger.ps1                 # latest origin/staging
   ./scripts/deployment/release-hostinger.ps1 -Commit 3f3020f2ffa1244b1a3d596a239e3b93a591e58e
+  ./scripts/deployment/release-hostinger.ps1 -ReleaseDirectory 'D:\materyalph-releases\COMMIT-TIMESTAMP'
 #>
 [CmdletBinding()]
 param(
     [string] $Commit,
+    [string] $ReleaseDirectory,
     [string] $Repository = 'Capstone2026Team/MateryalPH-Capstone-Project',
     [string] $VpsAddress = '187.77.142.129',
     [string] $OutputRoot = $(if (Test-Path 'D:\') { 'D:\materyalph-releases' } else { '' })
@@ -30,13 +32,53 @@ $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 # ssh -o splits option values on spaces, so work from the repo with relative paths.
 Set-Location -LiteralPath $repoRoot
 $access = '.tmp/hostinger-deployment/access'
-foreach ($required in "$access/id_ed25519.operator", "$access/known_hosts", 'apps/vendor-web/.env', 'apps/admin-web/.env') {
+foreach ($required in "$access/id_ed25519.operator", "$access/known_hosts") {
     if (-not (Test-Path -LiteralPath $required)) { throw "Missing $required" }
 }
-$sshOptions = @('-i', "$access/id_ed25519.operator", '-o', "UserKnownHostsFile=$access/known_hosts", '-o', 'StrictHostKeyChecking=yes', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=30', '-o', 'ServerAliveInterval=30')
+$sshOptions = @('-i', "$access/id_ed25519.operator", '-o', "UserKnownHostsFile=$access/known_hosts", '-o', 'StrictHostKeyChecking=yes', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15', '-o', 'ConnectionAttempts=1', '-o', 'ServerAliveInterval=30', '-o', 'ServerAliveCountMax=3')
 $remoteHost = "materyalph@$VpsAddress"
 
 function Write-Step([string] $message) { Write-Host "`n==> $message" -ForegroundColor Cyan }
+
+function Invoke-TransferStep([string] $description, [scriptblock] $action) {
+    $PSNativeCommandUseErrorActionPreference = $false
+    for ($attempt = 1; $attempt -le 3; $attempt++) {
+        & $action
+        $exitCode = $LASTEXITCODE
+        if ($exitCode -eq 0) { return }
+        if ($attempt -lt 3) {
+            Write-Host "  $description failed (attempt $attempt/3, exit $exitCode); retrying in $(5 * $attempt)s..."
+            Start-Sleep -Seconds (5 * $attempt)
+        }
+    }
+    $resumeHint = if ($release) { " Retry the existing package with -ReleaseDirectory '$release'." } else { '' }
+    throw "$description failed after 3 attempts (exit $exitCode). Check that your current public IPv4 is allowed for TCP 22 in the Hostinger firewall, your VPN/network permits SSH, and the operator key and pinned known_hosts are correct.$resumeHint"
+}
+
+function Get-ReleaseManifest([string] $directory) {
+    $record = Get-Content -LiteralPath (Join-Path $directory 'release.json') -Raw | ConvertFrom-Json
+    if ($record.format -ne 'materyalph-vps-release-v1' -or $record.commit -cnotmatch '^[a-f0-9]{40}$' -or
+        $record.required_check -ne 'success' -or $record.image_checks -ne 'runtime-and-trivy-passed' -or
+        $record.ci_run_url -notmatch ('^https://github\.com/' + [regex]::Escape($Repository) + '/actions/runs/[0-9]+$')) {
+        throw 'The release manifest must identify an exact CI-approved staging commit with passed runtime and Trivy checks.'
+    }
+    foreach ($role in 'api', 'edge') {
+        if ($record.images.$role -cnotmatch '^sha256:[a-f0-9]{64}$') { throw "Invalid immutable $role image in release.json." }
+    }
+    $archiveNames = @('api.tar', 'edge.tar', 'runtime.tar')
+    if (@($record.archives.PSObject.Properties.Name).Count -ne 3 -or
+        @(Compare-Object $archiveNames @($record.archives.PSObject.Properties.Name)).Count -ne 0) {
+        throw 'The release manifest must contain exactly api.tar, edge.tar and runtime.tar archive checksums.'
+    }
+    foreach ($name in $archiveNames) {
+        $path = Join-Path $directory $name
+        if ($record.archives.$name -cnotmatch '^[a-f0-9]{64}$' -or -not (Test-Path -LiteralPath $path -PathType Leaf) -or
+            (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant() -cne $record.archives.$name) {
+            throw "Release archive missing or checksum mismatch: $name. Keep the package intact; do not deploy it."
+        }
+    }
+    return $record
+}
 
 function Invoke-RemoteScript([string] $script) {
     # PowerShell pipes add CRLF and 'docker compose run' eats piped stdin: send base64, run from a temp file.
@@ -57,19 +99,38 @@ function Get-PortalValue([string] $file, [string] $name) {
     throw "Missing $name in $file"
 }
 
-# ---- 0. Network preflight: every later step needs these names to resolve -------------------
+# ---- 0. Validate an existing package and verify SSH before waiting for CI or building --------
+$release = $null
+if ($ReleaseDirectory) {
+    $release = (Resolve-Path -LiteralPath $ReleaseDirectory).Path
+    Write-Step 'Verifying the existing release package'
+    $manifest = Get-ReleaseManifest $release
+    if ($Commit -and $Commit -cne $manifest.commit) { throw '-Commit must match the full commit in the existing release manifest.' }
+    $Commit = $manifest.commit
+}
+Write-Step 'Checking SSH access to the VPS before CI or packaging'
+Invoke-TransferStep 'SSH preflight' { ssh @sshOptions $remoteHost 'true' }
+if (-not $ReleaseDirectory) {
+    foreach ($required in 'apps/vendor-web/.env', 'apps/admin-web/.env') {
+        if (-not (Test-Path -LiteralPath $required)) { throw "Missing $required" }
+    }
+}
+
 Write-Step 'Checking DNS for GitHub and Docker Hub'
-foreach ($name in 'github.com', 'api.github.com', 'registry-1.docker.io', 'auth.docker.io') {
+$dnsNames = if ($ReleaseDirectory) { @('api.github.com') } else { @('github.com', 'api.github.com', 'registry-1.docker.io', 'auth.docker.io') }
+foreach ($name in $dnsNames) {
     try { Resolve-DnsName $name -Type A -ErrorAction Stop | Out-Null }
     catch { throw "Cannot resolve $name. Your DNS server is not answering; set DNS to 8.8.8.8 / 8.8.4.4 (Settings > Network > DNS server assignment), run 'ipconfig /flushdns', restart Docker Desktop, then rerun." }
 }
 
 # ---- 1. Exact commit and manual CI evidence -------------------------------------------------
 Write-Step 'Resolving the staging commit'
-git fetch origin staging --quiet
-if ($LASTEXITCODE -ne 0) { throw 'Cannot reach GitHub (git fetch failed). Check your internet/DNS connection and run the script again.' }
-if (-not $Commit) { $Commit = (git rev-parse origin/staging).Trim() }
-$Commit = (git rev-parse $Commit).Trim()
+if (-not $ReleaseDirectory) {
+    git fetch origin staging --quiet
+    if ($LASTEXITCODE -ne 0) { throw 'Cannot reach GitHub (git fetch failed). Check your internet/DNS connection and run the script again.' }
+    if (-not $Commit) { $Commit = (git rev-parse origin/staging).Trim() }
+    $Commit = (git rev-parse $Commit).Trim()
+}
 if ($Commit -notmatch '^[a-f0-9]{40}$') { throw 'Could not resolve a full commit SHA.' }
 $short = $Commit.Substring(0, 8)
 Write-Host "Commit $Commit"
@@ -90,11 +151,16 @@ function Invoke-GitHubApi([string] $uri, [string] $method = 'Get', [string] $bod
         }
     }
 }
-function Get-ManualRun { (Invoke-GitHubApi "https://api.github.com/repos/$Repository/actions/runs?head_sha=$Commit&event=workflow_dispatch&per_page=10").workflow_runs | Select-Object -First 1 }
+function Get-ManualRun {
+    (Invoke-GitHubApi "https://api.github.com/repos/$Repository/actions/runs?head_sha=$Commit&event=workflow_dispatch&per_page=100").workflow_runs |
+        Where-Object { $_.head_sha -ceq $Commit -and $_.head_branch -eq 'staging' -and $_.path -eq '.github/workflows/ci.yml' } |
+        Select-Object -First 1
+}
 
 Write-Step 'Checking for a successful manual quality-gates run'
 $run = Get-ManualRun
 if (-not $run -or ($run.status -eq 'completed' -and $run.conclusion -ne 'success')) {
+    if ($ReleaseDirectory) { throw 'The existing package has no successful current quality-gates run for its exact staging commit. Restore passing CI before resuming.' }
     if ((git rev-parse origin/staging).Trim() -ne $Commit) { throw 'A manual run can only start on the current origin/staging head. Push the commit to staging first.' }
     Write-Host 'Starting a manual quality-gates run on staging...'
     Invoke-GitHubApi "https://api.github.com/repos/$Repository/actions/workflows/ci.yml/dispatches" 'Post' '{"ref":"staging"}' | Out-Null
@@ -108,28 +174,30 @@ do {
 if ($run.conclusion -ne 'success') { throw "Manual run #$($run.run_number) finished '$($run.conclusion)'. Fix CI first: $($run.html_url)" }
 
 # ---- 2. Package -----------------------------------------------------------------------------
-Write-Step 'Packaging the release (Docker build, runtime tests, Trivy)'
-$env:VENDOR_RECAPTCHA_SITE_KEY = Get-PortalValue 'apps/vendor-web/.env' 'VITE_RECAPTCHA_SITE_KEY'
-$env:ADMIN_RECAPTCHA_SITE_KEY = Get-PortalValue 'apps/admin-web/.env' 'VITE_RECAPTCHA_SITE_KEY'
-$env:GOOGLE_MAPS_BROWSER_KEY = Get-PortalValue 'apps/vendor-web/.env' 'VITE_GOOGLE_MAPS_BROWSER_KEY'
-$env:GITHUB_TOKEN = $token
-if (Test-Path 'D:\materyalph-tools\trivy-0.75.0\trivy.exe') { $env:PATH = "D:\materyalph-tools\trivy-0.75.0;$env:PATH" }
-if (-not (Get-Command trivy -ErrorAction SilentlyContinue)) { throw 'Trivy is not on PATH.' }
-if ($OutputRoot) { New-Item -ItemType Directory -Force $OutputRoot | Out-Null; $env:TEMP = Join-Path $OutputRoot 'tmp'; $env:TMP = $env:TEMP; New-Item -ItemType Directory -Force $env:TEMP | Out-Null }
-$releaseRoot = if ($OutputRoot) { $OutputRoot } else { Join-Path $repoRoot '.tmp/releases' }
-$release = Join-Path $releaseRoot "$short-$([DateTime]::UtcNow.ToString('yyyyMMddHHmmss'))"
-try {
-    python scripts/deployment/package-vps.py $Repository $Commit $release
-    if ($LASTEXITCODE -ne 0) { throw 'Packaging failed (see output above). "no such host" = DNS/network problem, rerun once fixed; a Trivy HIGH/CRITICAL finding must be fixed in the image, not ignored.' }
-} finally { Remove-Item Env:GITHUB_TOKEN -ErrorAction SilentlyContinue }
-$manifest = Get-Content -LiteralPath (Join-Path $release 'release.json') -Raw | ConvertFrom-Json
+if (-not $ReleaseDirectory) {
+    Write-Step 'Packaging the release (Docker build, runtime tests, Trivy)'
+    $env:VENDOR_RECAPTCHA_SITE_KEY = Get-PortalValue 'apps/vendor-web/.env' 'VITE_RECAPTCHA_SITE_KEY'
+    $env:ADMIN_RECAPTCHA_SITE_KEY = Get-PortalValue 'apps/admin-web/.env' 'VITE_RECAPTCHA_SITE_KEY'
+    $env:GOOGLE_MAPS_BROWSER_KEY = Get-PortalValue 'apps/vendor-web/.env' 'VITE_GOOGLE_MAPS_BROWSER_KEY'
+    if (Test-Path 'D:\materyalph-tools\trivy-0.75.0\trivy.exe') { $env:PATH = "D:\materyalph-tools\trivy-0.75.0;$env:PATH" }
+    if (-not (Get-Command trivy -ErrorAction SilentlyContinue)) { throw 'Trivy is not on PATH.' }
+    if ($OutputRoot) { New-Item -ItemType Directory -Force $OutputRoot | Out-Null; $env:TEMP = Join-Path $OutputRoot 'tmp'; $env:TMP = $env:TEMP; New-Item -ItemType Directory -Force $env:TEMP | Out-Null }
+    $releaseRoot = if ($OutputRoot) { $OutputRoot } else { Join-Path $repoRoot '.tmp/releases' }
+    $release = Join-Path $releaseRoot "$short-$([DateTime]::UtcNow.ToString('yyyyMMddHHmmss'))"
+    $env:GITHUB_TOKEN = $token
+    try {
+        python scripts/deployment/package-vps.py $Repository $Commit $release
+        if ($LASTEXITCODE -ne 0) { throw 'Packaging failed (see output above). "no such host" = DNS/network problem, rerun once fixed; a Trivy HIGH/CRITICAL finding must be fixed in the image, not ignored.' }
+    } finally { Remove-Item Env:GITHUB_TOKEN -ErrorAction SilentlyContinue }
+    $manifest = Get-ReleaseManifest $release
+}
+Write-Host "Release package: $release"
 
 # ---- 3. Upload and verify -------------------------------------------------------------------
 Write-Step 'Uploading the release to the VPS'
 $stage = "release-$short"
-ssh @sshOptions $remoteHost "rm -rf ~/$stage && mkdir -p ~/$stage"
-scp @sshOptions -C (Join-Path $release 'api.tar') (Join-Path $release 'edge.tar') (Join-Path $release 'runtime.tar') (Join-Path $release 'release.json') "${remoteHost}:$stage/"
-if ($LASTEXITCODE -ne 0) { throw 'Upload failed.' }
+Invoke-TransferStep 'Preparing the upload directory' { ssh @sshOptions $remoteHost "mkdir -p ~/$stage" }
+Invoke-TransferStep 'Release upload' { scp @sshOptions -C (Join-Path $release 'api.tar') (Join-Path $release 'edge.tar') (Join-Path $release 'runtime.tar') (Join-Path $release 'release.json') "${remoteHost}:$stage/" }
 Invoke-RemoteScript @"
 cd ~/$stage && python3 -c "import json,hashlib,sys; r=json.load(open('release.json')); bad=[n for n,h in r['archives'].items() if hashlib.sha256(open(n,'rb').read()).hexdigest()!=h]; print('checksums', 'OK' if not bad else 'MISMATCH '+str(bad)); sys.exit(1 if bad else 0)"
 "@
@@ -169,6 +237,7 @@ echo CHAIN-DONE
 $chain = $chain.Replace('__COMMIT__', $Commit).Replace('__STAGE__', $stage).Replace('__API__', $manifest.images.api).Replace('__EDGE__', $manifest.images.edge)
 $chainEncoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes(($chain -replace "`r", '')))
 ssh @sshOptions $remoteHost "echo $chainEncoded | base64 -d > ~/$stage.sh; rm -f ~/$stage.log; setsid nohup bash ~/$stage.sh > ~/$stage.log 2>&1 < /dev/null & echo started"
+if ($LASTEXITCODE -ne 0) { throw "Could not confirm remote release startup. Check ~/$stage.log on the VPS before retrying; the remote release may already be running." }
 $printed = 0
 do {
     Start-Sleep -Seconds 20

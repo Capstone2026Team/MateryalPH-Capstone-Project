@@ -141,9 +141,14 @@ After the first deployment, release a pushed `staging` commit from the operator 
 ```powershell
 ./scripts/deployment/release-hostinger.ps1            # latest origin/staging
 ./scripts/deployment/release-hostinger.ps1 -Commit SHA
+./scripts/deployment/release-hostinger.ps1 -ReleaseDirectory 'D:\materyalph-releases\COMMIT-TIMESTAMP'
 ```
 
 It starts and waits for the manual `quality gates` run when none exists, packages with `package-vps.py`, uploads and verifies checksums, then on the VPS loads the images, installs the runtime (resetting the Windows archive's file modes), updates `control.env`, takes the required backup and deploys fenced in a detached session (log: `~/release-SHORT.log`). It reopens staging only after the operator types `REOPEN` to confirm the four rehearsal checks for that commit. The workstation's public IP must be allowed for TCP 22.
+
+SSH authentication and pinned-host verification run before any CI wait or package build. SSH preflight, upload-directory preparation and SCP each retry up to three times. A failed directory-preparation command blocks SCP; failed uploads block installation and retain the local release directory. A timeout or `banner exchange` failure means SSH did not establish a usable connection: verify the workstation's current public IPv4, the Hostinger TCP 22 allowlist and VPN/network access before retrying. Keep strict host verification enabled.
+
+After packaging succeeds, `-ReleaseDirectory` resumes that exact package instead of selecting the latest staging head or rebuilding images. It verifies the manifest's repository/commit, immutable image IDs, passed runtime/Trivy evidence and all three local archive hashes, then rechecks a successful manual `ci.yml` run on the same staging commit. It does not require portal build inputs or local Docker/Trivy for this resume path. Remote hashes, backup, fenced deployment and interactive rehearsal approval still apply. If SSH drops while starting the detached installation, inspect `~/release-SHORT.log` before retrying because the remote job may already be running.
 
 ## 9. Release evidence
 
