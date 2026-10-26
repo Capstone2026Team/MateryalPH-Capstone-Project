@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(DirectoryBuyerProfileProfile, () {
+    // Five-minute signed private photo URL, bound to the viewing Admin and current Buyer profile version. Fetch with authenticated cookie transport; null when absent or the account is deleted.
+    // String avatarUrl
+    test('to test the property `avatarUrl`', () async {
+      // TODO
+    });
+
     // String email
     test('to test the property `email`', () async {
       // TODO

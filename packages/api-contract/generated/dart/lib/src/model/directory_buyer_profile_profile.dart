@@ -11,6 +11,7 @@ part 'directory_buyer_profile_profile.g.dart';
 /// DirectoryBuyerProfileProfile
 ///
 /// Properties:
+/// * [avatarUrl] - Five-minute signed private photo URL, bound to the viewing Admin and current Buyer profile version. Fetch with authenticated cookie transport; null when absent or the account is deleted.
 /// * [email]
 /// * [emailVerified]
 /// * [mobile]
@@ -25,6 +26,10 @@ part 'directory_buyer_profile_profile.g.dart';
 /// * [commerceRestrictedUntil]
 @BuiltValue()
 abstract class DirectoryBuyerProfileProfile implements Built<DirectoryBuyerProfileProfile, DirectoryBuyerProfileProfileBuilder> {
+  /// Five-minute signed private photo URL, bound to the viewing Admin and current Buyer profile version. Fetch with authenticated cookie transport; null when absent or the account is deleted.
+  @BuiltValueField(wireName: r'avatar_url')
+  String? get avatarUrl;
+
   @BuiltValueField(wireName: r'email')
   String get email;
 
@@ -85,6 +90,11 @@ class _$DirectoryBuyerProfileProfileSerializer implements PrimitiveSerializer<Di
     DirectoryBuyerProfileProfile object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    yield r'avatar_url';
+    yield object.avatarUrl == null ? null : serializers.serialize(
+      object.avatarUrl,
+      specifiedType: const FullType.nullable(String),
+    );
     yield r'email';
     yield serializers.serialize(
       object.email,
@@ -168,6 +178,14 @@ class _$DirectoryBuyerProfileProfileSerializer implements PrimitiveSerializer<Di
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'avatar_url':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.avatarUrl = valueDes;
+          break;
         case r'email':
           final valueDes = serializers.deserialize(
             value,

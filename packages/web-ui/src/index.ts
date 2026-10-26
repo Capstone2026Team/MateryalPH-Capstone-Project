@@ -38,7 +38,7 @@ export { AccountWorkspace } from './account-workspace'
 export { PortalAccountMenu } from './portal-account-menu'
 export { PortalIdentityProvider } from './portal-identity'
 export { PortalShell, ProgressBar, StatusBadge, type PortalAccountScore, type PortalNavItem, type PortalNavSection } from './portal-shell'
-export { rateLimitMessage, clearWebSessionTransport, createWebApiConfiguration, getWebCsrfToken, webRequestErrorMessage, readReviewMediaFile } from './web-api-session'
+export { rateLimitMessage, clearWebSessionTransport, createWebApiConfiguration, getWebCsrfToken, webRequestErrorMessage, readReviewMediaFile, readDirectoryBuyerPhoto } from './web-api-session'
 export { OnboardingFlow, OnboardingStepContent, type StepSection } from './onboarding-flow'
 export { ResponsiveRecordList, RowGroup, MediaUploadField, RowErrorTable, ReviewWorkspace, SummaryTiles, FilterChips, type RecordColumn, type MediaItem, type RowErrorRecord, type SummaryTile, type FilterChip } from './catalog-patterns'
 export { FieldRow, AuthorityScopePanel, DocumentUploadField, OnboardingFormSection } from './onboarding-fields'
@@ -66,7 +66,7 @@ export { AutoAcceptPanel, type AutoAcceptPanelPolicy, type AutoAcceptPanelValues
 export { XenditConnection, type XenditConnectionProps } from './xendit-connection'
 export { StoreOperationSchedule, StoreHours, emptyStoreSchedule, storeScheduleErrors, type StoreOperatingDay } from './store-operation-schedule'
 
-export { ProfileDetails, ProfileSplitPanel } from './profile-details'
+export { ProfileDetails, ProfileSplitPanel, ProfileHeader, ProfileDetailsLayout, ProfileSection, ProfileImage } from './profile-details'
 export { RevealableValue } from './revealable-value'
 export { OrderHistory, OrderProgress, OrderSummaryCard, OrderStateRows, DeadlineCountdown, MoneyBreakdown, formatPesoCentavos, orderStateLabel, orderStateTone } from './order-patterns'
 

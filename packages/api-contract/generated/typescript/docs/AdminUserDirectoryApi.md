@@ -5,6 +5,7 @@ All URIs are relative to */api/v1*
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
 | [**getDirectoryBuyer**](AdminUserDirectoryApi.md#getdirectorybuyer) | **GET** /admin/buyers/{buyerId} |  |
+| [**getDirectoryBuyerPhoto**](AdminUserDirectoryApi.md#getdirectorybuyerphoto) | **GET** /admin/buyers/{buyerId}/photo |  |
 | [**getDirectoryVendor**](AdminUserDirectoryApi.md#getdirectoryvendor) | **GET** /admin/vendors/{vendorId} |  |
 | [**listDirectoryBuyerReviews**](AdminUserDirectoryApi.md#listdirectorybuyerreviews) | **GET** /admin/buyers/{buyerId}/reviews |  |
 | [**listDirectoryBuyers**](AdminUserDirectoryApi.md#listdirectorybuyers) | **GET** /admin/buyers |  |
@@ -20,7 +21,7 @@ All URIs are relative to */api/v1*
 
 
 
-user_directory.view. Buyer profile with contact details, ratings, activity and recent orders. Opening a profile is audited; a self-deleted Buyer\&#39;s email is masked and mobile omitted.
+user_directory.view. Buyer profile with contact details, ratings, activity and recent orders. Opening a profile is audited; a self-deleted Buyer\&#39;s email is masked and mobile and profile photo omitted.
 
 ### Example
 
@@ -86,6 +87,98 @@ example().catch(console.error);
 | **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **404** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## getDirectoryBuyerPhoto
+
+> Blob getDirectoryBuyerPhoto(buyerId, expires, owner, version, viewer, signature)
+
+
+
+user_directory.view. Fetch the sanitized private Buyer profile photo using the five-minute signed avatar_url from the directory profile. The URL is bound to the Buyer, current profile version and viewing Admin; it grants no access without the current Admin session and permission. Deleted Buyers have no photo. Authorization and photo version are checked again after private storage is read. Responses are private and no-store.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  AdminUserDirectoryApi,
+} from '@materyalph/api-client-ts';
+import type { GetDirectoryBuyerPhotoRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new AdminUserDirectoryApi(config);
+
+  const body = {
+    // string
+    buyerId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // number
+    expires: 56,
+    // string
+    owner: owner_example,
+    // number
+    version: 56,
+    // string
+    viewer: viewer_example,
+    // string
+    signature: signature_example,
+  } satisfies GetDirectoryBuyerPhotoRequest;
+
+  try {
+    const data = await api.getDirectoryBuyerPhoto(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **buyerId** | `string` |  | [Defaults to `undefined`] |
+| **expires** | `number` |  | [Defaults to `undefined`] |
+| **owner** | `string` |  | [Defaults to `undefined`] |
+| **version** | `number` |  | [Defaults to `undefined`] |
+| **viewer** | `string` |  | [Defaults to `undefined`] |
+| **signature** | `string` |  | [Defaults to `undefined`] |
+
+### Return type
+
+**Blob**
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `image/png`, `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Authorized sanitized profile photo with private, no-store and nosniff headers. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **404** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **503** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 

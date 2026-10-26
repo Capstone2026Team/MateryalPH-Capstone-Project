@@ -8,6 +8,8 @@ part of 'directory_buyer_profile_profile.dart';
 
 class _$DirectoryBuyerProfileProfile extends DirectoryBuyerProfileProfile {
   @override
+  final String? avatarUrl;
+  @override
   final String email;
   @override
   final bool emailVerified;
@@ -37,7 +39,8 @@ class _$DirectoryBuyerProfileProfile extends DirectoryBuyerProfileProfile {
       (DirectoryBuyerProfileProfileBuilder()..update(updates))._build();
 
   _$DirectoryBuyerProfileProfile._(
-      {required this.email,
+      {this.avatarUrl,
+      required this.email,
       required this.emailVerified,
       this.mobile,
       required this.buyerType,
@@ -63,6 +66,7 @@ class _$DirectoryBuyerProfileProfile extends DirectoryBuyerProfileProfile {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is DirectoryBuyerProfileProfile &&
+        avatarUrl == other.avatarUrl &&
         email == other.email &&
         emailVerified == other.emailVerified &&
         mobile == other.mobile &&
@@ -80,6 +84,7 @@ class _$DirectoryBuyerProfileProfile extends DirectoryBuyerProfileProfile {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, avatarUrl.hashCode);
     _$hash = $jc(_$hash, email.hashCode);
     _$hash = $jc(_$hash, emailVerified.hashCode);
     _$hash = $jc(_$hash, mobile.hashCode);
@@ -99,6 +104,7 @@ class _$DirectoryBuyerProfileProfile extends DirectoryBuyerProfileProfile {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'DirectoryBuyerProfileProfile')
+          ..add('avatarUrl', avatarUrl)
           ..add('email', email)
           ..add('emailVerified', emailVerified)
           ..add('mobile', mobile)
@@ -120,6 +126,10 @@ class DirectoryBuyerProfileProfileBuilder
         Builder<DirectoryBuyerProfileProfile,
             DirectoryBuyerProfileProfileBuilder> {
   _$DirectoryBuyerProfileProfile? _$v;
+
+  String? _avatarUrl;
+  String? get avatarUrl => _$this._avatarUrl;
+  set avatarUrl(String? avatarUrl) => _$this._avatarUrl = avatarUrl;
 
   String? _email;
   String? get email => _$this._email;
@@ -180,6 +190,7 @@ class DirectoryBuyerProfileProfileBuilder
   DirectoryBuyerProfileProfileBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _avatarUrl = $v.avatarUrl;
       _email = $v.email;
       _emailVerified = $v.emailVerified;
       _mobile = $v.mobile;
@@ -213,6 +224,7 @@ class DirectoryBuyerProfileProfileBuilder
   _$DirectoryBuyerProfileProfile _build() {
     final _$result = _$v ??
         _$DirectoryBuyerProfileProfile._(
+          avatarUrl: avatarUrl,
           email: BuiltValueNullFieldError.checkNotNull(
               email, r'DirectoryBuyerProfileProfile', 'email'),
           emailVerified: BuiltValueNullFieldError.checkNotNull(

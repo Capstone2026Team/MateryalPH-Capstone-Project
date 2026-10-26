@@ -13,12 +13,15 @@ use App\Models\AuthSession;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Database\Seeders\SystemFoundationSeeder;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Passport\AccessToken;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\CreatesDiscoveryFixtures;
 use Tests\Support\CreatesOrderFixtures;
 use Tests\Support\FakeAddressGeocoder;
@@ -158,6 +161,107 @@ final class AdminUserDirectoryTest extends TestCase
         $this->getJson('/api/v1/admin/buyers')->assertOk()->assertJsonPath('data.0.email', 'g•••@example.com');
         $this->getJson('/api/v1/admin/buyers/'.$profile)->assertOk()->assertJsonPath('data.profile.email', 'g•••@example.com')->assertJsonPath('data.profile.mobile', null)
             ->assertJsonPath('data.can_view_enforcement', true)->assertJsonPath('data.sanctions.0.action_label', 'Warning');
+    }
+
+    public function test_buyer_photo_is_private_signed_viewer_bound_and_versioned(): void
+    {
+        $buyer = $this->directoryBuyer('Photo Buyer', 'photo@example.com');
+        $profile = $this->buyerProfileId($buyer);
+        $this->signInAdmin($admin = $this->admin('ADMIN_SUPPORT'));
+        $this->getJson('/api/v1/admin/buyers/'.$profile)->assertOk()->assertJsonPath('data.profile.avatar_url', null);
+        $key = 'private/profile-photos/directory-test.png';
+        Storage::disk('local')->put($key, 'sanitized profile photo');
+        $buyer->forceFill(['profile_photo_key' => $key, 'profile_photo_disk' => 'local'])->save();
+        $url = (string) $this->getJson('/api/v1/admin/buyers/'.$profile)->assertOk()->json('data.profile.avatar_url');
+        self::assertStringNotContainsString($key, $url);
+        self::assertStringNotContainsString('profile_photo_key', (string) $this->getJson('/api/v1/admin/buyers/'.$profile)->getContent());
+        $photo = $this->get($url)->assertOk()->assertHeader('Content-Type', 'image/png')->assertHeader('X-Content-Type-Options', 'nosniff');
+        self::assertSame('sanitized profile photo', $photo->streamedContent());
+        self::assertStringContainsString('private', (string) $photo->headers->get('Cache-Control'));
+        self::assertStringContainsString('no-store', (string) $photo->headers->get('Cache-Control'));
+        Storage::disk('local')->delete($key);
+        $this->get($url)->assertStatus(503)->assertJsonPath('errors.0.code', 'FILE_UNAVAILABLE');
+        Storage::disk('local')->put($key, 'sanitized profile photo');
+        $this->get('/api/v1/admin/buyers/'.$profile.'/photo')->assertForbidden();
+        $this->get($url.'&version=999')->assertForbidden();
+        $this->signInAdmin($this->admin('ADMIN_SUPERADMIN'));
+        $this->get($url)->assertNotFound();
+        $this->signInAdmin($this->admin('ADMIN_FINANCE'));
+        $this->get($url)->assertForbidden()->assertJsonPath('errors.0.code', 'PERMISSION_DENIED');
+        $this->signInBuyer($buyer);
+        $this->get($url)->assertForbidden();
+        $this->signInAdmin($admin);
+        $buyer->forceFill(['lock_version' => $buyer->refresh()->lock_version + 1])->save();
+        $this->get($url)->assertNotFound();
+        $url = (string) $this->getJson('/api/v1/admin/buyers/'.$profile)->assertOk()->json('data.profile.avatar_url');
+        $this->travel(6)->minutes();
+        $this->get($url)->assertForbidden();
+        $this->travelBack();
+        $buyer->forceFill(['account_status' => 'DELETED', 'account_deleted_at' => now()])->save();
+        $this->getJson('/api/v1/admin/buyers/'.$profile)->assertOk()->assertJsonPath('data.profile.avatar_url', null);
+        $this->get($url)->assertNotFound();
+        $this->flushSession();
+        $this->app['auth']->forgetGuards();
+        $this->get($url)->assertUnauthorized();
+    }
+
+    /** @return array<string, array{string, int}> */
+    public static function photoRevocations(): array
+    {
+        return [
+            'photo replaced' => ['photo', 404],
+            'version changed' => ['version', 404],
+            'Buyer deleted' => ['buyer', 404],
+            'Admin suspended' => ['admin', 403],
+            'membership revoked' => ['membership', 403],
+            'permission revoked' => ['permission', 403],
+            'session revoked' => ['session', 401],
+        ];
+    }
+
+    #[DataProvider('photoRevocations')]
+    public function test_buyer_photo_reauthorizes_after_private_storage_read(string $change, int $status): void
+    {
+        $buyer = $this->directoryBuyer('Revocation Buyer', 'revocation@example.com');
+        $buyer->forceFill(['profile_photo_key' => 'private/profile-photos/revocation.png', 'profile_photo_disk' => 'local'])->save();
+        $this->signInAdmin($admin = $this->admin('ADMIN_SUPPORT'));
+        $url = (string) $this->getJson('/api/v1/admin/buyers/'.$this->buyerProfileId($buyer))->assertOk()->json('data.profile.avatar_url');
+        $disk = \Mockery::mock(FilesystemAdapter::class);
+        $disk->shouldReceive('get')->once()->with($buyer->profile_photo_key)->andReturnUsing(static function () use ($buyer, $admin, $change): string {
+            match ($change) {
+                'photo' => DB::table('users')->where('id', $buyer->id)->update(['profile_photo_key' => 'private/profile-photos/replaced.png']),
+                'version' => DB::table('users')->where('id', $buyer->id)->increment('lock_version'),
+                'buyer' => DB::table('users')->where('id', $buyer->id)->update(['account_status' => 'DELETED', 'account_deleted_at' => now()]),
+                'admin' => DB::table('users')->where('id', $admin->id)->update(['account_status' => 'SUSPENDED']),
+                'membership' => DB::table('admin_memberships')->where('user_id', $admin->id)->update(['status' => 'INACTIVE']),
+                'permission' => DB::table('role_permissions')->where('platform_role_id', DB::table('platform_roles')->where('code', 'ADMIN_SUPPORT')->value('id'))
+                    ->where('permission_id', DB::table('permissions')->where('code', 'user_directory.view')->value('id'))->delete(),
+                'session' => DB::table('auth_sessions')->where('user_id', $admin->id)->update(['revoked_at' => now()]),
+                default => null,
+            };
+
+            return 'private photo bytes that must not leave the API';
+        });
+        Storage::shouldReceive('disk')->with('local')->once()->andReturn($disk);
+        $response = $this->get($url)->assertStatus($status);
+        self::assertStringNotContainsString('private photo bytes', (string) $response->getContent());
+    }
+
+    public function test_vendor_banner_projection_requires_clean_current_media(): void
+    {
+        [$store, $owner] = $this->activeStore('Banner Hardware', false);
+        $this->signInAdmin($admin = $this->admin('ADMIN_SUPPORT'));
+        $this->getJson('/api/v1/admin/vendors/'.$store->id)->assertOk()->assertJsonPath('data.store.banner_url', null);
+        $this->signInStoreMember($owner);
+        $this->post('/api/v1/vendors/onboarding/media', ['file' => UploadedFile::fake()->image('banner.png'), 'kind' => 'BANNER', 'alt_text' => 'Store banner'])->assertCreated();
+        $file = (string) DB::table('store_profiles')->where('vendor_organization_id', $store->id)->value('banner_file_id');
+        $this->signInAdmin($admin);
+        self::assertNotNull($this->getJson('/api/v1/admin/vendors/'.$store->id)->assertOk()->json('data.store.banner_url'));
+        DB::table('files')->where('id', $file)->update(['scan_state' => 'PENDING']);
+        $this->getJson('/api/v1/admin/vendors/'.$store->id)->assertOk()->assertJsonPath('data.store.banner_url', null);
+        DB::table('files')->where('id', $file)->update(['scan_state' => 'CLEAN']);
+        DB::table('store_profiles')->where('vendor_organization_id', $store->id)->update(['banner_file_id' => null]);
+        $this->getJson('/api/v1/admin/vendors/'.$store->id)->assertOk()->assertJsonPath('data.store.banner_url', null);
     }
 
     public function test_vendor_list_filters_by_status_verification_and_owner_and_paginates(): void

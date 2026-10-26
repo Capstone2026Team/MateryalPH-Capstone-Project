@@ -191,6 +191,7 @@ Class | Method | HTTP request | Description
 [*AdminScoreMonitoringApi*](doc/AdminScoreMonitoringApi.md) | [**revokeAdminScoreExclusion**](doc/AdminScoreMonitoringApi.md#revokeadminscoreexclusion) | **POST** /admin/scores/exclusions/{exclusionId}/revoke |
 [*AdminScoreMonitoringApi*](doc/AdminScoreMonitoringApi.md) | [**suppressAdminBadge**](doc/AdminScoreMonitoringApi.md#suppressadminbadge) | **POST** /admin/scores/{vendorId}/badge-suppressions |
 [*AdminUserDirectoryApi*](doc/AdminUserDirectoryApi.md) | [**getDirectoryBuyer**](doc/AdminUserDirectoryApi.md#getdirectorybuyer) | **GET** /admin/buyers/{buyerId} |
+[*AdminUserDirectoryApi*](doc/AdminUserDirectoryApi.md) | [**getDirectoryBuyerPhoto**](doc/AdminUserDirectoryApi.md#getdirectorybuyerphoto) | **GET** /admin/buyers/{buyerId}/photo |
 [*AdminUserDirectoryApi*](doc/AdminUserDirectoryApi.md) | [**getDirectoryVendor**](doc/AdminUserDirectoryApi.md#getdirectoryvendor) | **GET** /admin/vendors/{vendorId} |
 [*AdminUserDirectoryApi*](doc/AdminUserDirectoryApi.md) | [**listDirectoryBuyerReviews**](doc/AdminUserDirectoryApi.md#listdirectorybuyerreviews) | **GET** /admin/buyers/{buyerId}/reviews |
 [*AdminUserDirectoryApi*](doc/AdminUserDirectoryApi.md) | [**listDirectoryBuyers**](doc/AdminUserDirectoryApi.md#listdirectorybuyers) | **GET** /admin/buyers |

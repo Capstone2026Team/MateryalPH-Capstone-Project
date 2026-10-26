@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`avatarUrl` | string
 `email` | string
 `emailVerified` | boolean
 `mobile` | string
@@ -26,6 +27,7 @@ import type { DirectoryBuyerProfileProfile } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "avatarUrl": null,
   "email": null,
   "emailVerified": null,
   "mobile": null,

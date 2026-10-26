@@ -14,12 +14,17 @@ use App\Domain\Operations\AdminAccess;
 use App\Domain\Reviews\ReviewPresenter;
 use App\Domain\Reviews\ReviewRules;
 use App\Domain\Scores\PublicScores;
+use App\Models\AuthSession;
 use App\Support\PortalDateRange;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
+use League\Flysystem\FilesystemException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Admin Buyer and Vendor user directories: a bounded, filterable list and a read-only profile with contact details,
@@ -95,11 +100,13 @@ final class UserDirectoryService
         $orders = DB::table('orders')->where('buyer_profile_id', $profileId)->groupBy('order_state')->selectRaw('order_state, COUNT(*) AS total')->pluck('total', 'order_state');
         $received = ReviewRules::constrainVisible(DB::table('reviews as r')->where('r.buyer_profile_id', $profileId)->where('r.review_type', ReviewRules::BUYER))
             ->selectRaw('count(*) AS total, avg(r.inquiry_seriousness)::numeric AS seriousness, avg(r.communication_quality)::numeric AS communication, avg(r.payment_reliability)::numeric AS payment')->first();
-        $this->audit->account($request, 'USER_DIRECTORY_VIEWED', 'BUYER_PROFILE', $profileId, [], ['subject_type' => 'BUYER', 'fields' => ['contact', 'ratings', 'activity']]);
+        $this->audit->account($request, 'USER_DIRECTORY_VIEWED', 'BUYER_PROFILE', $profileId, [], ['subject_type' => 'BUYER', 'fields' => ['contact', 'profile_photo', 'ratings', 'activity']]);
 
         return [
             'id' => $profileId, 'subject_type' => 'BUYER', 'name' => (string) $buyer->display_name, 'status' => (string) $buyer->account_status,
             'profile' => [
+                'avatar_url' => $deleted || $buyer->profile_photo_key === null || $buyer->profile_photo_disk === null ? null : URL::temporarySignedRoute('admin.directory.buyer-photo', now()->addMinutes(5),
+                    ['buyerId' => $profileId, 'owner' => $buyer->public_id, 'version' => $buyer->lock_version, 'viewer' => $request->user()->public_id]),
                 'email' => $this->buyerEmail($buyer), 'email_verified' => $buyer->email_verified_at !== null, 'mobile' => $deleted ? null : $buyer->mobile_e164,
                 'buyer_type' => (string) $buyer->buyer_type, 'company_name' => $buyer->company_name, 'position_title' => $buyer->position_title,
                 'industry' => $buyer->industry_classification === 'OTHER' ? ($buyer->industry_other_label ?? 'Other') : $buyer->industry_classification,
@@ -133,6 +140,49 @@ final class UserDirectoryService
             'sanctions' => $this->sanctions('BUYER', $profileId, $actor['permissions']),
             'can_view_enforcement' => in_array('enforcement.view', $actor['permissions'], true),
         ];
+    }
+
+    /** A signed URL never grants access without the current directory permission and a current active Admin session. */
+    public function buyerPhoto(Request $request, string $id): StreamedResponse
+    {
+        $buyer = $this->authorizedPhotoBuyer($request, $id);
+        try {
+            $bytes = Storage::disk((string) $buyer->profile_photo_disk)->get((string) $buyer->profile_photo_key);
+        } catch (FilesystemException) {
+            throw new AuthenticationException('FILE_UNAVAILABLE', 'The Buyer photo is temporarily unavailable.', 503);
+        }
+        if (! is_string($bytes)) {
+            throw new AuthenticationException('FILE_UNAVAILABLE', 'The Buyer photo is temporarily unavailable.', 503);
+        }
+        // Private storage may be remote: account deletion, permission revocation and photo replacement take effect
+        // before any bytes leave this process, even when they happen while storage is being read.
+        $current = $this->authorizedPhotoBuyer($request, $id);
+        if ($current->profile_photo_key !== $buyer->profile_photo_key || $current->profile_photo_disk !== $buyer->profile_photo_disk) {
+            throw new AuthenticationException('FILE_NOT_FOUND', 'This Buyer photo changed. Reload the profile.', 404);
+        }
+
+        return response()->stream(static function () use ($bytes): void {
+            echo $bytes;
+        }, 200, ['Content-Type' => 'image/png', 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff']);
+    }
+
+    private function authorizedPhotoBuyer(Request $request, string $id): object
+    {
+        $request->user()->refresh();
+        $this->access->require($request, self::PERMISSION);
+        $session = $request->attributes->get('auth_session');
+        if (! $session instanceof AuthSession || ! AuthSession::query()->whereKey($session->getKey())->where('user_id', $request->user()->getKey())
+            ->whereNull('revoked_at')->where('expires_at', '>', now())->exists()) {
+            throw new AuthenticationException('SESSION_EXPIRED', 'Your session has expired. Sign in again.', 401);
+        }
+        $buyer = $this->buyerRow($id);
+        if ($buyer->account_status === 'DELETED' || $buyer->profile_photo_key === null || $buyer->profile_photo_disk === null
+            || $request->query('owner') !== $buyer->public_id || (string) $request->query('version') !== (string) $buyer->lock_version
+            || $request->query('viewer') !== $request->user()->public_id) {
+            throw new AuthenticationException('FILE_NOT_FOUND', 'This Buyer photo is unavailable.', 404);
+        }
+
+        return $buyer;
     }
 
     /**
@@ -192,6 +242,7 @@ final class UserDirectoryService
         $owner = DB::table('vendor_memberships as m')->join('users as u', 'u.id', '=', 'm.user_id')->leftJoin('user_profiles as up', 'up.user_id', '=', 'u.id')
             ->where('m.vendor_organization_id', $id)->where('m.role', 'OWNER')->where('m.status', 'ACTIVE')->orderBy('m.created_at')->first(['u.name', 'u.email', 'up.mobile_e164']);
         $logo = $profile?->logo_file_id === null ? null : DB::table('files')->where('id', $profile->logo_file_id)->where('scan_state', 'CLEAN')->first();
+        $banner = $profile?->banner_file_id === null ? null : DB::table('files')->where('id', $profile->banner_file_id)->where('scan_state', 'CLEAN')->first();
         $members = DB::table('vendor_memberships as m')->join('users as u', 'u.id', '=', 'm.user_id')->where('m.vendor_organization_id', $id)->whereNull('m.deleted_at');
         $orders = DB::table('orders')->where('vendor_organization_id', $id)->groupBy('order_state')->selectRaw('order_state, COUNT(*) AS total')->pluck('total', 'order_state');
         $storeRatings = ReviewRules::constrainVisible(DB::table('reviews as r')->where('r.vendor_organization_id', $id)->where('r.review_type', ReviewRules::VENDOR))
@@ -206,7 +257,8 @@ final class UserDirectoryService
             'id' => $id, 'subject_type' => 'VENDOR_ORGANIZATION', 'store_name' => (string) $store->store_name, 'status' => (string) $store->store_activation_status,
             'store' => [
                 'legal_name' => $store->legal_business_name ?? $store->legal_name, 'registered_name' => $store->registered_name, 'business_type' => $store->business_type, 'description' => $profile?->description,
-                'logo_url' => $logo === null ? null : $this->files->temporaryUrl($logo)['url'], 'contact_email' => $profile->public_email ?? $store->store_email, 'contact_phone' => $profile->public_phone ?? $store->store_phone,
+                'logo_url' => $logo === null ? null : $this->files->temporaryUrl($logo)['url'], 'banner_url' => $banner === null ? null : $this->files->temporaryUrl($banner)['url'],
+                'contact_email' => $profile->public_email ?? $store->store_email, 'contact_phone' => $profile->public_phone ?? $store->store_phone,
                 'address' => $address?->formatted_address, 'location' => $address === null ? null : implode(', ', array_filter([$address->city_municipality, $address->province])),
                 'verification_status' => (string) $store->store_verification_status, 'setup_status' => (string) $store->store_setup_status, 'activation_status' => (string) $store->store_activation_status,
                 'discoverability_status' => (string) $store->marketplace_discoverability_status, 'account_status' => (string) $store->account_status, 'activation_hold_code' => $store->activation_hold_code,
@@ -388,7 +440,8 @@ final class UserDirectoryService
     {
         $row = ! Str::isUuid($id) ? null : DB::table('buyer_profiles as b')->join('users as u', 'u.id', '=', 'b.user_id')->leftJoin('user_profiles as up', 'up.user_id', '=', 'u.id')->where('b.id', $id)
             ->first(['b.id', 'b.user_id', 'b.buyer_type', 'b.company_name', 'b.position_title', 'b.industry_classification', 'b.industry_other_label', 'b.onboarding_status', 'u.email', 'u.email_verified_at', 'u.account_status',
-                'u.account_deleted_at', 'u.last_authenticated_at', 'u.created_at as joined_at', 'up.mobile_e164', DB::raw('coalesce(up.full_name, u.name) AS display_name')]);
+                'u.account_deleted_at', 'u.last_authenticated_at', 'u.created_at as joined_at', 'u.public_id', 'u.lock_version', 'u.profile_photo_key', 'u.profile_photo_disk',
+                'up.mobile_e164', DB::raw('coalesce(up.full_name, u.name) AS display_name')]);
         if ($row === null) {
             throw new AuthenticationException('USER_NOT_FOUND', 'This Buyer is unavailable.', 404);
         }

@@ -18,6 +18,8 @@ class _$DirectoryVendorProfileStore extends DirectoryVendorProfileStore {
   @override
   final String? logoUrl;
   @override
+  final String? bannerUrl;
+  @override
   final String? contactEmail;
   @override
   final String? contactPhone;
@@ -54,6 +56,7 @@ class _$DirectoryVendorProfileStore extends DirectoryVendorProfileStore {
       this.businessType,
       this.description,
       this.logoUrl,
+      this.bannerUrl,
       this.contactEmail,
       this.contactPhone,
       this.address,
@@ -86,6 +89,7 @@ class _$DirectoryVendorProfileStore extends DirectoryVendorProfileStore {
         businessType == other.businessType &&
         description == other.description &&
         logoUrl == other.logoUrl &&
+        bannerUrl == other.bannerUrl &&
         contactEmail == other.contactEmail &&
         contactPhone == other.contactPhone &&
         address == other.address &&
@@ -109,6 +113,7 @@ class _$DirectoryVendorProfileStore extends DirectoryVendorProfileStore {
     _$hash = $jc(_$hash, businessType.hashCode);
     _$hash = $jc(_$hash, description.hashCode);
     _$hash = $jc(_$hash, logoUrl.hashCode);
+    _$hash = $jc(_$hash, bannerUrl.hashCode);
     _$hash = $jc(_$hash, contactEmail.hashCode);
     _$hash = $jc(_$hash, contactPhone.hashCode);
     _$hash = $jc(_$hash, address.hashCode);
@@ -134,6 +139,7 @@ class _$DirectoryVendorProfileStore extends DirectoryVendorProfileStore {
           ..add('businessType', businessType)
           ..add('description', description)
           ..add('logoUrl', logoUrl)
+          ..add('bannerUrl', bannerUrl)
           ..add('contactEmail', contactEmail)
           ..add('contactPhone', contactPhone)
           ..add('address', address)
@@ -177,6 +183,10 @@ class DirectoryVendorProfileStoreBuilder
   String? _logoUrl;
   String? get logoUrl => _$this._logoUrl;
   set logoUrl(String? logoUrl) => _$this._logoUrl = logoUrl;
+
+  String? _bannerUrl;
+  String? get bannerUrl => _$this._bannerUrl;
+  set bannerUrl(String? bannerUrl) => _$this._bannerUrl = bannerUrl;
 
   String? _contactEmail;
   String? get contactEmail => _$this._contactEmail;
@@ -248,6 +258,7 @@ class DirectoryVendorProfileStoreBuilder
       _businessType = $v.businessType;
       _description = $v.description;
       _logoUrl = $v.logoUrl;
+      _bannerUrl = $v.bannerUrl;
       _contactEmail = $v.contactEmail;
       _contactPhone = $v.contactPhone;
       _address = $v.address;
@@ -287,6 +298,7 @@ class DirectoryVendorProfileStoreBuilder
           businessType: businessType,
           description: description,
           logoUrl: logoUrl,
+          bannerUrl: bannerUrl,
           contactEmail: contactEmail,
           contactPhone: contactPhone,
           address: address,

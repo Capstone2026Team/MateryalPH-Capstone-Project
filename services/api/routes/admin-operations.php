@@ -31,6 +31,7 @@ Route::prefix('admin')->middleware($web('ADMIN'))->group(function (): void {
 
     Route::get('/buyers', [U::class, 'buyers']);
     Route::get('/buyers/{buyerId}', [U::class, 'buyer'])->whereUuid('buyerId');
+    Route::get('/buyers/{buyerId}/photo', [U::class, 'buyerPhoto'])->whereUuid('buyerId')->middleware('signed')->name('admin.directory.buyer-photo');
     Route::get('/buyers/{buyerId}/reviews', [U::class, 'buyerReviews'])->whereUuid('buyerId');
     Route::get('/vendors', [U::class, 'vendors']);
     Route::get('/vendors/{vendorId}', [U::class, 'vendor'])->whereUuid('vendorId');

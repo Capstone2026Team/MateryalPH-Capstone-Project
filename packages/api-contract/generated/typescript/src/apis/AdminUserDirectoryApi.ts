@@ -56,6 +56,33 @@ export interface GetDirectoryBuyerRequest {
     buyerId: string;
 }
 
+export interface GetDirectoryBuyerPhotoRequest {
+    /**
+     *
+     */
+    buyerId: string;
+    /**
+     *
+     */
+    expires: number;
+    /**
+     *
+     */
+    owner: string;
+    /**
+     *
+     */
+    version: number;
+    /**
+     *
+     */
+    viewer: string;
+    /**
+     *
+     */
+    signature: string;
+}
+
 export interface GetDirectoryVendorRequest {
     /**
      *
@@ -215,7 +242,7 @@ export class AdminUserDirectoryApi extends runtime.BaseAPI {
     }
 
     /**
-     * user_directory.view. Buyer profile with contact details, ratings, activity and recent orders. Opening a profile is audited; a self-deleted Buyer\'s email is masked and mobile omitted.
+     * user_directory.view. Buyer profile with contact details, ratings, activity and recent orders. Opening a profile is audited; a self-deleted Buyer\'s email is masked and mobile and profile photo omitted.
      */
     async getDirectoryBuyerRaw(requestParameters: GetDirectoryBuyerRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<DirectoryBuyerEnvelope>> {
         const requestOptions = await this.getDirectoryBuyerRequestOpts(requestParameters);
@@ -225,10 +252,114 @@ export class AdminUserDirectoryApi extends runtime.BaseAPI {
     }
 
     /**
-     * user_directory.view. Buyer profile with contact details, ratings, activity and recent orders. Opening a profile is audited; a self-deleted Buyer\'s email is masked and mobile omitted.
+     * user_directory.view. Buyer profile with contact details, ratings, activity and recent orders. Opening a profile is audited; a self-deleted Buyer\'s email is masked and mobile and profile photo omitted.
      */
     async getDirectoryBuyer(requestParameters: GetDirectoryBuyerRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<DirectoryBuyerEnvelope> {
         const response = await this.getDirectoryBuyerRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getDirectoryBuyerPhoto without sending the request
+     */
+    async getDirectoryBuyerPhotoRequestOpts(requestParameters: GetDirectoryBuyerPhotoRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['buyerId'] == null) {
+            throw new runtime.RequiredError(
+                'buyerId',
+                'Required parameter "buyerId" was null or undefined when calling getDirectoryBuyerPhoto().'
+            );
+        }
+
+        if (requestParameters['expires'] == null) {
+            throw new runtime.RequiredError(
+                'expires',
+                'Required parameter "expires" was null or undefined when calling getDirectoryBuyerPhoto().'
+            );
+        }
+
+        if (requestParameters['owner'] == null) {
+            throw new runtime.RequiredError(
+                'owner',
+                'Required parameter "owner" was null or undefined when calling getDirectoryBuyerPhoto().'
+            );
+        }
+
+        if (requestParameters['version'] == null) {
+            throw new runtime.RequiredError(
+                'version',
+                'Required parameter "version" was null or undefined when calling getDirectoryBuyerPhoto().'
+            );
+        }
+
+        if (requestParameters['viewer'] == null) {
+            throw new runtime.RequiredError(
+                'viewer',
+                'Required parameter "viewer" was null or undefined when calling getDirectoryBuyerPhoto().'
+            );
+        }
+
+        if (requestParameters['signature'] == null) {
+            throw new runtime.RequiredError(
+                'signature',
+                'Required parameter "signature" was null or undefined when calling getDirectoryBuyerPhoto().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['expires'] != null) {
+            queryParameters['expires'] = requestParameters['expires'];
+        }
+
+        if (requestParameters['owner'] != null) {
+            queryParameters['owner'] = requestParameters['owner'];
+        }
+
+        if (requestParameters['version'] != null) {
+            queryParameters['version'] = requestParameters['version'];
+        }
+
+        if (requestParameters['viewer'] != null) {
+            queryParameters['viewer'] = requestParameters['viewer'];
+        }
+
+        if (requestParameters['signature'] != null) {
+            queryParameters['signature'] = requestParameters['signature'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/admin/buyers/{buyerId}/photo`;
+        urlPath = urlPath.replace('{buyerId}', encodeURIComponent(String(requestParameters['buyerId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * user_directory.view. Fetch the sanitized private Buyer profile photo using the five-minute signed avatar_url from the directory profile. The URL is bound to the Buyer, current profile version and viewing Admin; it grants no access without the current Admin session and permission. Deleted Buyers have no photo. Authorization and photo version are checked again after private storage is read. Responses are private and no-store.
+     */
+    async getDirectoryBuyerPhotoRaw(requestParameters: GetDirectoryBuyerPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Blob>> {
+        const requestOptions = await this.getDirectoryBuyerPhotoRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.BlobApiResponse(response);
+    }
+
+    /**
+     * user_directory.view. Fetch the sanitized private Buyer profile photo using the five-minute signed avatar_url from the directory profile. The URL is bound to the Buyer, current profile version and viewing Admin; it grants no access without the current Admin session and permission. Deleted Buyers have no photo. Authorization and photo version are checked again after private storage is read. Responses are private and no-store.
+     */
+    async getDirectoryBuyerPhoto(requestParameters: GetDirectoryBuyerPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Blob> {
+        const response = await this.getDirectoryBuyerPhotoRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

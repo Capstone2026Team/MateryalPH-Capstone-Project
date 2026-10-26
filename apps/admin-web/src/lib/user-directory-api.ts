@@ -14,7 +14,7 @@ import {
   type ListDirectoryVendorReviewsRequest,
   type ListDirectoryVendorsRequest,
 } from '@materyalph/api-client-ts'
-import { createWebApiConfiguration } from '@materyalph/web-ui'
+import { createWebApiConfiguration, readDirectoryBuyerPhoto } from '@materyalph/web-ui'
 
 export type { DirectoryBuyerProfile, DirectoryBuyerRow, DirectoryListing, DirectoryPageMeta, DirectoryReview, DirectorySanction, DirectoryVendorProfile, DirectoryVendorRow }
 /** Value types of each filter, so a selected option can be narrowed to the generated enum without an `undefined` member. */
@@ -39,6 +39,7 @@ export async function listDirectoryBuyers(filters: ListDirectoryBuyersRequest): 
 export async function getDirectoryBuyer(buyerId: string): Promise<DirectoryBuyerProfile> {
   return (await api().getDirectoryBuyer({ buyerId })).data
 }
+export const getDirectoryBuyerPhoto = (buyerId: string, signedUrl: string): Promise<Blob> => readDirectoryBuyerPhoto(basePath, buyerId, signedUrl)
 export async function listDirectoryBuyerReviews(filters: ListDirectoryBuyerReviewsRequest): Promise<DirectoryList<DirectoryReview>> {
   return listOf(await api().listDirectoryBuyerReviews(filters))
 }

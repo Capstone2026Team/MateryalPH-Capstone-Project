@@ -8,6 +8,7 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**avatarUrl** | **String** | Five-minute signed private photo URL, bound to the viewing Admin and current Buyer profile version. Fetch with authenticated cookie transport; null when absent or the account is deleted. |
 **email** | **String** |  |
 **emailVerified** | **bool** |  |
 **mobile** | **String** |  |

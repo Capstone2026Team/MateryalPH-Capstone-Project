@@ -13,6 +13,7 @@ Name | Type | Description | Notes
 **businessType** | **String** |  |
 **description** | **String** |  |
 **logoUrl** | **String** | Short-lived link to the scanned store logo. |
+**bannerUrl** | **String** | Short-lived link to the scanned store banner; null when absent or unavailable. |
 **contactEmail** | **String** |  |
 **contactPhone** | **String** |  |
 **address** | **String** |  |

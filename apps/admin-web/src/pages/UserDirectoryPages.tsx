@@ -1,14 +1,14 @@
 import {
-  ALL_DATES, Button, DataTable, DateFilter, EmptyState, FactList, FilterTabs, InfoNote, Pagination, SectionWorkspace, StarRatingDisplay, StatCard, StatusBadge, Toolbar, formatPesoCentavos,
+  ALL_DATES, Button, DataTable, DateFilter, EmptyState, FactList, FilterTabs, InfoNote, Pagination, ProfileDetailsLayout, ProfileHeader, ProfileImage, ProfileSection, SectionWorkspace, StarRatingDisplay, StatCard, StatusBadge, Toolbar, formatPesoCentavos,
 } from '@materyalph/web-ui'
-import { ArrowLeft, ImageOff, RefreshCw, ShieldAlert } from 'lucide-react'
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { ArrowLeft, BadgeCheck, CalendarDays, ImageOff, MapPin, RefreshCw, ShieldAlert } from 'lucide-react'
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Panel } from '../components/OperationsKit'
 import { dateQuery, statusLabel, statusTone } from '../lib/admin-format'
 import { label as humanize, manilaDate, manilaDateTime, useLoad } from '../lib/operations-hooks'
 import {
-  BUYER_STATUSES, VENDOR_ACTIVATION_STATUSES, VENDOR_VERIFICATION_STATUSES, getDirectoryBuyer, getDirectoryVendor, listDirectoryBuyerReviews, listDirectoryBuyers, listDirectoryVendorListings,
+  BUYER_STATUSES, VENDOR_ACTIVATION_STATUSES, VENDOR_VERIFICATION_STATUSES, getDirectoryBuyer, getDirectoryBuyerPhoto, getDirectoryVendor, listDirectoryBuyerReviews, listDirectoryBuyers, listDirectoryVendorListings,
   listDirectoryVendorReviews, listDirectoryVendors, type BuyerFilters, type BuyerReviewFilters, type DirectoryList, type DirectoryListing, type DirectoryPageMeta, type DirectoryReview,
   type DirectorySanction, type VendorFilters, type VendorReviewFilters,
 } from '../lib/user-directory-api'
@@ -16,6 +16,7 @@ import { AdminShell, ErrorState, LoadingState, PageHeader } from './PhaseThreeAd
 
 const filterSelect = 'min-h-11 w-auto max-w-full rounded-control border border-border-default bg-surface-primary px-3 text-sm font-normal text-text-strong'
 const rowLink = 'font-semibold text-action-primary underline-offset-4 hover:underline'
+const profileAction = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-control border border-border-default bg-surface-primary px-4 py-2 text-sm font-semibold text-text-strong hover:bg-surface-canvas'
 const SORTS = [['joined_desc', 'Newest joined first'], ['joined_asc', 'Oldest joined first'], ['name_asc', 'Name A to Z'], ['name_desc', 'Name Z to A']] as const
 
 const accountTone = (status: string) => status === 'DEACTIVATED' ? 'error' : status === 'DELETED' ? 'neutral' : statusTone(status)
@@ -205,43 +206,46 @@ function ReviewList({ load, canModerate }: { load: (page: number) => Promise<Dir
   </div>
 }
 
-function Logo({ url, name }: { url: string | null; name: string }) {
-  const [failed, setFailed] = useState(false)
-  return url && !failed
-    ? <img src={url} alt={`${name} logo`} className="h-16 w-16 shrink-0 rounded-control border border-border-default object-cover" onError={() => setFailed(true)} />
-    : <span className="grid h-16 w-16 shrink-0 place-items-center rounded-control border border-border-default bg-surface-canvas text-text-secondary" role="img" aria-label={`${name} has no logo`}><ImageOff size={22} aria-hidden="true" /></span>
-}
-
 export function AdminBuyerUserDetailPage() {
   const { buyerId = '' } = useParams()
   const detail = useLoad(() => getDirectoryBuyer(buyerId), [buyerId])
+  const loadPhoto = useCallback((source: string) => getDirectoryBuyerPhoto(buyerId, source), [buyerId])
   const [direction, setDirection] = useState('RECEIVED')
   const buyer = detail.data
   return <AdminShell activeHref="/buyer-users"><div className="space-y-6">
     <BackLink to="/buyer-users">Back to Buyer Users</BackLink>
     {detail.error ? <ErrorState message={detail.error} onRetry={detail.retry} /> : !buyer ? <LoadingState /> : <>
-      <PageHeader eyebrow="Buyer Management" title={buyer.name} description={`Buyer since ${manilaDate(buyer.profile.joinedAt)}. This profile is read-only; record warnings, restrictions and suspensions from Enforcement.`}
-        actions={buyer.canViewEnforcement ? <Link className="inline-flex min-h-11 items-center gap-2 rounded-control border border-border-default px-4 text-sm font-semibold" to="/enforcement"><ShieldAlert size={16} aria-hidden="true" />Open Enforcement</Link> : undefined} />
-      <div className="flex flex-wrap gap-2"><StatusBadge label={statusLabel(buyer.status)} tone={accountTone(buyer.status)} />{buyer.profile.commerceRestrictedUntil && <StatusBadge label={`Restricted until ${manilaDateTime(buyer.profile.commerceRestrictedUntil)}`} tone="warning" />}</div>
+      <ProfileHeader eyebrow="Buyer Management" name={buyer.name}
+        avatar={<ProfileImage kind="buyer" name={buyer.name} src={buyer.status === 'DELETED' ? null : buyer.profile.avatarUrl} load={loadPhoto} />}
+        metadata={<span className="inline-flex items-center gap-2"><CalendarDays size={15} aria-hidden="true" />Buyer since {manilaDate(buyer.profile.joinedAt)}</span>}
+        statuses={<><StatusBadge label={statusLabel(buyer.status)} tone={accountTone(buyer.status)} />{buyer.profile.commerceRestrictedUntil && <StatusBadge label={`Restricted until ${manilaDateTime(buyer.profile.commerceRestrictedUntil)}`} tone="warning" />}</>}
+        notice="This profile is read-only. Record warnings, restrictions and suspensions in Enforcement."
+        actions={buyer.canViewEnforcement ? <Link className={profileAction} to="/enforcement"><ShieldAlert size={16} aria-hidden="true" />Open Enforcement</Link> : null} />
       <SectionWorkspace sections={[
         { label: 'Profile', content: <div className="grid gap-5">
-          <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-            <Panel title="Contact and company" {...(buyer.status === 'DELETED' ? { description: 'This Buyer deleted their account, so the email is masked and the mobile number is not shown.' } : {})}>
-              <FactList facts={[
-                { label: 'Email', value: <>{buyer.profile.email}{buyer.status !== 'DELETED' && <span className="ml-2 text-[13px] text-text-secondary">{buyer.profile.emailVerified ? 'Verified' : 'Not verified'}</span>}</> },
-                { label: 'Mobile', value: buyer.profile.mobile ?? 'Not provided' }, { label: 'Buyer type', value: humanize(buyer.profile.buyerType) }, { label: 'Company', value: buyer.profile.companyName ?? 'Not provided' },
-                { label: 'Position', value: buyer.profile.positionTitle ?? 'Not provided' }, { label: 'Industry', value: buyer.profile.industry ? humanize(buyer.profile.industry) : 'Not provided' },
-                { label: 'Area', value: buyer.profile.area ?? 'No saved location' },
-              ]} />
-            </Panel>
-            <Panel title="Account" description="Coordinates, site instructions and payment details are never shown here.">
+          <ProfileDetailsLayout sidebar={<>
+            <ProfileSection title="Account overview">
               <FactList columns={1} facts={[
                 { label: 'Account status', value: <StatusBadge label={statusLabel(buyer.status)} tone={accountTone(buyer.status)} /> }, { label: 'Date joined', value: manilaDateTime(buyer.profile.joinedAt) },
                 { label: 'Onboarding', value: humanize(buyer.profile.onboardingStatus) }, { label: 'Last active', value: manilaDateTime(buyer.activity.lastActiveAt) },
                 ...(buyer.profile.deletedAt ? [{ label: 'Deleted', value: manilaDateTime(buyer.profile.deletedAt) }] : []),
               ]} />
-            </Panel>
-          </div>
+            </ProfileSection>
+            <p className="px-5 pb-5 text-[13px] leading-5 text-text-secondary sm:px-6 sm:pb-6">Coordinates, site instructions and payment details are never shown here.</p>
+          </>}>
+            <ProfileSection title="Contact details" {...(buyer.status === 'DELETED' ? { description: 'This Buyer deleted their account, so the email is masked and the mobile number is not shown.' } : {})}>
+              <FactList facts={[
+                { label: 'Email', value: <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="min-w-0 break-words">{buyer.profile.email}</span>{buyer.status !== 'DELETED' && <span className="inline-flex items-center gap-1 text-xs text-text-secondary">{buyer.profile.emailVerified && <BadgeCheck size={14} aria-hidden="true" />}{buyer.profile.emailVerified ? 'Verified' : 'Not verified'}</span>}</div> },
+                { label: 'Mobile', value: buyer.profile.mobile ?? 'Not provided' }, { label: 'Area', value: buyer.profile.area ?? 'No saved location' },
+              ]} />
+            </ProfileSection>
+            <ProfileSection title="Buyer information">
+              <FactList facts={[
+                { label: 'Buyer type', value: humanize(buyer.profile.buyerType) }, { label: 'Company', value: buyer.profile.companyName ?? 'Not provided' },
+                { label: 'Position', value: buyer.profile.positionTitle ?? 'Not provided' }, { label: 'Industry', value: buyer.profile.industry ? humanize(buyer.profile.industry) : 'Not provided' },
+              ]} />
+            </ProfileSection>
+          </ProfileDetailsLayout>
           <Sanctions sanctions={buyer.sanctions} />
         </div> },
         { label: 'Ratings and reviews', content: <div className="grid gap-5">
@@ -319,39 +323,55 @@ export function AdminVendorUserDetailPage() {
   return <AdminShell activeHref="/vendor-users"><div className="space-y-6">
     <BackLink to="/vendor-users">Back to Vendor Users</BackLink>
     {detail.error ? <ErrorState message={detail.error} onRetry={detail.retry} /> : !vendor ? <LoadingState /> : <>
-      <PageHeader eyebrow="Vendor Management" title={vendor.storeName} description={`Joined ${manilaDate(vendor.store.joinedAt)}. This profile is read-only; verification decisions and sanctions are recorded in their own queues.`}
-        actions={<>
-          {vendor.canViewVerification && <Link className="inline-flex min-h-11 items-center rounded-control border border-border-default px-4 text-sm font-semibold" to={`/vendor-verification/${vendor.id}`}>Open verification case</Link>}
-          {vendor.canViewEnforcement && <Link className="inline-flex min-h-11 items-center gap-2 rounded-control border border-border-default px-4 text-sm font-semibold" to="/enforcement"><ShieldAlert size={16} aria-hidden="true" />Open Enforcement</Link>}
-        </>} />
-      <div className="flex flex-wrap gap-2"><StatusBadge label={`Store ${statusLabel(vendor.store.activationStatus).toLowerCase()}`} tone={statusTone(vendor.store.activationStatus)} /><StatusBadge label={`Verification ${statusLabel(vendor.store.verificationStatus).toLowerCase()}`} tone={statusTone(vendor.store.verificationStatus)} />{vendor.store.vacationMode && <StatusBadge label="On vacation" tone="info" />}</div>
+      <ProfileHeader eyebrow="Vendor Management" name={vendor.storeName}
+        banner={<ProfileImage kind="banner" name={vendor.storeName} src={vendor.store.bannerUrl} />}
+        avatar={<ProfileImage kind="store" name={vendor.storeName} src={vendor.store.logoUrl} />}
+        metadata={<><span className="inline-flex items-center gap-2"><CalendarDays size={15} aria-hidden="true" />Joined {manilaDate(vendor.store.joinedAt)}</span>{vendor.store.location && <span className="inline-flex min-w-0 items-start gap-2"><MapPin size={15} className="mt-0.5 shrink-0" aria-hidden="true" /><span className="break-words">{vendor.store.location}</span></span>}</>}
+        statuses={<><StatusBadge label={`Store ${statusLabel(vendor.store.activationStatus).toLowerCase()}`} tone={statusTone(vendor.store.activationStatus)} /><StatusBadge label={`Verification ${statusLabel(vendor.store.verificationStatus).toLowerCase()}`} tone={statusTone(vendor.store.verificationStatus)} />{vendor.store.vacationMode && <StatusBadge label="On vacation" tone="info" />}</>}
+        notice="This profile is read-only. Verification decisions and sanctions are recorded in their own queues."
+        actions={vendor.canViewVerification || vendor.canViewEnforcement ? <>
+          {vendor.canViewVerification && <Link className={profileAction} to={`/vendor-verification/${vendor.id}`}><BadgeCheck size={16} aria-hidden="true" />Open verification case</Link>}
+          {vendor.canViewEnforcement && <Link className={profileAction} to="/enforcement"><ShieldAlert size={16} aria-hidden="true" />Open Enforcement</Link>}
+        </> : null} />
       <SectionWorkspace sections={[
         { label: 'Store profile', content: <div className="grid gap-5">
-          <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-            <Panel title="Store profile">
-              <div className="flex min-w-0 items-start gap-4"><Logo url={vendor.store.logoUrl} name={vendor.storeName} /><p className="min-w-0 whitespace-pre-line break-words text-sm text-text-secondary">{vendor.store.description ?? 'This store has not written a description.'}</p></div>
-              <FactList facts={[
-                { label: 'Store name', value: vendor.storeName }, { label: 'Legal name', value: vendor.store.legalName ?? 'Not provided' }, { label: 'Registered name', value: vendor.store.registeredName ?? 'Not provided' },
-                { label: 'Business type', value: vendor.store.businessType ? humanize(vendor.store.businessType) : 'Not provided' }, { label: 'Contact email', value: vendor.store.contactEmail ?? 'Not provided' },
-                { label: 'Contact phone', value: vendor.store.contactPhone ?? 'Not provided' }, { label: 'Registered address', value: vendor.store.address ?? 'Not provided' }, { label: 'Date joined', value: manilaDateTime(vendor.store.joinedAt) },
-              ]} />
-            </Panel>
-            <div className="grid min-w-0 gap-5">
-              <Panel title="Verification and status" description="Separate states, as in Vendor Verification.">
+          <ProfileDetailsLayout sidebar={<>
+              <ProfileSection title="Verification and status">
                 <FactList columns={1} facts={[
                   { label: 'Store Verification', value: <StatusBadge label={statusLabel(vendor.store.verificationStatus)} tone={statusTone(vendor.store.verificationStatus)} /> },
                   { label: 'Store Setup', value: statusLabel(vendor.store.setupStatus) },
                   { label: 'Store Activation', value: <StatusBadge label={statusLabel(vendor.store.activationStatus)} tone={statusTone(vendor.store.activationStatus)} /> },
-                  { label: 'Marketplace discovery', value: statusLabel(vendor.store.discoverabilityStatus) }, { label: 'Account', value: statusLabel(vendor.store.accountStatus) },
+                  { label: 'Account', value: statusLabel(vendor.store.accountStatus) },
                   ...(vendor.store.activationHoldCode ? [{ label: 'Hold', value: statusLabel(vendor.store.activationHoldCode) }] : []),
-                  { label: 'Bulk capability', value: vendor.store.bulkCapability ? 'Yes' : 'No' },
                 ]} />
-              </Panel>
-              <Panel title="Owner contact" description="The active store Owner.">
-                {vendor.owner ? <FactList columns={1} facts={[{ label: 'Name', value: vendor.owner.name }, { label: 'Email', value: vendor.owner.email }, { label: 'Mobile', value: vendor.owner.mobile ?? 'Not provided' }]} /> : <EmptyState message="This store has no active Owner." />}
-              </Panel>
-            </div>
-          </div>
+              </ProfileSection>
+              <ProfileSection title="Marketplace availability">
+                <FactList columns={1} facts={[
+                  { label: 'Marketplace discovery', value: statusLabel(vendor.store.discoverabilityStatus) },
+                  { label: 'Bulk capability', value: vendor.store.bulkCapability ? 'Yes' : 'No' },
+                  { label: 'Date joined', value: manilaDateTime(vendor.store.joinedAt) },
+                ]} />
+              </ProfileSection>
+          </>}>
+            <ProfileSection title="About the store">
+              <p className="whitespace-pre-line break-words text-sm leading-relaxed text-text-secondary">{vendor.store.description ?? 'This store has not written a description.'}</p>
+            </ProfileSection>
+            <ProfileSection title="Business information">
+              <FactList facts={[
+                { label: 'Store name', value: vendor.storeName }, { label: 'Business type', value: vendor.store.businessType ? humanize(vendor.store.businessType) : 'Not provided' },
+                { label: 'Legal name', value: vendor.store.legalName ?? 'Not provided' }, { label: 'Registered name', value: vendor.store.registeredName ?? 'Not provided' },
+              ]} />
+            </ProfileSection>
+            <ProfileSection title="Store contact">
+              <FactList facts={[
+                { label: 'Contact email', value: vendor.store.contactEmail ?? 'Not provided' }, { label: 'Contact phone', value: vendor.store.contactPhone ?? 'Not provided' },
+                { label: 'Registered address', value: vendor.store.address ?? 'Not provided' },
+              ]} />
+            </ProfileSection>
+            <ProfileSection title="Owner contact" description="The active store Owner.">
+              {vendor.owner ? <FactList facts={[{ label: 'Name', value: vendor.owner.name }, { label: 'Email', value: vendor.owner.email }, { label: 'Mobile', value: vendor.owner.mobile ?? 'Not provided' }]} /> : <EmptyState message="This store has no active Owner." />}
+            </ProfileSection>
+          </ProfileDetailsLayout>
           <Sanctions sanctions={vendor.sanctions} />
         </div> },
         { label: 'Ratings and reviews', content: <div className="grid gap-5">

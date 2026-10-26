@@ -7,10 +7,17 @@ void main() {
   final instance = MateryalphApiClient().getAdminUserDirectoryApi();
 
   group(AdminUserDirectoryApi, () {
-    // user_directory.view. Buyer profile with contact details, ratings, activity and recent orders. Opening a profile is audited; a self-deleted Buyer's email is masked and mobile omitted.
+    // user_directory.view. Buyer profile with contact details, ratings, activity and recent orders. Opening a profile is audited; a self-deleted Buyer's email is masked and mobile and profile photo omitted.
     //
     //Future<DirectoryBuyerEnvelope> getDirectoryBuyer(String buyerId) async
     test('test getDirectoryBuyer', () async {
+      // TODO
+    });
+
+    // user_directory.view. Fetch the sanitized private Buyer profile photo using the five-minute signed avatar_url from the directory profile. The URL is bound to the Buyer, current profile version and viewing Admin; it grants no access without the current Admin session and permission. Deleted Buyers have no photo. Authorization and photo version are checked again after private storage is read. Responses are private and no-store.
+    //
+    //Future<Uint8List> getDirectoryBuyerPhoto(String buyerId, int expires, String owner, int version, String viewer, String signature) async
+    test('test getDirectoryBuyerPhoto', () async {
       // TODO
     });
 

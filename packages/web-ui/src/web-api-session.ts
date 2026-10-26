@@ -322,6 +322,24 @@ export async function readAccountPhoto(basePath: string, portal: 'vendors' | 'ad
   return blob
 }
 
+/** Directory photos remain scoped to the selected Buyer and the currently authorized Admin session. */
+export async function readDirectoryBuyerPhoto(basePath: string, buyerId: string, signedUrl: string): Promise<Blob> {
+  const base = new URL(basePath, window.location.origin)
+  const url = new URL(signedUrl, base)
+  if (url.origin !== base.origin || url.username || url.password
+    || url.pathname !== `${base.pathname.replace(/\/$/, '')}/admin/buyers/${encodeURIComponent(buyerId)}/photo`) {
+    throw new Error('The Buyer profile picture URL is invalid. Refresh and try again.')
+  }
+  // Preserve the signed query exactly; expired media links must not clear an otherwise valid directory page.
+  const response = await coordinatedFetch(normalizedBasePath(base.href), true, url, {
+    credentials: 'include', cache: 'no-store', referrerPolicy: 'origin', headers: { Accept: 'image/png' },
+  }, [], { localForbidden: true })
+  if (!response.ok) throw new ResponseError(response)
+  const blob = await response.blob()
+  if (blob.type.split(';')[0] !== 'image/png') throw new Error('The Buyer profile picture cannot be previewed.')
+  return blob
+}
+
 const SIGNED_CASE_CONTENT = [
   /\/(vendor|admin)\/disputes\/[0-9a-f-]{36}\/files\/[0-9a-f-]{36}\/content$/i,
   /\/(vendor|admin)\/invoice-records\/[0-9a-f-]{36}\/content$/i,

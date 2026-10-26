@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 
+import 'dart:typed_data';
 import 'package:materyalph_api_client/src/api_util.dart';
 import 'package:materyalph_api_client/src/model/date.dart';
 import 'package:materyalph_api_client/src/model/directory_buyer_envelope.dart';
@@ -25,7 +26,7 @@ class AdminUserDirectoryApi {
   const AdminUserDirectoryApi(this._dio, this._serializers);
 
   /// getDirectoryBuyer
-  /// user_directory.view. Buyer profile with contact details, ratings, activity and recent orders. Opening a profile is audited; a self-deleted Buyer&#39;s email is masked and mobile omitted.
+  /// user_directory.view. Buyer profile with contact details, ratings, activity and recent orders. Opening a profile is audited; a self-deleted Buyer&#39;s email is masked and mobile and profile photo omitted.
   ///
   /// Parameters:
   /// * [buyerId]
@@ -100,6 +101,110 @@ class AdminUserDirectoryApi {
     }
 
     return Response<DirectoryBuyerEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// getDirectoryBuyerPhoto
+  /// user_directory.view. Fetch the sanitized private Buyer profile photo using the five-minute signed avatar_url from the directory profile. The URL is bound to the Buyer, current profile version and viewing Admin; it grants no access without the current Admin session and permission. Deleted Buyers have no photo. Authorization and photo version are checked again after private storage is read. Responses are private and no-store.
+  ///
+  /// Parameters:
+  /// * [buyerId]
+  /// * [expires]
+  /// * [owner]
+  /// * [version]
+  /// * [viewer]
+  /// * [signature]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [Uint8List] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<Uint8List>> getDirectoryBuyerPhoto({
+    required String buyerId,
+    required int expires,
+    required String owner,
+    required int version,
+    required String viewer,
+    required String signature,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/admin/buyers/{buyerId}/photo'.replaceAll('{' r'buyerId' '}', encodeQueryParameter(_serializers, buyerId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'GET',
+      responseType: ResponseType.bytes,
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      r'expires': encodeQueryParameter(_serializers, expires, const FullType(int)),
+      r'owner': encodeQueryParameter(_serializers, owner, const FullType(String)),
+      r'version': encodeQueryParameter(_serializers, version, const FullType(int)),
+      r'viewer': encodeQueryParameter(_serializers, viewer, const FullType(String)),
+      r'signature': encodeQueryParameter(_serializers, signature, const FullType(String)),
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    Uint8List? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : rawResponse as Uint8List;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<Uint8List>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

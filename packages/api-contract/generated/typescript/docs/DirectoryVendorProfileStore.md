@@ -11,6 +11,7 @@ Name | Type
 `businessType` | string
 `description` | string
 `logoUrl` | string
+`bannerUrl` | string
 `contactEmail` | string
 `contactPhone` | string
 `address` | string
@@ -37,6 +38,7 @@ const example = {
   "businessType": null,
   "description": null,
   "logoUrl": null,
+  "bannerUrl": null,
   "contactEmail": null,
   "contactPhone": null,
   "address": null,

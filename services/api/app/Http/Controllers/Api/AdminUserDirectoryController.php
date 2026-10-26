@@ -12,6 +12,7 @@ use App\Support\PortalDateRange;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Admin Buyer and Vendor user directories (Buyer Management and Vendor Management → Users). Read-only: each action
@@ -33,6 +34,11 @@ final class AdminUserDirectoryController extends Controller
     public function buyer(Request $request, string $buyerId, Directory $directory): JsonResponse
     {
         return ApiResponse::success($directory->buyer($request, $buyerId));
+    }
+
+    public function buyerPhoto(Request $request, string $buyerId, Directory $directory): StreamedResponse
+    {
+        return $directory->buyerPhoto($request, $buyerId);
     }
 
     public function buyerReviews(Request $request, string $buyerId, Directory $directory): JsonResponse

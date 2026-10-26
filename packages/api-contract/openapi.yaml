@@ -10219,7 +10219,7 @@ paths:
       tags: [ Admin User Directory ]
       description: user_directory.view. Buyer profile with contact details, ratings,
         activity and recent orders. Opening a profile is audited; a self-deleted
-        Buyer's email is masked and mobile omitted.
+        Buyer's email is masked and mobile and profile photo omitted.
       security: [ { accessCookie: [], webCsrf: [] } ]
       parameters:
         - {
@@ -10240,6 +10240,32 @@ paths:
         "401": { $ref: "#/components/responses/ErrorResponse" }
         "403": { $ref: "#/components/responses/ErrorResponse" }
         "404": { $ref: "#/components/responses/ErrorResponse" }
+  "/admin/buyers/{buyerId}/photo":
+    get:
+      operationId: getDirectoryBuyerPhoto
+      tags: [ Admin User Directory ]
+      description: user_directory.view. Fetch the sanitized private Buyer profile
+        photo using the five-minute signed avatar_url from the directory profile.
+        The URL is bound to the Buyer, current profile version and viewing Admin;
+        it grants no access without the current Admin session and permission.
+        Deleted Buyers have no photo. Authorization and photo version are checked
+        again after private storage is read. Responses are private and no-store.
+      security: [ { accessCookie: [], webCsrf: [] } ]
+      parameters:
+        - { name: buyerId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: expires, in: query, required: true, schema: { type: integer } }
+        - { name: owner, in: query, required: true, schema: { type: string } }
+        - { name: version, in: query, required: true, schema: { type: integer } }
+        - { name: viewer, in: query, required: true, schema: { type: string } }
+        - { name: signature, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Authorized sanitized profile photo with private, no-store and nosniff headers.
+          content: { image/png: { schema: { type: string, format: binary } } }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "403": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "503": { $ref: "#/components/responses/ErrorResponse" }
   "/admin/buyers/{buyerId}/reviews":
     get:
       operationId: listDirectoryBuyerReviews
@@ -37145,6 +37171,7 @@ components:
           type: object
           required:
             [
+              avatar_url,
               email,
               email_verified,
               mobile,
@@ -37159,6 +37186,9 @@ components:
               commerce_restricted_until
             ]
           properties:
+            avatar_url:
+              type: [ string, "null" ]
+              description: Five-minute signed private photo URL, bound to the viewing Admin and current Buyer profile version. Fetch with authenticated cookie transport; null when absent or the account is deleted.
             email: { type: string }
             email_verified: { type: boolean }
             mobile: { type: [ string, "null" ] }
@@ -37345,6 +37375,7 @@ components:
               business_type,
               description,
               logo_url,
+              banner_url,
               contact_email,
               contact_phone,
               address,
@@ -37368,6 +37399,11 @@ components:
               {
                 type: [ string, "null" ],
                 description: Short-lived link to the scanned store logo.
+              }
+            banner_url:
+              {
+                type: [ string, "null" ],
+                description: Short-lived link to the scanned store banner; null when absent or unavailable.
               }
             contact_email: { type: [ string, "null" ] }
             contact_phone: { type: [ string, "null" ] }

@@ -33,6 +33,12 @@ void main() {
       // TODO
     });
 
+    // Short-lived link to the scanned store banner; null when absent or unavailable.
+    // String bannerUrl
+    test('to test the property `bannerUrl`', () async {
+      // TODO
+    });
+
     // String contactEmail
     test('to test the property `contactEmail`', () async {
       // TODO

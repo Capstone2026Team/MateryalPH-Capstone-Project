@@ -20,6 +20,10 @@ import { mapValues, parseDate, parseDateTime, serializeDate, serializeDateTime }
  */
 export interface DirectoryBuyerProfileProfile {
     /**
+     * Five-minute signed private photo URL, bound to the viewing Admin and current Buyer profile version. Fetch with authenticated cookie transport; null when absent or the account is deleted.
+     */
+    avatarUrl: string | null;
+    /**
      *
      */
     email: string;
@@ -73,6 +77,7 @@ export interface DirectoryBuyerProfileProfile {
  * Check if a given object implements the DirectoryBuyerProfileProfile interface.
  */
 export function instanceOfDirectoryBuyerProfileProfile(value: object): value is DirectoryBuyerProfileProfile {
+    if ((!('avatarUrl' in (value as Record<string, any>)) && !('avatar_url' in (value as Record<string, any>))) || ((value as Record<string, any>)['avatarUrl'] === undefined && (value as Record<string, any>)['avatar_url'] === undefined)) return false;
     if (!('email' in value) || value['email'] === undefined) return false;
     if ((!('emailVerified' in (value as Record<string, any>)) && !('email_verified' in (value as Record<string, any>))) || ((value as Record<string, any>)['emailVerified'] === undefined && (value as Record<string, any>)['email_verified'] === undefined)) return false;
     if (!('mobile' in value) || value['mobile'] === undefined) return false;
@@ -98,6 +103,7 @@ export function DirectoryBuyerProfileProfileFromJSONTyped(json: any, ignoreDiscr
     }
     return {
 
+        'avatarUrl': json['avatar_url'],
         'email': json['email'],
         'emailVerified': json['email_verified'],
         'mobile': json['mobile'],
@@ -124,6 +130,7 @@ export function DirectoryBuyerProfileProfileToJSONTyped(value?: DirectoryBuyerPr
 
     return {
 
+        'avatar_url': value['avatarUrl'],
         'email': value['email'],
         'email_verified': value['emailVerified'],
         'mobile': value['mobile'],

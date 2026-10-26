@@ -10,6 +10,7 @@ All URIs are relative to */api/v1*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**getDirectoryBuyer**](AdminUserDirectoryApi.md#getdirectorybuyer) | **GET** /admin/buyers/{buyerId} |
+[**getDirectoryBuyerPhoto**](AdminUserDirectoryApi.md#getdirectorybuyerphoto) | **GET** /admin/buyers/{buyerId}/photo |
 [**getDirectoryVendor**](AdminUserDirectoryApi.md#getdirectoryvendor) | **GET** /admin/vendors/{vendorId} |
 [**listDirectoryBuyerReviews**](AdminUserDirectoryApi.md#listdirectorybuyerreviews) | **GET** /admin/buyers/{buyerId}/reviews |
 [**listDirectoryBuyers**](AdminUserDirectoryApi.md#listdirectorybuyers) | **GET** /admin/buyers |
@@ -23,7 +24,7 @@ Method | HTTP request | Description
 
 
 
-user_directory.view. Buyer profile with contact details, ratings, activity and recent orders. Opening a profile is audited; a self-deleted Buyer's email is masked and mobile omitted.
+user_directory.view. Buyer profile with contact details, ratings, activity and recent orders. Opening a profile is audited; a self-deleted Buyer's email is masked and mobile and profile photo omitted.
 
 ### Example
 ```dart
@@ -66,6 +67,67 @@ Name | Type | Description  | Notes
 
  - **Content-Type**: Not defined
  - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getDirectoryBuyerPhoto**
+> Uint8List getDirectoryBuyerPhoto(buyerId, expires, owner, version, viewer, signature)
+
+
+
+user_directory.view. Fetch the sanitized private Buyer profile photo using the five-minute signed avatar_url from the directory profile. The URL is bound to the Buyer, current profile version and viewing Admin; it grants no access without the current Admin session and permission. Deleted Buyers have no photo. Authorization and photo version are checked again after private storage is read. Responses are private and no-store.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAdminUserDirectoryApi();
+final String buyerId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final int expires = 56; // int |
+final String owner = owner_example; // String |
+final int version = 56; // int |
+final String viewer = viewer_example; // String |
+final String signature = signature_example; // String |
+
+try {
+    final response = api.getDirectoryBuyerPhoto(buyerId, expires, owner, version, viewer, signature);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AdminUserDirectoryApi->getDirectoryBuyerPhoto: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **buyerId** | **String**|  |
+ **expires** | **int**|  |
+ **owner** | **String**|  |
+ **version** | **int**|  |
+ **viewer** | **String**|  |
+ **signature** | **String**|  |
+
+### Return type
+
+[**Uint8List**](Uint8List.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: image/png, application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 

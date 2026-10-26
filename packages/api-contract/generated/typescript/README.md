@@ -185,6 +185,7 @@ All URIs are relative to */api/v1*
 *AdminScoreMonitoringApi* | [**revokeAdminScoreExclusion**](docs/AdminScoreMonitoringApi.md#revokeadminscoreexclusion) | **POST** /admin/scores/exclusions/{exclusionId}/revoke |
 *AdminScoreMonitoringApi* | [**suppressAdminBadge**](docs/AdminScoreMonitoringApi.md#suppressadminbadge) | **POST** /admin/scores/{vendorId}/badge-suppressions |
 *AdminUserDirectoryApi* | [**getDirectoryBuyer**](docs/AdminUserDirectoryApi.md#getdirectorybuyer) | **GET** /admin/buyers/{buyerId} |
+*AdminUserDirectoryApi* | [**getDirectoryBuyerPhoto**](docs/AdminUserDirectoryApi.md#getdirectorybuyerphoto) | **GET** /admin/buyers/{buyerId}/photo |
 *AdminUserDirectoryApi* | [**getDirectoryVendor**](docs/AdminUserDirectoryApi.md#getdirectoryvendor) | **GET** /admin/vendors/{vendorId} |
 *AdminUserDirectoryApi* | [**listDirectoryBuyerReviews**](docs/AdminUserDirectoryApi.md#listdirectorybuyerreviews) | **GET** /admin/buyers/{buyerId}/reviews |
 *AdminUserDirectoryApi* | [**listDirectoryBuyers**](docs/AdminUserDirectoryApi.md#listdirectorybuyers) | **GET** /admin/buyers |

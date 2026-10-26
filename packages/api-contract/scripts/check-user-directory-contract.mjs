@@ -45,7 +45,18 @@ for (const [path, methods] of Object.entries(spec.paths)) {
     }
   }
 }
-assert.equal(count, 7, `Expected 7 directory operations, found ${count}`)
+assert.equal(count, 8, `Expected 8 directory operations, found ${count}`)
+
+const photo = spec.paths['/admin/buyers/{buyerId}/photo'].get
+assert.equal(photo.operationId, 'getDirectoryBuyerPhoto')
+assert.deepEqual(photo.parameters.map(parameter => parameter.name), ['buyerId', 'expires', 'owner', 'version', 'viewer', 'signature'])
+assert.ok(photo.parameters.every(parameter => parameter.required), 'Private Buyer photo parameters are required')
+assert.deepEqual(photo.responses['200'].content['image/png'].schema, { type: 'string', format: 'binary' })
+assert.match(photo.description, /current Admin session and permission/)
+const photoRoute = routes.find(route => route.uri === 'api/v1/admin/buyers/{buyerId}/photo')
+assert.ok(photoRoute.middleware.some(name => /(^signed$|ValidateSignature$)/.test(name)), 'Private Buyer photo needs a signed URL')
+assert.ok(spec.components.schemas.DirectoryBuyerProfile.properties.profile.required.includes('avatar_url'))
+assert.ok(spec.components.schemas.DirectoryVendorProfile.properties.store.required.includes('banner_url'))
 
 const documented = /^api\/v1\/admin\/(buyers|vendors)(\/|$)/
 for (const route of routes.filter(route => documented.test(route.uri))) {

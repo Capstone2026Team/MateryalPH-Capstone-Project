@@ -16,6 +16,7 @@ part 'directory_vendor_profile_store.g.dart';
 /// * [businessType]
 /// * [description]
 /// * [logoUrl] - Short-lived link to the scanned store logo.
+/// * [bannerUrl] - Short-lived link to the scanned store banner; null when absent or unavailable.
 /// * [contactEmail]
 /// * [contactPhone]
 /// * [address]
@@ -46,6 +47,10 @@ abstract class DirectoryVendorProfileStore implements Built<DirectoryVendorProfi
   /// Short-lived link to the scanned store logo.
   @BuiltValueField(wireName: r'logo_url')
   String? get logoUrl;
+
+  /// Short-lived link to the scanned store banner; null when absent or unavailable.
+  @BuiltValueField(wireName: r'banner_url')
+  String? get bannerUrl;
 
   @BuiltValueField(wireName: r'contact_email')
   String? get contactEmail;
@@ -132,6 +137,11 @@ class _$DirectoryVendorProfileStoreSerializer implements PrimitiveSerializer<Dir
     yield r'logo_url';
     yield object.logoUrl == null ? null : serializers.serialize(
       object.logoUrl,
+      specifiedType: const FullType.nullable(String),
+    );
+    yield r'banner_url';
+    yield object.bannerUrl == null ? null : serializers.serialize(
+      object.bannerUrl,
       specifiedType: const FullType.nullable(String),
     );
     yield r'contact_email';
@@ -261,6 +271,14 @@ class _$DirectoryVendorProfileStoreSerializer implements PrimitiveSerializer<Dir
           ) as String?;
           if (valueDes == null) continue;
           result.logoUrl = valueDes;
+          break;
+        case r'banner_url':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.bannerUrl = valueDes;
           break;
         case r'contact_email':
           final valueDes = serializers.deserialize(

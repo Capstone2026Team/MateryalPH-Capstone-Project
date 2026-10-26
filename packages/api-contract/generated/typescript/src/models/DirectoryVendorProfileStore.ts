@@ -40,6 +40,10 @@ export interface DirectoryVendorProfileStore {
      */
     logoUrl: string | null;
     /**
+     * Short-lived link to the scanned store banner; null when absent or unavailable.
+     */
+    bannerUrl: string | null;
+    /**
      *
      */
     contactEmail: string | null;
@@ -102,6 +106,7 @@ export function instanceOfDirectoryVendorProfileStore(value: object): value is D
     if ((!('businessType' in (value as Record<string, any>)) && !('business_type' in (value as Record<string, any>))) || ((value as Record<string, any>)['businessType'] === undefined && (value as Record<string, any>)['business_type'] === undefined)) return false;
     if (!('description' in value) || value['description'] === undefined) return false;
     if ((!('logoUrl' in (value as Record<string, any>)) && !('logo_url' in (value as Record<string, any>))) || ((value as Record<string, any>)['logoUrl'] === undefined && (value as Record<string, any>)['logo_url'] === undefined)) return false;
+    if ((!('bannerUrl' in (value as Record<string, any>)) && !('banner_url' in (value as Record<string, any>))) || ((value as Record<string, any>)['bannerUrl'] === undefined && (value as Record<string, any>)['banner_url'] === undefined)) return false;
     if ((!('contactEmail' in (value as Record<string, any>)) && !('contact_email' in (value as Record<string, any>))) || ((value as Record<string, any>)['contactEmail'] === undefined && (value as Record<string, any>)['contact_email'] === undefined)) return false;
     if ((!('contactPhone' in (value as Record<string, any>)) && !('contact_phone' in (value as Record<string, any>))) || ((value as Record<string, any>)['contactPhone'] === undefined && (value as Record<string, any>)['contact_phone'] === undefined)) return false;
     if (!('address' in value) || value['address'] === undefined) return false;
@@ -133,6 +138,7 @@ export function DirectoryVendorProfileStoreFromJSONTyped(json: any, ignoreDiscri
         'businessType': json['business_type'],
         'description': json['description'],
         'logoUrl': json['logo_url'],
+        'bannerUrl': json['banner_url'],
         'contactEmail': json['contact_email'],
         'contactPhone': json['contact_phone'],
         'address': json['address'],
@@ -165,6 +171,7 @@ export function DirectoryVendorProfileStoreToJSONTyped(value?: DirectoryVendorPr
         'business_type': value['businessType'],
         'description': value['description'],
         'logo_url': value['logoUrl'],
+        'banner_url': value['bannerUrl'],
         'contact_email': value['contactEmail'],
         'contact_phone': value['contactPhone'],
         'address': value['address'],
