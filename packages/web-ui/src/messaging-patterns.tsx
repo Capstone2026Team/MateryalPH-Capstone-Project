@@ -106,6 +106,7 @@ export function QuotationThreadCard({ version, busy = false, onOpen, onRevise }:
       <p className="mt-1 text-sm">{quotationStatus(version)} · {formatPesoCentavos(version.content.commercial.commercialTotalCentavos)}</p>
       <p className="mt-1 text-xs text-text-secondary">Published <time dateTime={version.publishedAt}>{new Date(version.publishedAt).toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' })} Manila</time></p>
     </div></div>
+    {version.content.message && <p className="mt-3 whitespace-pre-wrap break-words text-sm">{version.content.message}</p>}
     <QuotationChangeRequest version={version} />
     <div className="mt-3 flex flex-wrap gap-2"><Button variant="secondary" onClick={onOpen} aria-haspopup="dialog">View quotation v{version.version}</Button>{version.latest && version.state === 'COUNTERED' && onRevise && <Button disabled={busy} onClick={onRevise}>Revise quotation</Button>}</div>
   </article>
@@ -116,6 +117,7 @@ export function QuotationVersionCard({ version, busy = false, onAction }: { vers
   return <article className="min-w-0 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5" aria-label={`Quotation version ${version.version}`}>
     <div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Order from chat</p><h3 className="mt-1 text-lg font-semibold">Quotation v{version.version}</h3></div><span className="rounded-control bg-surface-canvas px-2 py-1 text-sm font-semibold">{version.latest && ['PUBLISHED', 'VIEWED'].includes(version.state) ? 'Latest version' : quotationStatus(version)}</span></div>
     <p className="mt-2 text-sm text-text-secondary">{version.state === 'VIEWED' && version.viewed ? 'Viewed by Buyer' : `${version.state.replaceAll('_', ' ').toLowerCase().replace(/^./, letter => letter.toUpperCase())} · ${version.viewed ? 'Viewed by Buyer' : 'Not yet viewed'}`}</p>
+    {content.message && <p className="mt-3 whitespace-pre-wrap break-words text-sm">{content.message}</p>}
     <QuotationMaterialLines lines={content.lines} />
     <QuotationPaymentBreakdown content={content} selectedPaymentMethod={version.selectedPaymentMethod ?? null} accepted={version.state === 'ACCEPTED'} />
     <QuotationChangeList key={version.id} notes={quotationChangeNotes(content)} />

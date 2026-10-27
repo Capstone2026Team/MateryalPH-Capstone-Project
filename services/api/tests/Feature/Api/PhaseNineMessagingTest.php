@@ -710,6 +710,35 @@ final class PhaseNineMessagingTest extends TestCase
         app(ConversationBroadcast::class)->typing($id, $buyer->id, false);
     }
 
+    public function test_incomplete_drafts_autosave_but_publish_requires_complete_terms_and_freezes_the_message(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Autosaved quotation');
+        $variant = $this->variantIds($listing)[0];
+        $buyer = $this->buyer();
+        $id = $this->inquiry($store->id, $variant);
+        $this->signInStoreMember($owner);
+        $path = '/api/v1/vendor/conversations/'.$id.'/quotation';
+        $this->putJson($path.'/draft', ['lock_version' => 1, 'draft' => [
+            'lines' => [], 'fulfillment_method' => 'PICKUP', 'fulfillment_date' => null, 'message' => 'A preliminary offer.',
+        ]])->assertOk()->assertJsonPath('data.quotation.lock_version', 2);
+        $this->postJson($path.'/publish', ['lock_version' => 2], ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable();
+        self::assertSame(0, DB::table('quotation_versions')->count());
+        $draft = $this->draftInput($variant) + ['message' => "  A discount is included.\nPlease review the terms.  "];
+        $this->putJson($path.'/draft', ['lock_version' => 2, 'draft' => $draft])->assertOk();
+        $key = (string) Str::uuid7();
+        $published = $this->postJson($path.'/publish', ['lock_version' => 3], ['Idempotency-Key' => $key])->assertOk()->json('data.versions.0');
+        $this->postJson($path.'/publish', ['lock_version' => 3], ['Idempotency-Key' => $key])->assertOk();
+        self::assertSame(1, DB::table('quotation_versions')->count());
+        self::assertSame(trim($draft['message']), $published['content']['message']);
+        $this->signInBuyer($buyer);
+        $this->getJson('/api/v1/buyers/conversations/'.$id)->assertOk()
+            ->assertJsonPath('data.quotations.versions.0.content.message', trim($draft['message']));
+        $this->signInStoreMember($owner);
+        $this->putJson($path.'/draft', ['lock_version' => 4, 'draft' => $this->draftInput($variant) + ['message' => 'A later draft.']])->assertOk();
+        self::assertSame($published['content_hash'], DB::table('quotation_versions')->where('id', $published['id'])->value('content_hash'));
+        self::assertSame(trim($draft['message']), json_decode(DB::table('quotation_versions')->where('id', $published['id'])->value('content'), true)['message']);
+    }
+
     private function draftInput(string $variant, string $qty = '4'): array
     {
         return ['lines' => [['variant_id' => $variant, 'quantity' => $qty, 'unit_price_centavos' => 1700]], 'fulfillment_method' => 'PICKUP', 'fulfillment_date' => now()->addDays(3)->toDateString()];
@@ -1210,6 +1239,14 @@ final class PhaseNineMessagingTest extends TestCase
         self::assertSame('READY_FOR_PICKUP', DB::table('orders')->where('id', $order)->value('order_state'));
         $this->signInBuyer($buyer);
         $this->getJson('/api/v1/buyers/conversations/'.$id)->assertOk()->assertJsonFragment(['body' => 'The delivery is ready.']);
+        $replyKey = (string) Str::uuid7();
+        $reply = ['body' => 'I am on my way to collect the materials.', 'client_message_id' => $replyKey];
+        $this->postJson('/api/v1/buyers/conversations/'.$id.'/messages', $reply)->assertCreated();
+        $this->postJson('/api/v1/buyers/conversations/'.$id.'/messages', $reply)->assertCreated();
+        self::assertSame(1, DB::table('messages')->where('conversation_id', $id)->where('client_message_id', $replyKey)->count());
+        $this->signInStoreMember($replacement);
+        $this->getJson('/api/v1/vendor/conversations/'.$id)->assertOk()->assertJsonFragment(['body' => $reply['body'], 'mine' => false]);
+        $this->signInBuyer($buyer);
         $this->postJson('/api/v1/buyers/conversations/'.$id.'/quotation/accept', ['version_id' => (string) Str::uuid7()], ['Idempotency-Key' => (string) Str::uuid7()])->assertForbidden();
         [, $otherOrder] = $this->pickupOrder($store, $listing);
         DB::table('orders')->where('id', $otherOrder)->update(['order_state' => 'READY_FOR_PICKUP']);

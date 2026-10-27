@@ -16,6 +16,13 @@ const version: ChatQuotationVersion = {
   content: { lines: [{ variantId: 'item', quantity: '4', unitPriceCentavos: 1700, description: 'Portland Cement', unitCode: 'bag', taxCategory: 'VAT_12', sourcePriceVersionId: 'price', sourceTaxVersionId: 'tax' }], commercial: { materialsPayableCentavos: 6800, materialsVatCentavos: 729, vendorDiscountCentavos: 0, deliveryCentavos: 0, nrpcCentavos: 0, commercialTotalCentavos: 6800 }, fulfillmentMethod: 'PICKUP', paymentMethod: 'ONLINE', fulfillmentDate: '2099-10-01', priceSource: 'PRIVATE_TRANSACTION', processingFeeStatus: 'PENDING_PAYMENT_CHANNEL', changes: [{ path: 'lines.0.quantity', label: 'Quantity changed', before: '5', after: '4' }], originalChanges: [] },
 }
 describe('conversation and quotation presentation', () => {
+  it('shows the Vendor message in the quotation card and full terms', () => {
+    const offer = { ...version, content: { ...version.content, message: 'A discount is included.\nPlease review.' } }
+    const { rerender } = render(<QuotationThreadCard version={offer} onOpen={() => {}} />)
+    expect(screen.getByText(/A discount is included/)).toHaveTextContent('Please review.')
+    rerender(<QuotationVersionCard version={offer} />)
+    expect(screen.getByText(/A discount is included/)).toHaveTextContent('Please review.')
+  })
   it('preserves version-specific change requests through the generated client', () => {
     const countered = { ...version, requestedChanges: 'Please reduce quantity.', changeRequestedAt: '2026-10-18T03:00:00Z', vendorResponseDueAt: '2026-10-19T03:00:00Z' }
     const wire = ChatQuotationVersionToJSON(countered)

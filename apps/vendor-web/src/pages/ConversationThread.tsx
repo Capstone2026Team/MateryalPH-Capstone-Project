@@ -27,7 +27,6 @@ export function ConversationThread({ selected, role, onBack, onRead, onMessage, 
   const [reload, setReload] = useState(0)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [quotationId, setQuotationId] = useState<string | null>(null)
-  useEffect(() => { callbacks.current = { onRead, onMessage, obscured: obscured || historyOpen || Boolean(quotationId) } }, [onRead, onMessage, obscured, historyOpen, quotationId])
   const [detail, setDetail] = useState<ConversationDetail | null>(null)
   const fulfillmentCountId = useId()
   const [error, setError] = useState<string | null>(null)
@@ -49,6 +48,7 @@ export function ConversationThread({ selected, role, onBack, onRead, onMessage, 
   const lastTypingSent = useRef(0)
   const [editor, setEditor] = useState(false)
   const [handlers, setHandlers] = useState<ChatHandler[] | null>(null)
+  useEffect(() => { callbacks.current = { onRead, onMessage, obscured: obscured || historyOpen || Boolean(quotationId) || editor || handlers !== null } }, [onRead, onMessage, obscured, historyOpen, quotationId, editor, handlers])
   const [handlerPage, setHandlerPage] = useState(1)
   const [moreHandlers, setMoreHandlers] = useState(false)
   const [target, setTarget] = useState('')
@@ -139,7 +139,7 @@ export function ConversationThread({ selected, role, onBack, onRead, onMessage, 
   const newestMessageId = detail?.messages.items.at(-1)?.id
   const newestQuotationId = detail?.quotations.versions[0]?.id
   useEffect(() => {
-    if (!callbacks.current.obscured && threadBody.current && (handlers || followLatest.current)) threadBody.current.scrollTop = handlers ? 0 : threadBody.current.scrollHeight
+    if (!callbacks.current.obscured && threadBody.current && followLatest.current) threadBody.current.scrollTop = threadBody.current.scrollHeight
   }, [newestMessageId, newestQuotationId, handlers])
   // Reveal the typing bubble only for a reader already at the latest message; never pull someone reading history.
   useEffect(() => {
@@ -219,9 +219,9 @@ export function ConversationThread({ selected, role, onBack, onRead, onMessage, 
       <section className="chat-thread flex-1" aria-label="Selected conversation">
         {error && <StatusMessage tone="error">{error} <Button variant="quiet" onClick={() => void load()}>Retry conversation</Button></StatusMessage>}
         {!selected ? <div className="chat-empty-thread"><MessageSquare size={36} aria-hidden="true" /><h2>Your conversations, in one place</h2><p>{role === 'FULFILLMENT' ? 'Choose an assigned order conversation to coordinate fulfillment.' : 'Choose an inquiry from the inbox to reply or prepare a quotation.'}</p></div> : <>
-          <div className="chat-toolbar">{onBack && <Button className="chat-back" aria-label="Back to inbox" variant="quiet" disabled={busy} onClick={onBack}><ArrowLeft size={16} aria-hidden="true" /><span className="chat-action-label">Back to inbox</span></Button>}{c?.contextType === 'PROJECT_BASED' && c.mainConversationId && onOpenMain && <Button variant="quiet" disabled={busy} onClick={() => onOpenMain(c.mainConversationId!)}>Inquiry</Button>}<span className="chat-toolbar-label">{c ? conversationLabel(c) : 'Conversation'}</span>{c?.purpose === 'SALES' && onProjectList && <Button variant="quiet" disabled={busy} onClick={onProjectList} aria-haspopup="dialog"><MessageSquare size={16} aria-hidden="true" /><span>Project inquiries</span><CountBadge count={c.projectUnreadCount ?? 0} /><span className="sr-only">{c.projectUnreadCount ?? 0} unread project messages</span></Button>}{c && <>{c.canListFulfillmentConversations && onFulfillmentList && <><Button variant="quiet" onClick={onFulfillmentList} aria-haspopup="dialog" aria-describedby={fulfillmentCountId}><MessageSquare size={16} aria-hidden="true" /><span>Fulfillment conversations</span><CountBadge count={fulfillmentUnreadCount} /></Button><span id={fulfillmentCountId} className="sr-only" role="status">{fulfillmentUnreadCount > 0 ? `${fulfillmentUnreadCount} unread fulfillment messages` : 'No unread fulfillment messages'}</span></>}{c.purpose === 'SALES' && <Button variant="quiet" aria-label="Quotation history" aria-haspopup="dialog" onClick={() => setHistoryOpen(true)}><FileText size={16} aria-hidden="true" /><span className="chat-action-label">Quotation history</span></Button>}{c.canTransfer && <Button variant="quiet" aria-label="Transfer handler" disabled={busy} onClick={() => void mutate(async () => { const result = await chatApi.handlers(c.id); setHandlers(result.data); setHandlerPage(1); setMoreHandlers(Boolean(result.meta.has_more)) }, false)}><UsersRound size={16} aria-hidden="true" /><span className="chat-action-label">Transfer handler</span></Button>}</>}</div>
+          <div className="chat-toolbar">{onBack && <Button className="chat-back" aria-label="Back to inbox" variant="quiet" disabled={busy} onClick={onBack}><ArrowLeft size={16} aria-hidden="true" /><span className="chat-action-label">Back to inbox</span></Button>}{c?.contextType === 'PROJECT_BASED' && c.mainConversationId && onOpenMain && <Button variant="quiet" disabled={busy} onClick={() => onOpenMain(c.mainConversationId!)}>Inquiry</Button>}<span className="chat-toolbar-label">{c ? conversationLabel(c) : 'Conversation'}</span>{c?.purpose === 'SALES' && onProjectList && <Button variant="quiet" disabled={busy} onClick={onProjectList} aria-haspopup="dialog"><MessageSquare size={16} aria-hidden="true" /><span>Project inquiries</span><CountBadge count={c.projectUnreadCount ?? 0} /><span className="sr-only">{c.projectUnreadCount ?? 0} unread project messages</span></Button>}{c && <>{c.canListFulfillmentConversations && onFulfillmentList && <><Button variant="quiet" onClick={onFulfillmentList} aria-haspopup="dialog" aria-describedby={fulfillmentCountId}><MessageSquare size={16} aria-hidden="true" /><span>Fulfillment conversations</span><CountBadge count={fulfillmentUnreadCount} /></Button><span id={fulfillmentCountId} className="sr-only" role="status">{fulfillmentUnreadCount > 0 ? `${fulfillmentUnreadCount} unread fulfillment messages` : 'No unread fulfillment messages'}</span></>}{c.purpose === 'SALES' && <Button variant="quiet" aria-label="Quotation history" aria-haspopup="dialog" onClick={() => setHistoryOpen(true)}><FileText size={16} aria-hidden="true" /><span className="chat-action-label">Quotation history</span></Button>}{c.canTransfer && <Button variant="quiet" aria-label="Transfer handler" aria-haspopup="dialog" disabled={busy} onClick={() => void mutate(async () => { const result = await chatApi.handlers(c.id); setTarget(''); setReason(''); setHandlers(result.data); setHandlerPage(1); setMoreHandlers(Boolean(result.meta.has_more)) }, false)}><UsersRound size={16} aria-hidden="true" /><span className="chat-action-label">Transfer handler</span></Button>}</>}</div>
           {loading ? <LoadingState label="Loading conversation…" /> : detail && c ? <>
-            {canPrepare && <QuotationDraftEditor key={c.id} open={editor} onClose={() => setEditor(false)} reference={c.lockedReference} conversationId={c.id} quotation={detail.quotations.quotation ?? null} sourceNames={Object.fromEntries(detail.quotations.versions.find(version => version.latest)?.content.lines.map(line => [line.variantId, line.description]) ?? [])} role={role} onSaved={load} />}
+            {canPrepare && <QuotationDraftEditor key={c.id} open={editor} onClose={() => setEditor(false)} reference={c.lockedReference} conversationId={c.id} quotation={detail.quotations.quotation ?? null} sourceNames={Object.fromEntries(detail.quotations.versions.find(version => version.latest)?.content.lines.map(line => [line.variantId, line.description]) ?? [])} role={role} onSaved={load} onPendingChange={setBusy} />}
             {historyOpen && <FormDialog open title="Quotation history" description="Review published quotations, changes and accepted orders for this inquiry." busy={busy} onClose={() => setHistoryOpen(false)} footer={null}><div className="grid gap-4">
               {error && <StatusMessage tone="error">{error}</StatusMessage>}
               {detail.quotations.versions.length === 0 ? <p className="py-6 text-sm text-text-secondary">Published quotations and their changes appear here.</p> : detail.quotations.versions.map(version => <Fragment key={version.id}>{quotationDetails(version)}</Fragment>)}
@@ -230,7 +230,16 @@ export function ConversationThread({ selected, role, onBack, onRead, onMessage, 
             {selectedQuotation && <FormDialog open title={`Quotation v${selectedQuotation.version}`} description="Published terms and the Buyer's response for this version." busy={busy} onClose={() => setQuotationId(null)} footer={null}>{quotationDetails(selectedQuotation)}</FormDialog>}
             <ConversationHeader store={c.store} buyer={c.buyer} handler={c.handler} purpose={c.purpose} loadAvatar={loadChatAvatar} />
             <div className="chat-thread-body" ref={threadBody} onScroll={event => { const body = event.currentTarget; followLatest.current = body.scrollHeight - body.scrollTop - body.clientHeight < 160 }}>
-        {handlers && <form className="grid gap-3 border-b border-border-default p-5 sm:grid-cols-2" onSubmit={e => { e.preventDefault(); void mutate(async () => { await chatApi.transfer(c.id, Number(target), c.lockVersion, reason); setHandlers(null) }) }}><label className="grid gap-2 text-sm font-semibold">New handler<select className={control} required value={target} onChange={e => setTarget(e.target.value)}><option value="">Choose active staff</option>{handlers.map(h => <option key={h.id} value={h.id}>{h.displayName} · {chatRoleLabel(h.role)}</option>)}</select></label><label className="grid gap-2 text-sm font-semibold">Transfer reason<input className={control} required maxLength={500} value={reason} onChange={e => setReason(e.target.value)} /></label><div>{moreHandlers && <Button variant="secondary" onClick={() => void mutate(async () => { const result = await chatApi.handlers(c.id, handlerPage + 1); setHandlers([...handlers, ...result.data]); setHandlerPage(handlerPage + 1); setMoreHandlers(Boolean(result.meta.has_more)) }, false)}>More handlers</Button>}</div><p className="text-sm text-text-secondary sm:col-span-2">Transfer changes the handler. Their fixed role continues to determine what they may do.</p><Button disabled={busy || !target} type="submit">Confirm transfer</Button><Button variant="secondary" onClick={() => setHandlers(null)}>Cancel</Button></form>}
+        {handlers && <FormDialog open size="compact" title="Transfer handler" description="Choose an active team member and record why this inquiry is changing hands." busy={busy} onClose={() => setHandlers(null)} footer={<div className="flex justify-end gap-3"><Button variant="secondary" disabled={busy} onClick={() => setHandlers(null)}>Cancel</Button><Button form="transfer-handler-form" disabled={busy || !target || !reason.trim()} type="submit">Confirm transfer</Button></div>}>
+          {error && <StatusMessage tone="error">{error}</StatusMessage>}
+          <form id="transfer-handler-form" className="grid gap-4" onSubmit={e => { e.preventDefault(); void mutate(async () => { await chatApi.transfer(c.id, Number(target), c.lockVersion, reason.trim()); setHandlers(null); setTarget(''); setReason('') }) }}>
+            <label className="grid gap-2 text-sm font-semibold">New handler<select className={control} required disabled={busy} value={target} onChange={e => setTarget(e.target.value)}><option value="">Choose active staff</option>{handlers.map(h => <option key={h.id} value={h.id}>{h.displayName} · {chatRoleLabel(h.role)}</option>)}</select></label>
+            <label className="grid gap-2 text-sm font-semibold">Transfer reason<textarea className={control} required disabled={busy} rows={3} maxLength={500} value={reason} onChange={e => setReason(e.target.value)} /></label>
+            {handlers.length === 0 && <p role="status">No eligible handlers are available.</p>}
+            {moreHandlers && <Button variant="secondary" disabled={busy} onClick={() => void mutate(async () => { const result = await chatApi.handlers(c.id, handlerPage + 1); setHandlers([...handlers, ...result.data]); setHandlerPage(handlerPage + 1); setMoreHandlers(Boolean(result.meta.has_more)) }, false)}>More handlers</Button>}
+            <p className="text-sm text-text-secondary">Their fixed role continues to determine what they may do. Earlier messages keep their original attribution.</p>
+          </form>
+        </FormDialog>}
               <WorkPackageAttachment reference={c.lockedReference} proposal={detail.quotations.versions[0] ? ChatQuotationContentToJSON(detail.quotations.versions[0].content) : undefined} />
               <SiteInspectionPanel inspections={detail.siteInspections ?? []} busy={busy} onPrepareQuotation={canPrepare ? () => setEditor(true) : undefined} onDecide={async (inspection, action, decision) => {
                 try { await chatApi.siteInspection(c.id, inspection.id, action, decision) } catch (cause) { throw new Error(await readableChatError(cause)) }
@@ -242,7 +251,7 @@ export function ConversationThread({ selected, role, onBack, onRead, onMessage, 
                 {detail.quotations.hasMore && <div className="mb-5 text-center"><Button variant="secondary" disabled={busy} onClick={() => void olderQuotations()}>Earlier quotations</Button></div>}
                 <ol aria-label="Conversation messages">{timeline.map((entry, index) => <Fragment key={entry.id}>
                   {(index === 0 || messageDate(timeline[index - 1]!.timestamp) !== messageDate(entry.timestamp)) && <li className="text-center text-xs font-semibold text-text-secondary"><time dateTime={entry.timestamp}>{messageDate(entry.timestamp)} · Manila</time></li>}
-                  {entry.kind === 'message' ? <ChatMessageBubble message={entry.message} onOpenAttachment={(id, file) => void openFile(id, file?.displayName)} loadAttachment={loadAttachment} onOpenProduct={id => navigate(`/products/${id}`)} /> : <li><QuotationThreadCard version={entry.quotation} busy={busy} onOpen={() => setQuotationId(entry.quotation.id)} {...(canPrepare ? { onRevise: () => setEditor(true) } : {})} /></li>}
+                  {entry.kind === 'message' ? <ChatMessageBubble message={entry.message} onOpenAttachment={(id, file) => void openFile(id, file?.displayName)} loadAttachment={loadAttachment} onOpenProduct={id => navigate(`/products/${id}`)} /> : <li className="flex justify-end"><QuotationThreadCard version={entry.quotation} busy={busy} onOpen={() => setQuotationId(entry.quotation.id)} {...(canPrepare ? { onRevise: () => setEditor(true) } : {})} /></li>}
                 </Fragment>)}{pending.map(message => <ChatMessageBubble key={message.id} message={message} deliveryState={message.deliveryState} onRetry={() => void sendMessage(message)} onOpenAttachment={() => undefined} onOpenProduct={id => navigate(`/products/${id}`)} />)}</ol>
                 {timeline.length === 0 && <p className="py-10 text-center text-sm text-text-secondary">Start with a helpful reply about products or fulfillment.</p>}
                 <ChatTypingIndicator active={typing} />
@@ -272,28 +281,66 @@ export function ConversationThread({ selected, role, onBack, onRead, onMessage, 
   )
 }
 
-function QuotationDraftEditor({ open, onClose, conversationId, quotation, role, onSaved, reference, sourceNames = {} }: { open: boolean; onClose: () => void; conversationId: string; quotation?: ChatQuotation | null; role: string; onSaved: () => Promise<void>; reference?: unknown; sourceNames?: Record<string, string> }) {
+export function QuotationDraftEditor({ open, onClose, conversationId, quotation, role, onSaved, reference, sourceNames = {}, onPendingChange }: { open: boolean; onClose: () => void; conversationId: string; quotation?: ChatQuotation | null; role: string; onSaved: () => Promise<void>; reference?: unknown; sourceNames?: Record<string, string>; onPendingChange?: (pending: boolean) => void }) {
   const [draft, setDraft] = useState<ChatDraftContent>(() => quotation?.draft ? ChatDraftContentFromJSON(quotation.draft) : { lines: [], fulfillmentMethod: 'PICKUP', fulfillmentDate: '', deadlineHours: 24, discount: { scope: 'MATERIALS', percent: '' } })
   const [names, setNames] = useState<Record<string, string>>({})
   const [productDetails, setProductDetails] = useState<Record<string, { variantLabel: string; specifications: Record<string, string>; unitCode?: string; quantityPolicy?: import('@materyalph/api-client-ts').QuantityPolicy | undefined }>>({})
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [dirty, setDirty] = useState(false)
-  const [lock, setLock] = useState(quotation?.lockVersion ?? 1)
   const [saved, setSaved] = useState(false)
-  useEffect(() => { if (!dirty && quotation) { setLock(quotation.lockVersion); if (quotation.draft) setDraft(ChatDraftContentFromJSON(quotation.draft)) } }, [quotation, dirty])
+  const [saving, setSaving] = useState(false)
+  useEffect(() => { onPendingChange?.(dirty || busy || saving); return () => onPendingChange?.(false) }, [dirty, busy, saving, onPendingChange])
+  const latest = useRef(draft)
+  const lock = useRef(quotation?.lockVersion ?? 1)
+  const revision = useRef(0)
+  const savedRevision = useRef(0)
+  const inFlight = useRef<Promise<void> | null>(null)
+  const mounted = useRef(true)
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
+  useEffect(() => {
+    // Ignore an older poll response while our save or publish response is in flight.
+    if (!dirty && !busy && !inFlight.current && quotation && quotation.lockVersion >= lock.current) {
+      lock.current = quotation.lockVersion
+      if (quotation.draft) { const value = ChatDraftContentFromJSON(quotation.draft); latest.current = value; setDraft(value) }
+    }
+  }, [quotation, dirty, busy])
   const delivery = draft.delivery ?? {}
   const deliveryEdit = (patch: Record<string, unknown>) => edit({ ...draft, delivery: { ...delivery, ...patch } })
   const key = useRef(newIdempotencyKey())
-  const edit = (value: ChatDraftContent) => { setDraft(value); setDirty(true); setSaved(false); key.current = newIdempotencyKey() }
+  const edit = (value: ChatDraftContent) => { latest.current = value; revision.current++; setDraft(value); setDirty(true); setSaved(false); setError(null); key.current = newIdempotencyKey() }
+  const saveDraft = useCallback(async () => {
+    // Serialize writes and retain changes typed while an earlier save was running.
+    while (savedRevision.current < revision.current) {
+      if (inFlight.current) { await inFlight.current; continue }
+      const savingRevision = revision.current
+      const value = quotationDraftForSave(latest.current)
+      setSaving(true)
+      const request = (async () => {
+        const result = await chatApi.draft(conversationId, lock.current, value)
+        lock.current = result.quotation?.lockVersion ?? lock.current + 1
+        savedRevision.current = savingRevision
+        if (mounted.current && savingRevision === revision.current) { setDirty(false); setSaved(true) }
+      })()
+      inFlight.current = request
+      try { await request } finally { inFlight.current = null; if (mounted.current) setSaving(false) }
+    }
+  }, [conversationId])
+  useEffect(() => {
+    if (!dirty || busy || error) return
+    const timer = window.setTimeout(() => { void saveDraft().catch(async e => { const message = await readableChatError(e); if (mounted.current) setError(message) }) }, 800)
+    return () => window.clearTimeout(timer)
+  }, [draft, dirty, busy, error, saveDraft])
   const materialNames = { ...sourceNames, ...names }
   const amounts = quotationDiscountPreview(draft)
   const moneyValid = amounts.valid
-  async function act(action: () => Promise<void>) { setBusy(true); setError(null); try { await action() } catch (e) { setError(await readableChatError(e)) } finally { setBusy(false) } }
-  return <FormDialog open={open} onClose={onClose} busy={busy} title="Prepare quotation" description={role === 'CUSTOMER_SERVICE' ? 'Save a draft for an authorized publisher to review.' : 'Add materials, confirm fulfillment, then save and publish your quotation.'} footer={<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end"><p className="text-sm text-text-secondary sm:mr-auto">{busy ? 'Saving changes...' : dirty ? 'Unsaved changes' : saved ? 'Draft saved' : 'Review your draft before publishing.'}</p><Button variant="quiet" disabled={busy} onClick={onClose}>Close</Button><Button disabled={busy || !moneyValid || !draft.lines.length || !draft.fulfillmentDate} onClick={() => void act(async () => { const result = await chatApi.draft(conversationId, lock, quotationDraftForSave(draft)); setLock(result.quotation?.lockVersion ?? lock + 1); setDirty(false); setSaved(true); await onSaved() })}>Save draft</Button>{role !== 'CUSTOMER_SERVICE' && <Button variant="secondary" disabled={busy || !moneyValid || dirty || Boolean(quotation?.draft?.nrpc) || !quotation?.draft} onClick={() => { if (window.confirm('Publish these terms? This starts a new Buyer deadline and supersedes the previous version.')) void act(async () => { await chatApi.publish(conversationId, lock, key.current); key.current = newIdempotencyKey(); await onSaved() }) }}>Publish quotation</Button>}</div>}>
+  async function act(action: () => Promise<void>) { if (busy) return; setBusy(true); setError(null); try { await action() } catch (e) { setError(await readableChatError(e)) } finally { if (mounted.current) setBusy(false) } }
+  const close = () => { void act(async () => { await saveDraft(); await onSaved(); onClose() }) }
+  return <FormDialog open={open} onClose={close} busy={busy} title="Prepare quotation" description={role === 'CUSTOMER_SERVICE' ? 'Changes save automatically for an authorized publisher to review.' : 'Add materials and a message, confirm fulfillment, then publish your quotation. Changes save automatically.'} footer={<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end"><p role="status" className="text-sm text-text-secondary sm:mr-auto">{busy ? 'Finishing quotation…' : saving ? 'Saving changes…' : error ? 'Changes could not be saved. Retry before leaving.' : dirty ? 'Waiting to save…' : saved ? 'All changes saved' : 'Changes save automatically.'}</p><Button variant="quiet" disabled={busy} onClick={close}>Close</Button>{role !== 'CUSTOMER_SERVICE' && <Button disabled={busy || !moneyValid || !draft.lines.length || !draft.fulfillmentDate} onClick={() => { if (window.confirm('Publish these terms? This starts a new Buyer deadline and supersedes the previous version.')) void act(async () => { await saveDraft(); await chatApi.publish(conversationId, lock.current, key.current); key.current = newIdempotencyKey(); lock.current++; onClose(); await onSaved() }) }}>Publish quotation</Button>}</div>}>
     <section aria-label="Quotation draft" className="space-y-6">
-    {error && <StatusMessage tone="error">{error}</StatusMessage>}{saved && <StatusMessage tone="success">Draft saved.</StatusMessage>}{quotation?.draft?.nrpc != null && <StatusMessage tone="info">NRPC is now set only on eligible orders awaiting Vendor confirmation. An Owner, Store Manager or Store Staff must save this draft to remove its previous NRPC before publishing.</StatusMessage>}
+    {error && <StatusMessage tone="error">{error} <Button variant="quiet" disabled={busy || saving} onClick={() => void act(saveDraft)}>Retry saving</Button></StatusMessage>}{quotation?.draft?.nrpc != null && <StatusMessage tone="info">NRPC is now set only on eligible orders awaiting Vendor confirmation. An Owner, Store Manager or Store Staff must save this draft to remove its previous NRPC before publishing.</StatusMessage>}
     <WorkPackageAttachment reference={reference} proposal={ChatDraftContentToJSON(draft)} />
+    <label className="grid gap-2 text-sm font-semibold">Message to Buyer (optional)<textarea className={control} rows={3} maxLength={5000} disabled={busy} value={draft.message ?? ''} placeholder="Explain your offer or add a note for the Buyer…" onChange={e => edit({ ...draft, message: e.target.value })} /><span className="text-xs font-normal text-text-secondary">Included with this quotation when you publish.</span></label>
     <section className="space-y-3"><div className="sticky top-0 z-10 space-y-2 bg-surface-primary pb-2"><div><h3 className="font-semibold">Materials</h3><p className="mt-1 text-sm text-text-secondary">Add products below. Expand a material to edit its description and specifications.</p></div>
     <CatalogProductPicker active={open} disabled={busy} selectedVariantIds={draft.lines.map(line => line.variantId)} loadProducts={loadQuotationProducts} loadProduct={getListing} readableError={readableCatalogError} onAdd={(listing, variant) => {
       if (busy || !variant.price || draft.lines.some(line => line.variantId === variant.id)) return
@@ -310,8 +357,8 @@ function QuotationDraftEditor({ open, onClose, conversationId, quotation, role, 
     </section>
 
     <section className="space-y-4 border-t border-border-default pt-6"><h3 className="font-semibold">Fulfillment & payment</h3><div className="grid gap-4 sm:grid-cols-2">
-      <label className="grid gap-2 text-sm font-semibold">Fulfillment date<input className={control} type="date" value={draft.fulfillmentDate} onChange={e => edit({ ...draft, fulfillmentDate: e.target.value })} /></label>
-      <label className="grid gap-2 text-sm font-semibold">Buyer deadline (hours)<input className={control} type="number" min="1" max="72" value={draft.deadlineHours ?? 24} onChange={e => edit({ ...draft, deadlineHours: Number(e.target.value) })} /></label>
+      <label className="grid gap-2 text-sm font-semibold">Fulfillment date<input className={control} type="date" value={draft.fulfillmentDate ?? ''} disabled={busy} onChange={e => edit({ ...draft, fulfillmentDate: e.target.value })} /></label>
+      <label className="grid gap-2 text-sm font-semibold">Buyer deadline (hours)<input className={control} type="number" min="1" max="72" disabled={busy} value={draft.deadlineHours ?? 24} onChange={e => edit({ ...draft, deadlineHours: Number(e.target.value) })} /></label>
     </div>
     <p className="text-sm text-text-secondary">The Buyer chooses {draft.fulfillmentMethod === 'DELIVERY' ? 'Cash on Delivery or Online payment' : 'In-Store Payment or Online payment'} before accepting, subject to your enabled payment methods. Any online processing fee is disclosed at payment-channel selection.</p>
     <div className="mt-4 space-y-4">

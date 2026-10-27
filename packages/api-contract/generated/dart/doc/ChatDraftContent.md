@@ -8,10 +8,11 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**message** | **String** | Optional message to the Buyer, published with the quotation. | [optional]
 **lines** | [**BuiltList&lt;ChatDraftLine&gt;**](ChatDraftLine.md) |  |
 **fulfillmentMethod** | **String** |  |
 **paymentMethod** | **String** | Legacy editor preference, ignored. The Buyer selects payment before accepting the quotation. | [optional]
-**fulfillmentDate** | **String** |  |
+**fulfillmentDate** | **String** | May be empty in an autosaved draft; a current or future date is required for publication. | [optional]
 **deadlineHours** | **int** |  | [optional] [default to 24]
 **vendorDiscountCentavos** | **int** | Legacy fixed materials discount. Omit when discount is supplied. | [optional]
 **discount** | [**ChatQuotationDiscount**](ChatQuotationDiscount.md) |  | [optional]

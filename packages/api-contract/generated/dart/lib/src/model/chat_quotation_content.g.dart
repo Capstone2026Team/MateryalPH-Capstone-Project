@@ -62,6 +62,8 @@ class _$ChatQuotationContentPriceSourceEnumSerializer
 
 class _$ChatQuotationContent extends ChatQuotationContent {
   @override
+  final String? message;
+  @override
   final ChatQuotationDiscountAssessment? discount;
   @override
   final BuiltList<ChatQuotationLine> lines;
@@ -91,7 +93,8 @@ class _$ChatQuotationContent extends ChatQuotationContent {
       (ChatQuotationContentBuilder()..update(updates))._build();
 
   _$ChatQuotationContent._(
-      {this.discount,
+      {this.message,
+      this.discount,
       required this.lines,
       required this.commercial,
       required this.fulfillmentMethod,
@@ -117,6 +120,7 @@ class _$ChatQuotationContent extends ChatQuotationContent {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is ChatQuotationContent &&
+        message == other.message &&
         discount == other.discount &&
         lines == other.lines &&
         commercial == other.commercial &&
@@ -134,6 +138,7 @@ class _$ChatQuotationContent extends ChatQuotationContent {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, message.hashCode);
     _$hash = $jc(_$hash, discount.hashCode);
     _$hash = $jc(_$hash, lines.hashCode);
     _$hash = $jc(_$hash, commercial.hashCode);
@@ -153,6 +158,7 @@ class _$ChatQuotationContent extends ChatQuotationContent {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'ChatQuotationContent')
+          ..add('message', message)
           ..add('discount', discount)
           ..add('lines', lines)
           ..add('commercial', commercial)
@@ -172,6 +178,10 @@ class _$ChatQuotationContent extends ChatQuotationContent {
 class ChatQuotationContentBuilder
     implements Builder<ChatQuotationContent, ChatQuotationContentBuilder> {
   _$ChatQuotationContent? _$v;
+
+  String? _message;
+  String? get message => _$this._message;
+  set message(String? message) => _$this._message = message;
 
   ChatQuotationDiscountAssessmentBuilder? _discount;
   ChatQuotationDiscountAssessmentBuilder get discount =>
@@ -245,6 +255,7 @@ class ChatQuotationContentBuilder
   ChatQuotationContentBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _message = $v.message;
       _discount = $v.discount?.toBuilder();
       _lines = $v.lines.toBuilder();
       _commercial = $v.commercial.toBuilder();
@@ -280,6 +291,7 @@ class ChatQuotationContentBuilder
     try {
       _$result = _$v ??
           _$ChatQuotationContent._(
+            message: message,
             discount: _discount?.build(),
             lines: lines.build(),
             commercial: commercial.build(),

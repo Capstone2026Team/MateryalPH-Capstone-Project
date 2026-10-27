@@ -18,10 +18,12 @@ class OrderSubmittedScreen extends StatelessWidget {
     super.key,
     required this.checkout,
     required this.repository,
+    this.openConversation,
   });
 
   final CheckoutView checkout;
   final OrdersRepository repository;
+  final OpenOrderConversation? openConversation;
 
   /// Clears the checkout trail first so Back from Orders returns to Home, not a stale Cart or
   /// product page the Buyer already finished with.
@@ -37,6 +39,7 @@ class OrderSubmittedScreen extends StatelessWidget {
         builder: (_) => OrdersScreen(
           repository: repository,
           initialGroup: confirmed ? 'PROCESSING' : 'CONFIRMATION',
+          openConversation: openConversation,
         ),
       ),
     );
@@ -153,6 +156,7 @@ class OrderSubmittedScreen extends StatelessWidget {
                     builder: (_) => OrderDetailsScreen(
                       orderId: order.id,
                       repository: repository,
+                      openConversation: openConversation,
                     ),
                   ),
                 ),

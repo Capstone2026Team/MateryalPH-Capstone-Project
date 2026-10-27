@@ -49,6 +49,10 @@ import {
  */
 export interface ChatQuotationContent {
     /**
+     * Optional Vendor message frozen with this published quotation version.
+     */
+    message?: string;
+    /**
      *
      */
     discount?: ChatQuotationDiscountAssessment;
@@ -136,6 +140,7 @@ export function ChatQuotationContentFromJSONTyped(json: any, ignoreDiscriminator
     }
     return {
 
+        'message': json['message'] == null ? undefined : json['message'],
         'discount': json['discount'] == null ? undefined : ChatQuotationDiscountAssessmentFromJSON(json['discount']),
         'lines': ((json['lines'] as Array<any>).map(ChatQuotationLineFromJSON)),
         'commercial': ChatQuotationMoneyFromJSON(json['commercial']),
@@ -162,6 +167,7 @@ export function ChatQuotationContentToJSONTyped(value?: ChatQuotationContent | n
 
     return {
 
+        'message': value['message'],
         'discount': ChatQuotationDiscountAssessmentToJSON(value['discount']),
         'lines': ((value['lines'] as Array<any>).map(ChatQuotationLineToJSON)),
         'commercial': ChatQuotationMoneyToJSON(value['commercial']),

@@ -35,6 +35,10 @@ import {
  */
 export interface ChatDraftContent {
     /**
+     * Optional message to the Buyer, published with the quotation.
+     */
+    message?: string;
+    /**
      *
      */
     lines: Array<ChatDraftLine>;
@@ -48,9 +52,9 @@ export interface ChatDraftContent {
      */
     paymentMethod?: ChatDraftContentPaymentMethodEnum;
     /**
-     *
+     * May be empty in an autosaved draft; a current or future date is required for publication.
      */
-    fulfillmentDate: string;
+    fulfillmentDate?: string;
     /**
      *
      */
@@ -102,7 +106,6 @@ export type ChatDraftContentPaymentMethodEnum = typeof ChatDraftContentPaymentMe
 export function instanceOfChatDraftContent(value: object): value is ChatDraftContent {
     if (!('lines' in value) || value['lines'] === undefined) return false;
     if ((!('fulfillmentMethod' in (value as Record<string, any>)) && !('fulfillment_method' in (value as Record<string, any>))) || ((value as Record<string, any>)['fulfillmentMethod'] === undefined && (value as Record<string, any>)['fulfillment_method'] === undefined)) return false;
-    if ((!('fulfillmentDate' in (value as Record<string, any>)) && !('fulfillment_date' in (value as Record<string, any>))) || ((value as Record<string, any>)['fulfillmentDate'] === undefined && (value as Record<string, any>)['fulfillment_date'] === undefined)) return false;
     return true;
 }
 
@@ -116,10 +119,11 @@ export function ChatDraftContentFromJSONTyped(json: any, ignoreDiscriminator: bo
     }
     return {
 
+        'message': json['message'] == null ? undefined : json['message'],
         'lines': ((json['lines'] as Array<any>).map(ChatDraftLineFromJSON)),
         'fulfillmentMethod': json['fulfillment_method'],
         'paymentMethod': json['payment_method'] == null ? undefined : json['payment_method'],
-        'fulfillmentDate': json['fulfillment_date'],
+        'fulfillmentDate': json['fulfillment_date'] == null ? undefined : json['fulfillment_date'],
         'deadlineHours': json['deadline_hours'] == null ? undefined : json['deadline_hours'],
         'vendorDiscountCentavos': json['vendor_discount_centavos'] == null ? undefined : json['vendor_discount_centavos'],
         'discount': json['discount'] == null ? undefined : ChatQuotationDiscountFromJSON(json['discount']),
@@ -139,6 +143,7 @@ export function ChatDraftContentToJSONTyped(value?: ChatDraftContent | null, ign
 
     return {
 
+        'message': value['message'],
         'lines': ((value['lines'] as Array<any>).map(ChatDraftLineToJSON)),
         'fulfillment_method': value['fulfillmentMethod'],
         'payment_method': value['paymentMethod'],

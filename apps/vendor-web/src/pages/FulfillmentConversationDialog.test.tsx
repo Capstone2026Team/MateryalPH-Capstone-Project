@@ -8,7 +8,7 @@ import { MessagingWorkspace } from './MessagingPage'
 
 vi.mock('../lib/messaging-api', async original => ({
   ...await original<typeof import('../lib/messaging-api')>(),
-  chatApi: { get: vi.fn(), list: vi.fn(), projectInquiries: vi.fn(), fulfillmentConversations: vi.fn(), send: vi.fn(), read: vi.fn(), typing: vi.fn(), upload: vi.fn(), download: vi.fn() },
+  chatApi: { get: vi.fn(), list: vi.fn(), projectInquiries: vi.fn(), fulfillmentConversations: vi.fn(), send: vi.fn(), read: vi.fn(), typing: vi.fn(), upload: vi.fn(), download: vi.fn(), handlers: vi.fn(), transfer: vi.fn() },
   watchConversation: vi.fn(),
 }))
 
@@ -38,6 +38,24 @@ beforeEach(() => {
   vi.mocked(chatApi.typing).mockResolvedValue({ data: {}, meta: {}, errors: [] })
 })
 afterEach(cleanup)
+test('handler transfer opens a modal and retains the inquiry composer', async () => {
+  const sales = detail('sales-1')
+  sales.conversation.canTransfer = true
+  vi.mocked(chatApi.get).mockResolvedValue(sales)
+  vi.mocked(chatApi.handlers).mockResolvedValue({ data: [{ id: 2, displayName: 'Sam', role: 'STORE_STAFF' }], meta: { page: 1, has_more: false }, errors: [] })
+  vi.mocked(chatApi.transfer).mockResolvedValue({ data: {}, meta: {}, errors: [] })
+  render(<MemoryRouter initialEntries={['/messages?conversation=sales-1']}><MessagingWorkspace role="PUBLISHER" /></MemoryRouter>)
+  const composer = await screen.findByRole('textbox', { name: 'Message' })
+  fireEvent.change(composer, { target: { value: 'Keep this reply' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Transfer handler' }))
+  const modal = await screen.findByRole('dialog', { name: 'Transfer handler' })
+  fireEvent.change(within(modal).getByRole('combobox', { name: 'New handler' }), { target: { value: '2' } })
+  fireEvent.change(within(modal).getByRole('textbox', { name: 'Transfer reason' }), { target: { value: 'Shift handover' } })
+  fireEvent.submit(within(modal).getByRole('combobox').closest('form')!)
+  await waitFor(() => expect(chatApi.transfer).toHaveBeenCalledWith('sales-1', 2, sales.conversation.lockVersion, 'Shift handover'))
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Transfer handler' })).not.toBeInTheDocument())
+  expect(composer).toHaveValue('Keep this reply')
+})
 function Location() { return <output aria-label="Location">{useLocation().search}</output> }
 
 test('Vendor timeline opens published terms and shows an incoming Buyer change request without losing the draft', async () => {

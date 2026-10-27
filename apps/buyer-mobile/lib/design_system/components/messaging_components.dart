@@ -744,6 +744,10 @@ class QuotationVersionCard extends StatelessWidget {
             style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
           ),
           const Divider(height: 28),
+          if (c.message?.trim().isNotEmpty == true) ...[
+            Text(c.message!),
+            const SizedBox(height: 16),
+          ],
           QuotationMaterialLines(lines: c.lines),
           QuotationPaymentBreakdown(
             content: c,
@@ -873,6 +877,10 @@ class QuotationSummaryTile extends StatelessWidget {
                   color: active ? BuyerTheme.action : BuyerTheme.muted,
                 ),
               ),
+              if (version.content.message?.trim().isNotEmpty == true) ...[
+                const SizedBox(height: 8),
+                Text(version.content.message!),
+              ],
               const SizedBox(height: 4),
               Text(
                 '${chatDate(version.publishedAt)} · ${chatTime(version.publishedAt)} Manila',

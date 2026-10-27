@@ -11,6 +11,7 @@ import '../../design_system/theme.dart';
 import '../map_discovery/discovery_models.dart';
 import '../map_discovery/discovery_repository.dart' show newIdempotencyKey;
 import '../orders/order_submitted_screen.dart';
+import '../orders/order_details_screen.dart' show OpenOrderConversation;
 import '../orders/orders_repository.dart';
 import 'cart_controller.dart';
 import '../projects/projects_repository.dart';
@@ -29,6 +30,7 @@ class CheckoutPreviewScreen extends StatefulWidget {
     this.orders,
     this.projects,
     this.chooseDropOff,
+    this.openConversation,
   });
 
   final CartController controller;
@@ -45,6 +47,7 @@ class CheckoutPreviewScreen extends StatefulWidget {
   /// Order submission; without it the submit action stays unavailable.
   final OrdersRepository? orders;
   final ProjectsRepository? projects;
+  final OpenOrderConversation? openConversation;
 
   @override
   State<CheckoutPreviewScreen> createState() => _CheckoutPreviewScreenState();
@@ -369,8 +372,11 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
       if (!mounted) return;
       await Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
-          builder: (_) =>
-              OrderSubmittedScreen(checkout: checkout, repository: orders),
+          builder: (_) => OrderSubmittedScreen(
+            checkout: checkout,
+            repository: orders,
+            openConversation: widget.openConversation,
+          ),
         ),
       );
     } on DiscoveryFailure catch (error) {

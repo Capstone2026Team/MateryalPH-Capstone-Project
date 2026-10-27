@@ -23318,6 +23318,10 @@ components:
         - price_source
         - processing_fee_status
       properties:
+        message:
+          type: string
+          maxLength: 5000
+          description: Optional Vendor message frozen with this published quotation version.
         discount:
           $ref: "#/components/schemas/ChatQuotationDiscountAssessment"
         lines:
@@ -23823,13 +23827,17 @@ components:
       required:
         - lines
         - fulfillment_method
-        - fulfillment_date
       properties:
+        message:
+          type: string
+          nullable: true
+          maxLength: 5000
+          description: Optional message to the Buyer, published with the quotation.
         lines:
           type: array
           items:
             $ref: "#/components/schemas/ChatDraftLine"
-          minItems: 1
+          minItems: 0
           maxItems: 100
         fulfillment_method:
           type: string
@@ -23847,6 +23855,8 @@ components:
             - IN_STORE
         fulfillment_date:
           type: string
+          nullable: true
+          description: May be empty in an autosaved draft; a current or future date is required for publication.
         deadline_hours:
           type: integer
           minimum: 1

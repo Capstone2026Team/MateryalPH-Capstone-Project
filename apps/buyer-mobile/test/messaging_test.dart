@@ -60,6 +60,32 @@ api.ChatQuotationChange change(String path, Object? before, Object? after) =>
     );
 
 void main() {
+  testWidgets('Vendor quotation and its attached message remain on the left', (
+    tester,
+  ) async {
+    final version = quotation().rebuild(
+      (b) => b..content.message = 'A discount is included.',
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: BuyerTheme.light,
+        home: Scaffold(
+          body: QuotationThreadButton(version: version, onOpen: () {}),
+        ),
+      ),
+    );
+    final alignment = tester.widget<Align>(
+      find
+          .descendant(
+            of: find.byType(QuotationThreadButton),
+            matching: find.byType(Align),
+          )
+          .first,
+    );
+    expect(alignment.alignment, Alignment.centerLeft);
+    expect(find.text('A discount is included.'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
   test(
     'generated quotation codec retains change requests and their exact deadline',
     () {

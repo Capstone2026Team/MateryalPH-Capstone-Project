@@ -13,7 +13,11 @@ import 'package:materyalph/features/messaging/conversation_timeline.dart';
 import 'package:materyalph/features/messaging/conversation_quotations_screen.dart';
 import 'package:materyalph/features/messaging/messaging_screen.dart';
 import 'package:materyalph/features/orders/orders_repository.dart';
+import 'package:materyalph/features/orders/order_details_screen.dart';
+import 'package:materyalph/features/orders/order_models.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
+
+import 'orders_fakes.dart';
 
 // Synthetic UI fixtures. These do not represent live stores or provider data.
 api.ConversationView layoutConversation(
@@ -141,6 +145,7 @@ class LayoutMessagingRepository implements MessagingRepository {
   bool paginateMessages = false;
   final requestedCursors = <String?>[];
   final sendKeys = <String>[];
+  final sentConversationIds = <String>[];
   final sentProducts = <String?>[];
   final typingEvents = <bool>[];
   void Function(bool, int)? typingChanged;
@@ -283,6 +288,7 @@ class LayoutMessagingRepository implements MessagingRepository {
     String? productId,
   }) async {
     sendKeys.add(key);
+    sentConversationIds.add(id);
     sentProducts.add(productId);
     await sendGate?.future;
     if (failSend) throw StateError('fixture offline');
@@ -358,11 +364,6 @@ class LayoutMessagingRepository implements MessagingRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class UnusedOrdersRepository implements OrdersRepository {
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
 Future<void> mount(
   WidgetTester tester,
   LayoutMessagingRepository repository, {
@@ -397,6 +398,27 @@ Future<void> mount(
 
 void main() {
   setUp(() => FlutterSecureStorage.setMockInitialValues({}));
+  testWidgets('Buyer can reply to an open fulfillment conversation', (
+    tester,
+  ) async {
+    final repository = LayoutMessagingRepository();
+    repository.stores[0] = repository.stores.first.rebuild(
+      (b) => b
+        ..purpose = api.ConversationViewPurposeEnum.FULFILLMENT
+        ..orderId = 'order-one'
+        ..fulfillmentEntryEnabled = true
+        ..handler.role = 'OWNER',
+    );
+    await mount(tester, repository, thread: true);
+    await tester.enterText(find.byType(TextField), 'I am on my way.');
+    await tester.pump();
+    await tester.tap(find.byTooltip('Send message'));
+    await tester.pumpAndSettle();
+    expect(repository.sendKeys, hasLength(1));
+    expect(repository.messages.last.body, 'I am on my way.');
+    expect(find.text('I am on my way.'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
   testWidgets(
     'accepted orders are reached through their quotation without repeated thread actions',
     (tester) async {
@@ -414,7 +436,24 @@ void main() {
         tester,
         repository,
         thread: true,
-        orders: UnusedOrdersRepository(),
+        orders: FakeOrdersRepository(
+          detail: orderDetail(
+            fulfillmentView: const FulfillmentView(
+              method: 'PICKUP',
+              state: 'NOT_STARTED',
+              late: false,
+              steps: [],
+              trackingNotice: '',
+              receipt: FulfillmentReceiptView(paused: false, windowHours: 48),
+              thread: FulfillmentThreadView(
+                available: true,
+                readOnly: false,
+                conversationId: 'fulfillment-one',
+              ),
+              nextAction: 'NONE',
+            ),
+          ),
+        ),
       );
       expect(find.text('Open Order Details'), findsNothing);
       await tester.ensureVisible(find.text('Requested quotation v2'));
@@ -431,6 +470,42 @@ void main() {
             .first,
       );
       expect(find.text('Open Order Details'), findsOneWidget);
+      await tester.ensureVisible(find.text('Open Order Details'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open Order Details'));
+      await tester.pumpAndSettle();
+      expect(find.byType(OrderDetailsScreen), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Fulfillment Messages'), 250);
+      final entry = tester.widget<OutlinedButton>(
+        find.widgetWithText(OutlinedButton, 'Fulfillment Messages'),
+      );
+      expect(
+        entry.onPressed,
+        isNotNull,
+        reason:
+            'Order Details opened from a quotation must retain fulfillment messaging.',
+      );
+      repository.stores[0] = repository.stores.first.rebuild(
+        (b) => b
+          ..purpose = api.ConversationViewPurposeEnum.FULFILLMENT
+          ..orderId = 'order-2'
+          ..fulfillmentEntryEnabled = true,
+      );
+      await tester.tap(find.text('Fulfillment Messages'));
+      await tester.pumpAndSettle();
+      expect(find.byType(TextField), findsOneWidget);
+      await tester.enterText(
+        find.byType(TextField),
+        'I can collect the materials today.',
+      );
+      await tester.pump();
+      await tester.tap(find.byTooltip('Send message'));
+      await tester.pumpAndSettle();
+      expect(
+        repository.messages.last.body,
+        'I can collect the materials today.',
+      );
+      expect(repository.sentConversationIds.last, 'fulfillment-one');
       await tester.pumpWidget(const SizedBox());
     },
   );

@@ -670,12 +670,21 @@ void main() {
   testWidgets(
     'checkout submits ready groups once, confirms a split and opens the real confirmation',
     (tester) async {
+      Future<void> openConversation(BuildContext context, String id) async {}
       final procurement = FakeProcurementRepository(
         preview: previewFixture(deliveryStatus: 'BLOCKED'),
       );
       final cart = CartController(repository: procurement);
       await cart.load();
       final orders = FakeOrdersRepository(
+        detail: orderDetail(),
+        list: const OrderListPage(
+          items: [],
+          counts: {},
+          page: 1,
+          hasMore: false,
+          total: 0,
+        ),
         checkout: CheckoutView(
           id: 'checkout-1',
           reference: 'CHK-2026-ZX12CV34',
@@ -702,6 +711,7 @@ void main() {
             controller: cart,
             savedLocations: () => const [],
             orders: orders,
+            openConversation: openConversation,
           ),
         ),
       );
@@ -721,6 +731,28 @@ void main() {
       expect(find.byType(OrderSubmittedScreen), findsOneWidget);
       expect(find.text('CHK-2026-ZX12CV34'), findsOneWidget);
       expect(find.text('Accepted automatically — pay before'), findsOneWidget);
+      final submitted = tester.widget<OrderSubmittedScreen>(
+        find.byType(OrderSubmittedScreen),
+      );
+      expect(submitted.openConversation, same(openConversation));
+      await tester.ensureVisible(find.text('Bravo Builders Depot'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Bravo Builders Depot'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<OrderDetailsScreen>(find.byType(OrderDetailsScreen))
+            .openConversation,
+        same(openConversation),
+      );
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('View my orders'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<OrdersScreen>(find.byType(OrdersScreen)).openConversation,
+        same(openConversation),
+      );
     },
   );
 

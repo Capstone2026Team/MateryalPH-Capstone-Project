@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(ChatDraftContent, () {
+    // Optional message to the Buyer, published with the quotation.
+    // String message
+    test('to test the property `message`', () async {
+      // TODO
+    });
+
     // BuiltList<ChatDraftLine> lines
     test('to test the property `lines`', () async {
       // TODO
@@ -23,6 +29,7 @@ void main() {
       // TODO
     });
 
+    // May be empty in an autosaved draft; a current or future date is required for publication.
     // String fulfillmentDate
     test('to test the property `fulfillmentDate`', () async {
       // TODO

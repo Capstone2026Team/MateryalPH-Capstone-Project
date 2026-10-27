@@ -32,29 +32,30 @@ final class QuotationTerms
     /**
      * @param array<string, mixed> $input
      * @return array<string, mixed> */
-    public function validate(array $input): array
+    public function validate(array $input, bool $complete = true): array
     {
         $limits = (array) PlatformSettings::current()->value('quotations.deadline_limits');
 
         $validated = Validator::make($input, [
-            'lines' => ['required', 'array', 'min:1', 'max:100'],
+            'lines' => ['present', 'array', $complete ? 'min:1' : 'min:0', 'max:100'],
             'lines.*.variant_id' => ['required', 'uuid', 'distinct'],
             'lines.*.quantity' => ['required', 'regex:/^\d{1,10}(\.\d{1,4})?$/', 'numeric', 'gt:0'],
             'lines.*.unit_price_centavos' => ['required', 'integer', 'between:1,100000000000'],
             'lines.*.description' => ['sometimes', 'string', 'max:200'], 'lines.*.specifications' => ['sometimes', 'array', 'max:30'],
             'lines.*.specifications.*' => ['string', 'max:200'],
             'fulfillment_method' => ['required', 'in:PICKUP,DELIVERY'], 'payment_method' => ['sometimes', 'in:ONLINE,CASH_ON_DELIVERY,IN_STORE'],
-            'fulfillment_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:'.now('Asia/Manila')->toDateString()],
+            'fulfillment_date' => $complete ? ['required', 'date_format:Y-m-d', 'after_or_equal:'.now('Asia/Manila')->toDateString()] : ['nullable', 'date_format:Y-m-d'],
+            'message' => ['nullable', 'string', 'max:5000'],
             'deadline_hours' => ['sometimes', 'integer', 'between:'.(int) $limits['min_hours'].','.(int) $limits['max_hours']], 'vendor_discount_centavos' => ['sometimes', 'integer', 'min:0', Rule::prohibitedIf(array_key_exists('discount', $input))],
             'discount' => ['sometimes', 'array:scope,percent', 'min:2'],
             'discount.scope' => ['required_with:discount', 'in:MATERIALS,DELIVERY'],
             'discount.percent' => ['required_with:discount', 'string', 'regex:'.VendorDiscount::PERCENT_PATTERN, 'numeric', 'between:0,100'],
-            'delivery' => ['nullable', 'array'], 'delivery.vehicles' => ['required_if:fulfillment_method,DELIVERY', 'array', 'min:1', 'max:20'],
+            'delivery' => ['nullable', 'array'], 'delivery.vehicles' => [$complete ? 'required_if:fulfillment_method,DELIVERY' : 'sometimes', 'array', 'min:1', 'max:20'],
             'delivery.vehicles.*.vehicle_id' => ['required', 'uuid'], 'delivery.vehicles.*.number_of_vehicles' => ['required', 'integer', 'min:1'],
             'delivery.vehicles.*.total_vehicle_trips' => ['required', 'integer', 'min:1'], 'delivery.vehicles.*.group_key' => ['sometimes', 'string', 'max:40'],
-            'delivery.final_fee_centavos' => ['required_if:fulfillment_method,DELIVERY', 'integer', 'min:0'],
-            'delivery.arrangement' => ['required_if:fulfillment_method,DELIVERY', 'string', 'max:2000'],
-            'delivery.access_confirmed' => ['required_if:fulfillment_method,DELIVERY', 'boolean'],
+            'delivery.final_fee_centavos' => [$complete ? 'required_if:fulfillment_method,DELIVERY' : 'sometimes', 'integer', 'min:0'],
+            'delivery.arrangement' => [$complete ? 'required_if:fulfillment_method,DELIVERY' : 'nullable', 'string', 'max:2000'],
+            'delivery.access_confirmed' => [$complete ? 'required_if:fulfillment_method,DELIVERY' : 'sometimes', 'boolean'],
             'delivery.heavy_vehicle_access_confirmed' => ['sometimes', 'boolean'], 'delivery.manual_review_note' => ['nullable', 'string', 'max:2000'],
             'delivery.change_reason' => ['nullable', 'string', 'min:10', 'max:2000'],
             'nrpc' => ['prohibited'], 'nrpc.amount_centavos' => ['required_with:nrpc', 'integer', 'min:1'],
@@ -67,6 +68,10 @@ final class QuotationTerms
 
         // Older editors may still send a preference. Only the Buyer chooses at acceptance.
         unset($validated['payment_method'], $validated['nrpc']);
+
+        if (isset($validated['message'])) {
+            $validated['message'] = trim($validated['message']);
+        }
 
         return $validated;
     }
@@ -164,6 +169,7 @@ final class QuotationTerms
         $commercial = FinancialCalculator::commercial($lines, $materialsDiscount, $delivery === null ? 0 : (int) $delivery['final_charge_centavos'], $nrpc);
 
         return ['lines' => $lines, 'commercial' => $commercial, 'fulfillment_method' => $input['fulfillment_method'],
+            ...(isset($input['message']) && $input['message'] !== '' ? ['message' => $input['message']] : []),
             'fulfillment_date' => $input['fulfillment_date'], 'delivery' => $delivery, 'destination' => json_decode($this->deliveryOrder($c)->destination, true),
             'nrpc' => $nrpc === null ? null : $nrpc + ['terms' => $terms], 'price_source' => 'PRIVATE_TRANSACTION',
             'fee_policy_version_id' => FinancialSnapshotService::currentFeePolicyId((string) $c->vendor_organization_id), 'processing_fee_status' => 'PENDING_PAYMENT_CHANNEL'] + ($discount === null ? [] : ['discount' => $discount]);

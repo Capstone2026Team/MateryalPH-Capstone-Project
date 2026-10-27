@@ -17,6 +17,7 @@ part 'chat_quotation_content.g.dart';
 /// ChatQuotationContent
 ///
 /// Properties:
+/// * [message] - Optional Vendor message frozen with this published quotation version.
 /// * [discount]
 /// * [lines]
 /// * [commercial]
@@ -31,6 +32,10 @@ part 'chat_quotation_content.g.dart';
 /// * [processingFeeStatus]
 @BuiltValue()
 abstract class ChatQuotationContent implements Built<ChatQuotationContent, ChatQuotationContentBuilder> {
+  /// Optional Vendor message frozen with this published quotation version.
+  @BuiltValueField(wireName: r'message')
+  String? get message;
+
   @BuiltValueField(wireName: r'discount')
   ChatQuotationDiscountAssessment? get discount;
 
@@ -93,6 +98,13 @@ class _$ChatQuotationContentSerializer implements PrimitiveSerializer<ChatQuotat
     ChatQuotationContent object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.message != null) {
+      yield r'message';
+      yield serializers.serialize(
+        object.message,
+        specifiedType: const FullType(String),
+      );
+    }
     if (object.discount != null) {
       yield r'discount';
       yield serializers.serialize(
@@ -184,6 +196,14 @@ class _$ChatQuotationContentSerializer implements PrimitiveSerializer<ChatQuotat
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'message':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.message = valueDes;
+          break;
         case r'discount':
           final valueDes = serializers.deserialize(
             value,

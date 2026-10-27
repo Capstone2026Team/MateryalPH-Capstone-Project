@@ -259,6 +259,7 @@ class ProcurementNavigation {
       orders: orders,
       chooseDropOff: discovery == null ? null : chooseDropOff,
       projects: projects,
+      openConversation: messaging == null ? null : openConversation,
     ),
   );
 

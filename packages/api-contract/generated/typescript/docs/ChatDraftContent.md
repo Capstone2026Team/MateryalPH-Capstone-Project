@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`message` | string
 `lines` | [Array&lt;ChatDraftLine&gt;](ChatDraftLine.md)
 `fulfillmentMethod` | string
 `paymentMethod` | string
@@ -23,6 +24,7 @@ import type { ChatDraftContent } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "message": null,
   "lines": null,
   "fulfillmentMethod": null,
   "paymentMethod": null,

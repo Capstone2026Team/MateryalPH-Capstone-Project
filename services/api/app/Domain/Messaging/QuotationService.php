@@ -59,7 +59,7 @@ final class QuotationService
     {
         $c = $this->access->require($request->user(), $conversationId);
         $this->access->requireSales($request->user(), $c);
-        $input = $this->terms->validate($input);
+        $input = $this->terms->validate($input, complete: false);
         DB::transaction(function () use ($request, $conversationId, $input, $version, $c): void {
             $this->lockPackage($c);
             $c = $this->access->require($request->user(), $conversationId, true);

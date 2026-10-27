@@ -608,6 +608,7 @@ class _MessagingScreenState extends State<MessagingScreen>
       return;
     }
     setState(() {
+      _notice = null;
       _pending[key] = (
         body: message.body,
         product: message.product,
@@ -635,15 +636,18 @@ class _MessagingScreenState extends State<MessagingScreen>
         productId: message.product?.productId,
       );
       await _load();
-    } catch (_) {
+    } catch (error) {
       if (mounted && _pending.containsKey(key)) {
-        setState(
-          () => _pending[key] = (
+        setState(() {
+          _pending[key] = (
             body: message.body,
             product: message.product,
             failed: true,
-          ),
-        );
+          );
+          _notice = error is DiscoveryFailure
+              ? error.message
+              : 'Message could not be sent. Check your connection and retry.';
+        });
       }
     }
   }
@@ -890,6 +894,21 @@ class _MessagingScreenState extends State<MessagingScreen>
     );
   }
 
+  Future<void> _openConversation(BuildContext routeContext, String id) =>
+      Navigator.of(routeContext).push<void>(
+        MaterialPageRoute(
+          builder: (_) => MessagingScreen(
+            repository: widget.repository,
+            conversationId: id,
+            orders: widget.orders,
+            onOpenProduct: widget.onOpenProduct,
+            onSetDelivery: widget.onSetDelivery,
+            onOpenCart: widget.onOpenCart,
+            onOpenNotifications: widget.onOpenNotifications,
+          ),
+        ),
+      );
+
   Future<void> _openQuotations([String? versionId]) async {
     await showDialog<void>(
       context: context,
@@ -906,6 +925,7 @@ class _MessagingScreenState extends State<MessagingScreen>
                   builder: (_) => OrderDetailsScreen(
                     orderId: orderId,
                     repository: widget.orders!,
+                    openConversation: _openConversation,
                   ),
                 ),
               ),

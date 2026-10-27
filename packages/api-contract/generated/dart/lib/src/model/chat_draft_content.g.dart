@@ -137,13 +137,15 @@ class _$ChatDraftContentPaymentMethodEnumSerializer
 
 class _$ChatDraftContent extends ChatDraftContent {
   @override
+  final String? message;
+  @override
   final BuiltList<ChatDraftLine> lines;
   @override
   final ChatDraftContentFulfillmentMethodEnum fulfillmentMethod;
   @override
   final ChatDraftContentPaymentMethodEnum? paymentMethod;
   @override
-  final String fulfillmentDate;
+  final String? fulfillmentDate;
   @override
   final int? deadlineHours;
   @override
@@ -160,10 +162,11 @@ class _$ChatDraftContent extends ChatDraftContent {
       (ChatDraftContentBuilder()..update(updates))._build();
 
   _$ChatDraftContent._(
-      {required this.lines,
+      {this.message,
+      required this.lines,
       required this.fulfillmentMethod,
       this.paymentMethod,
-      required this.fulfillmentDate,
+      this.fulfillmentDate,
       this.deadlineHours,
       this.vendorDiscountCentavos,
       this.discount,
@@ -182,6 +185,7 @@ class _$ChatDraftContent extends ChatDraftContent {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is ChatDraftContent &&
+        message == other.message &&
         lines == other.lines &&
         fulfillmentMethod == other.fulfillmentMethod &&
         paymentMethod == other.paymentMethod &&
@@ -196,6 +200,7 @@ class _$ChatDraftContent extends ChatDraftContent {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, message.hashCode);
     _$hash = $jc(_$hash, lines.hashCode);
     _$hash = $jc(_$hash, fulfillmentMethod.hashCode);
     _$hash = $jc(_$hash, paymentMethod.hashCode);
@@ -212,6 +217,7 @@ class _$ChatDraftContent extends ChatDraftContent {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'ChatDraftContent')
+          ..add('message', message)
           ..add('lines', lines)
           ..add('fulfillmentMethod', fulfillmentMethod)
           ..add('paymentMethod', paymentMethod)
@@ -228,6 +234,10 @@ class _$ChatDraftContent extends ChatDraftContent {
 class ChatDraftContentBuilder
     implements Builder<ChatDraftContent, ChatDraftContentBuilder> {
   _$ChatDraftContent? _$v;
+
+  String? _message;
+  String? get message => _$this._message;
+  set message(String? message) => _$this._message = message;
 
   ListBuilder<ChatDraftLine>? _lines;
   ListBuilder<ChatDraftLine> get lines =>
@@ -285,6 +295,7 @@ class ChatDraftContentBuilder
   ChatDraftContentBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _message = $v.message;
       _lines = $v.lines.toBuilder();
       _fulfillmentMethod = $v.fulfillmentMethod;
       _paymentMethod = $v.paymentMethod;
@@ -317,12 +328,12 @@ class ChatDraftContentBuilder
     try {
       _$result = _$v ??
           _$ChatDraftContent._(
+            message: message,
             lines: lines.build(),
             fulfillmentMethod: BuiltValueNullFieldError.checkNotNull(
                 fulfillmentMethod, r'ChatDraftContent', 'fulfillmentMethod'),
             paymentMethod: paymentMethod,
-            fulfillmentDate: BuiltValueNullFieldError.checkNotNull(
-                fulfillmentDate, r'ChatDraftContent', 'fulfillmentDate'),
+            fulfillmentDate: fulfillmentDate,
             deadlineHours: deadlineHours,
             vendorDiscountCentavos: vendorDiscountCentavos,
             discount: _discount?.build(),

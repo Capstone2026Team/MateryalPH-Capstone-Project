@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(ChatQuotationContent, () {
+    // Optional Vendor message frozen with this published quotation version.
+    // String message
+    test('to test the property `message`', () async {
+      // TODO
+    });
+
     // ChatQuotationDiscountAssessment discount
     test('to test the property `discount`', () async {
       // TODO

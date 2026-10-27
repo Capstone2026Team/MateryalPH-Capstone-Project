@@ -15,10 +15,11 @@ part 'chat_draft_content.g.dart';
 /// ChatDraftContent
 ///
 /// Properties:
+/// * [message] - Optional message to the Buyer, published with the quotation.
 /// * [lines]
 /// * [fulfillmentMethod]
 /// * [paymentMethod] - Legacy editor preference, ignored. The Buyer selects payment before accepting the quotation.
-/// * [fulfillmentDate]
+/// * [fulfillmentDate] - May be empty in an autosaved draft; a current or future date is required for publication.
 /// * [deadlineHours]
 /// * [vendorDiscountCentavos] - Legacy fixed materials discount. Omit when discount is supplied.
 /// * [discount]
@@ -26,6 +27,10 @@ part 'chat_draft_content.g.dart';
 /// * [nrpc] - Historical drafts only. Omit when saving; new quotation NRPC is prohibited.
 @BuiltValue()
 abstract class ChatDraftContent implements Built<ChatDraftContent, ChatDraftContentBuilder> {
+  /// Optional message to the Buyer, published with the quotation.
+  @BuiltValueField(wireName: r'message')
+  String? get message;
+
   @BuiltValueField(wireName: r'lines')
   BuiltList<ChatDraftLine> get lines;
 
@@ -39,8 +44,9 @@ abstract class ChatDraftContent implements Built<ChatDraftContent, ChatDraftCont
   ChatDraftContentPaymentMethodEnum? get paymentMethod;
   // enum paymentMethodEnum {  ONLINE,  CASH_ON_DELIVERY,  IN_STORE,  };
 
+  /// May be empty in an autosaved draft; a current or future date is required for publication.
   @BuiltValueField(wireName: r'fulfillment_date')
-  String get fulfillmentDate;
+  String? get fulfillmentDate;
 
   @BuiltValueField(wireName: r'deadline_hours')
   int? get deadlineHours;
@@ -85,6 +91,13 @@ class _$ChatDraftContentSerializer implements PrimitiveSerializer<ChatDraftConte
     ChatDraftContent object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.message != null) {
+      yield r'message';
+      yield serializers.serialize(
+        object.message,
+        specifiedType: const FullType(String),
+      );
+    }
     yield r'lines';
     yield serializers.serialize(
       object.lines,
@@ -102,11 +115,13 @@ class _$ChatDraftContentSerializer implements PrimitiveSerializer<ChatDraftConte
         specifiedType: const FullType(ChatDraftContentPaymentMethodEnum),
       );
     }
-    yield r'fulfillment_date';
-    yield serializers.serialize(
-      object.fulfillmentDate,
-      specifiedType: const FullType(String),
-    );
+    if (object.fulfillmentDate != null) {
+      yield r'fulfillment_date';
+      yield serializers.serialize(
+        object.fulfillmentDate,
+        specifiedType: const FullType(String),
+      );
+    }
     if (object.deadlineHours != null) {
       yield r'deadline_hours';
       yield serializers.serialize(
@@ -165,6 +180,14 @@ class _$ChatDraftContentSerializer implements PrimitiveSerializer<ChatDraftConte
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'message':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.message = valueDes;
+          break;
         case r'lines':
           final valueDes = serializers.deserialize(
             value,
@@ -190,8 +213,9 @@ class _$ChatDraftContentSerializer implements PrimitiveSerializer<ChatDraftConte
         case r'fulfillment_date':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(String),
-          ) as String;
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
           result.fulfillmentDate = valueDes;
           break;
         case r'deadline_hours':

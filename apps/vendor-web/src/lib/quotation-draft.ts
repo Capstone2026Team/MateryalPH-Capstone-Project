@@ -9,6 +9,7 @@ export function quotationDraftForSave(draft: ChatDraftContent): ChatDraftContent
   const points = draft.discount ? parsePesoInput(draft.discount.percent.trim() || '0') : null
   return {
     ...rest,
+    message: draft.message?.trim() || '',
     ...(!draft.discount && vendorDiscountCentavos !== undefined ? { vendorDiscountCentavos } : {}),
     ...(draft.discount && points !== null ? { discount: { ...draft.discount, percent: pesoInputFromCentavos(points) } } : {}),
     lines: draft.lines.map(({ description, specifications, ...line }) => ({
