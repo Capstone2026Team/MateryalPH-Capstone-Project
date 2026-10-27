@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:materyalph_api_client/src/model/compliance_review_summary.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/compliance_register_record.dart';
 import 'package:materyalph_api_client/src/model/compliance_path.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -19,6 +20,8 @@ part 'compliance_submission_summary.g.dart';
 /// * [path]
 /// * [status]
 /// * [markingType]
+/// * [markingNumber] - Vendor-confirmed PS licence number or ICC sticker serial.
+/// * [registerRecord] - Immutable matched register details retained with this submission, including the registered product, brand, model, company and standard when present.
 /// * [reviewMode]
 /// * [submittedAt]
 /// * [decidedAt]
@@ -41,6 +44,14 @@ abstract class ComplianceSubmissionSummary implements Built<ComplianceSubmission
 
   @BuiltValueField(wireName: r'marking_type')
   String? get markingType;
+
+  /// Vendor-confirmed PS licence number or ICC sticker serial.
+  @BuiltValueField(wireName: r'marking_number')
+  String? get markingNumber;
+
+  /// Immutable matched register details retained with this submission, including the registered product, brand, model, company and standard when present.
+  @BuiltValueField(wireName: r'register_record')
+  ComplianceRegisterRecord? get registerRecord;
 
   @BuiltValueField(wireName: r'review_mode')
   ComplianceSubmissionSummaryReviewModeEnum? get reviewMode;
@@ -103,6 +114,20 @@ class _$ComplianceSubmissionSummarySerializer implements PrimitiveSerializer<Com
       yield serializers.serialize(
         object.markingType,
         specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.markingNumber != null) {
+      yield r'marking_number';
+      yield serializers.serialize(
+        object.markingNumber,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.registerRecord != null) {
+      yield r'register_record';
+      yield serializers.serialize(
+        object.registerRecord,
+        specifiedType: const FullType.nullable(ComplianceRegisterRecord),
       );
     }
     if (object.reviewMode != null) {
@@ -191,6 +216,22 @@ class _$ComplianceSubmissionSummarySerializer implements PrimitiveSerializer<Com
           ) as String?;
           if (valueDes == null) continue;
           result.markingType = valueDes;
+          break;
+        case r'marking_number':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.markingNumber = valueDes;
+          break;
+        case r'register_record':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ComplianceRegisterRecord),
+          ) as ComplianceRegisterRecord?;
+          if (valueDes == null) continue;
+          result.registerRecord.replace(valueDes);
           break;
         case r'review_mode':
           final valueDes = serializers.deserialize(

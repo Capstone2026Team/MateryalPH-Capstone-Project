@@ -97,6 +97,10 @@ assert.equal(lookup.parameters.some(parameter => parameter.name === 'Idempotency
 assert.equal(schemas.ComplianceLookup.properties.result.$ref, '#/components/schemas/ComplianceReferenceResult')
 assert.equal(schemas.ComplianceExtraction.properties.register_listed.type, 'boolean')
 assert.deepEqual(schemas.ComplianceRegister.properties.source_channel.enum, ['UPLOAD', 'FEED'])
+assert.ok(schemas.ComplianceSubmissionSummary.properties.marking_number)
+assert.equal(schemas.ComplianceSubmissionSummary.properties.register_record.oneOf[0].$ref, '#/components/schemas/ComplianceRegisterRecord')
+assert.match(readFileSync(resolve(root, 'generated/typescript/src/models/ComplianceSubmissionSummary.ts'), 'utf8'), /registerRecord\?: ComplianceRegisterRecord/)
+assert.match(readFileSync(resolve(root, 'generated/dart/lib/src/model/compliance_submission_summary.dart'), 'utf8'), /ComplianceRegisterRecord\? get registerRecord/)
 
 console.log(`Phase 4 catalog contract passed: ${expected.size} catalog and product-compliance operations match Laravel routes and guards.`)
 

@@ -13,6 +13,8 @@ Name | Type | Description | Notes
 **path** | [**CompliancePath**](CompliancePath.md) |  |
 **status** | **String** |  |
 **markingType** | **String** |  | [optional]
+**markingNumber** | **String** | Vendor-confirmed PS licence number or ICC sticker serial. | [optional]
+**registerRecord** | [**ComplianceRegisterRecord**](ComplianceRegisterRecord.md) | Immutable matched register details retained with this submission, including the registered product, brand, model, company and standard when present. | [optional]
 **reviewMode** | **String** |  | [optional]
 **submittedAt** | **String** |  | [optional]
 **decidedAt** | **String** |  | [optional]

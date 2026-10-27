@@ -110,6 +110,37 @@ final class TesseractComplianceTextExtractorTest extends TestCase
         }
     }
 
+    public function test_focused_pass_reads_the_small_number_line_and_a_later_failed_pass_keeps_it(): void
+    {
+        $processes = new Factory;
+        $pass = 0;
+        $processes->fake(['*--list-langs*' => $processes->result("eng\n"), '*' => function (PendingProcess $process) use ($processes, &$pass) {
+            $pass++;
+            $size = getimagesize($process->command[1]);
+            if ($pass === 3) {
+                self::assertLessThan(200, $size[1]);
+
+                return $processes->result($this->tsv(['License No. Q - 6 3 7 8']));
+            }
+            if ($pass === 4) {
+                throw new RuntimeException('Optional OCR pass failed.');
+            }
+
+            return $processes->result($this->tsv(['CERTIFIED', 'Product Safety']));
+        }]);
+        $result = $this->extractor($processes)->extract($this->imagePath, 'image/png', 'PS_MARK');
+        self::assertSame('Q-6378', $result['suggestions']['certificate_number']);
+        self::assertSame(4, $pass);
+        $processes->assertRan(function (PendingProcess $process): bool {
+            if (! is_array($process->command) || ! in_array('tsv', $process->command, true)) {
+                return false;
+            }
+            self::assertFileDoesNotExist($process->command[1]);
+
+            return true;
+        });
+    }
+
     private function extractor(Factory $processes): TesseractComplianceTextExtractor
     {
         return new TesseractComplianceTextExtractor(new Repository(['materyalph' => ['compliance_ocr' => ['binary' => 'tesseract', 'timeout_seconds' => 15]]]), $processes, new MarkingTextParser);

@@ -24,7 +24,13 @@ The official Google Sheets disable download, print and copy for viewers. The CSV
 ## OCR and QR
 
 - **QR.** The browser decodes the image with the native `BarcodeDetector` where one exists, otherwise with jsQR. jsQR covers Chrome, Edge and Firefox on Windows, where `BarcodeDetector` is absent. An ICC sticker photo on the photo path is also scanned for its QR code. The serial is found anywhere in the payload, including a verification URL.
-- **OCR.** Server-side Tesseract runs two passes, sparse text and then a higher-contrast block. It reads the number by its printed shape, because labels are often misread (`Licensa Mo, Q-1234`). Look-alike characters fan out to bounded candidate readings (`AS000000G1` → `A500000001`). The register picks the listed reading, and the upload reports `register_listed`.
+- **OCR.** Server-side Tesseract reads the full image, then enlarges the lower marking area as a text block and a single line. This targets the small licence/serial below the PS logo or ICC QR code. Four passes share one configured time budget; a failed pass keeps earlier readings. It tolerates spaces (`Q - 6 3 7 8`, `A 500 000 001`) and misread labels. Look-alike characters fan out to bounded candidate readings (`AS000000G1` → `A500000001`). The register picks the listed reading, and the upload reports `register_listed`. Placeholder artwork (`Q-XXXX`) supplies no number.
+
+## Product information
+
+The compact DTI-BPS panel sits immediately above Core details in Product information. Standard requirements and submission history expand on demand. Product photos remain a separate step, with compliance blockers linking to Product information.
+
+After confirmation and a matched submission, register brand/model values populate the product; PS records also supply manufacturer/address and `PH` when explicitly Local. Empty or oversized fields preserve existing values, and ICC importers never become manufacturers. Registered product, standard and importer details remain available in the submission summary after reload. The transaction audits the applied values and captures the verified fingerprint after applying them. The editor saves pending changes before submitting and refreshes the form from the response.
 
 ## Automated coverage
 
@@ -39,8 +45,27 @@ The official Google Sheets disable download, print and copy for viewers. The CSV
 ## Manual acceptance
 
 1. Admin: import the current PS and ICC lists from DTI-BPS, then activate both.
-2. Vendor, Windows Chrome: on a regulated listing, choose ICC sticker › QR code, upload a real sticker photo, and confirm the serial and importer appear and automatic verification succeeds.
+2. Vendor, Windows Chrome: in Product information above Core details, choose ICC sticker › QR code, upload a real sticker photo, and confirm the serial and importer appear and automatic verification succeeds. Confirm brand/model populate the listing, importer is labelled separately, and the registered details remain after reload.
 3. Photograph a real PS Mark: confirm the licence number is read, or type it, and that the manufacturer is pre-filled.
 4. Type an unlisted number: confirm nothing reaches the Admin queue until **Request manual review** is sent.
 
 Accuracy on real packaging photos (glare, curvature, holograms) needs manual testing on devices.
+
+## Verification — 2026-10-27
+
+| Gate | Result |
+| --- | --- |
+| Isolated PostgreSQL configuration/live guards and negative cases | Passed |
+| Compliance parser, Tesseract, catalog rules and catalog API files | 57 tests passed, 838 assertions; includes actual Tesseract on synthetic PS/ICC artwork, private evidence, authorization, register prefill, fingerprint, missing-field preservation and retirement of comparison assignments for the old brand |
+| Vendor catalog, form and QR components | 30 tests passed |
+| Admin product compliance components | 5 tests passed |
+| Chromium compact panel at 320, 390 and 1440 px, fixture API | 3 tests passed; no horizontal overflow; desktop/mobile screenshots reviewed |
+| Whole API Pint and PHPStan (512 MB) | Passed |
+| Vendor/Admin lint, typecheck and builds | Passed; existing Vendor finance-fixture unused-variable warning and bundle-size warnings remain |
+| OpenAPI validation / catalog contract | Passed; 8 existing unused-model recommendations / 30 operations |
+| TS client build; generated Dart model/serializer analysis | Passed |
+| Compose configuration, staged/diff secret scans, whitespace | Passed |
+
+No migration, new environment key or provider credential is required. Active PS/ICC register snapshots are still required for automatic verification. This scoped run does not establish whole-system, real-provider or physical-camera acceptance. No deployment was performed.
+
+Suggested commit: `fix(catalog): improve marking OCR and apply verified register details`

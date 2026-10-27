@@ -9,8 +9,8 @@ export const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 /** Four wizard steps over the server's six completion requirements. */
 export const listingSteps = [
   { label: 'Material selection', description: 'Name matching and tags', requirements: ['material_classification'] },
-  { label: 'Product information', description: 'Details, pricing and variants', requirements: ['product_details', 'variants_pricing'] },
-  { label: 'Photos and compliance', description: 'Product photos and PS/ICC marking', requirements: ['media', 'product_compliance'] },
+  { label: 'Product information', description: 'PS/ICC, details, pricing and variants', requirements: ['product_compliance', 'product_details', 'variants_pricing'] },
+  { label: 'Product photos', description: 'Public listing images', requirements: ['media'] },
   { label: 'Review and publish', description: 'Confirm and publish', requirements: ['review_publish'] },
 ]
 

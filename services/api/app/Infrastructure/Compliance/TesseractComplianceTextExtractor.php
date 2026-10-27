@@ -45,18 +45,31 @@ final class TesseractComplianceTextExtractor implements ComplianceTextExtractor
             if (! in_array($contentType, ['image/jpeg', 'image/png', 'image/webp'], true)) {
                 return $this->empty('FAILED');
             }
-            // Pass 1 reads sparse text (labels scattered around a logo); pass 2 reads a higher-contrast
-            // image as one uniform block. Their readings are pooled for the register lookup to confirm.
+            // Keep full-image reads for packaging photos. On standard PS/ICC artwork the small
+            // licence/serial sits below the logo/QR: enlarge that region independently as well.
             $texts = [];
             $confidences = [];
-            foreach ([['11', false], ['6', true]] as [$mode, $contrast]) {
-                $imagePath = $this->prepareImage($path, $contrast);
+            $deadline = microtime(true) + max(1, min(30, (int) $this->config->get('materyalph.compliance_ocr.timeout_seconds', 15)));
+            $passes = [['11', false, 0.0], ['6', true, 0.0], ['6', false, 0.65], ['7', true, 0.84]];
+            foreach ($passes as [$mode, $contrast, $top]) {
+                $remaining = (int) ceil($deadline - microtime(true));
+                if ($remaining < 1) {
+                    break;
+                }
+                $imagePath = $this->prepareImage($path, $contrast, $top);
                 if ($imagePath !== null) {
                     $imagePaths[] = $imagePath;
+                } elseif ($top > 0) {
+                    continue;
                 }
-                $output = $this->recognize($imagePath ?? $path, $mode);
+                try {
+                    $output = $this->recognize($imagePath ?? $path, $mode, $remaining);
+                } catch (Throwable) {
+                    // A failed optional pass must not discard a number read by another pass.
+                    continue;
+                }
                 if ($output === null) {
-                    return $this->empty('FAILED');
+                    continue;
                 }
                 [$text, $confidence] = $this->readTsv($output);
                 $texts[] = $text;
@@ -80,11 +93,11 @@ final class TesseractComplianceTextExtractor implements ComplianceTextExtractor
         }
     }
 
-    private function recognize(string $imagePath, string $pageSegmentation): ?string
+    private function recognize(string $imagePath, string $pageSegmentation, int $timeout): ?string
     {
         $bytes = 0;
         $result = $this->processes->newPendingProcess()->env(['OMP_THREAD_LIMIT' => '1'])
-            ->timeout(max(1, min(30, (int) $this->config->get('materyalph.compliance_ocr.timeout_seconds', 15))))
+            ->timeout($timeout)
             ->run([$this->binary(), $imagePath, 'stdout', '-l', 'eng', '--psm', $pageSegmentation, 'tsv'], static function (string $type, string $output) use (&$bytes): void {
                 $bytes += strlen($output);
                 if ($bytes > self::MAX_OUTPUT_BYTES) {
@@ -100,16 +113,18 @@ final class TesseractComplianceTextExtractor implements ComplianceTextExtractor
         return (string) $this->config->get('materyalph.compliance_ocr.binary', 'tesseract');
     }
 
-    private function prepareImage(string $path, bool $contrast): ?string
+    private function prepareImage(string $path, bool $contrast, float $top = 0): ?string
     {
         $dimensions = @getimagesize($path);
         if ($dimensions === false || $dimensions[0] < 1 || $dimensions[1] < 1 || $dimensions[0] * $dimensions[1] > ImageContentValidator::MAX_PIXELS) {
             throw new RuntimeException('OCR image dimensions are invalid.');
         }
-        $longest = max($dimensions[0], $dimensions[1]);
+        $sourceY = (int) floor($dimensions[1] * $top);
+        $sourceHeight = $dimensions[1] - $sourceY;
+        $longest = max($dimensions[0], $sourceHeight);
         $scale = min(2600, max(1600, $longest)) / $longest;
         $width = max(1, (int) round($dimensions[0] * $scale));
-        $height = max(1, (int) round($dimensions[1] * $scale));
+        $height = max(1, (int) round($sourceHeight * $scale));
         $memoryLimit = ini_parse_quantity((string) ini_get('memory_limit'));
         $imageBudget = ($dimensions[0] * $dimensions[1] + $width * $height) * 5 + 16_777_216;
         if ($memoryLimit > 0 && memory_get_usage(true) + $imageBudget > $memoryLimit) {
@@ -123,9 +138,9 @@ final class TesseractComplianceTextExtractor implements ComplianceTextExtractor
         $prepared = null;
         $temporary = false;
         try {
-            $prepared = imagecreatetruecolor($width, $height);
+            $prepared = imagecreatetruecolor($width + 24, $height + 24);
             imagefill($prepared, 0, 0, imagecolorallocate($prepared, 255, 255, 255));
-            imagecopyresampled($prepared, $source, 0, 0, 0, 0, $width, $height, imagesx($source), imagesy($source));
+            imagecopyresampled($prepared, $source, 12, 12, 0, $sourceY, $width, $height, imagesx($source), $sourceHeight);
             imagefilter($prepared, IMG_FILTER_GRAYSCALE);
             if ($contrast) {
                 // Holographic ICC stickers and embossed PS marks read better with flattened glare.

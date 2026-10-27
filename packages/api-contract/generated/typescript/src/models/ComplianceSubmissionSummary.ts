@@ -20,6 +20,13 @@ import {
     ComplianceReviewSummaryToJSON,
     ComplianceReviewSummaryToJSONTyped,
 } from './ComplianceReviewSummary';
+import type { ComplianceRegisterRecord } from './ComplianceRegisterRecord';
+import {
+    ComplianceRegisterRecordFromJSON,
+    ComplianceRegisterRecordFromJSONTyped,
+    ComplianceRegisterRecordToJSON,
+    ComplianceRegisterRecordToJSONTyped,
+} from './ComplianceRegisterRecord';
 import type { CompliancePath } from './CompliancePath';
 import {
     CompliancePathFromJSON,
@@ -54,6 +61,14 @@ export interface ComplianceSubmissionSummary {
      *
      */
     markingType?: string | null;
+    /**
+     * Vendor-confirmed PS licence number or ICC sticker serial.
+     */
+    markingNumber?: string | null;
+    /**
+     * Immutable matched register details retained with this submission, including the registered product, brand, model, company and standard when present.
+     */
+    registerRecord?: ComplianceRegisterRecord | null;
     /**
      *
      */
@@ -121,6 +136,8 @@ export function ComplianceSubmissionSummaryFromJSONTyped(json: any, ignoreDiscri
         'path': CompliancePathFromJSON(json['path']),
         'status': json['status'],
         'markingType': json['marking_type'] === undefined ? undefined : json['marking_type'] === null ? null : json['marking_type'],
+        'markingNumber': json['marking_number'] === undefined ? undefined : json['marking_number'] === null ? null : json['marking_number'],
+        'registerRecord': json['register_record'] === undefined ? undefined : json['register_record'] === null ? null : ComplianceRegisterRecordFromJSON(json['register_record']),
         'reviewMode': json['review_mode'] == null ? undefined : json['review_mode'],
         'submittedAt': json['submitted_at'] === undefined ? undefined : json['submitted_at'] === null ? null : json['submitted_at'],
         'decidedAt': json['decided_at'] === undefined ? undefined : json['decided_at'] === null ? null : json['decided_at'],
@@ -144,6 +161,8 @@ export function ComplianceSubmissionSummaryToJSONTyped(value?: ComplianceSubmiss
         'path': CompliancePathToJSON(value['path']),
         'status': value['status'],
         'marking_type': value['markingType'],
+        'marking_number': value['markingNumber'],
+        'register_record': ComplianceRegisterRecordToJSON(value['registerRecord']),
         'review_mode': value['reviewMode'],
         'submitted_at': value['submittedAt'],
         'decided_at': value['decidedAt'],

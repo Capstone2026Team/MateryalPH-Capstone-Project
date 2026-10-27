@@ -32,6 +32,18 @@ void main() {
       // TODO
     });
 
+    // Vendor-confirmed PS licence number or ICC sticker serial.
+    // String markingNumber
+    test('to test the property `markingNumber`', () async {
+      // TODO
+    });
+
+    // Immutable matched register details retained with this submission, including the registered product, brand, model, company and standard when present.
+    // ComplianceRegisterRecord registerRecord
+    test('to test the property `registerRecord`', () async {
+      // TODO
+    });
+
     // String reviewMode
     test('to test the property `reviewMode`', () async {
       // TODO

@@ -54,6 +54,7 @@ final class ProductComplianceService
         private readonly ComplianceReferenceProvider $reference,
         private readonly ListingTransitions $transitions,
         private readonly ListingReadiness $readiness,
+        private readonly ComparableMappingService $comparability,
         private readonly MarketplaceDiscoverability $discoverability,
         private readonly AuditRecorder $audit,
         private readonly OutboxPublisher $outbox,
@@ -198,8 +199,11 @@ final class ProductComplianceService
                 'brand' => $record['brand'] ?? $vendorText('brand'),
                 'batch_number' => $vendorText('batch_number'),
                 'review_note' => $reviewMode === 'MANUAL_REVIEW' ? $vendorText('review_note') : null,
-                'register_record' => $record === null ? null : array_intersect_key($record, array_flip(['company_name', 'product_description', 'brand', 'model_type', 'reference_standard', 'origin', 'license_number', 'icc_certificate_number', 'serial_range'])),
+                'register_record' => $record === null ? null : array_intersect_key($record, array_flip(['register_kind', 'company_name', 'product_description', 'brand', 'model_type', 'reference_standard', 'origin', 'license_number', 'icc_certificate_number', 'serial_range'])),
             ];
+            if ($record !== null) {
+                $this->applyRegisterDetails($request, $listing, $markingType, $record);
+            }
 
             DB::table('compliance_submissions')->where('vendor_listing_id', $listingId)->where('status', 'PENDING_ADMIN_REVIEW')->update(['status' => 'SUPERSEDED', 'lock_version' => DB::raw('lock_version + 1'), 'updated_at' => now()]);
             $previous = DB::table('compliance_submissions')->where('vendor_listing_id', $listingId)->orderByDesc('version')->first(['id', 'version']);
@@ -477,5 +481,34 @@ final class ProductComplianceService
         }
 
         return Str::limit(trim((string) preg_replace('/\s+/u', ' ', $value)), 500, '');
+    }
+
+    /** Apply only values the matched record identifies, before taking the verified fingerprint.
+     *
+     * @param  array<string, mixed>  $record
+     */
+    private function applyRegisterDetails(Request $request, object $listing, string $markingType, array $record): void
+    {
+        $product = DB::table('products')->where('id', $listing->product_id)->lockForUpdate()->first();
+        $values = ['brand' => $record['brand'] ?? null, 'model' => $record['model_type'] ?? null];
+        $limits = ['brand' => 180, 'model' => 180, 'manufacturer' => 200, 'manufacturer_address' => 500, 'country_of_manufacture' => 2];
+        if ($markingType === 'PS_MARK') {
+            $values += ['manufacturer' => $record['company_name'] ?? null, 'manufacturer_address' => $record['address'] ?? null];
+            if (strtoupper(trim((string) ($record['origin'] ?? ''))) === 'LOCAL') {
+                $values['country_of_manufacture'] = 'PH';
+            }
+        }
+        // ICC company/address identify the importer, not the manufacturer. Neither "Foreign"
+        // nor a missing register value establishes a country, address or model.
+        $values = array_filter($values, static fn (mixed $value, string $field): bool => is_string($value) && trim($value) !== '' && mb_strlen($value) <= $limits[$field], ARRAY_FILTER_USE_BOTH);
+        $values = array_map('trim', $values);
+        $before = array_intersect_key((array) $product, $values);
+        if ($values !== [] && array_diff_assoc($values, $before) !== []) {
+            DB::table('products')->where('id', $listing->product_id)->update($values + ['updated_at' => now()]);
+            foreach (DB::table('listing_variants')->where('vendor_listing_id', $listing->id)->orderBy('id')->pluck('id') as $variantId) {
+                $this->comparability->assign((string) $variantId);
+            }
+            $this->audit->account($request, 'CATALOG_LISTING_REGISTER_DETAILS_APPLIED', 'VENDOR_LISTING', (string) $listing->id, before: $before, after: $values);
+        }
     }
 }

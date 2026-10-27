@@ -45,6 +45,15 @@ final class MarkingTextParserTest extends TestCase
         self::assertSame([], (new MarkingTextParser)->parse('Unlabelled packaging text 1234'));
     }
 
+    public function test_standard_marking_number_lines_allow_ocr_spaces_without_reading_standards_or_placeholder_artwork(): void
+    {
+        $parser = new MarkingTextParser;
+        self::assertSame('Q-6378', $parser->parse("CERTIFIED\nProduct Safety\nLicense No. Q - 6 3 7 8", 'PS_MARK')['certificate_number']);
+        self::assertSame('A500000001', $parser->parse("ICC\nA 500 000 001", 'ICC_STICKER')['certificate_number']);
+        self::assertArrayNotHasKey('certificate_number', $parser->parse("CERTIFIED\nProduct Quality\nLicense No. Q-XXXX\nPNS 136:2000", 'PS_MARK'));
+        self::assertArrayNotHasKey('certificate_number', $parser->parse('ICC 2018-2020', 'ICC_STICKER'));
+    }
+
     /** Text that Tesseract actually produced for the official PS Mark and ICC sticker artwork. */
     public function test_misread_labels_and_look_alike_characters_still_yield_the_number(): void
     {

@@ -15,7 +15,7 @@ import { storeName, useCatalogAccess } from '../lib/catalog-access'
 import { formFromListing, listingSteps, mergeSavedRows, quantityText, rowsFromListing, unitName, useMaterialSearch, usePhotoPreviews, variantClientErrors, type DetailsForm, type VariantRow } from '../lib/catalog-form'
 import { manualSaveReason, useListingAutosave, type SaveStatus } from '../lib/listing-autosave'
 import { ProductActions, ListingBadge, ListingState, ProductsTabs, SaveStatusLine } from './CatalogShared'
-import { MaterialMatchOption, MaterialStep, PhotosComplianceStep, ProductInformationStep, PublicationGate, ReviewStep } from './CatalogListingSteps'
+import { MaterialMatchOption, MaterialStep, ProductPhotosStep, ProductInformationStep, PublicationGate, ReviewStep } from './CatalogListingSteps'
 import { ErrorState, LoadingState, PageHeader, VendorShell } from './PhaseThreeVendorPages'
 import { ProductAnalyticsShortcut, ProductInsightStrip } from './ProductAnalyticsPages'
 import { useProductSummaries } from '../lib/product-summaries'
@@ -299,7 +299,11 @@ export function VendorListingEditorPage() {
       onReload={() => void load()} saveStatus={autosave.status} manualSave={manualReason} onSaveNow={() => void saveNow()} onRetrySave={() => void autosave.saveNow()}
       onUpload={(file, replaces) => void run(() => uploadListingMedia(listing.id, file, listing.displayName, replaces), replaces ? 'Photo replaced. The previous version is retained in history.' : 'Photo uploaded.')}
       onRemove={mediaId => void run(() => removeListingMedia(listing.id, mediaId), 'Photo removed.')}
-      onComplianceSubmitted={updated => { adopt(updated); setMessage({ tone: updated.complianceStatus === 'VERIFIED' ? 'success' : 'info', text: updated.complianceStatus === 'VERIFIED' ? 'Verified through a match with the current DTI-BPS register.' : 'Sent for manual review. Product Compliance staff will check the number and photo against DTI-BPS records; an unconfirmed number is not treated as counterfeit.' }) }}
+      beforeComplianceSubmit={async () => {
+        if (!await autosave.saveNow() || autosave.isDirty()) throw new Error('Finish and save your product changes before verifying the marking.')
+        return autosave.lockVersion() ?? listing.lockVersion
+      }}
+      onComplianceSubmitted={updated => { apply(updated); setMessage({ tone: updated.complianceStatus === 'VERIFIED' ? 'success' : 'info', text: updated.complianceStatus === 'VERIFIED' ? 'Verified through a match with the current DTI-BPS register. Available register details have been applied to this listing.' : 'Sent for manual review. Product Compliance staff will check the number and photo against DTI-BPS records; an unconfirmed number is not treated as counterfeit.' }) }}
       onPublish={() => void run(() => publishListing(listing.id, listing.lockVersion), 'Publication evaluated by the server.')}
       onDeactivate={reason => void run(() => deactivateListing(listing.id, listing.lockVersion, reason), 'Listing deactivated. It is no longer offered to Buyers.')} />
   </CatalogGate>
@@ -310,7 +314,7 @@ function EditorContent(props: {
   material: CatalogMaterial | null; setMaterial: (material: CatalogMaterial | null) => void; step: number; goToStep: (step: number) => void; busy: boolean; setBusy: (busy: boolean) => void
   readOnly: boolean; conflict: boolean; message: { tone: 'success' | 'error' | 'info'; text: string } | null; fieldErrors: Record<string, string>
   onReload: () => void; saveStatus: SaveStatus; manualSave: 'LIVE' | 'REGULATED' | null; onSaveNow: () => void; onRetrySave: () => void; onUpload: (file: File, replaces: string | null) => void; onRemove: (mediaId: string) => void
-  onComplianceSubmitted: (listing: CatalogListing) => void; onPublish: () => void; onDeactivate: (reason: string | null) => void; onDelete: () => void
+  beforeComplianceSubmit: () => Promise<number>; onComplianceSubmitted: (listing: CatalogListing) => void; onPublish: () => void; onDeactivate: (reason: string | null) => void; onDelete: () => void
 }) {
   const { listing, taxonomy, form, step, busy, readOnly, fieldErrors } = props
   const previews = usePhotoPreviews(listing)
@@ -327,8 +331,8 @@ function EditorContent(props: {
       nextLabel={next => `Continue: ${next.label}`}
       aside={<PublicationGate listing={listing} onGoTo={props.goToStep} />}>
       {step === 0 && <MaterialStep form={form} setForm={props.setForm} taxonomy={taxonomy} material={props.material} setMaterial={props.setMaterial} errors={fieldErrors} readOnly={readOnly} />}
-      {step === 1 && <ProductInformationStep listing={listing} form={form} setForm={props.setForm} rows={props.rows} setRows={props.setRows} taxonomy={taxonomy} material={props.material} errors={fieldErrors} busy={busy} readOnly={readOnly} onEditMaterial={() => props.goToStep(0)} />}
-      {step === 2 && <PhotosComplianceStep listing={listing} taxonomy={taxonomy} busy={busy} setBusy={props.setBusy} readOnly={readOnly} previews={previews} onUpload={props.onUpload} onRemove={props.onRemove} mediaError={fieldErrors.media ?? null} onComplianceSubmitted={props.onComplianceSubmitted} />}
+      {step === 1 && <ProductInformationStep listing={listing} form={form} setForm={props.setForm} rows={props.rows} setRows={props.setRows} taxonomy={taxonomy} material={props.material} errors={fieldErrors} busy={busy} setBusy={props.setBusy} readOnly={readOnly || busy} onEditMaterial={() => props.goToStep(0)} onComplianceSubmitted={props.onComplianceSubmitted} beforeComplianceSubmit={props.beforeComplianceSubmit} />}
+      {step === 2 && <ProductPhotosStep listing={listing} taxonomy={taxonomy} busy={busy} readOnly={readOnly} previews={previews} onUpload={props.onUpload} onRemove={props.onRemove} mediaError={fieldErrors.media ?? null} />}
       {step === 3 && <ReviewStep listing={listing} taxonomy={taxonomy} previews={previews} busy={busy} readOnly={readOnly} onGoTo={props.goToStep} onPublish={props.onPublish} onDeactivate={props.onDeactivate} />}
     </OnboardingFlow>
   </div>

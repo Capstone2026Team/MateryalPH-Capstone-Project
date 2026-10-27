@@ -14,10 +14,10 @@ namespace App\Domain\Compliance;
 final class MarkingTextParser
 {
     /** Q-1234 with tolerated OCR noise between the prefix and the digits. */
-    private const PS_NUMBER = '/(?<![A-Z0-9])(?:[QG]|[O0](?=\s*[-–—]))\s*[-–—~.]?\s*([0-9OILSZGBDT]{3,5})(?![A-Z0-9])/u';
+    private const PS_NUMBER = '/(?<![A-Z0-9])(?:[QG]|[O0](?=\s*[-–—]))\s*[-–—~.:]?\s*([0-9OILSZGBDT](?:[\t ]*[0-9OILSZGBDT]){2,4})(?![A-Z0-9])/u';
 
     /** One letter followed by seven to ten printed digits, e.g. A500000001. */
-    private const ICC_SERIAL = '/(?<![A-Z0-9])([A-Z])\s?([0-9OILSZGBDT]{7,11})(?![A-Z0-9])/u';
+    private const ICC_SERIAL = '/(?<![A-Z0-9])([A-Z])[\t ]*([0-9OILSZGBDT](?:[\t ]*[0-9OILSZGBDT]){6,10})(?![A-Z0-9])/u';
 
     private const SERIAL_DIGITS = 9;
 
@@ -78,6 +78,7 @@ final class MarkingTextParser
         preg_match_all(self::PS_NUMBER, strtoupper($text), $matches);
         $readings = [];
         foreach ($matches[1] as $digits) {
+            $digits = (string) preg_replace('/\s+/', '', $digits);
             if (preg_match_all('/\d/', $digits) < 2) {
                 continue;
             }
@@ -100,6 +101,7 @@ final class MarkingTextParser
         preg_match_all(self::ICC_SERIAL, strtoupper($text), $matches, PREG_SET_ORDER);
         $readings = [];
         foreach ($matches as [, $letter, $digits]) {
+            $digits = (string) preg_replace('/\s+/', '', $digits);
             if (preg_match_all('/\d/', $digits) < 5) {
                 continue;
             }

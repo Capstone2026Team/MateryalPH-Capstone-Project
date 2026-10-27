@@ -4,7 +4,7 @@ Photo/camera evidence is scanned and stored privately before local Tesseract rea
 
 The photo path returns editable suggestions for marking type and labelled licence/certificate number, manufacturer/importer names and addresses, country, brand and batch/lot. Unlabelled values, conflicting numbers and PNS standards are not guessed as certificate identifiers. Extraction never establishes authenticity or changes compliance/publication state. Vendor confirmation and the existing official-register comparison or Admin decision remain separate.
 
-**Updated 2026-10-17 (register lookup, `product-compliance-register-lookup.md`).** OCR now reads the marking number by its printed shape, because Tesseract rarely reproduces the label exactly. That number is the PS License No. (`Q-1234`) or the ICC sticker serial (`A500000001`), which is now the ICC identifier. Two passes run (sparse text, then a higher-contrast block), and look-alike readings (`AS000000G1` → `A500000001`) become candidates that the active register confirms.
+**Updated 2026-10-27 (register lookup, `product-compliance-register-lookup.md`).** OCR reads the marking number by its printed shape, because Tesseract rarely reproduces the label exactly. That number is the PS License No. (`Q-1234`) or the ICC sticker serial (`A500000001`). Full-image sparse/block reads and enlarged lower-area block/single-line reads share one time budget. Internal spaces and look-alike readings (`AS000000G1` → `A500000001`) become candidates that the active register confirms. Cropping, resizing, borders and segmentation follow the [Tesseract image-quality guidance](https://tesseract-ocr.github.io/tessdoc/ImproveQuality.html). Raw OCR text stays transient.
 
 ## Development runtime
 
@@ -29,7 +29,7 @@ The Admin integration card shows `HEALTHY` only when Tesseract successfully list
 
 ## Manual acceptance
 
-In My Products, choose a regulated product, Photos and compliance, then Photo or camera capture. Upload clear physical PS/ICC marking photos, inspect suggestions, correct a number, and confirm before submitting. Also try a blurred photo and a sticker containing only its serial/QR code. Missing values must remain manual; an uncertain/unavailable official match must remain pending Admin review. Test camera rotation and glare on real packaging. Browser/camera acceptance and accuracy on real-world photos require manual testing.
+In My Products, choose a regulated product, Product information, then Photo or camera capture above Core details. Upload clear physical PS/ICC marking photos, inspect suggestions, correct a number, and confirm before submitting. Confirm matched register details fill the listing and survive reload. Also try a blurred photo and a sticker containing only its serial/QR code. Missing values must remain manual; an uncertain/unavailable official match needs an explicit manual review request. Test camera rotation and glare on real packaging. Browser/camera acceptance and accuracy on real-world photos require manual testing.
 
 ## Changed files
 

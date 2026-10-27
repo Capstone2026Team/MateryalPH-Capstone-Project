@@ -7,6 +7,7 @@ namespace Tests\Feature\Api;
 use App\Domain\Catalog\CatalogImportService;
 use App\Domain\Catalog\ComparableMappingService;
 use App\Domain\Catalog\MarketplaceDiscoverability;
+use App\Domain\Catalog\VendorCatalogService;
 use App\Domain\Compliance\ComplianceTextExtractor;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\TokenSessionService;
@@ -399,14 +400,23 @@ final class PhaseFourCatalogComplianceTest extends TestCase
         self::assertSame(0, DB::table('compliance_submissions')->count());
 
         // The Vendor supplies only the number; the register supplies the manufacturer.
+        $beforeMatch = $this->getJson('/api/v1/vendor/catalog/listings/'.$listing)->assertOk()->json('data');
+        $oldMapping = app(ComparableMappingService::class)->assign($beforeMatch['variants'][0]['id'], true);
+        self::assertSame('COMPARABLE', $oldMapping['status']);
         $this->submitCompliance($listing, 'MANUAL', ['certificate_number' => 'Q-7001', 'review_mode' => 'AUTOMATIC'])->assertCreated()
             ->assertJsonPath('data.compliance_status', 'VERIFIED')->assertJsonPath('data.status', 'ACTIVE')
+            ->assertJsonPath('data.brand', 'SAMPLECEM')->assertJsonPath('data.manufacturer', 'Sample Cement Corporation')->assertJsonPath('data.country_of_manufacture', 'PH')
+            ->assertJsonPath('data.model', $beforeMatch['model'])->assertJsonPath('data.manufacturer_address', $beforeMatch['manufacturer_address'])
+            ->assertJsonPath('data.compliance_submissions.0.marking_number', 'Q-7001')->assertJsonPath('data.compliance_submissions.0.register_record.product_description', 'PORTLAND CEMENT TYPE I')
             ->assertJsonPath('data.compliance_submissions.0.latest_review.source', 'SYSTEM_REGISTER_MATCH')->assertJsonPath('data.compliance_submissions.0.review_mode', 'AUTOMATIC');
         $submission = DB::table('compliance_submissions')->where('vendor_listing_id', $listing)->first();
         $declared = json_decode($submission->declared, true);
         self::assertSame('Sample Cement Corporation', $declared['manufacturer_name']);
         self::assertSame('PORTLAND CEMENT TYPE I', $declared['register_record']['product_description']);
         self::assertNotNull($submission->compliance_reference_record_id);
+        self::assertSame(app(VendorCatalogService::class)->listingFingerprint($listing), $submission->listing_fingerprint);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'CATALOG_LISTING_REGISTER_DETAILS_APPLIED', 'resource_id' => $listing]);
+        $this->assertDatabaseHas('listing_comparable_assignments', ['id' => $oldMapping['assignment_id'], 'mapping_state' => 'RETIRED']);
         $this->assertDatabaseHas('compliance_reviews', ['compliance_submission_id' => $submission->id, 'decision' => 'APPROVED', 'reviewer_user_id' => null]);
         $this->assertDatabaseHas('compliance_reference_matches', ['compliance_submission_id' => $submission->id, 'result' => 'MATCHED']);
 
@@ -453,7 +463,10 @@ final class PhaseFourCatalogComplianceTest extends TestCase
         $this->lookup($tile, 'ICC_STICKER', 'A988295071')->assertOk()->assertJsonPath('data.result', 'UNMATCHED')->assertJsonPath('data.reason', 'NUMBER_NOT_FOUND');
         $this->lookup($tile, 'ICC_STICKER', '002541/0524')->assertOk()->assertJsonPath('data.result', 'UNMATCHED')->assertJsonPath('data.reason', 'CERTIFICATE_NUMBER_GIVEN');
         $this->lookup($tile, 'ICC_STICKER', 'B012717020')->assertOk()->assertJsonPath('data.result', 'UNCERTAIN')->assertJsonPath('data.reason', 'PRODUCT_NOT_COVERED');
-        $this->submitCompliance($tile, 'MANUAL', ['marking_type' => 'ICC_STICKER', 'certificate_number' => 'A988239400', 'review_mode' => 'AUTOMATIC'])->assertCreated()->assertJsonPath('data.compliance_status', 'VERIFIED');
+        $manufacturer = $this->getJson('/api/v1/vendor/catalog/listings/'.$tile)->json('data.manufacturer');
+        $this->submitCompliance($tile, 'MANUAL', ['marking_type' => 'ICC_STICKER', 'certificate_number' => 'A988239400', 'review_mode' => 'AUTOMATIC'])->assertCreated()->assertJsonPath('data.compliance_status', 'VERIFIED')
+            ->assertJsonPath('data.brand', 'BEETHOVEN')->assertJsonPath('data.model', 'GLAZED - FLOOR TILES - 600MMX600MM')->assertJsonPath('data.manufacturer', $manufacturer)
+            ->assertJsonPath('data.compliance_submissions.0.register_record.company_name', '21TH CONSTRUCTION DEVELOPMENT');
         $declared = json_decode((string) DB::table('compliance_submissions')->where('vendor_listing_id', $tile)->value('declared'), true);
         self::assertSame(['21TH CONSTRUCTION DEVELOPMENT', null, 'BEETHOVEN', 'A988239313 – A988295070'], [$declared['importer_name'], $declared['manufacturer_name'], $declared['brand'], $declared['register_record']['serial_range']]);
     }

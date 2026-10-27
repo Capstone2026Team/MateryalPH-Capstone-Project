@@ -6756,7 +6756,13 @@ paths:
         License No. or ICC sticker serial and marking evidence. With review_mode
         AUTOMATIC (default) a MATCHED register lookup (rule
         compliance.register-number.v2) is VERIFIED as an audited system decision
-        and the register record supplies the manufacturer or importer; any other
+        and the register record supplies the manufacturer or importer. On a
+        match, non-empty brand and model values that fit the listing fields are
+        applied to the product; PS records also supply manufacturer and address,
+        and a Local PS record supplies country PH. Missing or oversized fields
+        preserve the listing values; ICC importers never replace manufacturers.
+        This update is audited in the submission transaction before capturing
+        the verified listing fingerprint. Any other
         result returns 422 COMPLIANCE_REGISTER_NOT_MATCHED with details.lookup
         and records nothing. With review_mode MANUAL_REVIEW, which the Vendor
         chooses explicitly, an unmatched declaration becomes
@@ -29758,6 +29764,10 @@ components:
             enum: [ PENDING_ADMIN_REVIEW, VERIFIED, CHANGES_REQUIRED, REJECTED, SUPERSEDED ]
           }
         marking_type: { type: [ string, 'null' ] }
+        marking_number: { type: [ string, 'null' ], description: Vendor-confirmed PS licence number or ICC sticker serial. }
+        register_record:
+          description: Immutable matched register details retained with this submission, including the registered product, brand, model, company and standard when present.
+          oneOf: [ { $ref: "#/components/schemas/ComplianceRegisterRecord" }, { type: 'null' } ]
         review_mode: { type: string, enum: [ AUTOMATIC, MANUAL_REVIEW ] }
         submitted_at: { type: [ string, 'null' ] }
         decided_at: { type: [ string, 'null' ] }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { AlertCircle, Camera, Check, CheckCircle2, ClipboardCheck, ClipboardList, Package, Pencil, QrCode, RefreshCw, Search, ShieldAlert, Trash2, Truck, UploadCloud } from 'lucide-react'
-import type { CatalogAttributeDefinition, CompliancePath, MarkingType } from '@materyalph/api-client-ts'
+import type { CatalogAttributeDefinition, CompliancePath, ComplianceRegisterRecord, MarkingType } from '@materyalph/api-client-ts'
 import { Button, Field, QuantityField, MediaUploadField, RowGroup, StatusMessage, type MediaItem } from '@materyalph/web-ui'
 import {
   formatCentavos, getMaterial, readableCatalogError, catalogFieldErrors, lookupCompliance, refusedComplianceLookup, submitCompliance, uploadComplianceEvidence,
@@ -93,7 +93,7 @@ function measurementCodes(listing: CatalogListing, form: DetailsForm, taxonomy: 
   return { materialCode, categoryCode: taxonomy.categories.find(category => category.id === form.categoryId)?.code ?? null }
 }
 
-export function ProductInformationStep({ listing, form, setForm, rows, setRows, taxonomy, material, errors, busy, readOnly, onEditMaterial }: { listing: CatalogListing; form: DetailsForm; setForm: (form: DetailsForm) => void; rows: VariantRow[]; setRows: (rows: VariantRow[]) => void; taxonomy: CatalogTaxonomy; material: CatalogMaterial | null; errors: Record<string, string>; busy: boolean; readOnly: boolean; onEditMaterial?: () => void }) {
+export function ProductInformationStep({ listing, form, setForm, rows, setRows, taxonomy, material, errors, busy, setBusy, readOnly, onEditMaterial, onComplianceSubmitted, beforeComplianceSubmit }: { listing: CatalogListing; form: DetailsForm; setForm: (form: DetailsForm) => void; rows: VariantRow[]; setRows: (rows: VariantRow[]) => void; taxonomy: CatalogTaxonomy; material: CatalogMaterial | null; errors: Record<string, string>; busy: boolean; setBusy: (busy: boolean) => void; readOnly: boolean; onEditMaterial?: () => void; onComplianceSubmitted: (listing: CatalogListing) => void; beforeComplianceSubmit: () => Promise<number> }) {
   const definitions = taxonomy.attributeDefinitions.filter(definition => definition.materialCategoryId === form.categoryId)
   const set = (key: keyof DetailsForm) => (event: { target: { value: string } }) => setForm({ ...form, [key]: event.target.value })
   const regulated = listing.regulated
@@ -105,6 +105,7 @@ export function ProductInformationStep({ listing, form, setForm, rows, setRows, 
   const listingDefinitions = readyMixed ? definitions.filter(definition => definition.code !== STRENGTH_ATTRIBUTE) : definitions
   return <div className="grid gap-8">
     <CategorySection form={form} setForm={setForm} taxonomy={taxonomy} material={material} readOnly={readOnly} error={errors.material_category_id} onEditMaterial={onEditMaterial} />
+    <ComplianceSection listing={listing} canSubmit={listing.permissions.canManage && listing.permissions.canSubmitCompliance} busy={busy} setBusy={setBusy} onSubmitted={onComplianceSubmitted} beforeSubmit={beforeComplianceSubmit} />
     <section aria-labelledby="core-details-heading" className="grid gap-4">
       <SectionHeading id="core-details-heading" title="Core details" />
       <div className="grid gap-2">
@@ -245,7 +246,7 @@ function VolumeTiers({ tiers, unit, readOnly, busy, variantLabel, error, onChang
   </fieldset>
 }
 
-export function PhotosComplianceStep({ listing, taxonomy, busy, setBusy, readOnly, previews, onUpload, onRemove, mediaError, onComplianceSubmitted }: { listing: CatalogListing; taxonomy: CatalogTaxonomy; busy: boolean; setBusy: (busy: boolean) => void; readOnly: boolean; previews: Record<string, string>; onUpload: (file: File, replaces: string | null) => void; onRemove: (mediaId: string) => void; mediaError: string | null; onComplianceSubmitted: (listing: CatalogListing) => void }) {
+export function ProductPhotosStep({ listing, taxonomy, busy, readOnly, previews, onUpload, onRemove, mediaError }: { listing: CatalogListing; taxonomy: CatalogTaxonomy; busy: boolean; readOnly: boolean; previews: Record<string, string>; onUpload: (file: File, replaces: string | null) => void; onRemove: (mediaId: string) => void; mediaError: string | null }) {
   const items: MediaItem[] = listing.media.map(media => ({ id: media.id, label: media.altText ?? 'Product photo', status: media.status, version: media.version, scanState: media.scanState, contentType: media.contentType, byteSize: media.byteSize, previewUrl: media.status === 'READY' ? previews[media.fileId] ?? null : null }))
   return <div className="grid gap-8">
     <section aria-labelledby="photos-heading" className="grid gap-3">
@@ -253,7 +254,6 @@ export function PhotosComplianceStep({ listing, taxonomy, busy, setBusy, readOnl
       <MediaUploadField label="Product photos" accept={IMAGE_TYPES} acceptedLabel="JPG, PNG or WebP" maxBytes={taxonomy.limits.maxListingImageKb * 1024} maxItems={readOnly ? 0 : taxonomy.limits.maxMedia} items={items} busy={busy || readOnly} error={mediaError}
         onUpload={file => onUpload(file, null)} onReplace={(id, file) => onUpload(file, id)} onRemove={onRemove} />
     </section>
-    <ComplianceSection listing={listing} canSubmit={listing.permissions.canSubmitCompliance} busy={busy} setBusy={setBusy} onSubmitted={onComplianceSubmitted} />
   </div>
 }
 
@@ -287,15 +287,14 @@ function extractionNote(stored: ComplianceEvidence, numberLabel: string, qrRead:
 }
 
 const pathOptions: { value: CompliancePath; label: string; description: string; icon: typeof Camera }[] = [
-  { value: 'PHOTO_OCR', label: 'Photo or camera capture', description: 'Photograph the marking. The number is read from the photo or the sticker’s QR code and checked automatically.', icon: Camera },
+  { value: 'PHOTO_OCR', label: 'Photo or camera capture', description: 'The number is read from your photo, then checked against the register.', icon: Camera },
   { value: 'QR', label: 'QR code scan or upload', description: 'Upload or photograph the ICC sticker’s QR code. It is read in your browser.', icon: QrCode },
   { value: 'MANUAL', label: 'Manual entry', description: 'Type the number and attach a clear photo of the marking.', icon: ClipboardList },
 ]
 
-function RegisterRecord({ lookup }: { lookup: ComplianceLookup }) {
-  const record = lookup.record
+function RegisterRecord({ record, markingType }: { record: ComplianceRegisterRecord | null | undefined; markingType: MarkingType }) {
   if (!record) return null
-  const copy = MARKING_COPY[lookup.markingType]
+  const copy = MARKING_COPY[markingType]
   const rows: [string, string | null | undefined][] = [
     [copy.company, record.companyName], ['Product', record.productDescription], ['Brand', record.brand], ['Model or type', record.modelType],
     ['Product standard', record.referenceStandard], ['PS License No.', record.licenseNumber], ['ICC certificate no.', record.iccCertificateNumber],
@@ -304,7 +303,7 @@ function RegisterRecord({ lookup }: { lookup: ComplianceLookup }) {
   return <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">{rows.filter(([, value]) => value).map(([label, value]) => <div key={label} className="min-w-0"><dt className="text-text-secondary">{label}</dt><dd className="whitespace-pre-line break-words font-semibold">{value}</dd></div>)}</dl>
 }
 
-function ComplianceSection({ listing, canSubmit, busy, setBusy, onSubmitted }: { listing: CatalogListing; canSubmit: boolean; busy: boolean; setBusy: (busy: boolean) => void; onSubmitted: (listing: CatalogListing) => void }) {
+function ComplianceSection({ listing, canSubmit, busy, setBusy, onSubmitted, beforeSubmit }: { listing: CatalogListing; canSubmit: boolean; busy: boolean; setBusy: (busy: boolean) => void; onSubmitted: (listing: CatalogListing) => void; beforeSubmit: () => Promise<number> }) {
   const [path, setPath] = useState<CompliancePath>('PHOTO_OCR')
   const [markingType, setMarkingType] = useState<MarkingType>('PS_MARK')
   const [evidence, setEvidence] = useState<ComplianceEvidence[]>([])
@@ -359,7 +358,8 @@ function ComplianceSection({ listing, canSubmit, busy, setBusy, onSubmitted }: {
 
   function changeType(type: MarkingType) {
     lookupRequest.current++
-    setMarkingType(type); setNumber(''); setLookup({ status: 'idle' }); setReadNote(null); setConfirmed(false); setManualReview(false); setErrors({})
+    setMarkingType(type); setNumber(''); setEvidence([]); setPending(null); setLookup({ status: 'idle' }); setReadNote(null); setConfirmed(false); setManualReview(false); setErrors({})
+    if (type === 'PS_MARK' && path === 'QR') setPath('PHOTO_OCR')
   }
   function changeNumber(value: string) {
     setNumber(value); setConfirmed(false); setManualReview(false)
@@ -403,8 +403,9 @@ function ComplianceSection({ listing, canSubmit, busy, setBusy, onSubmitted }: {
     if (Object.keys(local).length) { setErrors(local); return }
     setBusy(true)
     try {
+      const version = await beforeSubmit()
       onSubmitted(await submitCompliance(listing.id, {
-        listingLockVersion: listing.lockVersion, path, evidenceIds: evidence.map(item => item.evidenceId), markingType, certificateNumber: number.trim(), reviewMode,
+        listingLockVersion: version, path, evidenceIds: evidence.map(item => item.evidenceId), markingType, certificateNumber: number.trim(), reviewMode,
         reviewNote: reviewMode === 'MANUAL_REVIEW' ? reviewNote.trim() || null : null, batchNumber: batchNumber.trim() || null, confirmed: true,
       }))
       setEvidence([]); setNumber(''); setLookup({ status: 'idle' }); setReadNote(null); setConfirmed(false); setManualReview(false); setReviewNote(''); setBatchNumber('')
@@ -419,27 +420,25 @@ function ComplianceSection({ listing, canSubmit, busy, setBusy, onSubmitted }: {
     <label className="flex min-h-11 items-start gap-3 text-sm"><input type="checkbox" className="mt-1 h-5 w-5 accent-action-primary" checked={confirmed} aria-invalid={Boolean(errors.confirmed)} aria-describedby={errors.confirmed ? 'confirm-error' : undefined} onChange={event => setConfirmed(event.target.checked)} />I checked this {copy.numberLabel} against the physical marking on the product.</label>
     {errors.confirmed && <p id="confirm-error" className="text-sm text-status-error" role="alert">{errors.confirmed}</p>}
   </>
-  return <section aria-labelledby="compliance-heading" className="grid gap-5">
-    <SectionHeading id="compliance-heading" title="DTI-BPS compliance marking (required)" />
-    <div className="flex items-start gap-3 rounded-control border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"><ShieldAlert size={20} className="mt-0.5 shrink-0" aria-hidden="true" /><p><strong>{rule?.productName ?? 'This product'}</strong>{rule?.referenceStandard ? ` (${rule.referenceStandard})` : ''} is a DTI-BPS regulated product. The listing can be published only after its PS Mark (locally manufactured) or ICC sticker (imported) is verified. MateryalPH review is a marketplace control, not a DTI-BPS certification.</p></div>
-    <dl className="grid gap-3 text-sm sm:grid-cols-3"><div><dt className="text-text-secondary">Reference standard</dt><dd className="font-semibold">{rule?.referenceStandard ?? '—'}</dd></div><div><dt className="text-text-secondary">Technical regulation</dt><dd className="font-semibold">{rule?.technicalRegulation ?? '—'}</dd></div><div><dt className="text-text-secondary">Scope</dt><dd>{rule?.scope ?? '—'}</dd></div></dl>
-    {rule && rule.markingRequirements.length > 0 && <details className="text-sm"><summary className="min-h-11 cursor-pointer py-2 font-semibold">Marking requirements ({rule.markingRequirements.length})</summary><ul className="mt-2 list-disc space-y-1 pl-5">{rule.markingRequirements.map(item => <li key={item}>{item}</li>)}</ul></details>}
-    <div className="flex flex-wrap items-center gap-3"><ListingBadge status={listing.complianceStatus} prefix="PS/ICC" />{latest?.latestReview?.reason && <span className="text-sm text-text-secondary">Reviewer: {latest.latestReview.reason}</span>}</div>
+  return <section aria-labelledby="compliance-heading" className="grid min-w-0 gap-3 rounded-surface border border-border-default p-3 sm:p-4">
+    <div className="flex flex-wrap items-center justify-between gap-2"><h3 id="compliance-heading" className="text-sm font-semibold">DTI-BPS compliance marking (required)</h3><ListingBadge status={listing.complianceStatus} prefix="PS/ICC" /></div>
+    <p className="flex items-start gap-2 text-sm text-text-secondary"><ShieldAlert size={18} className="mt-0.5 shrink-0" aria-hidden="true" /><span><strong>{rule?.productName ?? 'This product'}</strong>{rule?.referenceStandard ? ` · ${rule.referenceStandard}` : ''}. Verify the PS licence or ICC sticker before publishing. MateryalPH review is a marketplace control, not DTI-BPS certification.</span></p>
     {listing.complianceStatus === 'VERIFIED' ? <StatusMessage tone="success">Verified{latest?.latestReview?.source === 'SYSTEM_REGISTER_MATCH' ? ' through a match with the current DTI-BPS register' : ' by Product Compliance review'}. Editing the manufacturer, brand, model or material reopens verification.</StatusMessage>
       : listing.complianceStatus === 'PENDING_ADMIN_REVIEW' ? <StatusMessage>Your manual review request is waiting for Product Compliance. You can replace it with a corrected number below.</StatusMessage> : null}
+    {latest?.registerRecord && <details className="text-sm"><summary className="min-h-11 cursor-pointer py-3 font-semibold">{latest.markingNumber ?? 'Submitted marking'} · Registered product details</summary><RegisterRecord record={latest.registerRecord} markingType={latest.markingType === 'ICC_STICKER' ? 'ICC_STICKER' : 'PS_MARK'} /></details>}
     {!canSubmit ? <StatusMessage>Your role cannot submit PS/ICC evidence.</StatusMessage> : listing.complianceStatus !== 'VERIFIED' && <>
       <fieldset className="grid min-w-0 gap-2" disabled={busy}>
         <legend className="text-sm font-semibold">Marking on the product</legend>
-        <div className="grid gap-3 sm:grid-cols-2">{(['PS_MARK', 'ICC_STICKER'] as const).map(type => { const checked = markingType === type; return <label key={type} className={`flex min-h-16 cursor-pointer items-start gap-3 rounded-control border p-3 ${checked ? 'border-action-primary bg-brand-orange-50' : 'border-border-default'}`}><input type="radio" name="marking_choice" className="mt-1 h-5 w-5 accent-action-primary" checked={checked} onChange={() => changeType(type)} /><span><span className="block font-semibold">{MARKING_COPY[type].name}</span><span className="block text-sm text-text-secondary">{type === 'PS_MARK' ? 'Locally manufactured · Philippine Standard' : 'Imported product · Import Commodity Clearance'}</span></span></label> })}</div>
+        <div className="flex flex-wrap gap-2">{(['PS_MARK', 'ICC_STICKER'] as const).map(type => { const checked = markingType === type; return <label key={type} className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-control border px-3 py-2 text-sm ${checked ? 'border-action-primary bg-brand-orange-50' : 'border-border-default'}`}><input type="radio" name="marking_choice" className="h-4 w-4 accent-action-primary" checked={checked} onChange={() => changeType(type)} /><span className="font-semibold">{MARKING_COPY[type].name}</span><span className="text-text-secondary">{type === 'PS_MARK' ? '· Local' : '· Imported'}</span></label> })}</div>
       </fieldset>
       <fieldset className="grid min-w-0 gap-2" disabled={busy}>
         <legend className="text-sm font-semibold">How will you provide the marking?</legend>
-        <div className="grid gap-3 md:grid-cols-3">{pathOptions.map(option => { const Icon = option.icon; const checked = path === option.value; return <label key={option.value} className={`flex min-h-11 cursor-pointer items-start gap-3 rounded-control border p-3 ${checked ? 'border-action-primary bg-brand-orange-50' : 'border-border-default'}`}><input type="radio" name="compliance_path" className="mt-1 h-5 w-5 shrink-0 accent-action-primary" checked={checked} onChange={() => { setPath(option.value); setEvidence([]); setReadNote(null); setConfirmed(false) }} /><span className="min-w-0"><span className="flex items-center gap-1.5 font-semibold"><Icon size={16} aria-hidden="true" />{option.label}</span><span className="block text-sm text-text-secondary">{option.description}</span></span></label> })}</div>
+        <div className="flex flex-wrap gap-2">{pathOptions.filter(option => markingType === 'ICC_STICKER' || option.value !== 'QR').map(option => { const Icon = option.icon; const checked = path === option.value; return <label key={option.value} className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-control border px-3 py-2 text-sm ${checked ? 'border-action-primary bg-brand-orange-50' : 'border-border-default'}`}><input type="radio" name="compliance_path" className="h-4 w-4 shrink-0 accent-action-primary" checked={checked} onChange={() => { setPath(option.value); setEvidence([]); setPending(null); setReadNote(null); setConfirmed(false) }} /><Icon size={16} aria-hidden="true" /><span className="font-semibold">{option.label}</span></label> })}</div>
+        <p className="text-sm text-text-secondary">{pathOptions.find(option => option.value === path)?.description}</p>
       </fieldset>
-      <label hidden={Boolean(pending)} className={`grid cursor-pointer justify-items-center gap-2 rounded-surface border-2 border-dashed p-6 text-center transition-colors motion-reduce:transition-none ${busy ? 'opacity-60' : 'border-brand-orange-300 bg-brand-orange-50 hover:border-action-primary'}`}>
-        <UploadCloud size={28} className="text-action-primary" aria-hidden="true" />
-        <span className="font-semibold">{path === 'QR' ? 'Upload QR code image' : `Upload ${copy.name} marking photo`}</span>
-        <span className="text-sm text-text-secondary">{path === 'QR' ? 'Photograph the ICC sticker straight on so the whole QR code is sharp and in frame.' : `Take a clear, well-lit photo showing the ${copy.numberLabel}.`} JPG, PNG or WebP up to 10 MB. You can check the photo before it is uploaded. Stored privately; never shown to Buyers.</span>
+      <label hidden={Boolean(pending)} className={`grid cursor-pointer gap-1 rounded-control border border-dashed p-3 transition-colors motion-reduce:transition-none ${busy ? 'opacity-60' : 'border-border-default hover:border-action-primary'}`}>
+        <span className="flex items-center gap-2 text-sm font-semibold"><UploadCloud size={18} className="text-action-primary" aria-hidden="true" />{path === 'QR' ? 'Upload QR code image' : `Upload ${copy.name} marking photo`}</span>
+        <span className="text-xs text-text-secondary">{path === 'QR' ? 'Keep the whole QR code sharp and in frame.' : `Include the ${copy.numberLabel} below the mark.`} JPG, PNG or WebP · up to 10 MB · private evidence.</span>
         <input ref={picker} type="file" accept={IMAGE_TYPES.join(',')} capture={path === 'PHOTO_OCR' ? 'environment' : undefined} disabled={busy} className="min-h-11 w-full min-w-0 max-w-xs text-sm" onChange={event => { choose(event.target.files?.[0]); event.target.value = '' }} />
       </label>
       {pending && <section aria-labelledby="pending-photo-heading" className="grid gap-4 rounded-surface border border-border-default p-4 xl:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] xl:items-start">
@@ -459,8 +458,7 @@ function ComplianceSection({ listing, canSubmit, busy, setBusy, onSubmitted }: {
       </li>)}</ul>}
       {errors.evidence && <p className="text-sm text-status-error" role="alert">{errors.evidence}</p>}
 
-      <section aria-labelledby="marking-number-heading" className="grid gap-4 border-t border-border-default pt-5">
-        <div><h4 id="marking-number-heading" className="text-lg font-semibold">{copy.numberLabel}</h4><p className="text-sm text-text-secondary">Only this number is needed. It is checked against the DTI-BPS {copy.list}, and the manufacturer or importer, product and brand are filled in from the matching record.</p></div>
+      <section aria-label="Check the marking number" className="grid gap-3">
         {readNote && <p className="text-sm" role="status">{readNote}</p>}
         <form className="flex flex-wrap items-start gap-3" noValidate onSubmit={event => { event.preventDefault(); void check(number) }}>
           <div className="min-w-0 flex-1 basis-64"><Field ref={numberInput} label={copy.numberLabel} name="certificate_number" value={number} required autoComplete="off" spellCheck={false} autoCapitalize="characters" placeholder={copy.example} maxLength={60} error={errors.certificate_number} hint={copy.where} disabled={busy} onChange={event => changeNumber(event.target.value)} /></div>
@@ -471,12 +469,13 @@ function ComplianceSection({ listing, canSubmit, busy, setBusy, onSubmitted }: {
           {result && matched && <div className="grid gap-3 rounded-control border border-status-success/40 bg-green-50 p-4 text-green-950">
             <p className="flex items-center gap-2 font-semibold"><CheckCircle2 size={18} aria-hidden="true" />Found in the DTI-BPS register</p>
             <p className="text-sm">{result.message}</p>
-            <RegisterRecord lookup={result} />
+            <p className="text-sm">After you confirm and submit, available brand, model and PS manufacturer details fill the listing below.</p>
+            <RegisterRecord record={result.record} markingType={result.markingType} />
           </div>}
           {result && !matched && <div className="grid gap-3 rounded-control border border-amber-300 bg-amber-50 p-4 text-amber-950">
             <p className="flex items-center gap-2 font-semibold"><AlertCircle size={18} aria-hidden="true" />{LOOKUP_TITLES[result.reason ?? ''] ?? 'Not confirmed by the register'}</p>
             <p className="text-sm">{result.message}</p>
-            {result.record && <><p className="text-sm font-semibold">Record listed under this number</p><RegisterRecord lookup={result} /></>}
+            {result.record && <><p className="text-sm font-semibold">Record listed under this number</p><RegisterRecord record={result.record} markingType={result.markingType} /></>}
           </div>}
           {lookup.status === 'failed' && <StatusMessage tone="error">{lookup.message}</StatusMessage>}
           {canAskForReview && !manualReview && <div className="flex flex-wrap gap-2">
@@ -503,7 +502,8 @@ function ComplianceSection({ listing, canSubmit, busy, setBusy, onSubmitted }: {
         <div className="flex flex-wrap gap-2"><Button type="submit" disabled={busy}>{busy ? 'Sending…' : 'Send for manual review'}</Button><Button variant="quiet" disabled={busy} onClick={() => setManualReview(false)}>Cancel</Button></div>
       </form>}
     </>}
-    {listing.complianceSubmissions.length > 0 && <section aria-labelledby="submission-history" className="grid gap-2 border-t border-border-default pt-5"><h4 id="submission-history" className="font-semibold">Submission history</h4><ul className="divide-y divide-border-default text-sm">{listing.complianceSubmissions.map(item => <li key={item.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2"><span className="font-semibold">Version {item.version}</span><ListingState status={item.status} /><span className="text-text-secondary">{statusLabel(item.path)}{item.reviewMode === 'MANUAL_REVIEW' ? ' · Manual review requested' : ''}{item.latestReview ? ` · ${item.latestReview.source === 'SYSTEM_REGISTER_MATCH' ? 'Register match' : 'Admin review'}${item.latestReview.reason ? `: ${item.latestReview.reason}` : ''}` : ''}</span></li>)}</ul></section>}
+    <details className="border-t border-border-default text-sm"><summary className="min-h-11 cursor-pointer py-3 font-semibold">Standard and marking requirements</summary><dl className="mb-2 grid gap-2 sm:grid-cols-2"><div><dt className="text-text-secondary">Technical regulation</dt><dd>{rule?.technicalRegulation ?? '—'}</dd></div><div><dt className="text-text-secondary">Scope</dt><dd>{rule?.scope ?? '—'}</dd></div></dl>{rule && <ul className="list-disc space-y-1 pl-5">{rule.markingRequirements.map(item => <li key={item}>{item}</li>)}</ul>}</details>
+    {listing.complianceSubmissions.length > 0 && <details className="border-t border-border-default text-sm"><summary id="submission-history" className="min-h-11 cursor-pointer py-3 font-semibold">Submission history ({listing.complianceSubmissions.length})</summary><ul className="divide-y divide-border-default">{listing.complianceSubmissions.map(item => <li key={item.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2"><span className="font-semibold">Version {item.version}</span><ListingState status={item.status} /><span className="text-text-secondary">{statusLabel(item.path)}{item.reviewMode === 'MANUAL_REVIEW' ? ' · Manual review requested' : ''}{item.latestReview ? ` · ${item.latestReview.source === 'SYSTEM_REGISTER_MATCH' ? 'Register match' : 'Admin review'}${item.latestReview.source !== 'SYSTEM_REGISTER_MATCH' && item.latestReview.reason ? `: ${item.latestReview.reason}` : ''}` : ''}</span></li>)}</ul></details>}
   </section>
 }
 

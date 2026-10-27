@@ -165,6 +165,10 @@ class _$ComplianceSubmissionSummary extends ComplianceSubmissionSummary {
   @override
   final String? markingType;
   @override
+  final String? markingNumber;
+  @override
+  final ComplianceRegisterRecord? registerRecord;
+  @override
   final ComplianceSubmissionSummaryReviewModeEnum? reviewMode;
   @override
   final String? submittedAt;
@@ -183,6 +187,8 @@ class _$ComplianceSubmissionSummary extends ComplianceSubmissionSummary {
       required this.path,
       required this.status,
       this.markingType,
+      this.markingNumber,
+      this.registerRecord,
       this.reviewMode,
       this.submittedAt,
       this.decidedAt,
@@ -206,6 +212,8 @@ class _$ComplianceSubmissionSummary extends ComplianceSubmissionSummary {
         path == other.path &&
         status == other.status &&
         markingType == other.markingType &&
+        markingNumber == other.markingNumber &&
+        registerRecord == other.registerRecord &&
         reviewMode == other.reviewMode &&
         submittedAt == other.submittedAt &&
         decidedAt == other.decidedAt &&
@@ -220,6 +228,8 @@ class _$ComplianceSubmissionSummary extends ComplianceSubmissionSummary {
     _$hash = $jc(_$hash, path.hashCode);
     _$hash = $jc(_$hash, status.hashCode);
     _$hash = $jc(_$hash, markingType.hashCode);
+    _$hash = $jc(_$hash, markingNumber.hashCode);
+    _$hash = $jc(_$hash, registerRecord.hashCode);
     _$hash = $jc(_$hash, reviewMode.hashCode);
     _$hash = $jc(_$hash, submittedAt.hashCode);
     _$hash = $jc(_$hash, decidedAt.hashCode);
@@ -236,6 +246,8 @@ class _$ComplianceSubmissionSummary extends ComplianceSubmissionSummary {
           ..add('path', path)
           ..add('status', status)
           ..add('markingType', markingType)
+          ..add('markingNumber', markingNumber)
+          ..add('registerRecord', registerRecord)
           ..add('reviewMode', reviewMode)
           ..add('submittedAt', submittedAt)
           ..add('decidedAt', decidedAt)
@@ -271,6 +283,17 @@ class ComplianceSubmissionSummaryBuilder
   String? get markingType => _$this._markingType;
   set markingType(String? markingType) => _$this._markingType = markingType;
 
+  String? _markingNumber;
+  String? get markingNumber => _$this._markingNumber;
+  set markingNumber(String? markingNumber) =>
+      _$this._markingNumber = markingNumber;
+
+  ComplianceRegisterRecordBuilder? _registerRecord;
+  ComplianceRegisterRecordBuilder get registerRecord =>
+      _$this._registerRecord ??= ComplianceRegisterRecordBuilder();
+  set registerRecord(ComplianceRegisterRecordBuilder? registerRecord) =>
+      _$this._registerRecord = registerRecord;
+
   ComplianceSubmissionSummaryReviewModeEnum? _reviewMode;
   ComplianceSubmissionSummaryReviewModeEnum? get reviewMode =>
       _$this._reviewMode;
@@ -303,6 +326,8 @@ class ComplianceSubmissionSummaryBuilder
       _path = $v.path;
       _status = $v.status;
       _markingType = $v.markingType;
+      _markingNumber = $v.markingNumber;
+      _registerRecord = $v.registerRecord?.toBuilder();
       _reviewMode = $v.reviewMode;
       _submittedAt = $v.submittedAt;
       _decidedAt = $v.decidedAt;
@@ -339,6 +364,8 @@ class ComplianceSubmissionSummaryBuilder
             status: BuiltValueNullFieldError.checkNotNull(
                 status, r'ComplianceSubmissionSummary', 'status'),
             markingType: markingType,
+            markingNumber: markingNumber,
+            registerRecord: _registerRecord?.build(),
             reviewMode: reviewMode,
             submittedAt: submittedAt,
             decidedAt: decidedAt,
@@ -347,6 +374,9 @@ class ComplianceSubmissionSummaryBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'registerRecord';
+        _registerRecord?.build();
+
         _$failedField = 'latestReview';
         _latestReview?.build();
       } catch (e) {

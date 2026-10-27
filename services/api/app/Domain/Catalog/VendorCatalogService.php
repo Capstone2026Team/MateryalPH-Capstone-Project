@@ -579,6 +579,8 @@ final class VendorCatalogService
             'compliance_submissions' => $submissions->map(fn (object $submission): array => [
                 'id' => $submission->id, 'version' => (int) $submission->version, 'path' => $submission->path, 'status' => $submission->status, 'marking_type' => $submission->marking_type,
                 'review_mode' => $submission->review_mode, 'submitted_at' => $submission->submitted_at, 'decided_at' => $submission->decided_at,
+                'marking_number' => ComparableMappingService::decode($submission->declared)['certificate_number'] ?? null,
+                'register_record' => ($record = ComparableMappingService::decode($submission->declared)['register_record'] ?? null) === null ? null : $record + ['register_kind' => $submission->marking_type === 'ICC_STICKER' ? 'ICC_CERTIFICATE' : 'PS_LICENSE'],
                 'latest_review' => ($review = DB::table('compliance_reviews')->where('compliance_submission_id', $submission->id)->orderByDesc('created_at')->first(['decision', 'reason', 'reviewed_at', 'reviewer_user_id'])) === null ? null : ['decision' => $review->decision, 'reason' => $review->reason, 'reviewed_at' => $review->reviewed_at, 'source' => $review->reviewer_user_id === null ? 'SYSTEM_REGISTER_MATCH' : 'ADMIN'],
             ])->all(),
             'status_history' => DB::table('listing_status_history')->where('vendor_listing_id', $listing->id)->orderByDesc('created_at')->orderByDesc('id')->limit(20)->get(['from_status', 'to_status', 'source', 'reason_code', 'reason', 'publication_version', 'created_at'])->all(),
