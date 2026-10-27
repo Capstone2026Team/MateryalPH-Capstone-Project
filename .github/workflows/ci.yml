@@ -539,6 +539,7 @@ jobs:
       - run: mkdir -p .tmp && python scripts/deployment/test-vps-compose.py
       - run: python scripts/deployment/test-vps-database.py
       - run: node --test scripts/deployment/vps-deployment.test.mjs
+      - run: python scripts/deployment/test-package-vps.py
       - name: Test Hostinger SSH preflight and release resume guards
         shell: pwsh
         run: ./scripts/deployment/test-release-hostinger.ps1
@@ -559,7 +560,7 @@ jobs:
           docker compose --env-file services/api/.env.testing -f compose.test.yaml config --quiet
       - run: docker build --pull -f infrastructure/docker/api.render.Dockerfile -t materyalph-api:${{ github.sha }} .
       - name: Build both VPS portals off-server
-        run: docker build --pull -f infrastructure/docker/portals.vps.Dockerfile --build-arg VENDOR_RECAPTCHA_SITE_KEY=public-ci-vendor --build-arg ADMIN_RECAPTCHA_SITE_KEY=public-ci-admin --build-arg GOOGLE_MAPS_BROWSER_KEY=public-ci-maps -t materyalph-edge:${{ github.sha }} .
+        run: docker build --pull --no-cache-filter edge-runtime -f infrastructure/docker/portals.vps.Dockerfile --build-arg VENDOR_RECAPTCHA_SITE_KEY=public-ci-vendor --build-arg ADMIN_RECAPTCHA_SITE_KEY=public-ci-admin --build-arg GOOGLE_MAPS_BROWSER_KEY=public-ci-maps -t materyalph-edge:${{ github.sha }} .
       - name: Validate the Caddy edge image
         run: docker run --rm --network none -e API_HOST=api.example.test -e VENDOR_HOST=vendor.example.test -e ADMIN_HOST=admin.example.test -e REVERB_HOST=ws.example.test materyalph-edge:${{ github.sha }} caddy adapt --config /etc/caddy/Caddyfile --validate > /dev/null
       - name: Exercise the isolated Render HTTP runtime

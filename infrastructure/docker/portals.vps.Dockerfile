@@ -22,9 +22,11 @@ ENV VITE_API_BASE_URL=/api/v1 VITE_APP_ENV=staging
 RUN VITE_RECAPTCHA_SITE_KEY="$VENDOR_RECAPTCHA_SITE_KEY" VITE_GOOGLE_MAPS_BROWSER_KEY="$GOOGLE_MAPS_BROWSER_KEY" sh scripts/deployment/build-portal.sh vendor-web \
     && VITE_RECAPTCHA_SITE_KEY="$ADMIN_RECAPTCHA_SITE_KEY" VITE_GOOGLE_MAPS_BROWSER_KEY="$GOOGLE_MAPS_BROWSER_KEY" sh scripts/deployment/build-portal.sh admin-web
 
-FROM caddy:2.11.7-alpine
-# The base tag lags Alpine security fixes (e.g. brotli-libs CVE-2026-111497); apply them before the Trivy gate.
-RUN apk upgrade --no-cache
+FROM caddy:2.11.7-alpine AS edge-runtime
+# Refresh this stage on every release; --pull alone can reuse a stale apk layer.
+# Fail the build if the repository cannot supply the CVE-2026-92392 fix.
+RUN apk upgrade --no-cache \
+    && apk add --no-cache 'curl>=8.23.0-r0' 'libcurl>=8.23.0-r0'
 COPY --from=caddy-build /usr/bin/caddy /usr/bin/caddy
 COPY infrastructure/vps/Caddyfile /etc/caddy/Caddyfile
 COPY --from=portals /build/apps/vendor-web/dist /srv/vendor
