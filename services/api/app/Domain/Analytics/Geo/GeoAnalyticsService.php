@@ -45,6 +45,22 @@ final class GeoAnalyticsService
     public function __construct(private readonly AdminAccess $access, private readonly PsgcHierarchy $psgc) {}
 
     /**
+     * Taxonomy choices are independent of the selected period, geography and recorded demand.
+     *
+     * @return array{items: list<object>, meta: array<string, int>}
+     */
+    public function filterOptions(Request $request, ?string $categoryId, int $page): array
+    {
+        $this->authorize($request);
+        $query = $categoryId === null
+            ? DB::table('material_categories')->where('active', true)->orderBy('sort_order')->orderBy('name')->orderBy('id')
+            : DB::table('materials')->where('active', true)->where('material_category_id', $categoryId)->orderBy('name')->orderBy('id');
+        $options = $query->paginate(100, ['id', 'name'], 'page', $page);
+
+        return ['items' => $options->items(), 'meta' => ['current_page' => $options->currentPage(), 'last_page' => $options->lastPage(), 'total' => $options->total()]];
+    }
+
+    /**
      * @param  list<string>  $extra
      * @return array<string, mixed>
      */
@@ -57,6 +73,7 @@ final class GeoAnalyticsService
             'fulfillment_method' => ['sometimes', Rule::in(['DELIVERY', 'PICKUP'])], 'payment_method' => ['sometimes', Rule::in(['ONLINE', 'CASH_ON_DELIVERY', 'IN_STORE'])],
             'order_state' => ['sometimes', Rule::in(['CONFIRMED', 'PROCESSING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'PICKED_UP', 'COMPLETED', 'DISPUTED', 'CANCELLATION_REQUESTED', 'CANCELLED'])],
             ...(in_array('measure', $extra, true) ? ['measure' => ['sometimes', Rule::in(['ORDER_COUNT', 'QUANTITY', 'VALUE'])]] : []),
+            ...(in_array('page', $extra, true) ? ['page' => ['sometimes', 'integer', 'min:1']] : []),
         ];
     }
 
@@ -104,7 +121,7 @@ final class GeoAnalyticsService
     }
 
     /**
-     * Category or material demand heatmap: child areas × the top demand columns of the selection.
+     * Category or material demand heatmap: child areas × paginated taxonomy choices, including zero demand.
      *
      * @param  array<string, mixed>  $input
      * @return array<string, mixed>
@@ -123,9 +140,25 @@ final class GeoAnalyticsService
         $byMaterial = ! empty($context['filters']['category_id']) || ! empty($context['filters']['material_id']);
         $dimension = $byMaterial ? 'l.material_id' : 'l.material_category_id';
         $childColumn = 'f.'.PsgcHierarchy::childColumn($context['depth']);
-        $lines = fn (): Builder => $this->orders($context)->join('analytics_order_line_facts as l', 'l.analytics_order_fact_id', '=', 'f.id')->whereNotNull($dimension);
-        $columns = $lines()->groupBy($dimension)->orderByRaw('SUM(l.value_centavos) DESC')->limit(8)->selectRaw($dimension.' AS dimension')->pluck('dimension')->map(static fn (mixed $id): string => (string) $id)->all();
-        $names = $byMaterial ? DB::table('materials')->whereIn('id', $columns)->pluck('name', 'id') : DB::table('material_categories')->whereIn('id', $columns)->pluck('name', 'id');
+        $lines = fn (): Builder => $this->filterLines($this->orders($context)->join('analytics_order_line_facts as l', 'l.analytics_order_fact_id', '=', 'f.id'), $context, 'l')->whereNotNull($dimension);
+        // Active taxonomy entries stay visible without sales. Also retain inactive entries with matching
+        // historical demand so deactivation never hides recorded commerce.
+        $choices = DB::table($byMaterial ? 'materials' : 'material_categories')->where(function (Builder $query) use ($byMaterial, $context, $lines, $dimension): void {
+            $query->where(function (Builder $active) use ($byMaterial, $context): void {
+                $active->where('active', true);
+                if ($byMaterial && isset($context['filters']['category_id'])) {
+                    $active->where('material_category_id', $context['filters']['category_id']);
+                }
+            })->orWhereIn('id', $lines()->select($dimension));
+        });
+        if ($byMaterial && isset($context['filters']['material_id'])) {
+            $choices->where('id', $context['filters']['material_id']);
+        }
+        if (! $byMaterial) {
+            $choices->orderBy('sort_order');
+        }
+        $choicePage = $choices->orderBy('name')->orderBy('id')->paginate(8, ['id', 'name'], 'page', (int) ($input['page'] ?? 1));
+        $columns = array_map(static fn (object $choice): string => (string) $choice->id, $choicePage->items());
         $unit = $measure === 'QUANTITY' ? DB::table('materials as m')->join('units as u', 'u.id', '=', 'm.canonical_unit_id')->where('m.id', $context['filters']['material_id'])->value('u.name') : null;
         $aggregate = match ($measure) {
             'ORDER_COUNT' => 'COUNT(DISTINCT f.id)',
@@ -155,7 +188,8 @@ final class GeoAnalyticsService
         }
 
         return ['scope' => $this->scope($context), 'dataset' => $this->dataset($context['environment']), 'measure' => $measure, 'unit' => $unit,
-            'dimension' => $byMaterial ? 'MATERIAL' : 'CATEGORY', 'columns' => array_map(static fn (string $id): array => ['id' => $id, 'name' => (string) ($names[$id] ?? 'Unmapped')], $columns),
+            'dimension' => $byMaterial ? 'MATERIAL' : 'CATEGORY', 'columns' => array_map(static fn (object $choice): array => ['id' => (string) $choice->id, 'name' => (string) $choice->name], $choicePage->items()),
+            'column_pagination' => ['current_page' => $choicePage->currentPage(), 'last_page' => $choicePage->lastPage(), 'total' => $choicePage->total()],
             'rows' => array_values($rows), 'not_comparable_lines' => $excluded, 'definition' => self::DEFINITIONS['demand']];
     }
 
@@ -252,9 +286,19 @@ final class GeoAnalyticsService
                 $query->where('f.'.$key, $context['filters'][$key]);
             }
         }
+        if (isset($context['filters']['category_id']) || isset($context['filters']['material_id'])) {
+            $query->whereExists(fn (Builder $q) => $this->filterLines($q->selectRaw('1')->from('analytics_order_line_facts as x')->whereColumn('x.analytics_order_fact_id', 'f.id'), $context, 'x'));
+        }
+
+        return $query;
+    }
+
+    /** @param array<string, mixed> $context */
+    private function filterLines(Builder $query, array $context, string $alias): Builder
+    {
         foreach (['category_id' => 'material_category_id', 'material_id' => 'material_id'] as $key => $column) {
             if (isset($context['filters'][$key])) {
-                $query->whereExists(fn (Builder $q) => $q->selectRaw('1')->from('analytics_order_line_facts as x')->whereColumn('x.analytics_order_fact_id', 'f.id')->where('x.'.$column, $context['filters'][$key]));
+                $query->where($alias.'.'.$column, $context['filters'][$key]);
             }
         }
 

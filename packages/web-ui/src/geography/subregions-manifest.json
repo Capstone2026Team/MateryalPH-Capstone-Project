@@ -1,0 +1,429 @@
+{
+  "commit": "5d4929bdd477946ef88748a85d21c194d5d1d3ea",
+  "sources": [
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1001300000.0.01.json",
+      "blob": "c4e8f12a4ccda358bb6bfbf5ebab2922cc209f63"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1001800000.0.01.json",
+      "blob": "aa719cfc0c83559b77692f4f6974bba6bcb6de43"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1003500000.0.01.json",
+      "blob": "82d9e9afbc639e6cf3df498cfbbcb554606c49e5"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1004200000.0.01.json",
+      "blob": "1e462d8acba3a6d68198b6ba3fc78fef28b4b90b"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1004300000.0.01.json",
+      "blob": "e7dca925292d371e24155d41d73579678e52bc3c"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-102800000.0.01.json",
+      "blob": "e81a342da237602b093cb98e5ddf9e0fb0e445b9"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-102900000.0.01.json",
+      "blob": "f12a0262d234c7b55128787d8a1bebf966d72a4e"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-103300000.0.01.json",
+      "blob": "fedb230a9fb1d6e27b40b5ceaf64aec610148033"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-105500000.0.01.json",
+      "blob": "43d82d5ac79941f1266510aee3a112f19954ee6c"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1102300000.0.01.json",
+      "blob": "766839f61fc2337f27d8a4ef81b2221aac5bcaf8"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1102400000.0.01.json",
+      "blob": "8dfd08cbb4594752879c693eb36c987a2f6ee4f8"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1102500000.0.01.json",
+      "blob": "1545ee8c9d223a25ae4e7f40ba778341e581725d"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1108200000.0.01.json",
+      "blob": "b375649e4e4ad080b7bc5a36d5be1317db5358b0"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1108600000.0.01.json",
+      "blob": "0f3bc65cfd61161408a9100c719327d3318dd27f"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1204700000.0.01.json",
+      "blob": "4d00f43d4bffa2030243d5e89e0c9c3e544fa96f"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1206300000.0.01.json",
+      "blob": "164ac2232d1530a85517b8605a7e1a5c130554e4"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1206500000.0.01.json",
+      "blob": "09dd10a4a9a2a6f198657d3f970cc8530e009aff"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1208000000.0.01.json",
+      "blob": "3110e9e014185f96f1fc9f1af8289cfab82b1999"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1303900000.0.01.json",
+      "blob": "e9d68641d8533d196f4ddbb143f8cd7f325a14ad"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1307400000.0.01.json",
+      "blob": "bddaee1615a88f8896a2d95ef921dcfe8bd2e5de"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1307500000.0.01.json",
+      "blob": "118b50bcb12dfaf3e5b0b943822cb0b999c4f48c"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1307600000.0.01.json",
+      "blob": "815e387432f5fa6cc367c40d161421ca2fff1868"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1400100000.0.01.json",
+      "blob": "8d4a422457ac83da0208a676f29d481e04f3fa9d"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1401100000.0.01.json",
+      "blob": "26f7145b1d4fbbada8f9eea658e657e913ab59d1"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1402700000.0.01.json",
+      "blob": "fb93c7afcc3e6ecb55f3335acc729ff81ea758c6"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1403200000.0.01.json",
+      "blob": "4959c30d74fe2fe0e2696921dd87483a78ed46fd"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1404400000.0.01.json",
+      "blob": "bd6d90a2f75c627ce9408db3864ee43f4b6f1388"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1408100000.0.01.json",
+      "blob": "031e52b9a228dbe8cbc6bf06f10974084db1d643"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1600200000.0.01.json",
+      "blob": "ee1382fc6abaaf1d7518af15f043c13b2b4bfd4e"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1600300000.0.01.json",
+      "blob": "338454330272e83fb9a144fb3caece04975cd4f4"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1606700000.0.01.json",
+      "blob": "49b596df2d88b980556d3ae224a0e24dfcf988bb"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1606800000.0.01.json",
+      "blob": "d0bc1e8084583f479cf664358910f2126ae5073f"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1608500000.0.01.json",
+      "blob": "e42f0350789e309b780356fd6e29232996a5797a"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1704000000.0.01.json",
+      "blob": "ef440d8dedc1aa9ebd52f9d4d86677cc5b1cddd0"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1705100000.0.01.json",
+      "blob": "5c75b0e4ad521bf88c65d28937b63ac17d05a13b"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1705200000.0.01.json",
+      "blob": "807367c58e8d7e52e0b90590b11597d9bd8491c2"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1705300000.0.01.json",
+      "blob": "1188ec474df781396cf45a830630047f776fa10d"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1705900000.0.01.json",
+      "blob": "3e799764a342f0950295937e743ddc1f41733426"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1804500000.0.01.json",
+      "blob": "30d9bbaab20f455a72b6058602e6fc1da2b6c713"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1804600000.0.01.json",
+      "blob": "44b181ab577a606d75615103255920c34b7234f0"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1806100000.0.01.json",
+      "blob": "0a5ae4e9a154a8fab8eed52e0d09aad913696336"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1900700000.0.01.json",
+      "blob": "1e1c5764237a48df9feac397d589d18a4600a11e"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1903600000.0.01.json",
+      "blob": "afe6e79e01c598a07af86b3e5b94ec8daa9b5c45"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1907000000.0.01.json",
+      "blob": "217827a0a43573f0b472acc447542531f8737ddc"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1908700000.0.01.json",
+      "blob": "a5cd96e0b1fdafb5873bbd412c129057e9ed12e1"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1908800000.0.01.json",
+      "blob": "ca3c81fc2a757eabb0070b2a2185cc2444e5d318"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-1999900000.0.01.json",
+      "blob": "57b6e8feb887f6dd53146f823757afadd814d00b"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-200900000.0.01.json",
+      "blob": "93b58edd2ed9a187a32af598af21c03089a1d592"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-201500000.0.01.json",
+      "blob": "521b1029abe7ec35d2e4881a87e7ceccfad6e00b"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-203100000.0.01.json",
+      "blob": "d24681ac36431745397a8bea914f99ac6f07911f"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-205000000.0.01.json",
+      "blob": "527661ea3431c8d210fc449a6c48659a29c03c5d"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-205700000.0.01.json",
+      "blob": "8b19c437fcb42e14eedf45664af163aa997ea918"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-300800000.0.01.json",
+      "blob": "75184e804d53e251e5fec858728c44c3fbd24c91"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-301400000.0.01.json",
+      "blob": "2ba44fe070a737adbb130686e8a0b501bb7bcbe2"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-304900000.0.01.json",
+      "blob": "f4f237a4f5d71fc3d9e2de774a043b383cdd27cc"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-305400000.0.01.json",
+      "blob": "bc0ee7989780200888edb2f1e35f43a5976832b8"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-306900000.0.01.json",
+      "blob": "848fafb6cdd3ac2e2a7f81ad8b2cb2965415412d"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-307100000.0.01.json",
+      "blob": "44aac238c73f392f6b431f1efb242b08387f3758"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-307700000.0.01.json",
+      "blob": "7b19279220e8a5dc983fd5ae9542505379caa3a7"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-401000000.0.01.json",
+      "blob": "51a1d989ff9ddfaf4676d43acf210e859acd2559"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-402100000.0.01.json",
+      "blob": "5ccd76d0dbba46a87149f59edb5d3c0249eb1cb5"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-403400000.0.01.json",
+      "blob": "65f8991c8d5c188a5e9410d1a0e9e8de541a15ee"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-405600000.0.01.json",
+      "blob": "290486ad6b4dd7bb67bebd4d6dae1364352c5f52"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-405800000.0.01.json",
+      "blob": "5afabbdd2035813aa6f3302074ae2e4deb7ca9ac"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-500500000.0.01.json",
+      "blob": "303c97d2803310c8ba0826757875a9bc3b3bba5f"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-501600000.0.01.json",
+      "blob": "ddb041f40f4a88c57c3c9a991ea42fe3765f50c7"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-501700000.0.01.json",
+      "blob": "a8d54e7a3bf2417224ea7f2596e6a0e005634c0b"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-502000000.0.01.json",
+      "blob": "21c59c1fbadc6cb93809df2f979665b9c8749126"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-504100000.0.01.json",
+      "blob": "233270a9754ab6382812ebc27bfcb3a00e884c56"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-506200000.0.01.json",
+      "blob": "067e29aaccb49787e84237c2efbc9ef09364f06d"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-600400000.0.01.json",
+      "blob": "c6d74dce74168c637de79ccbeacf524bc52f1d9e"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-600600000.0.01.json",
+      "blob": "7884bb79307914c3d48a7dc17bce3e18974336d6"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-601900000.0.01.json",
+      "blob": "157ff3adf501cd5e8cb8a3cf4ae3cfb69ca0f272"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-603000000.0.01.json",
+      "blob": "ec77285182642907cbb4b574a39689ade4d92c3f"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-607900000.0.01.json",
+      "blob": "efc8452ca15caadf4c7dd489d9be1bb62f495fde"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-701200000.0.01.json",
+      "blob": "1e8ff88e7b6f7d22fecf753d75b10249fcd8d067"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-702200000.0.01.json",
+      "blob": "d9a035fce8f2449aa52f015e9700efd0c0c3b21b"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-802600000.0.01.json",
+      "blob": "8df858612e7715c109da85737f538333f98747b1"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-803700000.0.01.json",
+      "blob": "65c36357b06707836024c92cdb9bb2f246712345"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-804800000.0.01.json",
+      "blob": "cbab3a6673b0ecc43fd68dc53f9af3dae1b74b9b"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-806000000.0.01.json",
+      "blob": "4c248d9ef1edd7dcb5ecf23602ec513041cb190f"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-806400000.0.01.json",
+      "blob": "a2ebb6d2757936bd4275cb318ccc26c9b33d6704"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-807800000.0.01.json",
+      "blob": "d1eea23cd057688de21836da73f20f88db0d5c50"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-906600000.0.01.json",
+      "blob": "3a79245e78414138412e76bc775483e2fea2c6f5"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-907200000.0.01.json",
+      "blob": "85d106603e75c7229c25cd762eebc71cfbda34b8"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-907300000.0.01.json",
+      "blob": "953b7829f63308b1674586cda348498d79a02f7f"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-908300000.0.01.json",
+      "blob": "d63dae2089e93c172441e1300caa28f8afeb1a23"
+    },
+    {
+      "path": "latest/geojson/provdists/medres/municities-provdist-990100000.0.01.json",
+      "blob": "3721b8a1e8ff816054deeffb4de4bfed559d3f5f"
+    },
+    {
+      "path": "latest/geojson/regions/medres/provdists-region-100000000.0.01.json",
+      "blob": "5489fee4ca455c73dae4998920af3e8210c8d5d8"
+    },
+    {
+      "path": "latest/geojson/regions/medres/provdists-region-1000000000.0.01.json",
+      "blob": "185c99a856c9f9cfe7d944899a7cf4aca6051460"
+    },
+    {
+      "path": "latest/geojson/regions/medres/provdists-region-1100000000.0.01.json",
+      "blob": "52226fff93a85f13ba770862f41d8421881b85db"
+    },
+    {
+      "path": "latest/geojson/regions/medres/provdists-region-1200000000.0.01.json",
+      "blob": "524d67abab4e23a3e88c459c6ee70b4ebb21bc84"
+    },
+    {
+      "path": "latest/geojson/regions/medres/provdists-region-1300000000.0.01.json",
+      "blob": "c986da5e2d0b836fda729ad080d839e3c54f133e"
+    },
+    {
+      "path": "latest/geojson/regions/medres/provdists-region-1400000000.0.01.json",
+      "blob": "c33757f5b1058cd15174fbd78a9b4cc80be586c6"
+    },
+    {
+      "path": "latest/geojson/regions/medres/provdists-region-1600000000.0.01.json",
+      "blob": "f9a77be49e2ac4b7ee896e71a5ee531d85501a4f"
+    },
+    {
+      "path": "latest/geojson/regions/medres/provdists-region-1700000000.0.01.json",
+      "blob": "c3affb05aad689eebade2768010a94077101d9fd"
+    },
+    {
+      "path": "latest/geojson/regions/medres/provdists-region-1800000000.0.01.json",
+      "blob": "b90e58feff9085492f0aac598a81d719ddbccbb4"
+    },
+    {
+      "path": "latest/geojson/regions/medres/provdists-region-1900000000.0.01.json",
+      "blob": "bdb0685823473540a0c6c60d02cf9e3996fe4281"
+    },
+    {
+      "path": "latest/geojson/regions/medres/provdists-region-200000000.0.01.json",
+      "blob": "27138e6e5a46bc0d8ffc14154ad7b9105257729e"
+    },
+    {
+      "path": "latest/geojson/regions/medres/provdists-region-300000000.0.01.json",
+      "blob": "d52da2c5130cfae66ec73819c1d11a31ccf4a845"
+    },
+    {
+      "path": "latest/geojson/regions/medres/provdists-region-400000000.0.01.json",
+      "blob": "c0868e653eed31a60cefaf29710d14bac776059a"
+    },
+    {
+      "path": "latest/geojson/regions/medres/provdists-region-500000000.0.01.json",
+      "blob": "dc3298b30bd42cf57c738dbab91e78a019739e0a"
+    },
+    {
+      "path": "latest/geojson/regions/medres/provdists-region-600000000.0.01.json",
+      "blob": "b7411e6ec78812cccc55a5d93c8fd821a1e16b19"
+    },
+    {
+      "path": "latest/geojson/regions/medres/provdists-region-700000000.0.01.json",
+      "blob": "f7178114b5fd875eb3360a9958d6b64e9c150bad"
+    },
+    {
+      "path": "latest/geojson/regions/medres/provdists-region-800000000.0.01.json",
+      "blob": "aa78b6e299d5577bf3ff9115c5c13a766875cf88"
+    },
+    {
+      "path": "latest/geojson/regions/medres/provdists-region-900000000.0.01.json",
+      "blob": "258e1380b3daa2ea490299760b354d2d99d34943"
+    }
+  ]
+}

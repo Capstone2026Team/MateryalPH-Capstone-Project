@@ -883,6 +883,8 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(GeoDemandMeasureEnum.serializer)
       ..add(GeoDemandRowsInner.serializer)
       ..add(GeoFilterApplicability.serializer)
+      ..add(GeoFilterOption.serializer)
+      ..add(GeoFilterOptionsEnvelope.serializer)
       ..add(GeoKpis.serializer)
       ..add(GeoKpisActiveUsers.serializer)
       ..add(GeoRate.serializer)
@@ -2894,6 +2896,12 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(GeoDemandRowsInner)]),
           () => ListBuilder<GeoDemandRowsInner>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(GeoFilterOption)]),
+          () => ListBuilder<GeoFilterOption>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
       ..addBuilderFactory(
           const FullType(
               BuiltList, const [const FullType(GoogleContentAuthor)]),

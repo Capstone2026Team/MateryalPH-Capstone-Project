@@ -10907,13 +10907,46 @@ paths:
           "$ref": "#/components/responses/ErrorResponse"
         "503":
           "$ref": "#/components/responses/ErrorResponse"
+  /admin/geo-analytics/filter-options:
+    get:
+      operationId: getGeoFilterOptions
+      tags: [ Admin Geographic Analytics ]
+      description: >-
+        Requires analytics.view_aggregates and the geo_analytics feature flag.
+        Paginated active material categories from the taxonomy, ordered by sort order, name and ID.
+        With category_id, returns active canonical materials in that category ordered by name and ID.
+        Choices are independent of demand, dataset, dates and geography, including choices with no orders.
+      security:
+        - accessCookie: []
+          webCsrf: []
+      parameters:
+        - name: category_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+      responses:
+        '200':
+          description: Taxonomy choices, up to 100 per page.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GeoFilterOptionsEnvelope' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ErrorResponse' }
+        '503': { $ref: '#/components/responses/ErrorResponse' }
   "/admin/geo-analytics/demand":
     "get":
       "operationId": "getGeoDemandHeatmap"
       "tags":
         - "Admin Geographic Analytics"
       "description": "analytics.view_aggregates. Category or material demand by child
-        area; quantity needs one material (422 QUANTITY_NEEDS_MATERIAL)."
+        area with eight taxonomy columns per page, including active categories or materials
+        with zero matching demand and inactive entries with matching historical demand.
+        Columns have stable taxonomy ordering and column_pagination describes all pages.
+        Category/material filters constrain individual demand lines. Quantity needs one
+        material (422 QUANTITY_NEEDS_MATERIAL)."
       "security":
         - "accessCookie": []
           "webCsrf": []
@@ -11005,6 +11038,10 @@ paths:
               - "ORDER_COUNT"
               - "QUANTITY"
               - "VALUE"
+        - name: page
+          in: query
+          description: Page of category or material columns, eight per page.
+          schema: { type: integer, minimum: 1, default: 1 }
       "responses":
         "200":
           "description": "Authorized result."
@@ -36211,6 +36248,7 @@ components:
         - "measure"
         - "dimension"
         - "columns"
+        - "column_pagination"
         - "rows"
         - "not_comparable_lines"
         - "definition"
@@ -36267,6 +36305,8 @@ components:
                 "type": "array"
                 "items":
                   "$ref": "#/components/schemas/GeoDemandCell"
+        column_pagination:
+          $ref: '#/components/schemas/PageMeta'
         "not_comparable_lines":
           "type": "integer"
         "definition":
@@ -37753,6 +37793,23 @@ components:
           "type": "array"
           "items":
             "$ref": "#/components/schemas/ApiError"
+    GeoFilterOption:
+      type: object
+      required: [ id, name ]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+    GeoFilterOptionsEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/GeoFilterOption' }
+        meta: { $ref: '#/components/schemas/PageMeta' }
+        errors:
+          type: array
+          items: { $ref: '#/components/schemas/ApiError' }
     "GeoDemandEnvelope":
       "type": "object"
       "required":

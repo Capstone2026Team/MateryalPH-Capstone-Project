@@ -1,6 +1,19 @@
-import { forwardRef, useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react'
-import { ChevronDown, Search, X } from 'lucide-react'
+import { forwardRef, useId, useState, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react'
+import { ChevronDown, Search, SlidersHorizontal, X } from 'lucide-react'
 import { Button } from './button'
+
+/** Keeps applied context visible while retaining drafts inside a collapsed filter panel. */
+export function FilterDisclosure({ label = 'Filters', summary, children }: { label?: string; summary?: ReactNode; children: ReactNode }) {
+  const [open, setOpen] = useState(false)
+  const panelId = useId()
+  return <section aria-label={`${label} panel`} className="min-w-0 rounded-surface border border-border-default bg-surface-primary">
+    <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-3 p-4 sm:px-6">
+      <Button variant="secondary" aria-expanded={open} aria-controls={panelId} onClick={() => setOpen(value => !value)}><SlidersHorizontal size={16} aria-hidden="true" />{label}<ChevronDown size={16} aria-hidden="true" className={open ? 'rotate-180' : ''} /></Button>
+      {summary && <div className="min-w-0 text-[13px] text-text-secondary">{summary}</div>}
+    </div>
+    <div id={panelId} hidden={!open} className="border-t border-border-default p-4 sm:p-6">{children}</div>
+  </section>
+}
 
 export function FilterPanel({ label, children, footer, actions }: { label: string; children: ReactNode; footer?: ReactNode; actions?: ReactNode }) {
   return <section aria-label={label} className="min-w-0 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-6">

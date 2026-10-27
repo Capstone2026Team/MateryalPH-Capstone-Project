@@ -609,6 +609,8 @@ docs/GeoDemandColumnsInner.md
 docs/GeoDemandEnvelope.md
 docs/GeoDemandRowsInner.md
 docs/GeoFilterApplicability.md
+docs/GeoFilterOption.md
+docs/GeoFilterOptionsEnvelope.md
 docs/GeoKpis.md
 docs/GeoKpisActiveUsers.md
 docs/GeoRate.md
@@ -1898,6 +1900,8 @@ src/models/GeoDemandColumnsInner.ts
 src/models/GeoDemandEnvelope.ts
 src/models/GeoDemandRowsInner.ts
 src/models/GeoFilterApplicability.ts
+src/models/GeoFilterOption.ts
+src/models/GeoFilterOptionsEnvelope.ts
 src/models/GeoKpis.ts
 src/models/GeoKpisActiveUsers.ts
 src/models/GeoRate.ts

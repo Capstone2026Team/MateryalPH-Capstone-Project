@@ -23,6 +23,8 @@ test('tab badges include processed refunds and confirmed reimbursements while ca
   vi.mocked(operations.getSummary).mockResolvedValue({ refundsTotal: 1, refundsFailed: 0, refundsPending: 0, reimbursementsTotal: 1, reimbursementsPending: 0, cancellationRequestsOpen: 0, nfrEvents30Days: 1 })
   vi.mocked(operations.listRefunds).mockResolvedValue({ items: [refund({ state: 'REFUNDED', displayState: 'PROCESSED', canRetry: false })], hasMore: false })
   at('/order-operations')
+  expect(screen.getByRole('heading', { level: 1, name: 'Orders & Refunds Logs' })).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: 'Invoice Request Log' })).toHaveAttribute('href', '/invoices')
   expect(await screen.findByRole('tab', { name: 'Refunds 1' })).toBeInTheDocument()
   expect(screen.getByRole('tab', { name: 'Cash reimbursements 1' })).toBeInTheDocument()
   expect(screen.getByText('Failed refunds').closest('div')).toHaveTextContent('Failed refunds0')
@@ -43,6 +45,43 @@ test('tab badges include processed refunds and confirmed reimbursements while ca
   expect(screen.getByRole('tab', { name: 'Refunds 1' })).toBeInTheDocument()
 })
 
+test('refund records keep their amounts, references and states readable without granting unavailable actions', async () => {
+  const item = refund({ canRetry: false, statementReference: 'FEE-2026-AAAA', trigger: 'FEE_CREDIT', amountCentavos: 15375 })
+  delete item.orderReference
+  vi.mocked(operations.listRefunds).mockResolvedValue({ items: [item], hasMore: false })
+  at('/order-operations')
+  const table = within(await screen.findByRole('table', { name: 'Refund records' }))
+  expect(table.getByText('FEE-2026-AAAA')).toBeInTheDocument()
+  expect(table.getByText('₱153.75')).toBeInTheDocument()
+  expect(table.getByText('Platform fee credit')).toBeInTheDocument()
+  expect(table.getByRole('columnheader', { name: 'Requested' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Retry after funding is resolved' })).not.toBeInTheDocument()
+})
+
+test('reimbursement log retains recorded methods and distinguishes evidence from confirmation', async () => {
+  vi.mocked(operations.listReimbursements).mockResolvedValue([{ id: 'r1', orderReference: 'ORD-2026-CASH', vendorName: 'Test Supply', state: 'VENDOR_REIMBURSEMENT_PENDING', amountCentavos: 400000, method: 'IN_STORE', hasEvidence: true, confirmedByReview: false, canDecide: false }])
+  at('/order-operations?view=reimbursements')
+  const records = within(await screen.findByRole('table', { name: 'Cash reimbursement records' }))
+  expect(records.getByText('In-Store Payment')).toBeInTheDocument()
+  expect(records.getByText('₱4,000.00')).toBeInTheDocument()
+  expect(records.getByText('Vendor evidence recorded — awaiting confirmation')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Confirm with reason' })).not.toBeInTheDocument()
+})
+
+test('cancellation logs show server deadlines and automatic finalization without adding cancellation controls', async () => {
+  vi.mocked(operations.listCancellationRequests).mockResolvedValue([
+    { id: 'request-1', orderReference: 'ORD-2026-CANCEL', vendorName: 'Test Supply', reasonCode: 'CHANGE_OF_PLAN', responseDueAt: new Date('2026-10-27T02:00:00Z'), overdue: true },
+    { id: 'request-2', orderReference: 'ORD-2026-WAIT', reasonCode: 'CHANGE_OF_PLAN', overdue: false },
+  ])
+  at('/order-operations?view=requests')
+  const records = within(await screen.findByRole('table', { name: 'Cancellation request records' }))
+  expect(records.getByText('Past due — finalizing automatically')).toBeInTheDocument()
+  expect(records.getByText('Awaiting Vendor response')).toBeInTheDocument()
+  expect(records.getByText(/Oct 27, 2026/)).toHaveTextContent('10:00')
+  expect(records.getByText('Not recorded')).toBeInTheDocument()
+  expect(records.queryByRole('button')).not.toBeInTheDocument()
+})
+
 test('Refresh updates the summary and current list without resetting its filters', async () => {
   vi.mocked(operations.listRefunds).mockResolvedValue({ items: [], hasMore: false })
   at('/order-operations')
@@ -54,7 +93,7 @@ test('Refresh updates the summary and current list without resetting its filters
   const callsBefore = vi.mocked(operations.listRefunds).mock.calls.length
   fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
   expect(await screen.findByRole('tab', { name: 'Refunds 6' })).toBeInTheDocument()
-  expect(await screen.findByText('Refund processed by the payment provider')).toBeInTheDocument()
+  expect(await within(screen.getByRole('list', { name: 'Refund records' })).findByText('Refund processed by the payment provider')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Processed', pressed: true })).toBeInTheDocument()
   expect(operations.listRefunds).toHaveBeenCalledTimes(callsBefore + 1)
 })
@@ -63,11 +102,12 @@ test('failed refunds come first with a retry to the original payment that stays 
   vi.mocked(operations.listRefunds).mockResolvedValue({ items: [refund()], hasMore: false })
   vi.mocked(operations.retryRefund).mockResolvedValue()
   at('/order-operations')
-  expect(await screen.findByText('Refund failed — action required')).toBeInTheDocument()
+  const records = within(await screen.findByRole('list', { name: 'Refund records' }))
+  expect(records.getByText('Refund failed — action required')).toBeInTheDocument()
   expect(screen.getByRole('tab', { name: 'Refunds 5' })).toBeInTheDocument()
-  expect(screen.getByText(/INSUFFICIENT_BALANCE/)).toBeInTheDocument()
+  expect(records.getByText(/INSUFFICIENT_BALANCE/)).toBeInTheDocument()
   expect(operations.listRefunds).toHaveBeenCalledWith(1, 'REFUND_FAILED', { label: 'All dates', from: '', to: '' })
-  fireEvent.click(screen.getByRole('button', { name: 'Retry after funding is resolved' }))
+  fireEvent.click(records.getByRole('button', { name: 'Retry after funding is resolved' }))
   await waitFor(() => expect(operations.retryRefund).toHaveBeenCalledWith('refund-1'))
   expect(await screen.findByText(/stays pending until the provider confirms it/)).toBeInTheDocument()
 })
@@ -78,7 +118,8 @@ test('a reimbursement decision needs a recorded reason, and a 403 is explained',
   vi.mocked(operations.confirmReimbursement).mockRejectedValue(new ResponseError(new Response(JSON.stringify({ data: null, meta: {}, errors: [{ code: 'PERMISSION_DENIED', message: 'This Admin action is not available to your role.', details: {} }] }),
     { status: 403, headers: { 'Content-Type': 'application/json' } }), 'denied'))
   at('/order-operations?view=reimbursements')
-  fireEvent.click(await screen.findByRole('button', { name: 'Confirm with reason' }))
+  const records = within(await screen.findByRole('list', { name: 'Cash reimbursement records' }))
+  fireEvent.click(records.getByRole('button', { name: 'Confirm with reason' }))
   const dialog = screen.getByRole('dialog')
   fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm reimbursement' }))
   expect(await within(dialog).findByText(/at least 10 characters/)).toBeInTheDocument()

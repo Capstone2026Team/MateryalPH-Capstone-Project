@@ -33,6 +33,11 @@ import {
     GeoDemandEnvelopeFromJSON,
     GeoDemandEnvelopeToJSON,
 } from '../models/GeoDemandEnvelope';
+import {
+    type GeoFilterOptionsEnvelope,
+    GeoFilterOptionsEnvelopeFromJSON,
+    GeoFilterOptionsEnvelopeToJSON,
+} from '../models/GeoFilterOptionsEnvelope';
 
 export interface GetGeoAnalyticsDashboardRequest {
     /**
@@ -137,6 +142,21 @@ export interface GetGeoDemandHeatmapRequest {
      *
      */
     measure?: GetGeoDemandHeatmapMeasureEnum;
+    /**
+     * Page of category or material columns, eight per page.
+     */
+    page?: number;
+}
+
+export interface GetGeoFilterOptionsRequest {
+    /**
+     *
+     */
+    categoryId?: string;
+    /**
+     *
+     */
+    page?: number;
 }
 
 /**
@@ -328,6 +348,10 @@ export class AdminGeographicAnalyticsApi extends runtime.BaseAPI {
             queryParameters['measure'] = requestParameters['measure'];
         }
 
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
         const headerParameters: runtime.HTTPHeaders = {};
 
         if (this.configuration && this.configuration.apiKey) {
@@ -346,7 +370,7 @@ export class AdminGeographicAnalyticsApi extends runtime.BaseAPI {
     }
 
     /**
-     * analytics.view_aggregates. Category or material demand by child area; quantity needs one material (422 QUANTITY_NEEDS_MATERIAL).
+     * analytics.view_aggregates. Category or material demand by child area with eight taxonomy columns per page, including active categories or materials with zero matching demand and inactive entries with matching historical demand. Columns have stable taxonomy ordering and column_pagination describes all pages. Category/material filters constrain individual demand lines. Quantity needs one material (422 QUANTITY_NEEDS_MATERIAL).
      */
     async getGeoDemandHeatmapRaw(requestParameters: GetGeoDemandHeatmapRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GeoDemandEnvelope>> {
         const requestOptions = await this.getGeoDemandHeatmapRequestOpts(requestParameters);
@@ -356,10 +380,59 @@ export class AdminGeographicAnalyticsApi extends runtime.BaseAPI {
     }
 
     /**
-     * analytics.view_aggregates. Category or material demand by child area; quantity needs one material (422 QUANTITY_NEEDS_MATERIAL).
+     * analytics.view_aggregates. Category or material demand by child area with eight taxonomy columns per page, including active categories or materials with zero matching demand and inactive entries with matching historical demand. Columns have stable taxonomy ordering and column_pagination describes all pages. Category/material filters constrain individual demand lines. Quantity needs one material (422 QUANTITY_NEEDS_MATERIAL).
      */
     async getGeoDemandHeatmap(requestParameters: GetGeoDemandHeatmapRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GeoDemandEnvelope> {
         const response = await this.getGeoDemandHeatmapRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getGeoFilterOptions without sending the request
+     */
+    async getGeoFilterOptionsRequestOpts(requestParameters: GetGeoFilterOptionsRequest): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        if (requestParameters['categoryId'] != null) {
+            queryParameters['category_id'] = requestParameters['categoryId'];
+        }
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/admin/geo-analytics/filter-options`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Requires analytics.view_aggregates and the geo_analytics feature flag. Paginated active material categories from the taxonomy, ordered by sort order, name and ID. With category_id, returns active canonical materials in that category ordered by name and ID. Choices are independent of demand, dataset, dates and geography, including choices with no orders.
+     */
+    async getGeoFilterOptionsRaw(requestParameters: GetGeoFilterOptionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GeoFilterOptionsEnvelope>> {
+        const requestOptions = await this.getGeoFilterOptionsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => GeoFilterOptionsEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Requires analytics.view_aggregates and the geo_analytics feature flag. Paginated active material categories from the taxonomy, ordered by sort order, name and ID. With category_id, returns active canonical materials in that category ordered by name and ID. Choices are independent of demand, dataset, dates and geography, including choices with no orders.
+     */
+    async getGeoFilterOptions(requestParameters: GetGeoFilterOptionsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GeoFilterOptionsEnvelope> {
+        const response = await this.getGeoFilterOptionsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

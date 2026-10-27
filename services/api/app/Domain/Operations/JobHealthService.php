@@ -178,7 +178,7 @@ final class JobHealthService
 
     private function resetOutbox(object $event): void
     {
-        DB::table('outbox_events')->where('id', $event->id)->update(['attempts' => 0, 'available_at' => now(), 'updated_at' => now()]);
+        DB::table('outbox_events')->where('id', $event->id)->update(['attempts' => 0, 'available_at' => now(), 'dispatched_until' => null, 'updated_at' => now()]);
         if ($event->event_type === 'DOCUMENT_EXPORT_REQUESTED') {
             // Retry the original immutable snapshot; processing rechecks the requester's current access.
             DB::table('data_exports')->where('id', $event->aggregate_id)->where('state', 'FAILED')->where('failure_code', 'GENERATION_FAILED')

@@ -7,6 +7,7 @@ All URIs are relative to */api/v1*
 | [**getGeoAnalyticsDashboard**](AdminGeographicAnalyticsApi.md#getgeoanalyticsdashboard) | **GET** /admin/geo-analytics |  |
 | [**getGeoBoundaries**](AdminGeographicAnalyticsApi.md#getgeoboundaries) | **GET** /admin/geo-analytics/boundaries |  |
 | [**getGeoDemandHeatmap**](AdminGeographicAnalyticsApi.md#getgeodemandheatmap) | **GET** /admin/geo-analytics/demand |  |
+| [**getGeoFilterOptions**](AdminGeographicAnalyticsApi.md#getgeofilteroptions) | **GET** /admin/geo-analytics/filter-options |  |
 
 
 
@@ -198,11 +199,11 @@ example().catch(console.error);
 
 ## getGeoDemandHeatmap
 
-> GeoDemandEnvelope getGeoDemandHeatmap(dataset, area, from, to, granularity, procurementType, categoryId, materialId, fulfillmentMethod, paymentMethod, orderState, measure)
+> GeoDemandEnvelope getGeoDemandHeatmap(dataset, area, from, to, granularity, procurementType, categoryId, materialId, fulfillmentMethod, paymentMethod, orderState, measure, page)
 
 
 
-analytics.view_aggregates. Category or material demand by child area; quantity needs one material (422 QUANTITY_NEEDS_MATERIAL).
+analytics.view_aggregates. Category or material demand by child area with eight taxonomy columns per page, including active categories or materials with zero matching demand and inactive entries with matching historical demand. Columns have stable taxonomy ordering and column_pagination describes all pages. Category/material filters constrain individual demand lines. Quantity needs one material (422 QUANTITY_NEEDS_MATERIAL).
 
 ### Example
 
@@ -248,6 +249,8 @@ async function example() {
     orderState: orderState_example,
     // 'ORDER_COUNT' | 'QUANTITY' | 'VALUE' (optional)
     measure: measure_example,
+    // number | Page of category or material columns, eight per page. (optional)
+    page: 56,
   } satisfies GetGeoDemandHeatmapRequest;
 
   try {
@@ -279,6 +282,7 @@ example().catch(console.error);
 | **paymentMethod** | `ONLINE`, `CASH_ON_DELIVERY`, `IN_STORE` |  | [Optional] [Defaults to `undefined`] [Enum: ONLINE, CASH_ON_DELIVERY, IN_STORE] |
 | **orderState** | `CONFIRMED`, `PROCESSING`, `READY_FOR_PICKUP`, `OUT_FOR_DELIVERY`, `DELIVERED`, `PICKED_UP`, `COMPLETED`, `DISPUTED`, `CANCELLATION_REQUESTED`, `CANCELLED` |  | [Optional] [Defaults to `undefined`] [Enum: CONFIRMED, PROCESSING, READY_FOR_PICKUP, OUT_FOR_DELIVERY, DELIVERED, PICKED_UP, COMPLETED, DISPUTED, CANCELLATION_REQUESTED, CANCELLED] |
 | **measure** | `ORDER_COUNT`, `QUANTITY`, `VALUE` |  | [Optional] [Defaults to `undefined`] [Enum: ORDER_COUNT, QUANTITY, VALUE] |
+| **page** | `number` | Page of category or material columns, eight per page. | [Optional] [Defaults to `1`] |
 
 ### Return type
 
@@ -301,6 +305,86 @@ example().catch(console.error);
 | **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **503** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## getGeoFilterOptions
+
+> GeoFilterOptionsEnvelope getGeoFilterOptions(categoryId, page)
+
+
+
+Requires analytics.view_aggregates and the geo_analytics feature flag. Paginated active material categories from the taxonomy, ordered by sort order, name and ID. With category_id, returns active canonical materials in that category ordered by name and ID. Choices are independent of demand, dataset, dates and geography, including choices with no orders.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  AdminGeographicAnalyticsApi,
+} from '@materyalph/api-client-ts';
+import type { GetGeoFilterOptionsRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new AdminGeographicAnalyticsApi(config);
+
+  const body = {
+    // string (optional)
+    categoryId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // number (optional)
+    page: 56,
+  } satisfies GetGeoFilterOptionsRequest;
+
+  try {
+    const data = await api.getGeoFilterOptions(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **categoryId** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **page** | `number` |  | [Optional] [Defaults to `1`] |
+
+### Return type
+
+[**GeoFilterOptionsEnvelope**](GeoFilterOptionsEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Taxonomy choices, up to 100 per page. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **503** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 

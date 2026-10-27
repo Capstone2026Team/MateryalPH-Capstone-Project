@@ -112,9 +112,8 @@ export function SupportRequestForm({ client, identity, onCreated }: { client: Su
 }
 
 export function SupportRequestList({ client, onOpen, admin = false, renderHeader }: { client: SupportClient; onOpen: (id: string) => void; admin?: boolean; renderHeader?: (refreshAction: ReactNode) => ReactNode }) {
-  const filtersId = useId()
   const [filters, setFilters] = useState<SupportFilters>({})
-  const [draft, setDraft] = useState<SupportFilters>({})
+  const [search, setSearch] = useState('')
   const [range, setRange] = useState(ALL_DATES)
   const [tickets, setTickets] = useState<SupportTicket[]>([])
   const [cursor, setCursor] = useState<string | null>(null)
@@ -129,32 +128,35 @@ export function SupportRequestList({ client, onOpen, admin = false, renderHeader
     finally { if (current === revision.current) setBusy(false) }
   }, [client, filters])
   useEffect(() => { void load(); return () => { revision.current++ } }, [load])
+  const changeFilters = useCallback((changes: Partial<SupportFilters>) => {
+    setFilters(current => ({ ...current, ...changes }))
+    setTickets([])
+    setCursor(null)
+  }, [])
+  useEffect(() => {
+    if (search === (filters.q ?? '')) return
+    const timer = setTimeout(() => changeFilters({ q: search || undefined }), 300)
+    return () => clearTimeout(timer)
+  }, [search, filters.q, changeFilters])
   function changeStatus(value: string) {
     const status = value === 'ALL' ? undefined : value as SupportStatus
     if (status === filters.status) return
-    setFilters(current => ({ ...current, status }))
-    setDraft(current => ({ ...current, status }))
-    setTickets([])
-    setCursor(null)
+    changeFilters({ status })
   }
   function changeDates(value: DateFilterRange) {
     const dates = { from: value.from ? parseDate(value.from) : undefined, to: value.to ? parseDate(value.to) : undefined }
     setRange(value)
-    setFilters(current => ({ ...current, ...dates }))
-    setDraft(current => ({ ...current, ...dates }))
-    setTickets([])
-    setCursor(null)
+    changeFilters(dates)
   }
   const refreshAction = <Button variant="secondary" disabled={busy} onClick={() => void load()}><RefreshCw size={16} aria-hidden="true" />Refresh requests</Button>
   return <>{renderHeader?.(refreshAction)}<div className="grid min-w-0 gap-5">
     {admin && <FilterTabs appearance="tabs" label="Support request status" value={filters.status ?? 'ALL'} onChange={changeStatus} chips={[{ value: 'ALL', label: 'All requests' }, ...SUPPORT_STATUSES.map(value => ({ value, label: supportLabel(value) }))]} />}
     {admin && <FilterPanel label="Support request filters"><div className="col-span-full grid gap-4">
-      <form id={filtersId} className="grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_auto]" onSubmit={event => { event.preventDefault(); setFilters({ ...draft }); setTickets([]); setCursor(null) }}>
-        <Field label="Search requests" name="support-search" startAdornment={<Search size={16} />} placeholder="Ticket, name, email or subject" value={draft.q ?? ''} maxLength={160} onChange={event => setDraft({ ...draft, q: event.target.value })} />
-        <Select label="Category" name="filter-category" value={draft.category ?? ''} onChange={value => setDraft({ ...draft, category: value ? value as SupportCategory : undefined })}><option value="">All categories</option>{SUPPORT_CATEGORIES.map(value => <option value={value} key={value}>{supportLabel(value)}</option>)}</Select>
-        <Select label="User type" name="filter-type" value={draft.userType ?? ''} onChange={value => setDraft({ ...draft, userType: value ? value as SupportUserType : undefined })}><option value="">All user types</option>{SUPPORT_TYPES.map(value => <option value={value} key={value}>{supportLabel(value)}</option>)}</Select>
-        <Button type="submit" disabled={busy}>Apply filters</Button>
-      </form>
+      <div className="grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)]">
+        <Field label="Search requests" name="support-search" startAdornment={<Search size={16} />} placeholder="Ticket, name, email or subject" value={search} maxLength={160} onChange={event => setSearch(event.target.value)} />
+        <Select label="Category" name="filter-category" value={filters.category ?? ''} onChange={value => changeFilters({ category: value ? value as SupportCategory : undefined })}><option value="">All categories</option>{SUPPORT_CATEGORIES.map(value => <option value={value} key={value}>{supportLabel(value)}</option>)}</Select>
+        <Select label="User type" name="filter-type" value={filters.userType ?? ''} onChange={value => changeFilters({ userType: value ? value as SupportUserType : undefined })}><option value="">All user types</option>{SUPPORT_TYPES.map(value => <option value={value} key={value}>{supportLabel(value)}</option>)}</Select>
+      </div>
       <div className="flex flex-wrap items-center gap-3 border-t border-border-default pt-4"><span className="text-sm text-text-secondary">Received</span><DateFilter title="Request received dates" value={range} onChange={changeDates} /></div>
     </div></FilterPanel>}
     {!renderHeader && <div>{refreshAction}</div>}

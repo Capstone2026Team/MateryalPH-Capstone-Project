@@ -8,6 +8,7 @@ import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/geo_demand_rows_inner.dart';
 import 'package:materyalph_api_client/src/model/geo_demand_columns_inner.dart';
 import 'package:materyalph_api_client/src/model/geo_dataset.dart';
+import 'package:materyalph_api_client/src/model/page_meta.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -23,6 +24,7 @@ part 'geo_demand.g.dart';
 /// * [dimension]
 /// * [columns]
 /// * [rows]
+/// * [columnPagination]
 /// * [notComparableLines]
 /// * [definition]
 @BuiltValue()
@@ -49,6 +51,9 @@ abstract class GeoDemand implements Built<GeoDemand, GeoDemandBuilder> {
 
   @BuiltValueField(wireName: r'rows')
   BuiltList<GeoDemandRowsInner> get rows;
+
+  @BuiltValueField(wireName: r'column_pagination')
+  PageMeta get columnPagination;
 
   @BuiltValueField(wireName: r'not_comparable_lines')
   int get notComparableLines;
@@ -115,6 +120,11 @@ class _$GeoDemandSerializer implements PrimitiveSerializer<GeoDemand> {
     yield serializers.serialize(
       object.rows,
       specifiedType: const FullType(BuiltList, [FullType(GeoDemandRowsInner)]),
+    );
+    yield r'column_pagination';
+    yield serializers.serialize(
+      object.columnPagination,
+      specifiedType: const FullType(PageMeta),
     );
     yield r'not_comparable_lines';
     yield serializers.serialize(
@@ -198,6 +208,13 @@ class _$GeoDemandSerializer implements PrimitiveSerializer<GeoDemand> {
             specifiedType: const FullType(BuiltList, [FullType(GeoDemandRowsInner)]),
           ) as BuiltList<GeoDemandRowsInner>;
           result.rows.replace(valueDes);
+          break;
+        case r'column_pagination':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(PageMeta),
+          ) as PageMeta;
+          result.columnPagination = valueDes.toBuilder();
           break;
         case r'not_comparable_lines':
           final valueDes = serializers.deserialize(

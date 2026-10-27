@@ -134,6 +134,8 @@ class _$GeoDemand extends GeoDemand {
   @override
   final BuiltList<GeoDemandRowsInner> rows;
   @override
+  final PageMeta columnPagination;
+  @override
   final int notComparableLines;
   @override
   final String definition;
@@ -149,6 +151,7 @@ class _$GeoDemand extends GeoDemand {
       required this.dimension,
       required this.columns,
       required this.rows,
+      required this.columnPagination,
       required this.notComparableLines,
       required this.definition})
       : super._();
@@ -170,6 +173,7 @@ class _$GeoDemand extends GeoDemand {
         dimension == other.dimension &&
         columns == other.columns &&
         rows == other.rows &&
+        columnPagination == other.columnPagination &&
         notComparableLines == other.notComparableLines &&
         definition == other.definition;
   }
@@ -184,6 +188,7 @@ class _$GeoDemand extends GeoDemand {
     _$hash = $jc(_$hash, dimension.hashCode);
     _$hash = $jc(_$hash, columns.hashCode);
     _$hash = $jc(_$hash, rows.hashCode);
+    _$hash = $jc(_$hash, columnPagination.hashCode);
     _$hash = $jc(_$hash, notComparableLines.hashCode);
     _$hash = $jc(_$hash, definition.hashCode);
     _$hash = $jf(_$hash);
@@ -200,6 +205,7 @@ class _$GeoDemand extends GeoDemand {
           ..add('dimension', dimension)
           ..add('columns', columns)
           ..add('rows', rows)
+          ..add('columnPagination', columnPagination)
           ..add('notComparableLines', notComparableLines)
           ..add('definition', definition))
         .toString();
@@ -241,6 +247,12 @@ class GeoDemandBuilder implements Builder<GeoDemand, GeoDemandBuilder> {
       _$this._rows ??= ListBuilder<GeoDemandRowsInner>();
   set rows(ListBuilder<GeoDemandRowsInner>? rows) => _$this._rows = rows;
 
+  PageMetaBuilder? _columnPagination;
+  PageMetaBuilder get columnPagination =>
+      _$this._columnPagination ??= PageMetaBuilder();
+  set columnPagination(PageMetaBuilder? columnPagination) =>
+      _$this._columnPagination = columnPagination;
+
   int? _notComparableLines;
   int? get notComparableLines => _$this._notComparableLines;
   set notComparableLines(int? notComparableLines) =>
@@ -264,6 +276,7 @@ class GeoDemandBuilder implements Builder<GeoDemand, GeoDemandBuilder> {
       _dimension = $v.dimension;
       _columns = $v.columns.toBuilder();
       _rows = $v.rows.toBuilder();
+      _columnPagination = $v.columnPagination.toBuilder();
       _notComparableLines = $v.notComparableLines;
       _definition = $v.definition;
       _$v = null;
@@ -298,6 +311,7 @@ class GeoDemandBuilder implements Builder<GeoDemand, GeoDemandBuilder> {
                 dimension, r'GeoDemand', 'dimension'),
             columns: columns.build(),
             rows: rows.build(),
+            columnPagination: columnPagination.build(),
             notComparableLines: BuiltValueNullFieldError.checkNotNull(
                 notComparableLines, r'GeoDemand', 'notComparableLines'),
             definition: BuiltValueNullFieldError.checkNotNull(
@@ -315,6 +329,8 @@ class GeoDemandBuilder implements Builder<GeoDemand, GeoDemandBuilder> {
         columns.build();
         _$failedField = 'rows';
         rows.build();
+        _$failedField = 'columnPagination';
+        columnPagination.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'GeoDemand', _$failedField, e.toString());

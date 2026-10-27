@@ -4,8 +4,8 @@ import { Button } from './button'
 import './side-panel.css'
 
 /** Native modal focus containment, with a persistent header and a scrolling body. */
-export function SidePanel({ open, title, description, children, onClose, closeLabel = 'Close panel', padded = true }: {
-  open: boolean; title: string; description?: string; children: ReactNode; onClose: () => void; closeLabel?: string; padded?: boolean
+export function SidePanel({ open, title, description, children, onClose, closeLabel = 'Close panel', padded = true, closeDisabled = false }: {
+  open: boolean; title: string; description?: string; children: ReactNode; onClose: () => void; closeLabel?: string; padded?: boolean; closeDisabled?: boolean
 }) {
   const dialog = useRef<HTMLDialogElement>(null)
   const titleId = useId()
@@ -28,7 +28,7 @@ export function SidePanel({ open, title, description, children, onClose, closeLa
     }
   }, [open])
   const close = () => {
-    if (closing) return
+    if (closing || closeDisabled) return
     setClosing(true)
     timer.current = setTimeout(onClose, window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 0 : 180)
   }
@@ -36,7 +36,7 @@ export function SidePanel({ open, title, description, children, onClose, closeLa
     <div className="mp-side-panel__layout">
       <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border-default px-5 py-4">
         <div className="min-w-0"><h2 id={titleId} className="break-words text-lg font-semibold">{title}</h2>{description && <p className="mt-1 text-xs text-text-secondary">{description}</p>}</div>
-        <Button variant="quiet" aria-label={closeLabel} onClick={close}><X size={20} aria-hidden="true" /></Button>
+        <Button variant="quiet" aria-label={closeLabel} disabled={closeDisabled} onClick={close}><X size={20} aria-hidden="true" /></Button>
       </div>
       <div className={`mp-side-panel__body${padded ? ' mp-side-panel__body--padded' : ''}`}>{children}</div>
     </div>

@@ -4,6 +4,7 @@ import {
   type GeoBoundaryCollection,
   type GeoDashboard,
   type GeoDemand,
+  type GeoFilterOption,
   type GetGeoAnalyticsDashboardRequest,
   type GetGeoDemandHeatmapMeasureEnum,
 } from '@materyalph/api-client-ts'
@@ -49,8 +50,23 @@ export async function getGeoDashboard(filters: GeoFilters): Promise<GeoDashboard
   return (await api().getGeoAnalyticsDashboard(params(filters))).data
 }
 
-export async function getGeoDemand(filters: GeoFilters, measure: GetGeoDemandHeatmapMeasureEnum): Promise<GeoDemand> {
-  return (await api().getGeoDemandHeatmap({ ...params(filters), measure } as never)).data
+export async function getGeoDemand(filters: GeoFilters, measure: GetGeoDemandHeatmapMeasureEnum, page = 1): Promise<GeoDemand> {
+  return (await api().getGeoDemandHeatmap({ ...params(filters), measure, page })).data
+}
+
+/** Read every taxonomy page; demand rankings must never determine available filter choices. */
+export async function getGeoFilterOptions(categoryId?: string): Promise<GeoFilterOption[]> {
+  const options: GeoFilterOption[] = []
+  const client = api()
+  let page = 1
+  let lastPage = 1
+  do {
+    const result = await client.getGeoFilterOptions({ ...(categoryId ? { categoryId } : {}), page })
+    options.push(...result.data)
+    lastPage = result.meta.lastPage
+    page += 1
+  } while (page <= lastPage)
+  return options
 }
 
 export async function getGeoBoundaries(area: string | null): Promise<GeoBoundaryCollection> {

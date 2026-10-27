@@ -3,6 +3,7 @@ import { AlertTriangle, ArrowDownRight, ArrowUpRight, Award, BadgeCheck, Clock, 
 import { chartLeftInset, chartMinimumWidth, chartTicks } from './chart-layout'
 import { useMeasuredWidth } from './geo-analytics-patterns'
 import { StatusBadge } from './portal-shell'
+import { MaterialThumbnail } from './material-thumbnail'
 
 /** One graph/table day. A null value is a gap (missing day, suppressed or no local observation) — never zero. */
 export type PricePoint = {
@@ -200,12 +201,36 @@ export function SuppressionNotice({ label = 'Insufficient Competitor Data' }: { 
 
 export function DatasetNotice({ label, updateSchedule, snapshotAt, currentAsOf, explanation }: { label: string; updateSchedule?: string | null; snapshotAt?: string | null; currentAsOf?: string | null; explanation?: string | null }) {
   const time = new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' })
-  return <div className="grid gap-1 border-l-4 border-brand-orange-500 bg-brand-orange-50 px-4 py-3 text-sm text-text-strong">
-    <p className="font-semibold">{label}</p>
-    <p className="inline-flex flex-wrap items-center gap-x-3 gap-y-1 text-text-secondary"><span className="inline-flex items-center gap-1"><Clock size={14} aria-hidden="true" />{updateSchedule ?? 'Updated daily'}</span>
-      {snapshotAt && <span>Last successful capture: {time.format(new Date(snapshotAt))} (Asia/Manila)</span>}
-      {currentAsOf && <span>Current offers as of {time.format(new Date(currentAsOf))}</span>}</p>
-    {explanation && <p className="text-text-secondary">{explanation}</p>}
+  return <section aria-label={label} className="grid min-w-0 gap-4 rounded-control border border-border-default bg-surface-canvas p-4 text-sm">
+    <p className="flex items-center gap-2 font-semibold text-text-strong"><Clock size={16} aria-hidden="true" className="shrink-0 text-text-secondary" />{label}</p>
+    <dl className="grid min-w-0 gap-x-6 gap-y-4 md:grid-cols-3">
+      <div className="min-w-0"><dt className="text-xs text-text-secondary">Capture schedule</dt><dd className="mt-1 break-words font-medium leading-5 text-text-strong">{updateSchedule ?? 'Updated daily'}</dd></div>
+      <div className="min-w-0"><dt className="text-xs text-text-secondary">Last successful capture</dt><dd className="mt-1 break-words font-medium leading-5 text-text-strong">{snapshotAt ? <time dateTime={snapshotAt}>{time.format(new Date(snapshotAt))} (Asia/Manila)</time> : 'No published capture yet'}</dd></div>
+      {currentAsOf && <div className="min-w-0"><dt className="text-xs text-text-secondary">Current offers as of</dt><dd className="mt-1 break-words font-medium leading-5 text-text-strong"><time dateTime={currentAsOf}>{time.format(new Date(currentAsOf))} (Asia/Manila)</time></dd></div>}
+    </dl>
+    {explanation && <p className="border-t border-border-default pt-3 text-[13px] leading-6 text-text-secondary">{explanation}</p>}
+  </section>
+}
+
+export type MaterialPriceTableRow = {
+  id: string; name: string; category: string; categoryCode: string; unit: string; imageUrl?: string | null | undefined
+  average: ReactNode; vendors: ReactNode; change: ReactNode; currentOffers: ReactNode; action: ReactNode
+}
+
+/** One accessible price table, with labelled stacked cells on narrow screens. Values retain their source semantics. */
+export function MaterialPriceTable({ rows }: { rows: MaterialPriceTableRow[] }) {
+  const columns = ['Material / variant', 'Average (end)', 'Snapshot Vendors', 'Price change', 'Current offers', 'Details']
+  const layout = 'grid grid-cols-2 gap-x-4 gap-y-4 xl:grid-cols-[minmax(14rem,2fr)_minmax(7rem,0.85fr)_5rem_minmax(11rem,1.3fr)_minmax(6rem,0.75fr)_6rem]'
+  return <div role="table" aria-label="Comparable material averages" className="min-w-0 overflow-hidden rounded-control border border-border-default bg-surface-primary text-sm">
+    <div role="rowgroup" className="sr-only xl:not-sr-only"><div role="row" className={`${layout} items-center border-b border-border-default bg-surface-canvas px-4 py-3 text-xs font-semibold text-text-secondary`}>{columns.map(label => <div role="columnheader" key={label}>{label}</div>)}</div></div>
+    <div role="rowgroup" className="divide-y divide-border-default">{rows.map(row => <div role="row" key={row.id} className={`${layout} min-w-0 items-start px-4 py-5 hover:bg-surface-canvas`}>
+      <div role="cell" aria-colindex={1} className="col-span-2 min-w-0 xl:col-span-1"><div className="flex min-w-0 items-start gap-3"><MaterialThumbnail url={row.imageUrl} categoryCode={row.categoryCode} size="sm" /><div className="min-w-0"><p className="break-words font-semibold leading-5 text-text-strong">{row.name}</p><p className="mt-1 break-words text-xs leading-5 text-text-secondary">{row.category} · per {row.unit}</p></div></div></div>
+      <div role="cell" aria-colindex={2} className="min-w-0 tabular-nums"><p aria-hidden="true" className="mb-1 text-xs text-text-secondary xl:hidden">Average (end)</p>{row.average}</div>
+      <div role="cell" aria-colindex={3} className="min-w-0 tabular-nums"><p aria-hidden="true" className="mb-1 text-xs text-text-secondary xl:hidden">Snapshot Vendors</p>{row.vendors}</div>
+      <div role="cell" aria-colindex={4} className="col-span-2 min-w-0 break-words leading-5 xl:col-span-1"><p aria-hidden="true" className="mb-1 text-xs text-text-secondary xl:hidden">Price change</p>{row.change}</div>
+      <div role="cell" aria-colindex={5} className="min-w-0 tabular-nums"><p aria-hidden="true" className="mb-1 text-xs text-text-secondary xl:hidden">Current offers</p>{row.currentOffers}</div>
+      <div role="cell" aria-colindex={6} className="flex min-w-0 justify-end xl:justify-start">{row.action}</div>
+    </div>)}</div>
   </div>
 }
 

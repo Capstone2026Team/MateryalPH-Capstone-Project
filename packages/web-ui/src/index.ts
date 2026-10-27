@@ -130,6 +130,8 @@ export { QuotationDeliveryArrangement } from './quotation-delivery-arrangement'
 export { NrpcPreparationEditor } from './nrpc-preparation-editor'
 export { nrpcPreparationAssessment, orderNrpcMaterialPreview, orderMaterialAmountLines, type NrpcPreparedMaterial, type NrpcPreparationValue } from './nrpc-preparation'
 export { MaterialThumbnail, categoryIcon } from './material-thumbnail'
+export { MaterialPriceTable, type MaterialPriceTableRow } from './analytics-patterns'
+export { FilterDisclosure } from './filter-controls'
 
 export { shouldRotateIdempotencyKey } from './idempotency'
 export { openPendingWindow } from './pending-window'

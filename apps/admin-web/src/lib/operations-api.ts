@@ -39,8 +39,10 @@ const config = () => createWebApiConfiguration(basePath, { refreshSession: true 
 export const newKey = (): string => crypto.randomUUID()
 
 const pageOf = <T>(items: T[], meta: unknown): Page<T> => {
-  const value = (meta ?? {}) as { total?: number; last_page?: number }
-  return { items, total: Number(value.total ?? items.length), lastPage: Math.max(1, Number(value.last_page ?? 1)) }
+  const value = (meta ?? {}) as { total?: number; last_page?: number; per_page?: number }
+  const total = Number(value.total ?? items.length)
+  const pages = value.per_page && value.per_page > 0 ? Math.ceil(total / value.per_page) : 1
+  return { items, total, lastPage: Math.max(1, Number(value.last_page ?? pages)) }
 }
 
 /** A structured API failure: the stable code drives conflict and re-authentication handling, never the message text. */
@@ -132,6 +134,16 @@ export async function integrationOverview(): Promise<IntegrationOverview> {
 export async function operationFailures(kind: 'OUTBOX' | 'JOBS', page = 1, range?: CalendarRange): Promise<Page<OperationFailure>> {
   const response = await new AdminIntegrationHealthApi(config()).listOperationFailures({ kind, page, ...dateQuery(range) })
   return pageOf(response.data, response.meta)
+}
+/** Finish reading the paginated preview before retrying anything, so our own retries cannot shift later pages. */
+export async function operationRetryPreview(kind: 'OUTBOX' | 'JOBS'): Promise<OperationFailure[]> {
+  const first = await operationFailures(kind)
+  const rows = new Map(first.items.map(item => [`${item.kind}:${item.reference}`, item]))
+  for (let page = 2; page <= first.lastPage; page++) {
+    const next = await operationFailures(kind, page)
+    next.items.forEach(item => rows.set(`${item.kind}:${item.reference}`, item))
+  }
+  return [...rows.values()]
 }
 export async function operationRetries(): Promise<OperationRetryRecord[]> {
   return (await new AdminIntegrationHealthApi(config()).listOperationRetries()).data

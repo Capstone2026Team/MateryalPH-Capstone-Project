@@ -162,7 +162,7 @@ test('the Buyer profile separates profile, ratings and reviews, and usage and ac
   expect(screen.getByText('Orders').closest('div')).toHaveTextContent('5')
   expect(screen.getByText('Sign-ins in 30 days').closest('div')).toHaveTextContent('8')
   expect(screen.getByText('Disputes (open / total)').closest('div')).toHaveTextContent('1 / 2')
-  expect(within(screen.getByRole('region', { name: 'Recent orders' })).getByText('ORD-AAA')).toBeInTheDocument()
+  expect(within(screen.getByRole('table', { name: 'Recent orders' })).getByText('ORD-AAA')).toBeInTheDocument()
 })
 
 test('a deleted Buyer shows the masked address and no mobile, and a missing Buyer reports a failure with retry', async () => {

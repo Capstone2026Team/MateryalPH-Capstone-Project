@@ -213,6 +213,8 @@ class _BooleanConstSerializer<T> implements PrimitiveSerializer<T> {
         "lib/src/model/vendor_verification_submit.dart": ["draft"],
         "lib/src/model/vendor_verification_draft.dart": ["legalIdentity", "taxProfile", "classification"],
         "lib/src/model/catalog_listing_summary_list_envelope.dart": ["meta"],
+        "lib/src/model/geo_filter_options_envelope.dart": ["meta"],
+        "lib/src/model/geo_demand.dart": ["columnPagination"],
         "lib/src/model/inventory_ledger_envelope.dart": ["meta"],
         "lib/src/model/inventory_movement_list_envelope.dart": ["meta"],
         "lib/src/model/fleet_vehicle_list_envelope.dart": ["meta"],

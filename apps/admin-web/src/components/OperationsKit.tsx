@@ -1,5 +1,5 @@
 import { DataTable, Pagination } from '@materyalph/web-ui'
-import type { ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
 import type { PagedState } from '../lib/operations-hooks'
 import { ErrorState, LoadingState } from '../pages/PhaseThreeAdminPages'
 
@@ -8,8 +8,10 @@ export function Pager({ page, lastPage, busy, onChange, total }: { page: number;
 }
 
 export function Panel({ title, description, actions, children, id }: { title: string; description?: string; actions?: ReactNode; children: ReactNode; id?: string }) {
-  return <section aria-labelledby={id ?? title} className="grid min-w-0 gap-4 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5">
-    <div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><h2 id={id ?? title} className="text-lg font-semibold text-text-strong">{title}</h2>{description && <p className="mt-1 text-sm text-text-secondary">{description}</p>}</div>{actions && <div className="flex flex-wrap gap-2">{actions}</div>}</div>
+  const generatedId = useId()
+  const headingId = id ?? generatedId
+  return <section aria-labelledby={headingId} className="grid min-w-0 gap-4 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5">
+    <div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><h2 id={headingId} className="text-lg font-semibold text-text-strong">{title}</h2>{description && <p className="mt-1 text-sm text-text-secondary">{description}</p>}</div>{actions && <div className="flex flex-wrap gap-2">{actions}</div>}</div>
     {children}
   </section>
 }

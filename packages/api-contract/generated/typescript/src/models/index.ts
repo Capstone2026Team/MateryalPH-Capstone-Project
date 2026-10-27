@@ -574,6 +574,8 @@ export * from './GeoDemandColumnsInner';
 export * from './GeoDemandEnvelope';
 export * from './GeoDemandRowsInner';
 export * from './GeoFilterApplicability';
+export * from './GeoFilterOption';
+export * from './GeoFilterOptionsEnvelope';
 export * from './GeoKpis';
 export * from './GeoKpisActiveUsers';
 export * from './GeoRate';

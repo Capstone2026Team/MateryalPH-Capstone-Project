@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { AlertCircle, Camera, Check, CheckCircle2, ClipboardCheck, ClipboardList, Package, Pencil, QrCode, RefreshCw, Search, ShieldAlert, Trash2, Truck, UploadCloud } from 'lucide-react'
+import { AlertCircle, Camera, Check, CheckCircle2, ChevronDown, ClipboardCheck, ClipboardList, Package, Pencil, QrCode, RefreshCw, Search, ShieldAlert, Trash2, Truck, UploadCloud } from 'lucide-react'
 import type { CatalogAttributeDefinition, CompliancePath, ComplianceRegisterRecord, MarkingType } from '@materyalph/api-client-ts'
-import { Button, Field, QuantityField, MediaUploadField, RowGroup, StatusMessage, type MediaItem } from '@materyalph/web-ui'
+import { Button, ChoiceField, Field, FileSelectionField, QuantityField, MediaUploadField, RowGroup, StatusMessage, type MediaItem } from '@materyalph/web-ui'
 import {
   formatCentavos, getMaterial, readableCatalogError, catalogFieldErrors, lookupCompliance, refusedComplianceLookup, submitCompliance, uploadComplianceEvidence,
   type CatalogListing, type CatalogMaterial, type CatalogMaterialMatch, type CatalogTaxonomy, type ComplianceEvidence, type ComplianceLookup,
@@ -420,27 +420,27 @@ function ComplianceSection({ listing, canSubmit, busy, setBusy, onSubmitted, bef
     <label className="flex min-h-11 items-start gap-3 text-sm"><input type="checkbox" className="mt-1 h-5 w-5 accent-action-primary" checked={confirmed} aria-invalid={Boolean(errors.confirmed)} aria-describedby={errors.confirmed ? 'confirm-error' : undefined} onChange={event => setConfirmed(event.target.checked)} />I checked this {copy.numberLabel} against the physical marking on the product.</label>
     {errors.confirmed && <p id="confirm-error" className="text-sm text-status-error" role="alert">{errors.confirmed}</p>}
   </>
-  return <section aria-labelledby="compliance-heading" className="grid min-w-0 gap-3 rounded-surface border border-border-default p-3 sm:p-4">
-    <div className="flex flex-wrap items-center justify-between gap-2"><h3 id="compliance-heading" className="text-sm font-semibold">DTI-BPS compliance marking (required)</h3><ListingBadge status={listing.complianceStatus} prefix="PS/ICC" /></div>
-    <p className="flex items-start gap-2 text-sm text-text-secondary"><ShieldAlert size={18} className="mt-0.5 shrink-0" aria-hidden="true" /><span><strong>{rule?.productName ?? 'This product'}</strong>{rule?.referenceStandard ? ` · ${rule.referenceStandard}` : ''}. Verify the PS licence or ICC sticker before publishing. MateryalPH review is a marketplace control, not DTI-BPS certification.</span></p>
+  return <section aria-labelledby="compliance-heading" className="grid min-w-0 gap-6 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-6">
+    <header className="grid gap-4 border-b border-border-default pb-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-control bg-brand-orange-50 text-action-primary"><ShieldAlert size={22} aria-hidden="true" /></span><div className="min-w-0"><h3 id="compliance-heading" className="text-lg font-semibold leading-6">DTI-BPS compliance marking<span className="sr-only"> (required)</span></h3><p className="mt-1 text-sm text-text-secondary">Required before publishing this regulated product.</p></div></div>
+        <ListingBadge status={listing.complianceStatus} prefix="PS/ICC" />
+      </div>
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm"><strong className="text-text-strong">{rule?.productName ?? 'This product'}</strong>{rule?.referenceStandard && <span className="text-text-secondary">{rule.referenceStandard}</span>}</div>
+      <p className="max-w-3xl text-sm leading-6 text-text-secondary">Verify the PS licence or ICC sticker on your product. MateryalPH review is a marketplace control, not DTI-BPS certification.</p>
+    </header>
     {listing.complianceStatus === 'VERIFIED' ? <StatusMessage tone="success">Verified{latest?.latestReview?.source === 'SYSTEM_REGISTER_MATCH' ? ' through a match with the current DTI-BPS register' : ' by Product Compliance review'}. Editing the manufacturer, brand, model or material reopens verification.</StatusMessage>
       : listing.complianceStatus === 'PENDING_ADMIN_REVIEW' ? <StatusMessage>Your manual review request is waiting for Product Compliance. You can replace it with a corrected number below.</StatusMessage> : null}
-    {latest?.registerRecord && <details className="text-sm"><summary className="min-h-11 cursor-pointer py-3 font-semibold">{latest.markingNumber ?? 'Submitted marking'} · Registered product details</summary><RegisterRecord record={latest.registerRecord} markingType={latest.markingType === 'ICC_STICKER' ? 'ICC_STICKER' : 'PS_MARK'} /></details>}
+    {latest?.registerRecord && <details className="group rounded-control bg-surface-canvas px-4 text-sm"><summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 font-semibold focus-visible:outline-2 focus-visible:outline-focus-ring [&::-webkit-details-marker]:hidden"><span className="min-w-0 break-words">{latest.markingNumber ?? 'Submitted marking'} · Registered product details</span><ChevronDown size={18} className="shrink-0 group-open:rotate-180" aria-hidden="true" /></summary><div className="border-t border-border-default py-4"><RegisterRecord record={latest.registerRecord} markingType={latest.markingType === 'ICC_STICKER' ? 'ICC_STICKER' : 'PS_MARK'} /></div></details>}
     {!canSubmit ? <StatusMessage>Your role cannot submit PS/ICC evidence.</StatusMessage> : listing.complianceStatus !== 'VERIFIED' && <>
-      <fieldset className="grid min-w-0 gap-2" disabled={busy}>
-        <legend className="text-sm font-semibold">Marking on the product</legend>
-        <div className="flex flex-wrap gap-2">{(['PS_MARK', 'ICC_STICKER'] as const).map(type => { const checked = markingType === type; return <label key={type} className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-control border px-3 py-2 text-sm ${checked ? 'border-action-primary bg-brand-orange-50' : 'border-border-default'}`}><input type="radio" name="marking_choice" className="h-4 w-4 accent-action-primary" checked={checked} onChange={() => changeType(type)} /><span className="font-semibold">{MARKING_COPY[type].name}</span><span className="text-text-secondary">{type === 'PS_MARK' ? '· Local' : '· Imported'}</span></label> })}</div>
-      </fieldset>
-      <fieldset className="grid min-w-0 gap-2" disabled={busy}>
-        <legend className="text-sm font-semibold">How will you provide the marking?</legend>
-        <div className="flex flex-wrap gap-2">{pathOptions.filter(option => markingType === 'ICC_STICKER' || option.value !== 'QR').map(option => { const Icon = option.icon; const checked = path === option.value; return <label key={option.value} className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-control border px-3 py-2 text-sm ${checked ? 'border-action-primary bg-brand-orange-50' : 'border-border-default'}`}><input type="radio" name="compliance_path" className="h-4 w-4 shrink-0 accent-action-primary" checked={checked} onChange={() => { setPath(option.value); setEvidence([]); setPending(null); setReadNote(null); setConfirmed(false) }} /><Icon size={16} aria-hidden="true" /><span className="font-semibold">{option.label}</span></label> })}</div>
-        <p className="text-sm text-text-secondary">{pathOptions.find(option => option.value === path)?.description}</p>
-      </fieldset>
-      <label hidden={Boolean(pending)} className={`grid cursor-pointer gap-1 rounded-control border border-dashed p-3 transition-colors motion-reduce:transition-none ${busy ? 'opacity-60' : 'border-border-default hover:border-action-primary'}`}>
-        <span className="flex items-center gap-2 text-sm font-semibold"><UploadCloud size={18} className="text-action-primary" aria-hidden="true" />{path === 'QR' ? 'Upload QR code image' : `Upload ${copy.name} marking photo`}</span>
-        <span className="text-xs text-text-secondary">{path === 'QR' ? 'Keep the whole QR code sharp and in frame.' : `Include the ${copy.numberLabel} below the mark.`} JPG, PNG or WebP · up to 10 MB · private evidence.</span>
-        <input ref={picker} type="file" accept={IMAGE_TYPES.join(',')} capture={path === 'PHOTO_OCR' ? 'environment' : undefined} disabled={busy} className="min-h-11 w-full min-w-0 max-w-xs text-sm" onChange={event => { choose(event.target.files?.[0]); event.target.value = '' }} />
-      </label>
+      <ChoiceField legend="Marking on the product" description="Select the marking printed on the physical product." name="marking_choice" value={markingType} disabled={busy} options={[
+        { value: 'PS_MARK', label: 'PS Mark', description: 'Locally manufactured product' },
+        { value: 'ICC_STICKER', label: 'ICC sticker', description: 'Imported product' },
+      ]} onChange={value => changeType(value as MarkingType)} />
+      <ChoiceField legend="How will you provide the marking?" description="A clear photo is required for every method." name="compliance_path" value={path} disabled={busy} options={pathOptions.filter(option => markingType === 'ICC_STICKER' || option.value !== 'QR').map(option => { const Icon = option.icon; return { ...option, icon: <Icon size={18} /> } })} onChange={value => { setPath(value as CompliancePath); setEvidence([]); setPending(null); setReadNote(null); setConfirmed(false) }} />
+      <div hidden={Boolean(pending)}>
+        <FileSelectionField inputRef={picker} label={path === 'QR' ? 'Upload QR code image' : `Upload ${copy.name} marking photo`} accept={IMAGE_TYPES.join(',')} chooseLabel="Choose photo" file={null} disabled={busy} camera={path === 'PHOTO_OCR'} hint={`${path === 'QR' ? 'Keep the whole QR code sharp and in frame.' : `Include the ${copy.numberLabel} below the mark.`} JPG, PNG or WebP · up to 10 MB · private evidence.`} onChange={file => choose(file ?? undefined)} />
+      </div>
       {pending && <section aria-labelledby="pending-photo-heading" className="grid gap-4 rounded-surface border border-border-default p-4 xl:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] xl:items-start">
         <div className="grid min-h-48 place-items-center overflow-hidden rounded-control border border-border-default bg-surface-canvas">{pending.url ? <img src={pending.url} alt={`Preview of ${pending.file.name}`} className="max-h-72 w-full object-contain" /> : <UploadCloud size={32} className="text-text-secondary" aria-hidden="true" />}</div>
         <div className="grid min-w-0 content-start gap-3">
@@ -458,11 +458,12 @@ function ComplianceSection({ listing, canSubmit, busy, setBusy, onSubmitted, bef
       </li>)}</ul>}
       {errors.evidence && <p className="text-sm text-status-error" role="alert">{errors.evidence}</p>}
 
-      <section aria-label="Check the marking number" className="grid gap-3">
+      <section aria-label="Check the marking number" className="grid gap-4 border-t border-border-default pt-5">
         {readNote && <p className="text-sm" role="status">{readNote}</p>}
-        <form className="flex flex-wrap items-start gap-3" noValidate onSubmit={event => { event.preventDefault(); void check(number) }}>
-          <div className="min-w-0 flex-1 basis-64"><Field ref={numberInput} label={copy.numberLabel} name="certificate_number" value={number} required autoComplete="off" spellCheck={false} autoCapitalize="characters" placeholder={copy.example} maxLength={60} error={errors.certificate_number} hint={copy.where} disabled={busy} onChange={event => changeNumber(event.target.value)} /></div>
-          <Button type="submit" variant="secondary" className="sm:mt-7" disabled={busy || lookup.status === 'checking'}><Search size={16} aria-hidden="true" />{lookup.status === 'checking' ? 'Checking…' : 'Check number'}</Button>
+        <form className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_auto]" noValidate onSubmit={event => { event.preventDefault(); void check(number) }}>
+          <Field ref={numberInput} label={copy.numberLabel} name="certificate_number" value={number} required autoComplete="off" spellCheck={false} autoCapitalize="characters" placeholder={copy.example} maxLength={60} error={errors.certificate_number} aria-describedby={errors.certificate_number ? 'certificate_number-error' : 'marking-number-hint'} disabled={busy} onChange={event => changeNumber(event.target.value)} />
+          <Button type="submit" variant="outline" className="self-start sm:mt-7" disabled={busy || lookup.status === 'checking'}><Search size={16} aria-hidden="true" />{lookup.status === 'checking' ? 'Checking…' : 'Check number'}</Button>
+          <p id="marking-number-hint" className="text-sm leading-6 text-text-secondary sm:col-span-2">{copy.where}</p>
         </form>
         <div aria-live="polite" className="grid gap-4">
           {lookup.status === 'checking' && <p className="text-sm text-text-secondary">Checking the DTI-BPS {copy.list}…</p>}
@@ -502,8 +503,10 @@ function ComplianceSection({ listing, canSubmit, busy, setBusy, onSubmitted, bef
         <div className="flex flex-wrap gap-2"><Button type="submit" disabled={busy}>{busy ? 'Sending…' : 'Send for manual review'}</Button><Button variant="quiet" disabled={busy} onClick={() => setManualReview(false)}>Cancel</Button></div>
       </form>}
     </>}
-    <details className="border-t border-border-default text-sm"><summary className="min-h-11 cursor-pointer py-3 font-semibold">Standard and marking requirements</summary><dl className="mb-2 grid gap-2 sm:grid-cols-2"><div><dt className="text-text-secondary">Technical regulation</dt><dd>{rule?.technicalRegulation ?? '—'}</dd></div><div><dt className="text-text-secondary">Scope</dt><dd>{rule?.scope ?? '—'}</dd></div></dl>{rule && <ul className="list-disc space-y-1 pl-5">{rule.markingRequirements.map(item => <li key={item}>{item}</li>)}</ul>}</details>
-    {listing.complianceSubmissions.length > 0 && <details className="border-t border-border-default text-sm"><summary id="submission-history" className="min-h-11 cursor-pointer py-3 font-semibold">Submission history ({listing.complianceSubmissions.length})</summary><ul className="divide-y divide-border-default">{listing.complianceSubmissions.map(item => <li key={item.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2"><span className="font-semibold">Version {item.version}</span><ListingState status={item.status} /><span className="text-text-secondary">{statusLabel(item.path)}{item.reviewMode === 'MANUAL_REVIEW' ? ' · Manual review requested' : ''}{item.latestReview ? ` · ${item.latestReview.source === 'SYSTEM_REGISTER_MATCH' ? 'Register match' : 'Admin review'}${item.latestReview.source !== 'SYSTEM_REGISTER_MATCH' && item.latestReview.reason ? `: ${item.latestReview.reason}` : ''}` : ''}</span></li>)}</ul></details>}
+    <div className="divide-y divide-border-default border-t border-border-default">
+      <details className="group text-sm"><summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-4 font-semibold focus-visible:outline-2 focus-visible:outline-focus-ring [&::-webkit-details-marker]:hidden">Standard and marking requirements<ChevronDown size={18} className="shrink-0 group-open:rotate-180" aria-hidden="true" /></summary><div className="grid gap-3 pb-4"><dl className="grid gap-3 sm:grid-cols-2"><div><dt className="text-text-secondary">Technical regulation</dt><dd className="mt-1 font-medium">{rule?.technicalRegulation ?? '—'}</dd></div><div><dt className="text-text-secondary">Scope</dt><dd className="mt-1 font-medium">{rule?.scope ?? '—'}</dd></div></dl>{rule && <ul className="list-disc space-y-1 pl-5">{rule.markingRequirements.map(item => <li key={item}>{item}</li>)}</ul>}</div></details>
+      {listing.complianceSubmissions.length > 0 && <details className="group text-sm"><summary id="submission-history" className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-4 font-semibold focus-visible:outline-2 focus-visible:outline-focus-ring [&::-webkit-details-marker]:hidden"><span>Submission history ({listing.complianceSubmissions.length})</span><ChevronDown size={18} className="shrink-0 group-open:rotate-180" aria-hidden="true" /></summary><ul className="divide-y divide-border-default pb-2">{listing.complianceSubmissions.map(item => <li key={item.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3"><span className="font-semibold">Version {item.version}</span><ListingState status={item.status} /><span className="text-text-secondary">{statusLabel(item.path)}{item.reviewMode === 'MANUAL_REVIEW' ? ' · Manual review requested' : ''}{item.latestReview ? ` · ${item.latestReview.source === 'SYSTEM_REGISTER_MATCH' ? 'Register match' : 'Admin review'}${item.latestReview.source !== 'SYSTEM_REGISTER_MATCH' && item.latestReview.reason ? `: ${item.latestReview.reason}` : ''}` : ''}</span></li>)}</ul></details>}
+    </div>
   </section>
 }
 

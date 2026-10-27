@@ -42,6 +42,11 @@ void main() {
       // TODO
     });
 
+    // PageMeta columnPagination
+    test('to test the property `columnPagination`', () async {
+      // TODO
+    });
+
     // int notComparableLines
     test('to test the property `notComparableLines`', () async {
       // TODO

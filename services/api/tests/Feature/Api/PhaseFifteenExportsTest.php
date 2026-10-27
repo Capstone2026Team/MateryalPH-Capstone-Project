@@ -19,6 +19,7 @@ use Carbon\CarbonImmutable;
 use Database\Seeders\SystemFoundationSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Queue\MaxAttemptsExceededException;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
@@ -53,7 +54,55 @@ final class PhaseFifteenExportsTest extends TestCase
         $this->fakePayments();
     }
 
-    private function export(string $audience, string $type, string $resource, string $format = 'CSV', ?string $key = null): array
+    /** @return array<string, array{string}> */
+    public static function auditExportFormats(): array
+    {
+        return ['PDF' => ['PDF'], 'CSV' => ['CSV']];
+    }
+
+    #[DataProvider('auditExportFormats')]
+    public function test_worker_exhaustion_fails_audit_exports_and_operator_retry_keeps_the_snapshot(string $format): void
+    {
+        Queue::fake();
+        $this->signInAdmin($this->admin());
+        $export = $this->export('admin', 'AUDIT_LOG', null, $format);
+        $snapshot = DB::table('data_exports')->where('id', $export['id'])->value('source_snapshot');
+        $eventId = (string) DB::table('outbox_events')->where('aggregate_id', $export['id'])->value('id');
+        $job = new ProcessOutboxEvent($eventId);
+        $job->failed(new MaxAttemptsExceededException);
+        $job->failed(new MaxAttemptsExceededException);
+        self::assertSame('FAILED', DB::table('data_exports')->where('id', $export['id'])->value('state'));
+        self::assertSame(OutboxProcessor::MAX_ATTEMPTS, DB::table('outbox_events')->where('id', $eventId)->value('attempts'));
+        self::assertNull(DB::table('outbox_events')->where('id', $eventId)->value('dispatched_until'));
+        $this->getJson('/api/v1/admin/reports?type=AUDIT_LOG&format='.$format)->assertOk()->assertJsonPath('data.0.failure_code', 'GENERATION_FAILED');
+        $this->postJson('/api/v1/admin/integrations/retries', ['target_type' => 'OUTBOX_EVENT', 'reference' => $eventId, 'reason' => 'Renderer repaired; retry immutable audit export'], ['Idempotency-Key' => (string) Str::uuid7()])->assertAccepted();
+        app(OutboxProcessor::class)->process($eventId);
+        $job->failed(new MaxAttemptsExceededException);
+        self::assertSame('READY', DB::table('data_exports')->where('id', $export['id'])->value('state'));
+        self::assertSame($snapshot, DB::table('data_exports')->where('id', $export['id'])->value('source_snapshot'));
+        $this->get('/api/v1/admin/reports/'.$export['id'].'/download')->assertOk();
+    }
+
+    public function test_worker_failure_preserves_revoked_exports_and_quarantined_imports(): void
+    {
+        Queue::fake();
+        $admin = $this->admin();
+        $this->signInAdmin($admin);
+        $export = $this->export('admin', 'AUDIT_LOG', null, 'CSV');
+        $eventId = (string) DB::table('outbox_events')->where('aggregate_id', $export['id'])->value('id');
+        $this->app->instance('env', 'staging');
+        config(['mail.outbox_delivery_not_before' => now()->addDay()->toISOString()]);
+        (new ProcessOutboxEvent($eventId))->failed(new MaxAttemptsExceededException);
+        self::assertSame('QUEUED', DB::table('data_exports')->where('id', $export['id'])->value('state'));
+        self::assertSame(0, DB::table('outbox_events')->where('id', $eventId)->value('attempts'));
+        config(['mail.outbox_delivery_not_before' => null]);
+        DB::table('admin_memberships')->where('user_id', $admin->id)->update(['status' => 'SUSPENDED']);
+        app(OutboxProcessor::class)->process($eventId);
+        (new ProcessOutboxEvent($eventId))->failed(new MaxAttemptsExceededException);
+        self::assertSame('REVOKED', DB::table('data_exports')->where('id', $export['id'])->value('state'));
+    }
+
+    private function export(string $audience, string $type, ?string $resource, string $format = 'CSV', ?string $key = null): array
     {
         return $this->postJson('/api/v1/'.$audience.'/reports', ['type' => $type, 'resource_id' => $resource, 'format' => $format, 'purpose' => 'Sample procurement review'], ['Idempotency-Key' => $key ?? (string) Str::uuid7()])->assertAccepted()->json('data');
     }

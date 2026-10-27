@@ -58,17 +58,18 @@ export type KpiBreakdownData = { caption: string; rows: readonly KpiBreakdownRow
  * calculation behind the number. The change is text plus an arrow icon in neutral ink: whether a rise is good depends
  * on the measure, so colour never judges it. The breakdown sits at the bottom so cards in one row line up.
  */
-export function KpiCard({ label, value, hint, icon, delta, sparkline, breakdown, collapsibleBreakdown = false, accent = false }: { label: string; value: ReactNode; hint?: ReactNode; icon?: ReactNode; delta?: KpiDelta | null; sparkline?: (number | null)[]; breakdown?: KpiBreakdownData; collapsibleBreakdown?: boolean; accent?: boolean }) {
+export function KpiCard({ label, value, hint, icon, delta, sparkline, breakdown, actions, collapsibleBreakdown = false, accent = false, density = 'comfortable', className = '' }: { label: string; value: ReactNode; hint?: ReactNode; icon?: ReactNode; delta?: KpiDelta | null; sparkline?: (number | null)[]; breakdown?: KpiBreakdownData; actions?: ReactNode; collapsibleBreakdown?: boolean; accent?: boolean; density?: 'comfortable' | 'compact'; className?: string }) {
   const change = delta?.changePercent
   const Icon = change === null || change === undefined || change === 0 ? Minus : change > 0 ? ArrowUpRight : ArrowDownRight
-  return <div className={`mp-viz flex min-w-0 flex-col rounded-surface border border-border-default border-t-2 bg-surface-primary p-5 ${accent ? 'border-t-brand-orange-500' : 'border-t-border-default'}`}>
-    <dt className="flex min-h-10 items-start justify-between gap-3 text-xs font-semibold leading-5 text-text-secondary"><span>{label}</span>{icon && <span className="grid h-8 w-8 shrink-0 place-items-center rounded-control bg-brand-orange-50 text-action-primary">{icon}</span>}</dt>
-    <dd className="mt-2 break-words text-3xl font-semibold leading-tight tracking-tight text-text-strong">{value}</dd>
+  return <div className={`mp-viz flex min-w-0 flex-col rounded-surface border border-border-default border-t-2 bg-surface-primary ${density === 'compact' ? 'p-3' : 'p-5'} ${accent ? 'border-t-brand-orange-500' : 'border-t-border-default'} ${className}`}>
+    <dt className={`flex items-start justify-between text-xs font-semibold leading-5 text-text-secondary ${density === 'compact' ? 'gap-2' : 'min-h-10 gap-3'}`}><span>{label}</span>{icon && <span className={`grid shrink-0 place-items-center rounded-control bg-brand-orange-50 text-action-primary ${density === 'compact' ? 'h-6 w-6' : 'h-8 w-8'}`}>{icon}</span>}</dt>
+    <dd className={`break-words font-semibold leading-tight tracking-tight text-text-strong ${density === 'compact' ? 'mt-1.5 text-xl sm:text-2xl' : 'mt-2 text-3xl'}`}>{value}</dd>
     {delta && <dd className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-text-strong"><Icon size={14} aria-hidden="true" />
       {change === null || change === undefined ? `No ${delta.periodLabel} to compare` : `${change > 0 ? '+' : ''}${change.toFixed(1)}% vs ${delta.periodLabel}`}</dd>}
     {hint && <dd className="mt-1 text-xs leading-5 text-text-secondary">{hint}</dd>}
     {sparkline && sparkline.some(point => point !== null) && <dd className="mt-3" aria-hidden="true"><Sparkline values={sparkline} /></dd>}
     {breakdown && <dd className="mt-auto pt-4">{collapsibleBreakdown ? <details><summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-action-primary focus-visible:outline-2 focus-visible:outline-focus-ring">View breakdown<span className="sr-only"> for {label}</span></summary><KpiBreakdown {...breakdown} /></details> : <KpiBreakdown {...breakdown} />}</dd>}
+    {actions && <dd className="mt-auto pt-4">{actions}</dd>}
   </div>
 }
 
@@ -103,7 +104,7 @@ export function BarList({ label, items, colorVar = '--mp-viz-series-1', empty }:
   const high = Math.max(...items.map(item => item.value), 1)
   return <ol aria-label={label} className="mp-viz grid gap-3">{items.map(item => <li key={item.key} className="grid gap-1">
     <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm"><span className="min-w-0 break-words font-medium text-text-strong">{item.label}</span><span className="min-w-0 break-words font-semibold tabular-nums text-text-strong">{item.display}</span></div>
-    <div className="h-2 rounded-pill bg-surface-canvas" aria-hidden="true"><div className="h-2 rounded-pill" style={{ width: `${Math.max(2, (item.value / high) * 100)}%`, background: `var(${colorVar})` }} /></div>
+    <div className="h-2 rounded-pill bg-surface-canvas" aria-hidden="true"><div className="h-2 rounded-pill" style={{ width: `${item.value <= 0 ? 0 : Math.max(2, (item.value / high) * 100)}%`, background: `var(${colorVar})` }} /></div>
     {item.detail && <p className="text-xs text-text-secondary">{item.detail}</p>}
   </li>)}</ol>
 }

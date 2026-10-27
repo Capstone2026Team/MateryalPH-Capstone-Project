@@ -46,11 +46,11 @@ const adminModuleHrefs: Record<string, string> = { 'vendor-verification': '/vend
 const adminNavigation: PortalNavSection[] = [
   { label: 'Overview', items: [{ label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={16} aria-hidden="true" /> }] },
   { label: 'User Management', items: [
-    { label: 'Vendor Users', href: '/vendor-users', icon: <ContactRound size={16} aria-hidden="true" />, child: true },
-    { label: 'Buyer Users', href: '/buyer-users', icon: <ContactRound size={16} aria-hidden="true" />, child: true },
+    { label: 'Vendor Users', href: '/vendor-users', icon: <ContactRound size={18} aria-hidden="true" /> },
+    { label: 'Buyer Users', href: '/buyer-users', icon: <ContactRound size={18} aria-hidden="true" /> },
   ] },
-  ...[['Marketplace', [['Marketplace Analytics', 'marketplace-analytics']]], ['Compliance & quality', [['Vendor Verification', 'vendor-verification'],['Product Compliance Queue', 'product-compliance'], ['Disputes & Appeals', 'disputes'], ['Enforcement', 'enforcement'], ['Score & Badge Monitoring', 'scores'], ['Review Moderation', 'moderation']]], ['Finance', [['Platform Finance', 'transactions'], ['Orders & Refunds', 'order-operations']]], ['Platform', [['Platform Settings', 'settings'], ['Support Requests', 'support'], ['Integration & Job Health', 'integrations']]]].map(([label, entries]) => ({ label: label as string, items: (entries as string[][]).map(([label = '', key = '']) => ({ label, href: adminModuleHrefs[key] ?? `/preview/${key}`, icon: (() => { const Icon = adminModuleIcons[key] ?? FileText; return <Icon size={18} aria-hidden="true" /> })() })) })),
-  { label: 'Tracking', items: [{ label: 'Audit Log', href: '/audit', icon: <History size={16} aria-hidden="true" /> }] },
+  ...[['Marketplace', [['Marketplace Analytics', 'marketplace-analytics']]], ['Compliance & quality', [['Vendor Verification', 'vendor-verification'],['Product Compliance Queue', 'product-compliance'], ['Disputes & Appeals', 'disputes'], ['Enforcement', 'enforcement'], ['Score & Badge Monitoring', 'scores'], ['Review Moderation', 'moderation']]], ['Platform', [['Platform Finance', 'transactions'], ['Platform Settings', 'settings'], ['Support Requests', 'support'], ['Integration & Job Health', 'integrations']]]].map(([label, entries]) => ({ label: label as string, items: (entries as string[][]).map(([label = '', key = '']) => ({ label, href: adminModuleHrefs[key] ?? `/preview/${key}`, icon: (() => { const Icon = adminModuleIcons[key] ?? FileText; return <Icon size={18} aria-hidden="true" /> })() })) })),
+  { label: 'Tracking', items: [{ label: 'Orders & Refunds Logs', href: '/order-operations', icon: <ReceiptText size={18} aria-hidden="true" /> }, { label: 'Audit Log', href: '/audit', icon: <History size={16} aria-hidden="true" /> }] },
 ]
 
 function adminDate(): string {

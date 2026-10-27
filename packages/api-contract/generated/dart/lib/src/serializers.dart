@@ -587,6 +587,8 @@ import 'package:materyalph_api_client/src/model/geo_demand_columns_inner.dart';
 import 'package:materyalph_api_client/src/model/geo_demand_envelope.dart';
 import 'package:materyalph_api_client/src/model/geo_demand_rows_inner.dart';
 import 'package:materyalph_api_client/src/model/geo_filter_applicability.dart';
+import 'package:materyalph_api_client/src/model/geo_filter_option.dart';
+import 'package:materyalph_api_client/src/model/geo_filter_options_envelope.dart';
 import 'package:materyalph_api_client/src/model/geo_kpis.dart';
 import 'package:materyalph_api_client/src/model/geo_kpis_active_users.dart';
 import 'package:materyalph_api_client/src/model/geo_rate.dart';
@@ -1798,6 +1800,8 @@ part 'serializers.g.dart';
   GeoDemandEnvelope,
   GeoDemandRowsInner,
   GeoFilterApplicability,
+  GeoFilterOption,
+  GeoFilterOptionsEnvelope,
   GeoKpis,
   GeoKpisActiveUsers,
   GeoRate,
@@ -2932,6 +2936,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(OnboardingDraftVersion)]),
         () => ListBuilder<OnboardingDraftVersion>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(GeoFilterOption)]),
+        () => ListBuilder<GeoFilterOption>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(SupplierResult)]),

@@ -53,6 +53,7 @@ Route::prefix('admin')->middleware($web('ADMIN'))->group(function (): void {
 
     Route::get('/geo-analytics', [G::class, 'dashboard']);
     Route::get('/geo-analytics/demand', [G::class, 'demand']);
+    Route::get('/geo-analytics/filter-options', [G::class, 'filterOptions']);
     Route::get('/geo-analytics/boundaries', [G::class, 'boundaries']);
 
     Route::get('/finance/kpis', [F::class, 'kpis']);

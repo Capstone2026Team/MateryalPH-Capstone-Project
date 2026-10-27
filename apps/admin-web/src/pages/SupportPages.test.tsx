@@ -39,7 +39,7 @@ test('ticket management and conversation keep independent submissions and preser
   expect(update).toHaveBeenCalledTimes(1)
 })
 
-test('support status tabs preserve applied filters, reset pagination and stay selected when filters are applied', async () => {
+test('support filters update automatically, preserve other selections and reset pagination', async () => {
   const client = new SupportClient('/api/v1', 'admin')
   const list = vi.spyOn(client, 'list').mockResolvedValue(empty)
   render(<SupportRequestList client={client} admin renderHeader={actions => <PageHeader eyebrow="User assistance" title="Support Requests" actions={actions} />} onOpen={vi.fn()} />)
@@ -48,11 +48,13 @@ test('support status tabs preserve applied filters, reset pagination and stay se
   expect(screen.getByRole('button', { name: 'Refresh requests' }).closest('header')).not.toBeNull()
   expect(screen.getAllByRole('tab').map(tab => tab.textContent)).toEqual(['All requests', 'Open', 'In Progress', 'Waiting For User', 'Resolved', 'Closed'])
   expect(screen.getByRole('tab', { name: 'All requests' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.queryByRole('button', { name: 'Apply filters' })).not.toBeInTheDocument()
 
   fireEvent.change(screen.getByRole('textbox', { name: 'Search requests' }), { target: { value: 'delivery' } })
   fireEvent.change(screen.getByRole('combobox', { name: 'Category' }), { target: { value: 'COMPLAINT' } })
+  expect(list).toHaveBeenLastCalledWith({ category: 'COMPLAINT' }, undefined)
   fireEvent.change(screen.getByRole('combobox', { name: 'User type' }), { target: { value: 'GUEST' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Apply filters' }))
+  expect(list).toHaveBeenLastCalledWith({ category: 'COMPLAINT', userType: 'GUEST' }, undefined)
   await waitFor(() => expect(list).toHaveBeenLastCalledWith({ q: 'delivery', category: 'COMPLAINT', userType: 'GUEST' }, undefined))
   fireEvent.click(screen.getByRole('button', { name: 'All dates' }))
   fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-10-01' } })
@@ -64,26 +66,61 @@ test('support status tabs preserve applied filters, reset pagination and stay se
   fireEvent.click(await screen.findByRole('button', { name: 'Load more requests' }))
   await waitFor(() => expect(list).toHaveBeenLastCalledWith(applied, 'next-page'))
 
-  // Switching status must not submit an unfinished search draft.
-  fireEvent.change(screen.getByRole('textbox', { name: 'Search requests' }), { target: { value: 'unfinished search' } })
+  // A pending search must keep a status selected during the debounce delay.
+  fireEvent.change(screen.getByRole('textbox', { name: 'Search requests' }), { target: { value: 'updated search' } })
   list.mockResolvedValue(empty)
   fireEvent.click(screen.getByRole('tab', { name: 'Closed' }))
   await waitFor(() => expect(list).toHaveBeenLastCalledWith({ ...applied, status: 'CLOSED' }, undefined))
   await waitFor(() => expect(screen.queryByRole('button', { name: 'Load more requests' })).not.toBeInTheDocument())
   expect(screen.getByRole('tab', { name: 'Closed' })).toHaveAttribute('aria-selected', 'true')
-  expect(screen.getByRole('textbox', { name: 'Search requests' })).toHaveValue('unfinished search')
+  expect(screen.getByRole('textbox', { name: 'Search requests' })).toHaveValue('updated search')
 
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Apply filters' })).toBeEnabled())
-  fireEvent.click(screen.getByRole('button', { name: 'Apply filters' }))
-  await waitFor(() => expect(list).toHaveBeenLastCalledWith({ ...applied, q: 'unfinished search', status: 'CLOSED' }, undefined))
+  await waitFor(() => expect(list).toHaveBeenLastCalledWith({ ...applied, q: 'updated search', status: 'CLOSED' }, undefined))
   fireEvent.click(screen.getByRole('tab', { name: 'All requests' }))
-  await waitFor(() => expect(list).toHaveBeenLastCalledWith({ ...applied, q: 'unfinished search', status: undefined }, undefined))
+  await waitFor(() => expect(list).toHaveBeenLastCalledWith({ ...applied, q: 'updated search', status: undefined }, undefined))
   expect(screen.getByRole('tab', { name: 'All requests' })).toHaveAttribute('aria-selected', 'true')
   await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh requests' })).toBeEnabled())
   const calls = list.mock.calls.length
   fireEvent.click(screen.getByRole('button', { name: 'Refresh requests' }))
   await waitFor(() => expect(list).toHaveBeenCalledTimes(calls + 1))
-  expect(list).toHaveBeenLastCalledWith({ ...applied, q: 'unfinished search', status: undefined }, undefined)
+  expect(list).toHaveBeenLastCalledWith({ ...applied, q: 'updated search', status: undefined }, undefined)
+})
+
+test('search waits until typing pauses, clears automatically and ignores late results', async () => {
+  vi.useFakeTimers()
+  const client = new SupportClient('/api/v1', 'admin')
+  let resolveSearch: ((response: Awaited<ReturnType<SupportClient['list']>>) => void) | undefined
+  const list = vi.spyOn(client, 'list').mockImplementation(filters => filters.q === 'delivery'
+    ? new Promise(resolve => { resolveSearch = resolve })
+    : Promise.resolve(empty))
+  const view = render(<SupportRequestList client={client} admin onOpen={vi.fn()} />)
+  try {
+    await act(async () => {})
+    const search = screen.getByRole('textbox', { name: 'Search requests' })
+    fireEvent.change(search, { target: { value: 'del' } })
+    await act(async () => { await vi.advanceTimersByTimeAsync(200) })
+    fireEvent.change(search, { target: { value: 'delivery' } })
+    await act(async () => { await vi.advanceTimersByTimeAsync(299) })
+    expect(list).toHaveBeenCalledTimes(1)
+    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+    expect(list).toHaveBeenLastCalledWith({ q: 'delivery' }, undefined)
+    expect(screen.getByText('Loading support requests…')).toBeInTheDocument()
+
+    fireEvent.change(search, { target: { value: '' } })
+    await act(async () => { await vi.advanceTimersByTimeAsync(300) })
+    expect(list).toHaveBeenLastCalledWith({ q: undefined }, undefined)
+    expect(screen.getByText('No support requests found.')).toBeInTheDocument()
+    await act(async () => { resolveSearch?.({ ...empty, meta: { nextCursor: 'stale-search-page' } }) })
+    expect(screen.queryByRole('button', { name: 'Load more requests' })).not.toBeInTheDocument()
+
+    fireEvent.change(search, { target: { value: 'pending search' } })
+    view.unmount()
+    await act(async () => { await vi.advanceTimersByTimeAsync(300) })
+    expect(list).toHaveBeenCalledTimes(3)
+  } finally {
+    view.unmount()
+    vi.useRealTimers()
+  }
 })
 
 test('support date dialog cancels safely, applies open-ended dates and clears them with All dates', async () => {

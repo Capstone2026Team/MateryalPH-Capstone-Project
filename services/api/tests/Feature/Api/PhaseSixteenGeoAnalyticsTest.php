@@ -291,6 +291,130 @@ final class PhaseSixteenGeoAnalyticsTest extends TestCase
         self::assertSame('Asia/Manila', $prices->timezone);
     }
 
+    public function test_filter_choices_use_the_full_active_taxonomy_without_requiring_demand(): void
+    {
+        $this->signInAdmin($this->admin('ADMIN_SUPERADMIN'));
+        $ids = [];
+        foreach (range(1, 105) as $number) {
+            $ids[] = $id = (string) Str::uuid7();
+            DB::table('material_categories')->insert(['id' => $id, 'code' => 'GEO_TEST_'.$number, 'name' => 'Geo category '.$number, 'active' => true, 'sort_order' => 2000 + $number, 'created_at' => now(), 'updated_at' => now()]);
+        }
+        DB::table('material_categories')->where('id', $ids[0])->update(['active' => false]);
+        $expected = DB::table('material_categories')->where('active', true)->orderBy('sort_order')->orderBy('name')->orderBy('id')->pluck('id')->all();
+        $actual = [];
+        $page = 1;
+        do {
+            $response = $this->getJson('/api/v1/admin/geo-analytics/filter-options?page='.$page)->assertOk();
+            $response->assertJsonPath('meta.current_page', $page)->assertJsonPath('meta.total', count($expected));
+            self::assertLessThanOrEqual(100, count($response->json('data')));
+            $actual = [...$actual, ...array_column($response->json('data'), 'id')];
+            $page++;
+        } while ($page <= $response->json('meta.last_page'));
+        self::assertSame($expected, $actual);
+        self::assertSame(0, DB::table('analytics_order_facts')->count());
+
+        $material = DB::table('materials')->where('active', true)->first();
+        self::assertNotNull($material);
+        $choices = $this->getJson('/api/v1/admin/geo-analytics/filter-options?category_id='.$material->material_category_id)->assertOk();
+        self::assertSame(DB::table('materials')->where('active', true)->where('material_category_id', $material->material_category_id)->orderBy('name')->orderBy('id')->pluck('id')->all(), array_column($choices->json('data'), 'id'));
+        $this->getJson('/api/v1/admin/geo-analytics/filter-options?category_id='.$ids[1])->assertOk()->assertJsonPath('data', []);
+        $this->getJson('/api/v1/admin/geo-analytics/filter-options?page=0')->assertUnprocessable();
+        $this->getJson('/api/v1/admin/geo-analytics/filter-options?category_id=invalid')->assertUnprocessable();
+        $this->signInAdmin($this->admin('ADMIN_SUPPORT'));
+        $this->getJson('/api/v1/admin/geo-analytics/filter-options')->assertForbidden();
+    }
+
+    public function test_category_and_material_filters_keep_demand_lines_and_geographic_metrics_consistent(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Mixed Category Store', [['price' => 100000, 'qty' => '100']], 1000);
+        $this->confirmedOrder($store, $owner, $listing);
+        app(GeoFactsBuilder::class)->build('COMMAND');
+        $line = DB::table('analytics_order_line_facts')->first();
+        self::assertNotNull($line);
+        $other = DB::table('materials')->where('active', true)->where('material_category_id', '!=', $line->material_category_id)->first();
+        self::assertNotNull($other);
+        DB::table('analytics_order_line_facts')->insert([
+            'id' => (string) Str::uuid7(), 'analytics_order_fact_id' => $line->analytics_order_fact_id,
+            'material_category_id' => $other->material_category_id, 'material_id' => $other->id, 'unit_id' => $other->canonical_unit_id,
+            'quantity' => '3', 'normalized_quantity' => '3', 'value_centavos' => 12345,
+        ]);
+        $this->signInAdmin($this->admin('ADMIN_SUPERADMIN'));
+        $this->setK(1);
+        $category = '&category_id='.$other->material_category_id;
+        $demand = $this->getJson('/api/v1/admin/geo-analytics/demand?measure=VALUE'.$category)->assertOk();
+        $materialIds = array_column($demand->json('data.columns'), 'id');
+        self::assertContains((string) $other->id, $materialIds);
+        self::assertNotContains((string) $line->material_id, $materialIds, 'Unrelated materials from the same order are excluded.');
+        $ncr = collect($demand->json('data.rows'))->firstWhere('code', '1300000000');
+        self::assertSame(12345, $ncr['cells'][array_search((string) $other->id, $materialIds, true)]['value']);
+        $quantity = $this->getJson('/api/v1/admin/geo-analytics/demand?measure=QUANTITY'.$category.'&material_id='.$other->id)->assertOk();
+        self::assertSame('3.0000', collect($quantity->json('data.rows'))->firstWhere('code', '1300000000')['cells'][0]['value']);
+        $dashboard = $this->getJson('/api/v1/admin/geo-analytics?granularity=DAY'.$category)->assertOk();
+        $dashboard->assertJsonPath('data.kpis.order_volume.value', 1);
+        self::assertSame(1, array_sum(array_column($dashboard->json('data.trends'), 'order_volume')));
+        self::assertSame(1, collect($dashboard->json('data.children'))->firstWhere('code', '1300000000')['order_volume']['value']);
+        // Category and material must match the same line, even when the order contains both categories.
+        $this->getJson('/api/v1/admin/geo-analytics?'.$category.'&material_id='.$line->material_id)->assertOk()->assertJsonPath('data.kpis.order_volume.value', 0);
+        $emptyCategory = (string) Str::uuid7();
+        DB::table('material_categories')->insert(['id' => $emptyCategory, 'code' => 'GEO_EMPTY', 'name' => 'No order category', 'active' => true, 'created_at' => now(), 'updated_at' => now()]);
+        $empty = $this->getJson('/api/v1/admin/geo-analytics?category_id='.$emptyCategory)->assertOk()->assertJsonPath('data.kpis.order_volume.value', 0);
+        self::assertSame($dashboard->json('data.kpis.vendor_count'), $empty->json('data.kpis.vendor_count'));
+        $this->getJson('/api/v1/admin/geo-analytics/demand?category_id='.$emptyCategory)->assertOk()->assertJsonPath('data.columns', []);
+    }
+
+    public function test_demand_pages_include_every_active_category_and_material_even_without_orders(): void
+    {
+        $this->signInAdmin($this->admin('ADMIN_SUPERADMIN'));
+        $expected = DB::table('material_categories')->where('active', true)->orderBy('sort_order')->orderBy('name')->orderBy('id')->pluck('id')->all();
+        self::assertGreaterThan(8, count($expected));
+        $actual = [];
+        $page = 1;
+        do {
+            $response = $this->getJson('/api/v1/admin/geo-analytics/demand?page='.$page)->assertOk();
+            $response->assertJsonPath('data.column_pagination.current_page', $page)->assertJsonPath('data.column_pagination.total', count($expected));
+            self::assertLessThanOrEqual(8, count($response->json('data.columns')));
+            $actual = [...$actual, ...array_column($response->json('data.columns'), 'id')];
+            foreach ($response->json('data.rows') as $row) {
+                self::assertCount(count($response->json('data.columns')), $row['cells']);
+                foreach ($row['cells'] as $cell) {
+                    self::assertSame(0, $cell['value']);
+                    self::assertFalse($cell['suppressed']);
+                }
+            }
+            $page++;
+        } while ($page <= $response->json('data.column_pagination.last_page'));
+        self::assertSame($expected, $actual, 'No category is dropped by a sales-only or top-eight limit.');
+
+        $material = DB::table('materials')->where('active', true)->first();
+        self::assertNotNull($material);
+        $expectedMaterials = DB::table('materials')->where('active', true)->where('material_category_id', $material->material_category_id)->orderBy('name')->orderBy('id')->pluck('id')->all();
+        $actualMaterials = [];
+        $page = 1;
+        do {
+            $response = $this->getJson('/api/v1/admin/geo-analytics/demand?category_id='.$material->material_category_id.'&page='.$page)->assertOk();
+            $actualMaterials = [...$actualMaterials, ...array_column($response->json('data.columns'), 'id')];
+            $page++;
+        } while ($page <= $response->json('data.column_pagination.last_page'));
+        self::assertSame($expectedMaterials, $actualMaterials);
+        $this->getJson('/api/v1/admin/geo-analytics/demand?page=0')->assertUnprocessable();
+        $this->getJson('/api/v1/admin/geo-analytics?page=2')->assertUnprocessable()->assertJsonPath('errors.0.code', 'ANALYTICS_FILTER_UNSUPPORTED');
+    }
+
+    public function test_inactive_category_with_recorded_demand_is_retained_but_unused_inactive_categories_are_excluded(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Historical Category Store', [['price' => 100000, 'qty' => '100']], 1000);
+        $this->confirmedOrder($store, $owner, $listing);
+        app(GeoFactsBuilder::class)->build('COMMAND');
+        $categoryId = DB::table('analytics_order_line_facts')->value('material_category_id');
+        DB::table('material_categories')->update(['active' => false]);
+        $this->signInAdmin($this->admin('ADMIN_SUPERADMIN'));
+        $this->setK(1);
+        $response = $this->getJson('/api/v1/admin/geo-analytics/demand')->assertOk();
+        $response->assertJsonPath('data.column_pagination.total', 1)->assertJsonPath('data.columns.0.id', $categoryId);
+        $ncr = collect($response->json('data.rows'))->firstWhere('code', '1300000000');
+        self::assertSame(1, $ncr['cells'][0]['value']);
+    }
+
     private function confirmedOrder(VendorOrganization $store, User $owner, string $listing): User
     {
         [$buyer, $orderId] = $this->pickupOrder($store, $listing, [['variant' => 0, 'quantity' => '2']]);

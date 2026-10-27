@@ -38,6 +38,7 @@
     "test:vendor-review-contract": "dart run scripts/check-vendor-review.dart",
     "test:notifications-contract": "node scripts/check-notifications-contract.mjs",
     "test:admin-operations-contract": "node scripts/check-admin-operations-contract.mjs",
+    "test:geo-filter-options-dart": "dart run scripts/check-geo-filter-options.dart",
     "test:user-directory-contract": "node scripts/check-user-directory-contract.mjs",
     "test:dashboard-contract": "node scripts/check-dashboard-insights-contract.mjs",
     "test:product-analytics-contract": "node scripts/check-product-analytics-contract.mjs",

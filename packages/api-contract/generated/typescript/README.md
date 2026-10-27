@@ -145,6 +145,7 @@ All URIs are relative to */api/v1*
 *AdminGeographicAnalyticsApi* | [**getGeoAnalyticsDashboard**](docs/AdminGeographicAnalyticsApi.md#getgeoanalyticsdashboard) | **GET** /admin/geo-analytics |
 *AdminGeographicAnalyticsApi* | [**getGeoBoundaries**](docs/AdminGeographicAnalyticsApi.md#getgeoboundaries) | **GET** /admin/geo-analytics/boundaries |
 *AdminGeographicAnalyticsApi* | [**getGeoDemandHeatmap**](docs/AdminGeographicAnalyticsApi.md#getgeodemandheatmap) | **GET** /admin/geo-analytics/demand |
+*AdminGeographicAnalyticsApi* | [**getGeoFilterOptions**](docs/AdminGeographicAnalyticsApi.md#getgeofilteroptions) | **GET** /admin/geo-analytics/filter-options |
 *AdminIntegrationHealthApi* | [**getIntegrationHealth**](docs/AdminIntegrationHealthApi.md#getintegrationhealth) | **GET** /admin/integrations |
 *AdminIntegrationHealthApi* | [**listOperationFailures**](docs/AdminIntegrationHealthApi.md#listoperationfailures) | **GET** /admin/integrations/failures |
 *AdminIntegrationHealthApi* | [**listOperationRetries**](docs/AdminIntegrationHealthApi.md#listoperationretries) | **GET** /admin/integrations/retries |
@@ -1151,6 +1152,8 @@ All URIs are relative to */api/v1*
 - [GeoDemandEnvelope](docs/GeoDemandEnvelope.md)
 - [GeoDemandRowsInner](docs/GeoDemandRowsInner.md)
 - [GeoFilterApplicability](docs/GeoFilterApplicability.md)
+- [GeoFilterOption](docs/GeoFilterOption.md)
+- [GeoFilterOptionsEnvelope](docs/GeoFilterOptionsEnvelope.md)
 - [GeoKpis](docs/GeoKpis.md)
 - [GeoKpisActiveUsers](docs/GeoKpisActiveUsers.md)
 - [GeoRate](docs/GeoRate.md)

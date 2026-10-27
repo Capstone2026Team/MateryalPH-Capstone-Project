@@ -55,6 +55,27 @@ test('material rows show the permitted listing photo or fall back to the categor
   expect(plain!.querySelector('img')).toBeNull()
 })
 
+test('daily snapshot health stays collapsed until opened and restores focus after closing the popup', async () => {
+  vi.mocked(api.listRuns).mockResolvedValue([{ id: 'run-1', snapshotDate: parseDate('2026-10-27'), revision: 1, state: 'PUBLISHED', observedAt: new Date('2026-10-26T16:10:00Z'), vendors: 23, selected: 304, observations: 364, delayed: false }])
+  vi.mocked(api.listAdminAnalytics).mockResolvedValue({ dataset: { label: 'Recorded Marketplace Prices' }, window: {}, currentAsOf: new Date('2026-10-27T12:00:00Z'), snapshot: null, updateSchedule: 'Daily', explanation: 'Public prices.', items: [] } as never)
+  render(<MemoryRouter><MaterialsAnalyticsSection psgcCode={null} areaLabel="Philippines" /></MemoryRouter>)
+  await screen.findByText('No comparable materials in this scope')
+  const trigger = screen.getByRole('button', { name: 'Daily snapshot health' })
+  expect(trigger).toHaveAttribute('aria-expanded', 'false')
+  expect(screen.queryByRole('dialog', { name: 'Daily snapshot health' })).not.toBeInTheDocument()
+  trigger.focus()
+  fireEvent.click(trigger)
+  const dialog = screen.getByRole('dialog', { name: 'Daily snapshot health' })
+  expect(trigger).toHaveAttribute('aria-expanded', 'true')
+  expect(within(dialog).getByText('23 Vendors · 304 selected of 364 observations')).toBeVisible()
+  expect(within(dialog).getByText('PUBLISHED · rev 1')).toBeVisible()
+  expect(api.listRuns).toHaveBeenCalledTimes(1)
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }))
+  expect(screen.queryByRole('dialog', { name: 'Daily snapshot health' })).not.toBeInTheDocument()
+  expect(trigger).toHaveAttribute('aria-expanded', 'false')
+  expect(trigger).toHaveFocus()
+})
+
 test('moderation offers only server-allowed actions (never delete) and requires a recorded reason', async () => {
   vi.mocked(api.getModeration).mockResolvedValue(review())
   vi.mocked(api.moderate).mockResolvedValue(review({ moderationState: 'CORRECTION_REQUESTED', availableActions: ['REMOVE', 'RESTORE'], lockVersion: 3 }))

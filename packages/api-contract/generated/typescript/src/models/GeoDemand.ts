@@ -20,6 +20,13 @@ import {
     GeoScopeToJSON,
     GeoScopeToJSONTyped,
 } from './GeoScope';
+import type { PageMeta } from './PageMeta';
+import {
+    PageMetaFromJSON,
+    PageMetaFromJSONTyped,
+    PageMetaToJSON,
+    PageMetaToJSONTyped,
+} from './PageMeta';
 import type { GeoDemandColumnsInner } from './GeoDemandColumnsInner';
 import {
     GeoDemandColumnsInnerFromJSON,
@@ -79,6 +86,10 @@ export interface GeoDemand {
     /**
      *
      */
+    columnPagination: PageMeta;
+    /**
+     *
+     */
     notComparableLines: number;
     /**
      *
@@ -117,6 +128,7 @@ export function instanceOfGeoDemand(value: object): value is GeoDemand {
     if (!('dimension' in value) || value['dimension'] === undefined) return false;
     if (!('columns' in value) || value['columns'] === undefined) return false;
     if (!('rows' in value) || value['rows'] === undefined) return false;
+    if ((!('columnPagination' in (value as Record<string, any>)) && !('column_pagination' in (value as Record<string, any>))) || ((value as Record<string, any>)['columnPagination'] === undefined && (value as Record<string, any>)['column_pagination'] === undefined)) return false;
     if ((!('notComparableLines' in (value as Record<string, any>)) && !('not_comparable_lines' in (value as Record<string, any>))) || ((value as Record<string, any>)['notComparableLines'] === undefined && (value as Record<string, any>)['not_comparable_lines'] === undefined)) return false;
     if (!('definition' in value) || value['definition'] === undefined) return false;
     return true;
@@ -139,6 +151,7 @@ export function GeoDemandFromJSONTyped(json: any, ignoreDiscriminator: boolean):
         'dimension': json['dimension'],
         'columns': ((json['columns'] as Array<any>).map(GeoDemandColumnsInnerFromJSON)),
         'rows': ((json['rows'] as Array<any>).map(GeoDemandRowsInnerFromJSON)),
+        'columnPagination': PageMetaFromJSON(json['column_pagination']),
         'notComparableLines': json['not_comparable_lines'],
         'definition': json['definition'],
     };
@@ -162,6 +175,7 @@ export function GeoDemandToJSONTyped(value?: GeoDemand | null, ignoreDiscriminat
         'dimension': value['dimension'],
         'columns': ((value['columns'] as Array<any>).map(GeoDemandColumnsInnerToJSON)),
         'rows': ((value['rows'] as Array<any>).map(GeoDemandRowsInnerToJSON)),
+        'column_pagination': PageMetaToJSON(value['columnPagination']),
         'not_comparable_lines': value['notComparableLines'],
         'definition': value['definition'],
     };

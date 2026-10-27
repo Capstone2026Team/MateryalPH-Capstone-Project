@@ -1,10 +1,10 @@
 import { DocumentExportButton } from '@materyalph/web-ui'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardCheck, Download, Flag, Inbox, Package, Search, ShieldCheck, Store, UserRound } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ClipboardCheck, Clock3, Download, Flag, Inbox, MapPinned, Package, Search, ShieldCheck, Store, UserRound } from 'lucide-react'
 import type { ReviewRatings } from '@materyalph/api-client-ts'
 import {
-  AnalyticsNullState, BadgeList, BadgeStatusList, Button, DateFilter, DatasetNotice, EventTimeline, FactList, FilterTabs, MaterialThumbnail, PriceTrendPanel, ReasonedDecisionForm, ReviewDetailContent, ReviewRatingSummary, ScoreSummaryGrid, SearchInput, StatusBadge, StatusMessage, TrendSummary,
+  AnalyticsNullState, BadgeList, BadgeStatusList, Button, DateFilter, DatasetNotice, EventTimeline, FactList, FilterTabs, FormDialog, MaterialPriceTable, MaterialThumbnail, PriceTrendPanel, ReasonedDecisionForm, ReviewDetailContent, ReviewRatingSummary, ScoreSummaryGrid, SearchInput, StatusBadge, StatusMessage, TrendSummary,
   analyticsDay, dateComparisonPreset, formatAnalyticsDate, formatManilaDateTime, formatPhpDecimal, manilaToday, type PricePoint,
   type ReviewPresentationRow,
 } from '@materyalph/web-ui'
@@ -66,13 +66,15 @@ function MaterialsDateControl({ filters, onChange, window }: { filters: AdminAna
 
 function AdminFilters({ filters, onChange, areaLabel, window }: { filters: AdminAnalyticsFilters; onChange: (next: Partial<AdminAnalyticsFilters>) => void; areaLabel?: string | undefined; window?: AdminMaterialsAnalyticsList['window'] | undefined }) {
   const [q, setQ] = useState(filters.q ?? '')
-  return <div className="grid gap-4 border-b border-border-default pb-5">
-    <div className="flex flex-wrap items-center gap-3"><MaterialsDateControl filters={filters} onChange={onChange} window={window} /><Button variant="quiet" onClick={() => { setQ(''); onChange({ presetDays: 30, startDate: null, endDate: null, q: undefined }) }}>Reset filters</Button></div>
-    <form className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end" onSubmit={(event: FormEvent) => { event.preventDefault(); onChange({ q: q.trim() || undefined }) }}>
-      <SearchInput label="Search materials" placeholder="Search materials" value={q} onChange={setQ} />
-      <Button type="submit" variant="secondary"><Search size={16} aria-hidden="true" />Apply</Button>
-    </form>
-    <p className="text-xs text-text-secondary">Scope: {areaLabel ?? 'Philippines'} (PSGC area; no radius applies). Payment, order-state and other transaction filters are not applicable to listed-price history.</p>
+  return <div className="grid min-w-0 gap-4 border-y border-border-default py-5">
+    <div className="grid min-w-0 items-end gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="grid min-w-0 gap-2"><span aria-hidden="true" className="text-sm font-semibold text-text-strong">Search materials</span><form className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]" onSubmit={(event: FormEvent) => { event.preventDefault(); onChange({ q: q.trim() || undefined }) }}>
+        <SearchInput label="Search materials" placeholder="Material, brand or specification" value={q} onChange={setQ} maxLength={100} />
+        <Button type="submit" variant="secondary"><Search size={16} aria-hidden="true" />Search</Button>
+      </form></div>
+      <div className="grid min-w-0 gap-2"><span className="text-sm font-semibold text-text-strong">Comparison period</span><div className="flex flex-wrap items-center gap-2"><MaterialsDateControl filters={filters} onChange={onChange} window={window} /><Button variant="quiet" onClick={() => { setQ(''); onChange({ presetDays: 30, startDate: null, endDate: null, q: undefined }) }}>Reset filters</Button></div></div>
+    </div>
+    <p className="text-xs leading-5 text-text-secondary">Scope: {areaLabel ?? 'Philippines'} (PSGC area; no radius applies). Payment, order-state and other transaction filters are not applicable to listed-price history.</p>
   </div>
 }
 
@@ -83,39 +85,41 @@ export function MaterialsAnalyticsSection({ psgcCode, areaLabel }: { psgcCode: s
   const list = useAnalyticsResource(`materials-${JSON.stringify(filters)}`, () => listAdminAnalytics(filters))
   const runs = useAnalyticsResource('material-runs', listRuns)
   const [exportError, setExportError] = useState<string | null>(null)
+  const [snapshotHealthOpen, setSnapshotHealthOpen] = useState(false)
   const download = async () => {
     setExportError(null)
     try { const blob = await exportAdminAnalytics(filters); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'materials-analytics-aggregates.csv'; link.click(); URL.revokeObjectURL(link.href) }
     catch (cause) { setExportError(await readableApiError(cause)) }
   }
-  return <section aria-labelledby="materials-analytics" className="space-y-5">
-    <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 id="materials-analytics" className="text-xl font-semibold">Materials Analytics</h2><p className="mt-1 max-w-3xl text-sm text-text-secondary">Equal-Vendor daily averages of public Tier 2 listed prices for {areaLabel}. Not an official price index.</p></div>
+  return <section aria-labelledby="materials-analytics" className="grid min-w-0 gap-5 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-6">
+    <div className="flex min-w-0 flex-col gap-4 xl:flex-row xl:items-start xl:justify-between"><div className="min-w-0"><h2 id="materials-analytics" className="text-lg font-semibold text-text-strong">Materials Analytics</h2><p className="mt-1.5 max-w-3xl text-sm leading-6 text-text-secondary">Equal-Vendor daily averages of public Tier 2 listed prices. Not an official price index.</p><p className="mt-3 flex items-center gap-2 text-[13px] font-medium text-text-strong"><MapPinned size={16} aria-hidden="true" className="shrink-0 text-text-secondary" /><span className="min-w-0 break-words">{areaLabel}</span></p></div>
       <div className="flex flex-wrap gap-2"><DocumentExportButton basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} audience="admin" types={['MATERIALS_ANALYTICS']} filters={{ ...(filters.startDate && filters.endDate ? { start_date: filters.startDate, end_date: filters.endDate } : { preset_days: filters.presetDays ?? 30 }), ...(filters.psgcCode ? { psgc_code: filters.psgcCode } : {}), ...(filters.q ? { q: filters.q } : {}) }} /><Button variant="secondary" onClick={() => void download()}><Download size={16} aria-hidden="true" />Export CSV</Button></div></div>
     {exportError && <StatusMessage tone="error">{exportError}</StatusMessage>}
     <AdminFilters filters={filters} onChange={next => setFilters({ ...next, psgcCode: undefined })} areaLabel={areaLabel} window={list.data?.window} />
     {list.error ? <ErrorState message={list.error} onRetry={list.retry} /> : !list.data ? <LoadingState /> : <>
       <DatasetNotice label={list.data.dataset.label ?? 'Listed-price history'} updateSchedule={list.data.updateSchedule} snapshotAt={list.data.snapshot?.observedAt ? list.data.snapshot.observedAt.toISOString() : null} currentAsOf={list.data.currentAsOf.toISOString()} explanation={list.data.explanation} />
       {list.data.items.length === 0 ? <AnalyticsNullState title="No comparable materials in this scope" reason="No published observation or current offer matches this area and period." />
-        : <div className="overflow-x-auto rounded-control border border-border-default"><table className="w-full min-w-[860px] text-sm">
-          <caption className="sr-only">Comparable material averages</caption>
-          <thead className="bg-surface-canvas text-left text-xs uppercase tracking-[0.08em] text-text-secondary"><tr><th className="px-4 py-2" scope="col">Material / variant</th><th className="px-4 py-2" scope="col">Average (end)</th><th className="px-4 py-2" scope="col">Vendors</th><th className="px-4 py-2" scope="col">Change</th><th className="px-4 py-2" scope="col">Current offers</th><th className="px-4 py-2" scope="col"><span className="sr-only">Action</span></th></tr></thead>
-          <tbody className="divide-y divide-border-default">{list.data.items.map(row => <tr key={row.groupId}>
-            <td className="px-4 py-3"><div className="flex items-center gap-3"><MaterialThumbnail url={row.image?.url} categoryCode={row.category.code} size="sm" /><div><p className="font-semibold">{row.displayName}</p><p className="text-xs text-text-secondary">{row.category.name} · per {row.unit.name}</p></div></div></td>
-            <td className="px-4 py-3 tabular-nums">{row.endPoint.averagePhp ? formatPhpDecimal(row.endPoint.averagePhp) : <span className="text-text-secondary">{row.endPoint.label ?? '—'}</span>}{row.endPoint.status === 'LIMITED_DATA' && <p className="text-xs text-text-secondary">Limited Local Data — 1 Vendor</p>}</td>
-            <td className="px-4 py-3 tabular-nums">{row.endPoint.vendorCount ?? '—'}</td>
-            <td className="px-4 py-3"><TrendSummary compact trend={row.trend} /></td>
-            <td className="px-4 py-3 tabular-nums">{row.current.vendorCount} Vendors · {row.current.listingCount} listings</td>
-            <td className="px-4 py-3 text-right"><Link className="inline-flex min-h-11 items-center font-semibold text-action-primary" to={`/analytics/materials/${row.groupId}${detailQuery(filters)}`} aria-label={`View details for ${row.displayName}`}>View details</Link></td>
-          </tr>)}</tbody></table></div>}
+        : <div className="grid min-w-0 gap-3"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-base font-semibold text-text-strong">Comparable materials</h3><p className="text-xs text-text-secondary">{list.data.items.length} variants on this page</p></div>
+          <MaterialPriceTable rows={list.data.items.map(row => ({ id: row.groupId, name: row.displayName, category: row.category.name, categoryCode: row.category.code, unit: row.unit.name, imageUrl: row.image?.url,
+            average: <><p className="font-semibold leading-5 text-text-strong">{row.endPoint.averagePhp ? formatPhpDecimal(row.endPoint.averagePhp) : <span className="font-normal text-text-secondary">{row.endPoint.label ?? '—'}</span>}</p>{row.endPoint.status === 'LIMITED_DATA' && <p className="mt-1 text-xs leading-5 text-text-secondary">Limited Local Data — 1 Vendor</p>}</>,
+            vendors: <span className="font-medium text-text-strong">{row.endPoint.vendorCount ?? '—'}</span>, change: <TrendSummary compact trend={row.trend} />,
+            currentOffers: <div className="grid gap-1 text-[13px] leading-5"><span>{row.current.vendorCount} {row.current.vendorCount === 1 ? 'Vendor' : 'Vendors'}</span><span className="text-xs text-text-secondary">{row.current.listingCount} {row.current.listingCount === 1 ? 'listing' : 'listings'}</span></div>,
+            action: <Link className="inline-flex min-h-11 items-center gap-1 whitespace-nowrap rounded-control text-[13px] font-semibold text-action-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-focus-ring" to={`/analytics/materials/${row.groupId}${detailQuery(filters)}`} aria-label={`View details for ${row.displayName}`}>View details<ArrowRight size={14} aria-hidden="true" className="shrink-0" /></Link>,
+          }))} />
+        </div>}
     </>}
-    <section aria-labelledby="runs" className="space-y-3">
-      <h3 id="runs" className="text-lg font-semibold">Daily snapshot health</h3>
+    <div className="min-w-0 border-t border-border-default pt-2">
+      <button type="button" aria-label="Daily snapshot health" aria-haspopup="dialog" aria-expanded={snapshotHealthOpen} onClick={() => setSnapshotHealthOpen(true)} className="flex min-h-14 w-full min-w-0 items-center justify-between gap-3 rounded-control py-3 text-left focus-visible:outline-2 focus-visible:outline-focus-ring hover:bg-surface-canvas">
+        <span className="flex min-w-0 items-center gap-3"><Clock3 size={18} aria-hidden="true" className="shrink-0 text-text-secondary" /><span className="grid min-w-0 gap-1"><span className="text-sm font-semibold text-text-strong">Daily snapshot health</span><span className="text-xs text-text-secondary">View recent capture runs and their status</span></span></span><ChevronDown size={18} aria-hidden="true" className="shrink-0 text-text-secondary" />
+      </button>
+    </div>
+    <FormDialog open={snapshotHealthOpen} title="Daily snapshot health" description="Recent daily price captures. All dates and times use Asia/Manila." size="compact" onClose={() => setSnapshotHealthOpen(false)} footer={<div className="flex justify-end"><Button variant="secondary" onClick={() => setSnapshotHealthOpen(false)}>Close</Button></div>}>
       {runs.error ? <ErrorState message={runs.error} onRetry={runs.retry} /> : !runs.data ? <LoadingState /> : runs.data.length === 0 ? <p className="text-sm text-text-secondary">No capture has run yet. The job runs daily at 00:10 Asia/Manila.</p>
-        : <ul className="divide-y divide-border-default border-y border-border-default">{runs.data.slice(0, 10).map(run => <li key={run.id} className="flex flex-wrap items-center gap-3 py-2 text-sm">
-          <span className="font-semibold">{formatAnalyticsDate(run.snapshotDate, true)}</span><StatusBadge label={`${run.state} · rev ${run.revision}`} tone={run.state === 'PUBLISHED' ? 'success' : run.state === 'FAILED' ? 'error' : 'neutral'} />
-          <span className="text-text-secondary">{run.observedAt ? `Captured ${formatManilaDateTime(run.observedAt)}` : ''}{run.delayed ? ' · delayed capture' : ''} · {run.vendors} Vendors · {run.selected} selected of {run.observations}</span>{run.errorCode && <span className="text-status-error">{run.errorCode}</span>}
+        : <ul className="divide-y divide-border-default">{runs.data.slice(0, 10).map(run => <li key={run.id} className="grid min-w-0 gap-3 py-3 text-sm md:grid-cols-[minmax(8rem,auto)_minmax(0,1fr)]">
+          <div className="grid justify-items-start gap-2"><span className="font-semibold">{formatAnalyticsDate(run.snapshotDate, true)}</span><StatusBadge label={`${run.state} · rev ${run.revision}`} tone={run.state === 'PUBLISHED' ? 'success' : run.state === 'FAILED' ? 'error' : 'neutral'} /></div>
+          <div className="grid min-w-0 gap-1 text-[13px] leading-5 text-text-secondary"><span className="break-words">{run.observedAt ? `Captured ${formatManilaDateTime(run.observedAt)}` : 'Capture time unavailable'}{run.delayed ? ' · delayed capture' : ''}</span><span>{run.vendors} Vendors · {run.selected} selected of {run.observations} observations</span>{run.errorCode && <span className="break-words text-status-error">{run.errorCode}</span>}</div>
         </li>)}</ul>}
-    </section>
+    </FormDialog>
   </section>
 }
 

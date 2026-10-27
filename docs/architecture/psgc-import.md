@@ -115,8 +115,10 @@ docker compose exec api php artisan materyalph:psgc-boundaries-import \
 
 ### Fallbacks
 
-- Areas without imported geometry appear in `missing_codes` of `GET /api/v1/admin/geo-analytics/boundaries` and are drawn as keyboard-operable tiles beside the map.
-- Without `VITE_GOOGLE_MAPS_BROWSER_KEY` (a referrer-restricted browser key, never a server secret), or when the Maps script fails, every area is drawn as a tile. The synchronized sortable table always offers the same values and drill-down.
+- Areas without imported geometry appear in `missing_codes` of `GET /api/v1/admin/geo-analytics/boundaries`. The national view can fill regional outlines from the bundled, MIT-licensed 18-region reference geometry, matched only by exact PSGC code. Imported geometry takes precedence. Provenance is recorded in `packages/web-ui/src/geography/README.md`.
+- Without `VITE_GOOGLE_MAPS_BROWSER_KEY` (a referrer-restricted browser key, never a server secret), or when the Maps script fails, an interactive SVG renders the available boundaries. Pinned, locally lazy-loaded province/city reference geometry can fill missing subregional outlines by exact code; imported geometry takes precedence. Other public province borders (or NCR city/municipality borders) remain noninteractive context within a selected region. Unknown areas remain reachable through the labelled area selector and synchronized sortable table; no boundary or point location is invented. Provenance, hashes, licence and attribution are documented in `packages/web-ui/src/geography/README.md`.
+- Bundled geometry is presentation-only reference data. It never changes server attribution, active PSGC versions, suppression, or historical facts. Review its version when regional boundaries change. All names, values and drill-down eligibility still come from the authorized API.
+- The Admin analytics overview explicitly selects the outline renderer: only Philippine geometry is displayed, without a Google/world basemap. On regional drill-down, the selected region's reference outline is fitted with any authorized child geometry, so missing child boundaries or an empty child list never removes the regional map. Shared basemap support remains available to other callers.
 
 ### Hierarchy used by the dashboard
 

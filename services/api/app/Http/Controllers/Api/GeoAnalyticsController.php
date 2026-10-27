@@ -26,7 +26,15 @@ final class GeoAnalyticsController extends Controller
 
     public function demand(Request $request, GeoAnalyticsService $analytics): JsonResponse
     {
-        return ApiResponse::success($analytics->demand($request, $this->filters($request, ['measure'])));
+        return ApiResponse::success($analytics->demand($request, $this->filters($request, ['measure', 'page'])));
+    }
+
+    public function filterOptions(Request $request, GeoAnalyticsService $analytics): JsonResponse
+    {
+        $input = $request->validate(['category_id' => ['sometimes', 'uuid'], 'page' => ['sometimes', 'integer', 'min:1']]);
+        $result = $analytics->filterOptions($request, $input['category_id'] ?? null, (int) ($input['page'] ?? 1));
+
+        return ApiResponse::success($result['items'], $result['meta']);
     }
 
     public function boundaries(Request $request, GeoAnalyticsService $analytics): JsonResponse

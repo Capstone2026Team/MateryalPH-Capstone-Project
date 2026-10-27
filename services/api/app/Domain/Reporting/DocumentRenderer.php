@@ -37,6 +37,10 @@ final class DocumentRenderer
 
             return $result;
         }
+        // Large reports must not build thousands of HTML table layout trees in memory.
+        if (count($snapshot['rows']) > 100) {
+            return app(TabularDocumentRenderer::class)->render($snapshot);
+        }
         $options = new Options;
         $options->set('isRemoteEnabled', false);
         $options->set('isPhpEnabled', false);

@@ -68,6 +68,14 @@ assert.ok(spec.components.schemas.ActivationRestrictions.properties.override_ava
 assert.deepEqual(spec.components.schemas.AdminDashboardSummary.properties.queues.items, { $ref: '#/components/schemas/OperationsQueue' })
 // Geographic responses carry no coordinates; transaction filters are reported as not applicable to price panels.
 const geo = JSON.stringify(spec.components.schemas.GeoDashboard) + JSON.stringify(spec.components.schemas.GeoChild)
+const filterOptions = spec.paths['/admin/geo-analytics/filter-options'].get
+assert.equal(filterOptions.operationId, 'getGeoFilterOptions')
+assert.deepEqual(filterOptions.parameters.map(parameter => parameter.name), ['category_id', 'page'], 'Taxonomy choices do not depend on transaction, date or area filters')
+assert.deepEqual(spec.components.schemas.GeoFilterOptionsEnvelope.properties.meta, { $ref: '#/components/schemas/PageMeta' }, 'Taxonomy choices are paginated')
+assert.deepEqual(spec.components.schemas.GeoFilterOption.required, ['id', 'name'])
+assert.ok(spec.paths['/admin/geo-analytics/demand'].get.parameters.some(parameter => parameter.name === 'page'))
+assert.ok(spec.components.schemas.GeoDemand.required.includes('column_pagination'))
+assert.deepEqual(spec.components.schemas.GeoDemand.properties.column_pagination, { $ref: '#/components/schemas/PageMeta' })
 assert.ok(!/latitude|longitude|"location"/.test(geo), 'Geographic aggregates never carry coordinates')
 assert.ok(spec.paths['/admin/geo-analytics'].get.parameters.every(p => !/latitude|longitude|radius/.test(p.name)), 'No radius or point filter on national analytics')
 // Settings never include an NRPC cap, VPS weights or secrets.

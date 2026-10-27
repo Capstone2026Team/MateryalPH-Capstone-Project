@@ -69,7 +69,8 @@ npm run dev
 ```powershell
 Set-Location apps/admin-web
 npm install
-npm run dev
+
+
 ```
 
 ### Buyer application (local Run)

@@ -151,6 +151,7 @@ Class | Method | HTTP request | Description
 [*AdminGeographicAnalyticsApi*](doc/AdminGeographicAnalyticsApi.md) | [**getGeoAnalyticsDashboard**](doc/AdminGeographicAnalyticsApi.md#getgeoanalyticsdashboard) | **GET** /admin/geo-analytics |
 [*AdminGeographicAnalyticsApi*](doc/AdminGeographicAnalyticsApi.md) | [**getGeoBoundaries**](doc/AdminGeographicAnalyticsApi.md#getgeoboundaries) | **GET** /admin/geo-analytics/boundaries |
 [*AdminGeographicAnalyticsApi*](doc/AdminGeographicAnalyticsApi.md) | [**getGeoDemandHeatmap**](doc/AdminGeographicAnalyticsApi.md#getgeodemandheatmap) | **GET** /admin/geo-analytics/demand |
+[*AdminGeographicAnalyticsApi*](doc/AdminGeographicAnalyticsApi.md) | [**getGeoFilterOptions**](doc/AdminGeographicAnalyticsApi.md#getgeofilteroptions) | **GET** /admin/geo-analytics/filter-options |
 [*AdminIntegrationHealthApi*](doc/AdminIntegrationHealthApi.md) | [**getIntegrationHealth**](doc/AdminIntegrationHealthApi.md#getintegrationhealth) | **GET** /admin/integrations |
 [*AdminIntegrationHealthApi*](doc/AdminIntegrationHealthApi.md) | [**listOperationFailures**](doc/AdminIntegrationHealthApi.md#listoperationfailures) | **GET** /admin/integrations/failures |
 [*AdminIntegrationHealthApi*](doc/AdminIntegrationHealthApi.md) | [**listOperationRetries**](doc/AdminIntegrationHealthApi.md#listoperationretries) | **GET** /admin/integrations/retries |
@@ -1157,6 +1158,8 @@ Class | Method | HTTP request | Description
  - [GeoDemandEnvelope](doc/GeoDemandEnvelope.md)
  - [GeoDemandRowsInner](doc/GeoDemandRowsInner.md)
  - [GeoFilterApplicability](doc/GeoFilterApplicability.md)
+ - [GeoFilterOption](doc/GeoFilterOption.md)
+ - [GeoFilterOptionsEnvelope](doc/GeoFilterOptionsEnvelope.md)
  - [GeoKpis](doc/GeoKpis.md)
  - [GeoKpisActiveUsers](doc/GeoKpisActiveUsers.md)
  - [GeoRate](doc/GeoRate.md)

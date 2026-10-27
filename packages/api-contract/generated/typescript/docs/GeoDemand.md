@@ -13,6 +13,7 @@ Name | Type
 `dimension` | string
 `columns` | [Array&lt;GeoDemandColumnsInner&gt;](GeoDemandColumnsInner.md)
 `rows` | [Array&lt;GeoDemandRowsInner&gt;](GeoDemandRowsInner.md)
+`columnPagination` | [PageMeta](PageMeta.md)
 `notComparableLines` | number
 `definition` | string
 
@@ -30,6 +31,7 @@ const example = {
   "dimension": null,
   "columns": null,
   "rows": null,
+  "columnPagination": null,
   "notComparableLines": null,
   "definition": null,
 } satisfies GeoDemand

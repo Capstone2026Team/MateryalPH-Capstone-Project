@@ -641,6 +641,8 @@ export 'package:materyalph_api_client/src/model/geo_demand_columns_inner.dart';
 export 'package:materyalph_api_client/src/model/geo_demand_envelope.dart';
 export 'package:materyalph_api_client/src/model/geo_demand_rows_inner.dart';
 export 'package:materyalph_api_client/src/model/geo_filter_applicability.dart';
+export 'package:materyalph_api_client/src/model/geo_filter_option.dart';
+export 'package:materyalph_api_client/src/model/geo_filter_options_envelope.dart';
 export 'package:materyalph_api_client/src/model/geo_kpis.dart';
 export 'package:materyalph_api_client/src/model/geo_kpis_active_users.dart';
 export 'package:materyalph_api_client/src/model/geo_rate.dart';

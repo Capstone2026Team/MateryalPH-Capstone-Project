@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Banknote, Clock, FileText, RefreshCw, Undo2 } from 'lucide-react'
-import { ALL_DATES, Button, ConfirmDialog, ControlBar, DateFilter, DocumentExportButton, EmptyState, FilterChips, FilterPanel, FilterTabs, Pagination, RefundStatusBadge, StatCard, StatusBadge, StatusMessage, formatManilaDateTime, formatPesoCentavos } from '@materyalph/web-ui'
+import { AlertCircle, Banknote, Clock, FileText, RefreshCw, Undo2, XCircle } from 'lucide-react'
+import { ALL_DATES, Button, ConfirmDialog, ControlBar, DateFilter, DocumentExportButton, EmptyState, FilterChips, FilterPanel, FilterTabs, Pagination, RefundStatusBadge, ResponsiveRecordList, StatCard, StatusBadge, StatusMessage, buttonClassName, formatManilaDateTime, formatPesoCentavos, type RecordColumn } from '@materyalph/web-ui'
 import {
   confirmReimbursement, getSummary, listCancellationRequests, listRefunds, listReimbursements, retryRefund,
   type AdminCancellationRequestRow, type AdminOrderOperationsSummary, type AdminRefundRow, type AdminReimbursementRow,
@@ -18,6 +18,9 @@ const REFUND_STATUSES: { value: RefundState; label: string }[] = [
   { value: 'REFUNDED', label: 'Processed' },
 ]
 const TRIGGERS: Record<string, string> = { CANCELLATION: 'Cancellation', DISPUTE_CONCLUSION: 'Dispute conclusion', TECHNICAL_COMPENSATION: 'Technical compensation', FEE_CREDIT: 'Platform fee credit' }
+const referenceClass = 'break-words font-semibold text-text-strong'
+const amountClass = 'whitespace-nowrap font-semibold tabular-nums text-text-strong'
+const methodLabel = (method: string) => ({ IN_STORE: 'In-Store Payment', CASH_ON_DELIVERY: 'Cash on Delivery' } as Record<string, string>)[method] ?? method.replaceAll('_', ' ')
 
 /**
  * Order operations for Order and Dispute Staff and Super Admin: refund exceptions with an authorized retry to the
@@ -38,13 +41,20 @@ export function AdminOrderOperationsPage() {
     return () => { active = false }
   }, [attempt])
   const chips = VIEWS.map(item => ({ ...item, count: summary ? (item.value === 'refunds' ? summary.refundsTotal : item.value === 'reimbursements' ? summary.reimbursementsTotal : summary.cancellationRequestsOpen) : undefined }))
-  return <AdminShell activeHref="/order-operations"><div className="grid min-w-0 gap-4">
-    <PageHeader compact eyebrow="Orders" title="Orders and refunds" description="Monitor refund status, Vendor cash reimbursements, and Buyer cancellation requests. Refunds return only to the original payment method. All figures are TEST."
-      actions={<><Link to="/invoices" className="inline-flex min-h-11 items-center gap-2 rounded-control px-4 text-sm font-semibold text-action-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"><FileText size={16} aria-hidden="true" />Invoice Request Log</Link><Button variant="secondary" onClick={reload}><RefreshCw size={16} aria-hidden="true" />Refresh</Button></>} />
-    {summaryError ? <ErrorState message={summaryError} onRetry={reload} /> : summary && <dl aria-label="Order operations summary" className="grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 xl:[&_dt]:min-h-10 xl:[&_dt]:items-start">
-      {[['Failed refunds', summary.refundsFailed], ['Refunds awaiting provider', summary.refundsPending], ['Reimbursements pending', summary.reimbursementsPending], ['Open cancellation requests', summary.cancellationRequestsOpen], ['Vendor cancellations (30 days)', summary.nfrEvents30Days]].map(([label, value]) =>
-        <StatCard key={String(label)} label={String(label)} value={value} />)}
-    </dl>}
+  return <AdminShell activeHref="/order-operations"><div className="grid min-w-0 gap-6">
+    <PageHeader eyebrow="Tracking" title="Orders & Refunds Logs" description="Review refund activity, Vendor cash reimbursements and Buyer cancellation requests."
+      actions={<><Link to="/invoices" className={buttonClassName('secondary')}><FileText size={16} aria-hidden="true" />Invoice Request Log</Link><Button variant="secondary" onClick={reload}><RefreshCw size={16} aria-hidden="true" />Refresh</Button></>} />
+    <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-control border border-border-default bg-surface-primary px-4 py-3 text-xs leading-5 text-text-secondary"><span>TEST records · Refunds return to the original payment method.</span><span>Dates and deadlines in Asia/Manila</span></div>
+    <section aria-labelledby="order-summary-heading" className="grid gap-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"><h2 id="order-summary-heading" className="text-sm font-semibold">Activity overview</h2><p className="text-xs text-text-secondary">Current exceptions · Vendor cancellations over the last 30 days</p></div>
+      {summaryError ? <ErrorState message={summaryError} onRetry={reload} /> : !summary ? <LoadingState /> : <dl aria-label="Order operations summary" className="grid min-w-0 gap-3 sm:grid-cols-2 sm:[&>div:last-child]:col-span-2 lg:grid-cols-3 xl:grid-cols-5 xl:[&>div:last-child]:col-span-1 xl:[&_dt]:min-h-10 xl:[&_dt]:items-start">
+        <StatCard label="Failed refunds" value={summary.refundsFailed} icon={<AlertCircle size={16} aria-hidden="true" />} />
+        <StatCard label="Refunds awaiting provider" value={summary.refundsPending} icon={<Clock size={16} aria-hidden="true" />} />
+        <StatCard label="Reimbursements pending" value={summary.reimbursementsPending} icon={<Banknote size={16} aria-hidden="true" />} />
+        <StatCard label="Open cancellation requests" value={summary.cancellationRequestsOpen} icon={<FileText size={16} aria-hidden="true" />} />
+        <StatCard label="Vendor cancellations (30 days)" value={summary.nfrEvents30Days} icon={<XCircle size={16} aria-hidden="true" />} />
+      </dl>}
+    </section>
     <FilterTabs appearance="tabs" label="Order operations view" chips={chips} value={view} onChange={value => setParams({ view: value })} />
     {view === 'refunds' && <RefundList onChanged={reload} refreshVersion={attempt} />}
     {view === 'reimbursements' && <ReimbursementList onChanged={reload} refreshVersion={attempt} />}
@@ -73,7 +83,16 @@ function RefundList({ onChanged, refreshVersion }: { onChanged: () => void; refr
     try { await retryRefund(row.id); setNotice({ tone: 'success', text: 'Refund re-sent to the original payment. It stays pending until the provider confirms it.' }); setAttempt(value => value + 1); onChanged() }
     catch (cause) { setNotice({ tone: 'error', text: await readableVerificationError(cause) }) } finally { setRetrying(null) }
   }
+  const columns: RecordColumn<AdminRefundRow>[] = [
+    { key: 'reference', header: 'Order / statement', cell: row => <span className={referenceClass}>{row.orderReference ?? row.statementReference ?? 'Platform fee'}</span> },
+    { key: 'vendor', header: 'Vendor & reason', cell: row => <div className="grid gap-1 lg:min-w-36"><span className="font-medium">{row.vendorName ?? 'Vendor'}</span><span className="text-xs text-text-secondary">{TRIGGERS[row.trigger] ?? row.trigger}</span></div> },
+    { key: 'amount', header: 'Refund amount', className: amountClass, cell: row => <span className={amountClass}>{formatPesoCentavos(row.amountCentavos)}</span> },
+    { key: 'status', header: 'Status', cell: row => <div className="grid gap-2 lg:min-w-44"><RefundStatusBadge displayState={row.displayState} />{row.evidenceOrigin === 'SIMULATED' && <span><StatusBadge label="SIMULATED" tone="warning" /></span>}{row.attemptNumber > 1 && <span className="text-xs text-text-secondary">Attempt {row.attemptNumber}</span>}{row.failureCode && <span className="break-all text-xs text-status-error">{row.failureCode}</span>}</div> },
+    { key: 'requested', header: 'Requested', cell: row => <span className="text-text-secondary">{row.requestedAt ? formatManilaDateTime(row.requestedAt) : 'Not recorded'}</span> },
+    { key: 'actions', header: 'Actions', cell: row => <div className="flex min-w-0 flex-wrap gap-2">{row.orderId && <DocumentExportButton basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} audience="admin" types={['PURCHASE_ORDER', 'OPERATIONAL_ORDER', 'PAYMENT_CONFIRMATION']} resourceId={row.orderId} title={row.orderReference ?? 'Order'} />}{row.canRetry && <Button variant="secondary" className="max-w-56 whitespace-normal text-left" disabled={retrying === row.id} onClick={() => void retry(row)}>{retrying === row.id ? 'Retrying…' : 'Retry after funding is resolved'}</Button>}{!row.orderId && !row.canRetry && <span className="text-xs text-text-secondary">No actions available</span>}</div> },
+  ]
   return <section className="grid min-w-0 gap-4" aria-label="Refunds">
+    <div><h2 className="text-lg font-semibold">Refund log</h2><p className="mt-1 text-sm leading-6 text-text-secondary">Track refund instructions, provider confirmations and failed attempts.</p></div>
     <FilterPanel label="Refund filters">
       <ControlBar tabs={<div className="grid min-w-0 gap-2">
         <p className="text-sm font-semibold">Status</p>
@@ -86,26 +105,7 @@ function RefundList({ onChanged, refreshVersion }: { onChanged: () => void; refr
     {notice && <StatusMessage tone={notice.tone}>{notice.text}</StatusMessage>}
     {error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} /> : rows === null ? <LoadingState /> : rows.length === 0
       ? <EmptyState message="No refunds in this status." />
-      : <ul className="grid min-w-0 divide-y divide-border-default rounded-surface border border-border-default bg-surface-primary">{rows.map(row => <li key={row.id} className="grid min-w-0 gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
-        <div className="flex min-w-0 items-start gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-control bg-surface-canvas text-text-secondary"><Undo2 size={18} aria-hidden="true" /></span>
-          <div className="grid min-w-0 gap-2">
-            <div><h2 className="break-words text-base font-semibold">{row.orderReference ?? row.statementReference ?? 'Platform fee'}</h2><p className="mt-1 break-words text-sm text-text-secondary">{TRIGGERS[row.trigger] ?? row.trigger} · {row.vendorName ?? 'Vendor'}</p></div>
-            <div className="flex min-w-0 flex-wrap"><RefundStatusBadge displayState={row.displayState} /></div>
-            {row.requestedAt && <p className="flex items-start gap-2 text-sm text-text-secondary"><Clock size={15} aria-hidden="true" className="mt-0.5 shrink-0" /><span className="min-w-0 break-words">Requested {formatManilaDateTime(row.requestedAt)}</span></p>}
-            {(row.attemptNumber > 1 || row.failureCode || row.evidenceOrigin === 'SIMULATED') && <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 text-xs text-text-secondary">
-              {row.attemptNumber > 1 && <span>Attempt {row.attemptNumber}</span>}{row.failureCode && <span className="break-all">{row.failureCode}</span>}{row.evidenceOrigin === 'SIMULATED' && <StatusBadge label="SIMULATED" tone="warning" />}
-            </div>}
-          </div>
-        </div>
-        <div className="grid min-w-0 gap-3 border-t border-border-default pt-4 xl:justify-items-end xl:border-0 xl:pt-0">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 xl:grid xl:justify-items-end"><p className="text-xs text-text-secondary">Refund amount</p><p className="text-lg font-semibold tabular-nums">{formatPesoCentavos(row.amountCentavos)}</p></div>
-          {(row.orderId || row.canRetry) && <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap xl:justify-end">
-            {row.orderId && <DocumentExportButton basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} audience="admin" types={['PURCHASE_ORDER', 'OPERATIONAL_ORDER', 'PAYMENT_CONFIRMATION']} resourceId={row.orderId} title={row.orderReference ?? 'Order'} />}
-            {row.canRetry && <Button variant="secondary" className="whitespace-normal" disabled={retrying === row.id} onClick={() => void retry(row)}>{retrying === row.id ? 'Retrying…' : 'Retry after funding is resolved'}</Button>}
-          </div>}
-        </div>
-      </li>)}</ul>}
+      : <ResponsiveRecordList caption="Refund records" rows={rows} columns={columns} rowKey={row => row.id} cardTitle={row => <span className="flex items-start gap-2"><Undo2 size={18} className="mt-0.5 shrink-0 text-action-primary" aria-hidden="true" />{row.orderReference ?? row.statementReference ?? 'Platform fee'}</span>} />}
     {(page > 1 || more) && <Pagination page={page} hasMore={more} busy={rows === null} onChange={setPage} />}
   </section>
 }
@@ -131,28 +131,23 @@ function ReimbursementList({ onChanged, refreshVersion }: { onChanged: () => voi
     try { await confirmReimbursement(target.id, reason.trim()); setTarget(null); setReason(''); setAttempt(value => value + 1); onChanged() }
     catch (cause) { setDialogError(await readableVerificationError(cause)) } finally { setBusy(false) }
   }
+  const columns: RecordColumn<AdminReimbursementRow>[] = [
+    { key: 'reference', header: 'Order', cell: row => <span className={referenceClass}>{row.orderReference}</span> },
+    { key: 'vendor', header: 'Vendor', cell: row => row.vendorName ?? 'Vendor' },
+    { key: 'amount', header: 'Reimbursement amount', className: amountClass, cell: row => <span className={amountClass}>{formatPesoCentavos(row.amountCentavos)}</span> },
+    { key: 'method', header: 'Payment method', cell: row => methodLabel(row.method) },
+    { key: 'status', header: 'Status & evidence', cell: row => <div className="grid gap-2 lg:min-w-44"><StatusBadge label={row.state === 'REIMBURSEMENT_CONFIRMED' ? (row.confirmedByReview ? 'Confirmed by review' : 'Confirmed by the Buyer') : row.hasEvidence ? 'Vendor evidence recorded — awaiting confirmation' : 'Awaiting Vendor evidence'} tone={row.state === 'REIMBURSEMENT_CONFIRMED' ? 'success' : 'warning'} /></div> },
+    { key: 'date', header: 'Reimbursed', cell: row => <span className="text-text-secondary">{row.reimbursedAt ? formatManilaDateTime(row.reimbursedAt) : 'Not recorded'}</span> },
+    { key: 'actions', header: 'Action', cell: row => row.canDecide ? <Button variant="secondary" className="whitespace-normal" onClick={() => { setTarget(row); setDialogError(null) }}>Confirm with reason</Button> : <span className="text-xs text-text-secondary">{row.state === 'REIMBURSEMENT_CONFIRMED' ? 'Confirmation recorded' : 'Awaiting confirmation'}</span> },
+  ]
   const filters = <FilterPanel label="Reimbursement filters"><div className="flex min-w-0 flex-wrap items-end gap-4"><div className="grid min-w-0 gap-2"><p className="text-sm font-semibold">Recorded dates</p><div className="flex min-w-0"><DateFilter title="Reimbursement recorded dates" value={range} onChange={setRange} /></div></div>{(range.from || range.to) && <Button variant="quiet" className="sm:ml-auto" onClick={() => setRange(ALL_DATES)}>Reset dates</Button>}</div></FilterPanel>
   if (error) return <section className="grid gap-4">{filters}<ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} /></section>
   if (rows === null) return <section className="grid gap-4">{filters}<LoadingState /></section>
   return <section className="grid min-w-0 gap-4" aria-label="Cash reimbursements">
+    <div><h2 className="text-lg font-semibold">Cash reimbursement log</h2><p className="mt-1 max-w-3xl text-sm leading-6 text-text-secondary">Track cash returned directly by the Vendor, evidence and Buyer acknowledgment. MateryalPH never moves this money.</p></div>
     {filters}
-    <p className="max-w-3xl text-sm leading-6 text-text-secondary">Cash the Buyer paid the Vendor directly on a cancelled order. The Vendor returns it with evidence; the Buyer's acknowledgment or a reasoned decision here confirms it. MateryalPH never moves this money.</p>
     {rows.length === 0 ? <EmptyState message="No cash reimbursements." />
-      : <ul className="grid min-w-0 divide-y divide-border-default rounded-surface border border-border-default bg-surface-primary">{rows.map(row => <li key={row.id} className="grid min-w-0 gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
-        <div className="flex min-w-0 items-start gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-control bg-surface-canvas text-text-secondary"><Banknote size={18} aria-hidden="true" /></span>
-          <div className="grid min-w-0 gap-2">
-            <div><h2 className="break-words text-base font-semibold">{row.orderReference}</h2><p className="mt-1 break-words text-sm text-text-secondary">{row.vendorName ?? 'Vendor'}</p></div>
-            <div className="flex min-w-0 flex-wrap"><StatusBadge label={row.state === 'REIMBURSEMENT_CONFIRMED' ? (row.confirmedByReview ? 'Confirmed by review' : 'Confirmed by the Buyer') : row.hasEvidence ? 'Vendor evidence recorded — awaiting confirmation' : 'Awaiting Vendor evidence'}
-              tone={row.state === 'REIMBURSEMENT_CONFIRMED' ? 'success' : 'warning'} /></div>
-            {row.reimbursedAt && <p className="flex items-start gap-2 text-sm text-text-secondary"><Clock size={15} aria-hidden="true" className="mt-0.5 shrink-0" /><span className="min-w-0 break-words">Reimbursed {formatManilaDateTime(row.reimbursedAt)}</span></p>}
-          </div>
-        </div>
-        <div className="grid min-w-0 gap-3 border-t border-border-default pt-4 xl:justify-items-end xl:border-0 xl:pt-0">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 xl:grid xl:justify-items-end"><p className="text-xs text-text-secondary">Reimbursement amount</p><p className="text-lg font-semibold tabular-nums">{formatPesoCentavos(row.amountCentavos)}</p></div>
-          {row.canDecide && <Button variant="secondary" onClick={() => { setTarget(row); setDialogError(null) }}>Confirm with reason</Button>}
-        </div>
-      </li>)}</ul>}
+      : <ResponsiveRecordList caption="Cash reimbursement records" rows={rows} columns={columns} rowKey={row => row.id} cardTitle={row => <span className="flex items-start gap-2"><Banknote size={18} className="mt-0.5 shrink-0 text-action-primary" aria-hidden="true" />{row.orderReference}</span>} />}
     <ConfirmDialog open={target !== null} tone="primary" title="Confirm this cash reimbursement?" confirmLabel="Confirm reimbursement" busy={busy} onCancel={() => setTarget(null)} onConfirm={() => void decide()}>
       <div className="grid gap-3 text-text-strong">
         <p className="text-text-secondary">Use this only after reviewing the Vendor's evidence when the Buyer cannot or does not acknowledge it. The decision and reason are audited.</p>
@@ -175,22 +170,20 @@ function RequestList({ refreshVersion }: { refreshVersion: number }) {
     return () => { active = false }
   }, [attempt, range, refreshVersion])
   const filters = <FilterPanel label="Cancellation request filters"><div className="flex min-w-0 flex-wrap items-end gap-4"><div className="grid min-w-0 gap-2"><p className="text-sm font-semibold">Requested dates</p><div className="flex min-w-0"><DateFilter title="Cancellation request dates" value={range} onChange={setRange} /></div></div>{(range.from || range.to) && <Button variant="quiet" className="sm:ml-auto" onClick={() => setRange(ALL_DATES)}>Reset dates</Button>}</div></FilterPanel>
+  const columns: RecordColumn<AdminCancellationRequestRow>[] = [
+    { key: 'reference', header: 'Order', cell: row => <span className={referenceClass}>{row.orderReference}</span> },
+    { key: 'vendor', header: 'Vendor', cell: row => row.vendorName ?? 'Vendor' },
+    { key: 'reason', header: 'Cancellation reason', cell: row => row.reasonCode.toLowerCase().replaceAll('_', ' ') },
+    { key: 'deadline', header: 'Vendor response due', cell: row => <span className="text-text-secondary">{row.responseDueAt ? formatManilaDateTime(row.responseDueAt) : 'Not recorded'}</span> },
+    { key: 'status', header: 'Status', cell: row => <StatusBadge label={row.overdue ? 'Past due — finalizing automatically' : 'Awaiting Vendor response'} tone={row.overdue ? 'warning' : 'neutral'} /> },
+    { key: 'documents', header: 'Documents', cell: row => row.orderId ? <DocumentExportButton basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} audience="admin" types={['PURCHASE_ORDER', 'OPERATIONAL_ORDER', 'PAYMENT_CONFIRMATION']} resourceId={row.orderId} title={row.orderReference} /> : <span className="text-xs text-text-secondary">No linked order</span> },
+  ]
   if (error) return <section className="grid gap-4">{filters}<ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} /></section>
   if (rows === null) return <section className="grid gap-4">{filters}<LoadingState /></section>
   return <section className="grid min-w-0 gap-4" aria-label="Open cancellation requests">
+    <div><h2 className="text-lg font-semibold">Cancellation request log</h2><p className="mt-1 max-w-3xl text-sm leading-6 text-text-secondary">Buyer requests during preparation. The Vendor has 24 hours to finalize; an unanswered request is finalized automatically with a full refund.</p></div>
     {filters}
-    <p className="max-w-3xl text-sm leading-6 text-text-secondary">Buyer requests during preparation. The Vendor has 24 hours to finalize; an unanswered request is finalized automatically with a full refund.</p>
     {rows.length === 0 ? <EmptyState message="No open cancellation requests." />
-      : <ul className="grid min-w-0 divide-y divide-border-default rounded-surface border border-border-default bg-surface-primary">{rows.map(row => <li key={row.id} className="grid min-w-0 gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
-        <div className="flex min-w-0 items-start gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-control bg-surface-canvas text-text-secondary"><Clock size={18} aria-hidden="true" /></span>
-          <div className="grid min-w-0 gap-2">
-            <div><h2 className="break-words text-base font-semibold">{row.orderReference}</h2><p className="mt-1 break-words text-sm text-text-secondary">{row.vendorName ?? 'Vendor'} · {row.reasonCode.toLowerCase().replaceAll('_', ' ')}</p></div>
-            {row.responseDueAt && <p className="break-words text-sm text-text-secondary">Vendor response due {formatManilaDateTime(row.responseDueAt)}</p>}
-            {row.overdue && <div className="flex min-w-0 flex-wrap"><StatusBadge label="Past due — finalizing automatically" tone="warning" /></div>}
-          </div>
-        </div>
-        {row.orderId && <div className="flex min-w-0 border-t border-border-default pt-4 xl:justify-end xl:border-0 xl:pt-0"><DocumentExportButton basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} audience="admin" types={['PURCHASE_ORDER', 'OPERATIONAL_ORDER', 'PAYMENT_CONFIRMATION']} resourceId={row.orderId} title={row.orderReference} /></div>}
-      </li>)}</ul>}
+      : <ResponsiveRecordList caption="Cancellation request records" rows={rows} columns={columns} rowKey={row => row.id} cardTitle={row => <span className="flex items-start gap-2"><Clock size={18} className="mt-0.5 shrink-0 text-action-primary" aria-hidden="true" />{row.orderReference}</span>} />}
   </section>
 }

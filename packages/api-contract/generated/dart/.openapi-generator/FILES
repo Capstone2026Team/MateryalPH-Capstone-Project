@@ -609,6 +609,8 @@ doc/GeoDemandColumnsInner.md
 doc/GeoDemandEnvelope.md
 doc/GeoDemandRowsInner.md
 doc/GeoFilterApplicability.md
+doc/GeoFilterOption.md
+doc/GeoFilterOptionsEnvelope.md
 doc/GeoKpis.md
 doc/GeoKpisActiveUsers.md
 doc/GeoRate.md
@@ -1905,6 +1907,8 @@ lib/src/model/geo_demand_columns_inner.dart
 lib/src/model/geo_demand_envelope.dart
 lib/src/model/geo_demand_rows_inner.dart
 lib/src/model/geo_filter_applicability.dart
+lib/src/model/geo_filter_option.dart
+lib/src/model/geo_filter_options_envelope.dart
 lib/src/model/geo_kpis.dart
 lib/src/model/geo_kpis_active_users.dart
 lib/src/model/geo_rate.dart
@@ -3147,6 +3151,8 @@ test/geo_demand_envelope_test.dart
 test/geo_demand_rows_inner_test.dart
 test/geo_demand_test.dart
 test/geo_filter_applicability_test.dart
+test/geo_filter_option_test.dart
+test/geo_filter_options_envelope_test.dart
 test/geo_kpis_active_users_test.dart
 test/geo_kpis_test.dart
 test/geo_rate_test.dart

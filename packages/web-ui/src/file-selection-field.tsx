@@ -1,15 +1,17 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState, type RefObject } from 'react'
 import { FileImage, Upload } from 'lucide-react'
 import { Button } from './button'
 
-export function FileSelectionField({ label, accept, hint, chooseLabel = 'Choose file', file, disabled = false, required = false, error, onChange, camera = false }: {
+export function FileSelectionField({ label, accept, hint, chooseLabel = 'Choose file', file, disabled = false, required = false, error, onChange, camera = false, inputRef }: {
   label: string; accept: string; hint: string; chooseLabel?: string;
   file: File | null; disabled?: boolean; required?: boolean; error?: string | undefined;
   onChange: (file: File | null) => void;
   camera?: boolean;
+  inputRef?: RefObject<HTMLInputElement | null>;
 }) {
   const id = useId()
-  const input = useRef<HTMLInputElement>(null)
+  const localInput = useRef<HTMLInputElement>(null)
+  const input = inputRef ?? localInput
   const cameraInput = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<{ file: File; url: string } | null>(null)
   const [failedPreview, setFailedPreview] = useState<string | null>(null)
@@ -32,6 +34,7 @@ export function FileSelectionField({ label, accept, hint, chooseLabel = 'Choose 
         <input ref={input} id={id} type="file" accept={accept} disabled={disabled} aria-required={required} aria-invalid={Boolean(error)} aria-describedby={`${id}-hint${error ? ` ${id}-error` : ''}`} className="sr-only" onChange={event => {
           const selected = event.target.files?.[0]
           if (selected) onChange(selected)
+          event.target.value = ''
         }} />
       </label>
       {camera && <label className={`relative inline-flex min-h-11 items-center rounded-control border border-border-default px-4 text-sm font-semibold focus-within:ring-2 focus-within:ring-focus-ring ${disabled ? 'opacity-50' : 'cursor-pointer'}`}>

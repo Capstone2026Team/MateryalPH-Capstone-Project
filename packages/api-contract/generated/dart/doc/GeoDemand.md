@@ -15,6 +15,7 @@ Name | Type | Description | Notes
 **dimension** | **String** |  |
 **columns** | [**BuiltList&lt;GeoDemandColumnsInner&gt;**](GeoDemandColumnsInner.md) |  |
 **rows** | [**BuiltList&lt;GeoDemandRowsInner&gt;**](GeoDemandRowsInner.md) |  |
+**columnPagination** | [**PageMeta**](PageMeta.md) |  |
 **notComparableLines** | **int** |  |
 **definition** | **String** |  |
 
