@@ -358,7 +358,16 @@ class FakeDiscoveryRepository implements DiscoveryRepository {
       publicPhone: '(02) 8236 5500',
       websiteUri: 'https://panda.example.test',
       googleMapsUri: 'https://maps.google.com/?cid=1',
-      openingHours: const ['Monday: 8:30 AM – 5:30 PM'],
+      // Keep the "Today" summary stable on every weekday in layout captures.
+      openingHours: const [
+        'Monday: 8:30 AM – 5:30 PM',
+        'Tuesday: 8:30 AM – 5:30 PM',
+        'Wednesday: 8:30 AM – 5:30 PM',
+        'Thursday: 8:30 AM – 5:30 PM',
+        'Friday: 8:30 AM – 5:30 PM',
+        'Saturday: 8:30 AM – 5:30 PM',
+        'Sunday: 8:30 AM – 5:30 PM',
+      ],
       googleRatingValue: '4.8',
       googleRatingCount: 120,
     );

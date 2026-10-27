@@ -239,7 +239,7 @@ final class DemoVendorSeedTest extends TestCase
         $importer = json_decode((string) DB::table('compliance_submissions as s')->join('vendor_listings as l', 'l.id', '=', 's.vendor_listing_id')->where('l.vendor_sku', 'JBN-6060-IMPORT')->value('s.declared'), true);
         self::assertSame('TA & J GALLERIA CERAMICA', $importer['importer_name'], 'The ICC register record supplies the importer.');
         $maker = DB::table('vendor_listings as l')->join('products as p', 'p.id', '=', 'l.product_id')->where('l.vendor_sku', 'HCG-CS4510')->first(['p.manufacturer', 'p.country_of_manufacture']);
-        self::assertSame(['Hocheng Philippines Corporation', 'PH'], [$maker->manufacturer, $maker->country_of_manufacture]);
+        self::assertSame(['HOCHENG PHILIPPINES CORPORATION', 'PH'], [$maker->manufacturer, $maker->country_of_manufacture], 'The PS register record supplies the manufacturer and local origin.');
 
         $sucat = (string) DB::table('vendor_organizations')->where('store_name', 'Sucat Cement, Steel & Ready-Mix Supply')->value('id');
         $rmc = DB::table('vendor_listings as l')->join('products as p', 'p.id', '=', 'l.product_id')->join('materials as m', 'm.id', '=', 'p.material_id')->where('l.vendor_organization_id', $sucat)->where('m.code', 'READY_MIXED_CONCRETE')->first(['l.id', 'l.status', 'l.regulated']);
