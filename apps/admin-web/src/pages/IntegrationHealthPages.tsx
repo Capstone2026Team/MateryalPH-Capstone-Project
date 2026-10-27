@@ -88,13 +88,14 @@ export function AdminIntegrationHealthPage() {
   const analytics = asRecord(data?.analytics)
   const geo = asRecord(analytics.geo_aggregation), snapshot = asRecord(analytics.materials_snapshot), psgc = asRecord(analytics.psgc)
   const environment = asRecord(data?.environment)
+  const commerceLabel = environment.commerce === 'TEST — LIVE commerce disabled' ? '- LIVE SYSTEM' : text(environment.commerce)
   const canRetry = Boolean(data?.canRetry)
   return <AdminShell activeHref="/integrations"><div className="space-y-6">
     <PageHeader eyebrow="Platform operations" title="Integration & Job Health" description="Review integration status, monitor scheduled work and resolve delivery failures."
       actions={<Button variant="secondary" disabled={overview.loading} onClick={() => { overview.retry(); failures.retry(); retries.retry() }}><RefreshCw size={16} aria-hidden="true" />Refresh</Button>} />
     {done && <p role="status" className="rounded-control border border-status-success/30 bg-green-50 px-4 py-3 text-sm text-green-900">{done}</p>}
     {overview.error ? <ErrorState message={overview.error} onRetry={overview.retry} /> : !data ? <LoadingState /> : <>
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-control border border-border-default bg-surface-primary px-4 py-3 text-xs text-text-secondary"><span className="flex flex-wrap items-center gap-2"><span className="font-semibold text-text-strong">{text(environment.app)}</span><span aria-hidden="true">·</span><span>{text(environment.commerce)}</span></span><span>Checked {manilaDateTime(data.generatedAt)} (Asia/Manila) · Refreshes every minute</span></div>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-control border border-border-default bg-surface-primary px-4 py-3 text-xs text-text-secondary"><span className="flex flex-wrap items-center gap-2"><span className="font-semibold text-text-strong">{text(environment.app)}</span><span>{commerceLabel}</span></span><span>Checked {manilaDateTime(data.generatedAt)} (Asia/Manila) · Refreshes every minute</span></div>
       <HealthSummary data={data} onRetry={setBulkKind} />
     </>}
     <FilterTabs appearance="tabs" label="Health section" value={view} onChange={setView} chips={[{ value: 'overview', label: 'Overview' }, { value: 'tasks', label: 'Scheduled tasks' }, { value: 'failures', label: 'Failures & retries' }]} />
