@@ -8,14 +8,26 @@ import 'package:built_value/serializer.dart';
 
 part 'quotation_location_search.g.dart';
 
-/// QuotationLocationSearch
+/// Supply exactly one selection - query for address search, latitude plus longitude for a map pin, or address_id to reopen a location previously proposed in this same conversation. Device GPS and the Buyer address book are never queried.
 ///
 /// Properties:
 /// * [query]
+/// * [latitude]
+/// * [longitude]
+/// * [addressId]
 @BuiltValue()
 abstract class QuotationLocationSearch implements Built<QuotationLocationSearch, QuotationLocationSearchBuilder> {
   @BuiltValueField(wireName: r'query')
-  String get query;
+  String? get query;
+
+  @BuiltValueField(wireName: r'latitude')
+  double? get latitude;
+
+  @BuiltValueField(wireName: r'longitude')
+  double? get longitude;
+
+  @BuiltValueField(wireName: r'address_id')
+  String? get addressId;
 
   QuotationLocationSearch._();
 
@@ -40,11 +52,34 @@ class _$QuotationLocationSearchSerializer implements PrimitiveSerializer<Quotati
     QuotationLocationSearch object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    yield r'query';
-    yield serializers.serialize(
-      object.query,
-      specifiedType: const FullType(String),
-    );
+    if (object.query != null) {
+      yield r'query';
+      yield serializers.serialize(
+        object.query,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.latitude != null) {
+      yield r'latitude';
+      yield serializers.serialize(
+        object.latitude,
+        specifiedType: const FullType(double),
+      );
+    }
+    if (object.longitude != null) {
+      yield r'longitude';
+      yield serializers.serialize(
+        object.longitude,
+        specifiedType: const FullType(double),
+      );
+    }
+    if (object.addressId != null) {
+      yield r'address_id';
+      yield serializers.serialize(
+        object.addressId,
+        specifiedType: const FullType(String),
+      );
+    }
   }
 
   @override
@@ -71,9 +106,34 @@ class _$QuotationLocationSearchSerializer implements PrimitiveSerializer<Quotati
         case r'query':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(String),
-          ) as String;
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
           result.query = valueDes;
+          break;
+        case r'latitude':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(double),
+          ) as double?;
+          if (valueDes == null) continue;
+          result.latitude = valueDes;
+          break;
+        case r'longitude':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(double),
+          ) as double?;
+          if (valueDes == null) continue;
+          result.longitude = valueDes;
+          break;
+        case r'address_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.addressId = valueDes;
           break;
         default:
           unhandled.add(key);

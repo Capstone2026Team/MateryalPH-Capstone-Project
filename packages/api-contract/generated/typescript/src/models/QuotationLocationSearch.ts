@@ -14,7 +14,7 @@
 
 import { mapValues } from '../runtime';
 /**
- *
+ * Supply exactly one selection - query for address search, latitude plus longitude for a map pin, or address_id to reopen a location previously proposed in this same conversation. Device GPS and the Buyer address book are never queried.
  * @export
  * @interface QuotationLocationSearch
  */
@@ -22,14 +22,25 @@ export interface QuotationLocationSearch {
     /**
      *
      */
-    query: string;
+    query?: string;
+    /**
+     *
+     */
+    latitude?: number;
+    /**
+     *
+     */
+    longitude?: number;
+    /**
+     *
+     */
+    addressId?: string;
 }
 
 /**
  * Check if a given object implements the QuotationLocationSearch interface.
  */
 export function instanceOfQuotationLocationSearch(value: object): value is QuotationLocationSearch {
-    if (!('query' in value) || value['query'] === undefined) return false;
     return true;
 }
 
@@ -43,7 +54,10 @@ export function QuotationLocationSearchFromJSONTyped(json: any, ignoreDiscrimina
     }
     return {
 
-        'query': json['query'],
+        'query': json['query'] == null ? undefined : json['query'],
+        'latitude': json['latitude'] == null ? undefined : json['latitude'],
+        'longitude': json['longitude'] == null ? undefined : json['longitude'],
+        'addressId': json['address_id'] == null ? undefined : json['address_id'],
     };
 }
 
@@ -59,6 +73,9 @@ export function QuotationLocationSearchToJSONTyped(value?: QuotationLocationSear
     return {
 
         'query': value['query'],
+        'latitude': value['latitude'],
+        'longitude': value['longitude'],
+        'address_id': value['addressId'],
     };
 }
 

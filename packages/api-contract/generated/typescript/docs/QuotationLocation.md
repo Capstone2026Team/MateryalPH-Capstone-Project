@@ -1,6 +1,7 @@
 
 # QuotationLocation
 
+Vendor-searched or pinned location scoped to this conversation. Coordinates position the editable map pin; they do not represent device GPS.
 
 ## Properties
 
@@ -8,6 +9,8 @@ Name | Type
 ------------ | -------------
 `id` | string
 `formattedAddress` | string
+`latitude` | number
+`longitude` | number
 
 ## Example
 
@@ -18,6 +21,8 @@ import type { QuotationLocation } from '@materyalph/api-client-ts'
 const example = {
   "id": null,
   "formattedAddress": null,
+  "latitude": null,
+  "longitude": null,
 } satisfies QuotationLocation
 
 console.log(example)

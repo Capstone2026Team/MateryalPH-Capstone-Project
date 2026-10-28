@@ -14,7 +14,7 @@
 
 import { mapValues } from '../runtime';
 /**
- *
+ * Vendor-searched or pinned location scoped to this conversation. Coordinates position the editable map pin; they do not represent device GPS.
  * @export
  * @interface QuotationLocation
  */
@@ -27,6 +27,14 @@ export interface QuotationLocation {
      *
      */
     formattedAddress: string;
+    /**
+     *
+     */
+    latitude: number;
+    /**
+     *
+     */
+    longitude: number;
 }
 
 /**
@@ -35,6 +43,8 @@ export interface QuotationLocation {
 export function instanceOfQuotationLocation(value: object): value is QuotationLocation {
     if (!('id' in value) || value['id'] === undefined) return false;
     if ((!('formattedAddress' in (value as Record<string, any>)) && !('formatted_address' in (value as Record<string, any>))) || ((value as Record<string, any>)['formattedAddress'] === undefined && (value as Record<string, any>)['formatted_address'] === undefined)) return false;
+    if (!('latitude' in value) || value['latitude'] === undefined) return false;
+    if (!('longitude' in value) || value['longitude'] === undefined) return false;
     return true;
 }
 
@@ -50,6 +60,8 @@ export function QuotationLocationFromJSONTyped(json: any, ignoreDiscriminator: b
 
         'id': json['id'],
         'formattedAddress': json['formatted_address'],
+        'latitude': json['latitude'],
+        'longitude': json['longitude'],
     };
 }
 
@@ -66,6 +78,8 @@ export function QuotationLocationToJSONTyped(value?: QuotationLocation | null, i
 
         'id': value['id'],
         'formatted_address': value['formattedAddress'],
+        'latitude': value['latitude'],
+        'longitude': value['longitude'],
     };
 }
 

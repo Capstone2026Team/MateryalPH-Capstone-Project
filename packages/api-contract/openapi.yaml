@@ -23967,15 +23967,23 @@ components:
         deduction_centavos: { type: integer, format: int64, minimum: 0 }
     QuotationLocationSearch:
       type: object
-      required: [ query ]
+      minProperties: 1
+      additionalProperties: false
+      description: Supply exactly one selection - query for address search, latitude plus longitude for a map pin, or address_id to reopen a location previously proposed in this same conversation. Device GPS and the Buyer address book are never queried.
       properties:
         query: { type: string, minLength: 5, maxLength: 300 }
+        latitude: { type: number, format: double, minimum: 4, maximum: 21.5 }
+        longitude: { type: number, format: double, minimum: 116, maximum: 127 }
+        address_id: { type: string, format: uuid }
     QuotationLocation:
       type: object
-      required: [ id, formatted_address ]
+      required: [ id, formatted_address, latitude, longitude ]
+      description: Vendor-searched or pinned location scoped to this conversation. Coordinates position the editable map pin; they do not represent device GPS.
       properties:
         id: { type: string, format: uuid }
         formatted_address: { type: string }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
     QuotationLocationEnvelope:
       type: object
       required: [ data, meta, errors ]

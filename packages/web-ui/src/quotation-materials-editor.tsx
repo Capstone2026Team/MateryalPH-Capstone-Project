@@ -7,6 +7,7 @@ import { QuantityField } from './quantity-field'
 import { MoneyField } from './money-field'
 import { formatPesoCentavos } from './order-patterns'
 import { SpecificationFields } from './specification-fields'
+import { materialPayablePreview } from './material-amounts'
 
 type MaterialDetails = { variantLabel: string; specifications: Record<string, string>; unitCode?: string; quantityPolicy?: QuantityPolicy | undefined }
 
@@ -25,9 +26,6 @@ export function QuotationMaterialsEditor({ lines, names, productDetails, disable
 
   return <section aria-label="Added quotation materials" className="min-w-0 space-y-2">
     <h4 className="text-sm font-semibold" aria-live="polite">Added materials ({lines.length})</h4>
-    <div className="hidden grid-cols-[minmax(0,1fr)_5.5rem_9rem_7rem] gap-2 px-3 text-xs text-text-secondary sm:grid" aria-hidden="true">
-      <span>Material</span><span>Quantity</span><span>Unit price (₱)</span><span className="sr-only">Actions</span>
-    </div>
     <ul className="min-w-0 divide-y divide-border-default rounded-control border border-border-default">
       {lines.map((line, index) => {
         const name = line.description?.trim() || names[line.variantId] || `Product line ${index + 1}`
@@ -36,22 +34,26 @@ export function QuotationMaterialsEditor({ lines, names, productDetails, disable
         const preview = Object.entries(specifications).filter(([, value]) => value.trim()).map(([key, value]) => `${key.replace(/[_-]+/g, ' ')}: ${value}`).join(' · ')
         const expanded = expandedId === line.variantId
         const detailsId = `${editorId}-${line.variantId}`
+        const subtotal = materialPayablePreview([{ id: line.variantId, quantity: line.quantity, unitPriceCentavos: line.unitPriceCentavos }], 0)
         return <li key={line.variantId} className="min-w-0">
-          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 sm:grid-cols-[minmax(0,1fr)_5.5rem_9rem_7rem]">
-            <div className="col-span-2 min-w-0 sm:col-span-1">
+          <div className="grid min-w-0 grid-cols-2 items-end gap-3 p-3 sm:grid-cols-[5.5rem_9rem_minmax(0,1fr)] sm:p-4">
+            <div className="col-span-2 flex min-w-0 items-start justify-between gap-2 sm:col-span-3">
+            <div className="min-w-0">
               <p className="break-words text-sm font-semibold">{name}</p>
-              <p className="mt-0.5 truncate text-xs text-text-secondary" title={preview}>{line.unitPriceCentavos > 0 ? formatPesoCentavos(line.unitPriceCentavos) : 'Enter a unit price'}{preview ? ` · ${preview}` : ''}</p>
+              {preview && <p className="mt-1 break-words text-xs text-text-secondary">{preview}</p>}
             </div>
-            <div className="col-start-1 row-start-2 min-w-0 sm:col-start-2 sm:row-start-1 sm:[&_label]:sr-only">
-              <QuantityField unitCode={details?.unitCode ?? line.unitCode ?? ''} policy={details?.quantityPolicy ?? line.quantityPolicy} label={details?.unitCode || line.unitCode ? undefined : 'Quantity'} aria-label={`Quantity for ${name}`} disabled={disabled} inputMode="decimal" value={line.quantity} onChange={event => onChange(line.variantId, { quantity: event.target.value })} />
-            </div>
-            <div className="col-span-2 col-start-2 row-start-2 min-w-0 sm:col-span-1 sm:col-start-3 sm:row-start-1 sm:[&_label]:sr-only">
-              <MoneyField label="Unit price (₱)" aria-label={`Unit price in pesos for ${name}`} disabled={disabled} valueCentavos={line.unitPriceCentavos > 0 ? line.unitPriceCentavos : null} minCentavos={1} maxCentavos={100000000000} onChange={value => onChange(line.variantId, { unitPriceCentavos: value ?? 0 })} />
-            </div>
-            <div className="col-start-3 row-start-1 flex justify-end gap-1 sm:col-start-4">
+            <div className="flex shrink-0 gap-1">
               <Button variant="quiet" disabled={disabled} aria-label={`Edit details for ${name}`} title="Edit description and specifications" aria-expanded={expanded} aria-controls={detailsId} onClick={() => setExpandedId(expanded ? null : line.variantId)}><ChevronDown size={18} aria-hidden="true" className={expanded ? 'rotate-180' : ''} /></Button>
               <Button variant="quiet" disabled={disabled} aria-label={`Remove ${name}`} title="Remove material" onClick={() => { if (expanded) setExpandedId(null); onRemove(line.variantId) }}><Trash2 size={18} aria-hidden="true" /></Button>
             </div>
+            </div>
+            <div className="min-w-0">
+              <QuantityField unitCode={details?.unitCode ?? line.unitCode ?? ''} policy={details?.quantityPolicy ?? line.quantityPolicy} label={details?.unitCode || line.unitCode ? undefined : 'Quantity'} aria-label={`Quantity for ${name}`} disabled={disabled} inputMode="decimal" value={line.quantity} onChange={event => onChange(line.variantId, { quantity: event.target.value })} />
+            </div>
+            <div className="min-w-0">
+              <MoneyField label="Unit price (₱)" aria-label={`Unit price in pesos for ${name}`} disabled={disabled} valueCentavos={line.unitPriceCentavos > 0 ? line.unitPriceCentavos : null} minCentavos={1} maxCentavos={100000000000} onChange={value => onChange(line.variantId, { unitPriceCentavos: value ?? 0 })} />
+            </div>
+            <dl aria-label={`Subtotal for ${name}`} className="col-span-2 flex flex-wrap items-baseline justify-between gap-1 text-sm sm:col-span-1 sm:block sm:pb-2 sm:text-right"><dt className="text-xs text-text-secondary">Line subtotal</dt><dd className="font-semibold tabular-nums sm:mt-2">{subtotal.valid ? formatPesoCentavos(subtotal.grossCentavos) : '—'}</dd></dl>
           </div>
           <div id={detailsId} hidden={!expanded} className="space-y-3 border-t border-border-default bg-surface-canvas p-3">
             {expanded && <>

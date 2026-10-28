@@ -1,4 +1,4 @@
-import { MessagingApi, type ChatDraftContent, type SiteInspectionDecision } from '@materyalph/api-client-ts'
+import { MessagingApi, type ChatDraftContent, type QuotationLocationSearch, type SiteInspectionDecision } from '@materyalph/api-client-ts'
 import { createWebApiConfiguration } from '@materyalph/web-ui'
 export { readableOnboardingError as readableChatError } from './onboarding-api'
 
@@ -22,7 +22,7 @@ export const chatApi = {
   handlers: (conversationId: string, page = 1) => api().listChatHandlers({ ...scope, conversationId, page }),
   transfer: (conversationId: string, handlerUserId: number, lockVersion: number, reason: string) => api().transferChatHandler({ ...scope, conversationId, chatTransfer: { handlerUserId, lockVersion, reason } }),
   draft: async (conversationId: string, lockVersion: number, draft: ChatDraftContent) => (await api().saveChatQuotationDraft({ ...scope, conversationId, chatDraftSave: { lockVersion, draft } })).data,
-  quotationLocation: async (conversationId: string, query: string) => (await api().searchChatQuotationLocation({ conversationId, quotationLocationSearch: { query } })).data,
+  quotationLocation: async (conversationId: string, selection: QuotationLocationSearch) => (await api().searchChatQuotationLocation({ conversationId, quotationLocationSearch: selection })).data,
   quotationDelivery: async (conversationId: string, draft: ChatDraftContent) => (await api().previewChatQuotationDelivery({ conversationId, chatQuotationPreviewRequest: { draft } })).data,
   publish: (conversationId: string, lockVersion: number, idempotencyKey: string) => api().publishChatQuotation({ ...scope, conversationId, idempotencyKey, chatPublish: { lockVersion } }),
   startQuotation: (conversationId: string, lockVersion: number, idempotencyKey: string) => api().startNextChatQuotation({ ...scope, conversationId, idempotencyKey, chatPublish: { lockVersion } }),

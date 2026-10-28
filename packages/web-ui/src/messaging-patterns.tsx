@@ -100,15 +100,18 @@ function QuotationChangeRequest({ version }: { version: ChatQuotationVersion }) 
 
 /** Compact in-thread entry; full materials, changes and payment details open on demand. */
 export function QuotationThreadCard({ version, busy = false, onOpen, onRevise }: { version: ChatQuotationVersion; busy?: boolean; onOpen: () => void; onRevise?: () => void }) {
-  return <article className="w-full min-w-0 max-w-xl rounded-surface border border-border-default bg-surface-primary p-4" aria-label={`Quotation v${version.version}`}>
-    <div className="flex items-start gap-3"><FileText size={20} aria-hidden="true" className="mt-1 shrink-0" /><div className="min-w-0 flex-1">
-      <h3 className="font-semibold">Quotation v{version.version}</h3>
-      <p className="mt-1 text-sm">{quotationStatus(version)} · {formatPesoCentavos(version.content.commercial.commercialTotalCentavos)}</p>
+  return <article className="w-full min-w-0 max-w-xl overflow-hidden rounded-surface border border-border-default bg-surface-primary" aria-label={`Quotation v${version.version}`}>
+    <div className="p-4 sm:p-5">
+    <div className="flex items-start gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-control bg-surface-canvas"><FileText size={20} aria-hidden="true" /></span><div className="min-w-0 flex-1">
+      <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">Quotation v{version.version}</h3><span className="rounded-control bg-surface-canvas px-2 py-1 text-xs font-medium">{quotationStatus(version)}</span></div>
       <p className="mt-1 text-xs text-text-secondary">Published <time dateTime={version.publishedAt}>{new Date(version.publishedAt).toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' })} Manila</time></p>
     </div></div>
-    {version.content.message && <p className="mt-3 whitespace-pre-wrap break-words text-sm">{version.content.message}</p>}
+    <dl className="mt-4 border-t border-border-default pt-4"><dt className="text-xs text-text-secondary">Quotation order total</dt><dd className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">{formatPesoCentavos(version.content.commercial.commercialTotalCentavos)}</dd></dl>
+    <p className="mt-1 text-xs text-text-secondary">{version.content.lines.length} material {version.content.lines.length === 1 ? 'line' : 'lines'} · {version.content.fulfillmentMethod === 'DELIVERY' ? 'Site Delivery' : 'Self-Pickup'} · Before payment processing fees</p>
+    {version.content.message && <p className="mt-4 whitespace-pre-wrap break-words border-l-2 border-border-default pl-3 text-sm leading-relaxed">{version.content.message}</p>}
     <QuotationChangeRequest version={version} />
-    <div className="mt-3 flex flex-wrap gap-2"><Button variant="secondary" onClick={onOpen} aria-haspopup="dialog">View quotation v{version.version}</Button>{version.latest && version.state === 'COUNTERED' && onRevise && <Button disabled={busy} onClick={onRevise}>Revise quotation</Button>}</div>
+    </div>
+    <div className="flex flex-wrap gap-2 border-t border-border-default bg-surface-canvas px-4 py-3 sm:px-5"><Button variant="secondary" onClick={onOpen} aria-haspopup="dialog">View quotation v{version.version}</Button>{version.latest && version.state === 'COUNTERED' && onRevise && <Button disabled={busy} onClick={onRevise}>Revise quotation</Button>}</div>
   </article>
 }
 

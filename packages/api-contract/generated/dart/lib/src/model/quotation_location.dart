@@ -8,11 +8,13 @@ import 'package:built_value/serializer.dart';
 
 part 'quotation_location.g.dart';
 
-/// QuotationLocation
+/// Vendor-searched or pinned location scoped to this conversation. Coordinates position the editable map pin; they do not represent device GPS.
 ///
 /// Properties:
 /// * [id]
 /// * [formattedAddress]
+/// * [latitude]
+/// * [longitude]
 @BuiltValue()
 abstract class QuotationLocation implements Built<QuotationLocation, QuotationLocationBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -20,6 +22,12 @@ abstract class QuotationLocation implements Built<QuotationLocation, QuotationLo
 
   @BuiltValueField(wireName: r'formatted_address')
   String get formattedAddress;
+
+  @BuiltValueField(wireName: r'latitude')
+  double get latitude;
+
+  @BuiltValueField(wireName: r'longitude')
+  double get longitude;
 
   QuotationLocation._();
 
@@ -53,6 +61,16 @@ class _$QuotationLocationSerializer implements PrimitiveSerializer<QuotationLoca
     yield serializers.serialize(
       object.formattedAddress,
       specifiedType: const FullType(String),
+    );
+    yield r'latitude';
+    yield serializers.serialize(
+      object.latitude,
+      specifiedType: const FullType(double),
+    );
+    yield r'longitude';
+    yield serializers.serialize(
+      object.longitude,
+      specifiedType: const FullType(double),
     );
   }
 
@@ -90,6 +108,20 @@ class _$QuotationLocationSerializer implements PrimitiveSerializer<QuotationLoca
             specifiedType: const FullType(String),
           ) as String;
           result.formattedAddress = valueDes;
+          break;
+        case r'latitude':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(double),
+          ) as double;
+          result.latitude = valueDes;
+          break;
+        case r'longitude':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(double),
+          ) as double;
+          result.longitude = valueDes;
           break;
         default:
           unhandled.add(key);

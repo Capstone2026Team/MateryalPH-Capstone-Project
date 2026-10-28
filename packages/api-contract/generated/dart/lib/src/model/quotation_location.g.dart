@@ -11,12 +11,20 @@ class _$QuotationLocation extends QuotationLocation {
   final String id;
   @override
   final String formattedAddress;
+  @override
+  final double latitude;
+  @override
+  final double longitude;
 
   factory _$QuotationLocation(
           [void Function(QuotationLocationBuilder)? updates]) =>
       (QuotationLocationBuilder()..update(updates))._build();
 
-  _$QuotationLocation._({required this.id, required this.formattedAddress})
+  _$QuotationLocation._(
+      {required this.id,
+      required this.formattedAddress,
+      required this.latitude,
+      required this.longitude})
       : super._();
   @override
   QuotationLocation rebuild(void Function(QuotationLocationBuilder) updates) =>
@@ -31,7 +39,9 @@ class _$QuotationLocation extends QuotationLocation {
     if (identical(other, this)) return true;
     return other is QuotationLocation &&
         id == other.id &&
-        formattedAddress == other.formattedAddress;
+        formattedAddress == other.formattedAddress &&
+        latitude == other.latitude &&
+        longitude == other.longitude;
   }
 
   @override
@@ -39,6 +49,8 @@ class _$QuotationLocation extends QuotationLocation {
     var _$hash = 0;
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, formattedAddress.hashCode);
+    _$hash = $jc(_$hash, latitude.hashCode);
+    _$hash = $jc(_$hash, longitude.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -47,7 +59,9 @@ class _$QuotationLocation extends QuotationLocation {
   String toString() {
     return (newBuiltValueToStringHelper(r'QuotationLocation')
           ..add('id', id)
-          ..add('formattedAddress', formattedAddress))
+          ..add('formattedAddress', formattedAddress)
+          ..add('latitude', latitude)
+          ..add('longitude', longitude))
         .toString();
   }
 }
@@ -65,6 +79,14 @@ class QuotationLocationBuilder
   set formattedAddress(String? formattedAddress) =>
       _$this._formattedAddress = formattedAddress;
 
+  double? _latitude;
+  double? get latitude => _$this._latitude;
+  set latitude(double? latitude) => _$this._latitude = latitude;
+
+  double? _longitude;
+  double? get longitude => _$this._longitude;
+  set longitude(double? longitude) => _$this._longitude = longitude;
+
   QuotationLocationBuilder() {
     QuotationLocation._defaults(this);
   }
@@ -74,6 +96,8 @@ class QuotationLocationBuilder
     if ($v != null) {
       _id = $v.id;
       _formattedAddress = $v.formattedAddress;
+      _latitude = $v.latitude;
+      _longitude = $v.longitude;
       _$v = null;
     }
     return this;
@@ -99,6 +123,10 @@ class QuotationLocationBuilder
               id, r'QuotationLocation', 'id'),
           formattedAddress: BuiltValueNullFieldError.checkNotNull(
               formattedAddress, r'QuotationLocation', 'formattedAddress'),
+          latitude: BuiltValueNullFieldError.checkNotNull(
+              latitude, r'QuotationLocation', 'latitude'),
+          longitude: BuiltValueNullFieldError.checkNotNull(
+              longitude, r'QuotationLocation', 'longitude'),
         );
     replace(_$result);
     return _$result;

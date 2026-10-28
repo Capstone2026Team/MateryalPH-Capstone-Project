@@ -21,6 +21,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\Response;
 
 final class ConversationController extends Controller
@@ -195,9 +196,14 @@ final class ConversationController extends Controller
 
     public function quotationLocation(Request $request, string $conversationId, QuotationDestination $destination): JsonResponse
     {
-        $input = $request->validate(['query' => ['required', 'string', 'min:5', 'max:300']]);
+        $input = $request->validate([
+            'query' => ['required_without_all:latitude,address_id', Rule::prohibitedIf($request->hasAny(['latitude', 'longitude', 'address_id'])), 'string', 'min:5', 'max:300'],
+            'latitude' => ['required_without_all:query,address_id', Rule::prohibitedIf($request->hasAny(['query', 'address_id'])), 'numeric', 'between:4,21.5'],
+            'longitude' => ['required_with:latitude', Rule::prohibitedIf($request->hasAny(['query', 'address_id'])), 'numeric', 'between:116,127'],
+            'address_id' => ['required_without_all:query,latitude', Rule::prohibitedIf($request->hasAny(['query', 'latitude', 'longitude'])), 'uuid'],
+        ]);
 
-        return ApiResponse::success($destination->search($request, $conversationId, $input['query']))->header('Cache-Control', 'no-store');
+        return ApiResponse::success($destination->search($request, $conversationId, $input))->header('Cache-Control', 'no-store');
     }
 
     public function quotationDeliveryPlan(Request $request, string $conversationId, QuotationService $quotations): JsonResponse

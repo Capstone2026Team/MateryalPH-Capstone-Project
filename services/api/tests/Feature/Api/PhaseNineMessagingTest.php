@@ -1416,7 +1416,7 @@ final class PhaseNineMessagingTest extends TestCase
         $geocoder = app(AddressGeocoder::class);
         $geocoder->forward = ['latitude' => $this->originLatitude, 'longitude' => $this->originLongitude, 'formatted_address' => 'Buyer-confirmed site, Quezon City', 'place_id' => null];
         $location = $this->postJson($path.'/location', ['query' => 'Buyer-confirmed site, Quezon City'])->assertOk()->json('data');
-        $this->assertArrayNotHasKey('latitude', $location);
+        self::assertSame($this->originLatitude, $location['latitude']);
         $draft['destination'] = ['intended_address_id' => $location['id'], 'heavy_vehicle_restriction' => 'NO'];
         $draft['delivery'] = ['access_confirmed' => true, 'heavy_vehicle_access_confirmed' => true];
         $geocoder->forward['latitude'] += 1;
@@ -1483,6 +1483,37 @@ final class PhaseNineMessagingTest extends TestCase
         $this->postJson('/api/v1/vendor/conversations/'.$first.'/quotation/delivery-plan', ['draft' => $draft])->assertNotFound();
         $this->signInBuyer($buyer);
         $this->getJson('/api/v1/buyers/conversations/'.$first)->assertOk()->assertJsonMissing(['id' => $location]);
+    }
+
+    public function test_vendor_quotation_map_pin_is_resolved_scoped_and_can_be_reopened(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Pinned quotation');
+        $variant = $this->variantIds($listing)[0];
+        $this->buyer();
+        $first = $this->inquiry($store->id, $variant);
+        $this->buyer();
+        $second = $this->inquiry($store->id, $variant);
+        $this->signInStoreMember($owner);
+        $path = '/api/v1/vendor/conversations/'.$first.'/quotation/location';
+        $geocoder = app(AddressGeocoder::class);
+        $geocoder->reverse = ['formatted_address' => 'Pinned north gate, Quezon City', 'place_id' => null, 'street' => null, 'unit' => null, 'barangay' => null, 'city_municipality' => 'Quezon City', 'province' => null, 'postal_code' => null];
+        $location = $this->postJson($path, ['latitude' => 14.65, 'longitude' => 121.02])->assertOk()
+            ->assertJsonPath('data.latitude', 14.65)->assertJsonPath('data.longitude', 121.02)
+            ->assertJsonPath('data.formatted_address', 'Pinned north gate, Quezon City')->json('data');
+        $this->assertDatabaseHas('addresses', ['id' => $location['id'], 'owner_type' => 'CONVERSATION', 'owner_id' => $first, 'source' => 'MAP_PIN']);
+        $count = DB::table('addresses')->count();
+        $this->postJson($path, ['address_id' => $location['id']])->assertOk()->assertJsonPath('data', $location);
+        self::assertSame($count, DB::table('addresses')->count());
+        $this->postJson('/api/v1/vendor/conversations/'.$second.'/quotation/location', ['address_id' => $location['id']])->assertUnprocessable()->assertJsonPath('errors.0.code', 'LOCATION_NOT_FOUND');
+        foreach ([[], ['latitude' => 14.65], ['latitude' => 90, 'longitude' => 121.02], ['latitude' => 14.65, 'longitude' => 121.02, 'query' => 'Mixed selection'], ['address_id' => $location['id'], 'query' => 'Mixed selection']] as $bad) {
+            $this->postJson($path, $bad)->assertUnprocessable();
+        }
+        $geocoder->reverse = null;
+        $this->postJson($path, ['latitude' => 14.65, 'longitude' => 121.02])->assertUnprocessable()->assertJsonPath('errors.0.code', 'ADDRESS_NOT_LOCATED');
+        $geocoder->unavailable = true;
+        $this->postJson($path, ['latitude' => 14.65, 'longitude' => 121.02])->assertStatus(503);
+        self::assertSame($count, DB::table('addresses')->count());
+        self::assertSame(0, DB::table('quotation_versions')->count());
     }
 
     public function test_percentage_materials_discount_is_frozen_and_preserved_after_acceptance(): void

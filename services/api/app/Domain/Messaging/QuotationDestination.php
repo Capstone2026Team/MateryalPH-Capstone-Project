@@ -32,8 +32,9 @@ final class QuotationDestination
         }
     }
 
-    /** @return array<string, mixed> */
-    public function search(Request $request, string $conversationId, string $query): array
+    /** @param array<string, mixed> $input
+     * @return array<string, mixed> */
+    public function search(Request $request, string $conversationId, array $input): array
     {
         $access = app(ConversationAccess::class);
         $c = $access->require($request->user(), $conversationId);
@@ -42,28 +43,38 @@ final class QuotationDestination
         if ($c->context_type !== 'ITEM_BASED') {
             throw new AuthenticationException('DESTINATION_LOCKED', 'Use the locked Work Package destination.', 409);
         }
+        if (isset($input['address_id'])) {
+            $point = $this->point($c, $input['address_id']);
+
+            return ['id' => $input['address_id'], 'formatted_address' => $point['formatted_address'], 'latitude' => (float) $point['latitude'], 'longitude' => (float) $point['longitude']];
+        }
+        $pin = isset($input['latitude']);
         try {
-            $point = app(AddressGeocoder::class)->forward(trim($query).', Philippines');
+            $geocoder = app(AddressGeocoder::class);
+            $point = $pin ? $geocoder->reverse((float) $input['latitude'], (float) $input['longitude']) : $geocoder->forward(trim($input['query']).', Philippines');
+            if ($point !== null && $pin) {
+                $point = ['latitude' => (float) $input['latitude'], 'longitude' => (float) $input['longitude']] + $point;
+            }
         } catch (AddressProviderUnavailable) {
             throw new AuthenticationException('ADDRESS_PROVIDER_UNAVAILABLE', 'Address search is unavailable. Retry in a moment.', 503);
         }
-        if ($point === null || ! PhilippineBounds::contains($point['latitude'], $point['longitude'])) {
+        if ($point === null || trim((string) $point['formatted_address']) === '' || ! PhilippineBounds::contains($point['latitude'], $point['longitude'])) {
             throw new AuthenticationException('ADDRESS_NOT_LOCATED', 'Address not found. Include the street, barangay and city, then search again.', 422);
         }
         // Provider lookup completes before the conversation lock; recheck access after that network call.
-        $id = DB::transaction(function () use ($request, $conversationId, $point, $access): string {
+        $id = DB::transaction(function () use ($request, $conversationId, $point, $access, $pin): string {
             $c = $access->require($request->user(), $conversationId, true);
             $access->requireSales($request->user(), $c);
             app(ConversationService::class)->requireCurrent($c);
             $id = (string) Str::uuid7();
             DB::statement('INSERT INTO addresses (id, owner_type, owner_id, label, formatted_address, latitude, longitude, location, source, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ST_SetSRID(ST_MakePoint(?, ?),4326)::geography, ?, now(), now())',
-                [$id, 'CONVERSATION', $c->id, 'Proposed delivery location', $point['formatted_address'], $point['latitude'], $point['longitude'], $point['longitude'], $point['latitude'], 'ADDRESS_SEARCH']);
+                [$id, 'CONVERSATION', $c->id, 'Proposed delivery location', $point['formatted_address'], $point['latitude'], $point['longitude'], $point['longitude'], $point['latitude'], $pin ? 'MAP_PIN' : 'ADDRESS_SEARCH']);
             app(AuditRecorder::class)->account($request, 'QUOTATION_LOCATION_RESOLVED', 'CONVERSATION', $c->id, after: ['address_id' => $id]);
 
             return $id;
         });
 
-        return ['id' => $id, 'formatted_address' => $point['formatted_address']];
+        return ['id' => $id, 'formatted_address' => $point['formatted_address'], 'latitude' => (float) $point['latitude'], 'longitude' => (float) $point['longitude']];
     }
 
     /** @param array<string, mixed> $input

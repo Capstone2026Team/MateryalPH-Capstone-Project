@@ -8,13 +8,21 @@ part of 'quotation_location_search.dart';
 
 class _$QuotationLocationSearch extends QuotationLocationSearch {
   @override
-  final String query;
+  final String? query;
+  @override
+  final double? latitude;
+  @override
+  final double? longitude;
+  @override
+  final String? addressId;
 
   factory _$QuotationLocationSearch(
           [void Function(QuotationLocationSearchBuilder)? updates]) =>
       (QuotationLocationSearchBuilder()..update(updates))._build();
 
-  _$QuotationLocationSearch._({required this.query}) : super._();
+  _$QuotationLocationSearch._(
+      {this.query, this.latitude, this.longitude, this.addressId})
+      : super._();
   @override
   QuotationLocationSearch rebuild(
           void Function(QuotationLocationSearchBuilder) updates) =>
@@ -27,13 +35,20 @@ class _$QuotationLocationSearch extends QuotationLocationSearch {
   @override
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
-    return other is QuotationLocationSearch && query == other.query;
+    return other is QuotationLocationSearch &&
+        query == other.query &&
+        latitude == other.latitude &&
+        longitude == other.longitude &&
+        addressId == other.addressId;
   }
 
   @override
   int get hashCode {
     var _$hash = 0;
     _$hash = $jc(_$hash, query.hashCode);
+    _$hash = $jc(_$hash, latitude.hashCode);
+    _$hash = $jc(_$hash, longitude.hashCode);
+    _$hash = $jc(_$hash, addressId.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -41,7 +56,10 @@ class _$QuotationLocationSearch extends QuotationLocationSearch {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'QuotationLocationSearch')
-          ..add('query', query))
+          ..add('query', query)
+          ..add('latitude', latitude)
+          ..add('longitude', longitude)
+          ..add('addressId', addressId))
         .toString();
   }
 }
@@ -55,6 +73,18 @@ class QuotationLocationSearchBuilder
   String? get query => _$this._query;
   set query(String? query) => _$this._query = query;
 
+  double? _latitude;
+  double? get latitude => _$this._latitude;
+  set latitude(double? latitude) => _$this._latitude = latitude;
+
+  double? _longitude;
+  double? get longitude => _$this._longitude;
+  set longitude(double? longitude) => _$this._longitude = longitude;
+
+  String? _addressId;
+  String? get addressId => _$this._addressId;
+  set addressId(String? addressId) => _$this._addressId = addressId;
+
   QuotationLocationSearchBuilder() {
     QuotationLocationSearch._defaults(this);
   }
@@ -63,6 +93,9 @@ class QuotationLocationSearchBuilder
     final $v = _$v;
     if ($v != null) {
       _query = $v.query;
+      _latitude = $v.latitude;
+      _longitude = $v.longitude;
+      _addressId = $v.addressId;
       _$v = null;
     }
     return this;
@@ -84,8 +117,10 @@ class QuotationLocationSearchBuilder
   _$QuotationLocationSearch _build() {
     final _$result = _$v ??
         _$QuotationLocationSearch._(
-          query: BuiltValueNullFieldError.checkNotNull(
-              query, r'QuotationLocationSearch', 'query'),
+          query: query,
+          latitude: latitude,
+          longitude: longitude,
+          addressId: addressId,
         );
     replace(_$result);
     return _$result;
