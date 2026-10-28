@@ -51,7 +51,7 @@ class ReleasePackagingTest(unittest.TestCase):
                 self.assertEqual(stream.extractfile(relative.as_posix()).read(), expected,
                                  'Windows release export must preserve the LF patch context')
 
-    def exercise(self, directory, reject_edge=False):
+    def exercise(self, directory, reject_role=None):
         destination = Path(directory) / 'release'
         commands = []
         commit = 'a' * 40
@@ -68,7 +68,7 @@ class ReleasePackagingTest(unittest.TestCase):
             elif arguments[:3] == ['docker', 'image', 'inspect']:
                 role = 'b' if 'api' in arguments[3] else 'c'
                 return subprocess.CompletedProcess(arguments, 0, stdout='sha256:' + role * 64)
-            elif arguments[0] == 'trivy' and reject_edge and arguments[-1] == 'sha256:' + 'c' * 64:
+            elif arguments[0] == 'trivy' and reject_role and arguments[-1] == 'sha256:' + ('b' if reject_role == 'api' else 'c') * 64:
                 raise subprocess.CalledProcessError(1, arguments)
             elif arguments[:2] == ['docker', 'save']:
                 Path(arguments[3]).write_bytes(b'synthetic image archive')
@@ -83,19 +83,19 @@ class ReleasePackagingTest(unittest.TestCase):
         with patch.object(sys, 'argv', ['package-vps.py', 'example/repository', commit, str(destination)]), \
                 patch.dict(os.environ, environment), patch.object(package, 'fetch_runs', return_value=[accepted]), \
                 patch.object(package, 'run', side_effect=run):
-            if reject_edge:
+            if reject_role:
                 with self.assertRaises(subprocess.CalledProcessError):
                     package.main()
             else:
                 package.main()
         return destination, commands
 
-    def test_release_refreshes_edge_runtime_and_checks_exact_images(self):
+    def test_release_refreshes_both_runtimes_and_checks_exact_images(self):
         with tempfile.TemporaryDirectory() as directory:
             destination, commands = self.exercise(directory)
             builds = [command for command in commands if command[:2] == ['docker', 'build']]
             self.assertEqual(len(builds), 2)
-            self.assertNotIn('--no-cache-filter', builds[0])
+            self.assertEqual(builds[0][builds[0].index('--no-cache-filter') + 1], 'api-runtime')
             self.assertEqual(builds[1][builds[1].index('--no-cache-filter') + 1], 'edge-runtime')
             record = json.loads((destination / 'release.json').read_text())
             scans = [command for command in commands if command[0] == 'trivy']
@@ -106,12 +106,13 @@ class ReleasePackagingTest(unittest.TestCase):
             for name, checksum in record['archives'].items():
                 self.assertEqual(package.digest(destination / name), checksum)
 
-    def test_edge_security_failure_cannot_produce_an_accepted_release(self):
-        with tempfile.TemporaryDirectory() as directory:
-            destination, commands = self.exercise(directory, reject_edge=True)
-            self.assertFalse((destination / 'release.json').exists())
-            self.assertFalse((destination / 'edge.tar').exists())
-            self.assertEqual(len([command for command in commands if command[0] == 'trivy']), 2)
+    def test_security_failure_cannot_produce_an_accepted_release(self):
+        for role, expected_scans in [('api', 1), ('edge', 2)]:
+            with self.subTest(role=role), tempfile.TemporaryDirectory() as directory:
+                destination, commands = self.exercise(directory, reject_role=role)
+                self.assertFalse((destination / 'release.json').exists())
+                self.assertFalse((destination / f'{role}.tar').exists())
+                self.assertEqual(len([command for command in commands if command[0] == 'trivy']), expected_scans)
 
 
 if __name__ == '__main__':

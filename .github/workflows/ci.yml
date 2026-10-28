@@ -558,7 +558,7 @@ jobs:
           trap 'rm -f services/api/.env.testing' EXIT
           node -e 'require("node:fs").writeFileSync("services/api/.env.testing", `TEST_DB_PASSWORD=${require("node:crypto").randomBytes(32).toString("hex")}\n`)'
           docker compose --env-file services/api/.env.testing -f compose.test.yaml config --quiet
-      - run: docker build --pull -f infrastructure/docker/api.render.Dockerfile -t materyalph-api:${{ github.sha }} .
+      - run: docker build --pull --no-cache-filter api-runtime -f infrastructure/docker/api.render.Dockerfile -t materyalph-api:${{ github.sha }} .
       - name: Build both VPS portals off-server
         run: docker build --pull --no-cache-filter edge-runtime -f infrastructure/docker/portals.vps.Dockerfile --build-arg VENDOR_RECAPTCHA_SITE_KEY=public-ci-vendor --build-arg ADMIN_RECAPTCHA_SITE_KEY=public-ci-admin --build-arg GOOGLE_MAPS_BROWSER_KEY=public-ci-maps -t materyalph-edge:${{ github.sha }} .
       - name: Validate the Caddy edge image

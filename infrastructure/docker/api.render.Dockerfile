@@ -1,4 +1,4 @@
-FROM php:8.4-fpm-alpine
+FROM php:8.4-fpm-alpine AS api-build
 
 RUN apk upgrade --no-cache \
     && apk add --no-cache \
@@ -54,6 +54,12 @@ RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framewor
     && adduser -D -u 10001 app \
     && chmod +x /usr/local/bin/render-start \
     && chown -R app:app storage bootstrap/cache /var/lib/clamav /tmp/nginx /app/infrastructure/nginx.conf
+
+FROM api-build AS api-runtime
+# Refresh this final stage on every release without recompiling PHP extensions.
+# Supervisor requires Python; fail closed if the CVE-2026-115557 fix is unavailable.
+RUN apk upgrade --no-cache \
+    && apk add --no-cache 'python3>=3.14.10-r0'
 
 USER app
 

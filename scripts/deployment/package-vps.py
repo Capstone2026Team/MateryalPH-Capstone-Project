@@ -71,9 +71,9 @@ def main():
         for role, dockerfile in [('api', 'api.render.Dockerfile'), ('edge', 'portals.vps.Dockerfile')]:
             image = f'materyalph-{role}:{commit}'
             command = ['docker', 'build', '--pull', '--platform=linux/amd64', '-f', str(source / 'infrastructure/docker' / dockerfile), '-t', image]
+            # --pull refreshes the base, not a cached RUN apk upgrade layer.
+            command += ['--no-cache-filter', f'{role}-runtime']
             if role == 'edge':
-                # --pull refreshes the base, not a cached RUN apk upgrade layer.
-                command += ['--no-cache-filter', 'edge-runtime']
                 for key in ['VENDOR_RECAPTCHA_SITE_KEY', 'ADMIN_RECAPTCHA_SITE_KEY', 'GOOGLE_MAPS_BROWSER_KEY']:
                     command += ['--build-arg', key]
             retry(lambda: run(command + [str(source)]), attempts=4)
