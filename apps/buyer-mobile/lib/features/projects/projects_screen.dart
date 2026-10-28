@@ -1232,6 +1232,7 @@ class _BudgetBar extends StatelessWidget {
           child: total <= 0 || used <= 0
               ? null
               : Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     for (final s in segments)
                       if (s.$1 > 0)
