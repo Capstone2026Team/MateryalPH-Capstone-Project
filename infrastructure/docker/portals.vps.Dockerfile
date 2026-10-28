@@ -1,9 +1,23 @@
-# Rebuild the current Caddy release with patched Go, HTTP/2 and HTML dependencies.
+# Rebuild the current Caddy release with patched Go, HTTP/2, HTML and JOSE dependencies.
 # Keep the standard modules; no additional plugins or provider credentials.
 FROM caddy:2.11.7-builder-alpine AS caddy-build
 ENV GOTOOLCHAIN=go1.27.3
+COPY infrastructure/docker/patches/go-jose-v3-rsa-bounds.patch /opt/go-jose-v3-rsa-bounds.patch
+COPY infrastructure/docker/patches/go-jose-v3-rsa-bounds_test.go /opt/go-jose-v3-rsa-bounds_test.go
+# Smallstep still imports v3, for which upstream has no fixed release.
+# Backport the upstream RSA bounds and test the actual replacement before linking.
+RUN go mod download github.com/go-jose/go-jose/v3@v3.0.5 \
+    && cp -R "$(go env GOMODCACHE)/github.com/go-jose/go-jose/v3@v3.0.5" /opt/go-jose-v3 \
+    && chmod -R u+w /opt/go-jose-v3 \
+    && cd /opt/go-jose-v3 \
+    && git apply --check /opt/go-jose-v3-rsa-bounds.patch \
+    && git apply /opt/go-jose-v3-rsa-bounds.patch \
+    && cp /opt/go-jose-v3-rsa-bounds_test.go rsa_bounds_test.go \
+    && go test -timeout 120s -run '^TestMateryal' .
 RUN xcaddy build v2.11.7 \
     --replace golang.org/x/net=golang.org/x/net@v0.62.0 \
+    --replace github.com/go-jose/go-jose/v3=/opt/go-jose-v3 \
+    --replace github.com/go-jose/go-jose/v4=github.com/go-jose/go-jose/v4@v4.1.6 \
     --output /usr/bin/caddy
 
 FROM node:24-alpine AS portals

@@ -19,6 +19,10 @@
 !scripts/deployment
 !scripts/deployment/build-portal.sh
 !infrastructure
+!infrastructure/docker
+!infrastructure/docker/patches
+!infrastructure/docker/patches/go-jose-v3-rsa-bounds.patch
+!infrastructure/docker/patches/go-jose-v3-rsa-bounds_test.go
 !infrastructure/vps
 !infrastructure/vps/Caddyfile
 **/node_modules
