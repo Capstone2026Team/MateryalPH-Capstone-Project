@@ -31,6 +31,55 @@ Future<void> showDetails(
 
 void main() {
   testWidgets(
+    'Buyer reviews proposed endpoints and manual delivery fee explanation',
+    (tester) async {
+      final json =
+          api.standardSerializers.serializeWith(
+                api.ChatQuotationContent.serializer,
+                quotation().content,
+              )
+              as Map<String, dynamic>;
+      json['fulfillment_method'] = 'DELIVERY';
+      json['destination'] = {
+        'intended': {'formatted_address': 'Intended project site'},
+        'heavy_vehicle_restriction': 'YES',
+        'alternate_drop_off': {'formatted_address': 'Alternative north gate'},
+        'access_instructions': 'Unload outside the gate.',
+      };
+      json['delivery'] = {
+        'arrangement': 'One truck trip to the north gate.',
+        'recommendation_changed': true,
+        'fee_overridden': true,
+        'formula_charge_centavos': 60500,
+        'change_reason': 'Includes the agreed unloading assistance.',
+      };
+      final content = api.standardSerializers.deserializeWith(
+        api.ChatQuotationContent.serializer,
+        json,
+      )!;
+      await showDetails(
+        tester,
+        Column(
+          children: [
+            QuotationPaymentBreakdown(content: content),
+            QuotationDeliveryTerms(content: content),
+          ],
+        ),
+        scale: 2,
+      );
+      expect(find.text('Intended project site'), findsOneWidget);
+      expect(find.text('Alternative north gate'), findsOneWidget);
+      expect(find.text('Unload outside the gate.'), findsOneWidget);
+      expect(find.text('System-calculated delivery fee'), findsOneWidget);
+      expect(
+        find.text('Includes the agreed unloading assistance.'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'accepted quotation shows the Buyer payment choice and direct physical fee treatment',
     (tester) async {
       final version = quotation().rebuild(

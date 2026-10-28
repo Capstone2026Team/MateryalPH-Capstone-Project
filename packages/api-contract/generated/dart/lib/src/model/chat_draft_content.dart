@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:materyalph_api_client/src/model/chat_quotation_destination.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/chat_draft_line.dart';
 import 'package:materyalph_api_client/src/model/chat_quotation_discount.dart';
@@ -23,7 +24,8 @@ part 'chat_draft_content.g.dart';
 /// * [deadlineHours]
 /// * [vendorDiscountCentavos] - Legacy fixed materials discount. Omit when discount is supplied.
 /// * [discount]
-/// * [delivery]
+/// * [destination]
+/// * [delivery] - Vehicles, counts, trips, arrangement and access confirmations. Set fee_override to true with a 10-2000 character change_reason to propose a manual gross fee; eligibility, route and capacity checks still apply.
 /// * [nrpc] - Historical drafts only. Omit when saving; new quotation NRPC is prohibited.
 @BuiltValue()
 abstract class ChatDraftContent implements Built<ChatDraftContent, ChatDraftContentBuilder> {
@@ -59,6 +61,10 @@ abstract class ChatDraftContent implements Built<ChatDraftContent, ChatDraftCont
   @BuiltValueField(wireName: r'discount')
   ChatQuotationDiscount? get discount;
 
+  @BuiltValueField(wireName: r'destination')
+  ChatQuotationDestination? get destination;
+
+  /// Vehicles, counts, trips, arrangement and access confirmations. Set fee_override to true with a 10-2000 character change_reason to propose a manual gross fee; eligibility, route and capacity checks still apply.
   @BuiltValueField(wireName: r'delivery')
   BuiltMap<String, JsonObject?>? get delivery;
 
@@ -141,6 +147,13 @@ class _$ChatDraftContentSerializer implements PrimitiveSerializer<ChatDraftConte
       yield serializers.serialize(
         object.discount,
         specifiedType: const FullType(ChatQuotationDiscount),
+      );
+    }
+    if (object.destination != null) {
+      yield r'destination';
+      yield serializers.serialize(
+        object.destination,
+        specifiedType: const FullType(ChatQuotationDestination),
       );
     }
     if (object.delivery != null) {
@@ -241,6 +254,14 @@ class _$ChatDraftContentSerializer implements PrimitiveSerializer<ChatDraftConte
           ) as ChatQuotationDiscount?;
           if (valueDes == null) continue;
           result.discount.replace(valueDes);
+          break;
+        case r'destination':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ChatQuotationDestination),
+          ) as ChatQuotationDestination?;
+          if (valueDes == null) continue;
+          result.destination.replace(valueDes);
           break;
         case r'delivery':
           final valueDes = serializers.deserialize(

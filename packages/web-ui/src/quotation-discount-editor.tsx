@@ -4,12 +4,13 @@ import { Select } from './filter-controls'
 import { formatPesoCentavos } from './order-patterns'
 import { quotationDiscountPreview } from './quotation-discount'
 
-export function QuotationDiscountEditor({ draft, disabled = false, onChange }: {
+export function QuotationDiscountEditor({ draft, deliveryPending = false, disabled = false, onChange }: {
   draft: ChatDraftContent
+  deliveryPending?: boolean
   disabled?: boolean
   onChange: (discount: ChatQuotationDiscount) => void
 }) {
-  return <VendorDiscountEditor discount={draft.discount} fulfillmentMethod={draft.fulfillmentMethod} legacyDiscountCentavos={draft.vendorDiscountCentavos} preview={quotationDiscountPreview(draft)} disabled={disabled} onChange={onChange} />
+  return <VendorDiscountEditor discount={draft.discount} fulfillmentMethod={draft.fulfillmentMethod} legacyDiscountCentavos={draft.vendorDiscountCentavos} preview={quotationDiscountPreview(draft)} deliveryPending={deliveryPending} disabled={disabled} onChange={onChange} />
 }
 
 export function VendorDiscountEditor({ discount, fulfillmentMethod, preview, legacyDiscountCentavos, deliveryPending = false, disabled = false, onChange }: {

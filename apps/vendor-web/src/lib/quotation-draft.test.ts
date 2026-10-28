@@ -85,3 +85,18 @@ test('existing fixed-discount drafts retain their saved totals until explicitly 
   expect(quotationDiscountPreview({ ...base, vendorDiscountCentavos: 8550 })).toMatchObject({ valid: true, deduction: 8550, total: 20000 })
   expect(quotationDraftForSave({ ...base, vendorDiscountCentavos: 8550 }).vendorDiscountCentavos).toBe(8550)
 })
+
+test('unfinished delivery saves without inventing a zero fee or submitting an empty vehicle list', () => {
+  const draft = { ...base, fulfillmentMethod: 'DELIVERY' as const, delivery: { vehicles: [], final_fee_centavos: -1, access_confirmed: false, change_reason: 'Still typing' }, destination: { heavyVehicleRestriction: 'UNANSWERED' as const } }
+  const saved = quotationDraftForSave(draft)
+  expect(saved.delivery).toEqual({ access_confirmed: false, change_reason: 'Still typing' })
+  expect(saved.destination).toEqual({ heavyVehicleRestriction: 'UNANSWERED' })
+  expect(draft.delivery.final_fee_centavos).toBe(-1)
+  expect(quotationDraftForSave({ ...draft, delivery: { final_fee_centavos: 0, fee_override: true } }).delivery?.final_fee_centavos).toBe(0)
+})
+
+test('server address labels do not change saved selection or trigger a different delivery calculation input', () => {
+  const draft = { ...base, destination: { intendedAddressId: 'selected-address', intendedAddress: 'Server-resolved address' } }
+  expect(quotationDraftForSave(draft).destination).toEqual({ intendedAddressId: 'selected-address' })
+  expect(draft.destination.intendedAddress).toBe('Server-resolved address')
+})

@@ -27,6 +27,13 @@ import {
     ChatQuotationDiscountToJSON,
     ChatQuotationDiscountToJSONTyped,
 } from './ChatQuotationDiscount';
+import type { ChatQuotationDestination } from './ChatQuotationDestination';
+import {
+    ChatQuotationDestinationFromJSON,
+    ChatQuotationDestinationFromJSONTyped,
+    ChatQuotationDestinationToJSON,
+    ChatQuotationDestinationToJSONTyped,
+} from './ChatQuotationDestination';
 
 /**
  *
@@ -70,6 +77,10 @@ export interface ChatDraftContent {
     discount?: ChatQuotationDiscount;
     /**
      *
+     */
+    destination?: ChatQuotationDestination;
+    /**
+     * Vehicles, counts, trips, arrangement and access confirmations. Set fee_override to true with a 10-2000 character change_reason to propose a manual gross fee; eligibility, route and capacity checks still apply.
      */
     delivery?: { [key: string]: any; };
     /**
@@ -127,6 +138,7 @@ export function ChatDraftContentFromJSONTyped(json: any, ignoreDiscriminator: bo
         'deadlineHours': json['deadline_hours'] == null ? undefined : json['deadline_hours'],
         'vendorDiscountCentavos': json['vendor_discount_centavos'] == null ? undefined : json['vendor_discount_centavos'],
         'discount': json['discount'] == null ? undefined : ChatQuotationDiscountFromJSON(json['discount']),
+        'destination': json['destination'] == null ? undefined : ChatQuotationDestinationFromJSON(json['destination']),
         'delivery': json['delivery'] == null ? undefined : json['delivery'],
         'nrpc': json['nrpc'] == null ? undefined : json['nrpc'],
     };
@@ -151,6 +163,7 @@ export function ChatDraftContentToJSONTyped(value?: ChatDraftContent | null, ign
         'deadline_hours': value['deadlineHours'],
         'vendor_discount_centavos': value['vendorDiscountCentavos'],
         'discount': ChatQuotationDiscountToJSON(value['discount']),
+        'destination': ChatQuotationDestinationToJSON(value['destination']),
         'delivery': value['delivery'],
         'nrpc': value['nrpc'],
     };

@@ -37,6 +37,8 @@ foreach (['buyers' => ['auth.transport:MOBILE', 'auth:api', 'account.access:BUYE
                 Route::get('/handlers', [C::class, 'handlers']);
                 Route::post('/transfer', [C::class, 'transfer']);
                 Route::put('/quotation/draft', [C::class, 'draft']);
+                Route::post('/quotation/location', [C::class, 'quotationLocation']);
+                Route::post('/quotation/delivery-plan', [C::class, 'quotationDeliveryPlan']);
                 Route::post('/quotation/publish', [C::class, 'publish']);
                 Route::post('/quotation/start', [C::class, 'startQuotation']);
             }

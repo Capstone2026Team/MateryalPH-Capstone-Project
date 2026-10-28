@@ -51,6 +51,12 @@ void main() {
       // TODO
     });
 
+    // ChatQuotationDestination destination
+    test('to test the property `destination`', () async {
+      // TODO
+    });
+
+    // Vehicles, counts, trips, arrangement and access confirmations. Set fee_override to true with a 10-2000 character change_reason to propose a manual gross fee; eligibility, route and capacity checks still apply.
     // BuiltMap<String, JsonObject> delivery
     test('to test the property `delivery`', () async {
       // TODO

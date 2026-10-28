@@ -14,6 +14,7 @@ Name | Type
 `deadlineHours` | number
 `vendorDiscountCentavos` | number
 `discount` | [ChatQuotationDiscount](ChatQuotationDiscount.md)
+`destination` | [ChatQuotationDestination](ChatQuotationDestination.md)
 `delivery` | { [key: string]: any; }
 `nrpc` | { [key: string]: any; }
 
@@ -32,6 +33,7 @@ const example = {
   "deadlineHours": null,
   "vendorDiscountCentavos": null,
   "discount": null,
+  "destination": null,
   "delivery": null,
   "nrpc": null,
 } satisfies ChatDraftContent

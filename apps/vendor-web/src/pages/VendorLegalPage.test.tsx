@@ -37,8 +37,8 @@ test.each([
   expect(fetch.mock.calls[0]?.[0]).toContain('/api/v1/agreements/current')
 })
 
-test('offers retry after an API failure', async () => {
-  vi.stubGlobal('fetch', vi.fn().mockRejectedValueOnce(new TypeError('Offline')).mockResolvedValueOnce(response(agreements)))
+test('offers retry after a persistent API failure', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockRejectedValueOnce(new TypeError('Offline')).mockRejectedValueOnce(new TypeError('Offline')).mockResolvedValueOnce(response(agreements)))
   openDocument('terms-of-service')
   expect(await screen.findByRole('alert')).toHaveTextContent('This document could not be loaded')
   fireEvent.click(screen.getByRole('button', { name: 'Try again' }))

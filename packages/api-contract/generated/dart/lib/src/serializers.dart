@@ -311,12 +311,14 @@ import 'package:materyalph_api_client/src/model/chat_publish.dart';
 import 'package:materyalph_api_client/src/model/chat_quotation.dart';
 import 'package:materyalph_api_client/src/model/chat_quotation_change.dart';
 import 'package:materyalph_api_client/src/model/chat_quotation_content.dart';
+import 'package:materyalph_api_client/src/model/chat_quotation_destination.dart';
 import 'package:materyalph_api_client/src/model/chat_quotation_discount.dart';
 import 'package:materyalph_api_client/src/model/chat_quotation_discount_assessment.dart';
 import 'package:materyalph_api_client/src/model/chat_quotation_line.dart';
 import 'package:materyalph_api_client/src/model/chat_quotation_money.dart';
 import 'package:materyalph_api_client/src/model/chat_quotation_page.dart';
 import 'package:materyalph_api_client/src/model/chat_quotation_page_response.dart';
+import 'package:materyalph_api_client/src/model/chat_quotation_preview_request.dart';
 import 'package:materyalph_api_client/src/model/chat_quotation_version.dart';
 import 'package:materyalph_api_client/src/model/chat_read.dart';
 import 'package:materyalph_api_client/src/model/chat_realtime.dart';
@@ -897,6 +899,9 @@ import 'package:materyalph_api_client/src/model/public_store_profile.dart';
 import 'package:materyalph_api_client/src/model/public_store_profile_envelope.dart';
 import 'package:materyalph_api_client/src/model/public_store_summary.dart';
 import 'package:materyalph_api_client/src/model/quantity_policy.dart';
+import 'package:materyalph_api_client/src/model/quotation_location.dart';
+import 'package:materyalph_api_client/src/model/quotation_location_envelope.dart';
+import 'package:materyalph_api_client/src/model/quotation_location_search.dart';
 import 'package:materyalph_api_client/src/model/radius_expansion.dart';
 import 'package:materyalph_api_client/src/model/radius_km.dart';
 import 'package:materyalph_api_client/src/model/ranking_component.dart';
@@ -1524,12 +1529,14 @@ part 'serializers.g.dart';
   ChatQuotation,
   ChatQuotationChange,
   ChatQuotationContent,
+  ChatQuotationDestination,
   ChatQuotationDiscount,
   ChatQuotationDiscountAssessment,
   ChatQuotationLine,
   ChatQuotationMoney,
   ChatQuotationPage,
   ChatQuotationPageResponse,
+  ChatQuotationPreviewRequest,
   ChatQuotationVersion,
   ChatRead,
   ChatRealtime,
@@ -2110,6 +2117,9 @@ part 'serializers.g.dart';
   PublicStoreProfileEnvelope,
   PublicStoreSummary,
   QuantityPolicy,
+  QuotationLocation,
+  QuotationLocationEnvelope,
+  QuotationLocationSearch,
   RadiusExpansion,
   RadiusKm,
   RankingComponent,

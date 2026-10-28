@@ -24,6 +24,7 @@ part 'chat_quotation_content.g.dart';
 /// * [fulfillmentMethod]
 /// * [paymentMethod] - Historical Vendor preference only. New quotations omit it; the Buyer chooses at acceptance.
 /// * [fulfillmentDate]
+/// * [destination] - Frozen intended destination, heavy-vehicle restriction, alternate drop-off and access instructions.
 /// * [delivery]
 /// * [nrpc]
 /// * [changes]
@@ -55,6 +56,10 @@ abstract class ChatQuotationContent implements Built<ChatQuotationContent, ChatQ
 
   @BuiltValueField(wireName: r'fulfillment_date')
   String get fulfillmentDate;
+
+  /// Frozen intended destination, heavy-vehicle restriction, alternate drop-off and access instructions.
+  @BuiltValueField(wireName: r'destination')
+  BuiltMap<String, JsonObject?>? get destination;
 
   @BuiltValueField(wireName: r'delivery')
   BuiltMap<String, JsonObject?>? get delivery;
@@ -139,6 +144,13 @@ class _$ChatQuotationContentSerializer implements PrimitiveSerializer<ChatQuotat
       object.fulfillmentDate,
       specifiedType: const FullType(String),
     );
+    if (object.destination != null) {
+      yield r'destination';
+      yield serializers.serialize(
+        object.destination,
+        specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+      );
+    }
     if (object.delivery != null) {
       yield r'delivery';
       yield serializers.serialize(
@@ -247,6 +259,14 @@ class _$ChatQuotationContentSerializer implements PrimitiveSerializer<ChatQuotat
             specifiedType: const FullType(String),
           ) as String;
           result.fulfillmentDate = valueDes;
+          break;
+        case r'destination':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+          ) as BuiltMap<String, JsonObject?>?;
+          if (valueDes == null) continue;
+          result.destination.replace(valueDes);
           break;
         case r'delivery':
           final valueDes = serializers.deserialize(

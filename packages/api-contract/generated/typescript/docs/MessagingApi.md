@@ -20,11 +20,13 @@ All URIs are relative to */api/v1*
 | [**listConversations**](MessagingApi.md#listconversations) | **GET** /{messagingPortal}/conversations |  |
 | [**listVendorFulfillmentConversations**](MessagingApi.md#listvendorfulfillmentconversations) | **GET** /vendor/conversations/{conversationId}/fulfillment-conversations |  |
 | [**openVendorOrderConversation**](MessagingApi.md#openvendororderconversation) | **POST** /vendor/orders/{orderId}/conversation |  |
+| [**previewChatQuotationDelivery**](MessagingApi.md#previewchatquotationdelivery) | **POST** /vendor/conversations/{conversationId}/quotation/delivery-plan |  |
 | [**publishChatQuotation**](MessagingApi.md#publishchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/publish |  |
 | [**readChatMessages**](MessagingApi.md#readchatmessages) | **POST** /{messagingPortal}/conversations/{conversationId}/read |  |
 | [**requestSiteInspection**](MessagingApi.md#requestsiteinspection) | **POST** /{messagingPortal}/site-inspections |  |
 | [**restoreChatConversation**](MessagingApi.md#restorechatconversation) | **DELETE** /{messagingPortal}/conversations/{conversationId}/archive |  |
 | [**saveChatQuotationDraft**](MessagingApi.md#savechatquotationdraft) | **PUT** /{messagingPortal}/conversations/{conversationId}/quotation/draft |  |
+| [**searchChatQuotationLocation**](MessagingApi.md#searchchatquotationlocation) | **POST** /vendor/conversations/{conversationId}/quotation/location |  |
 | [**sendChatMessage**](MessagingApi.md#sendchatmessage) | **POST** /{messagingPortal}/conversations/{conversationId}/messages |  |
 | [**sendChatTyping**](MessagingApi.md#sendchattyping) | **POST** /{messagingPortal}/conversations/{conversationId}/typing |  |
 | [**startNextChatQuotation**](MessagingApi.md#startnextchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/start |  |
@@ -1405,6 +1407,88 @@ example().catch(console.error);
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## previewChatQuotationDelivery
+
+> DeliveryPlanEnvelope previewChatQuotationDelivery(conversationId, chatQuotationPreviewRequest)
+
+
+
+Authorized sales staff only. Uses conversation-scoped locations; never exposes device GPS or the Buyer address book. Advisory calculations do not publish or reserve inventory.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  MessagingApi,
+} from '@materyalph/api-client-ts';
+import type { PreviewChatQuotationDeliveryRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new MessagingApi(config);
+
+  const body = {
+    // string
+    conversationId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // ChatQuotationPreviewRequest
+    chatQuotationPreviewRequest: ...,
+  } satisfies PreviewChatQuotationDeliveryRequest;
+
+  try {
+    const data = await api.previewChatQuotationDelivery(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **conversationId** | `string` |  | [Defaults to `undefined`] |
+| **chatQuotationPreviewRequest** | [ChatQuotationPreviewRequest](ChatQuotationPreviewRequest.md) |  | |
+
+### Return type
+
+[**DeliveryPlanEnvelope**](DeliveryPlanEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Authorized result |  -  |
+| **401** | Authentication required |  -  |
+| **403** | Forbidden |  -  |
+| **404** | NotFound |  -  |
+| **409** | Conflict |  -  |
+| **422** | ValidationError |  -  |
+| **503** | Address or routing provider unavailable; retry without inventing a fee. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## publishChatQuotation
 
 > ChatQuotationPageResponse publishChatQuotation(messagingPortal, conversationId, idempotencyKey, chatPublish)
@@ -1820,6 +1904,88 @@ example().catch(console.error);
 | **409** | Recoverable version, deadline, idempotency or stock conflict; re-read the current version |  -  |
 | **422** | Invalid fields or undisclosed NRPC |  -  |
 | **503** | Provider or scanner unavailable; retry safely |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## searchChatQuotationLocation
+
+> QuotationLocationEnvelope searchChatQuotationLocation(conversationId, quotationLocationSearch)
+
+
+
+Authorized sales staff only. Uses conversation-scoped locations; never exposes device GPS or the Buyer address book. Advisory calculations do not publish or reserve inventory.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  MessagingApi,
+} from '@materyalph/api-client-ts';
+import type { SearchChatQuotationLocationRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new MessagingApi(config);
+
+  const body = {
+    // string
+    conversationId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // QuotationLocationSearch
+    quotationLocationSearch: ...,
+  } satisfies SearchChatQuotationLocationRequest;
+
+  try {
+    const data = await api.searchChatQuotationLocation(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **conversationId** | `string` |  | [Defaults to `undefined`] |
+| **quotationLocationSearch** | [QuotationLocationSearch](QuotationLocationSearch.md) |  | |
+
+### Return type
+
+[**QuotationLocationEnvelope**](QuotationLocationEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Authorized result |  -  |
+| **401** | Authentication required |  -  |
+| **403** | Forbidden |  -  |
+| **404** | NotFound |  -  |
+| **409** | Conflict |  -  |
+| **422** | ValidationError |  -  |
+| **503** | Address or routing provider unavailable; retry without inventing a fee. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 

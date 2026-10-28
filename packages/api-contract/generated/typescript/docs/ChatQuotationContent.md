@@ -13,6 +13,7 @@ Name | Type
 `fulfillmentMethod` | string
 `paymentMethod` | string
 `fulfillmentDate` | string
+`destination` | { [key: string]: any; }
 `delivery` | { [key: string]: any; }
 `nrpc` | { [key: string]: any; }
 `changes` | [Array&lt;ChatQuotationChange&gt;](ChatQuotationChange.md)
@@ -34,6 +35,7 @@ const example = {
   "fulfillmentMethod": null,
   "paymentMethod": null,
   "fulfillmentDate": null,
+  "destination": null,
   "delivery": null,
   "nrpc": null,
   "changes": null,

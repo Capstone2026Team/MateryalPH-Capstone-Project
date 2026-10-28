@@ -1393,6 +1393,98 @@ final class PhaseNineMessagingTest extends TestCase
         self::assertSame($site, json_decode(DB::table('orders')->where('id', $order)->value('destination'), true)['intended']['location_id']);
     }
 
+    public function test_vendor_can_complete_delivery_draft_preview_and_propose_an_explained_manual_fee(): void
+    {
+        [$store, $owner] = $this->activeStore('Proposed quotation delivery', false, true);
+        DB::table('delivery_service_areas')->where('vendor_organization_id', $store->id)->update(['maximum_distance_km' => 10]);
+        $this->signInStoreMember($owner);
+        $listing = $this->orderListing('PROPOSED-DELIVERY');
+        $vehicle = $this->addVehicle($store->id);
+        $this->placeStore($store->id, 1000);
+        $this->connectOnlinePayments($store->id);
+        $buyer = $this->buyer();
+        $variant = $this->variantIds($listing)[0];
+        $id = $this->inquiry($store->id, $variant);
+        $this->signInStoreMember($owner);
+        $path = '/api/v1/vendor/conversations/'.$id.'/quotation';
+        $draft = $this->draftInput($variant);
+        $draft['fulfillment_method'] = 'DELIVERY';
+        $draft['destination'] = ['heavy_vehicle_restriction' => 'UNANSWERED'];
+        // Autosave accepts unfinished delivery details; publication and preview do not.
+        $this->putJson($path.'/draft', ['lock_version' => 1, 'draft' => $draft])->assertOk();
+        $this->postJson($path.'/delivery-plan', ['draft' => $draft])->assertUnprocessable()->assertJsonPath('errors.0.code', 'DELIVERY_ACCESS_REQUIRED');
+        $geocoder = app(AddressGeocoder::class);
+        $geocoder->forward = ['latitude' => $this->originLatitude, 'longitude' => $this->originLongitude, 'formatted_address' => 'Buyer-confirmed site, Quezon City', 'place_id' => null];
+        $location = $this->postJson($path.'/location', ['query' => 'Buyer-confirmed site, Quezon City'])->assertOk()->json('data');
+        $this->assertArrayNotHasKey('latitude', $location);
+        $draft['destination'] = ['intended_address_id' => $location['id'], 'heavy_vehicle_restriction' => 'NO'];
+        $draft['delivery'] = ['access_confirmed' => true, 'heavy_vehicle_access_confirmed' => true];
+        $geocoder->forward['latitude'] += 1;
+        $far = $this->postJson($path.'/location', ['query' => 'Out of radius site'])->assertOk()->json('data.id');
+        $farDraft = $draft;
+        $farDraft['destination']['intended_address_id'] = $far;
+        $this->postJson($path.'/delivery-plan', ['draft' => $farDraft])->assertUnprocessable()->assertJsonPath('errors.0.code', 'OUTSIDE_SELECTED_RADIUS');
+        $geocoder->forward['latitude'] = $this->originLatitude;
+        $draft['destination']['heavy_vehicle_restriction'] = 'YES';
+        $this->postJson($path.'/delivery-plan', ['draft' => $draft])->assertUnprocessable()->assertJsonPath('errors.0.code', 'DELIVERY_ACCESS_REQUIRED');
+        $geocoder->forward['latitude'] += 0.001;
+        $geocoder->forward['formatted_address'] = 'Alternative delivery gate';
+        $gate = $this->postJson($path.'/location', ['query' => 'Alternative delivery gate'])->assertOk()->json('data.id');
+        $draft['destination'] += ['alternate_address_id' => $gate, 'access_instructions' => 'Unload at the alternative gate.'];
+        $preview = $this->postJson($path.'/delivery-plan', ['draft' => $draft])->assertOk()->assertJsonPath('data.status', 'CANDIDATES_AVAILABLE')->json('data');
+        self::assertSame('ALTERNATE_DROP_OFF', $preview['endpoint']['kind']);
+        self::assertEqualsWithDelta($geocoder->forward['latitude'], app(RouteProvider::class)->requests[0]['destination'][0], 0.0000001);
+        self::assertSame($vehicle, $preview['groups'][0]['candidates'][0]['vehicle_id']);
+        self::assertSame(0, DB::table('quotation_versions')->count());
+        self::assertSame(0, DB::table('inventory_holds')->count());
+        $formula = $preview['groups'][0]['candidates'][0]['estimated_charge_centavos'];
+        $draft['delivery'] += ['vehicles' => [['vehicle_id' => $vehicle, 'number_of_vehicles' => 1, 'total_vehicle_trips' => 1]],
+            'final_fee_centavos' => $formula + 10000, 'fee_override' => true, 'arrangement' => 'One trip to the Buyer-confirmed site.'];
+        $this->putJson($path.'/draft', ['lock_version' => 2, 'draft' => $draft])->assertOk()
+            ->assertJsonPath('data.quotation.draft.destination.intended_address', $location['formatted_address']);
+        $this->postJson($path.'/publish', ['lock_version' => 3], ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable()->assertJsonPath('errors.0.code', 'DELIVERY_CHANGE_REASON_REQUIRED');
+        $draft['delivery']['change_reason'] = 'Buyer requested additional unloading assistance at the site.';
+        $version = $this->publishQuote($id, $draft, 3)['versions'][0];
+        self::assertSame($formula, $version['content']['delivery']['formula_charge_centavos']);
+        self::assertTrue($version['content']['delivery']['fee_overridden']);
+        self::assertSame($gate, $version['content']['destination']['alternate_drop_off']['address_id']);
+        self::assertSame($formula + 10000, $version['content']['commercial']['delivery_centavos']);
+        self::assertSame([], json_decode(DB::table('conversations')->where('id', $id)->value('locked_reference'), true));
+        self::assertSame(0, DB::table('buyer_locations')->where('buyer_profile_id', $this->buyerProfileId($buyer))->count());
+        $this->signInBuyer($buyer);
+        $order = $this->postJson('/api/v1/buyers/conversations/'.$id.'/quotation/accept', ['version_id' => $version['id'], 'content_hash' => $version['content_hash'], 'payment_method' => 'ONLINE'], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk()->json('data.order_id');
+        self::assertSame($formula + 10000, (int) DB::table('order_delivery_snapshots')->where('order_id', $order)->value('final_charge_centavos'));
+        self::assertSame($location['id'], json_decode(DB::table('orders')->where('id', $order)->value('destination'), true)['intended']['address_id']);
+    }
+
+    public function test_quotation_location_selection_is_conversation_scoped_and_provider_failure_is_recoverable(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Scoped quotation location');
+        $variant = $this->variantIds($listing)[0];
+        $buyer = $this->buyer();
+        $first = $this->inquiry($store->id, $variant);
+        $this->buyer();
+        $second = $this->inquiry($store->id, $variant);
+        $this->signInStoreMember($owner);
+        $geocoder = app(AddressGeocoder::class);
+        $geocoder->unavailable = true;
+        $this->postJson('/api/v1/vendor/conversations/'.$first.'/quotation/location', ['query' => 'Sample Quezon City address'])->assertStatus(503)->assertJsonPath('errors.0.code', 'ADDRESS_PROVIDER_UNAVAILABLE');
+        $geocoder->unavailable = false;
+        $geocoder->forward = ['latitude' => $this->originLatitude, 'longitude' => $this->originLongitude, 'formatted_address' => 'Sample address', 'place_id' => null];
+        $location = $this->postJson('/api/v1/vendor/conversations/'.$first.'/quotation/location', ['query' => 'Sample Quezon City address'])->assertOk()->json('data.id');
+        $draft = $this->draftInput($variant) + ['destination' => ['intended_address_id' => $location]];
+        $this->putJson('/api/v1/vendor/conversations/'.$second.'/quotation/draft', ['lock_version' => 1, 'draft' => $draft])->assertUnprocessable()->assertJsonPath('errors.0.code', 'LOCATION_NOT_FOUND');
+        $project = $this->projectInquiryThread($first, 'Locked destination');
+        $this->postJson('/api/v1/vendor/conversations/'.$project.'/quotation/location', ['query' => 'Sample Quezon City address'])->assertConflict()->assertJsonPath('errors.0.code', 'DESTINATION_LOCKED');
+        $this->putJson('/api/v1/vendor/conversations/'.$project.'/quotation/draft', ['lock_version' => 1, 'draft' => $draft])->assertConflict()->assertJsonPath('errors.0.code', 'DESTINATION_LOCKED');
+        $staff = $this->teamMember($store, 'FULFILLMENT');
+        $this->signInStoreMember($staff);
+        $this->postJson('/api/v1/vendor/conversations/'.$first.'/quotation/location', ['query' => 'Sample Quezon City address'])->assertNotFound();
+        $this->postJson('/api/v1/vendor/conversations/'.$first.'/quotation/delivery-plan', ['draft' => $draft])->assertNotFound();
+        $this->signInBuyer($buyer);
+        $this->getJson('/api/v1/buyers/conversations/'.$first)->assertOk()->assertJsonMissing(['id' => $location]);
+    }
+
     public function test_percentage_materials_discount_is_frozen_and_preserved_after_acceptance(): void
     {
         [$store, $owner, $listing] = $this->pickupStore('Percentage materials');

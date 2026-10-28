@@ -874,6 +874,102 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/ChatTransfer"
+  /vendor/conversations/{conversationId}/quotation/location:
+    post:
+      tags: [ Messaging ]
+      operationId: searchChatQuotationLocation
+      description: Authorized sales staff only. Uses conversation-scoped locations; never exposes device GPS or the Buyer address book. Advisory calculations do not publish or reserve inventory.
+      security:
+        - accessCookie: []
+          webCsrf: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/QuotationLocationSearch' }
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QuotationLocationEnvelope' }
+        '401':
+          description: Authentication required
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+        '404':
+          description: NotFound
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+        '422':
+          description: ValidationError
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+        '503':
+          description: Address or routing provider unavailable; retry without inventing a fee.
+  /vendor/conversations/{conversationId}/quotation/delivery-plan:
+    post:
+      tags: [ Messaging ]
+      operationId: previewChatQuotationDelivery
+      description: Authorized sales staff only. Uses conversation-scoped locations; never exposes device GPS or the Buyer address book. Advisory calculations do not publish or reserve inventory.
+      security:
+        - accessCookie: []
+          webCsrf: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChatQuotationPreviewRequest' }
+      responses:
+        '200':
+          description: Authorized result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeliveryPlanEnvelope' }
+        '401':
+          description: Authentication required
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+        '404':
+          description: NotFound
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+        '422':
+          description: ValidationError
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+        '503':
+          description: Address or routing provider unavailable; retry without inventing a fee.
   /{messagingPortal}/conversations/{conversationId}/quotation/draft:
     put:
       tags:
@@ -23382,6 +23478,10 @@ components:
             Buyer chooses at acceptance.
         fulfillment_date:
           type: string
+        destination:
+          type: object
+          additionalProperties: true
+          description: Frozen intended destination, heavy-vehicle restriction, alternate drop-off and access instructions.
         delivery:
           type: object
           additionalProperties: true
@@ -23865,6 +23965,39 @@ components:
         percent: { type: string }
         basis_centavos: { type: integer, format: int64, minimum: 0 }
         deduction_centavos: { type: integer, format: int64, minimum: 0 }
+    QuotationLocationSearch:
+      type: object
+      required: [ query ]
+      properties:
+        query: { type: string, minLength: 5, maxLength: 300 }
+    QuotationLocation:
+      type: object
+      required: [ id, formatted_address ]
+      properties:
+        id: { type: string, format: uuid }
+        formatted_address: { type: string }
+    QuotationLocationEnvelope:
+      type: object
+      required: [ data, meta, errors ]
+      properties:
+        data: { $ref: '#/components/schemas/QuotationLocation' }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { type: object, additionalProperties: true } }
+    ChatQuotationDestination:
+      type: object
+      description: Item-Based Vendor proposal, subject to Buyer review and acceptance. Omit address IDs to use the location shared in the inquiry. Work Package destinations stay locked.
+      properties:
+        intended_address: { type: string, readOnly: true }
+        alternate_address: { type: string, readOnly: true }
+        intended_address_id: { type: [ string, 'null' ], format: uuid }
+        alternate_address_id: { type: [ string, 'null' ], format: uuid }
+        heavy_vehicle_restriction: { type: string, enum: [ UNANSWERED, 'NO', 'YES' ] }
+        access_instructions: { type: [ string, 'null' ], maxLength: 500 }
+    ChatQuotationPreviewRequest:
+      type: object
+      required: [ draft ]
+      properties:
+        draft: { $ref: '#/components/schemas/ChatDraftContent' }
     ChatDraftContent:
       type: object
       required:
@@ -23911,7 +24044,10 @@ components:
           description: Legacy fixed materials discount. Omit when discount is supplied.
         discount:
           $ref: "#/components/schemas/ChatQuotationDiscount"
+        destination:
+          $ref: '#/components/schemas/ChatQuotationDestination'
         delivery:
+          description: Vehicles, counts, trips, arrangement and access confirmations. Set fee_override to true with a 10-2000 character change_reason to propose a manual gross fee; eligibility, route and capacity checks still apply.
           type: object
           additionalProperties: true
         nrpc:

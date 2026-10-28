@@ -77,7 +77,7 @@ final class ConfirmedDeliverySnapshot
      * @param  list<array{vehicle_id: string, number_of_vehicles: int, total_vehicle_trips: int, group_key?: string}>  $selection
      * @return array<string, mixed>
      */
-    public function prepare(User $actor, array $load, array $selection, int $finalChargeCentavos, string $arrangement, string $fulfillmentDate, ?string $manualReviewNote = null, ?string $changeReason = null): array
+    public function prepare(User $actor, array $load, array $selection, int $finalChargeCentavos, string $arrangement, string $fulfillmentDate, ?string $manualReviewNote = null, ?string $changeReason = null, bool $allowFeeOverride = false): array
     {
         $scope = $this->access->resolve($actor);
         if ($actor->account_type !== 'VENDOR' || ! in_array('vehicles.manage', $scope['permissions'], true)) {
@@ -164,12 +164,12 @@ final class ConfirmedDeliverySnapshot
                 throw new AuthenticationException('DELIVERY_CAPACITY_INSUFFICIENT', 'Confirm enough vehicles and trips for the load.', 422, ['group_key' => $key]);
             }
         }
-        if ($computed !== $finalChargeCentavos) {
+        if ($computed !== $finalChargeCentavos && ! $allowFeeOverride) {
             throw new AuthenticationException('DELIVERY_FEE_CHANGED', 'The delivery fee must equal the disclosed formula for the confirmed vehicles and trips. Review the current fee and confirm again.', 409, ['computed_charge_centavos' => $computed]);
         }
         $basis = $manual ? 'MANUAL_REVIEW' : 'ADVISORY_CONFIRMED';
         $recommended = [];
-        $changed = false;
+        $changed = $computed !== $finalChargeCentavos;
         foreach ($groups as $key => $group) {
             $candidate = $group['candidates'][0] ?? null;
             if ($candidate === null) {
@@ -185,6 +185,7 @@ final class ConfirmedDeliverySnapshot
         self::requireChangeReason($changed, $changeReason);
 
         return [
+            'formula_charge_centavos' => $computed, 'fee_overridden' => $computed !== $finalChargeCentavos,
             'system_recommendation' => $recommended, 'recommendation_changed' => $changed, 'change_reason' => $changed ? trim((string) $changeReason) : null,
             'vehicles' => $chosen, 'groups' => array_map(static fn (array $group): array => array_diff_key($group, ['candidates' => true, 'excluded' => true]), array_values($groups)),
             'intended_location' => $evaluation['intended_location'], 'alternative_drop_off' => $evaluation['alternative_drop_off'], 'drop_off' => $evaluation['drop_off'],

@@ -11,6 +11,7 @@ use App\Domain\Messaging\ConversationChannel;
 use App\Domain\Messaging\ConversationFiles;
 use App\Domain\Messaging\ConversationProducts;
 use App\Domain\Messaging\ConversationService;
+use App\Domain\Messaging\QuotationDestination;
 use App\Domain\Messaging\QuotationService;
 use App\Domain\Messaging\SiteInspectionService;
 use App\Http\ApiResponse;
@@ -190,6 +191,20 @@ final class ConversationController extends Controller
         $quotations->startNext($request, $conversationId, $input['lock_version']);
 
         return ApiResponse::success($quotations->show($request, $conversationId));
+    }
+
+    public function quotationLocation(Request $request, string $conversationId, QuotationDestination $destination): JsonResponse
+    {
+        $input = $request->validate(['query' => ['required', 'string', 'min:5', 'max:300']]);
+
+        return ApiResponse::success($destination->search($request, $conversationId, $input['query']))->header('Cache-Control', 'no-store');
+    }
+
+    public function quotationDeliveryPlan(Request $request, string $conversationId, QuotationService $quotations): JsonResponse
+    {
+        $input = $request->validate(['draft' => ['required', 'array']]);
+
+        return ApiResponse::success($quotations->deliveryPlan($request, $conversationId, $input['draft']))->header('Cache-Control', 'no-store');
     }
 
     public function decision(Request $request, string $conversationId, string $action, QuotationService $quotations): JsonResponse

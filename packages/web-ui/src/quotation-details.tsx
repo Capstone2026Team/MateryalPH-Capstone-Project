@@ -37,6 +37,8 @@ export function QuotationPaymentBreakdown({ content, selectedPaymentMethod, acce
   const deliveryDiscount = content.discount?.scope === 'DELIVERY' && content.discount.deductionCentavos > 0 ? content.discount : null
   const percent = content.discount?.percent
   const materialDiscountLabel = `Vendor discount (materials${content.discount?.scope === 'MATERIALS' && percent ? ` · ${percent}%` : ''})`
+  const destination: Record<string, unknown> = content.destination ?? {}
+  const address = (point: unknown): string => typeof point === 'object' && point !== null && 'formatted_address' in point && typeof point.formatted_address === 'string' ? point.formatted_address : 'Not recorded'
   return <>
     <section aria-label="Payment breakdown" className="mt-4 border-t border-border-default pt-4">
       <h4 className="mb-3 font-semibold">Payment breakdown</h4>
@@ -45,6 +47,7 @@ export function QuotationPaymentBreakdown({ content, selectedPaymentMethod, acce
         {materialDiscount > 0 && <QuotationMoneyRow label={materialDiscountLabel} value={`− ${formatPesoCentavos(materialDiscount)}`} />}
         <QuotationMoneyRow label={materialDiscount > 0 ? 'Materials after discounts' : 'Materials'} value={formatPesoCentavos(money.materialsPayableCentavos)} />
         <QuotationMoneyRow label="Included VAT (in materials)" value={formatPesoCentavos(money.materialsVatCentavos)} muted />
+        {content.delivery?.fee_overridden === true && typeof content.delivery.formula_charge_centavos === 'number' && <QuotationMoneyRow label="System-calculated delivery fee" value={formatPesoCentavos(content.delivery.formula_charge_centavos)} muted />}
         {deliveryDiscount ? <>
           <QuotationMoneyRow label="Delivery subtotal" value={formatPesoCentavos(deliveryDiscount.basisCentavos)} />
           <QuotationMoneyRow label={`Vendor discount (delivery · ${deliveryDiscount.percent}%)`} value={`− ${formatPesoCentavos(deliveryDiscount.deductionCentavos)}`} />
@@ -63,6 +66,14 @@ export function QuotationPaymentBreakdown({ content, selectedPaymentMethod, acce
         <QuotationMoneyRow label="Fulfillment" value={content.fulfillmentMethod === 'PICKUP' ? 'Self-Pickup' : 'Site Delivery'} />
         <QuotationMoneyRow label="Fulfillment date" value={content.fulfillmentDate} />
         <QuotationMoneyRow label="Payment method" value={selectedPaymentMethod ? ({ ONLINE: 'Online payment', CASH_ON_DELIVERY: 'Cash on Delivery', IN_STORE: 'In-Store Payment' } as Record<string, string>)[selectedPaymentMethod] ?? selectedPaymentMethod : accepted ? 'See Order Details' : 'Buyer selects before accepting'} />
+        {content.fulfillmentMethod === 'DELIVERY' && <>
+          <QuotationMoneyRow label="Delivery destination" value={address(destination.intended)} />
+          <QuotationMoneyRow label="Heavy-vehicle restriction" value={destination.heavy_vehicle_restriction === 'YES' ? 'Yes — alternative drop-off' : destination.heavy_vehicle_restriction === 'NO' ? 'No known restriction' : 'Not recorded'} />
+          {destination.heavy_vehicle_restriction === 'YES' && <QuotationMoneyRow label="Vehicle drop-off used for delivery fee" value={address(destination.alternate_drop_off)} />}
+          {typeof destination.access_instructions === 'string' && destination.access_instructions && <QuotationMoneyRow label="Access & unloading instructions" value={destination.access_instructions} />}
+          {typeof content.delivery?.arrangement === 'string' && <QuotationMoneyRow label="Delivery arrangement" value={content.delivery.arrangement} />}
+          {content.delivery?.recommendation_changed === true && typeof content.delivery.change_reason === 'string' && <QuotationMoneyRow label="Vendor’s delivery change explanation" value={content.delivery.change_reason} />}
+        </>}
       </dl>
     </section>
   </>

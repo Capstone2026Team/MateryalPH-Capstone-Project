@@ -57,7 +57,12 @@ final class QuotationTerms
             'delivery.arrangement' => [$complete ? 'required_if:fulfillment_method,DELIVERY' : 'nullable', 'string', 'max:2000'],
             'delivery.access_confirmed' => [$complete ? 'required_if:fulfillment_method,DELIVERY' : 'sometimes', 'boolean'],
             'delivery.heavy_vehicle_access_confirmed' => ['sometimes', 'boolean'], 'delivery.manual_review_note' => ['nullable', 'string', 'max:2000'],
-            'delivery.change_reason' => ['nullable', 'string', 'min:10', 'max:2000'],
+            'delivery.change_reason' => ['nullable', 'string', $complete ? 'min:10' : 'min:0', 'max:2000'],
+            'destination' => ['sometimes', 'array:intended_address_id,alternate_address_id,heavy_vehicle_restriction,access_instructions'],
+            'destination.intended_address_id' => ['nullable', 'uuid'], 'destination.alternate_address_id' => ['nullable', 'uuid'],
+            'destination.heavy_vehicle_restriction' => ['sometimes', 'in:UNANSWERED,NO,YES'],
+            'destination.access_instructions' => ['nullable', 'string', 'max:500'],
+            'delivery.fee_override' => ['sometimes', 'boolean'],
             'nrpc' => ['prohibited'], 'nrpc.amount_centavos' => ['required_with:nrpc', 'integer', 'min:1'],
             'nrpc.reason' => ['required_with:nrpc', 'string', 'min:3', 'max:2000'], 'nrpc.allocations' => ['required_with:nrpc', 'array', 'min:1'],
             'nrpc.allocations.*' => ['required', 'integer', 'min:1'],
@@ -85,20 +90,30 @@ final class QuotationTerms
             return null;
         }
 
-        $order = $this->deliveryOrder($c);
+        $order = $this->deliveryOrder($c, $input);
         $destination = json_decode($order->destination, true);
         if (! in_array($destination['heavy_vehicle_restriction'] ?? 'UNANSWERED', ['YES', 'NO'], true)) {
-            throw new AuthenticationException('DELIVERY_ACCESS_REQUIRED', 'The Buyer must declare heavy vehicle access and the delivery destination before a delivery quotation can be published.', 422);
+            throw new AuthenticationException('DELIVERY_ACCESS_REQUIRED', 'Select the delivery destination and record the Buyer’s heavy-vehicle restriction answer before publishing.', 422);
+        }
+
+        // Address search must not bypass the marketplace's fixed 50-km procurement boundary.
+        $store = DB::table('vendor_addresses as va')->join('vendor_address_versions as av', 'av.id', '=', 'va.current_version_id')
+            ->where('va.vendor_organization_id', $c->vendor_organization_id)->whereNotNull('av.location');
+        if ((clone $store)->exists()) {
+            foreach (array_filter([$destination['intended'] ?? null, $destination['alternate_drop_off'] ?? null]) as $point) {
+                if (! (clone $store)->whereRaw('ST_DWithin(av.location, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, 50000)', [$point['longitude'], $point['latitude']])->exists()) {
+                    throw new AuthenticationException('OUTSIDE_SELECTED_RADIUS', 'The delivery site and vehicle drop-off must be within 50 km of this store.', 422);
+                }
+            }
         }
 
         return app(OrderDeliveryPlanner::class)->route($order);
     }
 
-    public function deliveryOrder(object $c): object
+    /** @param array<string, mixed> $input */
+    public function deliveryOrder(object $c, array $input = []): object
     {
-        $reference = json_decode((string) $c->locked_reference, true);
-
-        return (object) ['vendor_organization_id' => $c->vendor_organization_id, 'destination' => json_encode($reference['destination'] ?? [], JSON_THROW_ON_ERROR)];
+        return (object) ['vendor_organization_id' => $c->vendor_organization_id, 'destination' => json_encode(app(QuotationDestination::class)->resolve($c, $input), JSON_THROW_ON_ERROR)];
     }
 
     /**
@@ -106,6 +121,52 @@ final class QuotationTerms
      * @param array<string, mixed>|null $route
      * @return array<string, mixed> */
     public function freeze(User $actor, object $c, array $input, ?array $route): array
+    {
+        $lines = $this->lines($c, $input);
+        if ($input['fulfillment_method'] !== 'DELIVERY' && array_any($lines, static fn (array $line): bool => ($line['load']['material_kind'] ?? null) === DeliveryRecommendationService::READY_MIXED_CONCRETE)) {
+            throw new AuthenticationException('SITE_DELIVERY_REQUIRED', ReadyMixedConcrete::SITE_DELIVERY_MESSAGE, 422, ['fulfillment_method' => ['Choose Site Delivery.']]);
+        }
+        $blockers = app(OrderEligibility::class)->lineBlockers((string) $c->vendor_organization_id, array_column($lines, 'tax_category', 'variant_id'));
+        if ($blockers !== []) {
+            throw new AuthenticationException('LINE_NOT_ELIGIBLE', 'A product is no longer available for quotation.', 409);
+        }
+        $delivery = null;
+        if ($input['fulfillment_method'] === 'DELIVERY') {
+            if (! ($input['delivery']['access_confirmed'] ?? false)) {
+                throw new AuthenticationException('DELIVERY_ACCESS_REQUIRED', 'Confirm access for the delivery vehicles.', 422);
+            }
+            $loadLines = array_map(static fn (array $l): object => (object) ['id' => $l['variant_id'], 'quantity' => $l['quantity'], 'snapshot' => json_encode($l, JSON_THROW_ON_ERROR)], $lines);
+            $load = app(OrderDeliveryPlanner::class)->load($this->deliveryOrder($c, $input), $loadLines, [], (array) $route, true, (bool) ($input['delivery']['heavy_vehicle_access_confirmed'] ?? false));
+            $delivery = app(ConfirmedDeliverySnapshot::class)->prepare($actor, $load, $input['delivery']['vehicles'], (int) $input['delivery']['final_fee_centavos'],
+                $input['delivery']['arrangement'], $input['fulfillment_date'], $input['delivery']['manual_review_note'] ?? null, $input['delivery']['change_reason'] ?? null, (bool) ($input['delivery']['fee_override'] ?? false));
+        }
+        $nrpc = $input['nrpc'] ?? null;
+        $terms = $nrpc === null ? null : app(NrpcTerms::class)->current();
+        if ($nrpc !== null && ($terms === null || $terms['content'] === null)) {
+            throw new AuthenticationException('NRPC_TERMS_UNAVAILABLE', 'NRPC Terms must be available before publication.', 503);
+        }
+        $discount = null;
+        $materialsDiscount = (int) ($input['vendor_discount_centavos'] ?? 0);
+        if (isset($input['discount'])) {
+            $gross = array_sum(array_map(static fn (array $line): int => Money::lineAmount($line['quantity'], $line['unit_price_centavos']), $lines));
+            $discount = VendorDiscount::assess($input['discount'], $gross, $delivery === null ? 0 : (int) $delivery['final_charge_centavos'], $delivery !== null);
+            $materialsDiscount = $discount['scope'] === 'MATERIALS' ? $discount['deduction_centavos'] : 0;
+            if ($discount['scope'] === 'DELIVERY' && $delivery !== null) {
+                $delivery = VendorDiscount::deliverySnapshot($delivery, $discount);
+            }
+        }
+        $commercial = FinancialCalculator::commercial($lines, $materialsDiscount, $delivery === null ? 0 : (int) $delivery['final_charge_centavos'], $nrpc);
+
+        return ['lines' => $lines, 'commercial' => $commercial, 'fulfillment_method' => $input['fulfillment_method'],
+            ...(isset($input['message']) && $input['message'] !== '' ? ['message' => $input['message']] : []),
+            'fulfillment_date' => $input['fulfillment_date'], 'delivery' => $delivery, 'destination' => $input['fulfillment_method'] === 'PICKUP' ? OrderDeliveryPlanner::pickupDestination((string) $c->vendor_organization_id) : json_decode($this->deliveryOrder($c, $input)->destination, true),
+            'nrpc' => $nrpc === null ? null : $nrpc + ['terms' => $terms], 'price_source' => 'PRIVATE_TRANSACTION',
+            'fee_policy_version_id' => FinancialSnapshotService::currentFeePolicyId((string) $c->vendor_organization_id), 'processing_fee_status' => 'PENDING_PAYMENT_CHANNEL'] + ($discount === null ? [] : ['discount' => $discount]);
+    }
+
+    /** @param array<string, mixed> $input
+     * @return list<array<string, mixed>> */
+    public function lines(object $c, array $input): array
     {
         $allowed = app(ListingTaxPolicy::class)->allowedCategories((string) $c->vendor_organization_id);
         $taxVersion = DB::table('vendor_tax_profiles')->where('vendor_organization_id', $c->vendor_organization_id)->value('current_version_id');
@@ -134,45 +195,8 @@ final class QuotationTerms
                 'load' => ['weight_kg' => $v->weight_kg, 'length_cm' => $v->length_cm, 'width_cm' => $v->width_cm, 'height_cm' => $v->height_cm] + $this->materialLoad($v)];
         }
         $lines = ProjectArrangementTerms::allocate($c, $lines);
-        if ($input['fulfillment_method'] !== 'DELIVERY' && array_any($lines, static fn (array $line): bool => ($line['load']['material_kind'] ?? null) === DeliveryRecommendationService::READY_MIXED_CONCRETE)) {
-            throw new AuthenticationException('SITE_DELIVERY_REQUIRED', ReadyMixedConcrete::SITE_DELIVERY_MESSAGE, 422, ['fulfillment_method' => ['Choose Site Delivery.']]);
-        }
-        $blockers = app(OrderEligibility::class)->lineBlockers((string) $c->vendor_organization_id, array_column($lines, 'tax_category', 'variant_id'));
-        if ($blockers !== []) {
-            throw new AuthenticationException('LINE_NOT_ELIGIBLE', 'A product is no longer available for quotation.', 409);
-        }
-        $delivery = null;
-        if ($input['fulfillment_method'] === 'DELIVERY') {
-            if (! ($input['delivery']['access_confirmed'] ?? false)) {
-                throw new AuthenticationException('DELIVERY_ACCESS_REQUIRED', 'Confirm access for the delivery vehicles.', 422);
-            }
-            $loadLines = array_map(static fn (array $l): object => (object) ['id' => $l['variant_id'], 'quantity' => $l['quantity'], 'snapshot' => json_encode($l, JSON_THROW_ON_ERROR)], $lines);
-            $load = app(OrderDeliveryPlanner::class)->load($this->deliveryOrder($c), $loadLines, [], (array) $route, true, (bool) ($input['delivery']['heavy_vehicle_access_confirmed'] ?? false));
-            $delivery = app(ConfirmedDeliverySnapshot::class)->prepare($actor, $load, $input['delivery']['vehicles'], (int) $input['delivery']['final_fee_centavos'],
-                $input['delivery']['arrangement'], $input['fulfillment_date'], $input['delivery']['manual_review_note'] ?? null, $input['delivery']['change_reason'] ?? null);
-        }
-        $nrpc = $input['nrpc'] ?? null;
-        $terms = $nrpc === null ? null : app(NrpcTerms::class)->current();
-        if ($nrpc !== null && ($terms === null || $terms['content'] === null)) {
-            throw new AuthenticationException('NRPC_TERMS_UNAVAILABLE', 'NRPC Terms must be available before publication.', 503);
-        }
-        $discount = null;
-        $materialsDiscount = (int) ($input['vendor_discount_centavos'] ?? 0);
-        if (isset($input['discount'])) {
-            $gross = array_sum(array_map(static fn (array $line): int => Money::lineAmount($line['quantity'], $line['unit_price_centavos']), $lines));
-            $discount = VendorDiscount::assess($input['discount'], $gross, $delivery === null ? 0 : (int) $delivery['final_charge_centavos'], $delivery !== null);
-            $materialsDiscount = $discount['scope'] === 'MATERIALS' ? $discount['deduction_centavos'] : 0;
-            if ($discount['scope'] === 'DELIVERY' && $delivery !== null) {
-                $delivery = VendorDiscount::deliverySnapshot($delivery, $discount);
-            }
-        }
-        $commercial = FinancialCalculator::commercial($lines, $materialsDiscount, $delivery === null ? 0 : (int) $delivery['final_charge_centavos'], $nrpc);
 
-        return ['lines' => $lines, 'commercial' => $commercial, 'fulfillment_method' => $input['fulfillment_method'],
-            ...(isset($input['message']) && $input['message'] !== '' ? ['message' => $input['message']] : []),
-            'fulfillment_date' => $input['fulfillment_date'], 'delivery' => $delivery, 'destination' => json_decode($this->deliveryOrder($c)->destination, true),
-            'nrpc' => $nrpc === null ? null : $nrpc + ['terms' => $terms], 'price_source' => 'PRIVATE_TRANSACTION',
-            'fee_policy_version_id' => FinancialSnapshotService::currentFeePolicyId((string) $c->vendor_organization_id), 'processing_fee_status' => 'PENDING_PAYMENT_CHANNEL'] + ($discount === null ? [] : ['discount' => $discount]);
+        return $lines;
     }
 
     /** @return array<string, mixed> */

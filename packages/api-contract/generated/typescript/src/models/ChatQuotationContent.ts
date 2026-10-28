@@ -78,6 +78,10 @@ export interface ChatQuotationContent {
      */
     fulfillmentDate: string;
     /**
+     * Frozen intended destination, heavy-vehicle restriction, alternate drop-off and access instructions.
+     */
+    destination?: { [key: string]: any; };
+    /**
      *
      */
     delivery?: { [key: string]: any; };
@@ -147,6 +151,7 @@ export function ChatQuotationContentFromJSONTyped(json: any, ignoreDiscriminator
         'fulfillmentMethod': json['fulfillment_method'],
         'paymentMethod': json['payment_method'] == null ? undefined : json['payment_method'],
         'fulfillmentDate': json['fulfillment_date'],
+        'destination': json['destination'] == null ? undefined : json['destination'],
         'delivery': json['delivery'] == null ? undefined : json['delivery'],
         'nrpc': json['nrpc'] == null ? undefined : json['nrpc'],
         'changes': ((json['changes'] as Array<any>).map(ChatQuotationChangeFromJSON)),
@@ -174,6 +179,7 @@ export function ChatQuotationContentToJSONTyped(value?: ChatQuotationContent | n
         'fulfillment_method': value['fulfillmentMethod'],
         'payment_method': value['paymentMethod'],
         'fulfillment_date': value['fulfillmentDate'],
+        'destination': value['destination'],
         'delivery': value['delivery'],
         'nrpc': value['nrpc'],
         'changes': ((value['changes'] as Array<any>).map(ChatQuotationChangeToJSON)),

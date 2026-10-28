@@ -76,6 +76,8 @@ class _$ChatQuotationContent extends ChatQuotationContent {
   @override
   final String fulfillmentDate;
   @override
+  final BuiltMap<String, JsonObject?>? destination;
+  @override
   final BuiltMap<String, JsonObject?>? delivery;
   @override
   final BuiltMap<String, JsonObject?>? nrpc;
@@ -100,6 +102,7 @@ class _$ChatQuotationContent extends ChatQuotationContent {
       required this.fulfillmentMethod,
       this.paymentMethod,
       required this.fulfillmentDate,
+      this.destination,
       this.delivery,
       this.nrpc,
       required this.changes,
@@ -127,6 +130,7 @@ class _$ChatQuotationContent extends ChatQuotationContent {
         fulfillmentMethod == other.fulfillmentMethod &&
         paymentMethod == other.paymentMethod &&
         fulfillmentDate == other.fulfillmentDate &&
+        destination == other.destination &&
         delivery == other.delivery &&
         nrpc == other.nrpc &&
         changes == other.changes &&
@@ -145,6 +149,7 @@ class _$ChatQuotationContent extends ChatQuotationContent {
     _$hash = $jc(_$hash, fulfillmentMethod.hashCode);
     _$hash = $jc(_$hash, paymentMethod.hashCode);
     _$hash = $jc(_$hash, fulfillmentDate.hashCode);
+    _$hash = $jc(_$hash, destination.hashCode);
     _$hash = $jc(_$hash, delivery.hashCode);
     _$hash = $jc(_$hash, nrpc.hashCode);
     _$hash = $jc(_$hash, changes.hashCode);
@@ -165,6 +170,7 @@ class _$ChatQuotationContent extends ChatQuotationContent {
           ..add('fulfillmentMethod', fulfillmentMethod)
           ..add('paymentMethod', paymentMethod)
           ..add('fulfillmentDate', fulfillmentDate)
+          ..add('destination', destination)
           ..add('delivery', delivery)
           ..add('nrpc', nrpc)
           ..add('changes', changes)
@@ -215,6 +221,12 @@ class ChatQuotationContentBuilder
   set fulfillmentDate(String? fulfillmentDate) =>
       _$this._fulfillmentDate = fulfillmentDate;
 
+  MapBuilder<String, JsonObject?>? _destination;
+  MapBuilder<String, JsonObject?> get destination =>
+      _$this._destination ??= MapBuilder<String, JsonObject?>();
+  set destination(MapBuilder<String, JsonObject?>? destination) =>
+      _$this._destination = destination;
+
   MapBuilder<String, JsonObject?>? _delivery;
   MapBuilder<String, JsonObject?> get delivery =>
       _$this._delivery ??= MapBuilder<String, JsonObject?>();
@@ -262,6 +274,7 @@ class ChatQuotationContentBuilder
       _fulfillmentMethod = $v.fulfillmentMethod;
       _paymentMethod = $v.paymentMethod;
       _fulfillmentDate = $v.fulfillmentDate;
+      _destination = $v.destination?.toBuilder();
       _delivery = $v.delivery?.toBuilder();
       _nrpc = $v.nrpc?.toBuilder();
       _changes = $v.changes.toBuilder();
@@ -302,6 +315,7 @@ class ChatQuotationContentBuilder
             paymentMethod: paymentMethod,
             fulfillmentDate: BuiltValueNullFieldError.checkNotNull(
                 fulfillmentDate, r'ChatQuotationContent', 'fulfillmentDate'),
+            destination: _destination?.build(),
             delivery: _delivery?.build(),
             nrpc: _nrpc?.build(),
             changes: changes.build(),
@@ -323,6 +337,8 @@ class ChatQuotationContentBuilder
         _$failedField = 'commercial';
         commercial.build();
 
+        _$failedField = 'destination';
+        _destination?.build();
         _$failedField = 'delivery';
         _delivery?.build();
         _$failedField = 'nrpc';

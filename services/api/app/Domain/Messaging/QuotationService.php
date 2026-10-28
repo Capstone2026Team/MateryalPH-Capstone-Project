@@ -11,6 +11,7 @@ use App\Domain\Catalog\QuantityPolicy;
 use App\Domain\Enforcement\BuyerCommerceRestriction;
 use App\Domain\Finance\Money;
 use App\Domain\Identity\AuthenticationException;
+use App\Domain\Orders\OrderDeliveryPlanner;
 use App\Domain\Orders\OrderEligibility;
 use App\Domain\Payments\PaymentMethodPolicy;
 use App\Domain\Settings\PlatformSettings;
@@ -60,6 +61,7 @@ final class QuotationService
         $c = $this->access->require($request->user(), $conversationId);
         $this->access->requireSales($request->user(), $c);
         $input = $this->terms->validate($input, complete: false);
+        app(QuotationDestination::class)->validateSelection($c, $input);
         DB::transaction(function () use ($request, $conversationId, $input, $version, $c): void {
             $this->lockPackage($c);
             $c = $this->access->require($request->user(), $conversationId, true);
@@ -76,6 +78,27 @@ final class QuotationService
             DB::table('quotations')->where('id', $q->id)->update(['draft' => json_encode($input, JSON_THROW_ON_ERROR), 'lock_version' => $version + 1, 'updated_at' => now()]);
             $this->event($q, $request->user(), 'DRAFT_SAVED', ['before' => $old, 'after' => $input]);
         });
+    }
+
+    /** Advisory calculation for the current unsaved editor; never publishes or reserves stock.
+     * @param array<string, mixed> $input
+     * @return array<string, mixed> */
+    public function deliveryPlan(Request $request, string $conversationId, array $input): array
+    {
+        $c = $this->access->require($request->user(), $conversationId);
+        $this->access->requireSales($request->user(), $c);
+        $this->messages->requireCurrent($c);
+        $input = $this->terms->validate($input, complete: false);
+        if ($input['fulfillment_method'] !== 'DELIVERY' || $input['lines'] === []) {
+            throw new AuthenticationException('DELIVERY_NOT_APPLICABLE', 'Add materials and choose Site Delivery first.', 422);
+        }
+        $order = $this->terms->deliveryOrder($c, $input);
+        $route = $this->terms->route($c, $input);
+        $lines = array_map(static fn (array $line): object => (object) ['id' => $line['variant_id'], 'quantity' => $line['quantity'], 'snapshot' => json_encode($line, JSON_THROW_ON_ERROR)], $this->terms->lines($c, $input));
+        $planner = app(OrderDeliveryPlanner::class);
+        $load = $planner->load($order, $lines, [], (array) $route, (bool) ($input['delivery']['access_confirmed'] ?? false), (bool) ($input['delivery']['heavy_vehicle_access_confirmed'] ?? false));
+
+        return $planner->advise($order, $load, (array) $route, $lines);
     }
 
     public function publish(Request $request, string $conversationId, int $version): void
@@ -327,6 +350,12 @@ final class QuotationService
             }
         }
         unset($line);
+        foreach (['intended', 'alternate'] as $kind) {
+            $id = $draft['destination'][$kind.'_address_id'] ?? null;
+            if ($id !== null) {
+                $draft['destination'][$kind.'_address'] = DB::table('addresses')->where('id', $id)->value('formatted_address');
+            }
+        }
 
         return $draft;
     }

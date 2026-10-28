@@ -432,6 +432,8 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(ChatQuotationChange.serializer)
       ..add(ChatQuotationContent.serializer)
       ..add(ChatQuotationContentPriceSourceEnum.serializer)
+      ..add(ChatQuotationDestination.serializer)
+      ..add(ChatQuotationDestinationHeavyVehicleRestrictionEnum.serializer)
       ..add(ChatQuotationDiscount.serializer)
       ..add(ChatQuotationDiscountAssessment.serializer)
       ..add(ChatQuotationDiscountAssessmentScopeEnum.serializer)
@@ -440,6 +442,7 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(ChatQuotationMoney.serializer)
       ..add(ChatQuotationPage.serializer)
       ..add(ChatQuotationPageResponse.serializer)
+      ..add(ChatQuotationPreviewRequest.serializer)
       ..add(ChatQuotationVersion.serializer)
       ..add(ChatRead.serializer)
       ..add(ChatRealtime.serializer)
@@ -1361,6 +1364,9 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(PublicStoreSummary.serializer)
       ..add(QuantityPolicy.serializer)
       ..add(QuantityPolicyModeEnum.serializer)
+      ..add(QuotationLocation.serializer)
+      ..add(QuotationLocationEnvelope.serializer)
+      ..add(QuotationLocationSearch.serializer)
       ..add(RadiusExpansion.serializer)
       ..add(RadiusKm.serializer)
       ..add(RankingComponent.serializer)
@@ -2436,6 +2442,12 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(ChatQuotationLine)]),
           () => ListBuilder<ChatQuotationLine>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
       ..addBuilderFactory(
           const FullType(BuiltMap, const [
             const FullType(String),
@@ -5105,6 +5117,20 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(BuiltList,
               const [const FullType(BotStepUpErrorEnvelopeAllOfErrors)]),
           () => ListBuilder<BotStepUpErrorEnvelopeAllOfErrors>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [
+            const FullType(BuiltMap, const [
+              const FullType(String),
+              const FullType.nullable(JsonObject)
+            ])
+          ]),
+          () => ListBuilder<BuiltMap<String, JsonObject?>>())
       ..addBuilderFactory(
           const FullType(BuiltMap, const [
             const FullType(String),

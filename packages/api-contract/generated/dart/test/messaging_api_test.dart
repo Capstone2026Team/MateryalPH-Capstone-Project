@@ -119,6 +119,13 @@ void main() {
       // TODO
     });
 
+    // Authorized sales staff only. Uses conversation-scoped locations; never exposes device GPS or the Buyer address book. Advisory calculations do not publish or reserve inventory.
+    //
+    //Future<DeliveryPlanEnvelope> previewChatQuotationDelivery(String conversationId, ChatQuotationPreviewRequest chatQuotationPreviewRequest) async
+    test('test previewChatQuotationDelivery', () async {
+      // TODO
+    });
+
     // Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
     //
     //Future<ChatQuotationPageResponse> publishChatQuotation(String messagingPortal, String conversationId, String idempotencyKey, ChatPublish chatPublish) async
@@ -151,6 +158,13 @@ void main() {
     //
     //Future<ChatQuotationPageResponse> saveChatQuotationDraft(String messagingPortal, String conversationId, ChatDraftSave chatDraftSave) async
     test('test saveChatQuotationDraft', () async {
+      // TODO
+    });
+
+    // Authorized sales staff only. Uses conversation-scoped locations; never exposes device GPS or the Buyer address book. Advisory calculations do not publish or reserve inventory.
+    //
+    //Future<QuotationLocationEnvelope> searchChatQuotationLocation(String conversationId, QuotationLocationSearch quotationLocationSearch) async
+    test('test searchChatQuotationLocation', () async {
       // TODO
     });
 

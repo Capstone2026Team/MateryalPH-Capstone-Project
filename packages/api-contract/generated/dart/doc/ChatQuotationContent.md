@@ -15,6 +15,7 @@ Name | Type | Description | Notes
 **fulfillmentMethod** | **String** |  |
 **paymentMethod** | **String** | Historical Vendor preference only. New quotations omit it; the Buyer chooses at acceptance. | [optional]
 **fulfillmentDate** | **String** |  |
+**destination** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) | Frozen intended destination, heavy-vehicle restriction, alternate drop-off and access instructions. | [optional]
 **delivery** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  | [optional]
 **nrpc** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  | [optional]
 **changes** | [**BuiltList&lt;ChatQuotationChange&gt;**](ChatQuotationChange.md) |  |

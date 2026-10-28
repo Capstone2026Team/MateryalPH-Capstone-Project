@@ -387,11 +387,13 @@ Class | Method | HTTP request | Description
 [*MessagingApi*](doc/MessagingApi.md) | [**listConversations**](doc/MessagingApi.md#listconversations) | **GET** /{messagingPortal}/conversations |
 [*MessagingApi*](doc/MessagingApi.md) | [**listVendorFulfillmentConversations**](doc/MessagingApi.md#listvendorfulfillmentconversations) | **GET** /vendor/conversations/{conversationId}/fulfillment-conversations |
 [*MessagingApi*](doc/MessagingApi.md) | [**openVendorOrderConversation**](doc/MessagingApi.md#openvendororderconversation) | **POST** /vendor/orders/{orderId}/conversation |
+[*MessagingApi*](doc/MessagingApi.md) | [**previewChatQuotationDelivery**](doc/MessagingApi.md#previewchatquotationdelivery) | **POST** /vendor/conversations/{conversationId}/quotation/delivery-plan |
 [*MessagingApi*](doc/MessagingApi.md) | [**publishChatQuotation**](doc/MessagingApi.md#publishchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/publish |
 [*MessagingApi*](doc/MessagingApi.md) | [**readChatMessages**](doc/MessagingApi.md#readchatmessages) | **POST** /{messagingPortal}/conversations/{conversationId}/read |
 [*MessagingApi*](doc/MessagingApi.md) | [**requestSiteInspection**](doc/MessagingApi.md#requestsiteinspection) | **POST** /{messagingPortal}/site-inspections |
 [*MessagingApi*](doc/MessagingApi.md) | [**restoreChatConversation**](doc/MessagingApi.md#restorechatconversation) | **DELETE** /{messagingPortal}/conversations/{conversationId}/archive |
 [*MessagingApi*](doc/MessagingApi.md) | [**saveChatQuotationDraft**](doc/MessagingApi.md#savechatquotationdraft) | **PUT** /{messagingPortal}/conversations/{conversationId}/quotation/draft |
+[*MessagingApi*](doc/MessagingApi.md) | [**searchChatQuotationLocation**](doc/MessagingApi.md#searchchatquotationlocation) | **POST** /vendor/conversations/{conversationId}/quotation/location |
 [*MessagingApi*](doc/MessagingApi.md) | [**sendChatMessage**](doc/MessagingApi.md#sendchatmessage) | **POST** /{messagingPortal}/conversations/{conversationId}/messages |
 [*MessagingApi*](doc/MessagingApi.md) | [**sendChatTyping**](doc/MessagingApi.md#sendchattyping) | **POST** /{messagingPortal}/conversations/{conversationId}/typing |
 [*MessagingApi*](doc/MessagingApi.md) | [**startNextChatQuotation**](doc/MessagingApi.md#startnextchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/start |
@@ -882,12 +884,14 @@ Class | Method | HTTP request | Description
  - [ChatQuotation](doc/ChatQuotation.md)
  - [ChatQuotationChange](doc/ChatQuotationChange.md)
  - [ChatQuotationContent](doc/ChatQuotationContent.md)
+ - [ChatQuotationDestination](doc/ChatQuotationDestination.md)
  - [ChatQuotationDiscount](doc/ChatQuotationDiscount.md)
  - [ChatQuotationDiscountAssessment](doc/ChatQuotationDiscountAssessment.md)
  - [ChatQuotationLine](doc/ChatQuotationLine.md)
  - [ChatQuotationMoney](doc/ChatQuotationMoney.md)
  - [ChatQuotationPage](doc/ChatQuotationPage.md)
  - [ChatQuotationPageResponse](doc/ChatQuotationPageResponse.md)
+ - [ChatQuotationPreviewRequest](doc/ChatQuotationPreviewRequest.md)
  - [ChatQuotationVersion](doc/ChatQuotationVersion.md)
  - [ChatRead](doc/ChatRead.md)
  - [ChatRealtime](doc/ChatRealtime.md)
@@ -1468,6 +1472,9 @@ Class | Method | HTTP request | Description
  - [PublicStoreProfileEnvelope](doc/PublicStoreProfileEnvelope.md)
  - [PublicStoreSummary](doc/PublicStoreSummary.md)
  - [QuantityPolicy](doc/QuantityPolicy.md)
+ - [QuotationLocation](doc/QuotationLocation.md)
+ - [QuotationLocationEnvelope](doc/QuotationLocationEnvelope.md)
+ - [QuotationLocationSearch](doc/QuotationLocationSearch.md)
  - [RadiusExpansion](doc/RadiusExpansion.md)
  - [RadiusKm](doc/RadiusKm.md)
  - [RankingComponent](doc/RankingComponent.md)

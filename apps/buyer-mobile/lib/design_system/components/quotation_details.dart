@@ -115,6 +115,18 @@ class QuotationPaymentBreakdown extends StatelessWidget {
         : null;
     final materialDiscountLabel =
         'Vendor discount (materials${discount?.scope.name == 'MATERIALS' ? ' · ${discount!.percent}%' : ''})';
+    final destination = content.destination;
+    final restriction = destination?['heavy_vehicle_restriction']?.value;
+    String address(String key) {
+      final point = destination?[key]?.value;
+      return point is Map && point['formatted_address'] is String
+          ? point['formatted_address'] as String
+          : 'Not recorded';
+    }
+
+    final instructions = destination?['access_instructions']?.value;
+    final arrangement = content.delivery?['arrangement']?.value;
+    final formulaFee = content.delivery?['formula_charge_centavos']?.value;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -140,6 +152,13 @@ class QuotationPaymentBreakdown extends StatelessWidget {
           _money(money.materialsVatCentavos),
           muted: true,
         ),
+        if (content.delivery?['fee_overridden']?.value == true &&
+            formulaFee is int)
+          _QuotationRow(
+            'System-calculated delivery fee',
+            _money(formulaFee),
+            muted: true,
+          ),
         if (deliveryDiscount != null) ...[
           _QuotationRow(
             'Delivery subtotal',
@@ -208,6 +227,26 @@ class QuotationPaymentBreakdown extends StatelessWidget {
               : 'Site Delivery',
         ),
         _QuotationRow('Fulfillment date', content.fulfillmentDate),
+        if (content.fulfillmentMethod == 'DELIVERY') ...[
+          _QuotationRow('Delivery destination', address('intended')),
+          _QuotationRow(
+            'Heavy-vehicle restriction',
+            restriction == 'YES'
+                ? 'Yes — alternative drop-off'
+                : restriction == 'NO'
+                ? 'No known restriction'
+                : 'Not recorded',
+          ),
+          if (restriction == 'YES')
+            _QuotationRow(
+              'Vehicle drop-off used for delivery fee',
+              address('alternate_drop_off'),
+            ),
+          if (instructions is String && instructions.isNotEmpty)
+            _QuotationRow('Access & unloading instructions', instructions),
+          if (arrangement is String && arrangement.isNotEmpty)
+            _QuotationRow('Delivery arrangement', arrangement),
+        ],
         _QuotationRow(
           'Payment method',
           const {

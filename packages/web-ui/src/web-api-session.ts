@@ -15,6 +15,7 @@ const mutations = new Set<string>()
 const cooldowns = new Map<string, { until: number; response: Response }>()
 
 const READ_TIMEOUT_MS = 30_000
+const READ_RETRY_DELAY_MS = 300
 
 function readTimeoutMs(): number {
   const configured = Number(import.meta.env.VITE_API_READ_TIMEOUT_MS)
@@ -72,6 +73,32 @@ async function fetchWebRequest(basePath: string, input: RequestInfo | URL, init?
   } finally {
     clearTimeout(timer)
   }
+}
+
+/** Recover a brief transport/server failure once, without replaying commands or extending a timed-out read. */
+async function fetchRecoverableRead(basePath: string, input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const generation = sessionGeneration
+  const method = init?.method ?? (input instanceof Request ? input.method : 'GET')
+  const signal = init?.signal ?? (input instanceof Request ? input.signal : undefined)
+  const accept = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined)).get('Accept')
+  if (!isSafeMethod(method) || (accept && !accept.includes('application/json'))) return fetchWebRequest(basePath, input, init)
+  let response: Response | undefined
+  let failure: unknown
+  try {
+    response = await fetchWebRequest(basePath, input, init)
+    if (![500, 502, 503, 504].includes(response.status) || response.headers.has('Retry-After')) return response
+  } catch (error) {
+    if (!(error instanceof TypeError) || signal?.aborted) throw error
+    failure = error
+  }
+  await new Promise(resolve => setTimeout(resolve, READ_RETRY_DELAY_MS))
+  if (signal?.aborted) throw signal.reason
+  // Never send an old account's delayed retry after logout/account replacement.
+  if (generation !== sessionGeneration) {
+    if (response) return response
+    throw failure
+  }
+  return fetchWebRequest(basePath, input, init)
 }
 
 export function rateLimitMessage(response: Response): string {
@@ -210,7 +237,7 @@ async function coordinatedFetch(basePath: string, refreshSession: boolean, input
 async function webFetch(basePath: string, refreshSession: boolean, input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const generation = sessionGeneration
   const version = refreshVersions.get(basePath) ?? 0
-  let response = await fetchWebRequest(basePath, input, init)
+  let response = await fetchRecoverableRead(basePath, input, init)
   if (generation !== sessionGeneration) return response
 
   if (response.status === 419 && !isSafeMethod(init?.method)) {
@@ -225,22 +252,51 @@ async function webFetch(basePath: string, refreshSession: boolean, input: Reques
 
   // A slower request may return its old-token 401 after another request has
   // already refreshed. Replay once with the new cookie without rotating again.
-  if ((refreshVersions.get(basePath) ?? 0) !== version) return fetchWebRequest(basePath, input, init)
+  if ((refreshVersions.get(basePath) ?? 0) !== version) return fetchRecoverableRead(basePath, input, init)
 
   const refreshed = await refreshWebSession(basePath)
   if (generation !== sessionGeneration) return response
   if (refreshed.kind === 'invalid') return response
   if (refreshed.kind === 'response') return refreshed.response.clone()
-  return fetchWebRequest(basePath, input, init)
+  return fetchRecoverableRead(basePath, input, init)
 }
 
 async function refreshWebSession(basePath: string): Promise<RefreshResult> {
   const current = refreshRequests.get(basePath)
   if (current) return current
 
-  const request = performRefresh(basePath).finally(() => refreshRequests.delete(basePath))
+  const request = coordinateTabRefresh(basePath).finally(() => {
+    if (refreshRequests.get(basePath) === request) refreshRequests.delete(basePath)
+  })
   refreshRequests.set(basePath, request)
   return request
+}
+
+async function coordinateTabRefresh(basePath: string): Promise<RefreshResult> {
+  // HttpOnly cookies are shared across tabs. In-memory promises alone cannot prevent
+  // two tabs from rotating the same refresh token and triggering reuse revocation.
+  if (typeof navigator === 'undefined' || !navigator.locks) return performRefresh(basePath)
+  const generation = sessionGeneration
+  const name = `materyalph:refresh:${basePath}`
+  const immediate = await navigator.locks.request(name, { ifAvailable: true }, lock => {
+    if (generation !== sessionGeneration) return { kind: 'invalid' } as const
+    return lock ? performRefresh(basePath) : null
+  })
+  if (immediate) return immediate
+  return navigator.locks.request(name, { signal: AbortSignal.timeout(readTimeoutMs()) }, async () => {
+    if (generation !== sessionGeneration) return { kind: 'invalid' }
+    // The tab ahead of us may already have installed fresh cookies. Check them
+    // under the lock instead of rotating again; no token is shared through JS.
+    const response = await fetchRecoverableRead(basePath, `${basePath}/auth/session`, {
+      credentials: 'include', headers: { Accept: 'application/json' },
+    })
+    if (generation !== sessionGeneration) return { kind: 'invalid' }
+    if (response.ok) {
+      refreshVersions.set(basePath, (refreshVersions.get(basePath) ?? 0) + 1)
+      return { kind: 'refreshed' }
+    }
+    return response.status === 401 ? performRefresh(basePath) : { kind: 'response', response }
+  })
 }
 
 async function performRefresh(basePath: string): Promise<RefreshResult> {

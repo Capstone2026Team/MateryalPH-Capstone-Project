@@ -381,11 +381,13 @@ All URIs are relative to */api/v1*
 *MessagingApi* | [**listConversations**](docs/MessagingApi.md#listconversations) | **GET** /{messagingPortal}/conversations |
 *MessagingApi* | [**listVendorFulfillmentConversations**](docs/MessagingApi.md#listvendorfulfillmentconversations) | **GET** /vendor/conversations/{conversationId}/fulfillment-conversations |
 *MessagingApi* | [**openVendorOrderConversation**](docs/MessagingApi.md#openvendororderconversation) | **POST** /vendor/orders/{orderId}/conversation |
+*MessagingApi* | [**previewChatQuotationDelivery**](docs/MessagingApi.md#previewchatquotationdelivery) | **POST** /vendor/conversations/{conversationId}/quotation/delivery-plan |
 *MessagingApi* | [**publishChatQuotation**](docs/MessagingApi.md#publishchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/publish |
 *MessagingApi* | [**readChatMessages**](docs/MessagingApi.md#readchatmessages) | **POST** /{messagingPortal}/conversations/{conversationId}/read |
 *MessagingApi* | [**requestSiteInspection**](docs/MessagingApi.md#requestsiteinspection) | **POST** /{messagingPortal}/site-inspections |
 *MessagingApi* | [**restoreChatConversation**](docs/MessagingApi.md#restorechatconversation) | **DELETE** /{messagingPortal}/conversations/{conversationId}/archive |
 *MessagingApi* | [**saveChatQuotationDraft**](docs/MessagingApi.md#savechatquotationdraft) | **PUT** /{messagingPortal}/conversations/{conversationId}/quotation/draft |
+*MessagingApi* | [**searchChatQuotationLocation**](docs/MessagingApi.md#searchchatquotationlocation) | **POST** /vendor/conversations/{conversationId}/quotation/location |
 *MessagingApi* | [**sendChatMessage**](docs/MessagingApi.md#sendchatmessage) | **POST** /{messagingPortal}/conversations/{conversationId}/messages |
 *MessagingApi* | [**sendChatTyping**](docs/MessagingApi.md#sendchattyping) | **POST** /{messagingPortal}/conversations/{conversationId}/typing |
 *MessagingApi* | [**startNextChatQuotation**](docs/MessagingApi.md#startnextchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/start |
@@ -876,12 +878,14 @@ All URIs are relative to */api/v1*
 - [ChatQuotation](docs/ChatQuotation.md)
 - [ChatQuotationChange](docs/ChatQuotationChange.md)
 - [ChatQuotationContent](docs/ChatQuotationContent.md)
+- [ChatQuotationDestination](docs/ChatQuotationDestination.md)
 - [ChatQuotationDiscount](docs/ChatQuotationDiscount.md)
 - [ChatQuotationDiscountAssessment](docs/ChatQuotationDiscountAssessment.md)
 - [ChatQuotationLine](docs/ChatQuotationLine.md)
 - [ChatQuotationMoney](docs/ChatQuotationMoney.md)
 - [ChatQuotationPage](docs/ChatQuotationPage.md)
 - [ChatQuotationPageResponse](docs/ChatQuotationPageResponse.md)
+- [ChatQuotationPreviewRequest](docs/ChatQuotationPreviewRequest.md)
 - [ChatQuotationVersion](docs/ChatQuotationVersion.md)
 - [ChatRead](docs/ChatRead.md)
 - [ChatRealtime](docs/ChatRealtime.md)
@@ -1462,6 +1466,9 @@ All URIs are relative to */api/v1*
 - [PublicStoreProfileEnvelope](docs/PublicStoreProfileEnvelope.md)
 - [PublicStoreSummary](docs/PublicStoreSummary.md)
 - [QuantityPolicy](docs/QuantityPolicy.md)
+- [QuotationLocation](docs/QuotationLocation.md)
+- [QuotationLocationEnvelope](docs/QuotationLocationEnvelope.md)
+- [QuotationLocationSearch](docs/QuotationLocationSearch.md)
 - [RadiusExpansion](docs/RadiusExpansion.md)
 - [RadiusKm](docs/RadiusKm.md)
 - [RankingComponent](docs/RankingComponent.md)

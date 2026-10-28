@@ -167,7 +167,7 @@ Open the VS Code terminal (Ctrl + `) in the project folder and run:
 
 ```powershell
 # Deployement Command (VPS)
-fix(deploy): refresh edge image security packages
+./scripts/deployment/release-hostinger.ps1
 ```
 
 The script checks SSH access before waiting for CI or building. If an upload fails after packaging, restore SSH connectivity and reuse the package path printed in the terminal:

@@ -25,11 +25,13 @@ Method | HTTP request | Description
 [**listConversations**](MessagingApi.md#listconversations) | **GET** /{messagingPortal}/conversations |
 [**listVendorFulfillmentConversations**](MessagingApi.md#listvendorfulfillmentconversations) | **GET** /vendor/conversations/{conversationId}/fulfillment-conversations |
 [**openVendorOrderConversation**](MessagingApi.md#openvendororderconversation) | **POST** /vendor/orders/{orderId}/conversation |
+[**previewChatQuotationDelivery**](MessagingApi.md#previewchatquotationdelivery) | **POST** /vendor/conversations/{conversationId}/quotation/delivery-plan |
 [**publishChatQuotation**](MessagingApi.md#publishchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/publish |
 [**readChatMessages**](MessagingApi.md#readchatmessages) | **POST** /{messagingPortal}/conversations/{conversationId}/read |
 [**requestSiteInspection**](MessagingApi.md#requestsiteinspection) | **POST** /{messagingPortal}/site-inspections |
 [**restoreChatConversation**](MessagingApi.md#restorechatconversation) | **DELETE** /{messagingPortal}/conversations/{conversationId}/archive |
 [**saveChatQuotationDraft**](MessagingApi.md#savechatquotationdraft) | **PUT** /{messagingPortal}/conversations/{conversationId}/quotation/draft |
+[**searchChatQuotationLocation**](MessagingApi.md#searchchatquotationlocation) | **POST** /vendor/conversations/{conversationId}/quotation/location |
 [**sendChatMessage**](MessagingApi.md#sendchatmessage) | **POST** /{messagingPortal}/conversations/{conversationId}/messages |
 [**sendChatTyping**](MessagingApi.md#sendchattyping) | **POST** /{messagingPortal}/conversations/{conversationId}/typing |
 [**startNextChatQuotation**](MessagingApi.md#startnextchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/start |
@@ -892,6 +894,59 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **previewChatQuotationDelivery**
+> DeliveryPlanEnvelope previewChatQuotationDelivery(conversationId, chatQuotationPreviewRequest)
+
+
+
+Authorized sales staff only. Uses conversation-scoped locations; never exposes device GPS or the Buyer address book. Advisory calculations do not publish or reserve inventory.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getMessagingApi();
+final String conversationId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final ChatQuotationPreviewRequest chatQuotationPreviewRequest = ; // ChatQuotationPreviewRequest |
+
+try {
+    final response = api.previewChatQuotationDelivery(conversationId, chatQuotationPreviewRequest);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling MessagingApi->previewChatQuotationDelivery: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **conversationId** | **String**|  |
+ **chatQuotationPreviewRequest** | [**ChatQuotationPreviewRequest**](ChatQuotationPreviewRequest.md)|  |
+
+### Return type
+
+[**DeliveryPlanEnvelope**](DeliveryPlanEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **publishChatQuotation**
 > ChatQuotationPageResponse publishChatQuotation(messagingPortal, conversationId, idempotencyKey, chatPublish)
 
@@ -1139,6 +1194,59 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**ChatQuotationPageResponse**](ChatQuotationPageResponse.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **searchChatQuotationLocation**
+> QuotationLocationEnvelope searchChatQuotationLocation(conversationId, quotationLocationSearch)
+
+
+
+Authorized sales staff only. Uses conversation-scoped locations; never exposes device GPS or the Buyer address book. Advisory calculations do not publish or reserve inventory.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getMessagingApi();
+final String conversationId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final QuotationLocationSearch quotationLocationSearch = ; // QuotationLocationSearch |
+
+try {
+    final response = api.searchChatQuotationLocation(conversationId, quotationLocationSearch);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling MessagingApi->searchChatQuotationLocation: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **conversationId** | **String**|  |
+ **quotationLocationSearch** | [**QuotationLocationSearch**](QuotationLocationSearch.md)|  |
+
+### Return type
+
+[**QuotationLocationEnvelope**](QuotationLocationEnvelope.md)
 
 ### Authorization
 

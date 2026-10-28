@@ -1,11 +1,10 @@
 import { Toolbar } from '@materyalph/web-ui'
 import { WorkPackageAttachment } from '../components/WorkPackageAttachment'
 import { SiteInspectionPanel } from '../components/SiteInspectionPanel'
-import { listFleet } from '../lib/inventory-api'
 import { Fragment, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ChatDraftContentFromJSON, ChatDraftContentToJSON, ChatQuotationContentToJSON, type ChatDraftContent, type ChatMessage, type ChatProduct, type ChatHandler, type ChatQuotation, type ChatQuotationVersion, type ConversationDetail } from '@materyalph/api-client-ts'
-import { Button, CatalogProductPicker, CountBadge, FormDialog, ChatMessageBubble, ChatTypingIndicator, ConversationHeader, QuotationDeliveryArrangement, QuotationDiscountEditor, QuotationMaterialsEditor, QuotationThreadCard, QuotationVersionCard, StatusMessage, useNavigationRefresh, chatRoleLabel, conversationLabel, conversationTimeline, formatPesoCentavos, quotationDiscountPreview } from '@materyalph/web-ui'
+import { ChatDraftContentFromJSON, ChatDraftContentToJSON, ChatQuotationContentToJSON, type ChatDraftContent, type ChatMessage, type ChatProduct, type ChatHandler, type ChatQuotation, type ChatQuotationVersion, type ConversationDetail, type DeliveryPlan } from '@materyalph/api-client-ts'
+import { Button, CatalogProductPicker, CountBadge, FormDialog, ChatMessageBubble, ChatTypingIndicator, ConversationHeader, quotationSelectedVehicles, quotationVehicleChoice, quotationDeliveryFee, quotationDeliveryChanged, QuotationDestinationFields, QuotationDeliveryArrangement, QuotationDiscountEditor, QuotationMaterialsEditor, QuotationThreadCard, QuotationVersionCard, StatusMessage, useNavigationRefresh, chatRoleLabel, conversationLabel, conversationTimeline, formatPesoCentavos, quotationDiscountPreview } from '@materyalph/web-ui'
 import { ArrowLeft, FileText, MessageSquare, Paperclip, Send, UsersRound } from 'lucide-react'
 import { chatApi, loadChatAvatar, readableChatError, watchConversation } from '../lib/messaging-api'
 import { getListing, listListings, readableCatalogError } from '../lib/catalog-api'
@@ -16,7 +15,6 @@ import { ErrorState, LoadingState } from './PhaseThreeVendorPages'
 const control = 'min-h-12 w-full min-w-0 rounded-control border border-border-default bg-surface-primary px-3 text-base'
 
 const loadQuotationProducts = (query: string, page: number) => listListings({ ...(query ? { q: query } : {}), status: 'ACTIVE', page })
-const loadQuotationVehicles = async () => (await listFleet()).items
 const messageDate = (at: string) => new Date(at).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium' })
 
 export function ConversationThread({ selected, role, onBack, onRead, onMessage, onFulfillmentList, onProjectList, onOpenMain, obscured = false, onBusyChange }: {
@@ -290,7 +288,8 @@ export function QuotationDraftEditor({ open, onClose, conversationId, quotation,
   const [dirty, setDirty] = useState(false)
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
-  useEffect(() => { onPendingChange?.(dirty || busy || saving); return () => onPendingChange?.(false) }, [dirty, busy, saving, onPendingChange])
+  const [locationBusy, setLocationBusy] = useState(false)
+  useEffect(() => { onPendingChange?.(dirty || busy || saving || locationBusy); return () => onPendingChange?.(false) }, [dirty, busy, saving, locationBusy, onPendingChange])
   const latest = useRef(draft)
   const lock = useRef(quotation?.lockVersion ?? 1)
   const revision = useRef(0)
@@ -305,10 +304,43 @@ export function QuotationDraftEditor({ open, onClose, conversationId, quotation,
       if (quotation.draft) { const value = ChatDraftContentFromJSON(quotation.draft); latest.current = value; setDraft(value) }
     }
   }, [quotation, dirty, busy])
+  const [planResult, setPlanResult] = useState<{ input: string; value: DeliveryPlan } | null>(null)
+  const [planError, setPlanError] = useState<string | null>(null)
+  const [planBusy, setPlanBusy] = useState(false)
+  const [planRetry, setPlanRetry] = useState(0)
+  const planInput = JSON.stringify({ lines: draft.lines.map(({ variantId, quantity, unitPriceCentavos }) => ({ variantId, quantity, unitPriceCentavos })), fulfillmentMethod: draft.fulfillmentMethod, ...(draft.destination ? { destination: quotationDraftForSave(draft).destination } : {}), delivery: { access_confirmed: draft.delivery?.access_confirmed === true, heavy_vehicle_access_confirmed: draft.delivery?.heavy_vehicle_access_confirmed === true } })
+  const plan = planResult?.input === planInput ? planResult.value : null
   const delivery = draft.delivery ?? {}
-  const deliveryEdit = (patch: Record<string, unknown>) => edit({ ...draft, delivery: { ...delivery, ...patch } })
+  const deliveryEdit = (patch: Record<string, unknown>) => {
+    const next = { ...delivery, ...patch }
+    if (plan && next.fee_override !== true) next.final_fee_centavos = quotationDeliveryFee(plan, quotationSelectedVehicles(next.vehicles)) ?? -1
+    edit({ ...draft, delivery: next })
+  }
   const key = useRef(newIdempotencyKey())
   const edit = (value: ChatDraftContent) => { latest.current = value; revision.current++; setDraft(value); setDirty(true); setSaved(false); setError(null); key.current = newIdempotencyKey() }
+  const applyEdit = useRef(edit)
+  applyEdit.current = edit
+  useEffect(() => {
+    if (!open || draft.fulfillmentMethod !== 'DELIVERY' || !draft.lines.length) return
+    let current = true
+    setPlanBusy(true); setPlanError(null)
+    const timer = window.setTimeout(() => {
+      void chatApi.quotationDelivery(conversationId, quotationDraftForSave(JSON.parse(planInput) as ChatDraftContent)).then(result => {
+        if (!current) return
+        setPlanResult({ input: planInput, value: result })
+        const existing = latest.current.delivery ?? {}
+        // A restored selection survives opening the editor. Changed inputs receive a fresh recommendation.
+        const selected = quotationSelectedVehicles(existing.vehicles)
+        const keepSelection = planResult === null && selected.length > 0
+        const vehicles = keepSelection ? selected : result.groups.flatMap(group => group.candidates[0] ? [quotationVehicleChoice(group.key, group.candidates[0])] : [])
+        const fee = quotationDeliveryFee(result, vehicles)
+        if (vehicles.length && fee !== null) applyEdit.current({ ...latest.current, delivery: { ...existing, vehicles, ...(existing.fee_override === true ? {} : { final_fee_centavos: fee }) } })
+      }).catch(async cause => { const message = await readableChatError(cause); if (current) setPlanError(message) }).finally(() => { if (current) setPlanBusy(false) })
+    }, 550)
+    return () => { current = false; window.clearTimeout(timer) }
+  // Only load-affecting input changes trigger provider work; edits to notes and fees do not.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, conversationId, planInput, planRetry])
   const saveDraft = useCallback(async () => {
     // Serialize writes and retain changes typed while an earlier save was running.
     while (savedRevision.current < revision.current) {
@@ -334,11 +366,13 @@ export function QuotationDraftEditor({ open, onClose, conversationId, quotation,
   const materialNames = { ...sourceNames, ...names }
   const amounts = quotationDiscountPreview(draft)
   const moneyValid = amounts.valid
+  const deliveryPending = draft.fulfillmentMethod === 'DELIVERY' && (!plan || planBusy || Boolean(planError) || locationBusy || !plan.groups.length || plan.groups.some(group => !quotationSelectedVehicles(delivery.vehicles).some(row => (row.group_key ?? plan.groups[0]?.key) === group.key && (group.status === 'MANUAL_REVIEW_REQUIRED' ? group.manualReviewVehicles ?? [] : group.candidates).some(vehicle => vehicle.vehicleId === row.vehicle_id))) || !Array.isArray(delivery.vehicles) || delivery.vehicles.length === 0 || typeof delivery.final_fee_centavos !== 'number' || delivery.final_fee_centavos < 0)
+  const deliveryReady = draft.fulfillmentMethod !== 'DELIVERY' || (role !== 'STORE_STAFF' && !deliveryPending && delivery.access_confirmed === true && Boolean(String(delivery.arrangement ?? '').trim()) && (!quotationDeliveryChanged(plan, delivery) || String(delivery.change_reason ?? '').trim().length >= 10))
   async function act(action: () => Promise<void>) { if (busy) return; setBusy(true); setError(null); try { await action() } catch (e) { setError(await readableChatError(e)) } finally { if (mounted.current) setBusy(false) } }
   const close = () => { void act(async () => { await saveDraft(); await onSaved(); onClose() }) }
-  return <FormDialog open={open} onClose={close} busy={busy} title="Prepare quotation" description={role === 'CUSTOMER_SERVICE' ? 'Changes save automatically for an authorized publisher to review.' : 'Add materials and a message, confirm fulfillment, then publish your quotation. Changes save automatically.'} footer={<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end"><p role="status" className="text-sm text-text-secondary sm:mr-auto">{busy ? 'Finishing quotation…' : saving ? 'Saving changes…' : error ? 'Changes could not be saved. Retry before leaving.' : dirty ? 'Waiting to save…' : saved ? 'All changes saved' : 'Changes save automatically.'}</p><Button variant="quiet" disabled={busy} onClick={close}>Close</Button>{role !== 'CUSTOMER_SERVICE' && <Button disabled={busy || !moneyValid || !draft.lines.length || !draft.fulfillmentDate} onClick={() => { if (window.confirm('Publish these terms? This starts a new Buyer deadline and supersedes the previous version.')) void act(async () => { await saveDraft(); await chatApi.publish(conversationId, lock.current, key.current); key.current = newIdempotencyKey(); lock.current++; onClose(); await onSaved() }) }}>Publish quotation</Button>}</div>}>
+  return <FormDialog open={open} onClose={close} busy={busy || locationBusy} title="Prepare quotation" description={role === 'CUSTOMER_SERVICE' ? 'Changes save automatically for an authorized publisher to review.' : 'Add materials and a message, confirm fulfillment, then publish your quotation. Changes save automatically.'} footer={<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end"><div className="sm:mr-auto"><p className="font-semibold tabular-nums">Quotation order total: {amounts.valid && !deliveryPending ? formatPesoCentavos(amounts.total) : draft.fulfillmentMethod === 'DELIVERY' ? 'Awaiting delivery fee' : 'Complete materials'}</p><p className="text-xs text-text-secondary">Before payment processing fees.</p><p role="status" className="text-sm text-text-secondary">{busy ? 'Finishing quotation…' : saving ? 'Saving changes…' : error ? dirty ? 'Changes could not be saved. Retry before leaving.' : 'Review the issue above before publishing.' : dirty ? 'Waiting to save…' : saved ? 'All changes saved' : 'Changes save automatically.'}</p></div><Button variant="quiet" disabled={busy || locationBusy} onClick={close}>Close</Button>{role !== 'CUSTOMER_SERVICE' && <Button disabled={busy || !moneyValid || !deliveryReady || !draft.lines.length || !draft.fulfillmentDate} onClick={() => { if (window.confirm('Publish these terms? This starts a new Buyer deadline and supersedes the previous version.')) void act(async () => { await saveDraft(); await chatApi.publish(conversationId, lock.current, key.current); key.current = newIdempotencyKey(); lock.current++; onClose(); await onSaved() }) }}>Publish quotation</Button>}</div>}>
     <section aria-label="Quotation draft" className="space-y-6">
-    {error && <StatusMessage tone="error">{error} <Button variant="quiet" disabled={busy || saving} onClick={() => void act(saveDraft)}>Retry saving</Button></StatusMessage>}{quotation?.draft?.nrpc != null && <StatusMessage tone="info">NRPC is now set only on eligible orders awaiting Vendor confirmation. An Owner, Store Manager or Store Staff must save this draft to remove its previous NRPC before publishing.</StatusMessage>}
+    {error && <StatusMessage tone="error">{error} {dirty && <Button variant="quiet" disabled={busy || saving} onClick={() => void act(saveDraft)}>Retry saving</Button>}</StatusMessage>}{quotation?.draft?.nrpc != null && <StatusMessage tone="info">NRPC is now set only on eligible orders awaiting Vendor confirmation. An Owner, Store Manager or Store Staff must save this draft to remove its previous NRPC before publishing.</StatusMessage>}
     <WorkPackageAttachment reference={reference} proposal={ChatDraftContentToJSON(draft)} />
     <label className="grid gap-2 text-sm font-semibold">Message to Buyer (optional)<textarea className={control} rows={3} maxLength={5000} disabled={busy} value={draft.message ?? ''} placeholder="Explain your offer or add a note for the Buyer…" onChange={e => edit({ ...draft, message: e.target.value })} /><span className="text-xs font-normal text-text-secondary">Included with this quotation when you publish.</span></label>
     <section className="space-y-3"><div className="sticky top-0 z-10 space-y-2 bg-surface-primary pb-2"><div><h3 className="font-semibold">Materials</h3><p className="mt-1 text-sm text-text-secondary">Add products below. Expand a material to edit its description and specifications.</p></div>
@@ -363,8 +397,12 @@ export function QuotationDraftEditor({ open, onClose, conversationId, quotation,
     <p className="text-sm text-text-secondary">The Buyer chooses {draft.fulfillmentMethod === 'DELIVERY' ? 'Cash on Delivery or Online payment' : 'In-Store Payment or Online payment'} before accepting, subject to your enabled payment methods. Any online processing fee is disclosed at payment-channel selection.</p>
     <div className="mt-4 space-y-4">
       <label className="grid gap-2 text-sm font-semibold">Fulfillment<select className={control} disabled={busy} value={draft.fulfillmentMethod} onChange={e => edit({ ...draft, fulfillmentMethod: e.target.value as ChatDraftContent['fulfillmentMethod'], ...(e.target.value === 'PICKUP' && draft.discount?.scope === 'DELIVERY' ? { discount: { scope: 'MATERIALS', percent: '' } } : {}) })}><option value="PICKUP">Self-Pickup</option><option value="DELIVERY">Site Delivery</option></select></label>
-      {draft.fulfillmentMethod === 'DELIVERY' && <QuotationDeliveryArrangement value={delivery} onChange={deliveryEdit} active={open} disabled={busy} loadVehicles={loadQuotationVehicles} readableError={readableChatError} />}
-      <QuotationDiscountEditor draft={draft} disabled={busy} onChange={discount => edit({ ...draft, discount })} />
+      {draft.fulfillmentMethod === 'DELIVERY' && <>
+        {role === 'STORE_STAFF' && <StatusMessage tone="info">Prepare the delivery details for an Owner or Store Manager to confirm and publish.</StatusMessage>}
+        <QuotationDestinationFields value={draft.destination} reference={reference} disabled={busy} onChange={destination => edit({ ...latest.current, destination })} search={async query => { setLocationBusy(true); try { return await chatApi.quotationLocation(conversationId, query) } finally { setLocationBusy(false) } }} readableError={readableChatError} />
+        <QuotationDeliveryArrangement value={delivery} onChange={deliveryEdit} plan={plan} loading={planBusy} error={planError} disabled={busy} onRetry={() => setPlanRetry(value => value + 1)} />
+      </>}
+      <QuotationDiscountEditor draft={draft} deliveryPending={deliveryPending} disabled={busy} onChange={discount => edit({ ...draft, discount })} />
 
     </div>
 

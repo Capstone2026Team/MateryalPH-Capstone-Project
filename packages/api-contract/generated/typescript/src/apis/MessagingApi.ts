@@ -79,6 +79,11 @@ import {
     ChatQuotationPageResponseToJSON,
 } from '../models/ChatQuotationPageResponse';
 import {
+    type ChatQuotationPreviewRequest,
+    ChatQuotationPreviewRequestFromJSON,
+    ChatQuotationPreviewRequestToJSON,
+} from '../models/ChatQuotationPreviewRequest';
+import {
     type ChatRead,
     ChatReadFromJSON,
     ChatReadToJSON,
@@ -114,6 +119,11 @@ import {
     ConversationPageResponseToJSON,
 } from '../models/ConversationPageResponse';
 import {
+    type DeliveryPlanEnvelope,
+    DeliveryPlanEnvelopeFromJSON,
+    DeliveryPlanEnvelopeToJSON,
+} from '../models/DeliveryPlanEnvelope';
+import {
     type ErrorEnvelope,
     ErrorEnvelopeFromJSON,
     ErrorEnvelopeToJSON,
@@ -123,6 +133,16 @@ import {
     FulfillmentConversationPageResponseFromJSON,
     FulfillmentConversationPageResponseToJSON,
 } from '../models/FulfillmentConversationPageResponse';
+import {
+    type QuotationLocationEnvelope,
+    QuotationLocationEnvelopeFromJSON,
+    QuotationLocationEnvelopeToJSON,
+} from '../models/QuotationLocationEnvelope';
+import {
+    type QuotationLocationSearch,
+    QuotationLocationSearchFromJSON,
+    QuotationLocationSearchToJSON,
+} from '../models/QuotationLocationSearch';
 import {
     type SiteInspectionCreate,
     SiteInspectionCreateFromJSON,
@@ -401,6 +421,17 @@ export interface OpenVendorOrderConversationRequest {
     idempotencyKey: string;
 }
 
+export interface PreviewChatQuotationDeliveryRequest {
+    /**
+     *
+     */
+    conversationId: string;
+    /**
+     *
+     */
+    chatQuotationPreviewRequest: ChatQuotationPreviewRequest;
+}
+
 export interface PublishChatQuotationRequest {
     /**
      *
@@ -474,6 +505,17 @@ export interface SaveChatQuotationDraftRequest {
      *
      */
     chatDraftSave: ChatDraftSave;
+}
+
+export interface SearchChatQuotationLocationRequest {
+    /**
+     *
+     */
+    conversationId: string;
+    /**
+     *
+     */
+    quotationLocationSearch: QuotationLocationSearch;
 }
 
 export interface SendChatMessageRequest {
@@ -1695,6 +1737,65 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for previewChatQuotationDelivery without sending the request
+     */
+    async previewChatQuotationDeliveryRequestOpts(requestParameters: PreviewChatQuotationDeliveryRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['conversationId'] == null) {
+            throw new runtime.RequiredError(
+                'conversationId',
+                'Required parameter "conversationId" was null or undefined when calling previewChatQuotationDelivery().'
+            );
+        }
+
+        if (requestParameters['chatQuotationPreviewRequest'] == null) {
+            throw new runtime.RequiredError(
+                'chatQuotationPreviewRequest',
+                'Required parameter "chatQuotationPreviewRequest" was null or undefined when calling previewChatQuotationDelivery().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendor/conversations/{conversationId}/quotation/delivery-plan`;
+        urlPath = urlPath.replace('{conversationId}', encodeURIComponent(String(requestParameters['conversationId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ChatQuotationPreviewRequestToJSON(requestParameters['chatQuotationPreviewRequest']),
+        };
+    }
+
+    /**
+     * Authorized sales staff only. Uses conversation-scoped locations; never exposes device GPS or the Buyer address book. Advisory calculations do not publish or reserve inventory.
+     */
+    async previewChatQuotationDeliveryRaw(requestParameters: PreviewChatQuotationDeliveryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<DeliveryPlanEnvelope>> {
+        const requestOptions = await this.previewChatQuotationDeliveryRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => DeliveryPlanEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Authorized sales staff only. Uses conversation-scoped locations; never exposes device GPS or the Buyer address book. Advisory calculations do not publish or reserve inventory.
+     */
+    async previewChatQuotationDelivery(requestParameters: PreviewChatQuotationDeliveryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<DeliveryPlanEnvelope> {
+        const response = await this.previewChatQuotationDeliveryRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for publishChatQuotation without sending the request
      */
     async publishChatQuotationRequestOpts(requestParameters: PublishChatQuotationRequest): Promise<runtime.RequestOpts> {
@@ -2046,6 +2147,65 @@ export class MessagingApi extends runtime.BaseAPI {
      */
     async saveChatQuotationDraft(requestParameters: SaveChatQuotationDraftRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatQuotationPageResponse> {
         const response = await this.saveChatQuotationDraftRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for searchChatQuotationLocation without sending the request
+     */
+    async searchChatQuotationLocationRequestOpts(requestParameters: SearchChatQuotationLocationRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['conversationId'] == null) {
+            throw new runtime.RequiredError(
+                'conversationId',
+                'Required parameter "conversationId" was null or undefined when calling searchChatQuotationLocation().'
+            );
+        }
+
+        if (requestParameters['quotationLocationSearch'] == null) {
+            throw new runtime.RequiredError(
+                'quotationLocationSearch',
+                'Required parameter "quotationLocationSearch" was null or undefined when calling searchChatQuotationLocation().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendor/conversations/{conversationId}/quotation/location`;
+        urlPath = urlPath.replace('{conversationId}', encodeURIComponent(String(requestParameters['conversationId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: QuotationLocationSearchToJSON(requestParameters['quotationLocationSearch']),
+        };
+    }
+
+    /**
+     * Authorized sales staff only. Uses conversation-scoped locations; never exposes device GPS or the Buyer address book. Advisory calculations do not publish or reserve inventory.
+     */
+    async searchChatQuotationLocationRaw(requestParameters: SearchChatQuotationLocationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<QuotationLocationEnvelope>> {
+        const requestOptions = await this.searchChatQuotationLocationRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => QuotationLocationEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Authorized sales staff only. Uses conversation-scoped locations; never exposes device GPS or the Buyer address book. Advisory calculations do not publish or reserve inventory.
+     */
+    async searchChatQuotationLocation(requestParameters: SearchChatQuotationLocationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<QuotationLocationEnvelope> {
+        const response = await this.searchChatQuotationLocationRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

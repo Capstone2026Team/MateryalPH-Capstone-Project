@@ -44,6 +44,12 @@ void main() {
       // TODO
     });
 
+    // Frozen intended destination, heavy-vehicle restriction, alternate drop-off and access instructions.
+    // BuiltMap<String, JsonObject> destination
+    test('to test the property `destination`', () async {
+      // TODO
+    });
+
     // BuiltMap<String, JsonObject> delivery
     test('to test the property `delivery`', () async {
       // TODO

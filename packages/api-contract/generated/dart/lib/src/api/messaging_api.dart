@@ -22,6 +22,7 @@ import 'package:materyalph_api_client/src/model/chat_id_response.dart';
 import 'package:materyalph_api_client/src/model/chat_product_page_response.dart';
 import 'package:materyalph_api_client/src/model/chat_publish.dart';
 import 'package:materyalph_api_client/src/model/chat_quotation_page_response.dart';
+import 'package:materyalph_api_client/src/model/chat_quotation_preview_request.dart';
 import 'package:materyalph_api_client/src/model/chat_read.dart';
 import 'package:materyalph_api_client/src/model/chat_realtime_response.dart';
 import 'package:materyalph_api_client/src/model/chat_send.dart';
@@ -29,7 +30,10 @@ import 'package:materyalph_api_client/src/model/chat_transfer.dart';
 import 'package:materyalph_api_client/src/model/chat_typing.dart';
 import 'package:materyalph_api_client/src/model/conversation_detail_response.dart';
 import 'package:materyalph_api_client/src/model/conversation_page_response.dart';
+import 'package:materyalph_api_client/src/model/delivery_plan_envelope.dart';
 import 'package:materyalph_api_client/src/model/fulfillment_conversation_page_response.dart';
+import 'package:materyalph_api_client/src/model/quotation_location_envelope.dart';
+import 'package:materyalph_api_client/src/model/quotation_location_search.dart';
 import 'package:materyalph_api_client/src/model/site_inspection_create.dart';
 import 'package:materyalph_api_client/src/model/site_inspection_created_response.dart';
 import 'package:materyalph_api_client/src/model/site_inspection_decision.dart';
@@ -1648,6 +1652,115 @@ class MessagingApi {
     );
   }
 
+  /// previewChatQuotationDelivery
+  /// Authorized sales staff only. Uses conversation-scoped locations; never exposes device GPS or the Buyer address book. Advisory calculations do not publish or reserve inventory.
+  ///
+  /// Parameters:
+  /// * [conversationId]
+  /// * [chatQuotationPreviewRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [DeliveryPlanEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<DeliveryPlanEnvelope>> previewChatQuotationDelivery({
+    required String conversationId,
+    required ChatQuotationPreviewRequest chatQuotationPreviewRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendor/conversations/{conversationId}/quotation/delivery-plan'.replaceAll('{' r'conversationId' '}', encodeQueryParameter(_serializers, conversationId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(ChatQuotationPreviewRequest);
+      _bodyData = _serializers.serialize(chatQuotationPreviewRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    DeliveryPlanEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(DeliveryPlanEnvelope),
+      ) as DeliveryPlanEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<DeliveryPlanEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
   /// publishChatQuotation
   /// Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
   ///
@@ -2166,6 +2279,115 @@ class MessagingApi {
     }
 
     return Response<ChatQuotationPageResponse>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// searchChatQuotationLocation
+  /// Authorized sales staff only. Uses conversation-scoped locations; never exposes device GPS or the Buyer address book. Advisory calculations do not publish or reserve inventory.
+  ///
+  /// Parameters:
+  /// * [conversationId]
+  /// * [quotationLocationSearch]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [QuotationLocationEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<QuotationLocationEnvelope>> searchChatQuotationLocation({
+    required String conversationId,
+    required QuotationLocationSearch quotationLocationSearch,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendor/conversations/{conversationId}/quotation/location'.replaceAll('{' r'conversationId' '}', encodeQueryParameter(_serializers, conversationId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(QuotationLocationSearch);
+      _bodyData = _serializers.serialize(quotationLocationSearch, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    QuotationLocationEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(QuotationLocationEnvelope),
+      ) as QuotationLocationEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<QuotationLocationEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
