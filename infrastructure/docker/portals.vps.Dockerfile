@@ -1,9 +1,9 @@
-# Rebuild the current Caddy release with patched Go and HTTP/2 dependencies.
+# Rebuild the current Caddy release with patched Go, HTTP/2 and HTML dependencies.
 # Keep the standard modules; no additional plugins or provider credentials.
 FROM caddy:2.11.7-builder-alpine AS caddy-build
 ENV GOTOOLCHAIN=go1.27.3
 RUN xcaddy build v2.11.7 \
-    --replace golang.org/x/net=golang.org/x/net@v0.60.0 \
+    --replace golang.org/x/net=golang.org/x/net@v0.62.0 \
     --output /usr/bin/caddy
 
 FROM node:24-alpine AS portals

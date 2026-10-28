@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { AdminVendorVerificationDetailPage } from './PhaseThreeAdminPages'
@@ -44,26 +44,33 @@ const caseDetail = {
   reviews: [],
 }
 
-function renderCase() {
-  return render(<MemoryRouter initialEntries={['/vendor-verification/case-1']}><Routes><Route path="/vendor-verification/:organizationId" element={<AdminVendorVerificationDetailPage />} /></Routes></MemoryRouter>)
+async function renderCase() {
+  // Settle the initial case request and default-selection effect before interacting.
+  await act(async () => {
+    render(<MemoryRouter initialEntries={['/vendor-verification/case-1']}><Routes><Route path="/vendor-verification/:organizationId" element={<AdminVendorVerificationDetailPage />} /></Routes></MemoryRouter>)
+  })
 }
 
 describe('Admin verification case review', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     api.getVendorVerificationCase.mockResolvedValue(caseDetail)
     api.decideVendorVerificationRequirement.mockResolvedValue(caseDetail)
   })
 
   test('reviews business information as one action and loads both ID files with identity values', async () => {
-    renderCase()
+    await renderCase()
     const list = await screen.findByRole('region', { name: 'Verification requirements' })
+    expect(within(list).getByRole('button', { name: 'Review Government ID — Registered legal identity' })).toHaveAttribute('aria-current', 'true')
     expect(within(list).getAllByRole('button', { name: 'Review Business information' })).toHaveLength(1)
     expect(within(list).queryByRole('button', { name: /review business_type/i })).not.toBeInTheDocument()
     fireEvent.click(within(list).getByRole('button', { name: 'Review Business information' }))
+    expect(within(list).getByRole('button', { name: 'Review Business information' })).toHaveAttribute('aria-current', 'true')
     const businessInformation = await screen.findByRole('region', { name: 'Business information' })
     expect(within(businessInformation).getByText('Registered business / legal name')).toBeVisible()
     expect(within(businessInformation).getByText('Test Supply Inc.')).toBeVisible()
     fireEvent.click(within(list).getByRole('button', { name: 'Review Government ID — Registered legal identity' }))
+    expect(within(list).getByRole('button', { name: 'Review Government ID — Registered legal identity' })).toHaveAttribute('aria-current', 'true')
     const legalIdentity = await screen.findByRole('region', { name: 'Government ID — Registered legal identity' })
     expect(within(legalIdentity).getByText('Juan Dela Cruz')).toBeVisible()
     expect(await within(legalIdentity).findByText('Inline preview: Government ID — Front / identity page')).toBeVisible()
@@ -72,7 +79,7 @@ describe('Admin verification case review', () => {
   })
 
   test('locks business information until every other requirement is approved', async () => {
-    renderCase()
+    await renderCase()
     const list = await screen.findByRole('region', { name: 'Verification requirements' })
     expect(await screen.findByText('Inline preview: Government ID — Back')).toBeVisible()
     fireEvent.click(within(list).getByRole('button', { name: 'Review Business information' }))
@@ -85,7 +92,7 @@ describe('Admin verification case review', () => {
   test('sends one version guarded business decision as the final acceptance', async () => {
     const approved = { ...caseDetail, sections: { STORE_VERIFICATION: caseDetail.sections.STORE_VERIFICATION.map(step => step.key.startsWith('business') ? step : { ...step, status: 'APPROVED' }) } }
     api.getVendorVerificationCase.mockResolvedValue(approved)
-    renderCase()
+    await renderCase()
     await screen.findByRole('region', { name: 'Verification requirements' })
     expect(screen.queryByText(/decided after every other requirement is approved/)).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Record requirement decision' }))
