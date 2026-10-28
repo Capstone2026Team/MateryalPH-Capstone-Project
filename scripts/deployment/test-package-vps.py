@@ -4,6 +4,7 @@ import io
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -24,6 +25,32 @@ RUNTIME_FILES = [
 
 
 class ReleasePackagingTest(unittest.TestCase):
+    def test_windows_git_archive_preserves_security_patch_lf(self):
+        root = Path(__file__).resolve().parents[2]
+        relative = Path('infrastructure/docker/patches/go-jose-v3-rsa-bounds.patch')
+        expected = (root / relative).read_bytes()
+        self.assertNotIn(b'\r', expected)
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / 'source'
+            source.mkdir()
+            shutil.copyfile(root / '.gitattributes', source / '.gitattributes')
+            target = source / relative
+            target.parent.mkdir(parents=True)
+            target.write_bytes(expected)
+
+            def git(*arguments):
+                return subprocess.run(['git', '-C', str(source), *arguments], check=True, capture_output=True)
+
+            git('init')
+            git('-c', 'core.autocrlf=false', 'add', '.')
+            git('-c', 'user.name=Packaging Test', '-c', 'user.email=packaging@example.test',
+                '-c', 'commit.gpgsign=false', 'commit', '-m', 'Synthetic release source')
+            archive = Path(directory) / 'source.tar'
+            git('-c', 'core.autocrlf=true', 'archive', '--format=tar', '--output', str(archive), 'HEAD')
+            with tarfile.open(archive) as stream:
+                self.assertEqual(stream.extractfile(relative.as_posix()).read(), expected,
+                                 'Windows release export must preserve the LF patch context')
+
     def exercise(self, directory, reject_edge=False):
         destination = Path(directory) / 'release'
         commands = []

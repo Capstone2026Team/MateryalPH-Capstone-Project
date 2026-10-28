@@ -20,6 +20,14 @@ consistency checks. Both standalone JWK and JWKS parsing are tested, alongside
 valid public/private RSA round trips. Caddy's separate go-jose/v4 dependency is
 pinned to upstream v4.1.6.
 
+Patch files must retain LF line endings. The repository's `.gitattributes`
+enforces this for Windows checkouts and `git archive` release exports; with
+`core.autocrlf=true`, an unmarked patch is exported with CRLF context and
+`git apply --check` fails against the downloaded Linux source. The packaging
+tests exercise that Windows archive setting. Commit the attribute rule and
+obtain CI acceptance on the new staging commit before rerunning the release;
+packaging exports the selected commit, so a working-tree edit alone is not used.
+
 The v3 replacement is local source, not an upstream fixed version. Go build
 metadata records `github.com/go-jose/go-jose/v3 v3.0.5 => /opt/go-jose-v3`;
 version-only scanners cannot establish its patch status. The checked-in patch
