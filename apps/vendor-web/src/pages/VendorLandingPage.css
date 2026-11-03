@@ -31,7 +31,7 @@
 .vendor-landing .site-nav a { font-size: .75rem; }
 .vendor-landing .brand-link { flex-shrink: 0; gap: .5rem; font-size: .875rem; }
 .vendor-landing .brand-link img { width: 3rem; height: 3rem; }
-.vendor-landing .brand-link span { padding-left: .75rem; }
+.vendor-landing .brand-link > span { padding-left: .75rem; }
 .vendor-landing .button { min-height: 3rem; border-radius: var(--mp-radius-control); padding: .75rem 1.25rem; font-size: .875rem; }
 .vendor-landing .button svg { width: 1.125rem; height: 1.125rem; }
 .vendor-landing .lp-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 2rem; }
@@ -202,7 +202,7 @@
   .vendor-landing .site-header__inner { gap: .75rem; }
   .vendor-landing .brand-link { font-size: .8125rem; }
   .vendor-landing .brand-link img { width: 2.5rem; height: 2.5rem; }
-  .vendor-landing .brand-link span { padding-left: .5rem; }
+  .vendor-landing .brand-link > span { padding-left: .5rem; }
   .vendor-landing .lp-eyebrow { font-size: .6875rem; }
   .vendor-landing .lp-hero h1 { font-size: clamp(2.75rem, 11vw, 3.5rem); }
   .vendor-landing .lp-hero-band::after { background: color-mix(in srgb, var(--lp-ink) 87%, transparent); }

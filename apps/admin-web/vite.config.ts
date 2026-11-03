@@ -1,4 +1,5 @@
-import { defineConfig, type ProxyOptions } from 'vite'
+import { fileURLToPath } from 'node:url'
+import { defineConfig, searchForWorkspaceRoot, type ProxyOptions } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -36,6 +37,13 @@ export default defineConfig({
   server: {
     port: 5174,
     allowedHosts: publicTunnelHosts,
+    fs: {
+      strict: true,
+      allow: [
+        searchForWorkspaceRoot(fileURLToPath(new URL('.', import.meta.url))),
+        fileURLToPath(new URL('../../packages/web-ui/src/assets', import.meta.url)),
+      ],
+    },
     proxy: {
       '/api/v1': apiProxy,
     },

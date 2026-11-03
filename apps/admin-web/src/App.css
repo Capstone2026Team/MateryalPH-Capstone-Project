@@ -7,8 +7,6 @@
 .admin-story li svg { flex: 0 0 1.3rem; color: var(--mp-color-brand-orange-600); }
 .admin-story li strong { display: block; }
 .admin-story small { z-index: 1; color: var(--mp-color-text-secondary); }
-.secure-note { display: inline-flex; min-height: 2.25rem; align-items: center; gap: .4rem; border-radius: var(--mp-radius-pill); background: var(--mp-color-brand-orange-50); padding: .4rem .8rem; color: var(--mp-color-action-primary-pressed); font-size: .8rem; font-weight: 700; }
-.secure-note svg { width: 1rem; }
 .invite-page form { display: grid; gap: 1rem; margin-block-start: 2rem; }
 .admin-help { display: flex; min-height: 2.75rem; align-items: center; justify-content: space-between; gap: 1rem; color: var(--mp-color-text-secondary); font-size: .78rem; }
 .admin-help a, .admin-return { color: var(--mp-color-action-primary); font-weight: 700; text-underline-offset: .22em; }

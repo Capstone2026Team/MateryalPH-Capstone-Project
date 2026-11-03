@@ -1,5 +1,5 @@
 import { ResponseError } from '@materyalph/api-client-ts'
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import * as auth from '../lib/auth-api'
@@ -26,13 +26,13 @@ function page(email = 'owner@example.test') {
   render(<MemoryRouter initialEntries={[{ pathname: '/forgot-password', state: { email } }]}><Routes><Route path="/forgot-password" element={<VendorForgotPasswordPage />} /><Route path="/login" element={<h1>Sign in reached</h1>} /></Routes></MemoryRouter>)
 }
 
-test('Vendor recovery shares both method choices and places reCAPTCHA below without an email field', () => {
+test('Vendor recovery shares both method choices without an email field or security checkbox', () => {
   page()
   expect(screen.getByText('o••••@example.test')).toBeVisible()
   expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Send authentication code' })).toBeVisible()
-  const backup = screen.getByRole('button', { name: 'Use recovery codes' })
-  expect(backup.compareDocumentPosition(document.querySelector('.recaptcha-checkbox') as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Use recovery codes' })).toBeVisible()
+  expect(document.querySelector('.recaptcha-checkbox')).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Use an email security check instead' })).not.toBeInTheDocument()
 })
 
@@ -45,18 +45,28 @@ test('Vendor recovery asks for the account email only if it was not entered on s
   expect(screen.getByLabelText(/Recovery code/)).toBeRequired()
 })
 
-test('Vendor recovery sends the checkbox token with the Vendor recovery action', async () => {
+test.each(['owner@example.test', ''])('Vendor recovery requests an email security check without reCAPTCHA when initial email is %j', async initialEmail => {
   vi.stubEnv('VITE_RECAPTCHA_SITE_KEY', 'test-vendor-site')
-  const renderWidget = vi.fn((_host: HTMLElement, _parameters: Record<string, unknown>) => 1)
+  const renderWidget = vi.fn(() => 1)
   window.grecaptcha = { enterprise: { ready: callback => callback(), render: renderWidget, reset: vi.fn() } }
-  page()
-  await waitFor(() => expect(renderWidget).toHaveBeenCalledOnce())
-  const parameters = renderWidget.mock.calls[0]?.[1] as Record<string, unknown>
-  expect(parameters.action).toBe('vendor_password_recovery')
-  act(() => (parameters.callback as (token: string) => void)('test-vendor-checkbox'))
+  page(initialEmail)
+  expect(document.querySelector('.recaptcha-checkbox')).not.toBeInTheDocument()
+  expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+  expect(screen.queryByText(/Complete the security checkbox|If you cannot use the checkbox/)).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Send authentication code' }))
+  if (!initialEmail) {
+    expect(screen.getByLabelText(/Account email/)).toBeRequired()
+    expect(document.querySelector('.recaptcha-checkbox')).not.toBeInTheDocument()
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Complete the security checkbox|If you cannot use the checkbox/)).not.toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText(/Account email/), { target: { value: 'owner@example.test' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Send authentication code' }))
+  }
   await screen.findByLabelText(/Authentication code/)
-  expect(auth.requestPasswordRecovery).toHaveBeenCalledWith('owner@example.test', { recaptchaToken: 'test-vendor-checkbox' })
+  expect(auth.requestPasswordRecovery).toHaveBeenCalledWith('owner@example.test', { requestEmailStepUp: true })
+  expect(auth.requestPasswordRecovery).toHaveBeenCalledOnce()
+  expect(renderWidget).not.toHaveBeenCalled()
+  expect(screen.getByRole('button', { name: /Request another code in \d+s/ })).toBeDisabled()
 })
 
 test('Vendor email fallback verifies once before showing the existing 12-character password form', async () => {

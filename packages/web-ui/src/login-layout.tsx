@@ -3,18 +3,20 @@ import { FileCheck2, LockKeyhole, PackageCheck, ShieldCheck } from 'lucide-react
 import './login-layout.css'
 
 /** Presentation only; each portal retains ownership of its authentication flow. */
-export function LoginLayout({ portal, brand, title, description, children }: {
+export function LoginLayout({ portal, brand, navigation, title, description, children }: {
   portal: 'admin' | 'vendor'
   brand: ReactNode
+  navigation?: ReactNode
   title: string
   description: string
   children: ReactNode
 }) {
   const admin = portal === 'admin'
-  return <main className={`login-layout login-layout--${portal}`}>
+  return <main className={`login-layout login-layout--${portal}${navigation ? ' login-layout--with-navigation' : ''}`}>
+    {navigation ? <header className="login-layout__navigation">{navigation}</header> : null}
     <div className="login-layout__frame">
       <div className="login-layout__introduction">
-      <header className="login-layout__brand">{brand}</header>
+      <div className="login-layout__introduction-brand">{brand}</div>
       <section className="login-layout__story" aria-label={admin ? 'Admin portal safeguards' : 'Vendor portal benefits'}>
         <span className="login-layout__eyebrow">{admin ? 'Marketplace administration' : 'Your vendor workspace'}</span>
         <h2>{admin ? <>Careful decisions.<br />Lasting trust.</> : <>Your store.<br />Your next chapter.</>}</h2>
@@ -27,7 +29,9 @@ export function LoginLayout({ portal, brand, title, description, children }: {
       </section>
       </div>
       <section className="login-layout__card" aria-label={title}>
-        <h1>{title}</h1><p className="login-layout__description">{description}</p>
+        <header className="login-layout__card-heading">
+          <div className="login-layout__heading-copy"><h1>{title}</h1><p className="login-layout__description">{description}</p></div>
+        </header>
         {children}
       </section>
     </div>

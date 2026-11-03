@@ -1,6 +1,6 @@
 # Vendor and Admin password recovery — 26 October 2026
 
-Both portals use the same recovery component: choose a method, verify identity, then set a new password. The email entered on sign-in is carried through router state and shown masked. An email input appears only if the address is missing or explicitly changed. **Send authentication code** and **Use recovery codes** replace the duplicate email actions; reCAPTCHA sits below these choices.
+Both portals use the same recovery component: choose a method, verify identity, then set a new password. The email entered on sign-in is carried through router state and shown masked. An email input appears only if the address is missing or explicitly changed. **Send authentication code** and **Use recovery codes** replace the duplicate email actions. Per the owner correction of 3 November 2026, recovery no longer renders reCAPTCHA or checkbox helper text, including at email entry. Sending a code always requests the existing email security check; saved recovery codes remain available.
 
 Email codes use the shared six-digit input with paste/autofill, server cooldown, and an exact expiry in Asia/Manila. The accessible email fallback is integrated into the send action and requires only one recovery security code. Saved authenticator backup codes have a separate field. Password inputs remain hidden until server verification succeeds. Vendor retains its 12-character password minimum; Admin retains 14. Both require mixed case and a number. Legacy `/reset-password` links also begin at verification.
 
@@ -24,7 +24,7 @@ Login, invitation, other-portal, and native Buyer challenges cannot authorize th
 
 Recovery preserves email verification, onboarding, membership and organization decisions. A legitimately invited Admin awaiting initial MFA can reset without becoming active; a Vendor awaiting email verification remains pending. Admin and privileged Vendor MFA stays required at sign-in. The authenticator remains enrolled after backup-code use.
 
-## Validation
+## Validation recorded on 26 October 2026
 
 - Isolated API authentication regressions: **68 tests, 680 assertions passed**, covering both recovery methods, password policies, pending setup, expiry, replay, portal separation, CSRF, invalid attempts, notices, session revocation, and existing bot/MFA/native transport behavior.
 - Admin component suite: **27 files, 169 tests passed**. Vendor authentication/recovery suite: **3 files, 39 tests passed**, including sign-in email carry, both recovery methods, Vendor-bound checkbox evidence, verification failure, password entry, replacement-code saving, MFA, and legacy reset links.
@@ -41,8 +41,8 @@ If the web dev servers are already running, restart them to refresh the regenera
 
 Use non-production Vendor and invited Admin accounts. On each portal:
 
-1. Enter the email on sign-in, open Forgot password, and confirm the masked reference and two choices above reCAPTCHA. Open recovery directly and confirm that email entry appears only after a method is selected.
-2. Send and verify an email authentication code. Try the accessible fallback; verification should show password entry without sending a second email code.
+1. Enter the email on sign-in, open Forgot password, and confirm the masked reference and two recovery choices without reCAPTCHA or checkbox helper text. Open recovery directly and confirm that email entry appears only after a method is selected and also has no checkbox, even with a configured reCAPTCHA site key.
+2. Send and verify an email authentication code using the integrated email security check; verification should show password entry without sending a second email code.
 3. Try wrong/expired codes, resend cooldown, offline failure, and retry. Resending clears the old entry; failed verification never shows password fields.
 4. Use a saved authenticator backup code. Save the replacement set, update the password, and confirm that previous codes fail and existing sessions are revoked.
 5. Check security notices and the next sign-in, including required MFA. Confirm that pending setup and verification states are preserved.

@@ -21,7 +21,7 @@ export function BrandHeader() {
       <div className="site-header__inner">
         <Link className="brand-link" to="/" aria-label="MateryalPH Vendor home">
           <img src="/brand/materyalph-mark.png" alt="MateryalPH" width="48" height="48" />
-          <span>MateryalPH Vendor</span>
+          <span>Materyal<span className="text-action-primary">PH</span> Vendor</span>
         </Link>
         <button className="menu-button" type="button" aria-expanded={open} aria-controls="site-navigation" onClick={() => setOpen((value) => !value)}>
           {open ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}

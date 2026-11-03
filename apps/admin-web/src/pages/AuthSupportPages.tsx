@@ -45,7 +45,7 @@ function AdminPasswordRecovery({ initialCodeEntry = false }: { initialCodeEntry?
   const email = typeof state === 'object' && state !== null && 'email' in state && typeof state.email === 'string' ? state.email : searchParams.get('email') ?? ''
 
   return <AdminAuthShell title="Recover Admin access" description="Verify your identity and set a new password for your invited Admin account.">
-    <PasswordRecoveryFlow portal="admin" initialEmail={email} initialCodeEntry={initialCodeEntry} siteKey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+    <PasswordRecoveryFlow portal="admin" initialEmail={email} initialCodeEntry={initialCodeEntry}
       requestCode={async (address, evidence) => (await requestPasswordRecovery(address, evidence)).data}
       verifyIdentity={async input => {
         const result = await verifyPasswordRecovery(input)

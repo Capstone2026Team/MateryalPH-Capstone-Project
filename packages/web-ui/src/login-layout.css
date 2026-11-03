@@ -1,8 +1,17 @@
 .login-layout { min-height: 100svh; display: grid; align-items: center; padding: 40px 32px; background: var(--mp-color-surface-canvas); }
+.login-layout__navigation { position: absolute; top: 24px; left: 32px; z-index: 1; }
+.login-layout__return-link { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border: 1px solid var(--mp-color-border-default); border-radius: 50%; background: var(--mp-color-surface-primary); color: var(--mp-color-text-strong); box-shadow: 0 2px 8px color-mix(in srgb, var(--mp-color-text-strong) 6%, transparent); text-decoration: none; transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease; }
+.login-layout__return-link > svg { width: 20px; height: 20px; flex-shrink: 0; }
+.login-layout__return-link:hover { border-color: var(--mp-color-action-primary); background: var(--mp-color-brand-orange-50); color: var(--mp-color-action-primary-pressed); box-shadow: 0 2px 8px color-mix(in srgb, var(--mp-color-text-strong) 10%, transparent); }
+.login-layout__return-link:active { background: var(--mp-color-surface-canvas); box-shadow: none; }
 .login-layout__frame { width: min(100%, 1120px); margin-inline: auto; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 464px); align-items: center; column-gap: clamp(40px, 7vw, 112px); }
 .login-layout__introduction { min-width: 0; max-width: 480px; }
-.login-layout__brand { margin-bottom: 56px; }
-.login-layout__brand a { display: inline-flex; min-height: 48px; text-decoration: none; }
+.login-layout__introduction-brand { margin-bottom: 32px; }
+.login-layout__introduction-brand a { display: inline-flex; align-items: center; min-height: 44px; border-radius: var(--mp-radius-control); text-decoration: none; }
+.login-layout__card-heading { margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid var(--mp-color-border-default); }
+.login-layout__heading-copy { min-width: 0; }
+.login-layout__card .login-layout__card-heading h1 { font-weight: 700; line-height: 36px; }
+.login-layout__card-heading .login-layout__description { margin: 8px 0 0; text-wrap: pretty; }
 .login-layout__story { padding: 0; }
 .login-layout__eyebrow { display: block; color: var(--mp-color-action-primary); font-size: 12px; font-weight: 700; line-height: 16px; letter-spacing: .08em; text-transform: uppercase; }
 .login-layout__story h2 { margin: 16px 0 20px; color: var(--mp-color-text-strong); font-size: clamp(36px, 3.8vw, 52px); font-weight: 600; line-height: 1.08; letter-spacing: -.04em; }
@@ -39,13 +48,13 @@
 .login-layout__card .auth-switch a { display: inline-flex; align-items: center; min-height: 44px; }
 .login-layout__card .admin-footnote { margin: 24px 0 0 !important; padding-top: 20px; border-top: 1px solid var(--mp-color-border-default); color: var(--mp-color-text-secondary); font-size: 13px; line-height: 1.6; text-align: center; text-wrap: balance; }
 .login-layout__card [role="alert"] { overflow-wrap: anywhere; }
-.login-layout__card :is(a, button, input):focus-visible { outline: 2px solid var(--mp-color-focus-ring); outline-offset: 3px; }
+.login-layout__introduction-brand a:focus-visible, .login-layout__return-link:focus-visible, .login-layout__card :is(a, button, input):focus-visible { outline: 2px solid var(--mp-color-focus-ring); outline-offset: 3px; }
 @media (min-width: 901px) and (max-height: 860px) {
   .login-layout { padding-block: 24px; }
   .login-layout__card { padding-block: 32px; }
   .login-layout__description { margin-bottom: 24px; }
+  .login-layout__card-heading { margin-bottom: 24px; padding-bottom: 20px; }
   .login-layout__card form { gap: 16px; }
-  .login-layout__brand { margin-bottom: 40px; }
   .login-layout__story ul { margin-top: 32px; }
   .login-layout__story .login-layout__note { margin-top: 32px; }
 }
@@ -54,20 +63,50 @@
   .login-layout__card { padding-inline: 32px; }
 }
 @media (max-width: 900px) {
-  .login-layout { padding: 32px 24px; }
+  .login-layout { align-items: start; padding: 32px 24px; }
+  .login-layout--with-navigation { grid-template-rows: auto 1fr; row-gap: 0; }
+  .login-layout__navigation { position: static; justify-self: start; }
+  .login-layout .login-layout__frame { align-self: start; }
   .login-layout__frame { display: block; max-width: 480px; }
   .login-layout__introduction { max-width: none; }
-  .login-layout__brand { margin-bottom: 24px; }
+  .login-layout__introduction-brand { margin-bottom: 24px; }
   .login-layout__story { display: none; }
   .login-layout__card { padding: 32px; }
 }
 @media (max-width: 480px) {
   .login-layout { padding: 24px 16px; align-items: start; background: var(--mp-color-surface-primary); }
   .login-layout__card { padding: 24px 0 0; border: 0; border-top: 1px solid var(--mp-color-border-default); border-radius: 0; box-shadow: none; }
-  .login-layout__brand { margin-bottom: 0; padding-bottom: 24px; }
   .login-layout__description { margin-bottom: 24px; }
+  .login-layout__card-heading { margin-bottom: 24px; padding-bottom: 20px; }
 }
 @media (max-width: 350px) {
   /* Leave 304px for the provider security widget without scaling its controls. */
   .login-layout { padding-inline: 8px; }
+}
+
+/* Keep the materials image decorative and the login content on a pale surface. */
+.login-layout { --mp-login-background-image: url('./assets/materials-store.jpg'); position: relative; isolation: isolate; background-image: var(--mp-login-background-image); background-size: cover; background-position: center; }
+.login-layout::before { content: ''; position: absolute; inset: 0; z-index: -1; background: color-mix(in srgb, var(--mp-color-surface-canvas) 92%, transparent); }
+.login-layout .login-layout__eyebrow, .login-layout .login-layout__card a { color: var(--mp-color-action-primary-pressed); }
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .login-layout::before { background: color-mix(in srgb, var(--mp-color-surface-canvas) 84%, transparent); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+  .login-layout .login-layout__card { border-color: color-mix(in srgb, var(--mp-color-surface-primary) 80%, var(--mp-color-border-default)); background: color-mix(in srgb, var(--mp-color-surface-primary) 86%, transparent); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+}
+@media (max-width: 480px) {
+  .login-layout .login-layout__card { background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  /* Flatten the pale veil into the decorative image; keep the form itself opaque. */
+  .login-layout { background-image: linear-gradient(color-mix(in srgb, var(--mp-color-surface-canvas) 84%, transparent), color-mix(in srgb, var(--mp-color-surface-canvas) 84%, transparent)), var(--mp-login-background-image); }
+  .login-layout::before { display: none; }
+  .login-layout .login-layout__card { background: var(--mp-color-surface-primary); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@media (forced-colors: active) {
+  .login-layout { background-image: none; }
+  .login-layout::before { display: none; }
+  .login-layout .login-layout__card { border-color: CanvasText; background: Canvas; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .login-layout__return-link { border-color: CanvasText; background: Canvas; box-shadow: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-layout__return-link { transition: none; }
 }

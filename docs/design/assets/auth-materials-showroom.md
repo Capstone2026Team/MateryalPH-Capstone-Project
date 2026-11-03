@@ -1,0 +1,9 @@
+# Authentication background asset
+
+Asset: `packages/web-ui/src/assets/auth-materials-showroom.webp`
+
+Created on 2026-11-03 with the built-in image generation tool. This original scene is used only by the left-side story panel in the shared account recovery, verification, registration and invitation layout; the form keeps its original opaque surfaces and the login background remains separate. The generated 1672 x 941 PNG was encoded as WebP at quality 0.84 without cropping, resizing or other visual edits (225,042 bytes).
+
+## Final generation prompt
+
+Use case: photorealistic-natural. Asset type: new decorative landscape background photograph for MateryalPH account recovery, registration, verification and invitation pages, separate from the existing login-page hardware-store photograph. Create a premium, believable modern Philippine construction-materials showroom and warehouse: carefully arranged pale concrete blocks, natural timber, stone and porcelain tile samples, and a few neatly stacked steel profiles, seen in a calm spacious interior with large high windows. Architectural editorial photography, wide landscape composition around 16:9, eye-level perspective, soft diffused morning daylight and realistic fine material textures. Neutral limestone, warm white, pale gray and natural timber tones, small restrained warm orange warehouse details. Keep the left half visually quiet and evenly lit for dark foreground UI copy; subtle material depth toward the right. The photograph should look crisp and naturally lit, not already blurred; frosted-glass blur and pale overlays will be added by the website. No people, no text, no lettering, no labels, no logos, no watermark, no UI, no computers, no fantasy or dramatic lighting. One complete photographic scene, not a collage. This is the final production background asset, not a webpage mockup.

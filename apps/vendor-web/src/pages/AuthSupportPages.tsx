@@ -153,7 +153,7 @@ function VendorPasswordRecovery({ initialCodeEntry = false }: { initialCodeEntry
   const email = typeof state === 'object' && state !== null && 'email' in state && typeof state.email === 'string' ? state.email : searchParams.get('email') ?? ''
 
   return <VendorAuthShell title="Recover your account" description="Verify your identity and set a new password for your Vendor account." storyDescription="Recover your access securely and return to managing your store.">
-    <PasswordRecoveryFlow portal="vendor" initialEmail={email} initialCodeEntry={initialCodeEntry} siteKey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+    <PasswordRecoveryFlow portal="vendor" initialEmail={email} initialCodeEntry={initialCodeEntry}
       requestCode={async (address, evidence) => (await requestPasswordRecovery(address, evidence)).data}
       verifyIdentity={async input => {
         const result = await verifyPasswordRecovery(input)

@@ -26,13 +26,14 @@ function recoveryPage(email = 'admin@example.test') {
   render(<MemoryRouter initialEntries={[{ pathname: '/forgot-password', state: { email } }]}><AdminForgotPasswordPage /></MemoryRouter>)
 }
 
-it('uses the sign-in email and places one email action and backup recovery above the checkbox', () => {
+it('uses the sign-in email and offers email or backup recovery without reCAPTCHA', () => {
   recoveryPage()
   expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Use an email security check instead' })).not.toBeInTheDocument()
-  const backup = screen.getByRole('button', { name: 'Use recovery codes' })
+  expect(screen.getByRole('button', { name: 'Use recovery codes' })).toBeVisible()
   expect(screen.getByRole('button', { name: 'Send authentication code' })).toBeVisible()
-  expect(backup.compareDocumentPosition(document.querySelector('.recaptcha-checkbox') as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(document.querySelector('.recaptcha-checkbox')).not.toBeInTheDocument()
+  expect(screen.queryByText(/checkbox/i)).not.toBeInTheDocument()
   expect(screen.queryByLabelText(/New password/)).not.toBeInTheDocument()
 })
 
@@ -73,15 +74,20 @@ it('verifies the email security code once before revealing new-password fields',
   expect(completePasswordRecovery).toHaveBeenCalledWith('admin@example.test', 'NewPassword12345', 'NewPassword12345')
 })
 
-it('uses checkbox evidence for the email code and keeps resend on the server cooldown', async () => {
+it('uses email verification without rendering reCAPTCHA even when configured and keeps the resend cooldown', async () => {
   vi.stubEnv('VITE_RECAPTCHA_SITE_KEY', 'test-admin-site')
-  const renderWidget = vi.fn((_host: HTMLElement, parameters: Record<string, unknown>) => { (parameters.callback as (token: string) => void)('test-checkbox'); return 1 })
+  const renderWidget = vi.fn()
   window.grecaptcha = { enterprise: { ready: callback => callback(), render: renderWidget, reset: vi.fn() } }
-  recoveryPage()
+  recoveryPage('')
   await act(async () => {})
   fireEvent.click(screen.getByRole('button', { name: 'Send authentication code' }))
+  expect(document.querySelector('.recaptcha-checkbox')).not.toBeInTheDocument()
+  expect(screen.queryByText(/checkbox/i)).not.toBeInTheDocument()
+  fireEvent.change(screen.getByLabelText(/Account email/), { target: { value: 'admin@example.test' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Send authentication code' }))
   await screen.findByLabelText(/Authentication code/)
-  expect(requestPasswordRecovery).toHaveBeenCalledWith('admin@example.test', { recaptchaToken: 'test-checkbox' })
+  expect(renderWidget).not.toHaveBeenCalled()
+  expect(requestPasswordRecovery).toHaveBeenCalledWith('admin@example.test', { requestEmailStepUp: true })
   expect(screen.getByRole('button', { name: /Request another code in \d+s/ })).toBeDisabled()
 })
 

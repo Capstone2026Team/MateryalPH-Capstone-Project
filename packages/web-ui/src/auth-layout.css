@@ -34,3 +34,24 @@
 @media (max-width: 350px) {
   .auth-layout__panel { padding-inline: .5rem; }
 }
+
+/* Keep the image and glass on the story side; the form retains its original surfaces. */
+.auth-layout__story { --mp-auth-background-image: url('./assets/auth-materials-showroom.webp'); position: relative; isolation: isolate; background: var(--mp-color-surface-canvas) var(--mp-auth-background-image) center / cover no-repeat; }
+.auth-layout__story::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: color-mix(in srgb, var(--mp-color-surface-canvas) 92%, transparent); }
+.auth-layout .auth-layout__story > section { background: color-mix(in srgb, var(--mp-color-surface-primary) 12%, transparent); border-inline-end-color: color-mix(in srgb, var(--mp-color-surface-primary) 74%, var(--mp-color-border-default)); box-shadow: inset -1px 0 0 color-mix(in srgb, var(--mp-color-surface-primary) 65%, transparent); }
+.auth-layout .auth-layout__story :is(h2, li strong) { color: var(--mp-color-text-strong); }
+.auth-layout .auth-layout__story :is(p, li, small) { color: var(--mp-color-text-secondary); }
+.auth-layout .auth-layout__story li svg { color: var(--mp-color-action-primary-pressed); }
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .auth-layout__story::before { background: color-mix(in srgb, var(--mp-color-surface-canvas) 84%, transparent); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .auth-layout__story { background-image: none; }
+  .auth-layout__story::before { display: none; }
+  .auth-layout .auth-layout__story > section { background: var(--mp-color-surface-canvas); }
+}
+@media (forced-colors: active) {
+  .auth-layout__story { background-image: none; }
+  .auth-layout__story::before { display: none; }
+  .auth-layout .auth-layout__story > section { border-color: CanvasText; background: Canvas; box-shadow: none; }
+}

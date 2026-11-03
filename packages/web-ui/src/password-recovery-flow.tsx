@@ -5,7 +5,6 @@ import { AuthenticatorCodeField } from './authenticator-code-field'
 import { Button } from './button'
 import { Field } from './field'
 import { PasswordField } from './password-field'
-import { RecaptchaCheckbox } from './recaptcha-checkbox'
 import { StatusMessage } from './status-message'
 import { useWebBotProtection } from './web-bot-protection'
 import './password-recovery-flow.css'
@@ -14,11 +13,10 @@ type Stage = 'method' | 'email' | 'code' | 'password' | 'saved'
 type Method = 'email' | 'recovery'
 type Verification = { email: string; code?: string; recoveryCode?: string; challengeId?: string }
 
-export function PasswordRecoveryFlow({ portal, initialEmail = '', initialCodeEntry = false, requestCode, verifyIdentity, completePassword, resendSecurityCode, readableError, onDownloadCodes, onComplete, siteKey }: {
+export function PasswordRecoveryFlow({ portal, initialEmail = '', initialCodeEntry = false, requestCode, verifyIdentity, completePassword, resendSecurityCode, readableError, onDownloadCodes, onComplete }: {
   portal: 'admin' | 'vendor'
   initialEmail?: string
   initialCodeEntry?: boolean
-  siteKey: string | undefined
   requestCode: (email: string, evidence: VendorBotProtectionEvidence) => Promise<{ resendAfterSeconds: number; expiresIn: number }>
   verifyIdentity: (input: Verification) => Promise<{ expiresIn: number; recoveryCodes?: string[] | null }>
   completePassword: (email: string, password: string, confirmation: string) => Promise<unknown>
@@ -68,7 +66,7 @@ export function PasswordRecoveryFlow({ portal, initialEmail = '', initialCodeEnt
       setResendAt(Date.now() + result.resendAfterSeconds * 1000)
       setExpiresAt(new Date(Date.now() + result.expiresIn * 1000).toISOString())
       setStage('code')
-    }, !check.token)
+    }, true)
     setNow(Date.now())
   }
 
@@ -176,12 +174,10 @@ export function PasswordRecoveryFlow({ portal, initialEmail = '', initialCodeEnt
         <div className="recovery-flow__divider"><span>or</span></div>
         <Button className="w-full" variant="secondary" disabled={working} onClick={chooseRecovery}><KeyRound size={18} aria-hidden="true" />Use recovery codes</Button>
       </div>
-      <SecurityCheckbox portal={portal} check={check} siteKey={siteKey} />
     </>}
     {currentStage === 'email' && <form onSubmit={submitEmail} aria-busy={working}>
       <Field label="Account email" name="email" type="email" autoComplete="email" value={email} onChange={event => setEmail(event.currentTarget.value)} autoFocus required disabled={working} />
       <Button className="w-full" type="submit" disabled={working}>{working ? 'Sending…' : method === 'recovery' || initialCodeEntry ? 'Continue' : 'Send authentication code'}<ArrowRight size={18} aria-hidden="true" /></Button>
-      {method === 'email' && !initialCodeEntry && <SecurityCheckbox portal={portal} check={check} siteKey={siteKey} />}
       <Button variant="quiet" disabled={working} onClick={startOver}><ArrowLeft size={16} aria-hidden="true" />Back to recovery methods</Button>
     </form>}
     {currentStage === 'code' && <form onSubmit={verify} aria-busy={working}>
@@ -207,13 +203,6 @@ export function PasswordRecoveryFlow({ portal, initialEmail = '', initialCodeEnt
       <Button variant="secondary" onClick={() => onDownloadCodes(recoveryCodes)}>Download recovery codes (.txt)</Button>
       <Button onClick={onComplete}>I saved these codes. Continue to sign in</Button>
     </>}
-  </div>
-}
-
-function SecurityCheckbox({ portal, check, siteKey }: { portal: 'admin' | 'vendor'; check: ReturnType<typeof useWebBotProtection>; siteKey: string | undefined }) {
-  return <div className="recovery-flow__security">
-    <RecaptchaCheckbox ref={check.checkboxRef} siteKey={siteKey} action={portal === 'admin' ? 'admin_password_recovery' : 'vendor_password_recovery'} disabled={check.busy} onTokenChange={check.setToken} />
-    <p>If you cannot use the checkbox, “Send authentication code” continues with an email security check.</p>
   </div>
 }
 

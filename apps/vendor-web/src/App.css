@@ -4,7 +4,7 @@
 .site-header__inner { display: flex; min-height: 5rem; max-width: 76rem; margin-inline: auto; align-items: center; justify-content: space-between; padding-inline: clamp(1rem, 4vw, 2rem); }
 .brand-link { display: inline-flex; align-items: center; gap: .65rem; color: var(--mp-color-text-strong); font-size: .88rem; font-weight: 700; text-decoration: none; }
 .brand-link img { width: 3rem; height: 3rem; object-fit: contain; object-position: left center; }
-.brand-link span { border-inline-start: 1px solid var(--mp-color-border-default); padding-inline-start: .65rem; }
+.brand-link > span { border-inline-start: 1px solid var(--mp-color-border-default); padding-inline-start: .65rem; }
 .site-nav { display: flex; align-items: center; gap: clamp(.4rem, 1.5vw, 1.25rem); }
 .site-nav a { min-height: 2.75rem; display: inline-flex; align-items: center; color: var(--mp-color-text-secondary); font-size: .82rem; font-weight: 600; text-decoration: none; }
 .site-nav a:hover, .site-nav a[aria-current="page"] { color: var(--mp-color-text-strong); }
