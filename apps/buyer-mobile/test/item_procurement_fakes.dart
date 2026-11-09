@@ -108,6 +108,9 @@ ListingCardView listingCard(
   String sold = '0.0000',
   int uniqueBuyers = 0,
   String? rating,
+  String vendorScore = 'New Vendor',
+  String? normalizedUnitPrice = '15.00000000',
+  List<RankingComponentView> components = _components,
 }) => ListingCardView(
   listingId: id,
   variantId: '$id-v1',
@@ -127,14 +130,14 @@ ListingCardView listingCard(
   isFavorite: favorite,
   vendorId: vendorId,
   vendorName: vendor,
-  vendorScore: 'New Vendor',
+  vendorScore: vendorScore,
   pickupAvailable: true,
   delivery: 'WITHIN_STATED_AREA',
   optionsCount: 3,
   srs: '75.83',
-  components: _components,
+  components: components,
   variantLabel: 'Red · 0.40 mm · 12 ft',
-  normalizedUnitPrice: '15.00000000',
+  normalizedUnitPrice: normalizedUnitPrice,
   canonicalUnitCode: 'PC',
 );
 

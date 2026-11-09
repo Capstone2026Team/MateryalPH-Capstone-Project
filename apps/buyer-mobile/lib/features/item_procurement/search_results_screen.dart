@@ -6,6 +6,7 @@ import '../../design_system/components/buyer_overlays.dart';
 import '../../core/foreground_refresh.dart';
 import '../../design_system/components/discovery_controls.dart';
 import '../../design_system/components/procurement_components.dart';
+import '../../design_system/components/ranking_explanation.dart';
 import '../../design_system/components/ranking_indicator.dart';
 import '../../design_system/generated/color_tokens.dart';
 import '../../design_system/theme.dart';
@@ -874,66 +875,6 @@ class _Fulfillment extends StatelessWidget {
           ),
         ),
       ),
-    ],
-  );
-}
-
-class RankingExplanation extends StatelessWidget {
-  const RankingExplanation({super.key, required this.card, this.position});
-  final ListingCardView card;
-  final int? position;
-  @override
-  Widget build(BuildContext context) => Column(
-    mainAxisSize: MainAxisSize.min,
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Semantics(
-        header: true,
-        child: Text(
-          'Why this ranking',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-      ),
-      const SizedBox(height: 4),
-      if (position != null)
-        Text('Rank #$position in the current Best Deal results'),
-      const Text(
-        'Closer product-name matches come first. Best Deal compares offers within the same search-match level.',
-        style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
-      ),
-      Text(
-        '${card.displayName} · Best Deal score ${card.srs}',
-        style: const TextStyle(fontWeight: FontWeight.w600),
-      ),
-      const Divider(height: 24),
-      for (final component in card.components)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${component.label}: ${component.score} × ${component.weightPercent.toStringAsFixed(component.weightPercent % 1 == 0 ? 0 : 2)}% = ${component.weighted}',
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-              Text(
-                component.basis,
-                style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
-              ),
-            ],
-          ),
-        ),
-      const Text(
-        'Scores are normalized to 0–100 and combined as a weighted sum. Ties break by distance, then price, then listing.',
-        style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
-      ),
-      if (position != null) ...[
-        const SizedBox(height: 8),
-        const Text(
-          'The highest-ranked option under your active criteria may not have the lowest price or the best score in every category.',
-          style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
-        ),
-      ],
     ],
   );
 }

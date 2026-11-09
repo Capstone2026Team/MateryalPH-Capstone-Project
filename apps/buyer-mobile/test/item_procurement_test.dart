@@ -327,13 +327,16 @@ void main() {
 
         await tester.tap(find.textContaining('Why this ranking'));
         await tester.pumpAndSettle();
+        expect(find.text('Why this Best Deal?'), findsOneWidget);
+        expect(find.text('No product ratings yet.'), findsOneWidget);
+        expect(find.text('Distance: 80.00 × 30% = 24.00'), findsNothing);
+        await tester.ensureVisible(find.text('View score details'));
+        await tester.tap(find.text('View score details'));
+        await tester.pumpAndSettle();
         expect(find.text('Distance: 80.00 × 30% = 24.00'), findsOneWidget);
         expect(find.text('Price: 83.33 × 25% = 20.83'), findsOneWidget);
-        expect(
-          find.text('New — no product ratings yet (internal neutral score)'),
-          findsOneWidget,
-        );
-        Navigator.of(tester.element(find.byType(RankingExplanation))).pop();
+        await tester.ensureVisible(find.byTooltip('Close explanation'));
+        await tester.tap(find.byTooltip('Close explanation'));
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('Best Deal'));
