@@ -1142,7 +1142,7 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-[accessCookie](../README.md#accessCookie), [passportBearer](../README.md#passportBearer), [webCsrf](../README.md#webCsrf)
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
 
 ### HTTP request headers
 

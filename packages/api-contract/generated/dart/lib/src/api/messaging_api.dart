@@ -2080,10 +2080,6 @@ class MessagingApi {
             'keyName': 'mp_access',
             'where': '',
           },{
-            'type': 'http',
-            'scheme': 'bearer',
-            'name': 'passportBearer',
-          },{
             'type': 'apiKey',
             'name': 'webCsrf',
             'keyName': 'X-CSRF-Token',

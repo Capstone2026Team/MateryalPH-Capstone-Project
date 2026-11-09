@@ -61,6 +61,26 @@ for (const [path, item] of Object.entries(spec.paths)) {
     }
   }
 }
+// Reporting documents share a declared audience path; their payload checks live in the document contract.
+for (const [path, item] of Object.entries(spec.paths)) {
+  if (!path.includes('{audience}')) continue
+  for (const [method, operation] of Object.entries(item)) {
+    const audiences = operation.parameters?.find(parameter => parameter.name === 'audience' && parameter.in === 'path')?.schema.enum ?? []
+    for (const audience of audiences) {
+      const key = `${method.toUpperCase()} /api/v1${path.replace('{audience}', audience)}`
+      if (!buyerPattern.test(key) && !vendorPattern.test(key)) continue
+      assert.equal(method, 'get', `Shared order document routes are read-only: ${key}`)
+      const route = [...actual.entries()].find(([candidate]) => normalize(candidate) === normalize(key))?.[1]
+      assert.ok(route, `Laravel route missing for shared OpenAPI operation ${operation.operationId}: ${key}`)
+      assert.ok(has(route, 'auth:api', 'Illuminate\\Auth\\Middleware\\Authenticate:api'), `Passport guard missing: ${key}`)
+      const account = audience === 'buyers' ? 'BUYER' : 'VENDOR'
+      const transport = account === 'BUYER' ? 'MOBILE' : 'WEB'
+      assert.ok(has(route, `auth.transport:${transport}`, `App\\Http\\Middleware\\SetAuthTransport:${transport}`), `Shared order route transport missing: ${key}`)
+      assert.ok(has(route, `account.access:${account}`, `App\\Http\\Middleware\\RequireAccountAccess:${account}`), `Shared order route account guard missing: ${key}`)
+      expected.add(normalize(key))
+    }
+  }
+}
 for (const key of actual.keys()) {
   if (buyerPattern.test(key) || vendorPattern.test(key)) assert.ok(expected.has(normalize(key)), `Laravel Phase 8 route missing from OpenAPI: ${key}`)
 }

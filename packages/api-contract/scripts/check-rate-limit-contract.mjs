@@ -28,6 +28,9 @@ for (const route of routeList) {
   if (credentialAction) assert.ok(throttles[0].endsWith(':account-security'), route.uri)
 }
 const routes = new Map(routeList.flatMap(route => route.method.split('|').map(method => [`${method} /${route.uri}`, route])))
+// These use CommissionEmails' per-email domain limiter, rather than HTTP throttle middleware.
+const domainRateLimitedOperations = new Set(['resendFailedCommissionEmails', 'resendCommissionEmail'])
+let domainChecked = 0
 let checked = 0
 for (const [path, item] of Object.entries(spec.paths)) {
   for (const [method, operation] of Object.entries(item)) {
@@ -41,6 +44,14 @@ for (const [path, item] of Object.entries(spec.paths)) {
       const throttled = route.middleware.some(name => /(?:throttle|ThrottleRequests):/.test(name))
       const authentication = /^\/(?:auth|mobile\/auth)\//.test(expanded)
       if (!throttled && !authentication) {
+        if (domainRateLimitedOperations.has(operation.operationId)) {
+          assert.equal(method, 'post')
+          assert.ok(operation.responses['429'], `${operation.operationId} documents its per-email limit`)
+          assert.match(operation.description, /one-minute/i)
+          assert.match(operation.description, /per-email/i)
+          domainChecked++
+          continue
+        }
         assert.ok(!operation.responses['429'], `Obsolete rate-limit response: ${method} ${path}`)
         checked++
       }
@@ -48,4 +59,5 @@ for (const [path, item] of Object.entries(spec.paths)) {
   }
 }
 assert.ok(checked > 100)
-console.log(`Rate-limit contract passed: ${checked} everyday operations without 429 responses.`)
+assert.equal(domainChecked, domainRateLimitedOperations.size)
+console.log(`Rate-limit contract passed: ${checked} everyday operations without 429 responses; ${domainChecked} per-email resend limits.`)

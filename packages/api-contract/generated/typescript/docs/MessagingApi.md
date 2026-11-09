@@ -1752,8 +1752,6 @@ async function example() {
   const config = new Configuration({
     // To configure API key authorization: accessCookie
     apiKey: "YOUR API KEY",
-    // Configure HTTP bearer authorization: passportBearer
-    accessToken: "YOUR BEARER TOKEN",
     // To configure API key authorization: webCsrf
     apiKey: "YOUR API KEY",
   });
@@ -1795,7 +1793,7 @@ example().catch(console.error);
 
 ### Authorization
 
-[accessCookie](../README.md#accessCookie), [passportBearer](../README.md#passportBearer), [webCsrf](../README.md#webCsrf)
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
 
 ### HTTP request headers
 

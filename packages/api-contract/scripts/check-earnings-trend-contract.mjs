@@ -58,15 +58,20 @@ assert.match(sourceOperation.description, /completed partial refunds reduce/)
 assert.match(sourceOperation.description, /Pending and failed refunds do not reduce/)
 assert.match(schemas.AssessedOnlinePayment.description, /positive retained principal/)
 assert.equal(schemas.VendorThresholdPayments.properties.payments.maxItems, 20)
-for (const field of ['gross_basis_centavos', 'rate_basis_points', 'withheld_centavos']) {
+for (const field of ['gross_basis_centavos', 'rate_basis_points', 'withheld_centavos', 'assessed_payment_centavos', 'delivery_centavos', 'material_vat_centavos']) {
   assert.ok(schemas.AssessedOnlinePayment.required.includes(field))
   assert.equal(schemas.AssessedOnlinePayment.properties[field].type, 'integer')
 }
 assert.ok(schemas.AssessedOnlinePaymentTotals.required.includes('withheld_centavos'))
 const sourceWire = { taxable_year: 2026, totals: { assessed_payments: 1, payment_principal_centavos: 28550, buyer_processing_fees_centavos: 755, collections_centavos: 29305, withheld_centavos: 127 }, other_store_totals: null,
-  payments: [{ id: 'sample-assessment', order_reference: 'ORD-SAMPLE', assessed_at: '2026-10-02T10:00:00.000Z', payment_principal_centavos: 28550, buyer_processing_fees_centavos: 755, collections_centavos: 29305, gross_basis_centavos: 25491, rate_basis_points: 50, withheld_centavos: 127 }] }
+  payments: [{ id: 'sample-assessment', order_reference: 'ORD-SAMPLE', assessed_at: '2026-10-02T10:00:00.000Z', payment_principal_centavos: 28550, buyer_processing_fees_centavos: 755, collections_centavos: 29305,
+    assessed_payment_centavos: 42825, delivery_centavos: 14275, material_vat_centavos: 3059, gross_basis_centavos: 25491, rate_basis_points: 50, withheld_centavos: 127 }] }
 const sourceData = VendorThresholdPaymentsFromJSON(sourceWire)
 assert.equal(sourceData.payments[0].paymentPrincipalCentavos + sourceData.payments[0].buyerProcessingFeesCentavos, sourceData.totals.collectionsCentavos)
+// Posted assessment components remain distinct from the payment's current retained principal.
+assert.equal(sourceData.payments[0].assessedPaymentCentavos, 42825)
+assert.equal(sourceData.payments[0].deliveryCentavos, 14275)
+assert.equal(sourceData.payments[0].materialVatCentavos, 3059)
 assert.equal(sourceData.payments[0].grossBasisCentavos, 25491)
 assert.equal(sourceData.payments[0].rateBasisPoints, 50)
 assert.equal(sourceData.payments[0].withheldCentavos, sourceData.totals.withheldCentavos)
