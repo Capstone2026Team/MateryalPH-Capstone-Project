@@ -38,16 +38,37 @@ void main() {
     for (final font in {
       'MaterialIcons': 'fonts/MaterialIcons-Regular.otf',
       'Inter': 'assets/fonts/Inter-Variable.ttf',
-      'packages/lucide_icons_flutter/Lucide': 'packages/lucide_icons_flutter/assets/lucide.ttf',
+      'packages/lucide_icons_flutter/Lucide':
+          'packages/lucide_icons_flutter/assets/lucide.ttf',
     }.entries) {
       await (FontLoader(font.key)..addFont(rootBundle.load(font.value))).load();
     }
-    final quotes = ValueNotifier<api.ChatQuotationPage?>(api.ChatQuotationPage((b) => b..versions.add(quotation())..hasMore = false));
+    final quotes = ValueNotifier<api.ChatQuotationPage?>(
+      api.ChatQuotationPage(
+        (b) => b
+          ..versions.add(quotation())
+          ..hasMore = false,
+      ),
+    );
     addTearDown(quotes.dispose);
-    await tester.pumpWidget(MaterialApp(theme: BuyerTheme.light, debugShowCheckedModeBanner: false,
-      home: ConversationQuotationDetailScreen(quotations: quotes, versionId: quotation().id, onDecide: (_, _) async => null)));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: BuyerTheme.light,
+        debugShowCheckedModeBanner: false,
+        home: ConversationQuotationDetailScreen(
+          quotations: quotes,
+          versionId: quotation().id,
+          onDecide: (_, _) async => null,
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
-    await expectLater(find.byType(MaterialApp), matchesGoldenFile('../../../docs/design/evidence/buyer-messaging/quotation-detail.png'));
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile(
+        '../../../docs/design/evidence/buyer-messaging/quotation-detail.png',
+      ),
+    );
     await tester.ensureVisible(find.text('Review & accept'));
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());

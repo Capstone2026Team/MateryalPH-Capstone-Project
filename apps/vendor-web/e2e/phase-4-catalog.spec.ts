@@ -242,6 +242,7 @@ test('compact catalog keeps long products, photo fallbacks and grouped table det
   await fits(page)
   await screenshot('catalog-table.png')
   await page.getByRole('button', { name: 'Grid' }).click()
+  await expect(firstCard.locator('.mp-product-listing-photo')).toBeVisible()
   await firstCard.scrollIntoViewIfNeeded()
   const photoBounds = (await firstCard.locator('.mp-product-listing-photo').boundingBox())!
   await page.mouse.click(photoBounds.x + 20, photoBounds.y + 60)

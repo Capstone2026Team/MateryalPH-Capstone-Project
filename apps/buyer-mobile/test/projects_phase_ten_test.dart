@@ -156,13 +156,15 @@ void main() {
               onRequest: (request, handler) {
                 final path = request.uri.path;
                 Object? data;
-                if (path.endsWith('/estimates')) {
+                if (path.endsWith('/estimates') ||
+                    path.endsWith('/arrangement-options')) {
                   data = {
                     'estimate': null,
                     'items': <Object?>[],
                     'page': 1,
                     'has_more': false,
                     'total': 0,
+                    'unfiltered_total': 0,
                   };
                 } else if (path.endsWith('/work-packages/$packageId')) {
                   data = {
@@ -279,6 +281,7 @@ void main() {
         expect(map.last.origin!.latitude, 14.60);
         expect(map.last.origin!.longitude, 121.00);
         expect(map.last.items, isEmpty);
+        expect(find.textContaining('Something went wrong'), findsNothing);
         await expectLater(
           find.byType(MaterialApp),
           matchesGoldenFile(

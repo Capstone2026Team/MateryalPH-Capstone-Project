@@ -5,6 +5,7 @@ import { resolve } from 'node:path'
 const noticeId = '01995000-0000-7000-8000-000000000001'
 for (const audience of ['vendor', 'admin'] as const) {
   test(`${audience} notification preferences and revoked notice links`, async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-10-06T02:00:00Z'))
     await page.route('**/api/v1/**', async route => {
       const path = new URL(route.request().url()).pathname
       let data: unknown = {}

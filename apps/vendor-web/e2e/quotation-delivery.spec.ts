@@ -46,7 +46,7 @@ test('delivery quotation exposes access, calculated and manual fees, and a persi
       const body = route.request().postDataJSON() as { draft: unknown; lock_version: number }
       quotation.draft = body.draft; quotation.lock_version = body.lock_version + 1
       data = { quotation, versions: [], has_more: false, page: 1 }
-    } else if (path.endsWith('/conversations/conversation')) data = { conversation, messages: { items: [], has_more: false, next_before: null }, quotations: { quotation, versions: [], has_more: false, page: 1 } }
+    } else if (path.endsWith('/conversations/conversation') || path.endsWith('/conversations/conversation/buyer-thread')) data = { conversation, messages: { items: [], has_more: false, next_before: null }, quotations: { quotation, versions: [], has_more: false, page: 1 } }
     else if (path.includes('/catalog/listings')) data = { items: [], page: 1, has_more: false }
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data, meta: {}, errors: [] }) })
   })

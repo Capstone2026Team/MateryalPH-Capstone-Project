@@ -1,4 +1,4 @@
-.mp-queue-workspace { display: grid; min-width: 0; max-width: 1440px; gap: 16px; margin-inline: auto; }
+.mp-queue-workspace { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; max-width: 1440px; gap: 16px; margin-inline: auto; }
 .mp-queue-surface { min-width: 0; overflow: hidden; }
 .mp-queue-surface > header { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 8px 16px; padding: 16px 20px; border-bottom: 1px solid var(--mp-color-border-default); }
 .mp-queue-surface > header > div { min-width: 0; }
@@ -27,6 +27,6 @@
 .mp-queue-section-links a:focus-visible { outline: 2px solid var(--mp-color-focus-ring); outline-offset: 2px; }
 .mp-queue-workspace :is(section[id], aside[id]) { scroll-margin-top: 16px; }
 .mp-queue-workspace [role="region"][tabindex="0"]:focus-visible { outline: 2px solid var(--mp-color-focus-ring); outline-offset: -2px; }
-.mp-queue-detail-columns { display: grid; min-width: 0; align-items: start; gap: 12px; }
-.mp-queue-detail-stack { display: grid; min-width: 0; align-content: start; gap: 12px; }
+.mp-queue-detail-columns { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; align-items: start; gap: 12px; }
+.mp-queue-detail-stack { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; align-content: start; gap: 12px; }
 @media (min-width: 1280px) { .mp-queue-detail-columns { grid-template-columns: minmax(0, 1fr) minmax(300px, 360px); } }

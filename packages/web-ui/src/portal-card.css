@@ -1,3 +1,6 @@
+/* Lazy shared CSS can load before the portal's Tailwind reset. Fix the layer order first. */
+@layer properties, theme, base, components, utilities;
+
 /* Explicit card classes keep forms, menus and status treatments independent. */
 .mp-card-link::after { content: ''; position: absolute; inset: 0; border-radius: var(--mp-radius-surface); }
 .mp-card-link:focus-visible { outline: none; }

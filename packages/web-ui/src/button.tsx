@@ -16,7 +16,7 @@ const variantClasses: Record<ButtonVariant, string> = {
 
 /** Lets a navigation link look identical to a Button without becoming one. */
 export function buttonClassName(variant: ButtonVariant = 'primary', className = '') {
-  return `inline-flex min-h-12 min-w-11 shrink-0 items-center justify-center gap-2 rounded-control px-4 py-2 text-body-strong transition-colors duration-150 motion-reduce:transition-none sm:min-h-11 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:cursor-not-allowed disabled:opacity-50 ${variantClasses[variant]} ${className}`
+  return `inline-flex min-h-12 min-w-11 max-w-full shrink-0 items-center justify-center gap-2 rounded-control px-4 py-2 text-body-strong transition-colors duration-150 motion-reduce:transition-none sm:min-h-11 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:cursor-not-allowed disabled:opacity-50 ${variantClasses[variant]} ${className}`
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(

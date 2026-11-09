@@ -290,6 +290,7 @@ test('Vendor demand points show product details on hover, touch and keyboard foc
   const chart = panel.getByRole('img', { name: /Products by orders and distinct Buyers/ })
   const point = chart.locator('[data-scatter-point]').filter({ has: page.locator('circle[fill="transparent"]') }).nth(2)
   await point.scrollIntoViewIfNeeded()
+  await page.evaluate(() => document.fonts.ready)
   const before = (await panel.boundingBox())!
   if (page.viewportSize()!.width <= 390) await point.tap()
   else await point.hover()
@@ -398,7 +399,7 @@ test('Vendor closed cases keep period activity and show an honest current-status
   await expect(status.getByRole('img')).toHaveCount(0)
   const chart = page.getByRole('img', { name: /Dispute cases filed per day/ })
   expect(await chart.locator('g > text').allTextContents()).toEqual(['0', '1'])
-  await expect(page.getByRole('region', { name: 'Issue types', exact: true }).getByText('Defective or damaged')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Issue types', exact: true }).getByText('Defective or damaged', { exact: true })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   const directory = resolve('../../.tmp/dashboard-secondary-cards')
   mkdirSync(directory, { recursive: true })
@@ -1037,14 +1038,18 @@ test('Vendor summary retains indicators for the screenshot amounts with no previ
     await expect(card.locator('.mp-analytics-change[data-direction]')).toHaveCount(0)
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.evaluate(() => document.fonts.ready)
+  const contentWidth = await summary.evaluate(element => element.closest('.mp-analytics-main')!.getBoundingClientRect().width)
   const rail = page.getByRole('complementary', { name: 'Operations and activity' })
   if (page.viewportSize()!.width >= 1100) {
     const [summaryBounds, railBounds] = await Promise.all([summary.boundingBox(), rail.boundingBox()])
     expect(Math.abs(summaryBounds!.y - railBounds!.y)).toBeLessThanOrEqual(1)
     expect(summaryBounds!.x + summaryBounds!.width).toBeLessThan(railBounds!.x)
-    expect(summaryBounds!.height).toBeLessThan(360)
+    // The narrow desktop layout has two metric rows, including wrapped comparison reasons.
+    const metricRows = await summary.locator(':scope > .mp-metric-card').evaluateAll(cards => new Set(cards.map(card => card.getBoundingClientRect().top)).size)
+    expect(metricRows).toBe(contentWidth < 740 ? 2 : 1)
+    expect(summaryBounds!.height).toBeLessThan(contentWidth < 740 ? 440 : 360)
   }
-  const contentWidth = await summary.evaluate(element => element.closest('.mp-analytics-main')!.getBoundingClientRect().width)
   const valueSize = contentWidth >= 740 && contentWidth <= 919 ? '18px' : '22px'
   for (const value of await summary.locator('.mp-kpi-value').evaluateAll(elements => elements.map(element => ({ height: element.getBoundingClientRect().height, size: getComputedStyle(element).fontSize })))) {
     expect(value.size).toBe(valueSize)

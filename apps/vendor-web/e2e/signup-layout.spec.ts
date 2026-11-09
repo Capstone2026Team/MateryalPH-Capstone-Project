@@ -1,12 +1,29 @@
 import { expect, test } from '@playwright/test'
 
 test('registration scrolls only the form on desktop and uses page scrolling on mobile', async ({ page }, testInfo) => {
+  // Keep this layout test independent of a late-loading live provider iframe.
+  await page.addInitScript(() => {
+    window.grecaptcha = { enterprise: {
+      ready: callback => callback(),
+      render: container => {
+        container.dataset.layoutCheckbox = 'true'
+        container.style.cssText = 'width: 304px; max-width: 100%; height: 78px; border: 1px solid #d3d3d3; background: #fafafa'
+        container.textContent = 'Synthetic security checkbox'
+        return 1
+      },
+      reset: () => {},
+    } }
+  })
   await page.goto('/register')
   const panel = page.getByRole('region', { name: 'Register your store', exact: true })
   const story = page.getByRole('region', { name: 'Vendor portal benefits' })
   const width = page.viewportSize()?.width ?? 0
   const signIn = page.getByRole('link', { name: 'Sign in', exact: true })
   await expect(page.getByRole('heading', { name: 'Register your store' })).toBeVisible()
+  await expect.poll(() => page.locator('#vendor-registration-captcha').evaluate(element => Boolean(
+    element.querySelector('[data-layout-checkbox]') || element.textContent?.includes('not configured'),
+  ))).toBe(true)
+  await page.evaluate(() => document.fonts.ready)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 
   if (width > 900) {

@@ -141,7 +141,9 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).last,
     );
-    await tester.tap(find.text('Sign Out'));
+    await tester.ensureVisible(find.text('Sign Out'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sign Out').hitTestable());
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.textContaining('Could not sign out'),

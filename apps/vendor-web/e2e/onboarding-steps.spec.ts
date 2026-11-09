@@ -149,6 +149,7 @@ test('setup previews media and switches every operational section without page o
   await page.getByRole('textbox', { name: 'Public store name' }).fill('Updated Supply Store')
   await expect(page.getByRole('textbox', { name: 'Public email' })).toHaveCount(0)
   await expect(page.getByRole('textbox', { name: 'Public phone' })).toHaveCount(0)
+  await page.evaluate(() => document.fonts.ready)
   const nameBox = await page.getByRole('textbox', { name: 'Public store name' }).boundingBox()
   const descriptionBox = await page.getByRole('textbox', { name: 'Store description' }).boundingBox()
   expect(nameBox?.width).toBe(descriptionBox?.width)
@@ -188,8 +189,13 @@ test('setup previews media and switches every operational section without page o
         const box = element!.getBoundingClientRect()
         return { x: box.x + scrollX, y: box.y + scrollY, width: box.width, height: box.height }
       }), handles)
-      expect(typeBox!.y).toBeGreaterThan(categoryBox!.y + categoryBox!.height)
-      expect(Math.abs(typeBox!.x - categoryBox!.x)).toBeLessThan(2)
+      if (page.viewportSize()!.width >= 640) {
+        expect(Math.abs(typeBox!.y - categoryBox!.y)).toBeLessThan(2)
+        expect(typeBox!.x).toBeGreaterThan(categoryBox!.x + categoryBox!.width)
+      } else {
+        expect(typeBox!.y).toBeGreaterThan(categoryBox!.y + categoryBox!.height)
+        expect(Math.abs(typeBox!.x - categoryBox!.x)).toBeLessThan(2)
+      }
       if (page.viewportSize()!.width >= 768) expect(imageBox!.x).toBeGreaterThan(categoryBox!.x + categoryBox!.width)
       else expect(imageBox!.y).toBeGreaterThan(brandBox!.y + brandBox!.height)
       await expect(page.getByRole('region', { name: 'Vehicle 1 delivery rates' })).toContainText('Delivery rate calculator')

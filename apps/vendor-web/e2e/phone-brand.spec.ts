@@ -25,17 +25,17 @@ test('Vendor and Admin share logo spacing, column geometry and heading alignment
     await page.route('**/api/v1/**', route => route.fulfill({ status: 503, contentType: 'application/json', body: '{"data":null,"meta":{},"errors":[]}' }))
     await page.goto(url)
     await page.evaluate(() => document.fonts.ready)
-    const brand = page.locator('a:visible').filter({ has: page.locator('img[src="/brand/materyalph-logo.png"]') }).first()
+    const brand = page.locator('.login-layout__introduction-brand a')
     const logo = await brand.locator('img').boundingBox()
-    const label = await brand.locator('span > span').boundingBox()
+    const label = await brand.locator('img + span').boundingBox()
     const heading = await page.locator('h1').boundingBox()
     measurements.push({ logo, label, heading })
   }
   const [vendor, admin] = measurements
-  expect(vendor.logo!.width).toBe(48)
-  expect(admin.logo!.width).toBe(48)
-  expect(vendor.label!.x - vendor.logo!.x - vendor.logo!.width).toBe(12)
-  expect(admin.label!.x - admin.logo!.x - admin.logo!.width).toBe(12)
+  expect(vendor.logo!.width).toBe(36)
+  expect(admin.logo!.width).toBe(36)
+  expect(vendor.label!.x - vendor.logo!.x - vendor.logo!.width).toBe(8)
+  expect(admin.label!.x - admin.logo!.x - admin.logo!.width).toBe(8)
   expect(admin.heading!.x).toBeCloseTo(vendor.heading!.x, 0)
   // Cards are vertically centered independently because portal form heights differ.
   expect(admin.heading!.width).toBeCloseTo(vendor.heading!.width, 0)

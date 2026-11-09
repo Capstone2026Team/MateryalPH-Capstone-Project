@@ -57,6 +57,7 @@ final class PhaseSixBuyerDiscoveryTest extends TestCase
     public function test_discovery_exposes_only_active_unsuppressed_public_vendor_badges(): void
     {
         [$store, $owner] = $this->activeStore('Awarded Supplier');
+        $this->placeStore($store->id, 1000);
         $definitions = DB::table('badge_definitions')->whereIn('code', ['FAST_RESPONDER', 'ON_TIME', 'HIGHLY_RATED'])->pluck('id', 'code');
         foreach ($definitions as $code => $definition) {
             DB::table('vendor_badge_history')->insert([
@@ -74,6 +75,7 @@ final class PhaseSixBuyerDiscoveryTest extends TestCase
         $this->buyer();
         $rows = $this->search()->assertOk()->json('data');
         $vendor = collect($rows)->firstWhere('result_id', $store->id);
+        self::assertNotNull($vendor, 'The located active Vendor must appear in discovery.');
         self::assertSame(['FAST_RESPONDER'], array_column($vendor['vendor']['badges'], 'code'));
         self::assertSame(['code', 'name', 'scope_label', 'description', 'earned_at'], array_keys($vendor['vendor']['badges'][0]));
         self::assertStringNotContainsString('PRIVATE-CASE', json_encode($rows, JSON_THROW_ON_ERROR));

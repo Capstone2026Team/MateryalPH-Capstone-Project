@@ -77,6 +77,7 @@ test('verification and dashboard share nine grouped rows, setup uses the same pa
 })
 
 test('Admin reviews business information once and each ID with both sides in context', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
   const decisions = await api(page, true)
   await page.goto('http://127.0.0.1:4174/vendor-verification/synthetic-organization')
   const checklist = page.getByRole('region', { name: 'Verification requirements' })
@@ -94,6 +95,7 @@ test('Admin reviews business information once and each ID with both sides in con
   }
   await expect(checklist.getByText('business_information', { exact: true })).toHaveCount(0)
   await expect(checklist.getByRole('button', { name: 'Review Authority to Act' })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   await checklist.getByRole('button', { name: 'Review Business information' }).click()
   await expect(page.getByText('Business and legal details')).toBeVisible()
   await expect(page.locator('section[aria-labelledby="review-information-title"]').getByText('Juan Dela Cruz Trading').first()).toBeVisible()
