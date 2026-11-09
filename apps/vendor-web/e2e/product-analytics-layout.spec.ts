@@ -201,7 +201,7 @@ test('Product Analytics has its own navigation and preserves former analytics li
     const suggestionsList = page.getByRole('region', { name: 'Suggestions list', exact: true })
     await suggestionsList.focus()
     await page.keyboard.press('End')
-    expect(await suggestionsList.evaluate(element => element.scrollTop)).toBeGreaterThan(0)
+    await expect.poll(() => suggestionsList.evaluate(element => element.scrollTop)).toBeGreaterThan(0)
     await suggestionsList.evaluate(element => { element.scrollTop = 0 })
   } else {
     const ratingBounds = await topRated.boundingBox()

@@ -125,6 +125,14 @@ final class PhaseNineMessagingTest extends TestCase
                 DB::table('work_packages')->where('id', $package)->update(['status' => 'CANCELLED', 'deleted_at' => now()]);
             } elseif (in_array($reason, ['cancelled', 'draft_package'], true)) {
                 DB::table('work_packages')->where('id', $package)->update(['status' => $reason === 'cancelled' ? 'CANCELLED' : 'DRAFT']);
+            } elseif ($reason === 'archived') {
+                $archivedAt = now();
+                DB::table('projects')->where('id', DB::table('work_packages')->where('id', $package)->value('project_id'))->update([
+                    'status' => 'ARCHIVED',
+                    'archived_at' => $archivedAt,
+                    'delete_after' => $archivedAt->copy()->addHours(720),
+                    'archived_from_status' => 'ACTIVE',
+                ]);
             } else {
                 DB::table('projects')->where('id', DB::table('work_packages')->where('id', $package)->value('project_id'))->update(['status' => strtoupper($reason)]);
             }

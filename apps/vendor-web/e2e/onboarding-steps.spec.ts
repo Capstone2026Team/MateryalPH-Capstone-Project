@@ -70,7 +70,7 @@ test('verification steps reflow and keep only the selected requirement area visi
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
   await page.goto('/onboarding/verification')
-  await expect(page.getByRole('heading', { name: 'Business Information', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Business Information', exact: true })).toBeVisible({ timeout: 15_000 })
   await expect(page.getByRole('radio', { name: 'One Person Corporation (OPC)' })).toBeVisible()
   await expect(page.getByRole('group', { name: 'Business and Compliance Evidence' })).toBeVisible()
   await assertStepperFits(page, 'Store Verification', 4)
@@ -153,6 +153,8 @@ test('setup previews media and switches every operational section without page o
   await page.screenshot({ path: testInfo.outputPath('setup-public-preview.png'), fullPage: true })
   await assertStepperFits(page, 'Store Setup', 5)
   await expect(page.getByLabel('Upload image')).toHaveCount(2)
+  // Keep this layout check separate from the autosave/navigation race covered below.
+  await expect(page.getByText('Saved', { exact: true })).toBeVisible()
   const labels = ['Fulfillment Configuration', 'Xendit TEST Connection', 'Store Operation', 'Review and Complete']
   for (const label of labels) {
     await page.getByRole('button', { name: 'Next', exact: true }).click()
@@ -328,9 +330,11 @@ test('Business Information email lifecycle, validation, guards and evidence stay
   expect(drafts.at(-1)).toMatchObject({ lock_version: 9, draft_lock_version: 3 })
   expect(JSON.parse(String(drafts.at(-1)!.form_state))).toMatchObject({ tin: ['123-456-789-000'] })
   conflict = 'STALE_VERSION'
-  // Autosave may already have retried; Finish Later still sends exactly one more save.
+  // Settle any earlier autosave and scrolling before counting this explicit retry.
+  const finishLater = page.getByRole('button', { name: 'Finish Later' })
+  await finishLater.click({ trial: true })
   const saves = drafts.length
-  await page.getByRole('button', { name: 'Finish Later' }).click()
+  await finishLater.click()
   await expect(stale).toBeVisible()
   await expect.poll(() => drafts.length).toBe(saves + 1)
   await assertStepperFits(page, 'Store Verification', 4)

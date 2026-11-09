@@ -35,6 +35,8 @@ void main() {
       await tester.tap(find.bySemanticsLabel('Profile'));
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(find.text('Ranking Preferences'), 180);
+      await tester.ensureVisible(find.text('Ranking Preferences'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Ranking Preferences'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Item-Based ranking'));

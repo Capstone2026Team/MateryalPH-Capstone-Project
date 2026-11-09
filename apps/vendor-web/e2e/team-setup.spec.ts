@@ -27,13 +27,16 @@ test('optional team setup invites employees and fits the viewport', async ({ pag
       step_completion: [], requirements: [], drafts: [], lock_version: 1,
       organization: { store_name: 'Sample Building Supply', lock_version: 1 }, welcome_required: false,
       permissions: ['staff.manage', 'managers.manage', 'vendor.onboarding.manage', 'vendor.onboarding.submit'],
-      verification: {}, setup: { status: 'IN_PROGRESS' }, activation: { status: 'NOT_READY', marketplace_discoverability_status: 'NOT_DISCOVERABLE', readiness: { ready: false, status: 'NOT_READY', blockers: [], rule_version: 'test' } },
+      verification: {}, setup: {
+        status: 'IN_PROGRESS', profile: { fulfillment_method: 'VENDOR_DELIVERY' },
+        delivery_setup: { staff_ready: false, vehicle_ready: false, pickup_location_ready: true, service_settings_ready: true, ready: false, enabled: false, available: false, active_delivery_obligations: 0 },
+      }, activation: { status: 'NOT_READY', marketplace_discoverability_status: 'NOT_DISCOVERABLE', readiness: { ready: false, status: 'NOT_READY', blockers: [], rule_version: 'test' } },
       sections: { STORE_SETUP: { key: 'STORE_SETUP', label: 'Store Setup', status: 'IN_PROGRESS', complete: 0, total: 8, progress: { complete: 0, total: 8 }, steps: [] } },
     }
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data, meta, errors: [] }) })
   })
   await page.goto('/onboarding/setup')
-  await page.getByRole('button', { name: '4 Team Accounts' }).click()
+  await page.getByRole('navigation', { name: 'Store Setup steps' }).getByRole('button', { name: /Fulfillment Configuration/ }).click()
   await page.getByRole('link', { name: 'Manage Fulfillment Staff' }).click()
   await page.getByRole('button', { name: 'Add new account', exact: true }).click()
   await expect(page.getByRole('dialog', { name: 'Add new account', exact: true })).toBeVisible()
@@ -50,7 +53,9 @@ test('optional team setup invites employees and fits the viewport', async ({ pag
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('team-setup.png'), fullPage: true })
   await page.goto('/onboarding/setup')
-  await page.getByRole('button', { name: '4 Team Accounts' }).click()
+  await page.getByRole('navigation', { name: 'Store Setup steps' }).getByRole('button', { name: /Fulfillment Configuration/ }).click()
+  await page.getByRole('button', { name: 'Next', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Xendit TEST Connection', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Next', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Store Operation', exact: true })).toBeVisible()
   for (const day of ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']) {

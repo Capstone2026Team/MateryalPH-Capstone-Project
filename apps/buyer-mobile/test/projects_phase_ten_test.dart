@@ -85,7 +85,7 @@ void main() {
   });
   for (final width in [390.0, 1024.0]) {
     testWidgets(
-      'Project map uses the locked site and archived history is read-only at $width px',
+      'Project map uses the locked site and archived history blocks sourcing at $width px',
       (tester) async {
         await tester.binding.setSurfaceSize(Size(width, 900));
         addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -121,7 +121,7 @@ void main() {
         final project = <String, Object?>{
           'id': projectId,
           'name': 'Home construction',
-          'status': 'ARCHIVED',
+          'status': 'ACTIVE',
           'budget_centavos': 100000,
           'lock_version': 2,
           'budget': budget,
@@ -169,7 +169,7 @@ void main() {
                 } else if (path.endsWith('/work-packages/$packageId')) {
                   data = {
                     ...summary,
-                    'project_status': 'ARCHIVED',
+                    'project_status': project['status'],
                     'version': version,
                     'budget': budget,
                     'missing_lines': <Object?>[],
@@ -247,6 +247,13 @@ void main() {
             '../../../docs/design/evidence/phase-10/buyer-project-list-${width.toInt()}.png',
           ),
         );
+        // A list snapshot may predate an archive in another session.
+        project.addAll({
+          'status': 'ARCHIVED',
+          'archived_at': '2026-10-01T00:00:00Z',
+          'delete_after': '2026-10-31T00:00:00Z',
+          'archived_from_status': 'ACTIVE',
+        });
         await tester.tap(find.text('Home construction').last);
         await tester.pumpAndSettle();
         await expectLater(
@@ -274,6 +281,17 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Create new version'), findsNothing);
         expect(find.text('Cancel package'), findsNothing);
+        expect(find.text('Find vendors'), findsNothing);
+        // Only the restored Active project may resume sourcing at its locked site.
+        project['status'] = 'ACTIVE';
+        project.remove('archived_at');
+        project.remove('delete_after');
+        project.remove('archived_from_status');
+        await tester.tap(find.byTooltip('Back'));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('Foundation package'));
+        await tester.tap(find.text('Foundation package'));
+        await tester.pumpAndSettle();
         await tester.ensureVisible(find.text('Find vendors'));
         await tester.tap(find.text('Find vendors'));
         await tester.pumpAndSettle();

@@ -71,7 +71,7 @@ test('verification and dashboard share nine grouped rows, setup uses the same pa
   await expect(page.getByRole('region', { name: 'Store Verification', exact: true }).getByRole('listitem')).toHaveCount(9)
   await capture(page, 'dashboard')
   await page.goto('/onboarding/setup')
-  await page.getByRole('button', { name: '6 Review and Complete' }).click()
+  await page.getByRole('navigation', { name: 'Store Setup steps' }).getByRole('button', { name: /Review and Complete/ }).click()
   await expect(page.getByRole('region', { name: 'Setup checklist' }).getByText('Public store profile')).toBeVisible()
   await capture(page, 'setup')
 })
