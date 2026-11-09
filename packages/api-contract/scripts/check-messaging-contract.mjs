@@ -45,6 +45,8 @@ assert.equal(spec.components.schemas.ConversationView.properties.project_unread_
 assert.equal(spec.components.schemas.ConversationView.properties.can_list_fulfillment_conversations.type, 'boolean')
 assert.equal(spec.components.schemas.ConversationView.properties.fulfillment_unread_count.type, 'integer')
 assert.equal(spec.components.schemas.ConversationView.properties.fulfillment_unread_count.minimum, 0)
+assert.match(spec.paths['/{messagingPortal}/conversations'].get.description, /previews and unread counts exclude order-specific fulfillment messages/)
+assert.match(spec.paths['/vendor/conversations/{conversationId}/buyer-thread'].get.description, /closed fulfillment thread never locks the normal chat/)
 assert.equal(spec.paths['/vendor/conversations/{conversationId}/fulfillment-conversations'].get.operationId, 'listVendorFulfillmentConversations')
 assert.equal(spec.components.schemas.FulfillmentConversationPage.properties.items.maxItems, 25)
 assert.ok(spec.components.schemas.FulfillmentConversationSummary.required.includes('read_only'))

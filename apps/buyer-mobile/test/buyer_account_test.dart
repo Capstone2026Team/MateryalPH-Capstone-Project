@@ -20,7 +20,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: BuyerAccountScreen(
-            repository: repository(),
+            repository: repository(masked: true),
             onSignedOut: () {},
           ),
         ),
@@ -56,39 +56,47 @@ void main() {
     });
   }
 
-  testWidgets('profile save waits for a change and email links to Security', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: BuyerAccountScreen(repository: repository(), onSignedOut: () {}),
-      ),
-    );
-    await tester.pumpAndSettle();
-    FilledButton save() =>
-        tester.widget(find.widgetWithText(FilledButton, 'Save changes'));
-    expect(save().onPressed, isNull);
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Full name'),
-      'Buyer renamed',
-    );
-    await tester.pump();
-    expect(save().onPressed, isNotNull);
-    await tester.enterText(find.widgetWithText(TextField, 'Full name'), ' ');
-    await tester.pump();
-    expect(save().onPressed, isNull);
-    expect(find.text('Contact details'), findsOneWidget);
-    expect(find.widgetWithText(TextButton, 'Verify identity'), findsOneWidget);
-    expect(find.textContaining('Account created Sep 1, 2026'), findsOneWidget);
-  });
+  testWidgets(
+    'profile save waits for a change and full email links to Security',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BuyerAccountScreen(
+            repository: repository(),
+            onSignedOut: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      FilledButton save() =>
+          tester.widget(find.widgetWithText(FilledButton, 'Save changes'));
+      expect(save().onPressed, isNull);
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Full name'),
+        'Buyer renamed',
+      );
+      await tester.pump();
+      expect(save().onPressed, isNotNull);
+      await tester.enterText(find.widgetWithText(TextField, 'Full name'), ' ');
+      await tester.pump();
+      expect(save().onPressed, isNull);
+      expect(find.text('Contact details'), findsOneWidget);
+      expect(find.widgetWithText(TextButton, 'Change'), findsOneWidget);
+      expect(
+        find.text('buyer.with.a.long.email.address@example.test'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('Account created Sep 1, 2026'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('an unmasked email offers a change action', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: BuyerAccountScreen(
-          repository: repository(verified: true),
-          onSignedOut: () {},
-        ),
+        home: BuyerAccountScreen(repository: repository(), onSignedOut: () {}),
       ),
     );
     await tester.pumpAndSettle();
@@ -164,7 +172,9 @@ void main() {
 
 AuthRepository repository({
   bool expired = false,
-  bool verified = false,
+  bool masked = false,
+  bool verified = true,
+  bool emailVerified = true,
   String? phone = "+639171234567",
   String name = "Buyer fixture",
 }) {
@@ -186,14 +196,18 @@ AuthRepository repository({
             );
             return;
           }
-          final dynamic data = options.path.endsWith('/profile')
+          final receivedRatings = options.path.endsWith('/buyers/ratings');
+          final dynamic data = receivedRatings
+              ? <dynamic>[]
+              : options.path.endsWith('/profile')
               ? <String, dynamic>{
                   'id': 'buyer-fixture',
                   'full_name': name,
-                  'email': verified
-                      ? 'buyer.with.a.long.email.address@example.test'
-                      : 'b***@example.test',
-                  'email_masked': !verified,
+                  'email': masked || !verified
+                      ? 'b***@example.test'
+                      : 'buyer.with.a.long.email.address@example.test',
+                  'email_masked': masked || !verified,
+                  'email_verified': emailVerified,
                   'mobile_e164': phone,
                   'account_type': 'BUYER',
                   'account_status': 'ACTIVE',
@@ -239,7 +253,22 @@ AuthRepository repository({
               statusCode: 200,
               data: <String, dynamic>{
                 'data': data,
-                'meta': <String, dynamic>{},
+                'meta': receivedRatings
+                    ? <String, dynamic>{
+                        'page': 1,
+                        'per_page': 20,
+                        'total': 0,
+                        'summary': <String, dynamic>{
+                          'score': null,
+                          'count': 0,
+                          'minimum_count': 5,
+                          'window_days': 90,
+                          'inquiry_seriousness': null,
+                          'communication_quality': null,
+                          'payment_reliability': null,
+                        },
+                      }
+                    : <String, dynamic>{},
                 'errors': <dynamic>[],
               },
             ),

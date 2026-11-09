@@ -14,7 +14,7 @@ Name | Type | Description | Notes
 **vacationMode** | **bool** | Owner-only pause of all new procurement over the Asia/Manila date window in vacation_starts_on to vacation_ends_on, both required when true. Existing work and messaging remain available. False clears the window. Does not alter weekly hours or activation. | [optional]
 **vacationStartsOn** | **String** | First Asia/Manila day of the pause. Today or later, unless an active window keeps its saved start. Today starts the pause immediately; a later date schedules it. | [optional]
 **vacationEndsOn** | **String** | Last Asia/Manila day of the pause, inclusive; on or after vacation_starts_on. Procurement reopens at the next midnight. | [optional]
-**publicStoreName** | **String** |  | [optional]
+**publicStoreName** | **String** | Empty or null saves an unfinished name as blank without discarding other draft fields. A nonblank name is required for Store Setup completion and activation. | [optional]
 **description** | **String** |  | [optional]
 **bulkCapability** | **bool** |  | [optional]
 **fulfillmentMethod** | **String** |  | [optional]

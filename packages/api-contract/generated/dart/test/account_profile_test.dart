@@ -29,14 +29,21 @@ void main() {
       // TODO
     });
 
-    // Buyer email stays masked until recent identity verification.
+    // False for the authenticated owner's full account email. Retained for client compatibility.
     // bool emailMasked
     test('to test the property `emailMasked`', () async {
       // TODO
     });
 
+    // Full account email, visible only to the authenticated account owner.
     // String email
     test('to test the property `email`', () async {
+      // TODO
+    });
+
+    // Whether the account email ownership has been verified; not a Buyer performance or business verification badge.
+    // bool emailVerified
+    test('to test the property `emailVerified`', () async {
       // TODO
     });
 

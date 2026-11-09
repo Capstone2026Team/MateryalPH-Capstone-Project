@@ -269,13 +269,15 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                       const SnackBar(content: Text('Not yet implemented.')),
                     ),
                 onNotifications: _openNotifications,
+                rating: widget.reviewsRepository == null
+                    ? null
+                    : BuyerRatingsSection(
+                        repository: widget.reviewsRepository!,
+                        compact: true,
+                        active: widget.active,
+                        refreshRevision: _ratingsRevision,
+                      ),
               ),
-              if (widget.reviewsRepository != null)
-                BuyerRatingsSection(
-                  repository: widget.reviewsRepository!,
-                  active: widget.active,
-                  refreshRevision: _ratingsRevision,
-                ),
               const BuyerSectionLabel('My purchases'),
               BuyerMenuRow(
                 label: 'Orders',
@@ -333,6 +335,20 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                     ),
                   );
                   if (mounted) await _load();
+                },
+              ),
+              BuyerMenuRow(
+                label: 'Buyer rating',
+                icon: LucideIcons.star,
+                onTap: () {
+                  final repository = widget.reviewsRepository;
+                  if (repository == null) return _unavailable('Buyer rating');
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) =>
+                          BuyerRatingsScreen(repository: repository),
+                    ),
+                  );
                 },
               ),
               BuyerMenuRow(

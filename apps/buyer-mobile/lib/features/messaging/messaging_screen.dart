@@ -47,6 +47,7 @@ class MessagingScreen extends StatefulWidget {
     required this.repository,
     this.conversationId,
     this.orders,
+    this.onRescanSuppliers,
     this.onOpenCart,
     this.onOpenNotifications,
     this.initialProductId,
@@ -59,6 +60,7 @@ class MessagingScreen extends StatefulWidget {
 
   final String? conversationId;
   final OrdersRepository? orders;
+  final RescanProjectOrder? onRescanSuppliers;
   final VoidCallback? onOpenCart;
   final VoidCallback? onOpenNotifications;
   final String? initialProductId;
@@ -964,6 +966,7 @@ class _MessagingScreenState extends State<MessagingScreen>
             : (orderId) => Navigator.of(context).push<void>(
                 MaterialPageRoute(
                   builder: (_) => OrderDetailsScreen(
+                    onRescanSuppliers: widget.onRescanSuppliers,
                     orderId: orderId,
                     repository: widget.orders!,
                     openConversation: _openConversation,
@@ -1699,26 +1702,6 @@ class _MessagingScreenState extends State<MessagingScreen>
                       },
                       icon: const Icon(Icons.inventory_2_outlined),
                       label: const Text('Attach product'),
-                    ),
-                  if (d.conversation.purpose.name == 'SALES' &&
-                      d.conversation.contextType.name == 'ITEM_BASED' &&
-                      widget.onSetDelivery != null)
-                    TextButton.icon(
-                      onPressed: _busy
-                          ? null
-                          : () {
-                              setState(() => _actionsOpen = false);
-                              unawaited(
-                                _mutate(
-                                  () => widget.onSetDelivery!(
-                                    d.conversation.id,
-                                    d.conversation.lockVersion,
-                                  ),
-                                ),
-                              );
-                            },
-                      icon: const Icon(Icons.local_shipping_outlined),
-                      label: const Text('Delivery details'),
                     ),
                 ],
               ),

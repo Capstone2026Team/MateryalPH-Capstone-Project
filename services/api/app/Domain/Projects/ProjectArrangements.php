@@ -38,6 +38,7 @@ final class ProjectArrangements
             return $page;
         }
         $w = $this->projects->package($r, $packageId);
+        ProjectArchives::assertProcurementOpen($w);
         $rows = DB::table('compiled_estimate_vendors')->where('compiled_estimate_id', $page['estimate']['id'])
             ->orderByRaw("(snapshot->>'complete')::boolean DESC, (snapshot->>'rank')::int")->get(['id', 'snapshot']);
         $single = $groups = [];

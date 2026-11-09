@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 
 import '../../design_system/components/buyer_overlays.dart';
 import '../orders/orders_repository.dart';
+import '../orders/order_details_screen.dart' show RescanProjectOrder;
 import '../projects/projects_repository.dart';
 import 'cart_controller.dart';
 import 'cart_screen.dart';
@@ -36,6 +37,7 @@ class ProcurementNavigation {
     required this.openStoreProfile,
     this.onOpenMap,
     this.orders,
+    this.onRescanSuppliers,
     this.projects,
     this.messaging,
     this.discovery,
@@ -77,6 +79,7 @@ class ProcurementNavigation {
 
   /// Order submission from Checkout; absent in contexts that only preview.
   final OrdersRepository? orders;
+  final RescanProjectOrder? onRescanSuppliers;
   final ProjectsRepository? projects;
   final MessagingRepository? messaging;
   Future<void> openMessage(
@@ -116,6 +119,7 @@ class ProcurementNavigation {
     return _push(
       context,
       MessagingScreen(
+        onRescanSuppliers: onRescanSuppliers,
         repository: repository,
         conversationId: id,
         initialProductId: productId,
@@ -251,15 +255,34 @@ class ProcurementNavigation {
     return _push(context, CartScreen(controller: cart, navigation: this));
   }
 
+  Future<void> editCartLine(BuildContext context, CartLineView line) => _push(
+    context,
+    ProductDetailsScreen(
+      listingId: line.listingId,
+      initialVariantId: line.variantId,
+      cartLine: line,
+      initialFulfillment: cart.cart?.groups
+          .where((group) => group.vendorId == line.vendorId)
+          .firstOrNull
+          ?.fulfillmentMethod,
+      repository: repository,
+      explore: explore,
+      cart: cart,
+      navigation: this,
+    ),
+  );
+
   Future<void> openCheckout(BuildContext context) => _push(
     context,
     CheckoutPreviewScreen(
+      onRescanSuppliers: onRescanSuppliers,
       controller: cart,
       savedLocations: () => explore.savedLocations,
       orders: orders,
       chooseDropOff: discovery == null ? null : chooseDropOff,
       projects: projects,
       openConversation: messaging == null ? null : openConversation,
+      onOpenProduct: editCartLine,
     ),
   );
 

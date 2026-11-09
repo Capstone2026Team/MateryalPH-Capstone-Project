@@ -17,7 +17,7 @@ Name | Type | Description | Notes
 **requests** | [**BuiltList&lt;InvoiceRequestView&gt;**](InvoiceRequestView.md) |  |
 **platformDocuments** | [**BuiltList&lt;PlatformDocumentRef&gt;**](PlatformDocumentRef.md) |  |
 **billingDetails** | [**VendorInvoiceBillingDetails**](VendorInvoiceBillingDetails.md) |  | [optional]
-**canUpload** | **bool** |  |
+**canUpload** | **bool** | Authorized to prepare a first copy or a linked correction of the latest sent invoice after a Buyer return, correction request or amount/VAT mismatch. |
 **canOpenFiles** | **bool** |  |
 **issuerName** | **String** |  |
 **invoiceTypes** | **BuiltList&lt;String&gt;** |  |

@@ -12,8 +12,9 @@ Name | Type | Description | Notes
 **fullName** | **String** |  |
 **avatarUrl** | **String** | Short-lived owner-only personal photo URL; never the store logo. | [optional]
 **mobileE164** | **String** | Authenticated Buyer registered contact number. | [optional]
-**emailMasked** | **bool** | Buyer email stays masked until recent identity verification. | [optional]
-**email** | **String** |  |
+**emailMasked** | **bool** | False for the authenticated owner's full account email. Retained for client compatibility. | [optional]
+**email** | **String** | Full account email, visible only to the authenticated account owner. |
+**emailVerified** | **bool** | Whether the account email ownership has been verified; not a Buyer performance or business verification badge. | [optional]
 **accountType** | **String** |  |
 **accountStatus** | **String** |  |
 **lockVersion** | **int** |  |

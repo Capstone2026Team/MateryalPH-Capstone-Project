@@ -260,7 +260,8 @@ final class WorkPackageAuthoringTest extends TestCase
         $this->postJson($url.'/reactivate', ['lock_version' => $w['lock_version']], $this->key())->assertConflict()->assertJsonPath('errors.0.code', 'WORK_PACKAGE_HAS_ORDER');
 
         DB::table('work_packages')->where('id', $w['id'])->update(['selected_vendor_organization_id' => null]);
-        DB::table('projects')->where('id', $p['id'])->update(['status' => 'ARCHIVED']);
+        $archivedAt = now()->toImmutable();
+        DB::table('projects')->where('id', $p['id'])->update(['status' => 'ARCHIVED', 'archived_at' => $archivedAt, 'delete_after' => $archivedAt->addHours(720), 'archived_from_status' => 'ACTIVE']);
         $edit(['lock_version' => $w['lock_version']], $this->key())->assertConflict()->assertJsonPath('errors.0.code', 'PROJECT_CLOSED');
         $this->postJson($url.'/reactivate', ['lock_version' => $w['lock_version']], $this->key())->assertConflict()->assertJsonPath('errors.0.code', 'PROJECT_CLOSED');
     }

@@ -24,7 +24,7 @@ final class VendorSetupDraftRequest extends FormRequest
         return [
             'draft_lock_version' => ['sometimes', 'integer', 'min:0'],
             'organization_lock_version' => ['required', 'integer', 'min:1'],
-            'public_store_name' => ['sometimes', 'string', 'max:180'],
+            'public_store_name' => ['sometimes', 'nullable', 'string', 'max:180'],
             'form_state' => ['sometimes', 'string', 'json', 'max:65536'],
             'vacation_mode' => ['sometimes', 'boolean'],
             'vacation_starts_on' => [Rule::requiredIf(fn (): bool => $this->boolean('vacation_mode')), 'nullable', 'date_format:Y-m-d'],

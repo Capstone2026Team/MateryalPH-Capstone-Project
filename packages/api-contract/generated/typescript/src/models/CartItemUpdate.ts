@@ -14,7 +14,7 @@
 
 import { mapValues } from '../runtime';
 /**
- *
+ * Atomically edits an owned cart line. A listing_variant_id requires expected_price_version_id and must belong to the same listing. A duplicate option returns CART_VARIANT_ALREADY_EXISTS (409). fulfillment_method changes the entire Vendor group and retains all delivery eligibility checks. No stock is reserved.
  * @export
  * @interface CartItemUpdate
  */
@@ -35,7 +35,30 @@ export interface CartItemUpdate {
      *
      */
     acceptCurrentPrice?: boolean;
+    /**
+     *
+     */
+    listingVariantId?: string;
+    /**
+     *
+     */
+    expectedPriceVersionId?: string;
+    /**
+     *
+     */
+    fulfillmentMethod?: CartItemUpdateFulfillmentMethodEnum;
 }
+
+
+/**
+ * @export
+ */
+export const CartItemUpdateFulfillmentMethodEnum = {
+    Delivery: 'DELIVERY',
+    Pickup: 'PICKUP',
+} as const;
+export type CartItemUpdateFulfillmentMethodEnum = typeof CartItemUpdateFulfillmentMethodEnum[keyof typeof CartItemUpdateFulfillmentMethodEnum];
+
 
 /**
  * Check if a given object implements the CartItemUpdate interface.
@@ -59,6 +82,9 @@ export function CartItemUpdateFromJSONTyped(json: any, ignoreDiscriminator: bool
         'quantity': json['quantity'] == null ? undefined : json['quantity'],
         'savedForLater': json['saved_for_later'] == null ? undefined : json['saved_for_later'],
         'acceptCurrentPrice': json['accept_current_price'] == null ? undefined : json['accept_current_price'],
+        'listingVariantId': json['listing_variant_id'] == null ? undefined : json['listing_variant_id'],
+        'expectedPriceVersionId': json['expected_price_version_id'] == null ? undefined : json['expected_price_version_id'],
+        'fulfillmentMethod': json['fulfillment_method'] == null ? undefined : json['fulfillment_method'],
     };
 }
 
@@ -77,6 +103,9 @@ export function CartItemUpdateToJSONTyped(value?: CartItemUpdate | null, ignoreD
         'quantity': value['quantity'],
         'saved_for_later': value['savedForLater'],
         'accept_current_price': value['acceptCurrentPrice'],
+        'listing_variant_id': value['listingVariantId'],
+        'expected_price_version_id': value['expectedPriceVersionId'],
+        'fulfillment_method': value['fulfillmentMethod'],
     };
 }
 

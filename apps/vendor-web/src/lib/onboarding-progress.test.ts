@@ -1,6 +1,11 @@
 import { checklistProgress, checklistStatus, verificationChecklist } from '@materyalph/web-ui'
-import { VendorOnboardingStepFromJSON, VendorOnboardingStepToJSON } from '@materyalph/api-client-ts'
+import { VendorOnboardingStepFromJSON, VendorOnboardingStepToJSON, VendorSetupDraftFromJSON, VendorSetupDraftToJSON } from '@materyalph/api-client-ts'
 import { expect, test } from 'vitest'
+
+test.each(['', null])('an unfinished public name %s survives the generated request codec', name => {
+  const draft = VendorSetupDraftFromJSON({ organization_lock_version: 1, public_store_name: name, description: 'Retained draft' })
+  expect(VendorSetupDraftToJSON(draft)).toMatchObject({ organization_lock_version: 1, public_store_name: name, description: 'Retained draft' })
+})
 
 test('saved completion counts independently of the Admin decision and address is separate', () => {
   const steps = ['business_information', 'registered_business_address', 'supplier_classification'].map(key => ({ key, label: key, level: 'REQUIRED', status: 'NOT_STARTED', progressStatus: 'COMPLETED' }))

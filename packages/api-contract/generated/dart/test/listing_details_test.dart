@@ -89,6 +89,12 @@ void main() {
       // TODO
     });
 
+    // Distinct Buyers with COMPLETED orders for this listing across all variants and repeat purchases.
+    // int uniqueBuyers
+    test('to test the property `uniqueBuyers`', () async {
+      // TODO
+    });
+
     // bool isFavorite
     test('to test the property `isFavorite`', () async {
       // TODO

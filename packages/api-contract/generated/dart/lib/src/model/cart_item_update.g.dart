@@ -6,6 +6,68 @@ part of 'cart_item_update.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
+const CartItemUpdateFulfillmentMethodEnum
+    _$cartItemUpdateFulfillmentMethodEnum_DELIVERY =
+    const CartItemUpdateFulfillmentMethodEnum._('DELIVERY');
+const CartItemUpdateFulfillmentMethodEnum
+    _$cartItemUpdateFulfillmentMethodEnum_PICKUP =
+    const CartItemUpdateFulfillmentMethodEnum._('PICKUP');
+
+CartItemUpdateFulfillmentMethodEnum
+    _$cartItemUpdateFulfillmentMethodEnumValueOf(String name) {
+  switch (name) {
+    case 'DELIVERY':
+      return _$cartItemUpdateFulfillmentMethodEnum_DELIVERY;
+    case 'PICKUP':
+      return _$cartItemUpdateFulfillmentMethodEnum_PICKUP;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<CartItemUpdateFulfillmentMethodEnum>
+    _$cartItemUpdateFulfillmentMethodEnumValues = BuiltSet<
+        CartItemUpdateFulfillmentMethodEnum>(const <CartItemUpdateFulfillmentMethodEnum>[
+  _$cartItemUpdateFulfillmentMethodEnum_DELIVERY,
+  _$cartItemUpdateFulfillmentMethodEnum_PICKUP,
+]);
+
+Serializer<CartItemUpdateFulfillmentMethodEnum>
+    _$cartItemUpdateFulfillmentMethodEnumSerializer =
+    _$CartItemUpdateFulfillmentMethodEnumSerializer();
+
+class _$CartItemUpdateFulfillmentMethodEnumSerializer
+    implements PrimitiveSerializer<CartItemUpdateFulfillmentMethodEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'DELIVERY': 'DELIVERY',
+    'PICKUP': 'PICKUP',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'DELIVERY': 'DELIVERY',
+    'PICKUP': 'PICKUP',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    CartItemUpdateFulfillmentMethodEnum
+  ];
+  @override
+  final String wireName = 'CartItemUpdateFulfillmentMethodEnum';
+
+  @override
+  Object serialize(
+          Serializers serializers, CartItemUpdateFulfillmentMethodEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  CartItemUpdateFulfillmentMethodEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      CartItemUpdateFulfillmentMethodEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$CartItemUpdate extends CartItemUpdate {
   @override
   final int lockVersion;
@@ -15,6 +77,12 @@ class _$CartItemUpdate extends CartItemUpdate {
   final bool? savedForLater;
   @override
   final bool? acceptCurrentPrice;
+  @override
+  final String? listingVariantId;
+  @override
+  final String? expectedPriceVersionId;
+  @override
+  final CartItemUpdateFulfillmentMethodEnum? fulfillmentMethod;
 
   factory _$CartItemUpdate([void Function(CartItemUpdateBuilder)? updates]) =>
       (CartItemUpdateBuilder()..update(updates))._build();
@@ -23,7 +91,10 @@ class _$CartItemUpdate extends CartItemUpdate {
       {required this.lockVersion,
       this.quantity,
       this.savedForLater,
-      this.acceptCurrentPrice})
+      this.acceptCurrentPrice,
+      this.listingVariantId,
+      this.expectedPriceVersionId,
+      this.fulfillmentMethod})
       : super._();
   @override
   CartItemUpdate rebuild(void Function(CartItemUpdateBuilder) updates) =>
@@ -39,7 +110,10 @@ class _$CartItemUpdate extends CartItemUpdate {
         lockVersion == other.lockVersion &&
         quantity == other.quantity &&
         savedForLater == other.savedForLater &&
-        acceptCurrentPrice == other.acceptCurrentPrice;
+        acceptCurrentPrice == other.acceptCurrentPrice &&
+        listingVariantId == other.listingVariantId &&
+        expectedPriceVersionId == other.expectedPriceVersionId &&
+        fulfillmentMethod == other.fulfillmentMethod;
   }
 
   @override
@@ -49,6 +123,9 @@ class _$CartItemUpdate extends CartItemUpdate {
     _$hash = $jc(_$hash, quantity.hashCode);
     _$hash = $jc(_$hash, savedForLater.hashCode);
     _$hash = $jc(_$hash, acceptCurrentPrice.hashCode);
+    _$hash = $jc(_$hash, listingVariantId.hashCode);
+    _$hash = $jc(_$hash, expectedPriceVersionId.hashCode);
+    _$hash = $jc(_$hash, fulfillmentMethod.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -59,7 +136,10 @@ class _$CartItemUpdate extends CartItemUpdate {
           ..add('lockVersion', lockVersion)
           ..add('quantity', quantity)
           ..add('savedForLater', savedForLater)
-          ..add('acceptCurrentPrice', acceptCurrentPrice))
+          ..add('acceptCurrentPrice', acceptCurrentPrice)
+          ..add('listingVariantId', listingVariantId)
+          ..add('expectedPriceVersionId', expectedPriceVersionId)
+          ..add('fulfillmentMethod', fulfillmentMethod))
         .toString();
   }
 }
@@ -86,6 +166,23 @@ class CartItemUpdateBuilder
   set acceptCurrentPrice(bool? acceptCurrentPrice) =>
       _$this._acceptCurrentPrice = acceptCurrentPrice;
 
+  String? _listingVariantId;
+  String? get listingVariantId => _$this._listingVariantId;
+  set listingVariantId(String? listingVariantId) =>
+      _$this._listingVariantId = listingVariantId;
+
+  String? _expectedPriceVersionId;
+  String? get expectedPriceVersionId => _$this._expectedPriceVersionId;
+  set expectedPriceVersionId(String? expectedPriceVersionId) =>
+      _$this._expectedPriceVersionId = expectedPriceVersionId;
+
+  CartItemUpdateFulfillmentMethodEnum? _fulfillmentMethod;
+  CartItemUpdateFulfillmentMethodEnum? get fulfillmentMethod =>
+      _$this._fulfillmentMethod;
+  set fulfillmentMethod(
+          CartItemUpdateFulfillmentMethodEnum? fulfillmentMethod) =>
+      _$this._fulfillmentMethod = fulfillmentMethod;
+
   CartItemUpdateBuilder() {
     CartItemUpdate._defaults(this);
   }
@@ -97,6 +194,9 @@ class CartItemUpdateBuilder
       _quantity = $v.quantity;
       _savedForLater = $v.savedForLater;
       _acceptCurrentPrice = $v.acceptCurrentPrice;
+      _listingVariantId = $v.listingVariantId;
+      _expectedPriceVersionId = $v.expectedPriceVersionId;
+      _fulfillmentMethod = $v.fulfillmentMethod;
       _$v = null;
     }
     return this;
@@ -123,6 +223,9 @@ class CartItemUpdateBuilder
           quantity: quantity,
           savedForLater: savedForLater,
           acceptCurrentPrice: acceptCurrentPrice,
+          listingVariantId: listingVariantId,
+          expectedPriceVersionId: expectedPriceVersionId,
+          fulfillmentMethod: fulfillmentMethod,
         );
     replace(_$result);
     return _$result;

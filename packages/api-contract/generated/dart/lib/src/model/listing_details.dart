@@ -39,6 +39,7 @@ part 'listing_details.g.dart';
 /// * [compliance]
 /// * [productRating]
 /// * [unitsSold]
+/// * [uniqueBuyers] - Distinct Buyers with COMPLETED orders for this listing across all variants and repeat purchases.
 /// * [isFavorite]
 /// * [purchasable]
 /// * [notPurchasableReason]
@@ -100,6 +101,10 @@ abstract class ListingDetails implements Built<ListingDetails, ListingDetailsBui
 
   @BuiltValueField(wireName: r'units_sold')
   String get unitsSold;
+
+  /// Distinct Buyers with COMPLETED orders for this listing across all variants and repeat purchases.
+  @BuiltValueField(wireName: r'unique_buyers')
+  int? get uniqueBuyers;
 
   @BuiltValueField(wireName: r'is_favorite')
   bool get isFavorite;
@@ -239,6 +244,13 @@ class _$ListingDetailsSerializer implements PrimitiveSerializer<ListingDetails> 
       object.unitsSold,
       specifiedType: const FullType(String),
     );
+    if (object.uniqueBuyers != null) {
+      yield r'unique_buyers';
+      yield serializers.serialize(
+        object.uniqueBuyers,
+        specifiedType: const FullType(int),
+      );
+    }
     yield r'is_favorite';
     yield serializers.serialize(
       object.isFavorite,
@@ -431,6 +443,14 @@ class _$ListingDetailsSerializer implements PrimitiveSerializer<ListingDetails> 
             specifiedType: const FullType(String),
           ) as String;
           result.unitsSold = valueDes;
+          break;
+        case r'unique_buyers':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.uniqueBuyers = valueDes;
           break;
         case r'is_favorite':
           final valueDes = serializers.deserialize(

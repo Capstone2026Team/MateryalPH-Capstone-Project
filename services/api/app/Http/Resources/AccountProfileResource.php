@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Domain\Authorization\AccountAccess;
-use App\Models\AuthSession;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -20,21 +19,14 @@ final class AccountProfileResource extends JsonResource
     {
         $scope = app(AccountAccess::class)->resolve($this->resource);
         $buyer = $this->account_type === 'BUYER' ? DB::table('buyer_profiles')->where('user_id', $this->getKey())->first() : null;
-        $session = $request->attributes->get('auth_session');
-        $recent = $session instanceof AuthSession && $session->revoked_at === null
-            && $session->reauthenticated_at !== null && $session->reauthenticated_at->addMinutes(15)->isFuture();
-        $email = $this->email;
-        if ($this->account_type === 'BUYER' && ! $recent) {
-            $parts = explode('@', $email, 2);
-            $email = mb_substr($parts[0], 0, 1).'***@'.($parts[1] ?? '');
-        }
 
         return [
             'id' => $this->public_id,
             'full_name' => $this->name,
             'avatar_url' => $this->profile_photo_key ? URL::temporarySignedRoute('account.photo.'.strtolower($this->account_type), now()->addMinutes(5), ['version' => $this->lock_version, 'owner' => $this->public_id]) : null,
-            'email' => $email,
-            'email_masked' => $this->account_type === 'BUYER' && ! $recent,
+            'email' => $this->email,
+            'email_masked' => false,
+            'email_verified' => $this->email_verified_at !== null,
             'mobile_e164' => $this->account_type === 'BUYER' ? DB::table('user_profiles')->where('user_id', $this->getKey())->value('mobile_e164') : null,
             'account_type' => $this->account_type,
             'account_status' => $this->account_status,

@@ -35,14 +35,14 @@ void main() {
       // TODO
     });
 
-    // invoices.view. Customer Service sees status and metadata only; the full Buyer TIN only for roles that upload.
+    // invoices.view. Customer Service sees status and metadata only; the full Buyer TIN only for roles that upload. can_upload permits a private linked correction of the latest sent version after a Buyer return, correction request or unresolved amount/VAT mismatch, including an explained difference. Sent document fields and files remain immutable.
     //
     //Future<VendorOrderInvoicesEnvelope> getVendorOrderInvoices(String orderId) async
     test('test getVendorOrderInvoices', () async {
       // TODO
     });
 
-    // invoices.view. Open requests, orders without an invoice copy yet, uploaded records and reconciliation items. Never Earnings or other protected finance. Every Vendor list row includes its authorized order_id for opening the order invoice details.
+    // invoices.view. REQUESTS contains only requested first copies awaiting Send; uploaded and downloaded requests are excluded. RECONCILIATION contains the latest sent version per order with an amount/VAT mismatch (including explained differences), a Buyer return or a pending correction request. Earlier versions remain in RECORDS. Counts use these same rules before date filtering. Never Earnings or other protected finance. Every Vendor list row includes its authorized order_id for opening the order invoice details.
     //
     //Future<InvoiceLogEnvelope> listVendorInvoices({ String view, int page, Date from, Date to }) async
     test('test listVendorInvoices', () async {
@@ -56,14 +56,14 @@ void main() {
       // TODO
     });
 
-    // invoices.upload. Sends the saved, clean draft exactly once, creates an immutable invoice version, fulfills the applicable Buyer request and notifies the Buyer after commit. The Buyer email includes the exact uploaded invoice file and a summary of the sent invoice. Delivery rechecks current Buyer access, clean private storage and attachment integrity. Requires the current lock_version. No file means no send. A sent version cannot be edited or resent with a new key until the Buyer returns it or requests a correction.
+    // invoices.upload. Sends the saved, clean draft exactly once, creates an immutable invoice version, fulfills the applicable Buyer request and notifies the Buyer after commit. The Buyer email includes the exact uploaded invoice file and a summary of the sent invoice. Delivery rechecks current Buyer access, clean private storage and attachment integrity. Requires the current lock_version. No file means no send. A sent version cannot be edited or resent with a new key. A Buyer return, correction request or unresolved amount/VAT mismatch (including an explained difference) permits a linked new correction draft.
     //
     //Future<VendorOrderInvoicesEnvelope> sendVendorInvoice(String orderId, String idempotencyKey, InvoiceSendInput invoiceSendInput) async
     test('test sendVendorInvoice', () async {
       // TODO
     });
 
-    // invoices.upload. Save or replace the private invoice draft with optimistic concurrency and Idempotency-Key. Uploading never sends to the Buyer. After Send, preparation is locked until the Buyer requests a correction or returns the latest copy. No accepted Buyer total changes.
+    // invoices.upload. Save or replace the private invoice draft with optimistic concurrency and Idempotency-Key. Uploading never sends to the Buyer. After Send, preparation is locked unless the Buyer requests a correction, returns the latest copy or the latest invoice has an unresolved amount/VAT mismatch, including an explained difference. Corrections may retain the current private attachment or upload a replacement. No accepted Buyer total changes.
     //
     //Future<VendorOrderInvoicesEnvelope> uploadVendorInvoice(String orderId, String idempotencyKey, String invoiceType, String issuerName, String invoiceNumber, Date issuedOn, int amountCentavos, String sourceSystem, String invoicingMethod, int lockVersion, { int vatCentavos, int vatExemptCentavos, int zeroRatedCentavos, BuiltList<String> relatedLineIds, String amendsInvoiceRecordId, String invoiceRequestId, MultipartFile file }) async
     test('test uploadVendorInvoice', () async {

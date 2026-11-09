@@ -7,6 +7,26 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(WorkPackageView, () {
+    // DateTime archivedAt
+    test('to test the property `archivedAt`', () async {
+      // TODO
+    });
+
+    // DateTime deleteAfter
+    test('to test the property `deleteAfter`', () async {
+      // TODO
+    });
+
+    // bool canArchive
+    test('to test the property `canArchive`', () async {
+      // TODO
+    });
+
+    // String archiveBlocker
+    test('to test the property `archiveBlocker`', () async {
+      // TODO
+    });
+
     // String selectedArrangementId
     test('to test the property `selectedArrangementId`', () async {
       // TODO

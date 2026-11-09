@@ -102,6 +102,8 @@ class _$ListingDetails extends ListingDetails {
   @override
   final String unitsSold;
   @override
+  final int? uniqueBuyers;
+  @override
   final bool isFavorite;
   @override
   final bool purchasable;
@@ -142,6 +144,7 @@ class _$ListingDetails extends ListingDetails {
       required this.compliance,
       required this.productRating,
       required this.unitsSold,
+      this.uniqueBuyers,
       required this.isFavorite,
       required this.purchasable,
       this.notPurchasableReason,
@@ -180,6 +183,7 @@ class _$ListingDetails extends ListingDetails {
         compliance == other.compliance &&
         productRating == other.productRating &&
         unitsSold == other.unitsSold &&
+        uniqueBuyers == other.uniqueBuyers &&
         isFavorite == other.isFavorite &&
         purchasable == other.purchasable &&
         notPurchasableReason == other.notPurchasableReason &&
@@ -211,6 +215,7 @@ class _$ListingDetails extends ListingDetails {
     _$hash = $jc(_$hash, compliance.hashCode);
     _$hash = $jc(_$hash, productRating.hashCode);
     _$hash = $jc(_$hash, unitsSold.hashCode);
+    _$hash = $jc(_$hash, uniqueBuyers.hashCode);
     _$hash = $jc(_$hash, isFavorite.hashCode);
     _$hash = $jc(_$hash, purchasable.hashCode);
     _$hash = $jc(_$hash, notPurchasableReason.hashCode);
@@ -244,6 +249,7 @@ class _$ListingDetails extends ListingDetails {
           ..add('compliance', compliance)
           ..add('productRating', productRating)
           ..add('unitsSold', unitsSold)
+          ..add('uniqueBuyers', uniqueBuyers)
           ..add('isFavorite', isFavorite)
           ..add('purchasable', purchasable)
           ..add('notPurchasableReason', notPurchasableReason)
@@ -342,6 +348,10 @@ class ListingDetailsBuilder
   String? get unitsSold => _$this._unitsSold;
   set unitsSold(String? unitsSold) => _$this._unitsSold = unitsSold;
 
+  int? _uniqueBuyers;
+  int? get uniqueBuyers => _$this._uniqueBuyers;
+  set uniqueBuyers(int? uniqueBuyers) => _$this._uniqueBuyers = uniqueBuyers;
+
   bool? _isFavorite;
   bool? get isFavorite => _$this._isFavorite;
   set isFavorite(bool? isFavorite) => _$this._isFavorite = isFavorite;
@@ -415,6 +425,7 @@ class ListingDetailsBuilder
       _compliance = $v.compliance.toBuilder();
       _productRating = $v.productRating.toBuilder();
       _unitsSold = $v.unitsSold;
+      _uniqueBuyers = $v.uniqueBuyers;
       _isFavorite = $v.isFavorite;
       _purchasable = $v.purchasable;
       _notPurchasableReason = $v.notPurchasableReason;
@@ -468,6 +479,7 @@ class ListingDetailsBuilder
             productRating: productRating.build(),
             unitsSold: BuiltValueNullFieldError.checkNotNull(
                 unitsSold, r'ListingDetails', 'unitsSold'),
+            uniqueBuyers: uniqueBuyers,
             isFavorite: BuiltValueNullFieldError.checkNotNull(
                 isFavorite, r'ListingDetails', 'isFavorite'),
             purchasable: BuiltValueNullFieldError.checkNotNull(

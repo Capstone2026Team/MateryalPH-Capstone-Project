@@ -58,6 +58,7 @@ void main() {
       // TODO
     });
 
+    // Request state; Vendor RECONCILIATION rows also include the pending Buyer correction state, REQUESTED or RETURNED_FOR_CORRECTION.
     // String state
     test('to test the property `state`', () async {
       // TODO

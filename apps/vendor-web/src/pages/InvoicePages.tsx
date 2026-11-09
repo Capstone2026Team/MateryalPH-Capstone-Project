@@ -5,10 +5,10 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { ArrowUpRight, Check, FileCheck2, FileClock, FileText, MessageSquare, ReceiptText, RefreshCw, Save, Send, Upload } from 'lucide-react'
 import { serializeDate } from '@materyalph/api-client-ts'
 import {
-  Button, DateFilter, ConfirmDialog, DeadlineCountdown, FileSelectionField, FilterTabs, FormDialog, InvoicePresetFields, type InvoicePresetValues, EmptyState, InvoiceRecordList, Pagination, PlatformDocumentNotice, StatCard, StatusBadge, StatusMessage, formatManilaDateTime, formatPesoCentavos, InvoiceWorkspace, InvoiceListItem, InvoiceDetailSummary, InvoiceSelectionPlaceholder,
+  Button, DateFilter, DeadlineCountdown, FileSelectionField, FilterTabs, FormDialog, InvoicePresetFields, type InvoicePresetValues, EmptyState, InvoiceRecordList, Pagination, PlatformDocumentNotice, StatCard, StatusBadge, StatusMessage, formatManilaDateTime, formatPesoCentavos, InvoiceWorkspace, InvoiceListItem, InvoiceDetailSummary, InvoiceSelectionPlaceholder,
 } from '@materyalph/web-ui'
 import {
-  disputeApiBasePath, explainDifference, getOrderInvoices, listInvoices, uploadInvoice, saveInvoicePreset, sendInvoice, getInvoicePreset,
+  disputeApiBasePath, getOrderInvoices, listInvoices, uploadInvoice, saveInvoicePreset, sendInvoice, getInvoicePreset,
   type InvoiceListMeta, type InvoiceLogRow, type InvoiceView, type VendorOrderInvoices,
 } from '../lib/disputes-api'
 import { pesoInputToCentavos, readableOrderError, orderFieldErrors } from '../lib/orders-api'
@@ -20,7 +20,7 @@ import { dateRangeFromParams, dateRangePatch } from '../lib/date-filters'
 
 const control = 'min-h-12 w-full min-w-0 rounded-control border border-border-default bg-surface-primary px-3 text-base font-normal'
 const VIEWS: { value: InvoiceView; label: string }[] = [
-  { value: 'REQUESTS', label: 'Buyer requests' }, { value: 'DUE', label: 'No copy yet' }, { value: 'RECORDS', label: 'Uploaded copies' }, { value: 'RECONCILIATION', label: 'Amount mismatches' },
+  { value: 'REQUESTS', label: 'Buyer requests' }, { value: 'DUE', label: 'No copy yet' }, { value: 'RECORDS', label: 'Uploaded copies' }, { value: 'RECONCILIATION', label: 'Mismatches' },
 ]
 const REQUEST_STATES: Record<string, string> = { REQUESTED: 'Requested', UPLOADED: 'Uploaded', DOWNLOADED: 'Downloaded by the Buyer', RETURNED_FOR_CORRECTION: 'Returned for correction', CLOSED: 'Closed' }
 
@@ -50,12 +50,16 @@ function InvoicesWorkspace({ canManagePresets }: { canManagePresets: boolean }) 
   const [attempt, setAttempt] = useState(0)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
+  const listScope = useRef('')
   const refreshList = useCallback(() => setAttempt(value => value + 1), [])
   const invoiceChanged = useCallback((text: string) => { setNotice(text); refreshList() }, [refreshList])
   useEffect(() => {
     let active = true
-    setRows(null); setError(null); setSelectedId(null)
-    listInvoices({ view, page, ...(range.from ? { from: range.from } : {}), ...(range.to ? { to: range.to } : {}) }).then(result => { if (active) { setRows(result.items); setMeta(result.meta) } }).catch(async cause => { const text = await readableOrderError(cause); if (active) setError(text) })
+    const scope = JSON.stringify([view, page, range.from, range.to])
+    if (listScope.current !== scope) { setRows(null); setSelectedId(null); listScope.current = scope }
+    setError(null); setRefreshing(true)
+    listInvoices({ view, page, ...(range.from ? { from: range.from } : {}), ...(range.to ? { to: range.to } : {}) }).then(result => { if (active) { setRows(result.items); setMeta(result.meta) } }).catch(async cause => { const text = await readableOrderError(cause); if (active) setError(text) }).finally(() => { if (active) setRefreshing(false) })
     return () => { active = false }
   }, [view, page, range.from, range.to, attempt])
   const rowKey = (row: InvoiceLogRow) => row.id ?? row.orderId ?? ''
@@ -71,16 +75,17 @@ function InvoicesWorkspace({ canManagePresets }: { canManagePresets: boolean }) 
     </>} list={<section aria-labelledby="invoice-list-heading" className="mp-card mp-invoice-list">
       <div className="mp-invoice-list-header"><div><h2 id="invoice-list-heading" className="text-base font-semibold">Invoice list</h2><p className="mt-1 text-xs text-text-secondary">{error ? 'Records unavailable' : rows === null ? 'Loading records…' : `${meta?.total ?? rows.length} ${meta?.total === 1 ? 'record' : 'records'} in this view`}</p></div><Button variant="quiet" onClick={refreshList} disabled={rows === null && !error}><RefreshCw size={15} aria-hidden="true" />Refresh</Button></div>
       <FilterTabs label="Invoice view" appearance="tabs" value={view} onChange={value => update({ view: value })} chips={VIEWS.map(item => ({ value: item.value, label: item.value === 'REQUESTS' ? 'Requests' : item.value === 'RECORDS' ? 'Uploaded' : item.label, count: meta?.counts?.[item.value] }))} />
-      {view === 'RECONCILIATION' && <p className="text-xs leading-5 text-text-secondary">Invoice totals or VAT that do not match the accepted order.</p>}
+      {view === 'RECONCILIATION' && <p className="text-xs leading-5 text-text-secondary">Buyer returns, correction requests and amount or VAT mismatches. Prepare a corrected copy, review it, then send it to the Buyer.</p>}
       <div className="flex flex-wrap items-center justify-between gap-3"><DateFilter title={view === 'REQUESTS' ? 'Request dates' : view === 'DUE' ? 'Sale confirmation dates' : 'Invoice dates'} value={range} onChange={next => update(dateRangePatch(next))} /><span className="text-xs text-text-secondary">Dates filter this list. Overview shows all dates.</span></div>
+      {refreshing && rows !== null && <AsyncLoading compact label="Updating invoice list…" />}
       {error ? <ErrorState message={error} onRetry={refreshList} /> : rows === null ? <LoadingState label="Loading invoices…" />
-        : rows.length === 0 ? <EmptyState icon={<ReceiptText size={24} aria-hidden="true" />} message={hasDates ? 'No invoices match these dates.' : view === 'REQUESTS' ? 'No Buyer copy or correction requests.' : view === 'DUE' ? 'Every confirmed sale has an uploaded invoice copy.' : view === 'RECONCILIATION' ? 'No unresolved amount mismatches.' : 'No invoice copies in this view.'} action={view === 'REQUESTS' && Boolean(meta?.counts?.DUE) ? <Button variant="secondary" onClick={() => update({ view: 'DUE' })}>View sales without copies</Button> : <Button variant="secondary" onClick={refreshList}>Refresh list</Button>} />
+        : rows.length === 0 ? <EmptyState icon={<ReceiptText size={24} aria-hidden="true" />} message={hasDates ? 'No invoices match these dates.' : view === 'REQUESTS' ? 'No Buyer copy requests awaiting a send.' : view === 'DUE' ? 'Every confirmed sale has an uploaded invoice copy.' : view === 'RECONCILIATION' ? 'No invoices need correction.' : 'No invoice copies in this view.'} action={view === 'REQUESTS' && Boolean(meta?.counts?.DUE) ? <Button variant="secondary" onClick={() => update({ view: 'DUE' })}>View sales without copies</Button> : <Button variant="secondary" onClick={refreshList}>Refresh list</Button>} />
           : <ul className="mp-invoice-list-items" aria-label={VIEWS.find(item => item.value === view)?.label ?? 'Invoices'}>{rows.map(row => <InvoiceQueueItem key={rowKey(row)} row={row} view={view} selected={rowKey(row) === (selected ? rowKey(selected) : null)} onSelect={() => {
             setSelectedId(rowKey(row))
             if (window.matchMedia?.('(max-width: 1279px)').matches) document.getElementById('invoice-details')?.scrollIntoView({ block: 'start', behavior: 'instant' })
           }} />)}</ul>}
       {meta && (page > 1 || meta.hasMore) && <Pagination page={page} hasMore={Boolean(meta.hasMore)} total={meta.total ?? 0} busy={rows === null} onChange={next => update({ page: String(next) })} />}
-    </section>} detail={selected?.orderId ? <OrderInvoicePanel key={selected.orderId} orderId={selected.orderId} workspace {...(view === 'RECORDS' || view === 'RECONCILIATION' ? { recordId: selected.id } : {})} onChanged={invoiceChanged} /> : <InvoiceSelectionPlaceholder />} />
+    </section>} detail={selected?.orderId ? <OrderInvoicePanel key={selected.orderId} orderId={selected.orderId} refreshToken={attempt} workspace {...(view === 'RECORDS' || view === 'RECONCILIATION' ? { recordId: selected.id } : {})} onChanged={invoiceChanged} /> : <InvoiceSelectionPlaceholder />} />
   </div>
 }
 
@@ -94,12 +99,12 @@ function InvoiceQueueItem({ row, view, selected, onSelect }: { row: InvoiceLogRo
     ? <StatusBadge label={row.overdue ? 'Past service target' : REQUEST_STATES[row.state ?? ''] ?? row.state ?? 'Requested'} tone={row.overdue ? 'error' : 'warning'} />
     : view === 'DUE'
       ? <StatusBadge label={row.openRequest ? 'Buyer requested copy' : 'No copy yet'} tone={row.openRequest ? 'warning' : 'neutral'} />
-      : <StatusBadge label={row.reconciliationState === 'INVOICE_RECONCILIATION_REQUIRED' ? 'Review amount mismatch' : row.reconciliationState === 'EXPLAINED' ? 'Explained' : row.reconciliationState === 'CORRECTED' ? 'Corrected' : 'Copy uploaded'} tone={row.reconciliationState === 'INVOICE_RECONCILIATION_REQUIRED' ? 'warning' : 'success'} />
+      : <StatusBadge label={row.state === 'RETURNED_FOR_CORRECTION' ? 'Returned by Buyer' : row.kind === 'CORRECTION' && row.state === 'REQUESTED' ? 'Correction requested' : row.reconciliationState === 'INVOICE_RECONCILIATION_REQUIRED' ? 'Review amount mismatch' : row.reconciliationState === 'EXPLAINED' ? 'Mismatch explained' : row.reconciliationState === 'CORRECTED' ? 'Corrected' : 'Copy uploaded'} tone={view === 'RECONCILIATION' || row.reconciliationState === 'INVOICE_RECONCILIATION_REQUIRED' ? 'warning' : 'success'} />
   return <InvoiceListItem title={row.invoiceNumber ?? row.orderReference ?? 'Order'} {...(view === 'DUE' && row.buyerName ? { reference: `Buyer: ${row.buyerName}` } : row.invoiceNumber && row.orderReference ? { reference: row.orderReference } : {})} selected={selected} onSelect={onSelect} metadata={metadata} status={status} {...(row.amountCentavos !== undefined ? { amount: formatPesoCentavos(row.amountCentavos) } : {})} />
 }
 
 /** Invoice copies, Buyer requests and the upload form on the order page; actions follow the caller's role. */
-export function OrderInvoicePanel({ orderId, workspace = false, recordId, onChanged }: { orderId: string; workspace?: boolean; recordId?: string | undefined; onChanged?: (text: string) => void }) {
+export function OrderInvoicePanel({ orderId, workspace = false, recordId, refreshToken = 0, onChanged }: { orderId: string; workspace?: boolean; recordId?: string | undefined; refreshToken?: number; onChanged?: (text: string) => void }) {
   const [data, setData] = useState<VendorOrderInvoices | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -114,7 +119,7 @@ export function OrderInvoicePanel({ orderId, workspace = false, recordId, onChan
     setError(null)
     getOrderInvoices(orderId).then(value => { if (active) setData(value) }).catch(async cause => { const text = await readableOrderError(cause); if (active) setError(text) })
     return () => { active = false }
-  }, [orderId, attempt])
+  }, [orderId, attempt, refreshToken])
   const changed = (next: VendorOrderInvoices, text: string) => { setData(next); if (onChanged) onChanged(text); else setNotice(text) }
   const record = data?.records.find(item => item.id === recordId) ?? data?.records.at(-1)
   const showDraft = !recordId || !record || reviewedSelection === recordId
@@ -132,57 +137,44 @@ export function OrderInvoicePanel({ orderId, workspace = false, recordId, onChan
     } finally { setSending(false) }
   }
   const sendButton = data?.canOpenFiles && <Button disabled={!data.canSend || sending || !showDraft} onClick={() => void send()}>{data.records.length > 0 && !data.canUpload ? <Check size={15} aria-hidden="true" /> : <Send size={15} aria-hidden="true" />}{sending ? 'Sending…' : data.records.length > 0 && !data.canUpload ? 'Sent' : 'Send'}</Button>
+  const pendingRequests = data?.requests.filter(request => request.state === 'REQUESTED' || request.state === 'RETURNED_FOR_CORRECTION') ?? []
+  const preparation = data && (data.canUpload || pendingRequests.length > 0) && <div className="grid gap-3">
+    {pendingRequests.map(request => <div key={request.id} className="grid gap-2 rounded-control border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+      <p className="font-semibold">The Buyer requested an invoice {request.kind === 'CORRECTION' ? 'correction' : 'copy'} · {REQUEST_STATES[request.state] ?? request.state}</p>
+      {request.details && <p className="whitespace-pre-line">{request.details}</p>}
+      <DeadlineCountdown at={request.serviceTargetAt} label="Service target in" endedLabel="Past the service target" />
+      <p className="text-xs">The three-business-day target is a document-service goal. It never extends your legal deadline to issue the invoice.</p>
+    </div>)}
+    {data.canUpload && <>
+      {data.records.length > 0 && <p className="text-sm leading-6 text-text-secondary">Update the invoice details or replace the attached copy, then review and send the corrected version. Earlier sent copies stay in the history.</p>}
+      <UploadForm key={data.draft?.lockVersion ?? 0} data={data} onReview={() => setReviewedSelection(recordId ?? null)} onChanged={changed} />
+    </>}
+  </div>
   return <section id="invoices" aria-label={workspace ? 'Invoice details' : undefined} aria-labelledby={workspace ? undefined : 'invoice-heading'} className={workspace ? 'mp-invoice-sheet' : 'grid min-w-0 gap-4 mp-card mp-card-padded'}>
     {!workspace && <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
       <h2 id="invoice-heading" className="flex min-w-0 items-center gap-2 text-lg font-semibold"><FileText size={18} className="shrink-0" aria-hidden="true" />Invoices</h2>
       {data && <StatusBadge label={data.status === 'ISSUED' ? 'Copy uploaded' : data.status === 'NOT_YET_UPLOADED' ? 'No copy uploaded yet' : 'Not due yet'} tone={data.status === 'NOT_YET_UPLOADED' ? 'warning' : 'neutral'} />}
     </div>}
     {error ? <ErrorState message={error} onRetry={reload} /> : !data ? <AsyncLoading compact label="Loading invoices…" /> : <>
-      {workspace && <InvoiceDetailSummary data={data} showDraft={showDraft} {...(record ? { record } : {})} apiBasePath={disputeApiBasePath} recordAction={record?.canExplain ? <ExplainAction orderId={orderId} recordId={record.id} onChanged={changed} /> : null} actions={<div className="flex flex-wrap items-center gap-2">{sendButton}<Link to={`/orders/${orderId}#invoices`} className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-action-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-focus-ring">View order<ArrowUpRight size={14} aria-hidden="true" /></Link></div>} />}
-      {!workspace && sendButton}
+      {workspace && <InvoiceDetailSummary data={data} showDraft={showDraft} {...(record ? { record } : {})} apiBasePath={disputeApiBasePath} preparation={preparation} actions={<div className="flex flex-wrap items-center gap-2">{sendButton}<Link to={`/orders/${orderId}#invoices`} className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-action-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-focus-ring">View order<ArrowUpRight size={14} aria-hidden="true" /></Link></div>} />}
+      {!workspace && <>{sendButton}{preparation}</>}
       {sendError && <StatusMessage tone="error">{sendError}</StatusMessage>}
       {!workspace && <p className="max-w-3xl text-sm leading-6 text-text-secondary">{data.issuanceNotice}</p>}
       {notice && <StatusMessage tone="success">{notice}</StatusMessage>}
-      {data.requests.filter(request => request.state !== 'CLOSED').map(request => <div key={request.id} className="grid gap-2 rounded-control border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
-        <p className="font-semibold">The Buyer requested an invoice {request.kind === 'CORRECTION' ? 'correction' : 'copy'} · {REQUEST_STATES[request.state] ?? request.state}</p>
-        {request.details && <p className="whitespace-pre-line">{request.details}</p>}
-        {(request.state === 'REQUESTED' || request.state === 'RETURNED_FOR_CORRECTION') && <DeadlineCountdown at={request.serviceTargetAt} label="Service target in" endedLabel="Past the service target" />}
-        <p className="text-xs">The three-business-day target is a document-service goal. It never extends your legal deadline to issue the invoice.</p>
-      </div>)}
       {!workspace && data.billingDetails && <dl className="grid gap-1 rounded-control bg-surface-canvas p-3 text-sm">
         <div className="flex flex-wrap justify-between gap-x-3"><dt className="text-text-secondary">Bill to</dt><dd className="font-semibold">{data.billingDetails.billingName}</dd></div>
         <div className="flex flex-wrap justify-between gap-x-3"><dt className="text-text-secondary">Address</dt><dd className="font-semibold">{data.billingDetails.billingAddress}</dd></div>
         {(data.billingDetails.tin || data.billingDetails.tinMasked) && <div className="flex flex-wrap justify-between gap-x-3"><dt className="text-text-secondary">Buyer TIN</dt><dd className="font-semibold tabular-nums">{data.billingDetails.tin ?? data.billingDetails.tinMasked}</dd></div>}
       </dl>}
       {(!workspace || data.records.length > 1 || !data.canOpenFiles || !data.canUpload) && <div className="grid min-w-0 gap-2">
-        {workspace ? data.records.length > 1 && <details><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-focus-ring">All invoice copies ({data.records.length})</summary><InvoiceRecordList records={data.records} apiBasePath={disputeApiBasePath} renderAction={item => item.canExplain ? <ExplainAction orderId={orderId} recordId={item.id} onChanged={changed} /> : null} /></details> : <InvoiceRecordList records={data.records} apiBasePath={disputeApiBasePath} renderAction={item => item.canExplain ? <ExplainAction orderId={orderId} recordId={item.id} onChanged={changed} /> : null} />}
+        {workspace ? data.records.length > 1 && <details><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-focus-ring">All invoice copies ({data.records.length})</summary><InvoiceRecordList records={data.records} apiBasePath={disputeApiBasePath} /></details> : <InvoiceRecordList records={data.records} apiBasePath={disputeApiBasePath} />}
         {!data.canOpenFiles && data.records.length > 0 && <p className="text-xs leading-5 text-text-secondary">Your role can see invoice status but not open the official file.</p>}
         {!data.canUpload && !data.canOpenFiles && <p className="text-sm leading-6 text-text-secondary">The Owner, Store Manager or Store Staff upload the official invoice copy.</p>}
       </div>}
-      {data.canUpload && <UploadForm key={data.draft?.lockVersion ?? 0} data={data} onReview={() => setReviewedSelection(recordId ?? null)} onChanged={changed} />}
-      {!data.canUpload && data.canOpenFiles && data.records.length > 0 && <p className="text-xs leading-5 text-text-secondary">This sent version is locked. A Buyer return or correction request allows you to prepare a new version; earlier copies stay in the history.</p>}
+      {!data.canUpload && data.canOpenFiles && data.records.length > 0 && <p className="text-xs leading-5 text-text-secondary">This sent version is locked. A Buyer return, correction request or amount mismatch allows you to prepare a new version; earlier copies stay in the history.</p>}
       <div className="grid min-w-0 gap-3 border-t border-border-default pt-4"><h3 className="text-sm font-semibold">MateryalPH documents</h3><PlatformDocumentNotice documents={data.platformDocuments} orderId={orderId} apiBasePath={disputeApiBasePath} onRefresh={reload} />{workspace && <p className="text-xs leading-5 text-text-secondary">{data.issuanceNotice}</p>}</div>
     </>}
   </section>
-}
-
-function ExplainAction({ orderId, recordId, onChanged }: { orderId: string; recordId: string; onChanged: (data: VendorOrderInvoices, text: string) => void }) {
-  const [open, setOpen] = useState(false)
-  const [note, setNote] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  return <>
-    <Button variant="quiet" onClick={() => setOpen(true)}>Explain amount mismatch</Button>
-    <ConfirmDialog open={open} tone="primary" busy={busy} title="Explain the invoice amount mismatch" confirmLabel="Save explanation" onCancel={() => setOpen(false)} onConfirm={() => void (async () => {
-      if (note.trim().length < 10) { setError('Explain in at least 10 characters.'); return }
-      setBusy(true); setError(null)
-      try { onChanged(await explainDifference(orderId, recordId, note.trim()), 'Explanation saved. The Buyer\'s agreed amount is unchanged.'); setOpen(false) } catch (cause) { setError(await readableOrderError(cause)) } finally { setBusy(false) }
-    })()}>
-      <p className="text-text-secondary">Explain why the invoice total or VAT does not match the accepted order. The Buyer's agreed amount stays unchanged.</p>
-      <label className="grid gap-2 text-sm font-semibold text-text-strong">Explanation<textarea className={`${control} min-h-20 py-2`} maxLength={2000} value={note} onChange={event => setNote(event.target.value)} /></label>
-      {error && <p role="alert" className="text-sm text-status-error">{error}</p>}
-    </ConfirmDialog>
-  </>
 }
 
 /** Labels one control; the hint and error stay outside the accessible name and are linked through aria-describedby. */
@@ -201,18 +193,22 @@ function UploadForm({ data, onChanged, onReview }: { data: VendorOrderInvoices; 
   const today = manilaToday()
   const draft = data.draft
   const unsent = draft && !draft.sentRecordId
+  const previous = data.records.at(-1)
+  const correction = Boolean(previous)
+  const existingFile = draft?.fileName ?? previous?.fileName
   const formId = useId()
   const [open, setOpen] = useState(false)
-  const [type, setType] = useState<string>(draft?.invoiceType ?? data.preset?.invoiceType ?? 'VENDOR_GOODS_INVOICE')
-  const [issuer, setIssuer] = useState(draft?.issuerName ?? data.preset?.issuerName ?? data.issuerName)
+  const [type, setType] = useState<string>(draft?.invoiceType ?? previous?.invoiceType ?? data.preset?.invoiceType ?? 'VENDOR_GOODS_INVOICE')
+  const [issuer, setIssuer] = useState(draft?.issuerName ?? previous?.issuer ?? data.preset?.issuerName ?? data.issuerName)
   const [number, setNumber] = useState(unsent ? draft.invoiceNumber : '')
   const [issuedOn, setIssuedOn] = useState(unsent ? serializeDate(draft.issuedOn)! : today)
-  const [amount, setAmount] = useState(unsent ? (draft.amountCentavos / 100).toFixed(2) : '')
-  const [vat, setVat] = useState(unsent && draft.vatCentavos != null ? (draft.vatCentavos / 100).toFixed(2) : '')
+  const [amount, setAmount] = useState(unsent ? (draft.amountCentavos / 100).toFixed(2) : previous ? (previous.amountCentavos / 100).toFixed(2) : '')
+  const previousVat = unsent ? draft.vatCentavos : previous?.vatCentavos
+  const [vat, setVat] = useState(previousVat != null ? (previousVat / 100).toFixed(2) : '')
   const [lines, setLines] = useState<string[]>(draft?.relatedLineIds ?? [])
-  const [source, setSource] = useState<string>(draft?.sourceSystem ?? data.preset?.sourceSystem ?? 'REGISTERED_CAS')
-  const [method, setMethod] = useState<string>(draft?.invoicingMethod ?? data.preset?.invoicingMethod ?? 'COMPUTERIZED')
-  const [amends, setAmends] = useState(draft?.amendsInvoiceRecordId ?? data.records.at(-1)?.id ?? '')
+  const [source, setSource] = useState<string>(draft?.sourceSystem ?? previous?.sourceSystem ?? data.preset?.sourceSystem ?? 'REGISTERED_CAS')
+  const [method, setMethod] = useState<string>(draft?.invoicingMethod ?? previous?.invoicingMethod ?? data.preset?.invoicingMethod ?? 'COMPUTERIZED')
+  const amends = previous?.id ?? ''
   const [file, setFile] = useState<File | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [message, setMessage] = useState<string | null>(null)
@@ -245,7 +241,7 @@ function UploadForm({ data, onChanged, onReview }: { data: VendorOrderInvoices; 
     if (centavos === null) local.amount = 'Enter the invoice total.'
     if (vatCentavos === null) local.vat = 'Enter a valid VAT amount or leave it blank.'
     if (type === 'VENDOR_ADJUSTMENT_DOCUMENT' && !amends) local.amends = 'Choose the invoice this document adjusts.'
-    if (!file && !draft) local.file = 'Attach the PDF, JPG or PNG copy.'
+    if (!file && !draft && !previous) local.file = 'Attach the PDF, JPG or PNG copy.'
     setErrors(local)
     if (Object.keys(local).length) { setMessage('Check the highlighted fields.'); return }
     setBusy(true); setMessage(null)
@@ -264,7 +260,7 @@ function UploadForm({ data, onChanged, onReview }: { data: VendorOrderInvoices; 
     } finally { setBusy(false) }
   }
   return <>
-    <Button variant="secondary" className="w-fit" onClick={() => { onReview(); setOpen(true) }}>{unsent ? <Check size={17} className="text-status-success" aria-hidden="true" /> : <Upload size={16} aria-hidden="true" />}{unsent ? 'Review uploaded copy' : 'Upload invoice copy'}</Button>
+    <Button variant="secondary" className="w-fit" onClick={() => { onReview(); setOpen(true) }}>{unsent ? <Check size={17} className="text-status-success" aria-hidden="true" /> : <Upload size={16} aria-hidden="true" />}{correction ? unsent ? 'Review corrected invoice' : 'Prepare corrected invoice' : unsent ? 'Review uploaded copy' : 'Upload invoice copy'}</Button>
     <FormDialog open={open} title="Upload invoice copy" description="Prepare and review your copy here. The Buyer receives it only after you select Send." size="compact" busy={busy} onClose={() => setOpen(false)} footer={<div className="flex flex-wrap justify-end gap-3"><Button variant="secondary" disabled={busy} onClick={() => setOpen(false)}>Cancel</Button><Button type="submit" form={formId} disabled={busy}>{busy ? 'Saving…' : unsent ? 'Save changes' : 'Upload copy'}</Button></div>}>
       <form id={formId} className="grid min-w-0 gap-5" noValidate aria-label="Upload invoice copy" onSubmit={event => { event.preventDefault(); void submit() }}>
         {message && <StatusMessage tone="error">{message}</StatusMessage>}
@@ -277,16 +273,16 @@ function UploadForm({ data, onChanged, onReview }: { data: VendorOrderInvoices; 
         <fieldset className="grid gap-4 border-t border-border-default pt-5" aria-label="This invoice" disabled={busy}>
           <h3 className="text-sm font-semibold">This invoice</h3>
           <div className="grid gap-4 sm:grid-cols-2">
-            <FieldShell label="Invoice number" error={errors.invoice_number ?? errors.number}><input className={control} value={number} maxLength={64} onChange={event => setNumber(event.target.value)} /></FieldShell>
+            <FieldShell label="Invoice number" error={errors.invoice_number ?? errors.number} {...(correction ? { hint: 'Enter the new correction document number. Earlier invoice numbers remain in the history.' } : {})}><input className={control} value={number} maxLength={64} onChange={event => setNumber(event.target.value)} /></FieldShell>
             <FieldShell label="Invoice date" error={errors.issued_on}><input type="date" className={control} max={today} value={issuedOn} onChange={event => setIssuedOn(event.target.value)} /></FieldShell>
             <FieldShell label="Invoice total (₱)" error={errors.amount_centavos ?? errors.amount}><input className={control} inputMode="decimal" placeholder="0.00" value={amount} onChange={event => setAmount(event.target.value)} /></FieldShell>
             <FieldShell label="VAT shown (₱, optional)" error={errors.vat_centavos ?? errors.vat}><input className={control} inputMode="decimal" placeholder="0.00" value={vat} onChange={event => setVat(event.target.value)} /></FieldShell>
-            {data.records.length > 0 && <FieldShell label="Corrects invoice" error={errors.amends_invoice_record_id ?? errors.amends}><select className={control} value={amends} onChange={event => setAmends(event.target.value)}>{data.records.map(record => <option key={record.id} value={record.id}>{record.invoiceNumber}</option>)}</select></FieldShell>}
+            {previous && <p className="text-sm text-text-secondary sm:col-span-2">Corrects invoice <span className="font-semibold text-text-strong">{previous.invoiceNumber}</span>. The sent original stays unchanged.</p>}
           </div>
           {data.lines.length > 1 && <fieldset className="grid gap-2"><legend className="text-sm font-semibold">Lines covered (leave unchecked for the whole order)</legend>{data.lines.map(line => <label key={line.orderLineId} className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" className="h-5 w-5 accent-action-primary" checked={lines.includes(line.orderLineId)} onChange={event => setLines(current => event.target.checked ? [...current, line.orderLineId] : current.filter(id => id !== line.orderLineId))} />{line.displayName}</label>)}</fieldset>}
         </fieldset>
-        {draft && <p className="flex items-center gap-2 text-sm"><Check size={16} className="text-status-success" aria-hidden="true" />Current copy: {draft.fileName ?? 'Invoice document'}. Choose another file to replace it.</p>}
-        <FileSelectionField label="Copy (PDF, JPG or PNG)" accept="application/pdf,image/png,image/jpeg" hint="Upload the issued invoice copy. It stays private until sent." file={file} disabled={busy} required={!draft} error={errors.file} onChange={setFile} />
+        {(draft || previous) && <p className="flex items-center gap-2 text-sm"><Check size={16} className="shrink-0 text-status-success" aria-hidden="true" />Current copy: {existingFile ?? 'Invoice document'}. Keep it for a details correction, or choose another file to replace it.</p>}
+        <FileSelectionField label="Copy (PDF, JPG or PNG)" accept="application/pdf,image/png,image/jpeg" hint="Upload the issued invoice copy. It stays private until sent." file={file} disabled={busy} required={!draft && !previous} error={errors.file} onChange={setFile} />
         <p className="text-xs leading-5 text-text-secondary">TEST documents remain DEMO samples. Sending locks this version and never changes the Buyer’s accepted order amount.</p>
       </form>
     </FormDialog>

@@ -45,7 +45,7 @@ test('invoice list and document details reflow and retain selection and uploads'
         order_id: orderId, order_reference: item?.order_reference ?? 'ORD-2026-NEEDS-COPY', issuer_name: 'Sample Supply Corporation',
         status: item || sent ? 'ISSUED' : 'NOT_YET_UPLOADED', records: item ? [item] : sent ? [{ ...records[0], id: 'record-new', invoice_number: 'SAMPLE-NEW' }] : [], requests: [], platform_documents: [],
         buyer_name: 'Sample Buyer Construction', billing_details: item ? { billing_name: 'Sample Buyer Construction', billing_address: 'Sample billing address, Quezon City', tin_masked: '•••• 1234' } : null,
-        can_upload: !item && !sent, can_send: prepared && !sent, can_open_files: true, draft: prepared ? { ...draft, ...(sent ? { sent_record_id: 'record-new', lock_version: 2 } : {}) } : null, preset, order_summary: summary, invoice_types: ['VENDOR_GOODS_INVOICE', 'VENDOR_ADJUSTMENT_DOCUMENT'],
+        can_upload: !sent && (!item || item.reconciliation_state === 'INVOICE_RECONCILIATION_REQUIRED'), can_send: prepared && !sent, can_open_files: true, draft: prepared ? { ...draft, ...(sent ? { sent_record_id: 'record-new', lock_version: 2 } : {}) } : null, preset, order_summary: summary, invoice_types: ['VENDOR_GOODS_INVOICE', 'VENDOR_ADJUSTMENT_DOCUMENT'],
         source_systems: ['REGISTERED_CAS'], invoicing_methods: ['COMPUTERIZED'],
         lines: [{ order_line_id: 'line-1', display_name: 'Portland cement · 40 kg bags' }], issuance_notice: 'Issue the invoice when legally due.',
       }
@@ -64,7 +64,15 @@ test('invoice list and document details reflow and retain selection and uploads'
   await expect(second).toHaveAttribute('aria-pressed', 'true')
   await expect(sheet.getByRole('heading', { name: 'SAMPLE-002' })).toBeVisible()
   await expect(sheet.getByText('Amount mismatch needs review', { exact: true })).toBeVisible()
-  await expect(sheet.getByRole('button', { name: 'Explain amount mismatch' })).toBeVisible()
+  await expect(sheet.getByRole('button', { name: 'Prepare corrected invoice' })).toBeVisible()
+  await sheet.getByRole('button', { name: 'Prepare corrected invoice' }).click()
+  const correction = page.getByRole('dialog', { name: 'Upload invoice copy', exact: true })
+  await expect(correction.getByLabel('Invoice total (₱)', { exact: true })).toHaveValue('4250.00')
+  await expect(correction.getByText('SAMPLE-002', { exact: true })).toBeVisible()
+  await expect(correction.getByLabel('Copy (PDF, JPG or PNG)', { exact: true })).not.toHaveAttribute('required')
+  expect(await correction.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+  await page.screenshot({ path: `test-results/invoice-correction-${page.viewportSize()!.width}.png` })
+  await correction.getByRole('button', { name: 'Cancel', exact: true }).click()
   await expect(sheet.getByRole('link', { name: 'View order' })).toHaveAttribute('href', '/orders/order-1#invoices')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   expect(await sheet.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)

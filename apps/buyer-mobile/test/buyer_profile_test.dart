@@ -1,4 +1,8 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:materyalph/design_system/theme.dart';
@@ -6,11 +10,27 @@ import 'package:materyalph/features/notifications/notification_scope.dart';
 import 'package:materyalph/features/notifications/notification_settings_screen.dart';
 import 'package:materyalph/features/notifications/notifications_screen.dart';
 import 'package:materyalph/screens/buyer_home_screen.dart';
+import 'package:materyalph/screens/buyer_profile_screen.dart';
+import 'package:materyalph/features/trust/buyer_ratings_section.dart';
+import 'package:materyalph/features/trust/trust_models.dart';
 import 'package:materyalph/widgets/buyer_account_widgets.dart';
 import 'buyer_account_test.dart' as fixtures;
 import 'fulfillment_badges_test.dart' show notifications;
+import 'trust_fakes.dart';
 
 void main() {
+  setUpAll(() async {
+    await (FontLoader(
+      'Inter',
+    )..addFont(rootBundle.load('assets/fonts/Inter-Variable.ttf'))).load();
+    await (FontLoader(
+      'MaterialIcons',
+    )..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
+    await (FontLoader('packages/lucide_icons_flutter/Lucide')..addFont(
+          rootBundle.load('packages/lucide_icons_flutter/assets/lucide.ttf'),
+        ))
+        .load();
+  });
   testWidgets('Profile stays navigable when no repository is supplied', (
     tester,
   ) async {
@@ -66,7 +86,10 @@ void main() {
             expect(tester.takeException(), isNull);
           }
           expect(find.text('Buyer fixture'), findsOneWidget);
-          expect(find.text('b***@example.test'), findsOneWidget);
+          expect(
+            find.text('buyer.with.a.long.email.address@example.test'),
+            findsOneWidget,
+          );
           expect(find.text('+639171234567'), findsOneWidget);
           for (var i = 0; i < positions.length; i++) {
             expect(
@@ -105,6 +128,97 @@ void main() {
       );
     }
   }
+
+  testWidgets(
+    'Profile has an inline score and opens Buyer rating below Account Setting',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final reviews = FakeReviewsRepository()
+        ..received = BuyerReceivedRatingsView(
+          summary: const BuyerRatingSummaryView(count: 5, score: 4.25),
+          items: [
+            BuyerReceivedRatingView(
+              id: 'received-rating',
+              storeName: 'Sample Supply',
+              orderReference: 'ORD-SAMPLE',
+              ratings: const ReviewRatingsView(
+                inquirySeriousness: 4,
+                communicationQuality: 5,
+                paymentReliability: 4,
+              ),
+              submittedAt: DateTime.utc(2026, 11, 5),
+            ),
+          ],
+          total: 1,
+        );
+      await tester.pumpWidget(
+        RepaintBoundary(
+          key: const ValueKey('buyer-profile-preview'),
+          child: MaterialApp(
+            theme: BuyerTheme.light,
+            home: BuyerProfileScreen(
+              repository: fixtures.repository(),
+              reviewsRepository: reviews,
+              onSignedOut: () {},
+              onSignOut: () async {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Your Buyer rating'), findsNothing);
+      expect(find.text('4.25'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Your Buyer rating: 4.25 of 5'),
+        findsOneWidget,
+      );
+      expect(find.byTooltip('Email verified'), findsOneWidget);
+      expect(
+        find.text('buyer.with.a.long.email.address@example.test'),
+        findsOneWidget,
+      );
+      expect(
+        (tester.getTopLeft(find.text('Buyer fixture')).dy -
+                tester.getTopLeft(find.text('4.25')).dy)
+            .abs(),
+        lessThan(16),
+      );
+      await captureProfile(tester, 'profile');
+      await reveal(tester, 'Buyer rating');
+      final rows = tester
+          .widgetList<BuyerMenuRow>(find.byType(BuyerMenuRow))
+          .map((row) => row.label)
+          .toList();
+      expect(rows.indexOf('Buyer rating'), rows.indexOf('Account Setting') + 1);
+      await tester.tap(find.text('Buyer rating'));
+      await tester.pumpAndSettle();
+      expect(find.byType(BuyerRatingsScreen), findsOneWidget);
+      expect(find.text('4.25 / 5'), findsOneWidget);
+      expect(find.text('Sample Supply'), findsOneWidget);
+      await captureProfile(tester, 'buyer-rating');
+      await tester.tap(find.byTooltip('Back'));
+      await tester.pumpAndSettle();
+      expect(find.byType(BuyerRatingsScreen), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'Profile does not show an email check without email verification',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BuyerProfileScreen(
+            repository: fixtures.repository(emailVerified: false),
+            onSignedOut: () {},
+            onSignOut: () async {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Email verified'), findsNothing);
+    },
+  );
 
   testWidgets(
     'notifications open the inbox and deletion opens its confirmation page',
@@ -174,6 +288,21 @@ void main() {
       expect(BuyerTheme.systemUi, isA<SystemUiOverlayStyle>());
     },
   );
+}
+
+Future<void> captureProfile(WidgetTester tester, String name) async {
+  if (!const bool.fromEnvironment('CAPTURE_BUYER_PROFILE')) return;
+  final boundary = tester.renderObject<RenderRepaintBoundary>(
+    find.byKey(const ValueKey('buyer-profile-preview')),
+  );
+  await tester.runAsync(() async {
+    final image = await boundary.toImage(pixelRatio: 2);
+    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    final file = File('../../.tmp/buyer-profile-review/$name.png');
+    await file.parent.create(recursive: true);
+    await file.writeAsBytes(bytes!.buffer.asUint8List());
+    image.dispose();
+  });
 }
 
 Future<void> reveal(WidgetTester tester, String label) async {

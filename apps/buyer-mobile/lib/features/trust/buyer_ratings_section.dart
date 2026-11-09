@@ -3,22 +3,46 @@ import 'package:flutter/material.dart';
 
 import '../../design_system/components/star_rating.dart';
 import '../../design_system/theme.dart';
+import '../../widgets/buyer_account_widgets.dart' show buyerAccountBar;
 import '../map_discovery/discovery_models.dart';
 import '../orders/order_models.dart' show formatManilaDateTime;
 import 'reviews_repository.dart';
 import 'trust_models.dart';
 
-/// The Buyer's received ratings live in Profile; submitted product/store reviews keep their own entry.
+/// Received ratings have their own page; submitted product/store reviews keep their own entry.
+class BuyerRatingsScreen extends StatelessWidget {
+  const BuyerRatingsScreen({super.key, required this.repository});
+  final ReviewsRepository repository;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: buyerAccountBar(context, 'Buyer rating'),
+    body: SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        children: [
+          BuyerRatingsSection(repository: repository, initiallyExpanded: true),
+        ],
+      ),
+    ),
+  );
+}
+
+/// Shares rating loading, refresh and failure handling between the header and details page.
 class BuyerRatingsSection extends StatefulWidget {
   const BuyerRatingsSection({
     super.key,
     required this.repository,
     this.active = true,
     this.refreshRevision = 0,
+    this.compact = false,
+    this.initiallyExpanded = false,
   });
   final ReviewsRepository repository;
   final bool active;
   final int refreshRevision;
+  final bool compact;
+  final bool initiallyExpanded;
   @override
   State<BuyerRatingsSection> createState() => _BuyerRatingsSectionState();
 }
@@ -27,7 +51,7 @@ class _BuyerRatingsSectionState extends State<BuyerRatingsSection> {
   BuyerReceivedRatingsView? _data;
   String? _error;
   bool _loading = true;
-  bool _expanded = false;
+  late bool _expanded = widget.initiallyExpanded;
   int _revision = 0;
   int _requestedPage = 1;
 
@@ -76,13 +100,47 @@ class _BuyerRatingsSectionState extends State<BuyerRatingsSection> {
   Widget build(BuildContext context) {
     final data = _data;
     final summary = data?.summary;
-    return Container(
-      margin: const EdgeInsets.only(top: 20, bottom: 4),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border.all(color: BuyerTheme.border),
-        borderRadius: BorderRadius.circular(12),
-      ),
+    if (widget.compact) {
+      if (_error != null) {
+        return IconButton(
+          tooltip: 'Could not load Buyer rating. Tap to retry.',
+          onPressed: () => _load(_requestedPage),
+          icon: const Icon(Icons.refresh, size: 18),
+        );
+      }
+      final score = summary?.score;
+      final label = _loading
+          ? 'Loading your Buyer rating'
+          : score == null
+          ? 'Building your rating. Your score appears after ${summary!.minimumCount} eligible completed transactions.'
+          : 'Your Buyer rating: ${score.toStringAsFixed(2)} of 5';
+      return Tooltip(
+        message: label,
+        excludeFromSemantics: true,
+        child: Semantics(
+          container: true,
+          label: label,
+          excludeSemantics: true,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                score == null ? Icons.star_outline : Icons.star,
+                size: 18,
+                color: BuyerTheme.action,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                _loading ? '…' : score?.toStringAsFixed(2) ?? '—',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

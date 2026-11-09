@@ -124,6 +124,7 @@ final class ProjectBudget
      * @param array<string, mixed> $input */
     public function guard(Request $request, object $package, int $amount, array $input, ?string $orderId = null): void
     {
+        ProjectArchives::assertProcurementOpen($package);
         $project = DB::table('projects')->where('id', $package->project_id)->lockForUpdate()->first();
         $p = $this->metrics($project, excludeOrder: $orderId);
         $w = $this->metrics($project, $package, $orderId);

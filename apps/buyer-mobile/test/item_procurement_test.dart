@@ -153,6 +153,38 @@ Widget _explore(_Harness h) => ExploreScreen(
 );
 
 void main() {
+  testWidgets(
+    'product purchase labels use distinct Buyers rather than unit quantities',
+    (tester) async {
+      final repository = FakeProcurementRepository(
+        detail: listingDetail(uniqueBuyers: 2),
+      );
+      final h = await _harness(repository);
+      await _pump(
+        tester,
+        ListingCard(
+          card: listingCard('l-1', sold: '417.0000', uniqueBuyers: 2),
+          onOpen: () {},
+          onFavorite: () {},
+        ),
+      );
+      expect(find.textContaining('2 buyers'), findsOneWidget);
+      expect(find.textContaining('417'), findsNothing);
+      await _pump(
+        tester,
+        ProductDetailsScreen(
+          listingId: 'listing-1',
+          repository: repository,
+          explore: h.explore,
+          cart: h.cart,
+          navigation: h.navigation,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('2 buyers'), findsOneWidget);
+    },
+  );
+
   group('Explore dashboard', () {
     testWidgets(
       'loads categories while keeping only search and radius in the header',
@@ -583,6 +615,84 @@ void main() {
   });
 
   group('Cart and checkout preview', () {
+    testWidgets(
+      'cart opens saved options and saves the existing line without adding another',
+      (tester) async {
+        final repository = FakeProcurementRepository(detail: listingDetail());
+        final h = await _harness(repository);
+        await h.cart.load();
+        await _pump(
+          tester,
+          CartScreen(controller: h.cart, navigation: h.navigation),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Fulfillment for this store'), findsNothing);
+        expect(find.byType(QuantityStepper), findsNothing);
+        expect(find.byType(DecimalQuantityField), findsNothing);
+        await tester.tap(find.text('Apo Longspan Roofing - Tilespan'));
+        await tester.pumpAndSettle();
+        expect(find.byType(ProductDetailsScreen), findsOneWidget);
+        final page = tester.widget<ProductDetailsScreen>(
+          find.byType(ProductDetailsScreen),
+        );
+        expect(page.cartLine?.id, 'a');
+        expect(page.initialVariantId, 'variant-a');
+        expect(page.initialFulfillment, 'DELIVERY');
+        await tester.tap(
+          find.widgetWithText(FilledButton, 'Save changes').first,
+        );
+        await tester.pumpAndSettle();
+        // Pick pickup so delivery estimates are not required for this edit.
+        await tester.ensureVisible(find.text('Self-Pickup').last);
+        await tester.tap(find.text('Self-Pickup').last);
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(
+          find.widgetWithText(FilledButton, 'Save changes').last,
+        );
+        await tester.tap(
+          find.widgetWithText(FilledButton, 'Save changes').last,
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(ProductDetailsScreen), findsNothing);
+        expect(repository.addKeys, isEmpty);
+        expect(repository.configuredLines.single.lineId, 'a');
+        expect(repository.configuredLines.single.fulfillment, 'PICKUP');
+      },
+    );
+
+    testWidgets(
+      'checkout product links reopen saved options and refresh on return',
+      (tester) async {
+        final repository = FakeProcurementRepository(detail: listingDetail());
+        final h = await _harness(repository);
+        await h.cart.load();
+        await _pump(
+          tester,
+          CheckoutPreviewScreen(
+            controller: h.cart,
+            savedLocations: () => const [],
+            onOpenProduct: h.navigation.editCartLine,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Apo Longspan Roofing - Tilespan').first);
+        await tester.pumpAndSettle();
+        expect(find.byType(ProductDetailsScreen), findsOneWidget);
+        expect(
+          tester
+              .widget<ProductDetailsScreen>(find.byType(ProductDetailsScreen))
+              .cartLine
+              ?.id,
+          'a',
+        );
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+        expect(find.byType(CheckoutPreviewScreen), findsOneWidget);
+        expect(h.cart.preview, isNotNull);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
     testWidgets(
       'Buy opens finalization and continues to the existing checkout preview',
       (tester) async {

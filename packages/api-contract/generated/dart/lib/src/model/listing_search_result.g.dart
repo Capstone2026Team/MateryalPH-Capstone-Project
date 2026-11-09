@@ -156,6 +156,8 @@ class _$ListingSearchResult extends ListingSearchResult {
   @override
   final String unitsSold;
   @override
+  final int? uniqueBuyers;
+  @override
   final int distanceMeters;
   @override
   final BuiltList<ListingSearchResultBadgesEnum> badges;
@@ -188,6 +190,7 @@ class _$ListingSearchResult extends ListingSearchResult {
       required this.stockConfirmedAt,
       required this.productRating,
       required this.unitsSold,
+      this.uniqueBuyers,
       required this.distanceMeters,
       required this.badges,
       required this.isFavorite,
@@ -223,6 +226,7 @@ class _$ListingSearchResult extends ListingSearchResult {
         stockConfirmedAt == other.stockConfirmedAt &&
         productRating == other.productRating &&
         unitsSold == other.unitsSold &&
+        uniqueBuyers == other.uniqueBuyers &&
         distanceMeters == other.distanceMeters &&
         badges == other.badges &&
         isFavorite == other.isFavorite &&
@@ -249,6 +253,7 @@ class _$ListingSearchResult extends ListingSearchResult {
     _$hash = $jc(_$hash, stockConfirmedAt.hashCode);
     _$hash = $jc(_$hash, productRating.hashCode);
     _$hash = $jc(_$hash, unitsSold.hashCode);
+    _$hash = $jc(_$hash, uniqueBuyers.hashCode);
     _$hash = $jc(_$hash, distanceMeters.hashCode);
     _$hash = $jc(_$hash, badges.hashCode);
     _$hash = $jc(_$hash, isFavorite.hashCode);
@@ -277,6 +282,7 @@ class _$ListingSearchResult extends ListingSearchResult {
           ..add('stockConfirmedAt', stockConfirmedAt)
           ..add('productRating', productRating)
           ..add('unitsSold', unitsSold)
+          ..add('uniqueBuyers', uniqueBuyers)
           ..add('distanceMeters', distanceMeters)
           ..add('badges', badges)
           ..add('isFavorite', isFavorite)
@@ -359,6 +365,10 @@ class ListingSearchResultBuilder
   String? get unitsSold => _$this._unitsSold;
   set unitsSold(String? unitsSold) => _$this._unitsSold = unitsSold;
 
+  int? _uniqueBuyers;
+  int? get uniqueBuyers => _$this._uniqueBuyers;
+  set uniqueBuyers(int? uniqueBuyers) => _$this._uniqueBuyers = uniqueBuyers;
+
   int? _distanceMeters;
   int? get distanceMeters => _$this._distanceMeters;
   set distanceMeters(int? distanceMeters) =>
@@ -412,6 +422,7 @@ class ListingSearchResultBuilder
       _stockConfirmedAt = $v.stockConfirmedAt;
       _productRating = $v.productRating.toBuilder();
       _unitsSold = $v.unitsSold;
+      _uniqueBuyers = $v.uniqueBuyers;
       _distanceMeters = $v.distanceMeters;
       _badges = $v.badges.toBuilder();
       _isFavorite = $v.isFavorite;
@@ -464,6 +475,7 @@ class ListingSearchResultBuilder
             productRating: productRating.build(),
             unitsSold: BuiltValueNullFieldError.checkNotNull(
                 unitsSold, r'ListingSearchResult', 'unitsSold'),
+            uniqueBuyers: uniqueBuyers,
             distanceMeters: BuiltValueNullFieldError.checkNotNull(
                 distanceMeters, r'ListingSearchResult', 'distanceMeters'),
             badges: badges.build(),

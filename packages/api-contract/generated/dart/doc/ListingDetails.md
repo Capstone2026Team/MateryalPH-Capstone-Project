@@ -24,6 +24,7 @@ Name | Type | Description | Notes
 **compliance** | [**ListingCompliance**](ListingCompliance.md) |  |
 **productRating** | [**ProductRatingSummary**](ProductRatingSummary.md) |  |
 **unitsSold** | **String** |  |
+**uniqueBuyers** | **int** | Distinct Buyers with COMPLETED orders for this listing across all variants and repeat purchases. | [optional]
 **isFavorite** | **bool** |  |
 **purchasable** | **bool** |  |
 **notPurchasableReason** | **String** |  |

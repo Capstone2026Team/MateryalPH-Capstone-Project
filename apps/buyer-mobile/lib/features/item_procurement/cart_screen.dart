@@ -1,4 +1,3 @@
-import '../../design_system/quantity_policy.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -8,10 +7,11 @@ import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
 import '../map_discovery/discovery_models.dart';
 import 'cart_controller.dart';
+import 'cart_product_link.dart';
 import 'procurement_models.dart';
 import 'procurement_navigation.dart';
 
-/// Cart grouped by Vendor. Each group has its own fulfillment choice and validation band; a stale
+/// Cart grouped by Vendor. Each group keeps its validation band; a stale
 /// line is shown inline on its own group and never removes the rest of the cart.
 class CartScreen extends StatelessWidget {
   const CartScreen({
@@ -132,7 +132,11 @@ class CartScreen extends StatelessWidget {
             const SizedBox(height: 8),
           ],
           for (final group in cart.groups)
-            _GroupSection(controller: controller, group: group),
+            _GroupSection(
+              controller: controller,
+              group: group,
+              navigation: navigation,
+            ),
           if (cart.savedForLater.isNotEmpty)
             _Panel(
               children: [
@@ -153,6 +157,7 @@ class CartScreen extends StatelessWidget {
                     controller: controller,
                     line: line,
                     savedForLater: true,
+                    navigation: navigation,
                   ),
               ],
             ),
@@ -332,10 +337,15 @@ class _Panel extends StatelessWidget {
 }
 
 class _GroupSection extends StatelessWidget {
-  const _GroupSection({required this.controller, required this.group});
+  const _GroupSection({
+    required this.controller,
+    required this.group,
+    required this.navigation,
+  });
 
   final CartController controller;
   final CartGroupView group;
+  final ProcurementNavigation navigation;
 
   @override
   Widget build(BuildContext context) => _Panel(
@@ -377,10 +387,14 @@ class _GroupSection extends StatelessWidget {
             title: 'This store has paused new procurement',
           ),
         ),
-      _fulfillment(context),
       const Divider(height: 16),
       for (final line in group.lines)
-        _LineTile(controller: controller, line: line, savedForLater: false),
+        _LineTile(
+          controller: controller,
+          line: line,
+          savedForLater: false,
+          navigation: navigation,
+        ),
       Padding(
         padding: const EdgeInsets.only(right: 4, bottom: 8),
         child: Text(
@@ -391,72 +405,6 @@ class _GroupSection extends StatelessWidget {
       ),
     ],
   );
-
-  Widget _fulfillment(BuildContext context) {
-    final options = group.fulfillmentOptions;
-    if (options.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.only(right: 4),
-        child: StatusBand(
-          tone: BandTone.danger,
-          title: 'This store has no fulfillment method available',
-        ),
-      );
-    }
-    if (options.length == 1) {
-      return Row(
-        children: [
-          Icon(
-            options.first == 'DELIVERY' ? LucideIcons.truck : LucideIcons.store,
-            size: 16,
-            color: BuyerTheme.successStrong,
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              options.first == 'DELIVERY'
-                  ? 'Site Delivery only'
-                  : 'Self-Pickup only',
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      );
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Fulfillment for this store',
-          style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
-        ),
-        Wrap(
-          spacing: 8,
-          children: [
-            FilterPill(
-              selected: group.fulfillmentMethod == 'DELIVERY',
-              label: 'Site Delivery',
-              onTap: controller.busy
-                  ? null
-                  : () => controller.setFulfillment(group.vendorId, 'DELIVERY'),
-            ),
-            FilterPill(
-              selected: group.fulfillmentMethod == 'PICKUP',
-              label: 'Self-Pickup',
-              onTap: controller.busy
-                  ? null
-                  : () => controller.setFulfillment(group.vendorId, 'PICKUP'),
-            ),
-          ],
-        ),
-        if (group.fulfillmentMethod == null)
-          const Text(
-            'Choose how you will receive this store’s items.',
-            style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
-          ),
-      ],
-    );
-  }
 }
 
 class _LineTile extends StatelessWidget {
@@ -464,18 +412,17 @@ class _LineTile extends StatelessWidget {
     required this.controller,
     required this.line,
     required this.savedForLater,
+    required this.navigation,
   });
 
   final CartController controller;
   final CartLineView line;
   final bool savedForLater;
+  final ProcurementNavigation navigation;
 
   @override
   Widget build(BuildContext context) {
     final busy = controller.busy;
-    final whole = line.quantityStep == '1';
-    final quantity = double.tryParse(line.quantity) ?? 1;
-    final large = MediaQuery.textScalerOf(context).scale(1) > 1.3;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Column(
@@ -499,62 +446,12 @@ class _LineTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 4),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: SizedBox(
-                  width: large ? 44 : 64,
-                  height: large ? 44 : 64,
-                  child: line.imageUrl == null
-                      ? const ColoredBox(
-                          color: BuyerTheme.canvas,
-                          child: Icon(
-                            LucideIcons.package,
-                            color: BuyerTheme.muted,
-                          ),
-                        )
-                      : Image.network(
-                          line.imageUrl!,
-                          fit: BoxFit.cover,
-                          cacheWidth: 192,
-                          errorBuilder: (_, _, _) => const ColoredBox(
-                            color: BuyerTheme.canvas,
-                            child: Icon(LucideIcons.imageOff),
-                          ),
-                        ),
-                ),
-              ),
-              const SizedBox(width: 10),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      line.displayName,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    if (line.variantLabel != null)
-                      Text(
-                        line.variantLabel!,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: BuyerTheme.muted,
-                        ),
-                      ),
-                    if (line.appliedUnitPriceCentavos != null)
-                      Text(
-                        '${formatPeso(line.appliedUnitPriceCentavos!)} / ${line.unitName}${line.volumeTierApplied ? ' · volume price' : ''}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: BuyerTheme.action,
-                        ),
-                      ),
-                    if (line.stockLabel != null)
-                      StockLabelText(label: line.stockLabel, compact: true),
-                  ],
+                child: CartProductLink(
+                  line: line,
+                  onTap: busy
+                      ? null
+                      : () => navigation.editCartLine(context, line),
                 ),
               ),
               IconButton(
@@ -594,55 +491,6 @@ class _LineTile extends StatelessWidget {
                     : null,
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.only(left: 40),
-            child: Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 8,
-              children: [
-                Text(
-                  savedForLater
-                      ? 'Saved for later · ${formatQuantity(line.quantity)} ${line.unitName}'
-                      : line.lineTotalCentavos != null
-                      ? 'Line total ${formatPeso(line.lineTotalCentavos!)}'
-                      : '',
-                  style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
-                ),
-                if (!savedForLater && line.available && whole)
-                  QuantityStepper(
-                    compact: true,
-                    quantity: quantity.round(),
-                    unitName: line.unitName,
-                    enabled: !busy,
-                    onChanged: (value) =>
-                        controller.changeQuantity(line, '$value'),
-                  )
-                else if (!savedForLater && line.available)
-                  DecimalQuantityField(
-                    label: line.readyMixedConcrete
-                        ? 'Order volume (m³)'
-                        : sellingQuantityLabel(line.unitCode),
-                    value: formatQuantity(line.quantity),
-                    unitName: line.unitName,
-                    decimals: stepDecimals(line.quantityStep),
-                    enabled: !busy,
-                    commitOnSubmit: true,
-                    hint: 'Press Done to update.',
-                    onChanged: (value) {
-                      if (num.parse(value) != num.parse(line.quantity)) {
-                        controller.changeQuantity(line, value);
-                      }
-                    },
-                  )
-                else if (!savedForLater)
-                  Text(
-                    'Quantity ${formatQuantity(line.quantity)} ${line.unitName}',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-              ],
-            ),
-          ),
           const Divider(height: 12),
         ],
       ),

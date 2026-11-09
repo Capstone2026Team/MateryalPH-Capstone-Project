@@ -40,8 +40,8 @@ final class MarketplaceSearchService
     public const MAX_CANDIDATES = 2000;
 
     /**
-     * TOP_SELLING (Store Profile Shop Front, Buyer request 2026-10-16) ranks by the card's public "sold" figure:
-     * quantity on COMPLETED orders in each listing's sale unit.
+     * TOP_SELLING ranks by quantity on COMPLETED orders in each listing's sale unit.
+     * The displayed purchase count separately counts distinct Buyers.
      */
     public const SORTS = ['BEST_DEAL', 'DISTANCE', 'PRICE', 'RATING', 'FAVORITES_FIRST', 'DISTANCE_DESC', 'PRICE_DESC', 'RATING_ASC', 'TOP_SELLING'];
 
@@ -49,6 +49,8 @@ final class MarketplaceSearchService
     public const BEST_PRICE_MIN_VENDORS = 2;
 
     public const FUZZY_THRESHOLD = 0.3;
+
+    public const ORDERING_VERSION = 'name-match-first.v1';
 
     public function __construct(
         private readonly BuyerProfiles $profiles,
@@ -118,7 +120,7 @@ final class MarketplaceSearchService
             'default_sort' => $text === '' ? 'DISTANCE' : 'BEST_DEAL',
             'query' => ['text' => $input['query'] ?? null, 'normalized' => $text === '' ? null : $text],
             'ranking' => ['weights' => $weights->values, 'personalized' => $personalized, 'default_weights' => RankingWeights::platformDefault()['weights']->values,
-                'tie_breakers' => $this->tieBreakers($sort)],
+                'tie_breakers' => $this->tieBreakers($sort, $text !== '')],
             'total' => $total,
             'per_page' => $perPage,
             'has_more' => $hasMore,
@@ -216,12 +218,12 @@ final class MarketplaceSearchService
             'RATING' => [$rated ? 1 : 0, $rated ? 0 : -(int) bcmul((string) $offer['rating']['average'], '100', 0), -$offer['rating']['count'], $offer['distance'], $offer['listing_id'], $offer['variant_id']],
             'FAVORITES_FIRST' => [$offer['favorite'] ? 0 : 1, $srs, $offer['distance'], $offer['price'], $offer['listing_id'], $offer['variant_id']],
             'TOP_SELLING' => [-(int) bcmul((string) $offer['sold'], '10000', 0), $srs, $offer['distance'], $offer['price'], $offer['listing_id'], $offer['variant_id']],
-            default => [$srs, $offer['distance'], $offer['price'], $offer['listing_id'], $offer['variant_id']],
+            default => [(int) $offer['row']->text_match_tier, (int) $offer['row']->text_match_distance, $srs, $offer['distance'], $offer['price'], $offer['listing_id'], $offer['variant_id']],
         };
     }
 
     /** @return list<string> */
-    private function tieBreakers(string $sort): array
+    private function tieBreakers(string $sort, bool $hasText): array
     {
         return match ($sort) {
             'DISTANCE_DESC' => ['distance_desc', 'srs_desc', 'unit_price_asc', 'listing_id_asc'],
@@ -232,7 +234,7 @@ final class MarketplaceSearchService
             'RATING' => ['rated_first', 'product_rating_desc', 'rating_count_desc', 'distance_asc', 'listing_id_asc'],
             'FAVORITES_FIRST' => ['favorite_first', 'srs_desc', 'distance_asc', 'unit_price_asc', 'listing_id_asc'],
             'TOP_SELLING' => ['units_sold_desc', 'srs_desc', 'distance_asc', 'unit_price_asc', 'listing_id_asc'],
-            default => ['srs_desc', 'distance_asc', 'unit_price_asc', 'listing_id_asc'],
+            default => [...($hasText ? ['text_match_tier_asc', 'text_match_distance_asc'] : []), 'srs_desc', 'distance_asc', 'unit_price_asc', 'listing_id_asc'],
         };
     }
 
@@ -255,6 +257,14 @@ final class MarketplaceSearchService
             ->selectRaw('(SELECT max(d.maximum_distance_km) FROM delivery_service_areas d WHERE d.vendor_organization_id = o.id AND d.active) AS delivery_max_km');
         if ($text !== '') {
             $tokens = array_slice(array_values(array_filter(explode(' ', $text), static fn (string $token): bool => $token !== '')), 0, 8);
+            $name = "trim(regexp_replace(lower(l.display_name), '\\s+', ' ', 'g'))";
+            $nameMatches = implode(' AND ', array_fill(0, count($tokens), "$name LIKE ? ESCAPE '\\'"));
+            $facts = "lower(concat_ws(' ', l.display_name, pr.brand, pr.model, m.name, v.label, mc.name))";
+            $factsMatch = implode(' AND ', array_fill(0, count($tokens), "$facts LIKE ? ESCAPE '\\'"));
+            $patterns = array_map(static fn (string $token): string => '%'.addcslashes($token, '%_\\').'%', $tokens);
+            $query->selectRaw("CASE WHEN $name = ? THEN 0 WHEN ($nameMatches) THEN 1 WHEN ($factsMatch) OR EXISTS (SELECT 1 FROM material_aliases ma WHERE ma.material_id = pr.material_id AND ma.normalized_alias = ?) THEN 2 ELSE 3 END AS text_match_tier", [$text, ...$patterns, ...$patterns, $text]);
+            // Deal score decides between full matches. Similarity only orders fuzzy alternatives.
+            $query->selectRaw("CASE WHEN ($nameMatches) OR ($factsMatch) OR EXISTS (SELECT 1 FROM material_aliases ma WHERE ma.material_id = pr.material_id AND ma.normalized_alias = ?) THEN 0 ELSE round((1 - greatest(similarity($name, ?), similarity(lower(coalesce(m.name, '')), ?), coalesce((SELECT max(similarity(ma.normalized_alias, ?)) FROM material_aliases ma WHERE ma.material_id = pr.material_id), 0))) * 1000000)::int END AS text_match_distance", [...$patterns, ...$patterns, $text, $text, $text, $text]);
             $query->where(function (Builder $match) use ($tokens, $text): void {
                 $match->where(function (Builder $all) use ($tokens): void {
                     foreach ($tokens as $token) {
@@ -266,6 +276,8 @@ final class MarketplaceSearchService
                     ->orWhereExists(fn (Builder $alias) => $alias->selectRaw('1')->from('material_aliases as ma')->whereColumn('ma.material_id', 'pr.material_id')
                         ->where(fn (Builder $near) => $near->where('ma.normalized_alias', $text)->orWhereRaw('similarity(ma.normalized_alias, ?) >= ?', [$text, self::FUZZY_THRESHOLD])));
             });
+        } else {
+            $query->selectRaw('0 AS text_match_tier, 0 AS text_match_distance');
         }
         if (isset($input['category_id'])) {
             $query->where('l.material_category_id', $input['category_id']);
@@ -296,6 +308,10 @@ final class MarketplaceSearchService
         }
         if (isset($input['vendor_id'])) {
             $query->where('o.id', $input['vendor_id']);
+        }
+
+        if ($text !== '' && ($input['sort'] ?? 'BEST_DEAL') === 'BEST_DEAL') {
+            $query->orderBy('text_match_tier')->orderBy('text_match_distance');
         }
 
         return $query->orderByRaw('distance_meters ASC')->orderBy('v.id');
@@ -331,6 +347,7 @@ final class MarketplaceSearchService
         $organizationIds = array_values(array_unique(array_map(static fn (array $listing): string => $listing['headline']['organization_id'], $page)));
         $images = $this->facts->images($listingIds);
         $sold = $this->facts->unitsSold($listingIds);
+        $buyers = $this->facts->uniqueBuyers($listingIds);
         $summaries = $this->vendors->summaries($organizationIds);
         $items = [];
         foreach ($page as $index => $listing) {
@@ -355,6 +372,7 @@ final class MarketplaceSearchService
                 'stock_confirmed_at' => Carbon::parse((string) $row->stock_confirmed_at)->toIso8601String(),
                 'product_rating' => ['average' => $offer['rating']['average'], 'count' => $offer['rating']['count'], 'label' => $offer['rating']['average'] === null ? 'New' : $offer['rating']['average'].' of 5'],
                 'units_sold' => $sold[$offer['listing_id']] ?? '0.0000',
+                'unique_buyers' => $buyers[$offer['listing_id']] ?? 0,
                 'distance_meters' => $offer['distance'],
                 'badges' => array_values(array_filter([$offer['best_price'] ? 'BEST_PRICE' : null, $row->regulated && $row->compliance_status === 'VERIFIED' ? 'PS_ICC_VERIFIED' : null])),
                 'is_favorite' => $offer['favorite'],
@@ -377,7 +395,7 @@ final class MarketplaceSearchService
         $filters = array_intersect_key($input, array_flip(['category_id', 'brand', 'variant', 'availability', 'fulfillment', 'favorites_only', 'compliance', 'min_price_centavos', 'max_price_centavos', 'vendor_id', 'per_page']));
         ksort($filters);
 
-        return substr(hash('sha256', implode('|', [$scope->originVersion, (string) $scope->radiusKm, $text, $sort, $weights->fingerprint(), json_encode($filters, JSON_THROW_ON_ERROR)])), 0, 24);
+        return substr(hash('sha256', implode('|', [self::ORDERING_VERSION, $scope->originVersion, (string) $scope->radiusKm, $text, $sort, $weights->fingerprint(), json_encode($filters, JSON_THROW_ON_ERROR)])), 0, 24);
     }
 
     /** @param list<int|string> $key */

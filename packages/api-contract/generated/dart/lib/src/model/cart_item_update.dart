@@ -3,18 +3,22 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
 part 'cart_item_update.g.dart';
 
-/// CartItemUpdate
+/// Atomically edits an owned cart line. A listing_variant_id requires expected_price_version_id and must belong to the same listing. A duplicate option returns CART_VARIANT_ALREADY_EXISTS (409). fulfillment_method changes the entire Vendor group and retains all delivery eligibility checks. No stock is reserved.
 ///
 /// Properties:
 /// * [lockVersion]
 /// * [quantity]
 /// * [savedForLater]
 /// * [acceptCurrentPrice]
+/// * [listingVariantId]
+/// * [expectedPriceVersionId]
+/// * [fulfillmentMethod]
 @BuiltValue()
 abstract class CartItemUpdate implements Built<CartItemUpdate, CartItemUpdateBuilder> {
   @BuiltValueField(wireName: r'lock_version')
@@ -28,6 +32,16 @@ abstract class CartItemUpdate implements Built<CartItemUpdate, CartItemUpdateBui
 
   @BuiltValueField(wireName: r'accept_current_price')
   bool? get acceptCurrentPrice;
+
+  @BuiltValueField(wireName: r'listing_variant_id')
+  String? get listingVariantId;
+
+  @BuiltValueField(wireName: r'expected_price_version_id')
+  String? get expectedPriceVersionId;
+
+  @BuiltValueField(wireName: r'fulfillment_method')
+  CartItemUpdateFulfillmentMethodEnum? get fulfillmentMethod;
+  // enum fulfillmentMethodEnum {  DELIVERY,  PICKUP,  };
 
   CartItemUpdate._();
 
@@ -76,6 +90,27 @@ class _$CartItemUpdateSerializer implements PrimitiveSerializer<CartItemUpdate> 
       yield serializers.serialize(
         object.acceptCurrentPrice,
         specifiedType: const FullType(bool),
+      );
+    }
+    if (object.listingVariantId != null) {
+      yield r'listing_variant_id';
+      yield serializers.serialize(
+        object.listingVariantId,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.expectedPriceVersionId != null) {
+      yield r'expected_price_version_id';
+      yield serializers.serialize(
+        object.expectedPriceVersionId,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.fulfillmentMethod != null) {
+      yield r'fulfillment_method';
+      yield serializers.serialize(
+        object.fulfillmentMethod,
+        specifiedType: const FullType(CartItemUpdateFulfillmentMethodEnum),
       );
     }
   }
@@ -132,6 +167,30 @@ class _$CartItemUpdateSerializer implements PrimitiveSerializer<CartItemUpdate> 
           if (valueDes == null) continue;
           result.acceptCurrentPrice = valueDes;
           break;
+        case r'listing_variant_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.listingVariantId = valueDes;
+          break;
+        case r'expected_price_version_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.expectedPriceVersionId = valueDes;
+          break;
+        case r'fulfillment_method':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(CartItemUpdateFulfillmentMethodEnum),
+          ) as CartItemUpdateFulfillmentMethodEnum?;
+          if (valueDes == null) continue;
+          result.fulfillmentMethod = valueDes;
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -161,4 +220,19 @@ class _$CartItemUpdateSerializer implements PrimitiveSerializer<CartItemUpdate> 
   }
 }
 
+
+class CartItemUpdateFulfillmentMethodEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'DELIVERY')
+  static const CartItemUpdateFulfillmentMethodEnum DELIVERY = _$cartItemUpdateFulfillmentMethodEnum_DELIVERY;
+  @BuiltValueEnumConst(wireName: r'PICKUP')
+  static const CartItemUpdateFulfillmentMethodEnum PICKUP = _$cartItemUpdateFulfillmentMethodEnum_PICKUP;
+
+  static Serializer<CartItemUpdateFulfillmentMethodEnum> get serializer => _$cartItemUpdateFulfillmentMethodEnumSerializer;
+
+  const CartItemUpdateFulfillmentMethodEnum._(String name): super(name);
+
+  static BuiltSet<CartItemUpdateFulfillmentMethodEnum> get values => _$cartItemUpdateFulfillmentMethodEnumValues;
+  static CartItemUpdateFulfillmentMethodEnum valueOf(String name) => _$cartItemUpdateFulfillmentMethodEnumValueOf(name);
+}
 

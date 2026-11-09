@@ -60,6 +60,8 @@ class _ProjectSelectionCheckoutScreenState
   List<String> _issues(Iterable<String>? value) => value?.toList() ?? [];
 
   bool get canReview =>
+      package.projectStatus.name == 'ACTIVE' &&
+      package.archivedAt == null &&
       previewReady &&
       !loading &&
       !busy &&
@@ -387,6 +389,8 @@ class _ProjectSelectionCheckoutScreenState
                 OutlinedButton(
                   onPressed:
                       busy ||
+                          package.projectStatus.name != 'ACTIVE' ||
+                          package.archivedAt != null ||
                           loading ||
                           !acknowledged ||
                           _issues(group.issues).isNotEmpty ||

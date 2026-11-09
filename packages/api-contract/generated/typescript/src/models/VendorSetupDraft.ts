@@ -67,9 +67,9 @@ export interface VendorSetupDraft {
      */
     vacationEndsOn?: string | null;
     /**
-     *
+     * Empty or null saves an unfinished name as blank without discarding other draft fields. A nonblank name is required for Store Setup completion and activation.
      */
-    publicStoreName?: string;
+    publicStoreName?: string | null;
     /**
      *
      */
@@ -145,7 +145,7 @@ export function VendorSetupDraftFromJSONTyped(json: any, ignoreDiscriminator: bo
         'vacationMode': json['vacation_mode'] == null ? undefined : json['vacation_mode'],
         'vacationStartsOn': json['vacation_starts_on'] === undefined ? undefined : json['vacation_starts_on'] === null ? null : json['vacation_starts_on'],
         'vacationEndsOn': json['vacation_ends_on'] === undefined ? undefined : json['vacation_ends_on'] === null ? null : json['vacation_ends_on'],
-        'publicStoreName': json['public_store_name'] == null ? undefined : json['public_store_name'],
+        'publicStoreName': json['public_store_name'] === undefined ? undefined : json['public_store_name'] === null ? null : json['public_store_name'],
         'description': json['description'] === undefined ? undefined : json['description'] === null ? null : json['description'],
         'bulkCapability': json['bulk_capability'] == null ? undefined : json['bulk_capability'],
         'fulfillmentMethod': json['fulfillment_method'] == null ? undefined : json['fulfillment_method'],

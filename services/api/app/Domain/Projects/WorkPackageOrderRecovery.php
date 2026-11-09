@@ -19,7 +19,8 @@ final class WorkPackageOrderRecovery
             return;
         }
         $w = DB::table('work_packages')->where('id', $order->work_package_id)->lockForUpdate()->first();
-        if ($w === null || $w->current_version_id !== $order->work_package_version_id || $w->deleted_at !== null
+        if ($w === null || $w->current_version_id !== $order->work_package_version_id || $w->deleted_at !== null || $w->archived_at !== null
+            || DB::table('projects')->where('id', $w->project_id)->value('status') !== 'ACTIVE'
             || in_array($w->status, ['DRAFT', 'CANCELLED'], true)) {
             return;
         }

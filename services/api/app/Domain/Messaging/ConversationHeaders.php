@@ -120,7 +120,7 @@ final class ConversationHeaders
                 'project_inquiry_count' => $c->purpose === 'SALES' ? $activeProjects->count() : 0,
                 'project_unread_count' => $c->purpose === 'SALES' ? $activeProjects->sum(fn ($s) => (int) $unread->get($s->id, 0)) : 0,
                 'inquiry_label' => $c->context_type === 'PROJECT_BASED' ? ($reference['work_package']['name'] ?? 'Work Package inquiry') : 'Inquiry',
-                'fulfillment_unread_count' => ! $grouped && $supervisor && $c->purpose === 'SALES' ? (int) ($fulfillmentUnread->get($this->pair($c))->total ?? 0) : 0,
+                'fulfillment_unread_count' => $supervisor && $c->purpose === 'SALES' ? (int) ($fulfillmentUnread->get($this->pair($c))->total ?? 0) : 0,
                 'fulfillment_entry_enabled' => $c->purpose === 'FULFILLMENT', 'order_reference' => $c->purpose === 'FULFILLMENT' ? $order?->reference : null,
                 'read_only' => $readOnly, 'read_only_reason' => ! $readOnly ? null : match ($order?->order_state) {
                     'COMPLETED' => 'ORDER_COMPLETED', 'CANCELLED' => 'ORDER_CANCELLED', default => 'ORDER_NOT_IN_FULFILLMENT'

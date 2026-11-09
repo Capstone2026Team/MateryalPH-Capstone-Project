@@ -7,6 +7,33 @@ import 'trust_fakes.dart';
 
 void main() {
   testWidgets(
+    'compact unpublished rating never invents a score and retries failures',
+    (tester) async {
+      final repository = FakeReviewsRepository()
+        ..failure = Exception('Unavailable');
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BuyerRatingsSection(repository: repository, compact: true),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('0.00'), findsNothing);
+      repository.failure = null;
+      await tester.tap(
+        find.byTooltip('Could not load Buyer rating. Tap to retry.'),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('—'), findsOneWidget);
+      expect(find.text('0.00'), findsNothing);
+      expect(
+        find.bySemanticsLabel(RegExp('Building your rating')),
+        findsOneWidget,
+      );
+    },
+  );
+  testWidgets(
     'Profile rating displays a published CCS and reveals ratings from the actual store',
     (tester) async {
       final repository = FakeReviewsRepository()

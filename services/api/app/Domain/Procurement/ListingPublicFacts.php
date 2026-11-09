@@ -74,6 +74,24 @@ final class ListingPublicFacts
     }
 
     /**
+     * Each Buyer counts once per listing across all variants and COMPLETED orders.
+     *
+     * @param  list<string>  $listingIds
+     * @return array<string, int>
+     */
+    public function uniqueBuyers(array $listingIds): array
+    {
+        if ($listingIds === []) {
+            return [];
+        }
+
+        return DB::table('order_lines as ol')->join('orders as o', 'o.id', '=', 'ol.order_id')->join('listing_variants as v', 'v.id', '=', 'ol.listing_variant_id')
+            ->whereIn('v.vendor_listing_id', $listingIds)->where('o.order_state', 'COMPLETED')
+            ->groupBy('v.vendor_listing_id')->selectRaw('v.vendor_listing_id, count(DISTINCT o.buyer_profile_id) AS buyers')->pluck('buyers', 'vendor_listing_id')
+            ->map(static fn (mixed $buyers): int => (int) $buyers)->all();
+    }
+
+    /**
      * Public listing images: READY media whose file is PUBLIC, CLEAN and has an https delivery URL.
      *
      * @param  list<string>  $listingIds

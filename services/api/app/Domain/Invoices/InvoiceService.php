@@ -108,7 +108,7 @@ final class InvoiceService
                     $values['amends_invoice_record_id'] = (string) $latest->id;
                 }
                 $this->validateMetadata($order, $values);
-                $nextFile = $fileId ?? $draft?->file_id;
+                $nextFile = $fileId ?? $draft->file_id ?? $latest->file_id ?? null;
                 if ($nextFile === null) {
                     throw new AuthenticationException('VALIDATION_FAILED', 'Upload the invoice copy before saving.', 422, ['file' => ['Attach a PDF, JPG or PNG copy.']]);
                 }
@@ -192,17 +192,18 @@ final class InvoiceService
         }
         $latest = $this->latestRecord((string) $order->id);
 
-        return $latest === null || DB::table('invoice_requests')->where('order_id', $order->id)
-            ->where(function ($query) use ($latest): void {
-                $query->where(fn ($q) => $q->where('kind', 'CORRECTION')->where('state', 'REQUESTED')->where('invoice_record_id', $latest->id))
-                    ->orWhere(fn ($q) => $q->where('state', 'RETURNED_FOR_CORRECTION')->where('fulfilled_invoice_record_id', $latest->id));
-            })->exists();
+        return $latest === null || in_array($latest->reconciliation_state, ['INVOICE_RECONCILIATION_REQUIRED', 'EXPLAINED'], true)
+            || DB::table('invoice_requests')->where('order_id', $order->id)
+                ->where(function ($query) use ($latest): void {
+                    $query->where(fn ($q) => $q->where('kind', 'CORRECTION')->where('state', 'REQUESTED')->where('invoice_record_id', $latest->id))
+                        ->orWhere(fn ($q) => $q->where('state', 'RETURNED_FOR_CORRECTION')->where('fulfilled_invoice_record_id', $latest->id));
+                })->exists();
     }
 
     private function assertEditable(object $order): void
     {
         if (! $this->canPrepare($order)) {
-            throw new AuthenticationException('INVOICE_EDIT_LOCKED', 'This sent invoice is locked. A Buyer correction or return is required before preparing a new version.', 409);
+            throw new AuthenticationException('INVOICE_EDIT_LOCKED', 'This sent invoice is locked. A Buyer correction, return or invoice amount mismatch is required before preparing a new version.', 409);
         }
     }
 
@@ -468,10 +469,17 @@ final class InvoiceService
             'created_at' => now(), 'updated_at' => now(),
         ]);
         if ($requestRow !== null) {
-            DB::table('invoice_requests')->where('id', $requestRow->id)->update(['state' => 'UPLOADED', 'fulfilled_invoice_record_id' => $id, 'uploaded_at' => now(), 'lock_version' => (int) $requestRow->lock_version + 1, 'updated_at' => now()]);
+            DB::table('invoice_requests')->where('order_id', $order->id)->whereIn('state', ['REQUESTED', 'RETURNED_FOR_CORRECTION'])
+                ->where(function ($query) use ($requestRow, $amends): void {
+                    $query->where('id', $requestRow->id);
+                    if ($amends !== null) {
+                        $query->orWhere(fn ($query) => $query->where('kind', 'CORRECTION')->where('invoice_record_id', $amends->id))
+                            ->orWhere(fn ($query) => $query->where('state', 'RETURNED_FOR_CORRECTION')->where('fulfilled_invoice_record_id', $amends->id));
+                    }
+                })->update(['state' => 'UPLOADED', 'fulfilled_invoice_record_id' => $id, 'uploaded_at' => now(), 'downloaded_at' => null, 'lock_version' => DB::raw('lock_version + 1'), 'updated_at' => now()]);
         }
-        if ($amends !== null && $amends->reconciliation_state === 'INVOICE_RECONCILIATION_REQUIRED') {
-            DB::table('invoice_records')->where('id', $amends->id)->update(['reconciliation_state' => 'CORRECTED', 'reconciliation_note' => 'Corrected by a later sent document.', 'updated_at' => now()]);
+        if ($amends !== null && in_array($amends->reconciliation_state, ['INVOICE_RECONCILIATION_REQUIRED', 'EXPLAINED'], true)) {
+            DB::table('invoice_records')->where('id', $amends->id)->update(['reconciliation_state' => 'CORRECTED', 'lock_version' => (int) $amends->lock_version + 1, 'updated_at' => now()]);
         }
         $this->audit->account($request, 'INVOICE_UPLOADED', 'INVOICE_RECORD', $id, after: ['order_id' => (string) $order->id, 'invoice_type' => $input['invoice_type'],
             'invoice_number' => mb_substr(trim((string) $input['invoice_number']), 0, 64), 'issued_on' => (string) $input['issued_on'], 'reconciliation_state' => $state, 'file_sha256' => (string) DB::table('files')->where('id', $fileId)->value('checksum_sha256')]);
@@ -481,7 +489,7 @@ final class InvoiceService
                 'The Vendor sent its invoice copy. Open the order to view the file and details.', 'INVOICE_RECORD', $id, 'invoice-sent|'.$id);
         }
         if ($state === 'INVOICE_RECONCILIATION_REQUIRED') {
-            $this->notifier->vendor($order, 'Invoice difference on order '.$order->reference, 'The sent invoice totals differ from the accepted order. Explain the difference; the Buyer\'s agreed amount does not change.', ['OWNER', 'STORE_MANAGER', 'STORE_STAFF'], category: 'INVOICES');
+            $this->notifier->vendor($order, 'Invoice difference on order '.$order->reference, 'The sent invoice totals differ from the accepted order. Prepare and send a corrected invoice from Mismatches; the Buyer\'s agreed amount does not change.', ['OWNER', 'STORE_MANAGER', 'STORE_STAFF'], category: 'INVOICES');
         }
 
         return $id;

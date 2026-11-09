@@ -1,6 +1,6 @@
 import { DocumentUploadField } from '@materyalph/web-ui'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { createMemoryRouter, createRoutesFromElements, RouterProvider, Route } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { VendorDashboardPage, VendorWelcomePage, VendorVerificationPage, VendorSetupPage, VendorStoreProfilePage } from './PhaseThreeVendorPages'
 import { VendorEntryPage } from './VendorEntryPage'
@@ -29,7 +29,8 @@ beforeEach(() => {
   vi.mocked(finance.updatePhysicalPayments).mockImplementation(async (lockVersion, codEnabled, inStoreEnabled) => ({ lockVersion: lockVersion + 1, codEnabled, inStoreEnabled }))
 })
 function open(path: string) {
-  return render(<MemoryRouter initialEntries={[path]}><Routes><Route path="/entry" element={<VendorEntryPage />} /><Route path="/welcome" element={<VendorWelcomePage />} /><Route path="/dashboard" element={<VendorDashboardPage />} /><Route path="/onboarding/verification" element={<VendorVerificationPage />} /><Route path="/onboarding/setup" element={<VendorSetupPage />} /><Route path="/store-profile" element={<VendorStoreProfilePage />} /><Route path="/vehicles" element={<h1>Vehicles Management</h1>} /><Route path="/settings" element={<h1>Personal account settings</h1>} /></Routes></MemoryRouter>)
+  const router = createMemoryRouter(createRoutesFromElements(<Route><Route path="/login" element={<h1>Vendor sign in</h1>} /><Route path="/entry" element={<VendorEntryPage />} /><Route path="/welcome" element={<VendorWelcomePage />} /><Route path="/dashboard" element={<VendorDashboardPage />} /><Route path="/onboarding/verification" element={<VendorVerificationPage />} /><Route path="/onboarding/setup" element={<VendorSetupPage />} /><Route path="/store-profile" element={<VendorStoreProfilePage />} /><Route path="/vehicles" element={<h1>Vehicles Management</h1>} /><Route path="/settings" element={<h1>Personal account settings</h1>} /></Route>), { initialEntries: [path] })
+  return { ...render(<RouterProvider router={router} />), router }
 }
 
 test.each([
@@ -150,6 +151,87 @@ test('first login persists Continue then permits later login to resume onboardin
   expect(await screen.findByRole('heading', { level: 1, name: 'Store Verification' })).toBeVisible()
   expect(vendorLoginDestination(snapshot)).toBe('/onboarding/verification')
 })
+
+test('welcome failures stay inline and Continue remains recoverable', async () => {
+  snapshot.welcomeRequired = true
+  vi.mocked(api.dismissVendorWelcome).mockRejectedValueOnce(new TypeError('Connection interrupted'))
+  open('/welcome')
+  fireEvent.click(await screen.findByRole('button', { name: 'Continue' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Connection interrupted')
+  expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
+  fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+  await screen.findByRole('heading', { name: 'Store Verification', level: 1 })
+})
+
+test('Continue later saves an unfinished verification draft before opening Store Setup', async () => {
+  open('/onboarding/verification')
+  fireEvent.change(await screen.findByRole('textbox', { name: 'Public Store Name' }), { target: { value: 'Unfinished Supply' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Continue later to Store Setup' }))
+  await screen.findByRole('heading', { name: 'Store Setup', level: 1 })
+  expect(api.saveVendorVerificationDraft).toHaveBeenCalledOnce()
+  expect(api.saveVendorVerificationDraft).toHaveBeenCalledWith(expect.objectContaining({ formState: expect.stringContaining('Unfinished Supply') }))
+  expect(api.submitVendorVerification).not.toHaveBeenCalled()
+})
+
+test('browser Back waits for an in-flight save and Forward restores the saved setup', async () => {
+  let finish!: (value: api.VendorOnboardingSnapshot) => void
+  vi.mocked(api.saveVendorSetupDraft).mockImplementation(() => new Promise(resolve => { finish = resolve }))
+  const { router } = open('/dashboard')
+  await screen.findByText('Limited-Access Vendor Dashboard')
+  await act(async () => { await router.navigate('/onboarding/setup') })
+  fireEvent.change(await screen.findByRole('textbox', { name: 'Store description' }), { target: { value: 'Saved across browser history' } })
+  await waitFor(() => expect(api.saveVendorSetupDraft).toHaveBeenCalledOnce())
+  await act(async () => { await router.navigate(-1) })
+  expect(screen.getByRole('textbox', { name: 'Store description' })).toHaveValue('Saved across browser history')
+  snapshot = { ...snapshot, setup: { ...snapshot.setup, profile: { public_store_name: 'Test Supply', description: 'Saved across browser history' } } }
+  await act(async () => finish(snapshot))
+  await screen.findByText('Limited-Access Vendor Dashboard')
+  expect(api.saveVendorSetupDraft).toHaveBeenCalledOnce()
+  await act(async () => { await router.navigate(1) })
+  expect(await screen.findByRole('textbox', { name: 'Store description' })).toHaveValue('Saved across browser history')
+})
+
+test('failed browser navigation retains input and a retry preserves the destination fragment', async () => {
+  vi.mocked(api.saveVendorVerificationDraft).mockRejectedValueOnce(new TypeError('Save unavailable'))
+  const { router } = open('/onboarding/verification')
+  fireEvent.change(await screen.findByRole('textbox', { name: 'Public Store Name' }), { target: { value: 'Retained draft' } })
+  await act(async () => { await router.navigate('/settings#Agreements') })
+  await screen.findByRole('alert')
+  expect(screen.getByRole('textbox', { name: 'Public Store Name' })).toHaveValue('Retained draft')
+  expect(router.state.location.pathname).toBe('/onboarding/verification')
+  fireEvent.click(screen.getByRole('button', { name: 'Retry save' }))
+  await screen.findByText('Progress saved. Your information has not been submitted for review.')
+  await act(async () => { await router.navigate('/settings#Agreements') })
+  await screen.findByRole('heading', { name: 'Personal account settings' })
+  expect(router.state.location.hash).toBe('#Agreements')
+})
+
+test('session expiry leaves protected onboarding without attempting a draft write', async () => {
+  const { router } = open('/onboarding/verification')
+  fireEvent.change(await screen.findByRole('textbox', { name: 'Public Store Name' }), { target: { value: 'Unsaved private session' } })
+  await act(async () => { await router.navigate('/login') })
+  await screen.findByRole('heading', { name: 'Vendor sign in' })
+  expect(api.saveVendorVerificationDraft).not.toHaveBeenCalled()
+  expect(screen.queryByRole('textbox', { name: 'Public Store Name' })).not.toBeInTheDocument()
+})
+
+test.each(['CHANGES_REQUIRED', 'REJECTED', 'EXPIRED'] as const)('verification resumes at the %s requirement', async status => {
+  snapshot.verification = { ...snapshot.verification, status }
+  snapshot.sections.STORE_VERIFICATION = { key: 'STORE_VERIFICATION', label: 'Store Verification', status, complete: 1, total: 2, progress: { complete: 1, total: 2 }, steps: [
+    { id: 'business', key: 'business_information', label: 'Business information', level: 'REQUIRED', status: 'APPROVED', lockVersion: 1 },
+    { id: 'address', key: 'registered_business_address', label: 'Registered business address', level: 'REQUIRED', status, reason: 'Correct your registered location.', lockVersion: 1 },
+  ] }
+  open('/onboarding/verification')
+  expect(await screen.findByRole('textbox', { name: 'Street address' })).toBeVisible()
+  expect(screen.getByRole('button', { name: /Registered Business Address/ })).toHaveAttribute('aria-current', 'step')
+  expect(screen.getByText(/Review the correction reasons/)).toBeVisible()
+})
+
+test.each([['S4', 'Fulfillment Configuration'], ['S5', 'Store Operation'], ['S6', 'Review and Complete']])('existing setup link %s opens %s', async (key, title) => {
+  open(`/onboarding/setup?step=${key}`)
+  expect(await screen.findByRole('heading', { name: title })).toBeVisible()
+  expect(screen.queryByRole('button', { name: /Team Accounts/ })).not.toBeInTheDocument()
+})
 test('Finish Later saves each standalone onboarding form before returning to limited dashboard', async () => {
   open('/onboarding/verification')
   fireEvent.change(await screen.findByRole('textbox', { name: 'Public Store Name' }), { target: { value: 'Edited Supply' } })
@@ -187,6 +269,17 @@ test('leaving unchanged verification sends no draft mutation or redundant snapsh
   }
   expect(api.saveVendorVerificationDraft).not.toHaveBeenCalled()
   expect(api.getVendorOnboarding).toHaveBeenCalledTimes(18)
+})
+
+test('a saved blank setup name stays blank on resume and other fields remain editable', async () => {
+  snapshot.setup = { ...snapshot.setup, profile: { public_store_name: '', description: 'Saved draft description' } }
+  open('/onboarding/setup')
+  expect(await screen.findByRole('textbox', { name: 'Public store name' })).toHaveValue('')
+  expect(screen.getByRole('textbox', { name: 'Store description' })).toHaveValue('Saved draft description')
+  fireEvent.change(screen.getByRole('textbox', { name: 'Store description' }), { target: { value: 'Another unfinished description' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Finish Later' }))
+  await screen.findByText('Limited-Access Vendor Dashboard')
+  expect(api.saveVendorSetupDraft).toHaveBeenCalledWith(expect.objectContaining({ publicStoreName: '', description: 'Another unfinished description' }))
 })
 
 test('Vendor sidebar uses the uploaded store logo and falls back to initials if it fails', async () => {
@@ -434,9 +527,9 @@ test('setup keeps the persisted setup name when the verification draft differs',
   expect(api.saveVendorSetupDraft).not.toHaveBeenCalled()
 })
 
-test('setup prefills the submitted organization name when no public profile name is saved', async () => {
+test('setup prefills the submitted organization name before a public profile exists', async () => {
   snapshot.organization = { ...snapshot.organization, store_name: 'Submitted Store' }
-  snapshot.setup = { ...snapshot.setup, profile: { public_store_name: '' } }
+  snapshot.setup = { ...snapshot.setup, profile: null }
   open('/onboarding/setup')
   expect(await screen.findByRole('textbox', { name: 'Public store name' })).toHaveValue('Submitted Store')
   expect(within(screen.getByRole('complementary', { name: 'Store Profile Preview' })).getByRole('heading', { name: 'Submitted Store' })).toBeVisible()
@@ -479,8 +572,9 @@ test('setup review requires saved edits and team setup remains optional', async 
   open('/onboarding/setup')
   fireEvent.change(await screen.findByRole('textbox', { name: 'Public store name' }), { target: { value: 'Draft name' } })
   expect(screen.queryByRole('button', { name: /Commission Terms/ })).not.toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button', { name: '4 Team Accounts' }))
-  await waitFor(() => expect(screen.getByText(/Self-Pickup Only needs no staff accounts/)).toBeVisible())
+  expect(screen.queryByRole('button', { name: 'Team Accounts' })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: '3 Xendit TEST Connection' }))
+  await screen.findByRole('heading', { name: 'Xendit TEST Connection' })
   expect(screen.queryByRole('link', { name: 'Manage Team Accounts' })).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Next' }))
   expect(api.saveVendorSetupDraft).toHaveBeenCalled()
@@ -507,7 +601,7 @@ test('removing a persisted logo refreshes media from the backend', async () => {
 
 test('Store Operation rejects invalid hours and copies days without locking individual edits', async () => {
   open('/onboarding/setup')
-  fireEvent.click(await screen.findByRole('button', { name: '5 Store Operation' }))
+  fireEvent.click(await screen.findByRole('button', { name: '4 Store Operation' }))
   fireEvent.change(screen.getByRole('combobox', { name: 'Monday status' }), { target: { value: 'OPEN' } })
   fireEvent.change(screen.getByLabelText('Monday opening time'), { target: { value: '17:00' } })
   fireEvent.change(screen.getByLabelText('Monday closing time'), { target: { value: '08:00' } })
@@ -525,7 +619,7 @@ test('Store Operation rejects invalid hours and copies days without locking indi
 
 test('Finish Later keeps an incomplete Store Operation schedule private', async () => {
   open('/onboarding/setup')
-  fireEvent.click(await screen.findByRole('button', { name: '5 Store Operation' }))
+  fireEvent.click(await screen.findByRole('button', { name: '4 Store Operation' }))
   fireEvent.change(screen.getByRole('combobox', { name: 'Monday status' }), { target: { value: 'OPEN' } })
   fireEvent.click(screen.getByRole('button', { name: 'Finish Later' }))
   await waitFor(() => expect(api.saveVendorSetupDraft).toHaveBeenCalledWith(expect.objectContaining({ formState: expect.stringContaining('operatingScheduleDraft') })))
@@ -541,7 +635,8 @@ test('visited sections are not represented as completed without server confirmat
   const nav = await screen.findByRole('navigation', { name: 'Store Setup steps' })
   expect(within(nav).getByText('1 of 5 checklist items complete')).toBeVisible()
   expect(within(nav).queryByText('Store Media')).not.toBeInTheDocument()
-  expect(within(nav).getByRole('button', { name: /Completed, Public Store Profile/ })).toHaveAttribute('aria-current', 'step')
+  expect(within(nav).getByRole('button', { name: /Completed, Public Store Profile/ })).not.toHaveAttribute('aria-current')
+  expect(within(nav).getByRole('button', { name: '2 Fulfillment Configuration' })).toHaveAttribute('aria-current', 'step')
   fireEvent.click(within(nav).getByRole('button', { name: '2 Fulfillment Configuration' }))
   fireEvent.click(screen.getByRole('button', { name: 'Next' }))
   expect(within(nav).getByRole('button', { name: '2 Fulfillment Configuration' })).not.toHaveTextContent('Completed')
@@ -786,6 +881,24 @@ test('representative file survives a failed automatic save and is staged on retr
   expect(api.submitVendorVerification).not.toHaveBeenCalled()
 })
 
+test('failed document uploads stop automatic retries and retain the selection for explicit retry', async () => {
+  snapshot.organization = { ...snapshot.organization, business_type: 'CORPORATION' }
+  vi.mocked(api.uploadVendorDocument).mockRejectedValueOnce(new TypeError('Upload unavailable')).mockResolvedValue({ id: 'pending', requirementKey: 'representative_identity', version: 0, scanState: 'CLEAN', status: 'PENDING_SUBMISSION' })
+  open('/onboarding/verification')
+  fireEvent.change(await screen.findByRole('combobox', { name: 'Representative government ID type' }), { target: { value: 'PASSPORT' } })
+  const file = new File(['fictional fixture'], 'representative.pdf', { type: 'application/pdf' })
+  fireEvent.change(await screen.findByLabelText('Select Representative government ID — front'), { target: { files: [file] } })
+  fireEvent.click(screen.getByRole('button', { name: '2 Registered Business Address' }))
+  await screen.findByRole('button', { name: 'Retry save' })
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 1400)) })
+  expect(api.uploadVendorDocument).toHaveBeenCalledOnce()
+  expect(screen.getByText(/representative.pdf/)).toBeVisible()
+  fireEvent.click(screen.getByRole('button', { name: 'Retry save' }))
+  await screen.findByText('Progress saved. Your information has not been submitted for review.')
+  expect(api.uploadVendorDocument).toHaveBeenCalledTimes(2)
+  expect(api.submitVendorVerification).not.toHaveBeenCalled()
+})
+
 
 test('reopening partial progress restores draft email and hides sole proprietor business name', async () => {
   snapshot.organization = { ...snapshot.organization, store_email: 'verified@example.test', store_email_verified: true }
@@ -857,10 +970,13 @@ test('Submit for Admin Review sends current form data directly with the package 
   fireEvent.click(screen.getByRole('button', { name: '4 Privacy, Review and Submit' }))
   fireEvent.click(await screen.findByRole('checkbox', { name: /I acknowledge/ }))
   fireEvent.click(screen.getByRole('button', { name: 'Submit for Admin Review' }))
+  fireEvent.submit(document.getElementById('verification-draft')!)
+  fireEvent.submit(document.getElementById('verification-draft')!)
   await waitFor(() => expect(api.submitVendorVerification).toHaveBeenCalledWith(expect.objectContaining({ lockVersion: 7, privacyAcknowledged: true, draft: expect.objectContaining({ storeName: 'Latest Store Name', businessType: 'SOLE_PROPRIETORSHIP' }) })))
   expect(vi.mocked(api.saveVendorVerificationDraft).mock.calls.every(([request]) => typeof request.formState === 'string')).toBe(true)
   expect(screen.queryByRole('button', { name: 'Save verification draft' })).not.toBeInTheDocument()
   expect(await screen.findByText(/Your Store Verification is awaiting Admin review/)).toBeVisible()
+  expect(api.submitVendorVerification).toHaveBeenCalledOnce()
 })
 
 

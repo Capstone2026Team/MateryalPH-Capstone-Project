@@ -21,7 +21,7 @@ part 'vendor_setup_draft.g.dart';
 /// * [vacationMode] - Owner-only pause of all new procurement over the Asia/Manila date window in vacation_starts_on to vacation_ends_on, both required when true. Existing work and messaging remain available. False clears the window. Does not alter weekly hours or activation.
 /// * [vacationStartsOn] - First Asia/Manila day of the pause. Today or later, unless an active window keeps its saved start. Today starts the pause immediately; a later date schedules it.
 /// * [vacationEndsOn] - Last Asia/Manila day of the pause, inclusive; on or after vacation_starts_on. Procurement reopens at the next midnight.
-/// * [publicStoreName]
+/// * [publicStoreName] - Empty or null saves an unfinished name as blank without discarding other draft fields. A nonblank name is required for Store Setup completion and activation.
 /// * [description]
 /// * [bulkCapability]
 /// * [fulfillmentMethod]
@@ -56,6 +56,7 @@ abstract class VendorSetupDraft implements Built<VendorSetupDraft, VendorSetupDr
   @BuiltValueField(wireName: r'vacation_ends_on')
   String? get vacationEndsOn;
 
+  /// Empty or null saves an unfinished name as blank without discarding other draft fields. A nonblank name is required for Store Setup completion and activation.
   @BuiltValueField(wireName: r'public_store_name')
   String? get publicStoreName;
 
@@ -156,7 +157,7 @@ class _$VendorSetupDraftSerializer implements PrimitiveSerializer<VendorSetupDra
       yield r'public_store_name';
       yield serializers.serialize(
         object.publicStoreName,
-        specifiedType: const FullType(String),
+        specifiedType: const FullType.nullable(String),
       );
     }
     if (object.description != null) {

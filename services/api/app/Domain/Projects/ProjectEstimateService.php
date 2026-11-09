@@ -37,6 +37,7 @@ final class ProjectEstimateService
     {
         $radius = RadiusPolicy::PROJECT_BASED_KM;
         $w = $this->projects->package($request, $id);
+        ProjectArchives::assertProcurementOpen($w);
         if ($this->projects->project($request, $w->project_id)->status !== 'ACTIVE') {
             throw new AuthenticationException('PROJECT_CLOSED', 'This Project is read-only. Saved estimates remain available.', 409);
         }
@@ -239,7 +240,9 @@ final class ProjectEstimateService
      */
     public function budgetEstimate(Request $request, string $projectId, array $input): array
     {
-        $this->projects->project($request, $projectId);
+        if ($this->projects->project($request, $projectId)->status !== 'ACTIVE') {
+            throw new AuthenticationException('PROJECT_CLOSED', 'Restore the Project before estimating new procurement.', 409);
+        }
         $site = DB::table('project_sites')->where('id', $input['site_id'])->where('project_id', $projectId)->where('active', true)->first();
         if ($site === null) {
             throw new AuthenticationException('SITE_NOT_FOUND', 'Select a site from this Project.', 422);
@@ -778,6 +781,9 @@ final class ProjectEstimateService
     public function candidate(Request $request, string $packageId, string $candidateId, bool $fresh = true): array
     {
         $w = $this->projects->package($request, $packageId);
+        if ($fresh) {
+            ProjectArchives::assertProcurementOpen($w);
+        }
         $e = DB::table('compiled_estimate_vendors as v')->join('compiled_estimates as e', 'e.id', '=', 'v.compiled_estimate_id')->where('v.id', $candidateId)->where('e.work_package_version_id', $w->current_version_id)
             ->first(['v.*', 'e.expires_at', 'e.invalidated_at']);
         if ($e === null) {

@@ -27,6 +27,7 @@ use App\Domain\Orders\CancellationService;
 use App\Domain\Payments\PaymentGateway;
 use App\Domain\Payments\PaymentReconciliationService;
 use App\Domain\Payments\XenditWebhookInbox;
+use App\Domain\Projects\ProjectArchives;
 use App\Domain\Reporting\OrderDocumentService;
 use App\Domain\Reporting\TaxReminderService;
 use App\Domain\Reviews\ReviewService;
@@ -43,6 +44,11 @@ use Illuminate\Support\Str;
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote')->hourly();
+
+Artisan::command('materyalph:procurement-archives-prune', function (): void {
+    $this->info('Expired procurement archives removed: '.app(ProjectArchives::class)->sweep());
+})->purpose('Remove expired Buyer workspace archives while retaining immutable commercial history');
+Schedule::command('materyalph:procurement-archives-prune')->everyMinute()->withoutOverlapping();
 
 Artisan::command('materyalph:operations-recover', function (): void {
     $this->info('Allowlisted operations recovered: '.app(AutomaticOperationRecovery::class)->sweep());

@@ -6,6 +6,10 @@
 
 Name | Type
 ------------ | -------------
+`archivedAt` | Date
+`deleteAfter` | Date
+`canArchive` | boolean
+`archiveBlocker` | string
 `id` | string
 `name` | string
 `status` | string
@@ -24,6 +28,10 @@ import type { ProjectView } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "archivedAt": null,
+  "deleteAfter": null,
+  "canArchive": null,
+  "archiveBlocker": null,
   "id": null,
   "name": null,
   "status": null,

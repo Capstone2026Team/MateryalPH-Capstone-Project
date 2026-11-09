@@ -34,7 +34,8 @@ part 'listing_search_result.g.dart';
 /// * [stockLabel]
 /// * [stockConfirmedAt]
 /// * [productRating]
-/// * [unitsSold] - Quantity on completed orders.
+/// * [unitsSold] - Quantity on completed orders; used by TOP_SELLING.
+/// * [uniqueBuyers] - Distinct Buyers with COMPLETED orders for this listing across all variants and repeat purchases.
 /// * [distanceMeters] - Geodesic straight-line distance to the store.
 /// * [badges]
 /// * [isFavorite]
@@ -87,9 +88,13 @@ abstract class ListingSearchResult implements Built<ListingSearchResult, Listing
   @BuiltValueField(wireName: r'product_rating')
   ProductRatingSummary get productRating;
 
-  /// Quantity on completed orders.
+  /// Quantity on completed orders; used by TOP_SELLING.
   @BuiltValueField(wireName: r'units_sold')
   String get unitsSold;
+
+  /// Distinct Buyers with COMPLETED orders for this listing across all variants and repeat purchases.
+  @BuiltValueField(wireName: r'unique_buyers')
+  int? get uniqueBuyers;
 
   /// Geodesic straight-line distance to the store.
   @BuiltValueField(wireName: r'distance_meters')
@@ -209,6 +214,13 @@ class _$ListingSearchResultSerializer implements PrimitiveSerializer<ListingSear
       object.unitsSold,
       specifiedType: const FullType(String),
     );
+    if (object.uniqueBuyers != null) {
+      yield r'unique_buyers';
+      yield serializers.serialize(
+        object.uniqueBuyers,
+        specifiedType: const FullType(int),
+      );
+    }
     yield r'distance_meters';
     yield serializers.serialize(
       object.distanceMeters,
@@ -370,6 +382,14 @@ class _$ListingSearchResultSerializer implements PrimitiveSerializer<ListingSear
             specifiedType: const FullType(String),
           ) as String;
           result.unitsSold = valueDes;
+          break;
+        case r'unique_buyers':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.uniqueBuyers = valueDes;
           break;
         case r'distance_meters':
           final valueDes = serializers.deserialize(

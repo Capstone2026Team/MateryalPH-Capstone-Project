@@ -69,6 +69,14 @@ class _$ProjectSummaryStatusEnumSerializer
 
 class _$ProjectSummary extends ProjectSummary {
   @override
+  final DateTime? archivedAt;
+  @override
+  final DateTime? deleteAfter;
+  @override
+  final bool? canArchive;
+  @override
+  final String? archiveBlocker;
+  @override
   final String id;
   @override
   final String name;
@@ -89,7 +97,11 @@ class _$ProjectSummary extends ProjectSummary {
       (ProjectSummaryBuilder()..update(updates))._build();
 
   _$ProjectSummary._(
-      {required this.id,
+      {this.archivedAt,
+      this.deleteAfter,
+      this.canArchive,
+      this.archiveBlocker,
+      required this.id,
       required this.name,
       required this.status,
       required this.budgetCentavos,
@@ -109,6 +121,10 @@ class _$ProjectSummary extends ProjectSummary {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is ProjectSummary &&
+        archivedAt == other.archivedAt &&
+        deleteAfter == other.deleteAfter &&
+        canArchive == other.canArchive &&
+        archiveBlocker == other.archiveBlocker &&
         id == other.id &&
         name == other.name &&
         status == other.status &&
@@ -122,6 +138,10 @@ class _$ProjectSummary extends ProjectSummary {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, archivedAt.hashCode);
+    _$hash = $jc(_$hash, deleteAfter.hashCode);
+    _$hash = $jc(_$hash, canArchive.hashCode);
+    _$hash = $jc(_$hash, archiveBlocker.hashCode);
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, name.hashCode);
     _$hash = $jc(_$hash, status.hashCode);
@@ -137,6 +157,10 @@ class _$ProjectSummary extends ProjectSummary {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'ProjectSummary')
+          ..add('archivedAt', archivedAt)
+          ..add('deleteAfter', deleteAfter)
+          ..add('canArchive', canArchive)
+          ..add('archiveBlocker', archiveBlocker)
           ..add('id', id)
           ..add('name', name)
           ..add('status', status)
@@ -152,6 +176,23 @@ class _$ProjectSummary extends ProjectSummary {
 class ProjectSummaryBuilder
     implements Builder<ProjectSummary, ProjectSummaryBuilder> {
   _$ProjectSummary? _$v;
+
+  DateTime? _archivedAt;
+  DateTime? get archivedAt => _$this._archivedAt;
+  set archivedAt(DateTime? archivedAt) => _$this._archivedAt = archivedAt;
+
+  DateTime? _deleteAfter;
+  DateTime? get deleteAfter => _$this._deleteAfter;
+  set deleteAfter(DateTime? deleteAfter) => _$this._deleteAfter = deleteAfter;
+
+  bool? _canArchive;
+  bool? get canArchive => _$this._canArchive;
+  set canArchive(bool? canArchive) => _$this._canArchive = canArchive;
+
+  String? _archiveBlocker;
+  String? get archiveBlocker => _$this._archiveBlocker;
+  set archiveBlocker(String? archiveBlocker) =>
+      _$this._archiveBlocker = archiveBlocker;
 
   String? _id;
   String? get id => _$this._id;
@@ -193,6 +234,10 @@ class ProjectSummaryBuilder
   ProjectSummaryBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _archivedAt = $v.archivedAt;
+      _deleteAfter = $v.deleteAfter;
+      _canArchive = $v.canArchive;
+      _archiveBlocker = $v.archiveBlocker;
       _id = $v.id;
       _name = $v.name;
       _status = $v.status;
@@ -224,6 +269,10 @@ class ProjectSummaryBuilder
     try {
       _$result = _$v ??
           _$ProjectSummary._(
+            archivedAt: archivedAt,
+            deleteAfter: deleteAfter,
+            canArchive: canArchive,
+            archiveBlocker: archiveBlocker,
             id: BuiltValueNullFieldError.checkNotNull(
                 id, r'ProjectSummary', 'id'),
             name: BuiltValueNullFieldError.checkNotNull(

@@ -21,6 +21,7 @@ Name | Type
 `stockConfirmedAt` | Date
 `productRating` | [ProductRatingSummary](ProductRatingSummary.md)
 `unitsSold` | string
+`uniqueBuyers` | number
 `distanceMeters` | number
 `badges` | Array&lt;string&gt;
 `isFavorite` | boolean
@@ -50,6 +51,7 @@ const example = {
   "stockConfirmedAt": null,
   "productRating": null,
   "unitsSold": null,
+  "uniqueBuyers": null,
   "distanceMeters": null,
   "badges": null,
   "isFavorite": null,

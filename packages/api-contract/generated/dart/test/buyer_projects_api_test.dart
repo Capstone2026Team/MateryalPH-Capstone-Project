@@ -14,6 +14,20 @@ void main() {
       // TODO
     });
 
+    // Archive only after all related orders are terminal. The legacy Project status update uses this same guard.
+    //
+    //Future<ProjectArchiveMutationResponse> archiveProject(String itemId, String idempotencyKey, ProjectVersionRequest projectVersionRequest) async
+    test('test archiveProject', () async {
+      // TODO
+    });
+
+    // Archive only after all related orders are terminal. The legacy Project status update uses this same guard.
+    //
+    //Future<ProjectArchiveMutationResponse> archiveWorkPackage(String itemId, String idempotencyKey, ProjectVersionRequest projectVersionRequest) async
+    test('test archiveWorkPackage', () async {
+      // TODO
+    });
+
     // Cancel an unassigned package, retaining its saved contents. Selected work follows order cancellation rules.
     //
     //Future<WorkPackageViewResponse> closeWorkPackage(String packageId, ProjectVersionRequest projectVersionRequest) async
@@ -132,6 +146,13 @@ void main() {
       // TODO
     });
 
+    // Owned archives, paginated by type. Retention lasts exactly 720 hours; financial and transaction originals remain retained after workspace removal.
+    //
+    //Future<ProjectArchivePageResponse> listProjectArchives(String type, { int page }) async
+    test('test listProjectArchives', () async {
+      // TODO
+    });
+
     //Future<ProjectArrangementPageResponse> listProjectArrangementOptions(String packageId, { int page, String sort, String direction, bool favoritesOnly, bool completeOnly, bool withinBudget }) async
     test('test listProjectArrangementOptions', () async {
       // TODO
@@ -148,6 +169,20 @@ void main() {
     //
     //Future<WorkPackageAlternativePageResponse> listWorkPackageLineAlternatives(String packageId, String lineId, { String arrangementId, bool replace, int page, String excludeVendorId, String candidateId, String specificationChoices, String fulfillmentMethod }) async
     test('test listWorkPackageLineAlternatives', () async {
+      // TODO
+    });
+
+    // Irreversibly remove an archived item from the Buyer workspace after rechecking ongoing orders. Retain immutable commercial, financial and audit rows and references.
+    //
+    //Future<ProjectArchiveMutationResponse> permanentlyDeleteProject(String itemId, String idempotencyKey, ProjectVersionRequest projectVersionRequest) async
+    test('test permanentlyDeleteProject', () async {
+      // TODO
+    });
+
+    // Irreversibly remove an archived item from the Buyer workspace after rechecking ongoing orders. Retain immutable commercial, financial and audit rows and references.
+    //
+    //Future<ProjectArchiveMutationResponse> permanentlyDeleteWorkPackage(String itemId, String idempotencyKey, ProjectVersionRequest projectVersionRequest) async
+    test('test permanentlyDeleteWorkPackage', () async {
       // TODO
     });
 
@@ -186,6 +221,13 @@ void main() {
       // TODO
     });
 
+    // Authorize a cancelled order and return its unchanged Work Package for the existing supplier scan and selection flow. Groups source only uncovered quantities; peers and cancelled history remain unchanged. Does not create an order.
+    //
+    //Future<WorkPackageViewResponse> rescanProjectOrderSuppliers(String orderId, ProjectVersionRequest projectVersionRequest) async
+    test('test rescanProjectOrderSuppliers', () async {
+      // TODO
+    });
+
     // Reset to current platform defaults with version conflict protection.
     //
     //Future<ProjectPreferencesResponse> resetProjectRankingPreferences(ProjectPreferenceReset projectPreferenceReset) async
@@ -197,6 +239,20 @@ void main() {
     //
     //Future<WorkPackageViewResponse> resolveProjectMissingLine(String packageId, String lineId, ProjectMissingResolve projectMissingResolve) async
     test('test resolveProjectMissingLine', () async {
+      // TODO
+    });
+
+    // Restore before expiry under the parent lock, clear both timestamps, and preserve cancelled orders. A Work Package requires its parent Project restored first.
+    //
+    //Future<ProjectArchiveMutationResponse> restoreProject(String itemId, String idempotencyKey, ProjectVersionRequest projectVersionRequest) async
+    test('test restoreProject', () async {
+      // TODO
+    });
+
+    // Restore before expiry under the parent lock, clear both timestamps, and preserve cancelled orders. A Work Package requires its parent Project restored first.
+    //
+    //Future<ProjectArchiveMutationResponse> restoreWorkPackage(String itemId, String idempotencyKey, ProjectVersionRequest projectVersionRequest) async
+    test('test restoreWorkPackage', () async {
       // TODO
     });
 

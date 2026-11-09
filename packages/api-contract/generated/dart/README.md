@@ -346,6 +346,8 @@ Class | Method | HTTP request | Description
 [*BuyerPaymentsApi*](doc/BuyerPaymentsApi.md) | [**getBuyerPaymentOptions**](doc/BuyerPaymentsApi.md#getbuyerpaymentoptions) | **GET** /buyers/orders/{orderId}/payment-options |
 [*BuyerPaymentsApi*](doc/BuyerPaymentsApi.md) | [**refreshBuyerPayment**](doc/BuyerPaymentsApi.md#refreshbuyerpayment) | **POST** /buyers/payments/{paymentId}/refresh |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**activateWorkPackage**](doc/BuyerProjectsApi.md#activateworkpackage) | **POST** /buyers/work-packages/{packageId}/activate |
+[*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**archiveProject**](doc/BuyerProjectsApi.md#archiveproject) | **POST** /buyers/projects/{itemId}/archive |
+[*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**archiveWorkPackage**](doc/BuyerProjectsApi.md#archiveworkpackage) | **POST** /buyers/work-packages/{itemId}/archive |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**closeWorkPackage**](doc/BuyerProjectsApi.md#closeworkpackage) | **POST** /buyers/work-packages/{packageId}/close |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**compileProjectEstimates**](doc/BuyerProjectsApi.md#compileprojectestimates) | **POST** /buyers/work-packages/{packageId}/estimates |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**createProject**](doc/BuyerProjectsApi.md#createproject) | **POST** /buyers/projects |
@@ -364,16 +366,22 @@ Class | Method | HTTP request | Description
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**getWorkPackage**](doc/BuyerProjectsApi.md#getworkpackage) | **GET** /buyers/work-packages/{packageId} |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**inquireProjectArrangementVendor**](doc/BuyerProjectsApi.md#inquireprojectarrangementvendor) | **POST** /buyers/work-packages/{packageId}/arrangements/{arrangementId}/vendors/{vendorId}/inquiry |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**inquireProjectVendor**](doc/BuyerProjectsApi.md#inquireprojectvendor) | **POST** /buyers/work-packages/{packageId}/inquiries |
+[*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**listProjectArchives**](doc/BuyerProjectsApi.md#listprojectarchives) | **GET** /buyers/archived-items |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**listProjectArrangementOptions**](doc/BuyerProjectsApi.md#listprojectarrangementoptions) | **GET** /buyers/work-packages/{packageId}/arrangement-options |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**listProjects**](doc/BuyerProjectsApi.md#listprojects) | **GET** /buyers/projects |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**listWorkPackageLineAlternatives**](doc/BuyerProjectsApi.md#listworkpackagelinealternatives) | **GET** /buyers/work-packages/{packageId}/lines/{lineId}/alternatives |
+[*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**permanentlyDeleteProject**](doc/BuyerProjectsApi.md#permanentlydeleteproject) | **POST** /buyers/projects/{itemId}/permanent-deletion |
+[*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**permanentlyDeleteWorkPackage**](doc/BuyerProjectsApi.md#permanentlydeleteworkpackage) | **POST** /buyers/work-packages/{itemId}/permanent-deletion |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**previewProjectSpecificationSelection**](doc/BuyerProjectsApi.md#previewprojectspecificationselection) | **POST** /buyers/work-packages/{packageId}/candidates/{candidateId}/selection-preview |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**previewWorkPackageCsv**](doc/BuyerProjectsApi.md#previewworkpackagecsv) | **POST** /buyers/work-packages/import-preview |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**reactivateWorkPackage**](doc/BuyerProjectsApi.md#reactivateworkpackage) | **POST** /buyers/work-packages/{packageId}/reactivate |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**removeProjectDraftItem**](doc/BuyerProjectsApi.md#removeprojectdraftitem) | **DELETE** /buyers/work-packages/{packageId}/candidates/{candidateId}/draft-items/{lineId}/{variantId} |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**requestProjectDraftSupplier**](doc/BuyerProjectsApi.md#requestprojectdraftsupplier) | **POST** /buyers/work-packages/{packageId}/candidates/{candidateId}/suppliers/{vendorId}/request |
+[*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**rescanProjectOrderSuppliers**](doc/BuyerProjectsApi.md#rescanprojectordersuppliers) | **POST** /buyers/orders/{orderId}/rescan-suppliers |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**resetProjectRankingPreferences**](doc/BuyerProjectsApi.md#resetprojectrankingpreferences) | **POST** /buyers/project-ranking-preferences/reset |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**resolveProjectMissingLine**](doc/BuyerProjectsApi.md#resolveprojectmissingline) | **PUT** /buyers/work-packages/{packageId}/missing-lines/{lineId} |
+[*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**restoreProject**](doc/BuyerProjectsApi.md#restoreproject) | **POST** /buyers/projects/{itemId}/restore |
+[*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**restoreWorkPackage**](doc/BuyerProjectsApi.md#restoreworkpackage) | **POST** /buyers/work-packages/{itemId}/restore |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**saveProjectDraftItem**](doc/BuyerProjectsApi.md#saveprojectdraftitem) | **PUT** /buyers/work-packages/{packageId}/candidates/{candidateId}/draft-items/{lineId}/{variantId} |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**saveProjectRankingPreferences**](doc/BuyerProjectsApi.md#saveprojectrankingpreferences) | **PUT** /buyers/project-ranking-preferences |
 [*BuyerProjectsApi*](doc/BuyerProjectsApi.md) | [**searchProjectMaterials**](doc/BuyerProjectsApi.md#searchprojectmaterials) | **GET** /buyers/project-materials |
@@ -1471,6 +1479,11 @@ Class | Method | HTTP request | Description
  - [ProductComplianceQueueItem](doc/ProductComplianceQueueItem.md)
  - [ProductDeliveryPreviewRequest](doc/ProductDeliveryPreviewRequest.md)
  - [ProductRatingSummary](doc/ProductRatingSummary.md)
+ - [ProjectArchiveItem](doc/ProjectArchiveItem.md)
+ - [ProjectArchiveMutation](doc/ProjectArchiveMutation.md)
+ - [ProjectArchiveMutationResponse](doc/ProjectArchiveMutationResponse.md)
+ - [ProjectArchivePage](doc/ProjectArchivePage.md)
+ - [ProjectArchivePageResponse](doc/ProjectArchivePageResponse.md)
  - [ProjectArrangement](doc/ProjectArrangement.md)
  - [ProjectArrangementCreate](doc/ProjectArrangementCreate.md)
  - [ProjectArrangementEdit](doc/ProjectArrangementEdit.md)

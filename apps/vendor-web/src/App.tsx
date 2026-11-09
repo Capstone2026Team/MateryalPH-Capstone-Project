@@ -3,7 +3,7 @@ import { AcceptStaffInvitation } from './pages/AcceptStaffInvitation'
 import { BackNavigation, BotProtectionFields, Button, Field, GoogleButton, GoogleMark, googleButtonClassName, PasswordField, PhoneField, StatusMessage, PortalIdentityProvider, PortalResourceProvider, lazyPortalPage, PortalPageLoading, useCommissionPolicy } from '@materyalph/web-ui'
 import { ArrowRight } from 'lucide-react'
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react'
-import { BrowserRouter, Navigate, Link, Outlet, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
+import { Navigate, Link, Outlet, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
 
 import './App.css'
 import { AuthenticatedPublicPage } from './pages/AuthenticatedPublicPage'
@@ -61,9 +61,7 @@ const VendorVerificationPage = lazyPortalPage(() => import('./pages/PhaseThreeVe
 const VendorWelcomePage = lazyPortalPage(() => import('./pages/PhaseThreeVendorPages').then(module => ({ default: module.VendorWelcomePage })))
 
 function App() {
-  return (
-    <BrowserRouter>
-      <PortalPageLoading><Routes>
+  return <PortalPageLoading><Routes>
         <Route path="/" element={<AuthenticatedPublicPage><VendorLandingPage /></AuthenticatedPublicPage>} />
         <Route path="/login" element={<AuthenticatedPublicPage><LoginPage /></AuthenticatedPublicPage>} />
         <Route path="/register" element={<RegisterPage />} />
@@ -126,8 +124,6 @@ function App() {
         <Route path="/commission-terms" element={<CommissionTermsPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes></PortalPageLoading>
-    </BrowserRouter>
-  )
 }
 
 function LoginPage() {

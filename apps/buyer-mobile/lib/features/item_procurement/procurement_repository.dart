@@ -55,6 +55,9 @@ abstract interface class ProcurementRepository {
     String? quantity,
     bool? savedForLater,
     bool acceptCurrentPrice = false,
+    String? variantId,
+    String? expectedPriceVersionId,
+    String? fulfillmentMethod,
   });
 
   Future<CartView> removeLine(
@@ -235,6 +238,7 @@ final class ApiProcurementRepository implements ProcurementRepository {
       complianceBadge: detail.compliance.badge?.name,
       ratingLabel: detail.productRating.label,
       unitsSold: detail.unitsSold,
+      uniqueBuyers: detail.uniqueBuyers ?? 0,
       isFavorite: detail.isFavorite,
       purchasable: detail.purchasable,
       notPurchasableReason: detail.notPurchasableReason?.name,
@@ -356,6 +360,9 @@ final class ApiProcurementRepository implements ProcurementRepository {
     String? quantity,
     bool? savedForLater,
     bool acceptCurrentPrice = false,
+    String? variantId,
+    String? expectedPriceVersionId,
+    String? fulfillmentMethod,
   }) => _api(() async {
     final response = await _cart.updateBuyerCartItem(
       itemId: line.id,
@@ -363,6 +370,13 @@ final class ApiProcurementRepository implements ProcurementRepository {
         (b) => b
           ..lockVersion = cartLockVersion
           ..quantity = quantity
+          ..listingVariantId = variantId
+          ..expectedPriceVersionId = expectedPriceVersionId
+          ..fulfillmentMethod = fulfillmentMethod == null
+              ? null
+              : api.CartItemUpdateFulfillmentMethodEnum.valueOf(
+                  fulfillmentMethod,
+                )
           ..savedForLater = savedForLater
           ..acceptCurrentPrice = acceptCurrentPrice ? true : null,
       ),
@@ -473,6 +487,7 @@ final class ApiProcurementRepository implements ProcurementRepository {
     ratingLabel: result.productRating.label,
     ratingAverage: result.productRating.average,
     unitsSold: result.unitsSold,
+    uniqueBuyers: result.uniqueBuyers ?? 0,
     distanceMeters: result.distanceMeters,
     badges: result.badges.map((badge) => badge.name).toList(),
     isFavorite: result.isFavorite,

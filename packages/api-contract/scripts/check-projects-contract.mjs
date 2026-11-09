@@ -33,6 +33,21 @@ for (const route of routes.filter(route => /buyers\/(projects|work-packages|proj
   for (const method of route.method.split('|').filter(method => method !== 'HEAD')) assert.ok(expected.has(`${method} ${route.uri.replace(/\{[^}]+\}/g, '{}')}`), `Undocumented Project route ${route.uri}`)
 }
 const schemas = spec.components.schemas
+for (const name of ['ProjectSummary', 'ProjectView', 'WorkPackageSummary', 'WorkPackageView']) {
+  for (const field of ['archived_at', 'delete_after', 'can_archive', 'archive_blocker']) assert.ok(schemas[name].properties[field], `${name} must expose archive eligibility and retention`)
+  assert.equal(schemas[name].properties.archived_at.format, 'date-time')
+  assert.equal(schemas[name].properties.can_archive.type, 'boolean')
+}
+for (const kind of ['projects', 'work-packages']) {
+  for (const action of ['archive', 'restore', 'permanent-deletion']) {
+    const operation = spec.paths[`/buyers/${kind}/{itemId}/${action}`].post
+    assert.ok(operation.parameters.some(p => p.name === 'Idempotency-Key' && p.required), 'Archive lifecycle mutations must be retry safe')
+    assert.equal(operation.requestBody.content['application/json'].schema.$ref, '#/components/schemas/ProjectVersionRequest')
+  }
+}
+assert.deepEqual(spec.paths['/buyers/archived-items'].get.parameters.find(p => p.name === 'type').schema.enum, ['PROJECT', 'WORK_PACKAGE'])
+assert.equal(spec.paths['/buyers/orders/{orderId}/rescan-suppliers'].post.responses['200'].content['application/json'].schema.$ref, '#/components/schemas/WorkPackageViewResponse')
+for (const field of ['budget_centavos', 'archived_at', 'delete_after', 'remaining_days', 'parent_archived', 'can_restore', 'can_delete']) assert.ok(schemas.ProjectArchiveItem.required.includes(field))
 for (const field of ['selected_arrangement_id', 'procurement_candidate_id', 'vendor_orders']) assert.ok(schemas.WorkPackageView.properties[field], 'Work Package detail must retain procurement resume fields')
 assert.ok(schemas.ProjectSeparatePurchase.properties.load, 'Typed separate purchases retain delivery material classification')
 assert.match(schemas.ProjectPreferenceSave.properties.weights.description, /persisted unchanged/)

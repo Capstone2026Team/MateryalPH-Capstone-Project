@@ -1624,7 +1624,7 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
-     * One normal Buyer/store chat. The server uses the authorized store sales conversation for ordinary replies automatically, preserving order closure and original commercial permissions. Work Packages appear as message attachments; users never choose a reply subject.
+     * One normal Buyer/store chat. The server uses the authorized store sales conversation for ordinary replies automatically, preserving order closure and original commercial permissions. Work Packages appear as message attachments; users never choose a reply subject. Order-specific fulfillment messages and their read receipts remain in the fulfillment popup, outside this sales timeline. A closed fulfillment thread never locks the normal chat. Assigned Fulfillment Staff retain only the selected assigned order thread.
      */
     async getVendorBuyerThreadRaw(requestParameters: GetVendorBuyerThreadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ConversationDetailResponse>> {
         const requestOptions = await this.getVendorBuyerThreadRequestOpts(requestParameters);
@@ -1634,7 +1634,7 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
-     * One normal Buyer/store chat. The server uses the authorized store sales conversation for ordinary replies automatically, preserving order closure and original commercial permissions. Work Packages appear as message attachments; users never choose a reply subject.
+     * One normal Buyer/store chat. The server uses the authorized store sales conversation for ordinary replies automatically, preserving order closure and original commercial permissions. Work Packages appear as message attachments; users never choose a reply subject. Order-specific fulfillment messages and their read receipts remain in the fulfillment popup, outside this sales timeline. A closed fulfillment thread never locks the normal chat. Assigned Fulfillment Staff retain only the selected assigned order thread.
      */
     async getVendorBuyerThread(requestParameters: GetVendorBuyerThreadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ConversationDetailResponse> {
         const response = await this.getVendorBuyerThreadRaw(requestParameters, initOverrides);
@@ -1895,7 +1895,7 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
-     * Unified paginated inbox of authorized SALES inquiry threads, including Work Packages directly. Fulfillment remains order-specific. Each inquiry preserves its own receipts and personal archive.
+     * Paginated inbox grouped by authorized Buyer/store sales chat before pagination, including Work Package inquiries. Owner and Store Manager rows, previews and unread counts exclude order-specific fulfillment messages; existing order-only relationships have a permanent sales chat. Fulfillment conversations open inside that chat through the authorized order-list popup and keep separate unread counts and read-only closure. Assigned Fulfillment Staff see only their assigned order threads, listed separately per order. Buyer archive applies to the normal sales chat together and preserves original history and receipts.
      */
     async listConversationsRaw(requestParameters: ListConversationsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ConversationPageResponse>> {
         const requestOptions = await this.listConversationsRequestOpts(requestParameters);
@@ -1905,7 +1905,7 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
-     * Unified paginated inbox of authorized SALES inquiry threads, including Work Packages directly. Fulfillment remains order-specific. Each inquiry preserves its own receipts and personal archive.
+     * Paginated inbox grouped by authorized Buyer/store sales chat before pagination, including Work Package inquiries. Owner and Store Manager rows, previews and unread counts exclude order-specific fulfillment messages; existing order-only relationships have a permanent sales chat. Fulfillment conversations open inside that chat through the authorized order-list popup and keep separate unread counts and read-only closure. Assigned Fulfillment Staff see only their assigned order threads, listed separately per order. Buyer archive applies to the normal sales chat together and preserves original history and receipts.
      */
     async listConversations(requestParameters: ListConversationsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ConversationPageResponse> {
         const response = await this.listConversationsRaw(requestParameters, initOverrides);

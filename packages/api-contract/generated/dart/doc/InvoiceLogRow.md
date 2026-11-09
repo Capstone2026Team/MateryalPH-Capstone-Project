@@ -18,7 +18,7 @@ Name | Type | Description | Notes
 **openRequest** | **bool** |  | [optional]
 **note** | **String** |  | [optional]
 **kind** | **String** |  | [optional]
-**state** | **String** |  | [optional]
+**state** | **String** | Request state; Vendor RECONCILIATION rows also include the pending Buyer correction state, REQUESTED or RETURNED_FOR_CORRECTION. | [optional]
 **details** | **String** |  | [optional]
 **serviceTargetAt** | [**DateTime**](DateTime.md) |  | [optional]
 **serviceTargetLabel** | **String** |  | [optional]

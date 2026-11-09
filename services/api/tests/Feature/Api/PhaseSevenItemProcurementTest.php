@@ -212,6 +212,50 @@ final class PhaseSevenItemProcurementTest extends TestCase
 
     // ── Search, SRS and Best Price ─────────────────────────────────────────────────────────────────
 
+    public function test_best_deal_prioritizes_product_name_matches_before_deal_score_across_pages(): void
+    {
+        $listings = [];
+        foreach (['Deformed steel bar' => 500, 'Rerolled steel bar Grade 40' => 3000, 'Rerolled steel bar' => 4000] as $name => $distance) {
+            [$store, $owner] = $this->activeStore($name.' Store', false);
+            $this->signInStoreMember($owner);
+            $listings[$name] = $this->listing('RELEVANCE-'.count($listings), name: $name);
+            $this->placeStore($store->id, $distance);
+        }
+        $this->buyer();
+        $query = ['query' => '  REROLLED   steel bar  ', 'per_page' => 1];
+        $first = $this->searchListings($query)->assertOk()->assertJsonPath('data.0.listing_id', $listings['Rerolled steel bar'])
+            ->assertJsonPath('meta.ranking.tie_breakers.0', 'text_match_tier_asc');
+        $second = $this->searchListings($query + ['cursor' => $first->json('meta.next_cursor')])->assertOk()
+            ->assertJsonPath('data.0.listing_id', $listings['Rerolled steel bar Grade 40']);
+        $this->searchListings($query + ['cursor' => $second->json('meta.next_cursor')])->assertOk()
+            ->assertJsonPath('data.0.listing_id', $listings['Deformed steel bar']);
+        $this->searchListings(['query' => 'rerolled steel bar', 'sort' => 'DISTANCE'])->assertOk()
+            ->assertJsonPath('data.0.listing_id', $listings['Deformed steel bar']);
+    }
+
+    public function test_purchase_count_deduplicates_buyers_across_completed_orders_and_variants(): void
+    {
+        [$store, $owner] = $this->activeStore('Buyer Count Store', false);
+        $this->signInStoreMember($owner);
+        $listing = $this->listing('BUYER-COUNT', [['price' => 1800], ['price' => 2000]]);
+        $empty = $this->listing('NO-BUYERS');
+        $this->placeStore($store->id, 1000);
+        $first = $this->buyerProfileId($this->buyer());
+        $this->sale($store->id, $listing, $first, '40', 'COMPLETED');
+        $this->sale($store->id, $listing, $first, '70', 'COMPLETED', $this->variants($listing)[1]);
+        $second = $this->buyerProfileId($this->buyer());
+        $this->sale($store->id, $listing, $second, '5', 'COMPLETED');
+        $third = $this->buyerProfileId($this->buyer());
+        foreach (['CONFIRMED', 'CANCELLED'] as $state) {
+            $this->sale($store->id, $listing, $third, '90', $state);
+        }
+        $this->listingDetails($listing)->assertOk()->assertJsonPath('data.unique_buyers', 2)->assertJsonPath('data.units_sold', '115.0000');
+        $this->listingDetails($empty)->assertOk()->assertJsonPath('data.unique_buyers', 0);
+        $cards = collect($this->searchListings()->assertOk()->json('data'))->keyBy('listing_id');
+        self::assertSame(2, $cards[$listing]['unique_buyers']);
+        self::assertSame(0, $cards[$empty]['unique_buyers']);
+    }
+
     public function test_catalog_delivery_checks_are_batched_for_multiple_vendors_and_listings(): void
     {
         for ($index = 0; $index < 3; $index++) {
@@ -431,6 +475,44 @@ final class PhaseSevenItemProcurementTest extends TestCase
     }
 
     // ── Cart and checkout preview ──────────────────────────────────────────────────────────────────
+
+    public function test_cart_product_options_update_the_existing_line_atomically_and_keep_authorization(): void
+    {
+        [$store, $owner] = $this->activeStore('Editable Cart', false);
+        $this->signInStoreMember($owner);
+        $listing = $this->listing('EDIT-CART', [['price' => 1800], ['price' => 2100]]);
+        $other = $this->listing('OTHER-CART');
+        $this->placeStore($store->id, 1000);
+        $this->buyer();
+        $this->addToCart($listing, '2');
+        $cart = $this->getJson('/api/v1/buyers/cart')->json('data');
+        $lineId = $cart['groups'][0]['lines'][0]['id'];
+        $variant = $this->variants($listing)[1];
+        $price = (string) DB::table('listing_price_versions')->where('listing_variant_id', $variant)->whereNull('retired_at')->value('id');
+        $body = ['lock_version' => $cart['lock_version'], 'listing_variant_id' => $variant, 'expected_price_version_id' => $price, 'quantity' => '3', 'fulfillment_method' => 'PICKUP'];
+        $updated = $this->patchJson('/api/v1/buyers/cart/items/'.$lineId, $body)->assertOk()
+            ->assertJsonPath('data.groups.0.lines.0.id', $lineId)->assertJsonPath('data.groups.0.lines.0.variant_id', $variant)
+            ->assertJsonPath('data.groups.0.lines.0.quantity', '3.0000')->assertJsonPath('data.groups.0.lines.0.snapshot.unit_price_centavos', 2100);
+        self::assertSame(1, DB::table('cart_items')->count());
+        self::assertSame(0, DB::table('inventory_holds')->count());
+        self::assertSame(0, DB::table('orders')->count());
+        $this->patchJson('/api/v1/buyers/cart/items/'.$lineId, $body)->assertStatus(409);
+        $body['lock_version'] = $updated->json('data.lock_version');
+        $this->patchJson('/api/v1/buyers/cart/items/'.$lineId, array_replace($body, ['quantity' => '4', 'fulfillment_method' => 'DELIVERY']))->assertStatus(422);
+        $this->assertDatabaseHas('cart_items', ['id' => $lineId, 'quantity' => '3.0000']);
+        $this->patchJson('/api/v1/buyers/cart/items/'.$lineId, array_replace($body, ['listing_variant_id' => $this->variants($other)[0]]))->assertStatus(409);
+        $this->patchJson('/api/v1/buyers/cart/items/'.$lineId, array_replace($body, ['expected_price_version_id' => (string) Str::uuid7()]))->assertStatus(409)->assertJsonPath('errors.0.code', 'PRICE_CHANGED');
+        // A second existing option is never silently merged or removed by an edit.
+        $this->addToCart($listing, '1');
+        $latest = $this->getJson('/api/v1/buyers/cart')->json('data');
+        $firstVariant = $this->variants($listing)[0];
+        $firstPrice = (string) DB::table('listing_price_versions')->where('listing_variant_id', $firstVariant)->whereNull('retired_at')->value('id');
+        $this->patchJson('/api/v1/buyers/cart/items/'.$lineId, array_replace($body, ['lock_version' => $latest['lock_version'], 'listing_variant_id' => $firstVariant, 'expected_price_version_id' => $firstPrice]))
+            ->assertStatus(409)->assertJsonPath('errors.0.code', 'CART_VARIANT_ALREADY_EXISTS');
+        self::assertSame(2, DB::table('cart_items')->count());
+        $this->buyer();
+        $this->patchJson('/api/v1/buyers/cart/items/'.$lineId, array_replace($body, ['lock_version' => 1]))->assertNotFound();
+    }
 
     public function test_cart_placement_is_idempotent_validates_price_and_quantity_and_never_holds_stock(): void
     {
@@ -822,13 +904,13 @@ final class PhaseSevenItemProcurementTest extends TestCase
     }
 
     /** One order line of $quantity for the listing's first variant on an order in $state. */
-    private function sale(string $organizationId, string $listing, string $buyerProfileId, string $quantity, string $state): void
+    private function sale(string $organizationId, string $listing, string $buyerProfileId, string $quantity, string $state, ?string $variant = null): void
     {
         $orderId = (string) Str::uuid7();
         DB::table('orders')->insert(['id' => $orderId, 'reference' => 'TS-'.Str::upper(Str::random(10)), 'buyer_profile_id' => $buyerProfileId, 'vendor_organization_id' => $organizationId, 'procurement_type' => 'ITEM_BASED',
             'order_state' => $state, 'fulfillment_method' => 'PICKUP', 'payment_method' => 'ONLINE', 'commercial_total_centavos' => 1800, 'materials_centavos' => 1800,
             'closed_at' => $state === 'COMPLETED' ? now() : null, 'created_at' => now(), 'updated_at' => now()]);
-        $variant = $this->variants($listing)[0];
+        $variant ??= $this->variants($listing)[0];
         DB::table('order_lines')->insert(['id' => (string) Str::uuid7(), 'order_id' => $orderId, 'listing_variant_id' => $variant, 'unit_id' => DB::table('listing_variants')->where('id', $variant)->value('unit_id'),
             'quantity' => $quantity, 'unit_price_centavos' => 1800, 'payable_centavos' => 1800, 'tax_category' => 'NON_VAT', 'created_at' => now(), 'updated_at' => now()]);
     }

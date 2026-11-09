@@ -13,6 +13,10 @@ part 'project_summary.g.dart';
 /// ProjectSummary
 ///
 /// Properties:
+/// * [archivedAt]
+/// * [deleteAfter]
+/// * [canArchive]
+/// * [archiveBlocker]
 /// * [id]
 /// * [name]
 /// * [status]
@@ -23,6 +27,18 @@ part 'project_summary.g.dart';
 /// * [budget]
 @BuiltValue()
 abstract class ProjectSummary implements Built<ProjectSummary, ProjectSummaryBuilder> {
+  @BuiltValueField(wireName: r'archived_at')
+  DateTime? get archivedAt;
+
+  @BuiltValueField(wireName: r'delete_after')
+  DateTime? get deleteAfter;
+
+  @BuiltValueField(wireName: r'can_archive')
+  bool? get canArchive;
+
+  @BuiltValueField(wireName: r'archive_blocker')
+  String? get archiveBlocker;
+
   @BuiltValueField(wireName: r'id')
   String get id;
 
@@ -71,6 +87,34 @@ class _$ProjectSummarySerializer implements PrimitiveSerializer<ProjectSummary> 
     ProjectSummary object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.archivedAt != null) {
+      yield r'archived_at';
+      yield serializers.serialize(
+        object.archivedAt,
+        specifiedType: const FullType(DateTime),
+      );
+    }
+    if (object.deleteAfter != null) {
+      yield r'delete_after';
+      yield serializers.serialize(
+        object.deleteAfter,
+        specifiedType: const FullType(DateTime),
+      );
+    }
+    if (object.canArchive != null) {
+      yield r'can_archive';
+      yield serializers.serialize(
+        object.canArchive,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.archiveBlocker != null) {
+      yield r'archive_blocker';
+      yield serializers.serialize(
+        object.archiveBlocker,
+        specifiedType: const FullType(String),
+      );
+    }
     yield r'id';
     yield serializers.serialize(
       object.id,
@@ -138,6 +182,38 @@ class _$ProjectSummarySerializer implements PrimitiveSerializer<ProjectSummary> 
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'archived_at':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(DateTime),
+          ) as DateTime?;
+          if (valueDes == null) continue;
+          result.archivedAt = valueDes;
+          break;
+        case r'delete_after':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(DateTime),
+          ) as DateTime?;
+          if (valueDes == null) continue;
+          result.deleteAfter = valueDes;
+          break;
+        case r'can_archive':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.canArchive = valueDes;
+          break;
+        case r'archive_blocker':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.archiveBlocker = valueDes;
+          break;
         case r'id':
           final valueDes = serializers.deserialize(
             value,

@@ -915,6 +915,11 @@ export 'package:materyalph_api_client/src/model/product_compliance_queue_envelop
 export 'package:materyalph_api_client/src/model/product_compliance_queue_item.dart';
 export 'package:materyalph_api_client/src/model/product_delivery_preview_request.dart';
 export 'package:materyalph_api_client/src/model/product_rating_summary.dart';
+export 'package:materyalph_api_client/src/model/project_archive_item.dart';
+export 'package:materyalph_api_client/src/model/project_archive_mutation.dart';
+export 'package:materyalph_api_client/src/model/project_archive_mutation_response.dart';
+export 'package:materyalph_api_client/src/model/project_archive_page.dart';
+export 'package:materyalph_api_client/src/model/project_archive_page_response.dart';
 export 'package:materyalph_api_client/src/model/project_arrangement.dart';
 export 'package:materyalph_api_client/src/model/project_arrangement_create.dart';
 export 'package:materyalph_api_client/src/model/project_arrangement_edit.dart';

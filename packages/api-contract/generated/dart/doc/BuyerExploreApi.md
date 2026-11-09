@@ -235,7 +235,7 @@ Name | Type | Description  | Notes
 
 
 
-Item-Based search over MAT-02 eligible Tier 2 listings inside the radius; Directory Suppliers are never inventory. Browsing defaults to DISTANCE and a text query defaults to BEST_DEAL (SRS, a normalized weighted sum with the Buyer's Item-Based weights). FAVORITES_FIRST is a separate explicit sort that never changes Best Deal. Best Price compares the MAT-03 normalized price of the same comparable group and canonical unit across in-stock offers in the radius and needs two Vendors. One card per listing, deterministic tie-breaking and a signed keyset cursor that rejects changed filters.
+Item-Based search over MAT-02 eligible Tier 2 listings inside the radius; Directory Suppliers are never inventory. Browsing defaults to DISTANCE and a text query defaults to BEST_DEAL (SRS, a normalized weighted sum with the Buyer's Item-Based weights). BEST_DEAL puts exact product names first, then names containing every search token, then full catalog/alias matches, then fuzzy alternatives ordered by similarity. Within the same match level, the existing SRS and tie-breakers apply. FAVORITES_FIRST is a separate explicit sort that never changes Best Deal. Best Price compares the MAT-03 normalized price of the same comparable group and canonical unit across in-stock offers in the radius and needs two Vendors. One card per listing, deterministic tie-breaking and a signed keyset cursor that rejects changed filters.
 
 ### Example
 ```dart

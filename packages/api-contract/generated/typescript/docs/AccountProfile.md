@@ -12,6 +12,7 @@ Name | Type
 `mobileE164` | string
 `emailMasked` | boolean
 `email` | string
+`emailVerified` | boolean
 `accountType` | string
 `accountStatus` | string
 `lockVersion` | number
@@ -38,6 +39,7 @@ const example = {
   "mobileE164": null,
   "emailMasked": null,
   "email": null,
+  "emailVerified": null,
   "accountType": null,
   "accountStatus": null,
   "lockVersion": null,

@@ -647,7 +647,8 @@ final class PhaseThirteenDisputesTest extends TestCase
         self::assertSame('UPLOADED', (string) DB::table('invoice_requests')->where('id', $request->id)->value('state'));
         $this->getJson('/api/v1/vendor/navigation-updates')->assertOk()->assertJsonPath('data.sections./invoices', 0);
         $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices/send', ['lock_version' => 1], $sendKey)->assertOk()->assertJsonCount(1, 'data.records');
-        $this->post('/api/v1/vendor/orders/'.$orderId.'/invoices', ['file' => $this->validPdf()] + $upload, $this->key() + ['Accept' => 'application/json'])->assertStatus(409)->assertJsonPath('errors.0.code', 'INVOICE_EDIT_LOCKED');
+        $this->getJson('/api/v1/vendor/orders/'.$orderId.'/invoices')->assertOk()->assertJsonPath('data.can_upload', true);
+        $this->getJson('/api/v1/vendor/invoices?view=REQUESTS')->assertOk()->assertJsonCount(0, 'data')->assertJsonPath('meta.counts.REQUESTS', 0);
         foreach (self::PROTECTED_FINANCE as $key) {
             self::assertStringNotContainsString('"'.$key, json_encode($vendorView, JSON_THROW_ON_ERROR));
         }
@@ -657,7 +658,8 @@ final class PhaseThirteenDisputesTest extends TestCase
                 ->assertJsonPath('data.0.order_id', $orderId)->assertJsonPath('data.0.id', $record);
         }
         $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices/'.$record.'/explanation', ['note' => 'Rounding on the printed invoice; correction to follow.'], $this->key())->assertOk()
-            ->assertJsonPath('data.records.0.reconciliation_state', 'EXPLAINED');
+            ->assertJsonPath('data.records.0.reconciliation_state', 'EXPLAINED')->assertJsonPath('data.can_upload', true);
+        $this->getJson('/api/v1/vendor/invoices?view=RECONCILIATION')->assertOk()->assertJsonPath('data.0.id', $record)->assertJsonPath('meta.counts.RECONCILIATION', 1);
         $this->expectAppendOnly(fn () => DB::table('invoice_records')->where('id', $record)->update(['amount_centavos' => 1]));
 
         // Audited, short-lived downloads; the Buyer's download moves the request to DOWNLOADED.
@@ -666,6 +668,9 @@ final class PhaseThirteenDisputesTest extends TestCase
         $link = $this->getJson('/api/v1/buyers/orders/'.$orderId.'/invoices')->assertOk()->assertJsonPath('data.status', 'ISSUED')->json('data.records.0.download.url');
         $this->get($link)->assertOk();
         self::assertSame(['DOWNLOADED', 1], [(string) DB::table('invoice_requests')->where('id', $request->id)->value('state'), DB::table('invoice_record_downloads')->where('audience', 'BUYER')->count()]);
+        $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/vendor/invoices?view=REQUESTS')->assertOk()->assertJsonCount(0, 'data')->assertJsonPath('meta.counts.REQUESTS', 0);
+        $this->signInBuyer($buyer);
         $this->buyer('outsider@example.test');
         $this->get($link)->assertNotFound();
 
@@ -709,6 +714,8 @@ final class PhaseThirteenDisputesTest extends TestCase
         $this->postJson('/api/v1/buyers/orders/'.$orderId.'/invoices/requests', ['kind' => 'COPY', 'details' => 'Please provide the invoice copy.'], $this->key())->assertCreated();
         $requestId = (string) DB::table('invoice_requests')->where('order_id', $orderId)->value('id');
         $input = array_diff_key($preset, ['lock_version' => 0]) + ['invoice_number' => 'PRESET-01', 'issued_on' => now('Asia/Manila')->toDateString(), 'amount_centavos' => 12000];
+        $snapshotId = DB::table('financial_snapshots')->where('order_id', $orderId)->orderByDesc('version')->value('id');
+        $input['amount_centavos'] = (int) DB::table('financial_snapshot_lines')->where('financial_snapshot_id', $snapshotId)->sum('ordinary_payable_centavos');
         $this->signInStoreMember($owner);
         $this->post('/api/v1/vendor/orders/'.$orderId.'/invoices', $input + ['lock_version' => 0, 'file' => $this->validPdf()], $this->key() + ['Accept' => 'application/json'])->assertCreated();
         $oldFile = DB::table('invoice_drafts')->where('order_id', $orderId)->value('file_id');
@@ -717,19 +724,33 @@ final class PhaseThirteenDisputesTest extends TestCase
         $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices/send', ['lock_version' => 1], $this->key())->assertConflict();
         $sent = $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices/send', ['lock_version' => 2], $this->key())->assertOk()->assertJsonPath('data.can_upload', false)->json('data.records.0');
         $recordId = $sent['id'];
+        $this->getJson('/api/v1/vendor/invoices?view=REQUESTS')->assertOk()->assertJsonCount(0, 'data')->assertJsonPath('meta.counts.REQUESTS', 0);
+        $this->getJson('/api/v1/vendor/invoices?view=RECONCILIATION')->assertOk()->assertJsonCount(0, 'data');
+        $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices', ['invoice_number' => 'LOCKED', 'lock_version' => 3] + $input, $this->key())->assertConflict()->assertJsonPath('errors.0.code', 'INVOICE_EDIT_LOCKED');
         $snapshot = DB::table('invoice_records')->where('id', $recordId)->value('commercial_snapshot');
         self::assertNotNull($snapshot);
         $this->expectAppendOnly(fn () => DB::table('invoice_records')->where('id', $recordId)->update(['commercial_snapshot' => '{}']));
         $this->signInBuyer($buyer);
         $this->postJson('/api/v1/buyers/orders/'.$orderId.'/invoices/requests/'.$requestId.'/answer', ['action' => 'RETURN', 'reason' => 'Please correct the invoice reference.'], $this->key())->assertOk();
+        $this->postJson('/api/v1/buyers/orders/'.$orderId.'/invoices/requests', ['kind' => 'CORRECTION', 'invoice_record_id' => $recordId, 'details' => 'Please correct the billing reference too.'], $this->key())->assertCreated();
         $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/vendor/invoices?view=REQUESTS')->assertOk()->assertJsonCount(0, 'data')->assertJsonPath('meta.counts.REQUESTS', 0);
+        $this->getJson('/api/v1/vendor/invoices?view=RECONCILIATION')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $recordId)
+            ->assertJsonPath('data.0.state', 'RETURNED_FOR_CORRECTION')->assertJsonPath('meta.counts.RECONCILIATION', 1);
         $this->getJson('/api/v1/vendor/orders/'.$orderId.'/invoices')->assertOk()->assertJsonPath('data.can_upload', true)->assertJsonPath('data.draft.lock_version', 3);
-        $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices', ['invoice_number' => 'PRESET-03', 'lock_version' => 3] + $input, $this->key())->assertCreated()->assertJsonPath('data.draft.amends_invoice_record_id', $recordId);
+        $this->post('/api/v1/vendor/orders/'.$orderId.'/invoices', ['invoice_number' => 'PRESET-03', 'lock_version' => 3, 'file' => $this->validPdf()] + $input, $this->key() + ['Accept' => 'application/json'])->assertCreated()->assertJsonPath('data.draft.amends_invoice_record_id', $recordId);
+        $newFile = DB::table('invoice_drafts')->where('order_id', $orderId)->value('file_id');
+        self::assertNotSame($oldFile, $newFile);
+        self::assertSame($oldFile, DB::table('invoice_records')->where('id', $recordId)->value('file_id'));
         $corrected = $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices/send', ['lock_version' => 4], $this->key())->assertOk()->assertJsonCount(2, 'data.records')->assertJsonPath('data.can_upload', false)->json('data');
         self::assertSame('UPLOADED', DB::table('invoice_requests')->where('id', $requestId)->value('state'));
+        self::assertSame(2, DB::table('invoice_requests')->where('order_id', $orderId)->where('state', 'UPLOADED')->count());
         self::assertNotSame($recordId, DB::table('invoice_requests')->where('id', $requestId)->value('fulfilled_invoice_record_id'));
         self::assertSame($snapshot, DB::table('invoice_records')->where('id', $recordId)->value('commercial_snapshot'));
         self::assertSame('PRESET-02', $corrected['records'][0]['invoice_number']);
+        $this->getJson('/api/v1/vendor/invoices?view=RECONCILIATION')->assertOk()->assertJsonCount(0, 'data')->assertJsonPath('meta.counts.RECONCILIATION', 0);
+        $this->getJson('/api/v1/vendor/invoices?view=REQUESTS')->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson('/api/v1/vendor/invoices?view=RECORDS')->assertOk()->assertJsonCount(2, 'data');
         $originalEmail = app(InvoiceCopyMailFactory::class)->make($buyer, $recordId);
         $correctionEmail = app(InvoiceCopyMailFactory::class)->make($buyer, $corrected['records'][1]['id']);
         self::assertSame('PRESET-02', $originalEmail->invoice['invoice_number']);
@@ -738,6 +759,59 @@ final class PhaseThirteenDisputesTest extends TestCase
         self::assertTrue($correctionEmail->invoice['is_correction']);
         $this->signInBuyer($buyer);
         $this->postJson('/api/v1/buyers/orders/'.$orderId.'/invoices/requests', ['kind' => 'CORRECTION', 'invoice_record_id' => $recordId, 'details' => 'Please correct this older version.'], $this->key())->assertConflict();
+    }
+
+    public function test_invoice_amount_and_vat_mismatches_can_be_corrected_without_a_buyer_return(): void
+    {
+        [$store, $owner, $buyer, $orderId] = $this->paidPickup('Mismatch Invoice Store');
+        DB::table('vendor_organizations')->where('id', $store->id)->update(['legal_business_name' => 'Mismatch Invoice Store Corp.']);
+        $snapshot = DB::table('financial_snapshots')->where('order_id', $orderId)->orderByDesc('version')->first();
+        $lines = DB::table('financial_snapshot_lines')->where('financial_snapshot_id', $snapshot->id);
+        $total = (int) (clone $lines)->sum('ordinary_payable_centavos') + (int) $snapshot->delivery_centavos;
+        $vat = (int) (clone $lines)->sum('vat_centavos') + (int) $snapshot->delivery_vat_centavos;
+        $input = ['invoice_type' => 'VENDOR_GOODS_INVOICE', 'issuer_name' => 'Mismatch Invoice Store Corp.', 'invoice_number' => 'MISMATCH-01',
+            'issued_on' => now('Asia/Manila')->toDateString(), 'amount_centavos' => $total + 1, 'source_system' => 'REGISTERED_CAS', 'invoicing_method' => 'COMPUTERIZED'];
+        $this->signInStoreMember($owner);
+        $this->post('/api/v1/vendor/orders/'.$orderId.'/invoices', $input + ['lock_version' => 0, 'file' => $this->validPdf()], $this->key() + ['Accept' => 'application/json'])->assertCreated();
+        $sent = $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices/send', ['lock_version' => 1], $this->key())->assertOk()->assertJsonPath('data.can_upload', true)->json('data.records.0');
+        $original = DB::table('invoice_records')->where('id', $sent['id'])->first();
+        // Legacy sent copies have no preparation row. Retain the immutable record and file.
+        DB::table('invoice_drafts')->where('order_id', $orderId)->delete();
+        $service = $this->teamMember($store, 'CUSTOMER_SERVICE');
+        $this->signInStoreMember($service);
+        $this->getJson('/api/v1/vendor/orders/'.$orderId.'/invoices')->assertOk()->assertJsonPath('data.can_upload', false)->assertJsonPath('data.draft', null);
+        $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices', ['lock_version' => 2] + $input, $this->key())->assertForbidden();
+        $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices/send', ['lock_version' => 2], $this->key())->assertForbidden();
+        [, $otherOwner] = $this->activeStore('Other Invoice Store', false);
+        $this->signInStoreMember($otherOwner);
+        $this->getJson('/api/v1/vendor/invoices?view=RECONCILIATION')->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson('/api/v1/vendor/orders/'.$orderId.'/invoices')->assertNotFound();
+
+        $this->signInStoreMember($owner);
+        // A VAT-only difference must remain actionable even when the invoice total matches.
+        $next = ['invoice_number' => 'MISMATCH-02', 'amount_centavos' => $total, 'vat_centavos' => $vat + 1] + $input;
+        $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices', ['lock_version' => 0] + $next, $this->key())->assertCreated()->assertJsonPath('data.draft.amends_invoice_record_id', $sent['id']);
+        $second = $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices/send', ['lock_version' => 1], $this->key())->assertOk()
+            ->assertJsonPath('data.records.0.reconciliation_state', 'CORRECTED')->assertJsonPath('data.records.1.reconciliation_difference_centavos', 0)
+            ->assertJsonPath('data.records.1.reconciliation_state', 'INVOICE_RECONCILIATION_REQUIRED')->json('data.records.1');
+        $this->getJson('/api/v1/vendor/invoices?view=RECONCILIATION')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $second['id'])->assertJsonPath('meta.counts.RECONCILIATION', 1);
+        $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices/'.$second['id'].'/explanation', ['note' => 'The VAT amount needs a corrected invoice.'], $this->key())->assertOk();
+        $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices', ['lock_version' => 2, 'invoice_number' => 'MISMATCH-03', 'vat_centavos' => $vat] + $next, $this->key())->assertCreated();
+        $sendKey = $this->key();
+        $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices/send', ['lock_version' => 3], $sendKey)->assertOk()->assertJsonPath('data.can_upload', false)->assertJsonPath('data.records.2.reconciliation_state', 'MATCHED');
+        $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices/send', ['lock_version' => 3], $sendKey)->assertOk()->assertJsonCount(3, 'data.records');
+        $this->getJson('/api/v1/vendor/invoices?view=RECONCILIATION')->assertOk()->assertJsonCount(0, 'data')->assertJsonPath('meta.counts.RECONCILIATION', 0);
+        self::assertSame($original->file_id, DB::table('invoice_drafts')->where('order_id', $orderId)->value('file_id'), 'Metadata corrections can retain the authorized original attachment.');
+        self::assertSame((int) $original->amount_centavos, (int) DB::table('invoice_records')->where('id', $original->id)->value('amount_centavos'));
+        self::assertSame($original->commercial_snapshot, DB::table('invoice_records')->where('id', $original->id)->value('commercial_snapshot'));
+        self::assertSame('The VAT amount needs a corrected invoice.', DB::table('invoice_records')->where('id', $second['id'])->value('reconciliation_note'));
+
+        $latest = DB::table('invoice_records')->where('order_id', $orderId)->orderByDesc('created_at')->orderByDesc('id')->value('id');
+        $this->signInBuyer($buyer);
+        $this->postJson('/api/v1/buyers/orders/'.$orderId.'/invoices/requests', ['kind' => 'CORRECTION', 'invoice_record_id' => $latest, 'details' => 'Please correct the invoice billing name.'], $this->key())->assertCreated();
+        $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/vendor/invoices?view=REQUESTS')->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson('/api/v1/vendor/invoices?view=RECONCILIATION')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $latest)->assertJsonPath('data.0.state', 'REQUESTED');
     }
 
     #[DataProvider('invoiceAttachmentTypes')]

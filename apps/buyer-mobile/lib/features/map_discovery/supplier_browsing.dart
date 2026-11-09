@@ -17,6 +17,15 @@ extension SupplierListViewLabel on SupplierListView {
     SupplierListView.directory => 'Directory',
     SupplierListView.favorites => 'Favorites',
   };
+
+  String get explanation => switch (this) {
+    SupplierListView.verified =>
+      'Verified stores on MateryalPH. Browse products, message and order in the app.',
+    SupplierListView.directory =>
+      'Suppliers listed on Google, for reference only. Contact them outside MateryalPH.',
+    SupplierListView.favorites =>
+      'Suppliers you saved, including Verified stores and Directory suppliers.',
+  };
 }
 
 extension SupplierListSortLabel on SupplierListSort {

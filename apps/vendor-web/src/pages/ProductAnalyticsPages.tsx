@@ -2,11 +2,11 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowDownRight, ArrowRight, ArrowUpRight, BarChart3, Eye, Minus, MousePointerClick, ShoppingCart, Wallet } from 'lucide-react'
 import { BackNavigation,
-  AnalyticsChartCard, AnalyticsSummary, AnalyticsDetails, AssociationRuleList, BarList, ChartDataTable, DashboardPanel, ForecastNote, MaterialQualityCard, MethodNote, InfoNote, InsightList, InsightPanel, Pagination, PeriodSelector, RankedList, ResponsiveRecordList, SegmentedControl, SegmentScatter,
+  AnalyticsChartCard, AnalyticsSummary, AnalyticsDetails, AssociationRuleList, BarList, ChartDataTable, DashboardPanel, MaterialQualityCard, MethodNote, InfoNote, InsightList, InsightPanel, Pagination, PeriodSelector, RankedList, ResponsiveRecordList, SegmentedControl, SegmentScatter,
   ProductDetailWorkspace, ShareBar, Sparkline, StatusBadge, StatusMessage, TrendLineChart, analyticsDay, formatChartDay, formatCount, formatPesoCentavos, usePortalResource,
-  type ForecastView, type InsightItem, type RecordColumn, type TrendMarker, type VizColor,
+  type InsightItem, type RecordColumn, type TrendMarker, type VizColor,
 } from '@materyalph/web-ui'
-import type { DashboardForecast, DashboardRate, ProductAnalyticsSeriesPoint } from '@materyalph/api-client-ts'
+import type { DashboardRate, ProductAnalyticsSeriesPoint } from '@materyalph/api-client-ts'
 import {
   ANALYTICS_PERIODS, getProductAnalytics, getProductAnalyticsDetail, parsePeriod,
   type ProductAnalyticsRow, type ProductAnalyticsSuggestion, type ProductSort, type ProductSummary,
@@ -24,11 +24,6 @@ const SORTS: { value: ProductSort; label: string }[] = [{ value: 'views', label:
 const day = (value: Date | string) => analyticsDay(value) ?? ''
 const percent = (rate: DashboardRate) => (rate.percent === null || rate.percent === undefined ? '—' : `${rate.percent}%`)
 const link = 'inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-action-primary underline-offset-4 hover:underline'
-
-function forecastView(forecast: DashboardForecast): ForecastView {
-  return { state: forecast.state, direction: forecast.direction, changePercent: forecast.changePercent ?? null, expectedTotal: forecast.expectedTotal ?? null, points: forecast.points,
-    weekdayStrength: forecast.weekdayStrength ?? null, observedDays: forecast.observedDays }
-}
 
 function useErrorText(error: unknown): string | null {
   const [text, setText] = useState<string | null>(null)
@@ -53,10 +48,9 @@ function suggestionItems(items: ProductAnalyticsSuggestion[]): InsightItem[] {
     action: <Link className={link} to={item.href}>{item.kind === 'RESTOCK_VIEWED' || item.kind === 'REORDER_SOON' ? 'Open inventory' : item.href.startsWith('/products/') && !item.href.includes('inventory') ? 'Edit listing' : 'View details'}<ArrowRight size={14} aria-hidden="true" /></Link> }))
 }
 
-function ViewsTrend({ series, forecast, markers = [], horizonDays, method, subject = 'your products' }: { series: ProductAnalyticsSeriesPoint[]; forecast: DashboardForecast; markers?: TrendMarker[]; horizonDays: number; method: ReactNode; subject?: string }) {
+function ViewsTrend({ series, markers = [], method, subject = 'your products' }: { series: ProductAnalyticsSeriesPoint[]; markers?: TrendMarker[]; method: ReactNode; subject?: string }) {
   const labels = series.map(point => day(point.date))
   return <AnalyticsChartCard title="Product views and orders" description={`Views and confirmed orders for ${subject}.`} details={<>
-    <ForecastNote forecast={forecastView(forecast)} horizonDays={horizonDays} unit="product views" formatValue={value => formatCount(Math.round(value))} />
     <ChartDataTable caption="Product views and orders per day" rowHeader="Date" rows={labels.map(formatChartDay)} columns={[
       { key: 'views', header: 'Product views', values: series.map(point => formatCount(point.views)) },
       { key: 'orders', header: 'Orders', values: series.map(point => formatCount(point.orders)) },
@@ -64,7 +58,6 @@ function ViewsTrend({ series, forecast, markers = [], horizonDays, method, subje
     ]} /><MethodNote>{method}</MethodNote></>}>
     <TrendLineChart title="Product views and orders per day" labels={labels} formatLabel={formatChartDay} formatValue={value => formatCount(Math.round(value * 10) / 10)} emptyReason="No views or orders in this period."
       series={[{ key: 'views', label: 'Product views', colorVar: '--mp-viz-series-1', values: series.map(point => point.views), kind: 'bar' }, { key: 'orders', label: 'Orders', colorVar: '--mp-viz-series-2', values: series.map(point => point.orders) }]}
-      forecast={forecast.state === 'OK' ? { label: 'Views forecast', labels: forecast.points.map(point => day(point.date)), values: forecast.points.map(point => point.value), lower: forecast.points.map(point => point.lower), upper: forecast.points.map(point => point.upper) } : null}
       markers={markers} />
   </AnalyticsChartCard>
 }
@@ -128,7 +121,7 @@ export function ProductAnalyticsWorkspace({ canViewScores = false }: { canViewSc
 
     <div className="mp-product-analytics-columns">
       <div className="mp-product-analytics-trend">
-        <ViewsTrend series={data.series} forecast={data.forecast.views} horizonDays={data.forecast.horizonDays} method={<>{definitions.views} {definitions.orders} {definitions.forecast}</>} />
+        <ViewsTrend series={data.series} method={<>{definitions.views} {definitions.orders}</>} />
         {data.suggestions.length > 0 && <InsightPanel title="Suggestions" purpose="Actions based on product demand and stock." method={definitions.suggestions} scrollBody>
           <InsightList compact items={suggestionItems(data.suggestions)} empty="No suggestions right now. They appear as Buyers view and order your products." />
         </InsightPanel>}
@@ -258,8 +251,8 @@ export function ProductAnalyticsDetail({ canViewReviews = false }: { canViewRevi
       sales && kpis.valueCentavos ? { label: 'Product sales value', value: formatPesoCentavos(kpis.valueCentavos.value), icon: <Wallet size={16} aria-hidden="true" />, hint: 'Before partial refunds; delivery excluded. Cancelled and fully refunded sales excluded.', changePercent: kpis.valueCentavos.changePercent, comparison: `vs ${periodLabel}`, comparisonUnavailable: kpis.valueCentavos.previous === 0 ? `No sales in ${periodLabel}` : 'Previous period comparison unavailable' }
         : { label: 'Rank by orders', value: product.rankOrders ? `#${product.rankOrders}` : '—', icon: <BarChart3 size={16} aria-hidden="true" />, hint: `Among ${formatCount(kpis.products)} published products.` },
     ]} />
-    <ViewsTrend series={data.series} forecast={data.forecast.views} horizonDays={data.forecast.horizonDays} markers={markers} subject="this product"
-      method={<>{definitions.views} {definitions.forecast} {definitions.unusual_days}{data.unusualDays.state !== 'OK' ? ' Unusual days need at least eight active days.' : ''}</>} />
+    <ViewsTrend series={data.series} markers={markers} subject="this product"
+      method={<>{definitions.views} {definitions.orders} {definitions.unusual_days}{data.unusualDays.state !== 'OK' ? ' Unusual days need at least eight active days.' : ''}</>} />
     <AnalyticsDetails title="More product insights">
     <div className="mp-card-group grid items-stretch gap-5">
       <InsightPanel title="From view to order" purpose="How many Buyers saw this product and how many went on to order it, compared with your store." method={definitions.conversion}>

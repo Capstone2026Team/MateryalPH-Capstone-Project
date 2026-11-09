@@ -271,14 +271,15 @@ final class ConversationService
      * @return array<string, mixed> */
     public function inbox(Request $request): array
     {
-        if (in_array($request->user()->account_type, ['VENDOR', 'BUYER'], true)) {
+        $fulfillmentStaff = $request->user()->account_type === 'VENDOR' && $this->access->role($request->user()) === 'FULFILLMENT';
+        if (! $fulfillmentStaff && in_array($request->user()->account_type, ['VENDOR', 'BUYER'], true)) {
             // Group before pagination, so a Buyer never appears again on a later page.
-            $scope = $this->inboxQuery($request, includeFulfillment: true);
+            $scope = $this->inboxQuery($request);
             $partition = $request->user()->account_type === 'BUYER' ? 'c.vendor_organization_id' : 'c.buyer_profile_id';
             $ranked = (clone $scope)->select('c.*')->selectRaw('c.updated_at as inbox_updated_at, ROW_NUMBER() OVER (PARTITION BY '.$partition.' ORDER BY c.updated_at DESC, c.id DESC) as buyer_position');
             $page = DB::query()->fromSub($ranked, 'buyers')->where('buyer_position', 1)->orderByDesc('inbox_updated_at')->orderByDesc('id')->paginate(25);
             $rows = $page->items();
-            $roots = $this->inboxQuery($request, includeFulfillment: true, filterArchived: false, includeHistory: true)->where('c.purpose', 'SALES')->where('c.context_type', 'ITEM_BASED')->whereNull('c.canonical_conversation_id')
+            $roots = $this->inboxQuery($request, filterArchived: false, includeHistory: true)->where('c.purpose', 'SALES')->where('c.context_type', 'ITEM_BASED')->whereNull('c.canonical_conversation_id')
                 ->whereIn('c.buyer_profile_id', array_column($rows, 'buyer_profile_id'))->whereIn('c.vendor_organization_id', array_column($rows, 'vendor_organization_id'))->get(['c.*'])->keyBy(fn (object $c): string => $c->buyer_profile_id.'|'.$c->vendor_organization_id);
             $rows = array_map(static function (object $row) use ($roots): object {
                 $root = clone ($roots->get($row->buyer_profile_id.'|'.$row->vendor_organization_id) ?? $row);
@@ -297,7 +298,7 @@ final class ConversationService
     /** Uses the same current role, assignment and canonical-thread scope as the inbox, across every page. */
     public function unreadInboxCount(Request $request): int
     {
-        return $this->unreadQueryCount($request, $this->inboxQuery($request, includeFulfillment: $request->user()->account_type === 'VENDOR'));
+        return $this->unreadQueryCount($request, $this->inboxQuery($request));
     }
 
     /** Vendor navigation includes authorized fulfillment threads without changing the sales inbox's contents. */
@@ -357,10 +358,44 @@ final class ConversationService
     /** The same current role and assignment boundary used by the inbox; a Buyer thread never expands authority. */
     public function buyerThreadScope(Request $request, object $source, bool $includeHistory = true): Builder
     {
-        $query = $this->inboxQuery($request, includeFulfillment: true, filterArchived: false, includeHistory: true)
+        $query = $this->inboxQuery($request, filterArchived: false, includeHistory: true)
             ->where('c.buyer_profile_id', $source->buyer_profile_id)->where('c.vendor_organization_id', $source->vendor_organization_id);
+        if ($this->access->role($request->user()) === 'FULFILLMENT') {
+            $query->where('c.id', $source->id);
+        }
 
         return $includeHistory ? $query : $query->whereNull('c.canonical_conversation_id');
+    }
+
+    /** Permanent sales parent for an existing order relationship, independent of fulfillment closure. */
+    public function ensureOrderStoreChat(object $order): string
+    {
+        return DB::transaction(function () use ($order): string {
+            $buyer = DB::table('buyer_profiles')->where('id', $order->buyer_profile_id)->lockForUpdate()->firstOrFail();
+            $existing = DB::table('conversations')->where('buyer_profile_id', $order->buyer_profile_id)->where('vendor_organization_id', $order->vendor_organization_id)
+                ->where('purpose', 'SALES')->where('context_type', 'ITEM_BASED')->whereNull('canonical_conversation_id')->value('id');
+            if ($existing !== null) {
+                return (string) $existing;
+            }
+            $id = (string) Str::uuid7();
+            $owner = DB::table('vendor_memberships')->where('vendor_organization_id', $order->vendor_organization_id)->where('role', 'OWNER')->whereNull('deleted_at')->value('user_id');
+            DB::table('conversations')->insert(['id' => $id, 'buyer_profile_id' => $order->buyer_profile_id, 'vendor_organization_id' => $order->vendor_organization_id,
+                'purpose' => 'SALES', 'context_type' => 'ITEM_BASED', 'handler_user_id' => $owner, 'locked_reference' => '{}',
+                'created_at' => $order->created_at, 'updated_at' => $order->created_at]);
+            $this->participant($id, (int) $buyer->user_id, 'BUYER');
+            if ($owner !== null) {
+                $this->participant($id, (int) $owner, 'OWNER');
+                DB::table('conversation_assignments')->insert(['id' => (string) Str::uuid7(), 'conversation_id' => $id, 'assigned_user_id' => $owner,
+                    'assigned_role' => 'OWNER', 'reason' => 'Permanent store chat for an existing order', 'created_at' => now(), 'updated_at' => now()]);
+            }
+            DB::table('audit_logs')->insert(['id' => (string) Str::uuid7(), 'actor_role' => 'SYSTEM', 'vendor_organization_id' => $order->vendor_organization_id,
+                'action' => 'CONVERSATION_CREATED', 'resource_type' => 'CONVERSATION', 'resource_id' => $id,
+                'before' => '{}', 'after' => json_encode(['purpose' => 'SALES', 'order_id' => $order->id], JSON_THROW_ON_ERROR),
+                'reason' => 'Permanent store chat for an existing order', 'correlation_id' => (string) Str::uuid7(), 'succeeded' => true, 'created_at' => now(), 'updated_at' => now()]);
+            $this->changed($id);
+
+            return $id;
+        });
     }
 
     /** @param list<object> $rows

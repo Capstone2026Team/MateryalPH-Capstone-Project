@@ -885,6 +885,11 @@ docs/ProductComplianceQueueEnvelopeMeta.md
 docs/ProductComplianceQueueItem.md
 docs/ProductDeliveryPreviewRequest.md
 docs/ProductRatingSummary.md
+docs/ProjectArchiveItem.md
+docs/ProjectArchiveMutation.md
+docs/ProjectArchiveMutationResponse.md
+docs/ProjectArchivePage.md
+docs/ProjectArchivePageResponse.md
 docs/ProjectArrangement.md
 docs/ProjectArrangementCreate.md
 docs/ProjectArrangementEdit.md
@@ -2242,6 +2247,11 @@ src/models/ProductComplianceQueueEnvelopeMeta.ts
 src/models/ProductComplianceQueueItem.ts
 src/models/ProductDeliveryPreviewRequest.ts
 src/models/ProductRatingSummary.ts
+src/models/ProjectArchiveItem.ts
+src/models/ProjectArchiveMutation.ts
+src/models/ProjectArchiveMutationResponse.ts
+src/models/ProjectArchivePage.ts
+src/models/ProjectArchivePageResponse.ts
 src/models/ProjectArrangement.ts
 src/models/ProjectArrangementCreate.ts
 src/models/ProjectArrangementEdit.ts

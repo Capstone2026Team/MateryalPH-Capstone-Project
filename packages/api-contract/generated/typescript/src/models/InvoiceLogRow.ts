@@ -22,7 +22,7 @@ import {
 } from './DisputeFileLink';
 
 /**
- * One row of the selected view: an open request, an order without an invoice copy yet, an uploaded record or a reconciliation item.
+ * One row of the selected view. Vendor REQUESTS shows requested first copies awaiting Send; RECONCILIATION shows the latest invoice per order with an unresolved amount/VAT mismatch, Buyer return or correction request. RECORDS retains all sent versions. Admin log scope is unchanged.
  * @export
  * @interface InvoiceLogRow
  */
@@ -68,7 +68,7 @@ export interface InvoiceLogRow {
      */
     kind?: string;
     /**
-     *
+     * Request state; Vendor RECONCILIATION rows also include the pending Buyer correction state, REQUESTED or RETURNED_FOR_CORRECTION.
      */
     state?: string;
     /**

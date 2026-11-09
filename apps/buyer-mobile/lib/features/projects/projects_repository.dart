@@ -57,6 +57,88 @@ final class ProjectsRepository {
     () async =>
         _guard.required((await _api.listProjects(page: page)).data?.data),
   );
+  Future<api.ProjectArchivePage> archives({
+    required String type,
+    int page = 1,
+  }) => _guard(
+    () async => _guard.required(
+      (await _api.listProjectArchives(type: type, page: page)).data?.data,
+    ),
+  );
+
+  Future<void> archive(
+    String id,
+    int lock,
+    String key, {
+    bool project = false,
+  }) => _guard(() async {
+    final body = api.ProjectVersionRequest((b) => b..lockVersion = lock);
+    if (project) {
+      await _api.archiveProject(
+        itemId: id,
+        idempotencyKey: key,
+        projectVersionRequest: body,
+      );
+    } else {
+      await _api.archiveWorkPackage(
+        itemId: id,
+        idempotencyKey: key,
+        projectVersionRequest: body,
+      );
+    }
+  });
+  Future<void> restoreArchive(
+    String id,
+    int lock,
+    String key, {
+    bool project = false,
+  }) => _guard(() async {
+    final body = api.ProjectVersionRequest((b) => b..lockVersion = lock);
+    if (project) {
+      await _api.restoreProject(
+        itemId: id,
+        idempotencyKey: key,
+        projectVersionRequest: body,
+      );
+    } else {
+      await _api.restoreWorkPackage(
+        itemId: id,
+        idempotencyKey: key,
+        projectVersionRequest: body,
+      );
+    }
+  });
+  Future<void> deleteArchive(
+    String id,
+    int lock,
+    String key, {
+    bool project = false,
+  }) => _guard(() async {
+    final body = api.ProjectVersionRequest((b) => b..lockVersion = lock);
+    if (project) {
+      await _api.permanentlyDeleteProject(
+        itemId: id,
+        idempotencyKey: key,
+        projectVersionRequest: body,
+      );
+    } else {
+      await _api.permanentlyDeleteWorkPackage(
+        itemId: id,
+        idempotencyKey: key,
+        projectVersionRequest: body,
+      );
+    }
+  });
+  Future<api.WorkPackageView> rescanOrder(String id, int lock) => _guard(
+    () async => _guard.required(
+      (await _api.rescanProjectOrderSuppliers(
+        orderId: id,
+        projectVersionRequest: api.ProjectVersionRequest(
+          (b) => b..lockVersion = lock,
+        ),
+      )).data?.data,
+    ),
+  );
   Future<api.ProjectView> project(String id, {int page = 1}) => _guard(
     () async => _guard.required(
       (await _api.getProject(projectId: id, page: page)).data?.data,

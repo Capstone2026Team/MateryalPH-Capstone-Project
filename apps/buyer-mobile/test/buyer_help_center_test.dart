@@ -65,6 +65,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(BuyerAccountScreen), findsNothing);
     expect(find.byType(BuyerSettingsScreen), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text('Sign Out'),
+      180,
+      scrollable: _page,
+    );
     expect(find.text('Sign Out'), findsOneWidget);
   });
 

@@ -121,6 +121,20 @@ class SupplierListControls extends StatelessWidget {
               ),
           ],
         ),
+        Padding(
+          padding: const EdgeInsets.only(top: 4, bottom: 8),
+          child: Semantics(
+            liveRegion: true,
+            child: Text(
+              view.explanation,
+              style: const TextStyle(
+                fontSize: 12,
+                height: 1.4,
+                color: BuyerTheme.muted,
+              ),
+            ),
+          ),
+        ),
         Wrap(
           crossAxisAlignment: WrapCrossAlignment.center,
           spacing: 4,

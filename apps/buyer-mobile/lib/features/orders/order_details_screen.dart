@@ -33,6 +33,12 @@ import '../../design_system/components/buyer_app_bar.dart';
 
 typedef OpenOrderConversation =
     Future<void> Function(BuildContext context, String conversationId);
+typedef RescanProjectOrder =
+    Future<void> Function(
+      BuildContext context,
+      String orderId,
+      int lockVersion,
+    );
 
 /// Order Details. Server-calculated actions only: approve or reject the Vendor's exact version,
 /// review an NRPC on its own disclosure page, or flag it. The confirmed drop-off, vehicles, trips and
@@ -47,6 +53,7 @@ class OrderDetailsScreen extends StatefulWidget {
     this.now,
     this.paymentLauncher = launchPaymentPage,
     this.openConversation,
+    this.onRescanSuppliers,
     this.problemPhotoPicker = pickProblemPhoto,
   });
 
@@ -57,6 +64,7 @@ class OrderDetailsScreen extends StatefulWidget {
 
   /// Opens the order's Fulfillment Messages thread. Null hides the entry's action.
   final OpenOrderConversation? openConversation;
+  final RescanProjectOrder? onRescanSuppliers;
   final ProblemPhotoPicker problemPhotoPicker;
 
   @override
@@ -728,6 +736,44 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         ],
         _Header(order: order),
         const SizedBox(height: 10),
+        if (state == 'CANCELLED' && order.projectContext != null) ...[
+          FilledButton.icon(
+            onPressed:
+                _busy ||
+                    order.projectContext!['can_rescan_suppliers'] != true ||
+                    widget.onRescanSuppliers == null
+                ? null
+                : () async {
+                    if (_busy) return;
+                    setState(() {
+                      _busy = true;
+                      _notice = null;
+                    });
+                    try {
+                      await widget.onRescanSuppliers!(
+                        context,
+                        order.id,
+                        order.lockVersion,
+                      );
+                      if (mounted) await _load(background: true);
+                    } on DiscoveryFailure catch (e) {
+                      if (mounted) setState(() => _notice = e.message);
+                    } finally {
+                      if (mounted) setState(() => _busy = false);
+                    }
+                  },
+            icon: const Icon(LucideIcons.scanSearch, size: 18),
+            label: Text(_busy ? 'Scanning suppliers…' : 'Rescan Suppliers'),
+          ),
+          if (_busy) const BuyerLoadingProgress(),
+          const SizedBox(height: 8),
+          Text(
+            order.projectContext!['can_rescan_suppliers'] == true
+                ? 'Reuse this Work Package’s saved requirements, quantities, site and delivery preferences. The cancelled order stays in your history.'
+                : 'Restore archived items first. Rescanning is available while the same Work Package requirements still need procurement.',
+          ),
+          const SizedBox(height: 12),
+        ],
         if (_notice != null) ...[
           StatusBand(tone: BandTone.info, title: _notice!),
           const SizedBox(height: 10),

@@ -109,9 +109,8 @@ final class OrderSubmissionService
 
         try {
             $checkoutId = DB::transaction(function () use ($request, $input, $buyerId, $vendorIds, $groups, $scopedKey, $requestHash, $methods): string {
-                $package = null;
+                $package = $this->lockProcurementPackages($request, $buyerId, $vendorIds, $input['work_package_id'] ?? null);
                 if (isset($input['work_package_id'])) {
-                    $package = app(ProjectService::class)->package($request, $input['work_package_id'], true);
                     ProjectService::version($package, (int) $input['work_package_lock_version']);
                     if (in_array(app(ProjectService::class)->packageSummary($package)['status'], ['CANCELLED', 'COMPLETED'], true) || $package->current_version_id === null) {
                         throw new AuthenticationException('WORK_PACKAGE_CLOSED', 'Choose an open Work Package for this purchase.', 409);
@@ -231,6 +230,32 @@ final class OrderSubmissionService
             ])->all(),
             'notice' => 'Each Vendor reviews its own order request. Nothing is charged until a Vendor confirms and you accept the final amount.',
         ];
+    }
+
+    /** Lock every tagged package, even when checkout does not explicitly link its order to a package.
+     * @param list<string> $vendors */
+    private function lockProcurementPackages(Request $request, string $buyerId, array $vendors, ?string $selected): ?object
+    {
+        $tagged = DB::table('cart_items as i')->join('work_package_lines as l', 'l.id', '=', 'i.work_package_line_id')
+            ->join('work_package_versions as v', 'v.id', '=', 'l.work_package_version_id')
+            ->join('listing_variants as lv', 'lv.id', '=', 'i.listing_variant_id')->join('vendor_listings as vl', 'vl.id', '=', 'lv.vendor_listing_id')
+            ->where('i.cart_id', $this->carts->cart($buyerId)->id)->whereNull('i.saved_for_later_at')->whereIn('vl.vendor_organization_id', $vendors)->pluck('v.work_package_id')->all();
+        if ($selected !== null) {
+            $tagged[] = $selected;
+        }
+        $ids = DB::table('work_packages')->whereIn('id', array_unique($tagged))->orderBy('project_id')->orderBy('id')->pluck('id');
+        $result = null;
+        foreach ($ids as $id) {
+            $w = app(ProjectService::class)->package($request, $id, true);
+            if ($id === $selected) {
+                $result = $w;
+            }
+        }
+        if ($selected !== null && $result === null) {
+            return app(ProjectService::class)->package($request, $selected, true);
+        }
+
+        return $result;
     }
 
     private function replay(string $scopedKey, string $requestHash): ?object

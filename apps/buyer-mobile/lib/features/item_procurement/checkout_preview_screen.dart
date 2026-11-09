@@ -11,9 +11,11 @@ import '../../design_system/theme.dart';
 import '../map_discovery/discovery_models.dart';
 import '../map_discovery/discovery_repository.dart' show newIdempotencyKey;
 import '../orders/order_submitted_screen.dart';
-import '../orders/order_details_screen.dart' show OpenOrderConversation;
+import '../orders/order_details_screen.dart'
+    show OpenOrderConversation, RescanProjectOrder;
 import '../orders/orders_repository.dart';
 import 'cart_controller.dart';
+import 'cart_product_link.dart';
 import '../projects/projects_repository.dart';
 import 'checkout_project_screen.dart';
 import 'delivery_widgets.dart';
@@ -31,6 +33,8 @@ class CheckoutPreviewScreen extends StatefulWidget {
     this.projects,
     this.chooseDropOff,
     this.openConversation,
+    this.onRescanSuppliers,
+    this.onOpenProduct,
   });
 
   final CartController controller;
@@ -48,6 +52,8 @@ class CheckoutPreviewScreen extends StatefulWidget {
   final OrdersRepository? orders;
   final ProjectsRepository? projects;
   final OpenOrderConversation? openConversation;
+  final RescanProjectOrder? onRescanSuppliers;
+  final Future<void> Function(BuildContext, CartLineView)? onOpenProduct;
 
   @override
   State<CheckoutPreviewScreen> createState() => _CheckoutPreviewScreenState();
@@ -212,6 +218,12 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
           for (final group in preview.groups)
             _GroupPreview(
               group: group,
+              onOpenProduct: widget.onOpenProduct == null || _submitting
+                  ? null
+                  : (line) async {
+                      await widget.onOpenProduct!(context, line);
+                      if (mounted) await _controller.loadPreview();
+                    },
               controller: _controller,
               selectedMethod: _methodFor(group),
               onMethod: (method) =>
@@ -373,6 +385,7 @@ class _CheckoutPreviewScreenState extends State<CheckoutPreviewScreen> {
       await Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
           builder: (_) => OrderSubmittedScreen(
+            onRescanSuppliers: widget.onRescanSuppliers,
             checkout: checkout,
             repository: orders,
             openConversation: widget.openConversation,
@@ -507,11 +520,13 @@ class _GroupPreview extends StatelessWidget {
     required this.controller,
     required this.selectedMethod,
     required this.onMethod,
+    this.onOpenProduct,
   });
 
   final CheckoutGroupView group;
   final String selectedMethod;
   final ValueChanged<String> onMethod;
+  final Future<void> Function(CartLineView)? onOpenProduct;
   final CartController controller;
 
   Future<void> _choose(String method) async {
@@ -620,7 +635,13 @@ class _GroupPreview extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 10),
-        for (final line in group.lines) _LineCard(line: line),
+        for (final line in group.lines)
+          _LineCard(
+            line: line,
+            onTap: controller.busy || onOpenProduct == null
+                ? null
+                : () => onOpenProduct!(line),
+          ),
         const SizedBox(height: 6),
         const Text(
           'Delivery Mode',
@@ -773,9 +794,10 @@ class _GroupPreview extends StatelessWidget {
 }
 
 class _LineCard extends StatelessWidget {
-  const _LineCard({required this.line});
+  const _LineCard({required this.line, this.onTap});
 
   final CartLineView line;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -785,76 +807,20 @@ class _LineCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(10),
       border: Border.all(color: BuyerTheme.border),
     ),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            width: 64,
-            height: 64,
-            color: BuyerTheme.canvas,
-            child: line.imageUrl == null
-                ? const Icon(LucideIcons.package, color: BuyerTheme.muted)
-                : Image.network(
-                    line.imageUrl!,
-                    fit: BoxFit.cover,
-                    cacheWidth: 192,
-                    errorBuilder: (_, _, _) => const Icon(LucideIcons.imageOff),
-                  ),
+        CartProductLink(line: line, onTap: onTap),
+        for (final issue in line.issues)
+          Text(
+            issue.message,
+            style: TextStyle(
+              fontSize: 12,
+              color: issue.blocking
+                  ? Theme.of(context).colorScheme.error
+                  : BuyerTheme.ink,
+            ),
           ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                line.displayName,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-              if (line.variantLabel != null)
-                Text(
-                  line.variantLabel!,
-                  style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
-                ),
-              if (line.appliedUnitPriceCentavos != null)
-                Text(
-                  '${formatPeso(line.appliedUnitPriceCentavos!)} / ${line.unitName}',
-                  style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
-                ),
-              Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                spacing: 8,
-                children: [
-                  Text(
-                    line.lineTotalCentavos == null
-                        ? 'Unavailable'
-                        : formatPeso(line.lineTotalCentavos!),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      color: BuyerTheme.action,
-                    ),
-                  ),
-                  Text(
-                    '${formatQuantity(line.quantity)} ${line.unitName}',
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                ],
-              ),
-              for (final issue in line.issues)
-                Text(
-                  '• ${issue.message}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: issue.blocking
-                        ? Theme.of(context).colorScheme.error
-                        : BuyerTheme.ink,
-                  ),
-                ),
-            ],
-          ),
-        ),
       ],
     ),
   );

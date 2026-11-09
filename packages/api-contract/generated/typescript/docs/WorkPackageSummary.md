@@ -6,6 +6,10 @@
 
 Name | Type
 ------------ | -------------
+`archivedAt` | Date
+`deleteAfter` | Date
+`canArchive` | boolean
+`archiveBlocker` | string
 `selectedArrangementId` | string
 `vendorOrders` | Array&lt;{ [key: string]: any; }&gt;
 `id` | string
@@ -26,6 +30,10 @@ import type { WorkPackageSummary } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "archivedAt": null,
+  "deleteAfter": null,
+  "canArchive": null,
+  "archiveBlocker": null,
   "selectedArrangementId": null,
   "vendorOrders": null,
   "id": null,

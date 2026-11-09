@@ -885,6 +885,11 @@ doc/ProductComplianceQueueEnvelopeMeta.md
 doc/ProductComplianceQueueItem.md
 doc/ProductDeliveryPreviewRequest.md
 doc/ProductRatingSummary.md
+doc/ProjectArchiveItem.md
+doc/ProjectArchiveMutation.md
+doc/ProjectArchiveMutationResponse.md
+doc/ProjectArchivePage.md
+doc/ProjectArchivePageResponse.md
 doc/ProjectArrangement.md
 doc/ProjectArrangementCreate.md
 doc/ProjectArrangementEdit.md
@@ -2249,6 +2254,11 @@ lib/src/model/product_compliance_queue_envelope_meta.dart
 lib/src/model/product_compliance_queue_item.dart
 lib/src/model/product_delivery_preview_request.dart
 lib/src/model/product_rating_summary.dart
+lib/src/model/project_archive_item.dart
+lib/src/model/project_archive_mutation.dart
+lib/src/model/project_archive_mutation_response.dart
+lib/src/model/project_archive_page.dart
+lib/src/model/project_archive_page_response.dart
 lib/src/model/project_arrangement.dart
 lib/src/model/project_arrangement_create.dart
 lib/src/model/project_arrangement_edit.dart
@@ -3563,6 +3573,11 @@ test/product_compliance_queue_envelope_test.dart
 test/product_compliance_queue_item_test.dart
 test/product_delivery_preview_request_test.dart
 test/product_rating_summary_test.dart
+test/project_archive_item_test.dart
+test/project_archive_mutation_response_test.dart
+test/project_archive_mutation_test.dart
+test/project_archive_page_response_test.dart
+test/project_archive_page_test.dart
 test/project_arrangement_create_test.dart
 test/project_arrangement_edit_test.dart
 test/project_arrangement_inquiry_test.dart

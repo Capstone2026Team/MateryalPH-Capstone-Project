@@ -22,7 +22,8 @@ Name | Type | Description | Notes
 **stockLabel** | **String** |  |
 **stockConfirmedAt** | [**DateTime**](DateTime.md) |  |
 **productRating** | [**ProductRatingSummary**](ProductRatingSummary.md) |  |
-**unitsSold** | **String** | Quantity on completed orders. |
+**unitsSold** | **String** | Quantity on completed orders; used by TOP_SELLING. |
+**uniqueBuyers** | **int** | Distinct Buyers with COMPLETED orders for this listing across all variants and repeat purchases. | [optional]
 **distanceMeters** | **int** | Geodesic straight-line distance to the store. |
 **badges** | **BuiltList&lt;String&gt;** |  |
 **isFavorite** | **bool** |  |

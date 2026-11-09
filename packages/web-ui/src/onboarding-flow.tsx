@@ -40,7 +40,7 @@ export function OnboardingFlow({ steps, current, onStep, section, children, acti
     <h2 ref={heading} tabIndex={-1} id="onboarding-section-title" className={`${rail && steps[current]?.description ? 'mb-1' : 'mb-6'} text-2xl font-semibold tracking-tight`}>{steps[current]?.label}</h2>
     {rail && steps[current]?.description && <p className="mb-6 text-sm text-text-secondary">{steps[current]?.description}</p>}
     <div className="min-w-0">{children}</div>
-    <p className="mt-6 text-xs leading-5 text-text-secondary">{autosave ? `Progress saves when you change steps or return to the dashboard.${section.key === 'STORE_VERIFICATION' ? ' Only Submit for Admin Review sends your documents to Admin.' : ''}` : 'Switching steps keeps your edits on this page. Save a draft to keep them for later.'}</p>
+    <p className="mt-6 text-xs leading-5 text-text-secondary">{autosave ? `Progress saves automatically and before you change steps or leave this page.${section.key === 'STORE_VERIFICATION' ? ' Only Submit for Admin Review sends your documents to Admin.' : ''}` : 'Switching steps keeps your edits on this page. Save a draft to keep them for later.'}</p>
     <div className="mt-8 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 border-t border-border-default pt-5">
       {current > 0 && <BackNavigation><button type="button" disabled={busy} onClick={() => onStep(current - 1)}>Back</button></BackNavigation>}
       {actions}

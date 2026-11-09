@@ -133,9 +133,13 @@ export interface ListingSearchResult {
      */
     productRating: ProductRatingSummary;
     /**
-     * Quantity on completed orders.
+     * Quantity on completed orders; used by TOP_SELLING.
      */
     unitsSold: string;
+    /**
+     * Distinct Buyers with COMPLETED orders for this listing across all variants and repeat purchases.
+     */
+    uniqueBuyers?: number;
     /**
      * Geodesic straight-line distance to the store.
      */
@@ -235,6 +239,7 @@ export function ListingSearchResultFromJSONTyped(json: any, ignoreDiscriminator:
         'stockConfirmedAt': (json['stock_confirmed_at'] == null ? json['stock_confirmed_at'] : parseDateTime(json['stock_confirmed_at'])),
         'productRating': ProductRatingSummaryFromJSON(json['product_rating']),
         'unitsSold': json['units_sold'],
+        'uniqueBuyers': json['unique_buyers'] == null ? undefined : json['unique_buyers'],
         'distanceMeters': json['distance_meters'],
         'badges': json['badges'],
         'isFavorite': json['is_favorite'],
@@ -270,6 +275,7 @@ export function ListingSearchResultToJSONTyped(value?: ListingSearchResult | nul
         'stock_confirmed_at': value['stockConfirmedAt'] == null ? value['stockConfirmedAt'] : serializeDateTime(value['stockConfirmedAt']),
         'product_rating': ProductRatingSummaryToJSON(value['productRating']),
         'units_sold': value['unitsSold'],
+        'unique_buyers': value['uniqueBuyers'],
         'distance_meters': value['distanceMeters'],
         'badges': value['badges'],
         'is_favorite': value['isFavorite'],

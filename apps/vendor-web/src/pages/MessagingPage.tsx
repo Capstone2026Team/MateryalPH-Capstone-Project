@@ -23,7 +23,7 @@ export function MessagingWorkspace({ role, canConfigureBot = false }: { role: st
   const [params, setParams] = useSearchParams()
   const selected = params.get('conversation')
   const [selectedBuyerThreadId, setSelectedBuyerThreadId] = useState<string>()
-  const [fulfillmentOpen, setFulfillmentOpen] = useState(false)
+  const [fulfillmentInquiryId, setFulfillmentInquiryId] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [rows, setRows] = useState<ConversationView[]>([])
@@ -61,7 +61,7 @@ export function MessagingWorkspace({ role, canConfigureBot = false }: { role: st
       active = false
       refreshInbox.current = () => {}
       stop?.(); window.clearInterval(timer)
-      setRows([]); setMore(false); setSettingsOpen(false); setFulfillmentOpen(false)
+      setRows([]); setMore(false); setSettingsOpen(false); setFulfillmentInquiryId(null)
     }
     window.addEventListener('materyalph:session-cleared', clearSession)
     return () => { active = false; refreshInbox.current = () => {}; stop?.(); window.clearInterval(timer); window.removeEventListener('materyalph:session-cleared', clearSession) }
@@ -77,11 +77,11 @@ export function MessagingWorkspace({ role, canConfigureBot = false }: { role: st
         </div>
         <div className="chat-pagination"><Button variant="quiet" disabled={page === 1 || inboxLoading} onClick={() => setPage(value => value - 1)}>Previous</Button><Button variant="quiet" disabled={!more || inboxLoading} onClick={() => setPage(value => value + 1)}>Next</Button></div>
       </aside>
-      <ConversationThread combined selected={selected} role={role} onBuyerThread={setSelectedBuyerThreadId} onBack={() => { setSelectedBuyerThreadId(undefined); setParams({}) }} obscured={fulfillmentOpen || settingsOpen} onBusyChange={setBusy}
+      <ConversationThread combined={role !== 'FULFILLMENT'} selected={selected} role={role} onBuyerThread={setSelectedBuyerThreadId} onBack={() => { setSelectedBuyerThreadId(undefined); setParams({}) }} obscured={Boolean(fulfillmentInquiryId) || settingsOpen} onBusyChange={setBusy}
         onRead={() => refreshInbox.current()}
-        onMessage={() => setInboxRefresh(value => value + 1)} onFulfillmentList={() => setFulfillmentOpen(true)} />
+        onMessage={() => setInboxRefresh(value => value + 1)} onFulfillmentList={setFulfillmentInquiryId} />
     </div>
-    {fulfillmentOpen && selected && <FulfillmentConversationDialog inquiryId={selected} onClose={() => setFulfillmentOpen(false)} />}
+    {fulfillmentInquiryId && <FulfillmentConversationDialog inquiryId={fulfillmentInquiryId} onClose={() => setFulfillmentInquiryId(null)} />}
     {settingsOpen && <AutomatedResponseSettingsDialog load={loadBotSettings} save={saveBotSettings} onClose={() => setSettingsOpen(false)} />}
   </div>
 }

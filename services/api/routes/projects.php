@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\BuyerProjectArchiveController as A;
 use App\Http\Controllers\Api\BuyerProjectController as P;
 use Illuminate\Support\Facades\Route;
 
@@ -10,6 +11,13 @@ Route::prefix('buyers')->middleware(['auth.transport:MOBILE', 'auth:api', 'accou
     Route::post('work-packages/import-preview', [P::class, 'importPreview']);
     Route::get('project-materials', [P::class, 'materials']);
     Route::get('projects', [P::class, 'index']);
+    Route::get('archived-items', [A::class, 'index']);
+    Route::post('orders/{orderId}/rescan-suppliers', [A::class, 'rescan'])->whereUuid('orderId');
+    foreach (['projects' => 'PROJECT', 'work-packages' => 'WORK_PACKAGE'] as $path => $kind) {
+        foreach (['archive' => 'ARCHIVE', 'restore' => 'RESTORE', 'permanent-deletion' => 'DELETE_PERMANENTLY'] as $pathAction => $action) {
+            Route::post($path.'/{itemId}/'.$pathAction, [A::class, 'change'])->whereUuid('itemId')->defaults('kind', $kind)->defaults('action', $action);
+        }
+    }
     Route::post('projects', [P::class, 'create']);
     Route::prefix('projects/{projectId}')->whereUuid('projectId')->group(function (): void {
         Route::get('/', [P::class, 'show']);

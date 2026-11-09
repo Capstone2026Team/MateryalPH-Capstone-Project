@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { mapValues, parseDate, parseDateTime, serializeDate, serializeDateTime } from '../runtime';
 import type { ProjectSite } from './ProjectSite';
 import {
     ProjectSiteFromJSON,
@@ -41,6 +41,22 @@ import {
  * @interface ProjectView
  */
 export interface ProjectView {
+    /**
+     *
+     */
+    archivedAt?: Date;
+    /**
+     *
+     */
+    deleteAfter?: Date;
+    /**
+     *
+     */
+    canArchive?: boolean;
+    /**
+     *
+     */
+    archiveBlocker?: string;
     /**
      *
      */
@@ -108,6 +124,10 @@ export function ProjectViewFromJSONTyped(json: any, ignoreDiscriminator: boolean
     }
     return {
 
+        'archivedAt': json['archived_at'] == null ? undefined : (parseDateTime(json['archived_at'])),
+        'deleteAfter': json['delete_after'] == null ? undefined : (parseDateTime(json['delete_after'])),
+        'canArchive': json['can_archive'] == null ? undefined : json['can_archive'],
+        'archiveBlocker': json['archive_blocker'] == null ? undefined : json['archive_blocker'],
         'id': json['id'],
         'name': json['name'],
         'status': json['status'],
@@ -132,6 +152,10 @@ export function ProjectViewToJSONTyped(value?: ProjectView | null, ignoreDiscrim
 
     return {
 
+        'archived_at': value['archivedAt'] == null ? value['archivedAt'] : serializeDateTime(value['archivedAt']),
+        'delete_after': value['deleteAfter'] == null ? value['deleteAfter'] : serializeDateTime(value['deleteAfter']),
+        'can_archive': value['canArchive'],
+        'archive_blocker': value['archiveBlocker'],
         'id': value['id'],
         'name': value['name'],
         'status': value['status'],

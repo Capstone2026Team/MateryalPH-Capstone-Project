@@ -78,6 +78,13 @@ assert.equal(s.VendorOrderInvoices.properties.buyer_name.type, 'string', 'Vendor
 assert.equal(s.InvoiceLogRow.properties.buyer_name.type, 'string', 'Unrequested missing-copy rows can identify the order Buyer')
 assert.ok(!s.BuyerOrderInvoices.properties.draft, 'Buyer responses never expose private drafts')
 assert.ok(s.InvoiceRecordView.properties.reconciliation_state.enum.includes('INVOICE_RECONCILIATION_REQUIRED'))
+const invoiceList = spec.paths['/vendor/invoices'].get.description
+assert.match(invoiceList, /REQUESTS contains only requested first copies awaiting Send/)
+assert.match(invoiceList, /latest sent version per order/)
+assert.match(invoiceList, /Buyer return or a pending correction request/)
+assert.match(spec.paths['/vendor/orders/{orderId}/invoices'].post.description, /unresolved amount\/VAT mismatch/)
+assert.match(s.InvoiceUploadForm.properties.file.description, /latest sent attachment for an authorized correction/)
+assert.match(s.InvoiceLogRow.properties.state.description, /RETURNED_FOR_CORRECTION/)
 for (const name of ['InvoiceRecordView', 'VendorOrderInvoices', 'DisputeDetail', 'DisputeSummary']) {
   for (const field of Object.keys(s[name].properties)) assert.ok(!/commission|withholding|earning|payout|taxpayer|remittance|fee_statement/i.test(field), `${name}.${field} must not expose protected finance`)
 }

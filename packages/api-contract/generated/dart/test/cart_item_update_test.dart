@@ -27,5 +27,20 @@ void main() {
       // TODO
     });
 
+    // String listingVariantId
+    test('to test the property `listingVariantId`', () async {
+      // TODO
+    });
+
+    // String expectedPriceVersionId
+    test('to test the property `expectedPriceVersionId`', () async {
+      // TODO
+    });
+
+    // String fulfillmentMethod
+    test('to test the property `fulfillmentMethod`', () async {
+      // TODO
+    });
+
   });
 }

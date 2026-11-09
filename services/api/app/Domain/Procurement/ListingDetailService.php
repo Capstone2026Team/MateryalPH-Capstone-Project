@@ -106,6 +106,7 @@ final class ListingDetailService
             ],
             'product_rating' => ['average' => $rating['average'], 'count' => $rating['count'], 'label' => $rating['average'] === null ? 'New' : $rating['average'].' of 5'],
             'units_sold' => $this->facts->unitsSold([$listingId])[$listingId] ?? '0.0000',
+            'unique_buyers' => $this->facts->uniqueBuyers([$listingId])[$listingId] ?? 0,
             'is_favorite' => isset($favorites[$organizationId]),
             'purchasable' => $withinRadius && ! $vendor['vacation_mode'],
             'not_purchasable_reason' => ! $withinRadius ? 'OUTSIDE_SELECTED_RADIUS' : ($vendor['vacation_mode'] ? 'STORE_PAUSED' : null),

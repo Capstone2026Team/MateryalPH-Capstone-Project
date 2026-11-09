@@ -340,6 +340,8 @@ All URIs are relative to */api/v1*
 *BuyerPaymentsApi* | [**getBuyerPaymentOptions**](docs/BuyerPaymentsApi.md#getbuyerpaymentoptions) | **GET** /buyers/orders/{orderId}/payment-options |
 *BuyerPaymentsApi* | [**refreshBuyerPayment**](docs/BuyerPaymentsApi.md#refreshbuyerpayment) | **POST** /buyers/payments/{paymentId}/refresh |
 *BuyerProjectsApi* | [**activateWorkPackage**](docs/BuyerProjectsApi.md#activateworkpackage) | **POST** /buyers/work-packages/{packageId}/activate |
+*BuyerProjectsApi* | [**archiveProject**](docs/BuyerProjectsApi.md#archiveproject) | **POST** /buyers/projects/{itemId}/archive |
+*BuyerProjectsApi* | [**archiveWorkPackage**](docs/BuyerProjectsApi.md#archiveworkpackage) | **POST** /buyers/work-packages/{itemId}/archive |
 *BuyerProjectsApi* | [**closeWorkPackage**](docs/BuyerProjectsApi.md#closeworkpackage) | **POST** /buyers/work-packages/{packageId}/close |
 *BuyerProjectsApi* | [**compileProjectEstimates**](docs/BuyerProjectsApi.md#compileprojectestimates) | **POST** /buyers/work-packages/{packageId}/estimates |
 *BuyerProjectsApi* | [**createProject**](docs/BuyerProjectsApi.md#createproject) | **POST** /buyers/projects |
@@ -358,16 +360,22 @@ All URIs are relative to */api/v1*
 *BuyerProjectsApi* | [**getWorkPackage**](docs/BuyerProjectsApi.md#getworkpackage) | **GET** /buyers/work-packages/{packageId} |
 *BuyerProjectsApi* | [**inquireProjectArrangementVendor**](docs/BuyerProjectsApi.md#inquireprojectarrangementvendor) | **POST** /buyers/work-packages/{packageId}/arrangements/{arrangementId}/vendors/{vendorId}/inquiry |
 *BuyerProjectsApi* | [**inquireProjectVendor**](docs/BuyerProjectsApi.md#inquireprojectvendor) | **POST** /buyers/work-packages/{packageId}/inquiries |
+*BuyerProjectsApi* | [**listProjectArchives**](docs/BuyerProjectsApi.md#listprojectarchives) | **GET** /buyers/archived-items |
 *BuyerProjectsApi* | [**listProjectArrangementOptions**](docs/BuyerProjectsApi.md#listprojectarrangementoptions) | **GET** /buyers/work-packages/{packageId}/arrangement-options |
 *BuyerProjectsApi* | [**listProjects**](docs/BuyerProjectsApi.md#listprojects) | **GET** /buyers/projects |
 *BuyerProjectsApi* | [**listWorkPackageLineAlternatives**](docs/BuyerProjectsApi.md#listworkpackagelinealternatives) | **GET** /buyers/work-packages/{packageId}/lines/{lineId}/alternatives |
+*BuyerProjectsApi* | [**permanentlyDeleteProject**](docs/BuyerProjectsApi.md#permanentlydeleteproject) | **POST** /buyers/projects/{itemId}/permanent-deletion |
+*BuyerProjectsApi* | [**permanentlyDeleteWorkPackage**](docs/BuyerProjectsApi.md#permanentlydeleteworkpackage) | **POST** /buyers/work-packages/{itemId}/permanent-deletion |
 *BuyerProjectsApi* | [**previewProjectSpecificationSelection**](docs/BuyerProjectsApi.md#previewprojectspecificationselection) | **POST** /buyers/work-packages/{packageId}/candidates/{candidateId}/selection-preview |
 *BuyerProjectsApi* | [**previewWorkPackageCsv**](docs/BuyerProjectsApi.md#previewworkpackagecsv) | **POST** /buyers/work-packages/import-preview |
 *BuyerProjectsApi* | [**reactivateWorkPackage**](docs/BuyerProjectsApi.md#reactivateworkpackage) | **POST** /buyers/work-packages/{packageId}/reactivate |
 *BuyerProjectsApi* | [**removeProjectDraftItem**](docs/BuyerProjectsApi.md#removeprojectdraftitem) | **DELETE** /buyers/work-packages/{packageId}/candidates/{candidateId}/draft-items/{lineId}/{variantId} |
 *BuyerProjectsApi* | [**requestProjectDraftSupplier**](docs/BuyerProjectsApi.md#requestprojectdraftsupplier) | **POST** /buyers/work-packages/{packageId}/candidates/{candidateId}/suppliers/{vendorId}/request |
+*BuyerProjectsApi* | [**rescanProjectOrderSuppliers**](docs/BuyerProjectsApi.md#rescanprojectordersuppliers) | **POST** /buyers/orders/{orderId}/rescan-suppliers |
 *BuyerProjectsApi* | [**resetProjectRankingPreferences**](docs/BuyerProjectsApi.md#resetprojectrankingpreferences) | **POST** /buyers/project-ranking-preferences/reset |
 *BuyerProjectsApi* | [**resolveProjectMissingLine**](docs/BuyerProjectsApi.md#resolveprojectmissingline) | **PUT** /buyers/work-packages/{packageId}/missing-lines/{lineId} |
+*BuyerProjectsApi* | [**restoreProject**](docs/BuyerProjectsApi.md#restoreproject) | **POST** /buyers/projects/{itemId}/restore |
+*BuyerProjectsApi* | [**restoreWorkPackage**](docs/BuyerProjectsApi.md#restoreworkpackage) | **POST** /buyers/work-packages/{itemId}/restore |
 *BuyerProjectsApi* | [**saveProjectDraftItem**](docs/BuyerProjectsApi.md#saveprojectdraftitem) | **PUT** /buyers/work-packages/{packageId}/candidates/{candidateId}/draft-items/{lineId}/{variantId} |
 *BuyerProjectsApi* | [**saveProjectRankingPreferences**](docs/BuyerProjectsApi.md#saveprojectrankingpreferences) | **PUT** /buyers/project-ranking-preferences |
 *BuyerProjectsApi* | [**searchProjectMaterials**](docs/BuyerProjectsApi.md#searchprojectmaterials) | **GET** /buyers/project-materials |
@@ -1465,6 +1473,11 @@ All URIs are relative to */api/v1*
 - [ProductComplianceQueueItem](docs/ProductComplianceQueueItem.md)
 - [ProductDeliveryPreviewRequest](docs/ProductDeliveryPreviewRequest.md)
 - [ProductRatingSummary](docs/ProductRatingSummary.md)
+- [ProjectArchiveItem](docs/ProjectArchiveItem.md)
+- [ProjectArchiveMutation](docs/ProjectArchiveMutation.md)
+- [ProjectArchiveMutationResponse](docs/ProjectArchiveMutationResponse.md)
+- [ProjectArchivePage](docs/ProjectArchivePage.md)
+- [ProjectArchivePageResponse](docs/ProjectArchivePageResponse.md)
 - [ProjectArrangement](docs/ProjectArrangement.md)
 - [ProjectArrangementCreate](docs/ProjectArrangementCreate.md)
 - [ProjectArrangementEdit](docs/ProjectArrangementEdit.md)

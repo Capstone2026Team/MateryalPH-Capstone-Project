@@ -59,6 +59,16 @@ for (const path of ['/buyers/explore/summary', '/buyers/listings/search', '/buye
 }
 
 const schemas = spec.components.schemas
+for (const name of ['ListingSearchResult', 'ListingDetails']) {
+  assert.equal(schemas[name].properties.unique_buyers.type, 'integer')
+  assert.equal(schemas[name].properties.unique_buyers.minimum, 0)
+  assert.match(schemas[name].properties.unique_buyers.description, /COMPLETED.*all variants.*repeat purchases/)
+}
+assert.match(operation('/buyers/listings/search', 'post').description, /BEST_DEAL puts exact/)
+for (const name of ['listing_variant_id', 'expected_price_version_id']) {
+  assert.equal(schemas.CartItemUpdate.properties[name].format, 'uuid')
+}
+assert.deepEqual(schemas.CartItemUpdate.properties.fulfillment_method.enum, ['DELIVERY', 'PICKUP'])
 assert.match(schemas.DeliveryPreview.description, /same store address/, 'Delivery preview documents the matching-store route blocker message')
 assert.deepEqual(schemas.ProductDeliveryPreviewRequest.required, ['listing_variant_id', 'quantity'])
 assert.equal(schemas.ProductDeliveryPreviewRequest.additionalProperties, false, 'The Buyer cannot supply rates or a delivery amount')

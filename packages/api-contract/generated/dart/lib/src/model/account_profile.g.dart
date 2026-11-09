@@ -20,6 +20,8 @@ class _$AccountProfile extends AccountProfile {
   @override
   final String email;
   @override
+  final bool? emailVerified;
+  @override
   final String accountType;
   @override
   final String accountStatus;
@@ -54,6 +56,7 @@ class _$AccountProfile extends AccountProfile {
       this.mobileE164,
       this.emailMasked,
       required this.email,
+      this.emailVerified,
       required this.accountType,
       required this.accountStatus,
       required this.lockVersion,
@@ -84,6 +87,7 @@ class _$AccountProfile extends AccountProfile {
         mobileE164 == other.mobileE164 &&
         emailMasked == other.emailMasked &&
         email == other.email &&
+        emailVerified == other.emailVerified &&
         accountType == other.accountType &&
         accountStatus == other.accountStatus &&
         lockVersion == other.lockVersion &&
@@ -107,6 +111,7 @@ class _$AccountProfile extends AccountProfile {
     _$hash = $jc(_$hash, mobileE164.hashCode);
     _$hash = $jc(_$hash, emailMasked.hashCode);
     _$hash = $jc(_$hash, email.hashCode);
+    _$hash = $jc(_$hash, emailVerified.hashCode);
     _$hash = $jc(_$hash, accountType.hashCode);
     _$hash = $jc(_$hash, accountStatus.hashCode);
     _$hash = $jc(_$hash, lockVersion.hashCode);
@@ -132,6 +137,7 @@ class _$AccountProfile extends AccountProfile {
           ..add('mobileE164', mobileE164)
           ..add('emailMasked', emailMasked)
           ..add('email', email)
+          ..add('emailVerified', emailVerified)
           ..add('accountType', accountType)
           ..add('accountStatus', accountStatus)
           ..add('lockVersion', lockVersion)
@@ -175,6 +181,11 @@ class AccountProfileBuilder
   String? _email;
   String? get email => _$this._email;
   set email(String? email) => _$this._email = email;
+
+  bool? _emailVerified;
+  bool? get emailVerified => _$this._emailVerified;
+  set emailVerified(bool? emailVerified) =>
+      _$this._emailVerified = emailVerified;
 
   String? _accountType;
   String? get accountType => _$this._accountType;
@@ -243,6 +254,7 @@ class AccountProfileBuilder
       _mobileE164 = $v.mobileE164;
       _emailMasked = $v.emailMasked;
       _email = $v.email;
+      _emailVerified = $v.emailVerified;
       _accountType = $v.accountType;
       _accountStatus = $v.accountStatus;
       _lockVersion = $v.lockVersion;
@@ -287,6 +299,7 @@ class AccountProfileBuilder
             emailMasked: emailMasked,
             email: BuiltValueNullFieldError.checkNotNull(
                 email, r'AccountProfile', 'email'),
+            emailVerified: emailVerified,
             accountType: BuiltValueNullFieldError.checkNotNull(
                 accountType, r'AccountProfile', 'accountType'),
             accountStatus: BuiltValueNullFieldError.checkNotNull(

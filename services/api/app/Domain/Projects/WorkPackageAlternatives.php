@@ -40,6 +40,7 @@ final class WorkPackageAlternatives
     public function list(Request $request, string $packageId, string $lineId, ?string $excludeVendorId, int $page, ?string $candidateId = null, array $selections = [], ?string $method = null, ?string $arrangementId = null, bool $replace = false, bool $projectOnly = false): array
     {
         $w = $this->projects->package($request, $packageId);
+        ProjectArchives::assertProcurementOpen($w);
         $line = DB::table('work_package_lines')->where('id', $lineId)->where('work_package_version_id', $w->current_version_id)->first();
         if ($line === null) {
             throw new AuthenticationException('WORK_PACKAGE_LINE_NOT_FOUND', 'This material is not part of the current Work Package version.', 404);

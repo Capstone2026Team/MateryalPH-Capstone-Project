@@ -71,7 +71,11 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
   Iterable<String> available(ProjectData vendor) => projectRows(
     vendor['payment_methods'],
   ).where((m) => m['available'] == true).map((m) => projectText(m['method']));
+  bool get procurementOpen =>
+      widget.package.projectStatus.name == 'ACTIVE' &&
+      widget.package.archivedAt == null;
   bool get ready =>
+      procurementOpen &&
       arrangement != null &&
       !loading &&
       !busy &&
@@ -491,7 +495,7 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
                               '${materialQuantity(line['remaining_quantity'])} ${projectText(line['unit_code'])} still needed',
                             ),
                             trailing: TextButton(
-                              onPressed: busy || loading
+                              onPressed: busy || loading || !procurementOpen
                                   ? null
                                   : () => _offers(
                                       requirements.firstWhere(
@@ -513,7 +517,7 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
                             Align(
                               alignment: Alignment.centerRight,
                               child: TextButton(
-                                onPressed: busy || loading
+                                onPressed: busy || loading || !procurementOpen
                                     ? null
                                     : () => _waive(line),
                                 child: Text(
@@ -771,6 +775,7 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
     final theme = Theme.of(context);
     final requested = vendor['requested'] == true;
     final editable =
+        procurementOpen &&
         stage == 0 &&
         !requested &&
         vendor['conversation_id'] == null &&

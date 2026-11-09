@@ -9,7 +9,7 @@ import 'package:built_value/serializer.dart';
 
 part 'invoice_log_row.g.dart';
 
-/// One row of the selected view: an open request, an order without an invoice copy yet, an uploaded record or a reconciliation item.
+/// One row of the selected view. Vendor REQUESTS shows requested first copies awaiting Send; RECONCILIATION shows the latest invoice per order with an unresolved amount/VAT mismatch, Buyer return or correction request. RECORDS retains all sent versions. Admin log scope is unchanged.
 ///
 /// Properties:
 /// * [buyerName] - The order Buyer's display name on Vendor DUE rows, including orders without a Buyer invoice request.
@@ -22,7 +22,7 @@ part 'invoice_log_row.g.dart';
 /// * [openRequest]
 /// * [note]
 /// * [kind]
-/// * [state]
+/// * [state] - Request state; Vendor RECONCILIATION rows also include the pending Buyer correction state, REQUESTED or RETURNED_FOR_CORRECTION.
 /// * [details]
 /// * [serviceTargetAt]
 /// * [serviceTargetLabel]
@@ -74,6 +74,7 @@ abstract class InvoiceLogRow implements Built<InvoiceLogRow, InvoiceLogRowBuilde
   @BuiltValueField(wireName: r'kind')
   String? get kind;
 
+  /// Request state; Vendor RECONCILIATION rows also include the pending Buyer correction state, REQUESTED or RETURNED_FOR_CORRECTION.
   @BuiltValueField(wireName: r'state')
   String? get state;
 

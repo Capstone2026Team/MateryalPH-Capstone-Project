@@ -212,12 +212,61 @@ test('sent history remains selectable while a correction draft is being prepared
   open()
   expect(await screen.findByRole('heading', { name: 'SAMPLE-001' })).toBeVisible()
   expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
-  fireEvent.click(screen.getByRole('button', { name: 'Review uploaded copy' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Review corrected invoice' }))
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
   expect(screen.getByRole('heading', { name: 'SAMPLE-003' })).toBeVisible()
   expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled()
   fireEvent.click(screen.getByRole('button', { name: 'View SAMPLE-002 · ORD-2026-AAAA' }))
   expect(screen.getByRole('heading', { name: 'SAMPLE-002' })).toBeVisible()
+})
+
+test('a returned invoice can replace its copy, update its details and send a linked correction', async () => {
+  const returned = { ...first, fileName: 'original.pdf' }
+  const feedback: VendorOrderInvoices['requests'][number] = { id: 'request-1', kind: 'COPY', state: 'RETURNED_FOR_CORRECTION',
+    details: 'Returned: Please correct the invoice total.', invoiceRecordId: first.id, fulfilledInvoiceRecordId: first.id,
+    requestedAt: new Date(), serviceTargetAt: new Date('2030-01-01'), serviceTargetLabel: 'Jan 1, 2030', overdue: false, canReturn: false, canClose: false }
+  const initial = detail({ records: [returned], requests: [feedback], draft: { ...draft, sentRecordId: first.id, lockVersion: 2 }, canSend: false })
+  const prepared = { ...initial, draft: { ...draft, invoiceNumber: 'CORRECTED-001', fileName: 'replacement.pdf', amountCentavos: 280000, lockVersion: 3, amendsInvoiceRecordId: first.id }, canSend: true }
+  vi.mocked(api.listInvoices).mockResolvedValue(queue([{ ...rows[0]!, state: 'RETURNED_FOR_CORRECTION', kind: 'CORRECTION' }]))
+  vi.mocked(api.getOrderInvoices).mockResolvedValue(initial)
+  vi.mocked(api.uploadInvoice).mockImplementation(async () => { vi.mocked(api.getOrderInvoices).mockResolvedValue(prepared); return prepared })
+  const sent = { ...prepared, canUpload: false, canSend: false, requests: [{ ...feedback, state: 'UPLOADED' as const }], records: [returned, { ...first, id: 'corrected', invoiceNumber: 'CORRECTED-001', amendsInvoiceRecordId: first.id }], draft: { ...prepared.draft, sentRecordId: 'corrected', lockVersion: 4 } }
+  vi.mocked(api.sendInvoice).mockImplementation(async () => { vi.mocked(api.getOrderInvoices).mockResolvedValue(sent); vi.mocked(api.listInvoices).mockResolvedValue(queue([])); return sent })
+  open('/invoices?view=RECONCILIATION')
+  expect(await screen.findByText('Returned by Buyer')).toBeVisible()
+  fireEvent.click(await screen.findByRole('button', { name: 'Prepare corrected invoice' }))
+  const form = screen.getByRole('form', { name: 'Upload invoice copy' })
+  expect(within(form).getByLabelText('Invoice total (₱)')).toHaveValue('2750.00')
+  fireEvent.change(within(form).getByLabelText('Invoice number'), { target: { value: 'CORRECTED-001' } })
+  fireEvent.change(within(form).getByLabelText('Invoice total (₱)'), { target: { value: '2800.00' } })
+  const replacement = new File(['new PDF'], 'replacement.pdf', { type: 'application/pdf' })
+  fireEvent.change(within(form).getByLabelText(/Copy \(PDF/), { target: { files: [replacement] } })
+  fireEvent.click(screen.getByRole('button', { name: 'Upload copy' }))
+  expect(await screen.findByRole('heading', { name: 'CORRECTED-001' })).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled()
+  expect(api.uploadInvoice).toHaveBeenCalledWith('order-1', expect.objectContaining({ invoiceNumber: 'CORRECTED-001', amountCentavos: 280000, amendsInvoiceRecordId: first.id, file: replacement, lockVersion: 2 }), expect.any(String))
+  expect(screen.queryByRole('button', { name: 'Explain amount mismatch' })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+  await waitFor(() => expect(api.sendInvoice).toHaveBeenCalledWith('order-1', 3, expect.any(String)))
+  expect(await screen.findByText('No invoices match these dates.')).toBeVisible()
+})
+
+test('a correction can retain an existing attachment and keeps form values after a failed save', async () => {
+  vi.mocked(api.getOrderInvoices).mockResolvedValue(detail({ records: [{ ...first, fileName: 'original.pdf' }], canSend: false }))
+  vi.mocked(api.uploadInvoice).mockRejectedValueOnce(new Error('Temporarily unavailable')).mockResolvedValueOnce(detail({ records: [first], draft, canSend: true }))
+  open('/invoices?view=RECONCILIATION')
+  fireEvent.click(await screen.findByRole('button', { name: 'Prepare corrected invoice' }))
+  const form = screen.getByRole('form', { name: 'Upload invoice copy' })
+  fireEvent.change(within(form).getByLabelText('Invoice number'), { target: { value: 'CORRECTED-002' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Upload copy' }))
+  await waitFor(() => expect(api.uploadInvoice).toHaveBeenCalledOnce())
+  expect(within(form).getByLabelText('Invoice number')).toHaveValue('CORRECTED-002')
+  expect(within(form).getByLabelText('Copy (PDF, JPG or PNG)')).not.toBeRequired()
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Upload copy' })).toBeEnabled())
+  fireEvent.click(screen.getByRole('button', { name: 'Upload copy' }))
+  await waitFor(() => expect(api.uploadInvoice).toHaveBeenCalledTimes(2))
+  expect(vi.mocked(api.uploadInvoice).mock.calls[1]?.[1]).toMatchObject({ invoiceNumber: 'CORRECTED-002', amountCentavos: first.amountCentavos, amendsInvoiceRecordId: first.id, lockVersion: 0 })
+  expect(vi.mocked(api.uploadInvoice).mock.calls[1]?.[1].file).toBeUndefined()
 })
 
 test('business presets remain editable after an invoice has been sent', async () => {

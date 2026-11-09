@@ -96,7 +96,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
             for (final (option, detail) in const [
               (
                 ListingSort.bestDeal,
-                'Ranked by the Best Deal score: distance, price, VPS, stock and product rating.',
+                'Closest product-name matches appear first, then Best Deal uses distance, price, VPS, stock and product rating.',
               ),
               (
                 ListingSort.favoritesFirst,
@@ -611,7 +611,7 @@ class ListingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sold = formatQuantity(card.unitsSold);
+    final sold = card.uniqueBuyers;
     final delivery = card.delivery != 'NOT_OFFERED';
     return Material(
       color: Colors.white,
@@ -764,7 +764,7 @@ class ListingCard extends StatelessWidget {
                               const SizedBox(width: 2),
                               Flexible(
                                 child: Text(
-                                  '${card.ratingAverage == null ? 'New' : card.ratingLabel}${sold == '0' ? '' : ' | $sold sold'}',
+                                  '${card.ratingAverage == null ? 'New' : card.ratingLabel}${sold == 0 ? '' : ' | ${sold == 1 ? '1 buyer' : '$sold buyers'}'}',
                                   style: const TextStyle(fontSize: 11),
                                 ),
                               ),
@@ -897,6 +897,10 @@ class RankingExplanation extends StatelessWidget {
       const SizedBox(height: 4),
       if (position != null)
         Text('Rank #$position in the current Best Deal results'),
+      const Text(
+        'Closer product-name matches come first. Best Deal compares offers within the same search-match level.',
+        style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
+      ),
       Text(
         '${card.displayName} · Best Deal score ${card.srs}',
         style: const TextStyle(fontWeight: FontWeight.w600),

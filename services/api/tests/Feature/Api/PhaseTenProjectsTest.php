@@ -7,6 +7,7 @@ namespace Tests\Feature\Api;
 use App\Domain\Geography\PlacesProvider;
 use App\Domain\Geography\RouteProvider;
 use App\Domain\Orders\OrderActor;
+use App\Domain\Projects\ProjectArchives;
 use App\Domain\Projects\ProjectBudget;
 use App\Domain\Projects\ProjectEstimateService;
 use App\Domain\Projects\WorkPackageOrderRecovery;
@@ -553,6 +554,201 @@ final class PhaseTenProjectsTest extends TestCase
         self::assertSame($before['order_id'], $after['order_id']);
         self::assertSame($before['selected_vendor_id'], $after['selected_vendor_id']);
         self::assertSame($before['version'], $after['version']);
+    }
+
+    public function test_cancelled_order_rescan_creates_one_new_replacement_and_retains_the_original(): void
+    {
+        [$first] = $this->pickupStore('Cancelled supplier');
+        [$second] = $this->pickupStore('Replacement supplier');
+        $this->bulk($first->id);
+        $this->bulk($second->id);
+        $this->buyer();
+        [, $w] = $this->package();
+        $candidate = collect($this->scan($w)['items'])->firstWhere('vendor_id', $first->id);
+        $order = $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/selection', ['lock_version' => $w['lock_version'], 'candidate_id' => $candidate['id'], 'payment_method' => 'ONLINE'], $this->key())->assertCreated()->json('data.id');
+        $orderLock = (int) DB::table('orders')->where('id', $order)->value('lock_version');
+        $this->postJson('/api/v1/buyers/orders/'.$order.'/rescan-suppliers', ['lock_version' => $orderLock])->assertConflict();
+        $this->postJson('/api/v1/buyers/orders/'.$order.'/cancel', ['lock_version' => $orderLock], $this->key())->assertOk();
+        $original = (array) DB::table('orders')->where('id', $order)->first();
+        $reopened = $this->postJson('/api/v1/buyers/orders/'.$order.'/rescan-suppliers', ['lock_version' => $original['lock_version']])->assertOk()->assertJsonPath('data.current_version_id', $w['current_version_id'])->json('data');
+        $candidate = collect($this->scan($reopened)['items'])->firstWhere('vendor_id', $second->id);
+        self::assertNotNull($candidate);
+        $url = '/api/v1/buyers/work-packages/'.$w['id'].'/selection';
+        $input = ['lock_version' => $reopened['lock_version'], 'candidate_id' => $candidate['id'], 'payment_method' => 'ONLINE'];
+        $key = $this->key();
+        $replacement = $this->postJson($url, $input, $key)->assertCreated()->json('data.id');
+        $this->postJson($url, $input, $key)->assertCreated()->assertJsonPath('data.id', $replacement);
+        $this->postJson($url, $input, $this->key())->assertConflict();
+        self::assertNotSame($order, $replacement);
+        self::assertSame($original, (array) DB::table('orders')->where('id', $order)->first());
+        self::assertSame(2, DB::table('orders')->where('work_package_id', $w['id'])->count());
+        $this->getJson('/api/v1/buyers/work-packages/'.$w['id'])->assertOk()->assertJsonPath('data.budget.pending_centavos', 0)->assertJsonPath('data.budget.actual_centavos', 0)->assertJsonPath('data.budget.awaiting_recovery_centavos', 0);
+    }
+
+    public function test_archive_blocks_every_nonterminal_order_state_including_legacy_project_updates(): void
+    {
+        [$vendor] = $this->pickupStore('Ongoing archive supplier');
+        $this->bulk($vendor->id);
+        $this->buyer();
+        [$p, $w] = $this->package();
+        $candidate = $this->scan($w)['items'][0];
+        $order = $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/selection', ['lock_version' => $w['lock_version'], 'candidate_id' => $candidate['id'], 'payment_method' => 'ONLINE'], $this->key())->assertCreated()->json('data.id');
+        $w = $this->getJson('/api/v1/buyers/work-packages/'.$w['id'])->assertOk()->json('data');
+        foreach (['AWAITING_VENDOR_CONFIRMATION', 'AWAITING_BUYER_APPROVAL', 'AWAITING_NRPC_ACCEPTANCE', 'AWAITING_PAYMENT', 'CONFIRMED', 'PROCESSING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'PICKED_UP', 'CANCELLATION_REQUESTED', 'DISPUTED'] as $state) {
+            DB::table('orders')->where('id', $order)->update(['order_state' => $state, 'payment_state' => 'PENDING', 'payment_expires_at' => now()->addMinutes(45)]);
+            $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/archive', ['lock_version' => $w['lock_version']], $this->key())->assertConflict()->assertJsonPath('errors.0.message', ProjectArchives::PACKAGE_BLOCKER);
+            $this->postJson('/api/v1/buyers/projects/'.$p['id'].'/archive', ['lock_version' => $p['lock_version']], $this->key())->assertConflict()->assertJsonPath('errors.0.message', ProjectArchives::PROJECT_BLOCKER);
+            $this->patchJson('/api/v1/buyers/projects/'.$p['id'], ['lock_version' => $p['lock_version'], 'status' => 'ARCHIVED'], $this->key())->assertConflict();
+        }
+    }
+
+    public function test_cancelled_order_package_archives_restores_without_reactivating_orders_and_blocks_procurement(): void
+    {
+        [$vendor] = $this->pickupStore('Archive cancelled supplier');
+        $this->bulk($vendor->id);
+        $this->buyer();
+        [, $w, $input] = $this->package();
+        $candidate = $this->scan($w)['items'][0];
+        $order = $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/selection', ['lock_version' => $w['lock_version'], 'candidate_id' => $candidate['id'], 'payment_method' => 'ONLINE'], $this->key())->assertCreated()->json('data.id');
+        $this->postJson('/api/v1/buyers/orders/'.$order.'/cancel', ['lock_version' => (int) DB::table('orders')->where('id', $order)->value('lock_version')], $this->key())->assertOk();
+        $orderLock = (int) DB::table('orders')->where('id', $order)->value('lock_version');
+        $w = $this->getJson('/api/v1/buyers/work-packages/'.$w['id'])->assertOk()->json('data');
+        $url = '/api/v1/buyers/work-packages/'.$w['id'];
+        $this->postJson($url.'/archive', ['lock_version' => $w['lock_version']], $this->key())->assertOk();
+        $archived = $this->getJson($url)->assertOk()->assertJsonPath('data.can_archive', false)->json('data');
+        self::assertSame(720, (int) CarbonImmutable::parse($archived['archived_at'])->diffInHours(CarbonImmutable::parse($archived['delete_after'])));
+        $this->postJson($url.'/estimates', ['lock_version' => $archived['lock_version']])->assertConflict();
+        $this->postJson('/api/v1/buyers/orders/'.$order.'/rescan-suppliers', ['lock_version' => $orderLock])->assertConflict();
+        $this->postJson($url.'/selection', ['lock_version' => $archived['lock_version'], 'candidate_id' => $candidate['id'], 'payment_method' => 'ONLINE'], $this->key())->assertConflict();
+        $this->putJson($url, $input + ['lock_version' => $archived['lock_version']], $this->key())->assertConflict();
+        $this->postJson($url.'/restore', ['lock_version' => $archived['lock_version']], $this->key())->assertOk();
+        $this->getJson($url)->assertOk()->assertJsonPath('data.archived_at', null)->assertJsonPath('data.delete_after', null)->assertJsonPath('data.current_version_id', $w['current_version_id'])->assertJsonPath('data.budget_centavos', $w['budget_centavos']);
+        self::assertSame('CANCELLED', DB::table('orders')->where('id', $order)->value('order_state'));
+    }
+
+    public function test_archive_lists_are_owned_and_work_package_restore_requires_parent_restore(): void
+    {
+        $buyer = $this->buyer();
+        [$p, $w] = $this->package();
+        $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/archive', ['lock_version' => $w['lock_version']], $this->key())->assertOk();
+        $key = $this->key();
+        $this->postJson('/api/v1/buyers/projects/'.$p['id'].'/archive', ['lock_version' => $p['lock_version']], $key)->assertOk();
+        $this->postJson('/api/v1/buyers/projects/'.$p['id'].'/archive', ['lock_version' => $p['lock_version']], $key)->assertOk();
+        $this->getJson('/api/v1/buyers/projects')->assertOk()->assertJsonCount(0, 'data.items');
+        $this->getJson('/api/v1/buyers/archived-items?type=PROJECT')->assertOk()->assertJsonPath('data.items.0.name', $p['name'])->assertJsonPath('data.items.0.remaining_days', 30);
+        $archive = $this->getJson('/api/v1/buyers/archived-items?type=WORK_PACKAGE')->assertOk()->assertJsonPath('data.items.0.parent_archived', true)->assertJsonPath('data.items.0.can_restore', false)->json('data.items.0');
+        $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/restore', ['lock_version' => $archive['lock_version']], $this->key())->assertConflict()->assertJsonPath('errors.0.code', 'PARENT_PROJECT_ARCHIVED');
+        $this->buyer('other-archive-buyer@example.test');
+        $this->getJson('/api/v1/buyers/archived-items?type=PROJECT')->assertOk()->assertJsonCount(0, 'data.items');
+        $this->postJson('/api/v1/buyers/projects/'.$p['id'].'/restore', ['lock_version' => $p['lock_version'] + 1], $this->key())->assertNotFound();
+        $this->signInBuyer($buyer);
+        $this->postJson('/api/v1/buyers/projects/'.$p['id'].'/restore', ['lock_version' => $p['lock_version'] + 1], $this->key())->assertOk();
+        $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/restore', ['lock_version' => $archive['lock_version']], $this->key())->assertOk();
+        $this->getJson('/api/v1/buyers/projects/'.$p['id'])->assertOk()->assertJsonCount(1, 'data.packages.items')->assertJsonPath('data.budget.allocated_centavos', $w['budget_centavos']);
+    }
+
+    public function test_permanent_removal_requires_archive_preserves_references_and_leaves_unrelated_projects(): void
+    {
+        $this->buyer();
+        [$p, $w] = $this->package();
+        [$other] = $this->package();
+        $this->postJson('/api/v1/buyers/projects/'.$p['id'].'/permanent-deletion', ['lock_version' => $p['lock_version']], $this->key())->assertConflict();
+        $this->postJson('/api/v1/buyers/projects/'.$p['id'].'/archive', ['lock_version' => $p['lock_version']], $this->key())->assertOk();
+        $key = $this->key();
+        $this->postJson('/api/v1/buyers/projects/'.$p['id'].'/permanent-deletion', ['lock_version' => $p['lock_version'] + 1], $key)->assertOk();
+        $this->postJson('/api/v1/buyers/projects/'.$p['id'].'/permanent-deletion', ['lock_version' => $p['lock_version'] + 1], $key)->assertOk();
+        $this->getJson('/api/v1/buyers/projects/'.$p['id'])->assertNotFound();
+        $this->getJson('/api/v1/buyers/work-packages/'.$w['id'])->assertNotFound();
+        $this->getJson('/api/v1/buyers/projects/'.$other['id'])->assertOk();
+        self::assertNotNull(DB::table('work_packages')->where('id', $w['id'])->value('deleted_at'));
+        self::assertTrue(DB::table('work_package_versions')->where('id', $w['current_version_id'])->exists());
+        self::assertTrue(DB::table('work_package_lines')->where('work_package_version_id', $w['current_version_id'])->exists());
+        $this->getJson('/api/v1/buyers/archived-items?type=PROJECT')->assertOk()->assertJsonCount(0, 'data.items');
+    }
+
+    public function test_terminal_orders_allow_archive_and_deletion_rechecks_orders_and_preserves_history(): void
+    {
+        [$vendor] = $this->pickupStore('Finalized archive supplier');
+        $this->bulk($vendor->id);
+        $this->buyer();
+        [, $w] = $this->package();
+        $candidate = $this->scan($w)['items'][0];
+        $order = $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/selection', ['lock_version' => $w['lock_version'], 'candidate_id' => $candidate['id'], 'payment_method' => 'ONLINE'], $this->key())->assertCreated()->json('data.id');
+        $url = '/api/v1/buyers/work-packages/'.$w['id'];
+        foreach (['COMPLETED', 'CANCELLED', 'DECLINED', 'EXPIRED'] as $state) {
+            DB::table('orders')->where('id', $order)->update(['order_state' => $state]);
+            $w = $this->getJson($url)->assertOk()->json('data');
+            $this->postJson($url.'/archive', ['lock_version' => $w['lock_version']], $this->key())->assertOk();
+            $this->postJson($url.'/restore', ['lock_version' => $w['lock_version'] + 1], $this->key())->assertOk();
+        }
+        $w = $this->getJson($url)->assertOk()->json('data');
+        $this->postJson($url.'/archive', ['lock_version' => $w['lock_version']], $this->key())->assertOk();
+        // Even legacy/corrupt data introduced after archiving must never bypass the final eligibility check.
+        DB::table('orders')->where('id', $order)->update(['order_state' => 'PROCESSING']);
+        $this->postJson($url.'/permanent-deletion', ['lock_version' => $w['lock_version'] + 1], $this->key())->assertConflict();
+        $expired = CarbonImmutable::now()->subDays(31);
+        DB::table('work_packages')->where('id', $w['id'])->update(['archived_at' => $expired, 'delete_after' => $expired->addHours(720)]);
+        self::assertSame(0, app(ProjectArchives::class)->sweep());
+        self::assertNull(DB::table('work_packages')->where('id', $w['id'])->value('deleted_at'));
+        DB::table('orders')->where('id', $order)->update(['order_state' => 'CANCELLED']);
+        $this->postJson($url.'/permanent-deletion', ['lock_version' => $w['lock_version'] + 1], $this->key())->assertOk();
+        $this->getJson($url)->assertNotFound();
+        self::assertTrue(DB::table('orders')->where('id', $order)->exists());
+        self::assertTrue(DB::table('work_package_versions')->where('id', $w['current_version_id'])->exists());
+        self::assertTrue(DB::table('order_lines')->where('order_id', $order)->exists());
+        self::assertTrue(DB::table('order_snapshots')->where('order_id', $order)->exists());
+    }
+
+    public function test_expired_work_package_cleanup_preserves_its_active_parent_and_sibling(): void
+    {
+        $at = CarbonImmutable::parse('2026-11-09T04:00:00Z');
+        Carbon::setTestNow($at);
+        CarbonImmutable::setTestNow($at);
+        $this->buyer();
+        [$p, $w, $input] = $this->package(extra: ['budget_centavos' => 500000]);
+        $sibling = $this->postJson('/api/v1/buyers/projects/'.$p['id'].'/work-packages', $input, $this->key())->assertCreated()->json('data');
+        $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/archive', ['lock_version' => $w['lock_version']], $this->key())->assertOk();
+        Carbon::setTestNow($at->addHours(720));
+        CarbonImmutable::setTestNow($at->addHours(720));
+        self::assertSame(1, app(ProjectArchives::class)->sweep());
+        self::assertNull(DB::table('projects')->where('id', $p['id'])->value('deleted_at'));
+        self::assertSame('ACTIVE', DB::table('projects')->where('id', $p['id'])->value('status'));
+        self::assertNull(DB::table('work_packages')->where('id', $sibling['id'])->value('deleted_at'));
+        self::assertNotNull(DB::table('work_packages')->where('id', $w['id'])->value('deleted_at'));
+        self::assertTrue(DB::table('work_package_versions')->where('id', $w['current_version_id'])->exists());
+        self::assertSame(500000, ProjectBudget::allocated($p['id']));
+    }
+
+    public function test_cleanup_obeys_exact_30_day_boundary_and_never_deletes_restored_or_rearchived_items(): void
+    {
+        $at = CarbonImmutable::parse('2026-11-09T04:00:00Z');
+        Carbon::setTestNow($at);
+        CarbonImmutable::setTestNow($at);
+        $buyer = $this->buyer();
+        [$p, $w] = $this->package();
+        $url = '/api/v1/buyers/work-packages/'.$w['id'];
+        $this->postJson($url.'/archive', ['lock_version' => $w['lock_version']], $this->key())->assertOk();
+        $this->postJson($url.'/restore', ['lock_version' => $w['lock_version'] + 1], $this->key())->assertOk();
+        $after = $at->addDays(30);
+        Carbon::setTestNow($after);
+        CarbonImmutable::setTestNow($after);
+        $this->signInBuyer($buyer);
+        self::assertSame(0, app(ProjectArchives::class)->sweep());
+        self::assertNull(DB::table('work_packages')->where('id', $w['id'])->value('deleted_at'));
+        $this->postJson($url.'/archive', ['lock_version' => $w['lock_version'] + 2], $this->key())->assertOk();
+        self::assertSame(0, app(ProjectArchives::class)->sweep());
+        $this->postJson('/api/v1/buyers/projects/'.$p['id'].'/archive', ['lock_version' => $p['lock_version']], $this->key())->assertOk();
+        Carbon::setTestNow($after->addHours(720)->subSecond());
+        CarbonImmutable::setTestNow($after->addHours(720)->subSecond());
+        self::assertSame(0, app(ProjectArchives::class)->sweep());
+        Carbon::setTestNow($after->addHours(720));
+        CarbonImmutable::setTestNow($after->addHours(720));
+        $this->signInBuyer($buyer);
+        $this->postJson($url.'/restore', ['lock_version' => $w['lock_version'] + 3], $this->key())->assertConflict();
+        $this->artisan('materyalph:procurement-archives-prune')->assertSuccessful();
+        self::assertNotNull(DB::table('projects')->where('id', $p['id'])->value('deleted_at'));
+        self::assertNotNull(DB::table('work_packages')->where('id', $w['id'])->value('deleted_at'));
+        self::assertSame(0, app(ProjectArchives::class)->sweep());
     }
 
     public function test_cancellation_reopens_the_same_package_and_allows_matching_again(): void

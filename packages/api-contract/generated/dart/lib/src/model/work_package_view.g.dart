@@ -76,6 +76,14 @@ class _$WorkPackageViewProjectStatusEnumSerializer
 
 class _$WorkPackageView extends WorkPackageView {
   @override
+  final DateTime? archivedAt;
+  @override
+  final DateTime? deleteAfter;
+  @override
+  final bool? canArchive;
+  @override
+  final String? archiveBlocker;
+  @override
   final String? selectedArrangementId;
   @override
   final String? procurementCandidateId;
@@ -118,7 +126,11 @@ class _$WorkPackageView extends WorkPackageView {
       (WorkPackageViewBuilder()..update(updates))._build();
 
   _$WorkPackageView._(
-      {this.selectedArrangementId,
+      {this.archivedAt,
+      this.deleteAfter,
+      this.canArchive,
+      this.archiveBlocker,
+      this.selectedArrangementId,
       this.procurementCandidateId,
       this.vendorOrders,
       required this.id,
@@ -149,6 +161,10 @@ class _$WorkPackageView extends WorkPackageView {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is WorkPackageView &&
+        archivedAt == other.archivedAt &&
+        deleteAfter == other.deleteAfter &&
+        canArchive == other.canArchive &&
+        archiveBlocker == other.archiveBlocker &&
         selectedArrangementId == other.selectedArrangementId &&
         procurementCandidateId == other.procurementCandidateId &&
         vendorOrders == other.vendorOrders &&
@@ -173,6 +189,10 @@ class _$WorkPackageView extends WorkPackageView {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, archivedAt.hashCode);
+    _$hash = $jc(_$hash, deleteAfter.hashCode);
+    _$hash = $jc(_$hash, canArchive.hashCode);
+    _$hash = $jc(_$hash, archiveBlocker.hashCode);
     _$hash = $jc(_$hash, selectedArrangementId.hashCode);
     _$hash = $jc(_$hash, procurementCandidateId.hashCode);
     _$hash = $jc(_$hash, vendorOrders.hashCode);
@@ -199,6 +219,10 @@ class _$WorkPackageView extends WorkPackageView {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'WorkPackageView')
+          ..add('archivedAt', archivedAt)
+          ..add('deleteAfter', deleteAfter)
+          ..add('canArchive', canArchive)
+          ..add('archiveBlocker', archiveBlocker)
           ..add('selectedArrangementId', selectedArrangementId)
           ..add('procurementCandidateId', procurementCandidateId)
           ..add('vendorOrders', vendorOrders)
@@ -225,6 +249,23 @@ class _$WorkPackageView extends WorkPackageView {
 class WorkPackageViewBuilder
     implements Builder<WorkPackageView, WorkPackageViewBuilder> {
   _$WorkPackageView? _$v;
+
+  DateTime? _archivedAt;
+  DateTime? get archivedAt => _$this._archivedAt;
+  set archivedAt(DateTime? archivedAt) => _$this._archivedAt = archivedAt;
+
+  DateTime? _deleteAfter;
+  DateTime? get deleteAfter => _$this._deleteAfter;
+  set deleteAfter(DateTime? deleteAfter) => _$this._deleteAfter = deleteAfter;
+
+  bool? _canArchive;
+  bool? get canArchive => _$this._canArchive;
+  set canArchive(bool? canArchive) => _$this._canArchive = canArchive;
+
+  String? _archiveBlocker;
+  String? get archiveBlocker => _$this._archiveBlocker;
+  set archiveBlocker(String? archiveBlocker) =>
+      _$this._archiveBlocker = archiveBlocker;
 
   String? _selectedArrangementId;
   String? get selectedArrangementId => _$this._selectedArrangementId;
@@ -322,6 +363,10 @@ class WorkPackageViewBuilder
   WorkPackageViewBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _archivedAt = $v.archivedAt;
+      _deleteAfter = $v.deleteAfter;
+      _canArchive = $v.canArchive;
+      _archiveBlocker = $v.archiveBlocker;
       _selectedArrangementId = $v.selectedArrangementId;
       _procurementCandidateId = $v.procurementCandidateId;
       _vendorOrders = $v.vendorOrders?.toBuilder();
@@ -364,6 +409,10 @@ class WorkPackageViewBuilder
     try {
       _$result = _$v ??
           _$WorkPackageView._(
+            archivedAt: archivedAt,
+            deleteAfter: deleteAfter,
+            canArchive: canArchive,
+            archiveBlocker: archiveBlocker,
             selectedArrangementId: selectedArrangementId,
             procurementCandidateId: procurementCandidateId,
             vendorOrders: _vendorOrders?.build(),

@@ -5,6 +5,8 @@ All URIs are relative to */api/v1*
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
 | [**activateWorkPackage**](BuyerProjectsApi.md#activateworkpackage) | **POST** /buyers/work-packages/{packageId}/activate |  |
+| [**archiveProject**](BuyerProjectsApi.md#archiveproject) | **POST** /buyers/projects/{itemId}/archive |  |
+| [**archiveWorkPackage**](BuyerProjectsApi.md#archiveworkpackage) | **POST** /buyers/work-packages/{itemId}/archive |  |
 | [**closeWorkPackage**](BuyerProjectsApi.md#closeworkpackage) | **POST** /buyers/work-packages/{packageId}/close |  |
 | [**compileProjectEstimates**](BuyerProjectsApi.md#compileprojectestimates) | **POST** /buyers/work-packages/{packageId}/estimates |  |
 | [**createProject**](BuyerProjectsApi.md#createproject) | **POST** /buyers/projects |  |
@@ -23,16 +25,22 @@ All URIs are relative to */api/v1*
 | [**getWorkPackage**](BuyerProjectsApi.md#getworkpackage) | **GET** /buyers/work-packages/{packageId} |  |
 | [**inquireProjectArrangementVendor**](BuyerProjectsApi.md#inquireprojectarrangementvendor) | **POST** /buyers/work-packages/{packageId}/arrangements/{arrangementId}/vendors/{vendorId}/inquiry |  |
 | [**inquireProjectVendor**](BuyerProjectsApi.md#inquireprojectvendor) | **POST** /buyers/work-packages/{packageId}/inquiries |  |
+| [**listProjectArchives**](BuyerProjectsApi.md#listprojectarchives) | **GET** /buyers/archived-items |  |
 | [**listProjectArrangementOptions**](BuyerProjectsApi.md#listprojectarrangementoptions) | **GET** /buyers/work-packages/{packageId}/arrangement-options |  |
 | [**listProjects**](BuyerProjectsApi.md#listprojects) | **GET** /buyers/projects |  |
 | [**listWorkPackageLineAlternatives**](BuyerProjectsApi.md#listworkpackagelinealternatives) | **GET** /buyers/work-packages/{packageId}/lines/{lineId}/alternatives |  |
+| [**permanentlyDeleteProject**](BuyerProjectsApi.md#permanentlydeleteproject) | **POST** /buyers/projects/{itemId}/permanent-deletion |  |
+| [**permanentlyDeleteWorkPackage**](BuyerProjectsApi.md#permanentlydeleteworkpackage) | **POST** /buyers/work-packages/{itemId}/permanent-deletion |  |
 | [**previewProjectSpecificationSelection**](BuyerProjectsApi.md#previewprojectspecificationselection) | **POST** /buyers/work-packages/{packageId}/candidates/{candidateId}/selection-preview |  |
 | [**previewWorkPackageCsv**](BuyerProjectsApi.md#previewworkpackagecsv) | **POST** /buyers/work-packages/import-preview |  |
 | [**reactivateWorkPackage**](BuyerProjectsApi.md#reactivateworkpackage) | **POST** /buyers/work-packages/{packageId}/reactivate |  |
 | [**removeProjectDraftItem**](BuyerProjectsApi.md#removeprojectdraftitem) | **DELETE** /buyers/work-packages/{packageId}/candidates/{candidateId}/draft-items/{lineId}/{variantId} |  |
 | [**requestProjectDraftSupplier**](BuyerProjectsApi.md#requestprojectdraftsupplier) | **POST** /buyers/work-packages/{packageId}/candidates/{candidateId}/suppliers/{vendorId}/request |  |
+| [**rescanProjectOrderSuppliers**](BuyerProjectsApi.md#rescanprojectordersuppliers) | **POST** /buyers/orders/{orderId}/rescan-suppliers |  |
 | [**resetProjectRankingPreferences**](BuyerProjectsApi.md#resetprojectrankingpreferences) | **POST** /buyers/project-ranking-preferences/reset |  |
 | [**resolveProjectMissingLine**](BuyerProjectsApi.md#resolveprojectmissingline) | **PUT** /buyers/work-packages/{packageId}/missing-lines/{lineId} |  |
+| [**restoreProject**](BuyerProjectsApi.md#restoreproject) | **POST** /buyers/projects/{itemId}/restore |  |
+| [**restoreWorkPackage**](BuyerProjectsApi.md#restoreworkpackage) | **POST** /buyers/work-packages/{itemId}/restore |  |
 | [**saveProjectDraftItem**](BuyerProjectsApi.md#saveprojectdraftitem) | **PUT** /buyers/work-packages/{packageId}/candidates/{candidateId}/draft-items/{lineId}/{variantId} |  |
 | [**saveProjectRankingPreferences**](BuyerProjectsApi.md#saveprojectrankingpreferences) | **PUT** /buyers/project-ranking-preferences |  |
 | [**searchProjectMaterials**](BuyerProjectsApi.md#searchprojectmaterials) | **GET** /buyers/project-materials |  |
@@ -121,6 +129,170 @@ example().catch(console.error);
 | **409** | Stale version, expired estimate, source change or already selected Vendor; no mutation. |  -  |
 | **422** | Validation, fulfillment review or written budget override required. |  -  |
 | **503** | Provider unavailable; retry without fabricated values. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## archiveProject
+
+> ProjectArchiveMutationResponse archiveProject(itemId, idempotencyKey, projectVersionRequest)
+
+
+
+Archive only after all related orders are terminal. The legacy Project status update uses this same guard.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  BuyerProjectsApi,
+} from '@materyalph/api-client-ts';
+import type { ArchiveProjectRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new BuyerProjectsApi(config);
+
+  const body = {
+    // string
+    itemId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // ProjectVersionRequest
+    projectVersionRequest: ...,
+  } satisfies ArchiveProjectRequest;
+
+  try {
+    const data = await api.archiveProject(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **itemId** | `string` |  | [Defaults to `undefined`] |
+| **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
+| **projectVersionRequest** | [ProjectVersionRequest](ProjectVersionRequest.md) |  | |
+
+### Return type
+
+[**ProjectArchiveMutationResponse**](ProjectArchiveMutationResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Authorized procurement result. |  -  |
+| **401** | Authentication required. |  -  |
+| **403** | Buyer access required. |  -  |
+| **404** | Owned item unavailable. |  -  |
+| **409** | Ongoing orders, archived parent, expired retention or stale version. No mutation. |  -  |
+| **422** | Invalid request. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## archiveWorkPackage
+
+> ProjectArchiveMutationResponse archiveWorkPackage(itemId, idempotencyKey, projectVersionRequest)
+
+
+
+Archive only after all related orders are terminal. The legacy Project status update uses this same guard.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  BuyerProjectsApi,
+} from '@materyalph/api-client-ts';
+import type { ArchiveWorkPackageRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new BuyerProjectsApi(config);
+
+  const body = {
+    // string
+    itemId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // ProjectVersionRequest
+    projectVersionRequest: ...,
+  } satisfies ArchiveWorkPackageRequest;
+
+  try {
+    const data = await api.archiveWorkPackage(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **itemId** | `string` |  | [Defaults to `undefined`] |
+| **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
+| **projectVersionRequest** | [ProjectVersionRequest](ProjectVersionRequest.md) |  | |
+
+### Return type
+
+[**ProjectArchiveMutationResponse**](ProjectArchiveMutationResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Authorized procurement result. |  -  |
+| **401** | Authentication required. |  -  |
+| **403** | Buyer access required. |  -  |
+| **404** | Owned item unavailable. |  -  |
+| **409** | Ongoing orders, archived parent, expired retention or stale version. No mutation. |  -  |
+| **422** | Invalid request. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -1577,6 +1749,85 @@ example().catch(console.error);
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## listProjectArchives
+
+> ProjectArchivePageResponse listProjectArchives(type, page)
+
+
+
+Owned archives, paginated by type. Retention lasts exactly 720 hours; financial and transaction originals remain retained after workspace removal.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  BuyerProjectsApi,
+} from '@materyalph/api-client-ts';
+import type { ListProjectArchivesRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new BuyerProjectsApi(config);
+
+  const body = {
+    // 'PROJECT' | 'WORK_PACKAGE'
+    type: type_example,
+    // number (optional)
+    page: 56,
+  } satisfies ListProjectArchivesRequest;
+
+  try {
+    const data = await api.listProjectArchives(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **type** | `PROJECT`, `WORK_PACKAGE` |  | [Defaults to `undefined`] [Enum: PROJECT, WORK_PACKAGE] |
+| **page** | `number` |  | [Optional] [Defaults to `undefined`] |
+
+### Return type
+
+[**ProjectArchivePageResponse**](ProjectArchivePageResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Authorized procurement result. |  -  |
+| **401** | Authentication required. |  -  |
+| **403** | Buyer access required. |  -  |
+| **404** | Owned item unavailable. |  -  |
+| **409** | Ongoing orders, archived parent, expired retention or stale version. No mutation. |  -  |
+| **422** | Invalid request. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## listProjectArrangementOptions
 
 > ProjectArrangementPageResponse listProjectArrangementOptions(packageId, page, sort, direction, favoritesOnly, completeOnly, withinBudget)
@@ -1842,6 +2093,170 @@ example().catch(console.error);
 | **404** | No owned resource or current candidate. |  -  |
 | **409** | Stale version, expired estimate, source change or already selected Vendor; no mutation. |  -  |
 | **422** | Validation failed. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## permanentlyDeleteProject
+
+> ProjectArchiveMutationResponse permanentlyDeleteProject(itemId, idempotencyKey, projectVersionRequest)
+
+
+
+Irreversibly remove an archived item from the Buyer workspace after rechecking ongoing orders. Retain immutable commercial, financial and audit rows and references.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  BuyerProjectsApi,
+} from '@materyalph/api-client-ts';
+import type { PermanentlyDeleteProjectRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new BuyerProjectsApi(config);
+
+  const body = {
+    // string
+    itemId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // ProjectVersionRequest
+    projectVersionRequest: ...,
+  } satisfies PermanentlyDeleteProjectRequest;
+
+  try {
+    const data = await api.permanentlyDeleteProject(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **itemId** | `string` |  | [Defaults to `undefined`] |
+| **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
+| **projectVersionRequest** | [ProjectVersionRequest](ProjectVersionRequest.md) |  | |
+
+### Return type
+
+[**ProjectArchiveMutationResponse**](ProjectArchiveMutationResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Authorized procurement result. |  -  |
+| **401** | Authentication required. |  -  |
+| **403** | Buyer access required. |  -  |
+| **404** | Owned item unavailable. |  -  |
+| **409** | Ongoing orders, archived parent, expired retention or stale version. No mutation. |  -  |
+| **422** | Invalid request. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## permanentlyDeleteWorkPackage
+
+> ProjectArchiveMutationResponse permanentlyDeleteWorkPackage(itemId, idempotencyKey, projectVersionRequest)
+
+
+
+Irreversibly remove an archived item from the Buyer workspace after rechecking ongoing orders. Retain immutable commercial, financial and audit rows and references.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  BuyerProjectsApi,
+} from '@materyalph/api-client-ts';
+import type { PermanentlyDeleteWorkPackageRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new BuyerProjectsApi(config);
+
+  const body = {
+    // string
+    itemId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // ProjectVersionRequest
+    projectVersionRequest: ...,
+  } satisfies PermanentlyDeleteWorkPackageRequest;
+
+  try {
+    const data = await api.permanentlyDeleteWorkPackage(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **itemId** | `string` |  | [Defaults to `undefined`] |
+| **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
+| **projectVersionRequest** | [ProjectVersionRequest](ProjectVersionRequest.md) |  | |
+
+### Return type
+
+[**ProjectArchiveMutationResponse**](ProjectArchiveMutationResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Authorized procurement result. |  -  |
+| **401** | Authentication required. |  -  |
+| **403** | Buyer access required. |  -  |
+| **404** | Owned item unavailable. |  -  |
+| **409** | Ongoing orders, archived parent, expired retention or stale version. No mutation. |  -  |
+| **422** | Invalid request. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -2266,6 +2681,85 @@ example().catch(console.error);
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## rescanProjectOrderSuppliers
+
+> WorkPackageViewResponse rescanProjectOrderSuppliers(orderId, projectVersionRequest)
+
+
+
+Authorize a cancelled order and return its unchanged Work Package for the existing supplier scan and selection flow. Groups source only uncovered quantities; peers and cancelled history remain unchanged. Does not create an order.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  BuyerProjectsApi,
+} from '@materyalph/api-client-ts';
+import type { RescanProjectOrderSuppliersRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new BuyerProjectsApi(config);
+
+  const body = {
+    // string
+    orderId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // ProjectVersionRequest
+    projectVersionRequest: ...,
+  } satisfies RescanProjectOrderSuppliersRequest;
+
+  try {
+    const data = await api.rescanProjectOrderSuppliers(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **orderId** | `string` |  | [Defaults to `undefined`] |
+| **projectVersionRequest** | [ProjectVersionRequest](ProjectVersionRequest.md) |  | |
+
+### Return type
+
+[**WorkPackageViewResponse**](WorkPackageViewResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Authorized procurement result. |  -  |
+| **401** | Authentication required. |  -  |
+| **403** | Buyer access required. |  -  |
+| **404** | Owned item unavailable. |  -  |
+| **409** | Ongoing orders, archived parent, expired retention or stale version. No mutation. |  -  |
+| **422** | Invalid request. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## resetProjectRankingPreferences
 
 > ProjectPreferencesResponse resetProjectRankingPreferences(projectPreferenceReset)
@@ -2422,6 +2916,170 @@ example().catch(console.error);
 | **409** | Stale package, changed resolution, or no active primary Vendor request (MISSING_LINE_INACTIVE). Cancelled procurement history cannot be resolved as current work. |  -  |
 | **422** | Validation, fulfillment review or written budget override required. |  -  |
 | **503** | Provider unavailable; retry without fabricated values. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## restoreProject
+
+> ProjectArchiveMutationResponse restoreProject(itemId, idempotencyKey, projectVersionRequest)
+
+
+
+Restore before expiry under the parent lock, clear both timestamps, and preserve cancelled orders. A Work Package requires its parent Project restored first.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  BuyerProjectsApi,
+} from '@materyalph/api-client-ts';
+import type { RestoreProjectRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new BuyerProjectsApi(config);
+
+  const body = {
+    // string
+    itemId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // ProjectVersionRequest
+    projectVersionRequest: ...,
+  } satisfies RestoreProjectRequest;
+
+  try {
+    const data = await api.restoreProject(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **itemId** | `string` |  | [Defaults to `undefined`] |
+| **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
+| **projectVersionRequest** | [ProjectVersionRequest](ProjectVersionRequest.md) |  | |
+
+### Return type
+
+[**ProjectArchiveMutationResponse**](ProjectArchiveMutationResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Authorized procurement result. |  -  |
+| **401** | Authentication required. |  -  |
+| **403** | Buyer access required. |  -  |
+| **404** | Owned item unavailable. |  -  |
+| **409** | Ongoing orders, archived parent, expired retention or stale version. No mutation. |  -  |
+| **422** | Invalid request. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## restoreWorkPackage
+
+> ProjectArchiveMutationResponse restoreWorkPackage(itemId, idempotencyKey, projectVersionRequest)
+
+
+
+Restore before expiry under the parent lock, clear both timestamps, and preserve cancelled orders. A Work Package requires its parent Project restored first.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  BuyerProjectsApi,
+} from '@materyalph/api-client-ts';
+import type { RestoreWorkPackageRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new BuyerProjectsApi(config);
+
+  const body = {
+    // string
+    itemId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // ProjectVersionRequest
+    projectVersionRequest: ...,
+  } satisfies RestoreWorkPackageRequest;
+
+  try {
+    const data = await api.restoreWorkPackage(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **itemId** | `string` |  | [Defaults to `undefined`] |
+| **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
+| **projectVersionRequest** | [ProjectVersionRequest](ProjectVersionRequest.md) |  | |
+
+### Return type
+
+[**ProjectArchiveMutationResponse**](ProjectArchiveMutationResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Authorized procurement result. |  -  |
+| **401** | Authentication required. |  -  |
+| **403** | Buyer access required. |  -  |
+| **404** | Owned item unavailable. |  -  |
+| **409** | Ongoing orders, archived parent, expired retention or stale version. No mutation. |  -  |
+| **422** | Invalid request. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 

@@ -12,13 +12,29 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
+import { mapValues, parseDate, parseDateTime, serializeDate, serializeDateTime } from '../runtime';
 /**
  *
  * @export
  * @interface WorkPackageSummary
  */
 export interface WorkPackageSummary {
+    /**
+     *
+     */
+    archivedAt?: Date;
+    /**
+     *
+     */
+    deleteAfter?: Date;
+    /**
+     *
+     */
+    canArchive?: boolean;
+    /**
+     *
+     */
+    archiveBlocker?: string;
     /**
      *
      */
@@ -109,6 +125,10 @@ export function WorkPackageSummaryFromJSONTyped(json: any, ignoreDiscriminator: 
     }
     return {
 
+        'archivedAt': json['archived_at'] == null ? undefined : (parseDateTime(json['archived_at'])),
+        'deleteAfter': json['delete_after'] == null ? undefined : (parseDateTime(json['delete_after'])),
+        'canArchive': json['can_archive'] == null ? undefined : json['can_archive'],
+        'archiveBlocker': json['archive_blocker'] == null ? undefined : json['archive_blocker'],
         'selectedArrangementId': json['selected_arrangement_id'] === undefined ? undefined : json['selected_arrangement_id'] === null ? null : json['selected_arrangement_id'],
         'vendorOrders': json['vendor_orders'] == null ? undefined : json['vendor_orders'],
         'id': json['id'],
@@ -135,6 +155,10 @@ export function WorkPackageSummaryToJSONTyped(value?: WorkPackageSummary | null,
 
     return {
 
+        'archived_at': value['archivedAt'] == null ? value['archivedAt'] : serializeDateTime(value['archivedAt']),
+        'delete_after': value['deleteAfter'] == null ? value['deleteAfter'] : serializeDateTime(value['deleteAfter']),
+        'can_archive': value['canArchive'],
+        'archive_blocker': value['archiveBlocker'],
         'selected_arrangement_id': value['selectedArrangementId'],
         'vendor_orders': value['vendorOrders'],
         'id': value['id'],

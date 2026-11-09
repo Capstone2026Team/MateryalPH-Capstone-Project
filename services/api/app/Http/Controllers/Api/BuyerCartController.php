@@ -47,6 +47,9 @@ final class BuyerCartController extends Controller
             'quantity' => ['sometimes'],
             'saved_for_later' => ['sometimes', 'boolean'],
             'accept_current_price' => ['sometimes', 'boolean'],
+            'listing_variant_id' => ['sometimes', 'required_with:expected_price_version_id', 'uuid'],
+            'expected_price_version_id' => ['required_with:listing_variant_id', 'uuid'],
+            'fulfillment_method' => ['sometimes', Rule::in(['DELIVERY', 'PICKUP'])],
         ]);
 
         return ApiResponse::success($carts->updateItem($request, $itemId, $input));

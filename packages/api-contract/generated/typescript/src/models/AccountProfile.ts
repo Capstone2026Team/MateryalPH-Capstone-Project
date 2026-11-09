@@ -36,13 +36,17 @@ export interface AccountProfile {
      */
     mobileE164?: string | null;
     /**
-     * Buyer email stays masked until recent identity verification.
+     * False for the authenticated owner's full account email. Retained for client compatibility.
      */
     emailMasked?: boolean;
     /**
-     *
+     * Full account email, visible only to the authenticated account owner.
      */
     email: string;
+    /**
+     * Whether the account email ownership has been verified; not a Buyer performance or business verification badge.
+     */
+    emailVerified?: boolean;
     /**
      *
      */
@@ -131,6 +135,7 @@ export function AccountProfileFromJSONTyped(json: any, ignoreDiscriminator: bool
         'mobileE164': json['mobile_e164'] === undefined ? undefined : json['mobile_e164'] === null ? null : json['mobile_e164'],
         'emailMasked': json['email_masked'] == null ? undefined : json['email_masked'],
         'email': json['email'],
+        'emailVerified': json['email_verified'] == null ? undefined : json['email_verified'],
         'accountType': json['account_type'],
         'accountStatus': json['account_status'],
         'lockVersion': json['lock_version'],
@@ -163,6 +168,7 @@ export function AccountProfileToJSONTyped(value?: AccountProfile | null, ignoreD
         'mobile_e164': value['mobileE164'],
         'email_masked': value['emailMasked'],
         'email': value['email'],
+        'email_verified': value['emailVerified'],
         'account_type': value['accountType'],
         'account_status': value['accountStatus'],
         'lock_version': value['lockVersion'],

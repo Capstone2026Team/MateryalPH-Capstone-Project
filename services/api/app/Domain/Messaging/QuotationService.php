@@ -479,6 +479,9 @@ final class QuotationService
             throw new AuthenticationException('PROJECT_CLOSED', 'This Project is read-only. Quotation history remains available.', 409);
         }
         $package = DB::table('work_packages')->where('id', $c->context_id)->lockForUpdate()->first();
+        if ($package !== null && ($package->archived_at !== null || $package->deleted_at !== null)) {
+            throw new AuthenticationException('WORK_PACKAGE_ARCHIVED', 'Restore this Work Package before starting procurement.', 409);
+        }
         if ($package !== null) {
             $package = app(ProjectService::class)->effectivePackage($package);
         }

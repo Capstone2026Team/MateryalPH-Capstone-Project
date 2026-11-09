@@ -78,8 +78,10 @@ OrderDetailView orderDetail({
   int lockVersion = 3,
   OrderDisputeRefView? dispute,
   OrderInvoiceRefView? invoice,
+  Map<String, Object?>? projectContext,
 }) => OrderDetailView(
   id: 'order-1',
+  projectContext: projectContext,
   reference: 'ORD-2026-ABCD1234',
   vendorName: 'Alpha Construction Supply',
   fulfillmentMethod: fulfillment,

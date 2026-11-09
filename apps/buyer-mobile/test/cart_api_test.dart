@@ -8,6 +8,35 @@ import 'package:materyalph_api_client/materyalph_api_client.dart';
 
 void main() {
   test(
+    'cart option edits serialize the variant, displayed price and fulfillment together',
+    () {
+      final edit = CartItemUpdate(
+        (b) => b
+          ..lockVersion = 4
+          ..quantity = '3'
+          ..listingVariantId = '01995000-0000-7000-8000-000000000001'
+          ..expectedPriceVersionId = '01995000-0000-7000-8000-000000000002'
+          ..fulfillmentMethod = CartItemUpdateFulfillmentMethodEnum.PICKUP,
+      );
+      final json = standardSerializers.serializeWith(
+        CartItemUpdate.serializer,
+        edit,
+      );
+      expect(json, {
+        'lock_version': 4,
+        'quantity': '3',
+        'listing_variant_id': '01995000-0000-7000-8000-000000000001',
+        'expected_price_version_id': '01995000-0000-7000-8000-000000000002',
+        'fulfillment_method': 'PICKUP',
+      });
+      expect(
+        standardSerializers.deserializeWith(CartItemUpdate.serializer, json),
+        edit,
+      );
+    },
+  );
+
+  test(
     'product delivery preview uses the generated API and preserves the fee range and blockers',
     () async {
       var manual = false;

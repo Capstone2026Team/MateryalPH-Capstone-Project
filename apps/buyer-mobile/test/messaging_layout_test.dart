@@ -385,6 +385,7 @@ Future<void> mount(
         conversationId: thread ? 'one' : null,
         onOpenCart: () {},
         onOpenNotifications: () {},
+        onSetDelivery: (_, _) async {},
       ),
     ),
   );
@@ -1020,6 +1021,7 @@ void main() {
       await tester.pump();
       expect(find.text('Attach product'), findsOneWidget);
       expect(find.text('Attach file (JPG, PNG, PDF)'), findsOneWidget);
+      expect(find.text('Delivery details'), findsNothing);
       await tester.tap(find.byTooltip('Hide actions'));
       await tester.pump();
       expect(find.text('Attach product'), findsNothing);

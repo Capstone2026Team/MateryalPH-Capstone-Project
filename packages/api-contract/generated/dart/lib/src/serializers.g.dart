@@ -343,6 +343,7 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(CartItemCreateFulfillmentMethodEnum.serializer)
       ..add(CartItemCreateOriginSourceEnum.serializer)
       ..add(CartItemUpdate.serializer)
+      ..add(CartItemUpdateFulfillmentMethodEnum.serializer)
       ..add(CartLine.serializer)
       ..add(CartLineCurrent.serializer)
       ..add(CartLineCurrentStockLabelEnum.serializer)
@@ -1303,6 +1304,12 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(ProductComplianceQueueItemReviewModeEnum.serializer)
       ..add(ProductDeliveryPreviewRequest.serializer)
       ..add(ProductRatingSummary.serializer)
+      ..add(ProjectArchiveItem.serializer)
+      ..add(ProjectArchiveItemTypeEnum.serializer)
+      ..add(ProjectArchiveMutation.serializer)
+      ..add(ProjectArchiveMutationResponse.serializer)
+      ..add(ProjectArchivePage.serializer)
+      ..add(ProjectArchivePageResponse.serializer)
       ..add(ProjectArrangement.serializer)
       ..add(ProjectArrangementCreate.serializer)
       ..add(ProjectArrangementEdit.serializer)
@@ -3420,6 +3427,9 @@ Serializers _$serializers = (Serializers().toBuilder()
           ]),
           () => ListBuilder<BuiltMap<String, JsonObject?>>())
       ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ProjectArchiveItem)]),
+          () => ListBuilder<ProjectArchiveItem>())
+      ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(ProjectArrangement)]),
           () => ListBuilder<ProjectArrangement>())
       ..addBuilderFactory(
@@ -4510,6 +4520,24 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(AdminAnalyticsRow)]),
           () => ListBuilder<AdminAnalyticsRow>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
       ..addBuilderFactory(
           const FullType(BuiltMap, const [
             const FullType(String),

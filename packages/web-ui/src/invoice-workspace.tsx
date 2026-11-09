@@ -37,7 +37,7 @@ export function InvoiceSelectionPlaceholder() {
 }
 
 /** Accepted order values and recorded document facts stay visibly distinct. */
-export function InvoiceDetailSummary({ data, record, actions, recordAction, apiBasePath, showDraft = true }: { data: VendorOrderInvoices; record?: InvoiceRecordView; actions?: ReactNode; recordAction?: ReactNode; apiBasePath: string; showDraft?: boolean }) {
+export function InvoiceDetailSummary({ data, record, actions, recordAction, preparation, apiBasePath, showDraft = true }: { data: VendorOrderInvoices; record?: InvoiceRecordView; actions?: ReactNode; recordAction?: ReactNode; preparation?: ReactNode; apiBasePath: string; showDraft?: boolean }) {
   const heading = useId()
   const draft = showDraft && data.draft && !data.draft.sentRecordId ? data.draft : null
   const billing = !draft && record?.orderSummary ? record.orderSummary.billingDetails : data.billingDetails
@@ -60,6 +60,7 @@ export function InvoiceDetailSummary({ data, record, actions, recordAction, apiB
       </div>
       {number && <p className="text-xs text-text-secondary">Order {data.orderReference}</p>}
     </header>
+    {preparation}
     <div className="mp-invoice-parties">
       <div><h3 className="mp-invoice-section-label">Issued by</h3><p className="mt-2 text-sm font-semibold">{draft?.issuerName ?? record?.issuer ?? data.issuerName}</p><p className="mt-1 text-xs leading-5 text-text-secondary">{(draft?.invoiceType ?? record?.invoiceType) === 'VENDOR_ADJUSTMENT_DOCUMENT' ? 'Vendor adjustment document' : 'Vendor sales invoice'}</p></div>
       <div><h3 className="mp-invoice-section-label">{billing ? 'Bill to' : buyerName ? 'Buyer' : 'Bill to'}</h3>{billing ? <><p className="mt-2 text-sm font-semibold">{billing.billingName}</p><p className="mt-1 whitespace-pre-line text-xs leading-5 text-text-secondary">{billing.billingAddress}</p>{billing.tinMasked && <p className="mt-1 text-xs text-text-secondary">TIN: {billing.tinMasked}</p>}</> : <>{buyerName && <p className="mt-2 text-sm font-semibold">{buyerName}</p>}<p className={`${buyerName ? 'mt-1 text-xs' : 'mt-2 text-sm'} leading-6 text-text-secondary`}>No billing details provided.</p></>}</div>

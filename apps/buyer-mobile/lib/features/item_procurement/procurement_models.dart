@@ -5,8 +5,8 @@ enum LoadPhase { needsOrigin, loading, ready, failed }
 
 /// Item-Based sorts. Browsing defaults to distance and a text query to Best Deal (SRS); Best Deal
 /// and Favorites First are offered only for a text query. Favorites First is a separate explicit
-/// choice that never changes Best Deal. Top Selling ranks by the card's
-/// "sold" figure (quantity on completed orders) and is offered on a store's own page.
+/// choice that never changes Best Deal. Top Selling ranks by completed quantity
+/// and is offered on a store's own page. Public purchase counts show distinct Buyers.
 enum ListingSort {
   bestDeal,
   distance,
@@ -278,6 +278,7 @@ class ListingCardView {
     required this.ratingLabel,
     required this.ratingAverage,
     required this.unitsSold,
+    this.uniqueBuyers = 0,
     required this.distanceMeters,
     required this.badges,
     required this.isFavorite,
@@ -309,6 +310,7 @@ class ListingCardView {
   final String ratingLabel;
   final String? ratingAverage;
   final String unitsSold;
+  final int uniqueBuyers;
   final int distanceMeters;
   final List<String> badges;
   final bool isFavorite;
@@ -573,6 +575,7 @@ class ListingDetailView {
     required this.complianceNotice,
     required this.ratingLabel,
     required this.unitsSold,
+    this.uniqueBuyers = 0,
     required this.isFavorite,
     required this.purchasable,
     required this.attributes,
@@ -633,6 +636,7 @@ class ListingDetailView {
   final String complianceNotice;
   final String ratingLabel;
   final String unitsSold;
+  final int uniqueBuyers;
   final bool isFavorite;
   final bool purchasable;
   final Map<String, String> attributes;

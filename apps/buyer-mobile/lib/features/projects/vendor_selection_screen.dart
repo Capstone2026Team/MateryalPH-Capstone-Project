@@ -90,6 +90,7 @@ bool candidateActionable(
   api.ProjectCandidate c,
 ) =>
     package.projectStatus.name == 'ACTIVE' &&
+    package.archivedAt == null &&
     ['ACTIVE', 'QUOTATION_INQUIRY'].contains(package.status) &&
     c.stale != true &&
     estimate?.state == 'ACTIVE';
@@ -182,6 +183,7 @@ class _VendorSelectionScreenState extends State<VendorSelectionScreen> {
       projectInt(projectObject(estimate!.context)['radius_km']) != radius;
   bool get scannable =>
       package.projectStatus.name == 'ACTIVE' &&
+      package.archivedAt == null &&
       ['ACTIVE', 'QUOTATION_INQUIRY'].contains(package.status);
 
   @override

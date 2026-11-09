@@ -110,6 +110,14 @@ class _$WorkPackageSummaryStatusEnumSerializer
 
 class _$WorkPackageSummary extends WorkPackageSummary {
   @override
+  final DateTime? archivedAt;
+  @override
+  final DateTime? deleteAfter;
+  @override
+  final bool? canArchive;
+  @override
+  final String? archiveBlocker;
+  @override
   final String? selectedArrangementId;
   @override
   final BuiltList<BuiltMap<String, JsonObject?>>? vendorOrders;
@@ -139,7 +147,11 @@ class _$WorkPackageSummary extends WorkPackageSummary {
       (WorkPackageSummaryBuilder()..update(updates))._build();
 
   _$WorkPackageSummary._(
-      {this.selectedArrangementId,
+      {this.archivedAt,
+      this.deleteAfter,
+      this.canArchive,
+      this.archiveBlocker,
+      this.selectedArrangementId,
       this.vendorOrders,
       required this.id,
       required this.projectId,
@@ -165,6 +177,10 @@ class _$WorkPackageSummary extends WorkPackageSummary {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is WorkPackageSummary &&
+        archivedAt == other.archivedAt &&
+        deleteAfter == other.deleteAfter &&
+        canArchive == other.canArchive &&
+        archiveBlocker == other.archiveBlocker &&
         selectedArrangementId == other.selectedArrangementId &&
         vendorOrders == other.vendorOrders &&
         id == other.id &&
@@ -182,6 +198,10 @@ class _$WorkPackageSummary extends WorkPackageSummary {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, archivedAt.hashCode);
+    _$hash = $jc(_$hash, deleteAfter.hashCode);
+    _$hash = $jc(_$hash, canArchive.hashCode);
+    _$hash = $jc(_$hash, archiveBlocker.hashCode);
     _$hash = $jc(_$hash, selectedArrangementId.hashCode);
     _$hash = $jc(_$hash, vendorOrders.hashCode);
     _$hash = $jc(_$hash, id.hashCode);
@@ -201,6 +221,10 @@ class _$WorkPackageSummary extends WorkPackageSummary {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'WorkPackageSummary')
+          ..add('archivedAt', archivedAt)
+          ..add('deleteAfter', deleteAfter)
+          ..add('canArchive', canArchive)
+          ..add('archiveBlocker', archiveBlocker)
           ..add('selectedArrangementId', selectedArrangementId)
           ..add('vendorOrders', vendorOrders)
           ..add('id', id)
@@ -220,6 +244,23 @@ class _$WorkPackageSummary extends WorkPackageSummary {
 class WorkPackageSummaryBuilder
     implements Builder<WorkPackageSummary, WorkPackageSummaryBuilder> {
   _$WorkPackageSummary? _$v;
+
+  DateTime? _archivedAt;
+  DateTime? get archivedAt => _$this._archivedAt;
+  set archivedAt(DateTime? archivedAt) => _$this._archivedAt = archivedAt;
+
+  DateTime? _deleteAfter;
+  DateTime? get deleteAfter => _$this._deleteAfter;
+  set deleteAfter(DateTime? deleteAfter) => _$this._deleteAfter = deleteAfter;
+
+  bool? _canArchive;
+  bool? get canArchive => _$this._canArchive;
+  set canArchive(bool? canArchive) => _$this._canArchive = canArchive;
+
+  String? _archiveBlocker;
+  String? get archiveBlocker => _$this._archiveBlocker;
+  set archiveBlocker(String? archiveBlocker) =>
+      _$this._archiveBlocker = archiveBlocker;
 
   String? _selectedArrangementId;
   String? get selectedArrangementId => _$this._selectedArrangementId;
@@ -283,6 +324,10 @@ class WorkPackageSummaryBuilder
   WorkPackageSummaryBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _archivedAt = $v.archivedAt;
+      _deleteAfter = $v.deleteAfter;
+      _canArchive = $v.canArchive;
+      _archiveBlocker = $v.archiveBlocker;
       _selectedArrangementId = $v.selectedArrangementId;
       _vendorOrders = $v.vendorOrders?.toBuilder();
       _id = $v.id;
@@ -318,6 +363,10 @@ class WorkPackageSummaryBuilder
     try {
       _$result = _$v ??
           _$WorkPackageSummary._(
+            archivedAt: archivedAt,
+            deleteAfter: deleteAfter,
+            canArchive: canArchive,
+            archiveBlocker: archiveBlocker,
             selectedArrangementId: selectedArrangementId,
             vendorOrders: _vendorOrders?.build(),
             id: BuiltValueNullFieldError.checkNotNull(

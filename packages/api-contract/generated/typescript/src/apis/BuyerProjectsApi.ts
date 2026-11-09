@@ -24,6 +24,16 @@ import {
     ChatIdResponseToJSON,
 } from '../models/ChatIdResponse';
 import {
+    type ProjectArchiveMutationResponse,
+    ProjectArchiveMutationResponseFromJSON,
+    ProjectArchiveMutationResponseToJSON,
+} from '../models/ProjectArchiveMutationResponse';
+import {
+    type ProjectArchivePageResponse,
+    ProjectArchivePageResponseFromJSON,
+    ProjectArchivePageResponseToJSON,
+} from '../models/ProjectArchivePageResponse';
+import {
     type ProjectArrangementCreate,
     ProjectArrangementCreateFromJSON,
     ProjectArrangementCreateToJSON,
@@ -189,6 +199,36 @@ export interface ActivateWorkPackageRequest {
      *
      */
     packageId: string;
+    /**
+     *
+     */
+    idempotencyKey: string;
+    /**
+     *
+     */
+    projectVersionRequest: ProjectVersionRequest;
+}
+
+export interface ArchiveProjectRequest {
+    /**
+     *
+     */
+    itemId: string;
+    /**
+     *
+     */
+    idempotencyKey: string;
+    /**
+     *
+     */
+    projectVersionRequest: ProjectVersionRequest;
+}
+
+export interface ArchiveWorkPackageRequest {
+    /**
+     *
+     */
+    itemId: string;
     /**
      *
      */
@@ -434,6 +474,17 @@ export interface InquireProjectVendorRequest {
     projectCandidateRequest: ProjectCandidateRequest;
 }
 
+export interface ListProjectArchivesRequest {
+    /**
+     *
+     */
+    type: ListProjectArchivesTypeEnum;
+    /**
+     *
+     */
+    page?: number;
+}
+
 export interface ListProjectArrangementOptionsRequest {
     /**
      *
@@ -509,6 +560,36 @@ export interface ListWorkPackageLineAlternativesRequest {
      * Concrete method chosen on quotation review; suggestions must support it.
      */
     fulfillmentMethod?: ListWorkPackageLineAlternativesFulfillmentMethodEnum;
+}
+
+export interface PermanentlyDeleteProjectRequest {
+    /**
+     *
+     */
+    itemId: string;
+    /**
+     *
+     */
+    idempotencyKey: string;
+    /**
+     *
+     */
+    projectVersionRequest: ProjectVersionRequest;
+}
+
+export interface PermanentlyDeleteWorkPackageRequest {
+    /**
+     *
+     */
+    itemId: string;
+    /**
+     *
+     */
+    idempotencyKey: string;
+    /**
+     *
+     */
+    projectVersionRequest: ProjectVersionRequest;
 }
 
 export interface PreviewProjectSpecificationSelectionRequest {
@@ -594,6 +675,17 @@ export interface RequestProjectDraftSupplierRequest {
     projectDraftSupplierRequest: ProjectDraftSupplierRequest;
 }
 
+export interface RescanProjectOrderSuppliersRequest {
+    /**
+     *
+     */
+    orderId: string;
+    /**
+     *
+     */
+    projectVersionRequest: ProjectVersionRequest;
+}
+
 export interface ResetProjectRankingPreferencesRequest {
     /**
      *
@@ -614,6 +706,36 @@ export interface ResolveProjectMissingLineRequest {
      *
      */
     projectMissingResolve: ProjectMissingResolve;
+}
+
+export interface RestoreProjectRequest {
+    /**
+     *
+     */
+    itemId: string;
+    /**
+     *
+     */
+    idempotencyKey: string;
+    /**
+     *
+     */
+    projectVersionRequest: ProjectVersionRequest;
+}
+
+export interface RestoreWorkPackageRequest {
+    /**
+     *
+     */
+    itemId: string;
+    /**
+     *
+     */
+    idempotencyKey: string;
+    /**
+     *
+     */
+    projectVersionRequest: ProjectVersionRequest;
 }
 
 export interface SaveProjectDraftItemRequest {
@@ -778,6 +900,154 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
      */
     async activateWorkPackage(requestParameters: ActivateWorkPackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkPackageViewResponse> {
         const response = await this.activateWorkPackageRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for archiveProject without sending the request
+     */
+    async archiveProjectRequestOpts(requestParameters: ArchiveProjectRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['itemId'] == null) {
+            throw new runtime.RequiredError(
+                'itemId',
+                'Required parameter "itemId" was null or undefined when calling archiveProject().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling archiveProject().'
+            );
+        }
+
+        if (requestParameters['projectVersionRequest'] == null) {
+            throw new runtime.RequiredError(
+                'projectVersionRequest',
+                'Required parameter "projectVersionRequest" was null or undefined when calling archiveProject().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/projects/{itemId}/archive`;
+        urlPath = urlPath.replace('{itemId}', encodeURIComponent(String(requestParameters['itemId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ProjectVersionRequestToJSON(requestParameters['projectVersionRequest']),
+        };
+    }
+
+    /**
+     * Archive only after all related orders are terminal. The legacy Project status update uses this same guard.
+     */
+    async archiveProjectRaw(requestParameters: ArchiveProjectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ProjectArchiveMutationResponse>> {
+        const requestOptions = await this.archiveProjectRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ProjectArchiveMutationResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Archive only after all related orders are terminal. The legacy Project status update uses this same guard.
+     */
+    async archiveProject(requestParameters: ArchiveProjectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ProjectArchiveMutationResponse> {
+        const response = await this.archiveProjectRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for archiveWorkPackage without sending the request
+     */
+    async archiveWorkPackageRequestOpts(requestParameters: ArchiveWorkPackageRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['itemId'] == null) {
+            throw new runtime.RequiredError(
+                'itemId',
+                'Required parameter "itemId" was null or undefined when calling archiveWorkPackage().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling archiveWorkPackage().'
+            );
+        }
+
+        if (requestParameters['projectVersionRequest'] == null) {
+            throw new runtime.RequiredError(
+                'projectVersionRequest',
+                'Required parameter "projectVersionRequest" was null or undefined when calling archiveWorkPackage().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/work-packages/{itemId}/archive`;
+        urlPath = urlPath.replace('{itemId}', encodeURIComponent(String(requestParameters['itemId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ProjectVersionRequestToJSON(requestParameters['projectVersionRequest']),
+        };
+    }
+
+    /**
+     * Archive only after all related orders are terminal. The legacy Project status update uses this same guard.
+     */
+    async archiveWorkPackageRaw(requestParameters: ArchiveWorkPackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ProjectArchiveMutationResponse>> {
+        const requestOptions = await this.archiveWorkPackageRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ProjectArchiveMutationResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Archive only after all related orders are terminal. The legacy Project status update uses this same guard.
+     */
+    async archiveWorkPackage(requestParameters: ArchiveWorkPackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ProjectArchiveMutationResponse> {
+        const response = await this.archiveWorkPackageRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1959,6 +2229,66 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for listProjectArchives without sending the request
+     */
+    async listProjectArchivesRequestOpts(requestParameters: ListProjectArchivesRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['type'] == null) {
+            throw new runtime.RequiredError(
+                'type',
+                'Required parameter "type" was null or undefined when calling listProjectArchives().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['type'] != null) {
+            queryParameters['type'] = requestParameters['type'];
+        }
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/archived-items`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Owned archives, paginated by type. Retention lasts exactly 720 hours; financial and transaction originals remain retained after workspace removal.
+     */
+    async listProjectArchivesRaw(requestParameters: ListProjectArchivesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ProjectArchivePageResponse>> {
+        const requestOptions = await this.listProjectArchivesRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ProjectArchivePageResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Owned archives, paginated by type. Retention lasts exactly 720 hours; financial and transaction originals remain retained after workspace removal.
+     */
+    async listProjectArchives(requestParameters: ListProjectArchivesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ProjectArchivePageResponse> {
+        const response = await this.listProjectArchivesRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for listProjectArrangementOptions without sending the request
      */
     async listProjectArrangementOptionsRequestOpts(requestParameters: ListProjectArrangementOptionsRequest): Promise<runtime.RequestOpts> {
@@ -2168,6 +2498,154 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
      */
     async listWorkPackageLineAlternatives(requestParameters: ListWorkPackageLineAlternativesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkPackageAlternativePageResponse> {
         const response = await this.listWorkPackageLineAlternativesRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for permanentlyDeleteProject without sending the request
+     */
+    async permanentlyDeleteProjectRequestOpts(requestParameters: PermanentlyDeleteProjectRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['itemId'] == null) {
+            throw new runtime.RequiredError(
+                'itemId',
+                'Required parameter "itemId" was null or undefined when calling permanentlyDeleteProject().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling permanentlyDeleteProject().'
+            );
+        }
+
+        if (requestParameters['projectVersionRequest'] == null) {
+            throw new runtime.RequiredError(
+                'projectVersionRequest',
+                'Required parameter "projectVersionRequest" was null or undefined when calling permanentlyDeleteProject().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/projects/{itemId}/permanent-deletion`;
+        urlPath = urlPath.replace('{itemId}', encodeURIComponent(String(requestParameters['itemId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ProjectVersionRequestToJSON(requestParameters['projectVersionRequest']),
+        };
+    }
+
+    /**
+     * Irreversibly remove an archived item from the Buyer workspace after rechecking ongoing orders. Retain immutable commercial, financial and audit rows and references.
+     */
+    async permanentlyDeleteProjectRaw(requestParameters: PermanentlyDeleteProjectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ProjectArchiveMutationResponse>> {
+        const requestOptions = await this.permanentlyDeleteProjectRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ProjectArchiveMutationResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Irreversibly remove an archived item from the Buyer workspace after rechecking ongoing orders. Retain immutable commercial, financial and audit rows and references.
+     */
+    async permanentlyDeleteProject(requestParameters: PermanentlyDeleteProjectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ProjectArchiveMutationResponse> {
+        const response = await this.permanentlyDeleteProjectRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for permanentlyDeleteWorkPackage without sending the request
+     */
+    async permanentlyDeleteWorkPackageRequestOpts(requestParameters: PermanentlyDeleteWorkPackageRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['itemId'] == null) {
+            throw new runtime.RequiredError(
+                'itemId',
+                'Required parameter "itemId" was null or undefined when calling permanentlyDeleteWorkPackage().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling permanentlyDeleteWorkPackage().'
+            );
+        }
+
+        if (requestParameters['projectVersionRequest'] == null) {
+            throw new runtime.RequiredError(
+                'projectVersionRequest',
+                'Required parameter "projectVersionRequest" was null or undefined when calling permanentlyDeleteWorkPackage().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/work-packages/{itemId}/permanent-deletion`;
+        urlPath = urlPath.replace('{itemId}', encodeURIComponent(String(requestParameters['itemId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ProjectVersionRequestToJSON(requestParameters['projectVersionRequest']),
+        };
+    }
+
+    /**
+     * Irreversibly remove an archived item from the Buyer workspace after rechecking ongoing orders. Retain immutable commercial, financial and audit rows and references.
+     */
+    async permanentlyDeleteWorkPackageRaw(requestParameters: PermanentlyDeleteWorkPackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ProjectArchiveMutationResponse>> {
+        const requestOptions = await this.permanentlyDeleteWorkPackageRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ProjectArchiveMutationResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Irreversibly remove an archived item from the Buyer workspace after rechecking ongoing orders. Retain immutable commercial, financial and audit rows and references.
+     */
+    async permanentlyDeleteWorkPackage(requestParameters: PermanentlyDeleteWorkPackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ProjectArchiveMutationResponse> {
+        const response = await this.permanentlyDeleteWorkPackageRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -2549,6 +3027,69 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for rescanProjectOrderSuppliers without sending the request
+     */
+    async rescanProjectOrderSuppliersRequestOpts(requestParameters: RescanProjectOrderSuppliersRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['orderId'] == null) {
+            throw new runtime.RequiredError(
+                'orderId',
+                'Required parameter "orderId" was null or undefined when calling rescanProjectOrderSuppliers().'
+            );
+        }
+
+        if (requestParameters['projectVersionRequest'] == null) {
+            throw new runtime.RequiredError(
+                'projectVersionRequest',
+                'Required parameter "projectVersionRequest" was null or undefined when calling rescanProjectOrderSuppliers().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/orders/{orderId}/rescan-suppliers`;
+        urlPath = urlPath.replace('{orderId}', encodeURIComponent(String(requestParameters['orderId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ProjectVersionRequestToJSON(requestParameters['projectVersionRequest']),
+        };
+    }
+
+    /**
+     * Authorize a cancelled order and return its unchanged Work Package for the existing supplier scan and selection flow. Groups source only uncovered quantities; peers and cancelled history remain unchanged. Does not create an order.
+     */
+    async rescanProjectOrderSuppliersRaw(requestParameters: RescanProjectOrderSuppliersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkPackageViewResponse>> {
+        const requestOptions = await this.rescanProjectOrderSuppliersRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => WorkPackageViewResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Authorize a cancelled order and return its unchanged Work Package for the existing supplier scan and selection flow. Groups source only uncovered quantities; peers and cancelled history remain unchanged. Does not create an order.
+     */
+    async rescanProjectOrderSuppliers(requestParameters: RescanProjectOrderSuppliersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkPackageViewResponse> {
+        const response = await this.rescanProjectOrderSuppliersRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for resetProjectRankingPreferences without sending the request
      */
     async resetProjectRankingPreferencesRequestOpts(requestParameters: ResetProjectRankingPreferencesRequest): Promise<runtime.RequestOpts> {
@@ -2671,6 +3212,154 @@ export class BuyerProjectsApi extends runtime.BaseAPI {
      */
     async resolveProjectMissingLine(requestParameters: ResolveProjectMissingLineRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkPackageViewResponse> {
         const response = await this.resolveProjectMissingLineRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for restoreProject without sending the request
+     */
+    async restoreProjectRequestOpts(requestParameters: RestoreProjectRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['itemId'] == null) {
+            throw new runtime.RequiredError(
+                'itemId',
+                'Required parameter "itemId" was null or undefined when calling restoreProject().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling restoreProject().'
+            );
+        }
+
+        if (requestParameters['projectVersionRequest'] == null) {
+            throw new runtime.RequiredError(
+                'projectVersionRequest',
+                'Required parameter "projectVersionRequest" was null or undefined when calling restoreProject().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/projects/{itemId}/restore`;
+        urlPath = urlPath.replace('{itemId}', encodeURIComponent(String(requestParameters['itemId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ProjectVersionRequestToJSON(requestParameters['projectVersionRequest']),
+        };
+    }
+
+    /**
+     * Restore before expiry under the parent lock, clear both timestamps, and preserve cancelled orders. A Work Package requires its parent Project restored first.
+     */
+    async restoreProjectRaw(requestParameters: RestoreProjectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ProjectArchiveMutationResponse>> {
+        const requestOptions = await this.restoreProjectRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ProjectArchiveMutationResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Restore before expiry under the parent lock, clear both timestamps, and preserve cancelled orders. A Work Package requires its parent Project restored first.
+     */
+    async restoreProject(requestParameters: RestoreProjectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ProjectArchiveMutationResponse> {
+        const response = await this.restoreProjectRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for restoreWorkPackage without sending the request
+     */
+    async restoreWorkPackageRequestOpts(requestParameters: RestoreWorkPackageRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['itemId'] == null) {
+            throw new runtime.RequiredError(
+                'itemId',
+                'Required parameter "itemId" was null or undefined when calling restoreWorkPackage().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling restoreWorkPackage().'
+            );
+        }
+
+        if (requestParameters['projectVersionRequest'] == null) {
+            throw new runtime.RequiredError(
+                'projectVersionRequest',
+                'Required parameter "projectVersionRequest" was null or undefined when calling restoreWorkPackage().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/work-packages/{itemId}/restore`;
+        urlPath = urlPath.replace('{itemId}', encodeURIComponent(String(requestParameters['itemId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ProjectVersionRequestToJSON(requestParameters['projectVersionRequest']),
+        };
+    }
+
+    /**
+     * Restore before expiry under the parent lock, clear both timestamps, and preserve cancelled orders. A Work Package requires its parent Project restored first.
+     */
+    async restoreWorkPackageRaw(requestParameters: RestoreWorkPackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ProjectArchiveMutationResponse>> {
+        const requestOptions = await this.restoreWorkPackageRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ProjectArchiveMutationResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Restore before expiry under the parent lock, clear both timestamps, and preserve cancelled orders. A Work Package requires its parent Project restored first.
+     */
+    async restoreWorkPackage(requestParameters: RestoreWorkPackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ProjectArchiveMutationResponse> {
+        const response = await this.restoreWorkPackageRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -3120,6 +3809,14 @@ export const GetProjectEstimatesDirectionEnum = {
     Desc: 'DESC',
 } as const;
 export type GetProjectEstimatesDirectionEnum = typeof GetProjectEstimatesDirectionEnum[keyof typeof GetProjectEstimatesDirectionEnum];
+/**
+ * @export
+ */
+export const ListProjectArchivesTypeEnum = {
+    Project: 'PROJECT',
+    WorkPackage: 'WORK_PACKAGE',
+} as const;
+export type ListProjectArchivesTypeEnum = typeof ListProjectArchivesTypeEnum[keyof typeof ListProjectArchivesTypeEnum];
 /**
  * @export
  */

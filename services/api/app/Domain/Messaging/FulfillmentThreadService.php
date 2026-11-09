@@ -86,6 +86,8 @@ final class FulfillmentThreadService
             $order = DB::table('orders')->where('id', $orderId)->lockForUpdate()->first();
             $existing = DB::table('conversations')->where('order_id', $orderId)->where('purpose', 'FULFILLMENT')->first();
             if ($existing !== null) {
+                app(ConversationService::class)->ensureOrderStoreChat($order);
+
                 return (string) $existing->id;
             }
             if ($order === null || ! in_array($order->order_state, self::WRITABLE_STATES, true)) {
@@ -101,6 +103,7 @@ final class FulfillmentThreadService
                 'purpose' => 'FULFILLMENT', 'order_id' => $orderId, 'context_type' => $order->procurement_type, 'context_id' => $orderId, 'handler_user_id' => $handler,
                 'created_at' => now(), 'updated_at' => now()]);
             $service = app(ConversationService::class);
+            $service->ensureOrderStoreChat($order);
             $service->participant($id, (int) DB::table('buyer_profiles')->where('id', $order->buyer_profile_id)->value('user_id'), 'BUYER');
             if ($assigned !== null) {
                 $service->participant($id, (int) $assigned, 'FULFILLMENT');

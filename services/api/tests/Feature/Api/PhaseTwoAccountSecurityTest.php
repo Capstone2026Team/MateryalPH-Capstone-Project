@@ -218,18 +218,30 @@ final class PhaseTwoAccountSecurityTest extends TestCase
         $this->post('/api/v1/buyers/account/photo', [])->assertForbidden();
     }
 
-    public function test_buyer_contact_number_is_owned_and_full_email_still_requires_recent_identity_verification(): void
+    public function test_buyer_contact_details_are_owned_and_full_email_does_not_require_recent_authentication(): void
     {
         [$user] = $this->buyer();
         UserProfile::query()->create(['user_id' => $user->getKey(), 'full_name' => $user->name, 'mobile_e164' => '+639171234567', 'locale' => 'en']);
         $other = User::factory()->create();
         UserProfile::query()->create(['user_id' => $other->getKey(), 'full_name' => $other->name, 'mobile_e164' => '+639189999999', 'locale' => 'en']);
         $this->getJson('/api/v1/buyers/account/profile?user_id='.$other->public_id)->assertOk()
-            ->assertJsonPath('data.mobile_e164', '+639171234567')->assertJsonPath('data.email_masked', true);
-        $this->postJson('/api/v1/buyers/account/reauthentication', ['password' => 'OriginalPassword123'])->assertOk();
-        $this->getJson('/api/v1/buyers/account/profile')->assertOk()->assertJsonPath('data.email', $user->email)->assertJsonPath('data.email_masked', false);
+            ->assertJsonPath('data.id', $user->public_id)
+            ->assertJsonPath('data.mobile_e164', '+639171234567')
+            ->assertJsonPath('data.email', $user->email)
+            ->assertJsonPath('data.email_masked', false)
+            ->assertJsonPath('data.email_verified', true);
         $this->travel(16)->minutes();
-        $this->getJson('/api/v1/buyers/account/profile')->assertOk()->assertJsonPath('data.email_masked', true);
+        $this->getJson('/api/v1/buyers/account/profile')->assertOk()
+            ->assertJsonPath('data.email', $user->email)->assertJsonPath('data.email_masked', false);
+        $this->postJson('/api/v1/buyers/account/email', ['email' => 'replacement@example.test'])
+            ->assertForbidden()->assertJsonPath('errors.0.code', 'RECENT_AUTHENTICATION_REQUIRED');
+    }
+
+    public function test_account_email_check_reflects_persisted_verification(): void
+    {
+        [$user] = $this->buyer();
+        $user->forceFill(['email_verified_at' => null])->save();
+        $this->getJson('/api/v1/buyers/account/profile')->assertOk()->assertJsonPath('data.email_verified', false);
     }
 
     public function test_buyer_cannot_reauthenticate_with_an_authenticator_code_alone(): void

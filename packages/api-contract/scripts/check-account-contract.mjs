@@ -7,6 +7,12 @@ import { parse } from 'yaml'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
 const spec = parse(readFileSync(resolve(root, 'openapi.yaml'), 'utf8'))
+const profile = spec.components.schemas.AccountProfile.properties
+assert.equal(profile.email.type, 'string')
+assert.match(profile.email.description, /authenticated account owner/)
+assert.equal(profile.email_verified.type, 'boolean')
+assert.match(profile.email_verified.description, /email ownership/)
+assert.match(profile.email_masked.description, /False/)
 let routes
 if (process.argv[2]) routes = JSON.parse(readFileSync(process.argv[2], 'utf8').replace(/^\uFEFF/, ''))
 else {

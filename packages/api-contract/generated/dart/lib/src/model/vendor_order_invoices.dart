@@ -29,7 +29,7 @@ part 'vendor_order_invoices.g.dart';
 /// * [requests]
 /// * [platformDocuments]
 /// * [billingDetails]
-/// * [canUpload]
+/// * [canUpload] - Authorized to prepare a first copy or a linked correction of the latest sent invoice after a Buyer return, correction request or amount/VAT mismatch.
 /// * [canOpenFiles]
 /// * [issuerName]
 /// * [invoiceTypes]
@@ -71,6 +71,7 @@ abstract class VendorOrderInvoices implements Built<VendorOrderInvoices, VendorO
   @BuiltValueField(wireName: r'billing_details')
   VendorInvoiceBillingDetails? get billingDetails;
 
+  /// Authorized to prepare a first copy or a linked correction of the latest sent invoice after a Buyer return, correction request or amount/VAT mismatch.
   @BuiltValueField(wireName: r'can_upload')
   bool get canUpload;
 

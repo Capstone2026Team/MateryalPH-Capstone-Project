@@ -40,6 +40,7 @@ class OrdersScreen extends StatefulWidget {
     this.view = BuyerOrdersView.orders,
     this.paymentLauncher = launchPaymentPage,
     this.openConversation,
+    this.onRescanSuppliers,
     this.onOpenCart,
     this.problemPhotoPicker = pickProblemPhoto,
     this.now,
@@ -52,6 +53,7 @@ class OrdersScreen extends StatefulWidget {
 
   /// Opens a conversation by id; null disables the card message buttons.
   final OpenOrderConversation? openConversation;
+  final RescanProjectOrder? onRescanSuppliers;
 
   /// Opens the cart after Buy Again; null leaves the Buyer here with a confirmation.
   final VoidCallback? onOpenCart;
@@ -305,6 +307,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
             orderId: order.id,
             repository: widget.repository,
             paymentLauncher: widget.paymentLauncher,
+            onRescanSuppliers: widget.onRescanSuppliers,
             openConversation: widget.openConversation,
             problemPhotoPicker: widget.problemPhotoPicker,
             now: widget.now,

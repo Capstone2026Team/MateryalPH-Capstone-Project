@@ -8,6 +8,10 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**archivedAt** | [**DateTime**](DateTime.md) |  | [optional]
+**deleteAfter** | [**DateTime**](DateTime.md) |  | [optional]
+**canArchive** | **bool** |  | [optional]
+**archiveBlocker** | **String** |  | [optional]
 **id** | **String** |  |
 **name** | **String** |  |
 **status** | **String** |  |

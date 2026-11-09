@@ -227,7 +227,8 @@ final class CartService
     {
         $line = DB::table('work_package_lines as wl')->join('work_package_versions as wv', 'wv.id', '=', 'wl.work_package_version_id')
             ->join('work_packages as w', 'w.id', '=', 'wv.work_package_id')->join('projects as pr', 'pr.id', '=', 'w.project_id')
-            ->where('wl.id', $lineId)->where('pr.buyer_profile_id', $buyerId)->whereColumn('w.current_version_id', 'wv.id')->first(['wl.material_id', 'wl.unit_id', 'wl.quantity']);
+            ->where('wl.id', $lineId)->where('pr.buyer_profile_id', $buyerId)->where('pr.status', 'ACTIVE')->whereNull('pr.deleted_at')->whereNull('w.archived_at')->whereNull('w.deleted_at')
+            ->whereColumn('w.current_version_id', 'wv.id')->first(['wl.material_id', 'wl.unit_id', 'wl.quantity']);
         $variant = DB::table('listing_variants as v')->join('vendor_listings as l', 'l.id', '=', 'v.vendor_listing_id')->join('products as p', 'p.id', '=', 'l.product_id')
             ->where('v.id', $variantId)->first(['p.material_id', 'v.unit_id']);
         if ($line === null || $line->material_id === null || $variant === null || $variant->material_id !== $line->material_id || $variant->unit_id !== $line->unit_id) {
@@ -282,8 +283,27 @@ final class CartService
             if ($item === null) {
                 throw new AuthenticationException('CART_ITEM_NOT_FOUND', 'This cart line no longer exists.', 404);
             }
-            $offer = $this->offerQuery($this->offers->anywhere())->where('v.id', $item->listing_variant_id)->first();
+            $variantId = (string) ($input['listing_variant_id'] ?? $item->listing_variant_id);
+            $offer = $this->offerQuery($this->offers->anywhere())->where('v.id', $variantId)->first();
             $update = ['updated_at' => now(), 'lock_version' => (int) $item->lock_version + 1];
+            if (isset($input['listing_variant_id'])) {
+                $listingId = DB::table('listing_variants')->where('id', $item->listing_variant_id)->value('vendor_listing_id');
+                if ($offer === null || $offer->vacation_mode || (string) $offer->listing_id !== (string) $listingId) {
+                    throw new AuthenticationException('LISTING_UNAVAILABLE', 'Choose an available option from this product.', 409);
+                }
+                if ((string) $offer->price_version_id !== (string) $input['expected_price_version_id']) {
+                    throw new AuthenticationException('PRICE_CHANGED', 'The price changed. Refresh the product and review the current price.', 409);
+                }
+                if ($variantId !== (string) $item->listing_variant_id && DB::table('cart_items')->where('cart_id', $cart->id)->where('listing_variant_id', $variantId)->exists()) {
+                    throw new AuthenticationException('CART_VARIANT_ALREADY_EXISTS', 'This option is already in your cart. Edit that line or remove it first.', 409);
+                }
+                $update += $this->snapshot($offer) + ['listing_variant_id' => $variantId];
+                $quantity = $this->quantity($input['quantity'] ?? $item->quantity, QuantityPolicy::fromUnit($offer)->precision);
+                $this->assertAvailable($quantity, (string) $offer->available);
+                if ($item->work_package_line_id !== null) {
+                    $this->assertMissingLineTag($buyerId, (string) $item->work_package_line_id, $variantId, $quantity);
+                }
+            }
             if (array_key_exists('saved_for_later', $input)) {
                 $update['saved_for_later_at'] = $input['saved_for_later'] ? ($item->saved_for_later_at ?? now()) : null;
             }
@@ -301,6 +321,12 @@ final class CartService
                 $update += $this->snapshot($offer);
             }
             DB::table('cart_items')->where('id', $item->id)->update($update);
+            if (isset($input['fulfillment_method'])) {
+                if ($offer === null) {
+                    throw new AuthenticationException('LISTING_UNAVAILABLE', 'This product is no longer available.', 409);
+                }
+                $this->applyFulfillment($cart, (string) $offer->organization_id, (string) $input['fulfillment_method']);
+            }
             $this->touch($cart);
         });
 
@@ -339,24 +365,28 @@ final class CartService
         $buyerId = $this->profiles->idFor($request);
         DB::transaction(function () use ($buyerId, $vendorId, $input): void {
             $cart = $this->lockedCart($buyerId, (int) $input['lock_version']);
-            $group = Str::isUuid($vendorId) ? DB::table('cart_vendor_groups')->where('cart_id', $cart->id)->where('vendor_organization_id', $vendorId)->first() : null;
-            if ($group === null) {
-                throw new AuthenticationException('CART_GROUP_NOT_FOUND', 'This Vendor is no longer in your cart.', 404);
-            }
-            $method = (string) $input['fulfillment_method'];
-            $active = array_filter($this->lines((string) $cart->id), static fn (array $line): bool => $line['vendor_id'] === $vendorId && ! $line['saved_for_later']);
-            if ($method === 'PICKUP' && array_any($active, static fn (array $line): bool => $line['ready_mixed_concrete'])) {
-                throw new AuthenticationException('SITE_DELIVERY_REQUIRED', ReadyMixedConcrete::SITE_DELIVERY_MESSAGE, 422, ['fulfillment_method' => ['Choose Site Delivery.']]);
-            }
-            $offered = self::fulfillmentOptions((string) DB::table('store_profiles')->where('vendor_organization_id', $vendorId)->value('fulfillment_method'), $vendorId);
-            if (! in_array($method, $offered, true)) {
-                throw new AuthenticationException('FULFILLMENT_NOT_OFFERED', $method === 'DELIVERY' ? 'This store does not offer Site Delivery.' : 'This store does not offer Self-Pickup.', 422);
-            }
-            DB::table('cart_vendor_groups')->where('id', $group->id)->update(['fulfillment_method' => $method, 'updated_at' => now()]);
+            $this->applyFulfillment($cart, $vendorId, (string) $input['fulfillment_method']);
             $this->touch($cart);
         });
 
         return $this->view($request);
+    }
+
+    private function applyFulfillment(object $cart, string $vendorId, string $method): void
+    {
+        $group = Str::isUuid($vendorId) ? DB::table('cart_vendor_groups')->where('cart_id', $cart->id)->where('vendor_organization_id', $vendorId)->first() : null;
+        if ($group === null) {
+            throw new AuthenticationException('CART_GROUP_NOT_FOUND', 'This Vendor is no longer in your cart.', 404);
+        }
+        $active = array_filter($this->lines((string) $cart->id), static fn (array $line): bool => $line['vendor_id'] === $vendorId && ! $line['saved_for_later']);
+        if ($method === 'PICKUP' && array_any($active, static fn (array $line): bool => $line['ready_mixed_concrete'])) {
+            throw new AuthenticationException('SITE_DELIVERY_REQUIRED', ReadyMixedConcrete::SITE_DELIVERY_MESSAGE, 422, ['fulfillment_method' => ['Choose Site Delivery.']]);
+        }
+        $offered = self::fulfillmentOptions((string) DB::table('store_profiles')->where('vendor_organization_id', $vendorId)->value('fulfillment_method'), $vendorId);
+        if (! in_array($method, $offered, true)) {
+            throw new AuthenticationException('FULFILLMENT_NOT_OFFERED', $method === 'DELIVERY' ? 'This store does not offer Site Delivery.' : 'This store does not offer Self-Pickup.', 422);
+        }
+        DB::table('cart_vendor_groups')->where('id', $group->id)->update(['fulfillment_method' => $method, 'updated_at' => now()]);
     }
 
     /**

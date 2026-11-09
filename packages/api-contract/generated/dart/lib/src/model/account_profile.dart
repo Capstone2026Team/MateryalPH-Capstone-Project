@@ -16,8 +16,9 @@ part 'account_profile.g.dart';
 /// * [fullName]
 /// * [avatarUrl] - Short-lived owner-only personal photo URL; never the store logo.
 /// * [mobileE164] - Authenticated Buyer registered contact number.
-/// * [emailMasked] - Buyer email stays masked until recent identity verification.
-/// * [email]
+/// * [emailMasked] - False for the authenticated owner's full account email. Retained for client compatibility.
+/// * [email] - Full account email, visible only to the authenticated account owner.
+/// * [emailVerified] - Whether the account email ownership has been verified; not a Buyer performance or business verification badge.
 /// * [accountType]
 /// * [accountStatus]
 /// * [lockVersion]
@@ -46,12 +47,17 @@ abstract class AccountProfile implements Built<AccountProfile, AccountProfileBui
   @BuiltValueField(wireName: r'mobile_e164')
   String? get mobileE164;
 
-  /// Buyer email stays masked until recent identity verification.
+  /// False for the authenticated owner's full account email. Retained for client compatibility.
   @BuiltValueField(wireName: r'email_masked')
   bool? get emailMasked;
 
+  /// Full account email, visible only to the authenticated account owner.
   @BuiltValueField(wireName: r'email')
   String get email;
+
+  /// Whether the account email ownership has been verified; not a Buyer performance or business verification badge.
+  @BuiltValueField(wireName: r'email_verified')
+  bool? get emailVerified;
 
   @BuiltValueField(wireName: r'account_type')
   String get accountType;
@@ -148,6 +154,13 @@ class _$AccountProfileSerializer implements PrimitiveSerializer<AccountProfile> 
       object.email,
       specifiedType: const FullType(String),
     );
+    if (object.emailVerified != null) {
+      yield r'email_verified';
+      yield serializers.serialize(
+        object.emailVerified,
+        specifiedType: const FullType(bool),
+      );
+    }
     yield r'account_type';
     yield serializers.serialize(
       object.accountType,
@@ -275,6 +288,14 @@ class _$AccountProfileSerializer implements PrimitiveSerializer<AccountProfile> 
             specifiedType: const FullType(String),
           ) as String;
           result.email = valueDes;
+          break;
+        case r'email_verified':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.emailVerified = valueDes;
           break;
         case r'account_type':
           final valueDes = serializers.deserialize(

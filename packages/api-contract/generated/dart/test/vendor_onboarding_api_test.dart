@@ -162,6 +162,8 @@ void main() {
       // TODO
     });
 
+    // An unchanged successful request replays with the same Idempotency-Key before revalidating transient map confirmation tokens. Changed or expired idempotency requests return a conflict. First submissions validate the current draft and atomically submit evidence for manual review.
+    //
     //Future<VendorOnboardingEnvelope> submitVendorVerification(String idempotencyKey, VendorVerificationSubmit vendorVerificationSubmit) async
     test('test submitVendorVerification', () async {
       // TODO

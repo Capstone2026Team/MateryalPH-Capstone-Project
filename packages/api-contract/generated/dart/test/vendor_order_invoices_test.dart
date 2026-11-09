@@ -53,6 +53,7 @@ void main() {
       // TODO
     });
 
+    // Authorized to prepare a first copy or a linked correction of the latest sent invoice after a Buyer return, correction request or amount/VAT mismatch.
     // bool canUpload
     test('to test the property `canUpload`', () async {
       // TODO

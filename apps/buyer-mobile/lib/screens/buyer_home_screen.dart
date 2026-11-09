@@ -31,6 +31,8 @@ import '../features/projects/project_ranking_preferences_screen.dart';
 import '../features/projects/projects_repository.dart';
 import 'ranking_preferences_hub_screen.dart';
 import '../features/projects/projects_screen.dart';
+import '../features/projects/vendor_selection_screen.dart';
+import '../features/projects/project_arrangement_screen.dart';
 import '../features/map_discovery/discovery_controller.dart';
 import '../features/map_discovery/discovery_models.dart'
     show SupplierResultView;
@@ -245,6 +247,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen>
     Widget? destination;
     if (segments.length == 2 && segments[0] == 'orders' && _orders != null) {
       destination = OrderDetailsScreen(
+        onRescanSuppliers: _projects == null ? null : _rescanSuppliers,
         orderId: segments[1],
         repository: _orders,
         openConversation: _messaging == null ? null : _openConversation,
@@ -364,6 +367,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen>
       _explore == null || _cart == null
       ? null
       : ProcurementNavigation(
+          onRescanSuppliers: _projects == null ? null : _rescanSuppliers,
           explore: _explore,
           cart: _cart,
           repository: _procurement!,
@@ -596,6 +600,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen>
       Navigator.of(context).push<void>(
         MaterialPageRoute(
           builder: (_) => MessagingScreen(
+            onRescanSuppliers: _projects == null ? null : _rescanSuppliers,
             repository: _messaging!,
             conversationId: id,
             onOpenProduct: _navigation == null
@@ -610,6 +615,70 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen>
         ),
       );
 
+  Future<void> _rescanSuppliers(
+    BuildContext context,
+    String orderId,
+    int version,
+  ) async {
+    final repository = _projects!;
+    final package = await repository.rescanOrder(orderId, version);
+    final links = ProjectSourcingLinks(
+      openConversation: _openConversation,
+      openStore: _openStore,
+      openOrder: (context, id) => Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => OrderDetailsScreen(
+            orderId: id,
+            repository: _orders!,
+            onRescanSuppliers: _rescanSuppliers,
+            openConversation: _messaging == null ? null : _openConversation,
+          ),
+        ),
+      ),
+      openCart: _navigation == null
+          ? null
+          : (context) => unawaited(_navigation.openCart(context)),
+      onCartChanged: _cart == null ? null : () => unawaited(_cart.load()),
+      openProduct: _navigation == null
+          ? null
+          : (context, listing, variant) => unawaited(
+              _navigation.openListing(context, listing, variantId: variant),
+            ),
+    );
+    if (package.selectedArrangementId != null) {
+      if (context.mounted) {
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute(
+            builder: (_) => ProjectArrangementScreen(
+              repository: repository,
+              package: package,
+              arrangementId: package.selectedArrangementId,
+              links: links,
+            ),
+          ),
+        );
+      }
+    } else {
+      final estimates = await repository.compile(
+        package.id,
+        package.lockVersion,
+      );
+      if (context.mounted) {
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute(
+            builder: (_) => VendorSelectionScreen(
+              repository: repository,
+              package: package,
+              initialEstimates: estimates,
+              mapBuilder: widget.mapBuilder,
+              links: links,
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   Widget _projectsPage() {
     if (_projects != null && _discovery != null) {
       return ProjectsScreen(
@@ -622,6 +691,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen>
         openOrder: (context, id) => Navigator.of(context).push<void>(
           MaterialPageRoute(
             builder: (_) => OrderDetailsScreen(
+              onRescanSuppliers: _rescanSuppliers,
               orderId: id,
               repository: _orders!,
               openConversation: _messaging == null ? null : _openConversation,
@@ -646,6 +716,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen>
   Widget _destinationPage(int index) {
     if (index == 3 && _messaging != null) {
       return MessagingScreen(
+        onRescanSuppliers: _projects == null ? null : _rescanSuppliers,
         active: _destination == index,
         repository: _messaging,
         onSetDelivery: _navigation == null
@@ -682,6 +753,9 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen>
             : () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (context) => OrdersScreen(
+                    onRescanSuppliers: _projects == null
+                        ? null
+                        : _rescanSuppliers,
                     repository: _orders,
                     openConversation: _messaging == null
                         ? null
@@ -697,6 +771,9 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen>
             : () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => OrdersScreen(
+                    onRescanSuppliers: _projects == null
+                        ? null
+                        : _rescanSuppliers,
                     repository: _orders,
                     view: BuyerOrdersView.cancellationsAndRefunds,
                     openConversation: _messaging == null
@@ -717,6 +794,9 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen>
             : () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => OrdersScreen(
+                    onRescanSuppliers: _projects == null
+                        ? null
+                        : _rescanSuppliers,
                     repository: _orders,
                     view: BuyerOrdersView.reviews,
                   ),

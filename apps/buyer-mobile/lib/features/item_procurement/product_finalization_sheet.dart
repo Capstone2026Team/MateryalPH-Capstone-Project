@@ -44,6 +44,7 @@ class ProductFinalizationSheet extends StatefulWidget {
     required this.cart,
     required this.savedLocations,
     this.chooseDropOff,
+    this.editing = false,
   });
   final ProcurementRepository repository;
   final CartController cart;
@@ -60,6 +61,7 @@ class ProductFinalizationSheet extends StatefulWidget {
   final String quantity;
   final String? fulfillment;
   final bool buy;
+  final bool editing;
   final Future<String?> Function(
     String variantId,
     String quantity,
@@ -525,7 +527,13 @@ class _ProductFinalizationSheetState extends State<ProductFinalizationSheet> {
                           height: 20,
                           child: BuyerLoadingIndicator(strokeWidth: 2),
                         )
-                      : Text(widget.buy ? 'Checkout' : 'Add to Cart'),
+                      : Text(
+                          widget.editing
+                              ? 'Save changes'
+                              : widget.buy
+                              ? 'Checkout'
+                              : 'Add to Cart',
+                        ),
                 ),
               ],
             ),

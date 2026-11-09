@@ -120,22 +120,33 @@ final class InvoiceQueries
         $view = $filters['view'] ?? 'REQUESTS';
         $organization = $scope['organization_id'];
         $assigned = $scope['role'] === 'FULFILLMENT' ? DB::table('order_fulfillment_assignments')->select('order_id')->where('user_id', $request->user()->getKey())->whereNull('ended_at') : null;
-        $requests = DB::table('invoice_requests')->where('vendor_organization_id', $organization)->where('state', '<>', 'CLOSED');
+        $requests = DB::table('invoice_requests')->where('vendor_organization_id', $organization)->where('kind', 'COPY')->where('state', 'REQUESTED');
         $records = DB::table('invoice_records')->where('vendor_organization_id', $organization)->whereNotNull('order_id');
+        $reconciliation = (clone $records)->whereNotExists(fn (Builder $query) => $query->selectRaw('1')->from('invoice_records as newer')
+            ->whereColumn('newer.order_id', 'invoice_records.order_id')->where(function (Builder $query): void {
+                $query->whereColumn('newer.created_at', '>', 'invoice_records.created_at')
+                    ->orWhere(fn (Builder $query) => $query->whereColumn('newer.created_at', 'invoice_records.created_at')->whereColumn('newer.id', '>', 'invoice_records.id'));
+            }))->where(function (Builder $query): void {
+                $query->whereIn('reconciliation_state', ['INVOICE_RECONCILIATION_REQUIRED', 'EXPLAINED'])
+                    ->orWhereExists(fn (Builder $query) => self::correctionRequests($query)->selectRaw('1'));
+            });
         $due = $this->ordersWithoutCopies($organization);
         if ($assigned !== null) {
             $requests->whereIn('order_id', $assigned);
             $records->whereIn('order_id', $assigned);
+            $reconciliation->whereIn('order_id', $assigned);
             $due->whereIn('o.id', $assigned);
         }
         $counts = ['REQUESTS' => (clone $requests)->count(), 'DUE' => (clone $due)->count(), 'RECORDS' => (clone $records)->count(),
-            'RECONCILIATION' => (clone $records)->where('reconciliation_state', 'INVOICE_RECONCILIATION_REQUIRED')->count()];
+            'RECONCILIATION' => (clone $reconciliation)->count()];
         $page = max(1, (int) ($filters['page'] ?? 1));
         [$query, $present] = match ($view) {
             'DUE' => [$due->select('o.*')->selectSub(self::buyerNames()->whereColumn('invoice_buyers.id', 'o.buyer_profile_id'), 'buyer_name')->orderBy('o.accepted_at'), fn (object $order): array => $this->dueRow($order)],
             'RECORDS' => [$records->orderByDesc('created_at'), fn (object $record): array => $this->recordRow($record, 'VENDOR', false) + ['order_id' => (string) $record->order_id, 'order_reference' => self::orderReference((string) $record->order_id)]],
-            'RECONCILIATION' => [$records->where('reconciliation_state', 'INVOICE_RECONCILIATION_REQUIRED')->orderByDesc('created_at'),
-                fn (object $record): array => $this->recordRow($record, 'VENDOR', false) + ['order_id' => (string) $record->order_id, 'order_reference' => self::orderReference((string) $record->order_id)]],
+            'RECONCILIATION' => [$reconciliation->select('invoice_records.*')->selectSub(self::correctionRequests(DB::query())->select('correction.state')
+                ->orderByRaw("CASE WHEN correction.state = 'RETURNED_FOR_CORRECTION' THEN 0 ELSE 1 END")->orderByDesc('correction.updated_at')->orderByDesc('correction.id')->limit(1), 'correction_state')->orderByDesc('created_at')->orderByDesc('id'),
+                fn (object $record): array => $this->recordRow($record, 'VENDOR', false) + ['order_id' => (string) $record->order_id, 'order_reference' => self::orderReference((string) $record->order_id),
+                    ...($record->correction_state === null ? [] : ['state' => (string) $record->correction_state, 'kind' => 'CORRECTION'])]],
             default => [$requests->orderBy('service_target_at'), fn (object $row): array => $this->requestRow($row, 'VENDOR') + ['order_id' => (string) $row->order_id, 'order_reference' => self::orderReference((string) $row->order_id)]],
         };
         if (in_array($view, ['RECORDS', 'RECONCILIATION'], true)) {
@@ -193,6 +204,16 @@ final class InvoiceQueries
     {
         return DB::table('orders as o')->where('o.vendor_organization_id', $organizationId)->whereNotIn('o.order_state', [...self::NOT_YET_A_SALE, OrderStates::CANCELLED])
             ->whereNotExists(fn (Builder $query) => $query->selectRaw('1')->from('invoice_records as r')->whereColumn('r.order_id', 'o.id')->where('r.invoice_type', 'VENDOR_GOODS_INVOICE'));
+    }
+
+    /** Pending Buyer feedback attached to the current sent version, including returned copy requests. */
+    private static function correctionRequests(Builder $query): Builder
+    {
+        return $query->from('invoice_requests as correction')->whereColumn('correction.order_id', 'invoice_records.order_id')
+            ->where(function (Builder $query): void {
+                $query->where(fn (Builder $query) => $query->where('correction.kind', 'CORRECTION')->where('correction.state', 'REQUESTED')->whereColumn('correction.invoice_record_id', 'invoice_records.id'))
+                    ->orWhere(fn (Builder $query) => $query->where('correction.state', 'RETURNED_FOR_CORRECTION')->whereColumn('correction.fulfilled_invoice_record_id', 'invoice_records.id'));
+            });
     }
 
     /** @return array<string, mixed> */

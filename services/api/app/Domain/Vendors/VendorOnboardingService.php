@@ -399,6 +399,12 @@ final class VendorOnboardingService
         $organizationId = $this->organizationId($request);
         $key = $this->requireIdempotencyKey($request);
 
+        // A completed request is replayed before its transient address token can expire.
+        // The transaction below still arbitrates concurrent first submissions.
+        if ($this->idempotent($request, 'VENDOR_VERIFICATION_SUBMIT', $key, $organizationId)) {
+            return $this->snapshot($request);
+        }
+
         // Provider-backed address validation happens before taking database locks.
         $resolvedAddress = is_array($input['draft']['address'] ?? null)
             ? app(VendorAddressResolver::class)->validated($organizationId, $input['draft']['address']) : null;
@@ -470,7 +476,7 @@ final class VendorOnboardingService
                 ? app(VendorVacationSchedule::class)->resolve($input, $existing)
                 : ['vacation_mode' => (bool) ($existing->vacation_mode ?? false)];
             $profile = $vacation + [
-                'public_store_name' => trim((string) ($input['public_store_name'] ?? ($existing === null ? $organization->store_name : $existing->public_store_name))),
+                'public_store_name' => trim((string) (array_key_exists('public_store_name', $input) ? $input['public_store_name'] : ($existing === null ? $organization->store_name : $existing->public_store_name))),
                 'description' => array_key_exists('description', $input) ? $input['description'] : ($existing === null ? null : $existing->description),
                 'bulk_capability' => array_key_exists('bulk_capability', $input) ? (bool) $input['bulk_capability'] : ($existing === null ? null : $existing->bulk_capability),
                 'fulfillment_method' => $input['fulfillment_method'] ?? ($existing === null ? null : $existing->fulfillment_method),

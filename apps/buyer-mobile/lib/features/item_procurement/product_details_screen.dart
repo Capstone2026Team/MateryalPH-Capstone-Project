@@ -32,12 +32,16 @@ class ProductDetailsScreen extends StatefulWidget {
     required this.cart,
     required this.navigation,
     this.initialVariantId,
+    this.cartLine,
+    this.initialFulfillment,
   });
 
   final String listingId;
 
   /// The variant to show first when it is available, e.g. a quoted one.
   final String? initialVariantId;
+  final CartLineView? cartLine;
+  final String? initialFulfillment;
   final ProcurementRepository repository;
   final ExploreController explore;
   final CartController cart;
@@ -55,8 +59,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   late String? _variantId = widget.initialVariantId;
 
   /// Decimal quantity text; ready-mixed concrete starts empty so the Buyer enters the volume.
-  String _quantity = '1';
-  String? _fulfillment;
+  late String _quantity = widget.cartLine?.quantity ?? '1';
+  late String? _fulfillment = widget.initialFulfillment;
   String? _notice;
   bool _favorite = false;
   bool _descriptionExpanded = false;
@@ -116,6 +120,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         quantity: _quantity,
         fulfillment: _fulfillment,
         buy: buy,
+        editing: widget.cartLine != null,
         repository: widget.repository,
         cart: widget.cart,
         savedLocations: () => widget.explore.savedLocations,
@@ -129,6 +134,24 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             _fulfillment = fulfillment;
           });
           final configuration = '$variantId|$quantity|$fulfillment';
+          final cartLine = widget.cartLine;
+          if (cartLine != null) {
+            final selected = _variant;
+            if (selected?.priceVersionId == null || fulfillment == null) {
+              return 'Refresh the product and choose how to receive it.';
+            }
+            final saved = await widget.cart.configureLine(
+              cartLine,
+              variantId: variantId,
+              expectedPriceVersionId: selected!.priceVersionId!,
+              quantity: quantity,
+              fulfillmentMethod: fulfillment,
+            );
+            return saved
+                ? null
+                : widget.cart.notice ??
+                      'Unable to update this cart item. Please retry.';
+          }
           if (addedConfiguration != configuration) {
             await _addToCart();
             if (_notice != null) return _notice;
@@ -155,6 +178,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       ),
     );
     _finalizing = false;
+    if (completed == true && widget.cartLine != null && mounted) {
+      Navigator.of(context).pop();
+      return;
+    }
     if (completed == true && buy && mounted) {
       await widget.navigation.openCheckout(context);
     }
@@ -195,7 +222,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             : available.isEmpty
             ? null
             : available.first.variantId;
-        if (firstLoad && detail.readyMixed != null) _quantity = '';
+        if (firstLoad && detail.readyMixed != null && widget.cartLine == null) {
+          _quantity = '';
+        }
         _fulfillment ??= detail.pickupAvailable && !detail.deliveryOffered
             ? 'PICKUP'
             : !detail.pickupAvailable && detail.deliveryOffered
@@ -449,7 +478,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
   List<Widget> _overview(ListingDetailView detail) {
     final variant = _variant;
-    final sold = formatQuantity(detail.unitsSold);
+    final sold = detail.uniqueBuyers;
     return [
       const SizedBox(height: 8),
       Wrap(
@@ -519,7 +548,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               const SizedBox(width: 4),
               Flexible(
                 child: Text(
-                  '${detail.ratingLabel}${sold == '0' ? '' : ' | $sold sold'}',
+                  '${detail.ratingLabel}${sold == 0 ? '' : ' | ${sold == 1 ? '1 buyer' : '$sold buyers'}'}',
                   style: const TextStyle(fontSize: 13),
                 ),
               ),
@@ -849,7 +878,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   );
 
   List<Widget> _reviews(ListingDetailView detail) {
-    final sold = formatQuantity(detail.unitsSold);
+    final sold = detail.uniqueBuyers;
     return [
       const SizedBox(height: 16),
       if (widget.navigation.orders != null)
@@ -857,7 +886,11 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           key: ValueKey(detail.listingId),
           repository: widget.navigation.orders!.reviews,
           listingId: detail.listingId,
-          soldLabel: sold == '0' ? null : '$sold sold',
+          soldLabel: sold == 0
+              ? null
+              : sold == 1
+              ? '1 buyer'
+              : '$sold buyers',
           onCountChanged: (count) {
             if (mounted && _reviewCount != count) {
               setState(() => _reviewCount = count);
@@ -1002,16 +1035,19 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                         child: BuyerLoadingIndicator(strokeWidth: 2),
                       )
                     : const Icon(LucideIcons.shoppingCart),
-                label: const Text('Add to Cart'),
+                label: Text(
+                  widget.cartLine == null ? 'Add to Cart' : 'Save changes',
+                ),
               ),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: FilledButton(
-                onPressed: canAdd ? () => _finalize(buy: true) : null,
-                child: const Text('Buy'),
+            if (widget.cartLine == null) const SizedBox(width: 10),
+            if (widget.cartLine == null)
+              Expanded(
+                child: FilledButton(
+                  onPressed: canAdd ? () => _finalize(buy: true) : null,
+                  child: const Text('Buy'),
+                ),
               ),
-            ),
           ],
         ),
       ),

@@ -20,9 +20,9 @@ export function ConversationInbox({ rows, selected, selectedBuyerThreadId, onSel
     <ul className="chat-inbox-list" aria-label="Conversations">{visible.map(row => {
       const unreadCount = row.unreadCount + (row.canListFulfillmentConversations ? row.fulfillmentUnreadCount ?? 0 : 0)
       return <li key={row.id}>
-        <button type="button" className="chat-inbox-row" aria-current={row.id === selected || (selectedBuyerThreadId && row.buyerThreadId === selectedBuyerThreadId) ? 'true' : undefined} disabled={disabled} onClick={() => onSelect(row.id)}>
+        <button type="button" className="chat-inbox-row" aria-current={row.id === selected || (row.purpose === 'SALES' && selectedBuyerThreadId && row.buyerThreadId === selectedBuyerThreadId) ? 'true' : undefined} disabled={disabled} onClick={() => onSelect(row.id)}>
           <ChatAvatar name={row.buyer?.displayName ?? 'Buyer'} path={row.buyer?.avatarPath} load={loadAvatar} />
-          <span className="chat-inbox-copy"><span className="chat-inbox-title">{row.buyer?.displayName ?? conversationLabel(row)}</span><span className="chat-inbox-preview">{row.lastMessagePreview || (row.handler ? `Handled by ${row.handler.displayName}` : 'Needs a handler')}</span><span className="chat-inbox-reference">{row.needsHumanResponse && 'Needs a reply · '}{row.buyerThreadId ? 'All inquiries & orders' : row.orderId ? `Order · ${row.orderId.slice(-8)}` : conversationLabel(row)}</span></span>
+          <span className="chat-inbox-copy"><span className="chat-inbox-title">{row.buyer?.displayName ?? conversationLabel(row)}</span><span className="chat-inbox-preview">{row.lastMessagePreview || (row.handler ? `Handled by ${row.handler.displayName}` : 'Needs a handler')}</span><span className="chat-inbox-reference">{row.needsHumanResponse && 'Needs a reply · '}{row.purpose === 'SALES' && row.buyerThreadId ? 'All inquiries & orders' : row.orderId ? `Order · ${row.orderReference ?? row.orderId.slice(-8)}` : conversationLabel(row)}</span></span>
           <span className="chat-inbox-meta"><time dateTime={row.updatedAt}>{new Date(row.updatedAt).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric' })}</time>{unreadCount > 0 && <><CountBadge count={unreadCount} /><span className="sr-only">{unreadCount} unread messages</span></>}</span>
         </button>
       </li>

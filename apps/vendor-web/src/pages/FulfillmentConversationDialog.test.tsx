@@ -175,6 +175,47 @@ test('list supports pagination, empty and retry states; completed history has no
   expect(screen.queryByRole('textbox', { name: 'Message' })).not.toBeInTheDocument()
 })
 
+test('an old fulfillment link opens history inside the writable Buyer chat and preserves its reply', async () => {
+  const sales = detail('sales-1')
+  sales.conversation.buyerThreadId = 'buyer-one'
+  vi.mocked(chatApi.list).mockResolvedValue({ items: [sales.conversation], page: 1, hasMore: false })
+  vi.mocked(chatApi.buyerThread).mockResolvedValue(sales)
+  vi.mocked(chatApi.get).mockResolvedValue(detail('fulfillment-1', true))
+  vi.mocked(chatApi.fulfillmentConversations).mockResolvedValue({ items: [{ ...row, readOnly: true, orderState: 'COMPLETED' }], page: 1, hasMore: false })
+  vi.mocked(chatApi.send).mockResolvedValue({ data: { id: 'saved' }, meta: {}, errors: [] })
+  render(<MemoryRouter initialEntries={['/messages?conversation=old-fulfillment-link']}><Location /><MessagingWorkspace role="PUBLISHER" /></MemoryRouter>)
+  const composer = await screen.findByRole('textbox', { name: 'Message' })
+  fireEvent.change(composer, { target: { value: 'About your next order' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Fulfillment conversations' }))
+  const dialog = await screen.findByRole('dialog', { name: 'Fulfillment conversations' })
+  fireEvent.click(await within(dialog).findByRole('button', { name: /ORD-ONE/ }))
+  expect(chatApi.fulfillmentConversations).toHaveBeenCalledWith('sales-1', 1)
+  await within(dialog).findByText(/Fulfillment messages are read-only/)
+  expect(within(dialog).queryByRole('textbox', { name: 'Message' })).not.toBeInTheDocument()
+  expect(composer).toHaveValue('About your next order')
+  expect(screen.getByLabelText('Location')).toHaveTextContent('?conversation=old-fulfillment-link')
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Close fulfillment conversations' }))
+  expect(screen.getByRole('textbox', { name: 'Message' })).toBe(composer)
+  expect(screen.getByText('All inquiries & orders')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Send message' }))
+  await waitFor(() => expect(chatApi.send).toHaveBeenCalledWith('sales-1', 'About your next order', expect.any(String), undefined))
+})
+
+test('Fulfillment Staff open their assigned order directly without a combined sales chat', async () => {
+  const fulfillment = detail()
+  fulfillment.conversation.buyerThreadId = 'buyer-one'
+  const second = { ...fulfillment.conversation, id: 'fulfillment-2', orderId: 'order-2', orderReference: 'ORD-TWO' }
+  vi.mocked(chatApi.list).mockResolvedValue({ items: [fulfillment.conversation, second], page: 1, hasMore: false })
+  render(<MemoryRouter initialEntries={['/messages?conversation=fulfillment-1']}><MessagingWorkspace role="FULFILLMENT" /></MemoryRouter>)
+  await screen.findByRole('textbox', { name: 'Message' })
+  expect(screen.getByText('Order · ORD-ONE')).toBeInTheDocument()
+  expect(screen.queryByText('All inquiries & orders')).not.toBeInTheDocument()
+  const inboxRows = within(screen.getByRole('list', { name: 'Conversations' })).getAllByRole('button')
+  expect(inboxRows.filter(button => button.getAttribute('aria-current') === 'true')).toHaveLength(1)
+  expect(chatApi.buyerThread).not.toHaveBeenCalled()
+  expect(chatApi.get).toHaveBeenCalledWith('fulfillment-1', undefined, 1)
+})
+
 test('thread reuses retry keys, read receipts, history paging, image uploads and realtime cleanup', async () => {
   vi.mocked(chatApi.get).mockResolvedValue({ ...detail(), messages: { items: [message], hasMore: true, nextBefore: 'm-2' } })
   vi.mocked(chatApi.send).mockRejectedValueOnce(new Error('Offline')).mockResolvedValue({ data: { id: 'saved' }, meta: {}, errors: [] })

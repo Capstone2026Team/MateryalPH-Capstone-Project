@@ -318,6 +318,9 @@ class _DelayedCart extends FakeProcurementRepository {
     String? quantity,
     bool? savedForLater,
     bool acceptCurrentPrice = false,
+    String? variantId,
+    String? expectedPriceVersionId,
+    String? fulfillmentMethod,
   }) {
     calls++;
     return done.future;

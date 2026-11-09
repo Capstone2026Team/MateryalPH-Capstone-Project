@@ -307,6 +307,25 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         $this->assertDatabaseHas('vendor_organizations', ['id' => $organization->id, 'store_setup_status' => 'IN_PROGRESS']);
     }
 
+    public function test_setup_draft_can_clear_an_unfinished_public_name_without_losing_other_progress(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $this->patchJson('/api/v1/vendors/onboarding/setup', ['organization_lock_version' => $organization->refresh()->lock_version,
+            'public_store_name' => 'Draft store', 'description' => 'Description in progress'])->assertOk();
+        $this->patchJson('/api/v1/vendors/onboarding/setup', ['organization_lock_version' => $organization->refresh()->lock_version,
+            'public_store_name' => '', 'description' => 'Retained description'])->assertOk()
+            ->assertJsonPath('data.setup.profile.public_store_name', '')
+            ->assertJsonPath('data.setup.profile.description', 'Retained description')
+            ->assertJsonPath('data.setup.status', 'IN_PROGRESS');
+        $this->getJson('/api/v1/vendors/onboarding')->assertOk()
+            ->assertJsonPath('data.setup.profile.public_store_name', '');
+        self::assertSame(1, DB::table('store_profiles')->where('vendor_organization_id', $organization->id)->count());
+        self::assertSame(1, DB::table('vendor_onboarding_drafts')->where('vendor_organization_id', $organization->id)->where('workstream', 'STORE_SETUP')->count());
+        $this->postJson('/api/v1/vendors/onboarding/setup/complete', ['organization_lock_version' => $organization->refresh()->lock_version],
+            ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable()->assertJsonPath('errors.0.code', 'STORE_SETUP_INCOMPLETE');
+    }
+
     public function test_store_operation_requires_all_days_validates_times_and_is_public_only_after_activation(): void
     {
         [$organization, $owner] = $this->vendorFixture('OWNER');
@@ -649,6 +668,28 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
             'lock_version' => 999,
             'privacy_acknowledged' => true,
         ], ['Idempotency-Key' => $key])->assertConflict()->assertJsonPath('errors.0.code', 'IDEMPOTENCY_CONFLICT');
+    }
+
+    public function test_successful_submission_replay_does_not_revalidate_an_expired_map_draft(): void
+    {
+        [$organization, $owner] = $this->vendorFixture('OWNER');
+        $this->signInVendor($owner);
+        $this->saveVerificationDraft($organization, false);
+        $key = (string) Str::uuid7();
+        $payload = ['lock_version' => $organization->refresh()->lock_version, 'privacy_acknowledged' => true,
+            'draft' => ['address' => $this->resolvedAddressInput($organization)]];
+        $this->postJson('/api/v1/vendors/onboarding/verification/submit', $payload, ['Idempotency-Key' => $key])
+            ->assertAccepted()->assertJsonPath('data.verification.status', 'PENDING_VERIFICATION');
+        $versions = DB::table('vendor_document_versions')->count();
+        $this->travel(31)->minutes();
+        $this->signInVendor($owner);
+        $this->postJson('/api/v1/vendors/onboarding/verification/submit', $payload, ['Idempotency-Key' => $key])
+            ->assertAccepted()->assertJsonPath('data.verification.status', 'PENDING_VERIFICATION');
+        self::assertSame($versions, DB::table('vendor_document_versions')->count());
+        self::assertSame(1, DB::table('audit_logs')->where('action', 'VENDOR_VERIFICATION_SUBMITTED')->count());
+        $payload['draft']['address']['street'] = 'Changed request';
+        $this->postJson('/api/v1/vendors/onboarding/verification/submit', $payload, ['Idempotency-Key' => $key])
+            ->assertConflict()->assertJsonPath('errors.0.code', 'IDEMPOTENCY_CONFLICT');
     }
 
     public function test_private_evidence_is_scoped_to_the_vendor_and_authorized_admin_role(): void

@@ -91,6 +91,28 @@ class CartController extends ChangeNotifier {
     ),
   );
 
+  Future<bool> configureLine(
+    CartLineView line, {
+    required String variantId,
+    required String expectedPriceVersionId,
+    required String quantity,
+    required String fulfillmentMethod,
+  }) async {
+    if (cart == null || busy) return false;
+    await _mutate(
+      line.id,
+      (version) => _repository.updateLine(
+        line,
+        cartLockVersion: version,
+        variantId: variantId,
+        expectedPriceVersionId: expectedPriceVersionId,
+        quantity: quantity,
+        fulfillmentMethod: fulfillmentMethod,
+      ),
+    );
+    return notice == null;
+  }
+
   Future<void> acceptCurrentPrice(CartLineView line) => _mutate(
     line.id,
     (version) => _repository.updateLine(

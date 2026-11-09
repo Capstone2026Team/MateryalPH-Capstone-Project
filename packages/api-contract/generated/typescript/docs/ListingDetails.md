@@ -22,6 +22,7 @@ Name | Type
 `compliance` | [ListingCompliance](ListingCompliance.md)
 `productRating` | [ProductRatingSummary](ProductRatingSummary.md)
 `unitsSold` | string
+`uniqueBuyers` | number
 `isFavorite` | boolean
 `purchasable` | boolean
 `notPurchasableReason` | string
@@ -56,6 +57,7 @@ const example = {
   "compliance": null,
   "productRating": null,
   "unitsSold": null,
+  "uniqueBuyers": null,
   "isFavorite": null,
   "purchasable": null,
   "notPurchasableReason": null,

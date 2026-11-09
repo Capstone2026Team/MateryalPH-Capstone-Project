@@ -860,6 +860,11 @@ import 'package:materyalph_api_client/src/model/product_compliance_queue_envelop
 import 'package:materyalph_api_client/src/model/product_compliance_queue_item.dart';
 import 'package:materyalph_api_client/src/model/product_delivery_preview_request.dart';
 import 'package:materyalph_api_client/src/model/product_rating_summary.dart';
+import 'package:materyalph_api_client/src/model/project_archive_item.dart';
+import 'package:materyalph_api_client/src/model/project_archive_mutation.dart';
+import 'package:materyalph_api_client/src/model/project_archive_mutation_response.dart';
+import 'package:materyalph_api_client/src/model/project_archive_page.dart';
+import 'package:materyalph_api_client/src/model/project_archive_page_response.dart';
 import 'package:materyalph_api_client/src/model/project_arrangement.dart';
 import 'package:materyalph_api_client/src/model/project_arrangement_create.dart';
 import 'package:materyalph_api_client/src/model/project_arrangement_edit.dart';
@@ -2140,6 +2145,11 @@ part 'serializers.g.dart';
   ProductComplianceQueueItem,
   ProductDeliveryPreviewRequest,
   ProductRatingSummary,
+  ProjectArchiveItem,
+  ProjectArchiveMutation,
+  ProjectArchiveMutationResponse,
+  ProjectArchivePage,
+  ProjectArchivePageResponse,
   ProjectArrangement,
   ProjectArrangementCreate,
   ProjectArrangementEdit,
@@ -3446,6 +3456,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(PlatformSetting)]),
         () => ListBuilder<PlatformSetting>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ProjectArchiveItem)]),
+        () => ListBuilder<ProjectArchiveItem>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(VendorFinanceReviewsOpenReviewsInner)]),

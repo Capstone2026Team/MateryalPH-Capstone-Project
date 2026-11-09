@@ -69,6 +69,9 @@ for (const [path, method] of [['/stores', 'get'], ['/stores/{storeId}/profile', 
 }
 assert.equal(spec.components.schemas.VendorSetupDraft.properties.operating_schedule.minItems, 7)
 assert.equal(spec.components.schemas.VendorSetupDraft.properties.operating_schedule.maxItems, 7)
+assert.deepEqual(spec.components.schemas.VendorSetupDraft.properties.public_store_name.type, ['string', 'null'])
+assert.match(spec.components.schemas.VendorSetupDraft.properties.public_store_name.description, /required for Store Setup completion/)
+assert.match(spec.paths['/vendors/onboarding/verification/submit'].post.description, /before revalidating transient map/)
 assert.deepEqual(spec.components.schemas.StoreOperatingDay.properties.status.enum, ['OPEN', 'CLOSED'])
 assert.equal(spec.components.schemas.VendorOnboardingSnapshot.properties.setup.properties.operating_schedule.items.$ref, '#/components/schemas/StoreOperatingDay')
 

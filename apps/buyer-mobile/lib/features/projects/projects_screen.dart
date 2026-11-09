@@ -26,6 +26,8 @@ import 'project_arrangement_screen.dart';
 import 'work_package_editor.dart';
 import 'work_package_material_widgets.dart' show materialQuantity;
 import 'work_package_overview_widgets.dart';
+import '../../design_system/components/archive_item_action.dart';
+import 'project_archives_screen.dart';
 
 typedef ProjectOpen = void Function(BuildContext context, String id);
 typedef ProjectOpenOrder =
@@ -79,6 +81,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   api.WorkPackageView? _package;
   String? _error;
   bool _busy = false;
+  bool _showArchives = false;
   int _sequence = 0;
   int _projectSection = 0;
   final Map<String, String> _keys = {};
@@ -98,6 +101,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     _refresh = Timer.periodic(const Duration(seconds: 45), (_) {
       if (mounted &&
           widget.active &&
+          !_showArchives &&
           !_busy &&
           ModalRoute.of(context)?.isCurrent == true &&
           WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
@@ -317,6 +321,49 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     }
   }
 
+  Future<void> _archives() async {
+    setState(() => _showArchives = true);
+  }
+
+  Future<void> _closeArchives() async {
+    setState(() => _showArchives = false);
+    await _run(_reload);
+  }
+
+  Future<void> _archiveItem(
+    String itemId,
+    String name,
+    int version, {
+    bool project = false,
+  }) async {
+    if (_busy ||
+        !await confirmArchiveAction(
+          context,
+          name: name,
+          action: ArchiveAction.archive,
+        ) ||
+        !mounted) {
+      return;
+    }
+    await _run(() async {
+      final action = 'archive-$itemId-$version';
+      await repo.archive(itemId, version, _key(action), project: project);
+      _keys.remove(action);
+      if (project) {
+        if (_project?.id == itemId) _project = null;
+        _package = null;
+      } else {
+        _package = null;
+      }
+      await _reload();
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$name was archived.')));
+      }
+    });
+  }
+
   /// Vendor selection: map, sortable results and quotations (opened from the
   /// package; the comparison no longer lives inside the package page).
   Future<void> _findVendors([api.ProjectEstimatePage? initial]) async {
@@ -399,65 +446,100 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   );
 
   @override
-  Widget build(BuildContext context) => PopScope(
-    canPop: _project == null,
-    onPopInvokedWithResult: (didPop, result) {
-      if (!didPop && !_busy) unawaited(_back());
-    },
-    child: Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: _project == null
-          ? buyerTabAppBar(
-              context,
-              'Projects',
-              actions: [_rankingPreferencesAction()],
-            )
-          : buyerAppBar(
-              context,
-              projectText(_package?.name ?? _project?.name ?? 'Projects'),
-              // Inside a Project the back control steps up the Project hierarchy, not the route stack.
-              onBack: _project == null
-                  ? null
-                  : () {
-                      if (!_busy) _back();
-                    },
-              actions: [
-                if (_project != null && NotificationScope.of(context) != null)
-                  BuyerDocumentExportButton(
-                    repository: NotificationScope.of(context)!,
-                    resourceId: projectText(_project?.id),
-                    types: [
-                      export_api.DocumentExportInputTypeEnum.PROJECT_SUMMARY,
-                      export_api.DocumentExportInputTypeEnum.BUDGET_REPORT,
+  Widget build(BuildContext context) => _showArchives
+      ? PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, result) {
+            if (!didPop) _closeArchives();
+          },
+          child: ProjectArchivesScreen(
+            repository: repo,
+            onBack: _closeArchives,
+          ),
+        )
+      : PopScope(
+          canPop: _project == null,
+          onPopInvokedWithResult: (didPop, result) {
+            if (!didPop && !_busy) unawaited(_back());
+          },
+          child: Scaffold(
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            appBar: _project == null
+                ? buyerTabAppBar(
+                    context,
+                    'Projects',
+                    actions: [_rankingPreferencesAction()],
+                  )
+                : buyerAppBar(
+                    context,
+                    projectText(_package?.name ?? _project?.name ?? 'Projects'),
+                    // Inside a Project the back control steps up the Project hierarchy, not the route stack.
+                    onBack: _project == null
+                        ? null
+                        : () {
+                            if (!_busy) _back();
+                          },
+                    actions: [
+                      if (_project != null &&
+                          _package == null &&
+                          _project!.status != 'ARCHIVED')
+                        PopupMenuButton<String>(
+                          tooltip: 'Project actions',
+                          onSelected: (_) => _archiveItem(
+                            _project!.id,
+                            _project!.name,
+                            _project!.lockVersion,
+                            project: true,
+                          ),
+                          itemBuilder: (_) => [
+                            PopupMenuItem(
+                              value: 'archive',
+                              enabled: !_busy && _project!.canArchive == true,
+                              child: const Text('Archive Project'),
+                            ),
+                          ],
+                        ),
+                      if (_project != null &&
+                          NotificationScope.of(context) != null)
+                        BuyerDocumentExportButton(
+                          repository: NotificationScope.of(context)!,
+                          resourceId: projectText(_project?.id),
+                          types: [
+                            export_api
+                                .DocumentExportInputTypeEnum
+                                .PROJECT_SUMMARY,
+                            export_api
+                                .DocumentExportInputTypeEnum
+                                .BUDGET_REPORT,
+                          ],
+                        ),
+                      _rankingPreferencesAction(),
                     ],
                   ),
-                _rankingPreferencesAction(),
-              ],
-            ),
-      body: Column(
-        children: [
-          if (_busy) const BuyerLoadingProgress(),
-          if (_error != null && (_page != null || _project != null))
-            MaterialBanner(
-              content: Text(_error!),
-              actions: [
-                TextButton(
-                  onPressed: _busy ? null : () => _run(_reload),
-                  child: const Text('Retry'),
+            body: Column(
+              children: [
+                if (_busy) const BuyerLoadingProgress(),
+                if (_error != null && (_page != null || _project != null))
+                  MaterialBanner(
+                    content: Text(_error!),
+                    actions: [
+                      TextButton(
+                        onPressed: _busy ? null : () => _run(_reload),
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                Expanded(
+                  child: _package != null
+                      ? _packageBody()
+                      : _project != null
+                      ? _projectBody()
+                      : _index(),
                 ),
               ],
             ),
-          Expanded(
-            child: _package != null
-                ? _packageBody()
-                : _project != null
-                ? _projectBody()
-                : _index(),
           ),
-        ],
-      ),
-    ),
-  );
+        );
   Widget _rankingPreferencesAction() => BuyerHeaderIconButton(
     onPressed: _busy ? null : _preferences,
     icon: LucideIcons.slidersHorizontal,
@@ -491,6 +573,11 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
               style: const TextStyle(color: BuyerTheme.muted),
             ),
             const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: _busy ? null : _archives,
+              icon: const Icon(LucideIcons.archive, size: 18),
+              label: const Text('Archived Items'),
+            ),
             Align(
               alignment: Alignment.centerLeft,
               child: FilledButton.icon(
@@ -567,6 +654,19 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                           SpecificationRow(
                             'Remaining',
                             projectMoney(p.budget.remainingCentavos),
+                          ),
+                          const SizedBox(height: 12),
+                          ArchiveItemAction(
+                            label: 'Archive Project',
+                            allowed: p.canArchive == true,
+                            busy: _busy,
+                            blocker: p.archiveBlocker,
+                            onArchive: () => _archiveItem(
+                              p.id,
+                              p.name,
+                              p.lockVersion,
+                              project: true,
+                            ),
                           ),
                           if (p.budget.warning == true)
                             const StatusBand(
@@ -684,17 +784,16 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                         children: [
                           Expanded(
                             child: OutlinedButton.icon(
-                              onPressed: _busy || p.status == 'ARCHIVED'
+                              onPressed: _busy || p.canArchive != true
                                   ? null
-                                  : () => _run(() async {
-                                      _project = await repo
-                                          .update(projectText(p.id), {
-                                            'lock_version': p.lockVersion,
-                                            'status': 'ARCHIVED',
-                                          }, _key('archive'));
-                                    }),
+                                  : () => _archiveItem(
+                                      p.id,
+                                      p.name,
+                                      p.lockVersion,
+                                      project: true,
+                                    ),
                               icon: const Icon(LucideIcons.archive, size: 18),
-                              label: const Text('Archive'),
+                              label: const Text('Archive Project'),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -718,6 +817,11 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                           ),
                         ],
                       ),
+                      if (p.archiveBlocker != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(p.archiveBlocker!),
+                        ),
                       if (p.status == 'ACTIVE' &&
                           packages.items.toList().isEmpty) ...[
                         const SizedBox(height: 12),
@@ -773,9 +877,26 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                     if (packages.items.toList().isEmpty)
                       const WorkPackagesEmptyState(),
                     ...packages.items.toList().map(
-                      (w) => WorkPackageCard(
-                        package: w,
-                        onTap: () => _openPackage(projectText(w.id)),
+                      (w) => Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          WorkPackageCard(
+                            package: w,
+                            onTap: () => _openPackage(projectText(w.id)),
+                          ),
+                          if (p.status != 'ARCHIVED' && w.archivedAt == null)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: ArchiveItemAction(
+                                label: 'Archive Work Package',
+                                allowed: w.canArchive == true,
+                                busy: _busy,
+                                blocker: w.archiveBlocker,
+                                onArchive: () =>
+                                    _archiveItem(w.id, w.name, w.lockVersion),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                     if (packages.hasMore == true)
@@ -843,7 +964,8 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   Widget _packageBody() {
     final w = _package!,
         draft = w.status == 'DRAFT',
-        projectActive = w.projectStatus.name == 'ACTIVE',
+        projectActive =
+            w.projectStatus.name == 'ACTIVE' && w.archivedAt == null,
         editable = draft && projectActive,
         cancelled = w.status == 'CANCELLED',
         canDelete = w.canDelete == true,
@@ -873,6 +995,13 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           children: [WorkPackageStatusChip(projectText(w.status))],
         ),
         const SizedBox(height: 12),
+        if (w.archivedAt != null)
+          const StatusBand(
+            tone: BandTone.warning,
+            title: 'Archived',
+            message:
+                'Restore this Work Package from Archived Items to resume procurement.',
+          ),
         ProjectBudgetCard(budget: w.budget),
         const SizedBox(height: 16),
         if (editable) ...[
@@ -958,7 +1087,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           ),
           const SizedBox(height: 12),
         ],
-        if (!draft && !cancelled && w.selectedArrangementId == null) ...[
+        if (projectActive &&
+            !draft &&
+            !cancelled &&
+            w.selectedArrangementId == null) ...[
           FilledButton.icon(
             onPressed: _busy ? null : () => _findVendors(),
             icon: const Icon(LucideIcons.search, size: 18),
@@ -971,6 +1103,16 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             onPressed: _busy ? null : _reactivatePackage,
             icon: const Icon(LucideIcons.rotateCcw, size: 18),
             label: const Text('Reactivate'),
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (w.projectStatus.name != 'ARCHIVED' && w.archivedAt == null) ...[
+          ArchiveItemAction(
+            label: 'Archive Work Package',
+            allowed: w.canArchive == true,
+            busy: _busy,
+            blocker: w.archiveBlocker,
+            onArchive: () => _archiveItem(w.id, w.name, w.lockVersion),
           ),
           const SizedBox(height: 12),
         ],

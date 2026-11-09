@@ -105,7 +105,8 @@ final class CheckoutOptionsTest extends TestCase
         $body = $this->body([$store->id], $package);
         $body['work_package_lock_version']++;
         $this->postJson('/api/v1/buyers/checkouts', $body, $this->key())->assertConflict()->assertJsonPath('errors.0.code', 'PROJECT_VERSION_CONFLICT');
-        DB::table('projects')->where('id', $project['id'])->update(['status' => 'ARCHIVED']);
+        $archivedAt = now()->toImmutable();
+        DB::table('projects')->where('id', $project['id'])->update(['status' => 'ARCHIVED', 'archived_at' => $archivedAt, 'delete_after' => $archivedAt->addHours(720), 'archived_from_status' => 'ACTIVE']);
         $this->postJson('/api/v1/buyers/checkouts', $this->body([$store->id], $package), $this->key())->assertConflict()->assertJsonPath('errors.0.code', 'PROJECT_CLOSED');
         self::assertSame(0, DB::table('orders')->count());
         self::assertSame(0, DB::table('checkout_groups')->count());

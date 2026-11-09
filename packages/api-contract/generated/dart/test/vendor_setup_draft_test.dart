@@ -42,6 +42,7 @@ void main() {
       // TODO
     });
 
+    // Empty or null saves an unfinished name as blank without discarding other draft fields. A nonblank name is required for Store Setup completion and activation.
     // String publicStoreName
     test('to test the property `publicStoreName`', () async {
       // TODO

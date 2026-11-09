@@ -23,7 +23,7 @@ final class ProjectService
 
     public function project(Request $request, string $id, bool $lock = false): object
     {
-        $query = DB::table('projects')->where('id', $id)->where('buyer_profile_id', $this->buyers->idFor($request));
+        $query = DB::table('projects')->where('id', $id)->whereNull('deleted_at')->where('buyer_profile_id', $this->buyers->idFor($request));
         $row = ($lock ? $query->lockForUpdate() : $query)->first();
         if ($row === null) {
             throw new AuthenticationException('PROJECT_NOT_FOUND', 'This Project is unavailable.', 404);
@@ -43,13 +43,21 @@ final class ProjectService
             throw new AuthenticationException('PROJECT_CLOSED', 'This Project is read-only. Its procurement history remains available.', 409);
         }
 
-        return $this->effectivePackage($lock ? DB::table('work_packages')->where('id', $id)->lockForUpdate()->first() : $row);
+        $row = $lock ? DB::table('work_packages')->where('id', $id)->whereNull('deleted_at')->lockForUpdate()->first() : $row;
+        if ($row === null) {
+            throw new AuthenticationException('WORK_PACKAGE_NOT_FOUND', 'This Work Package is unavailable.', 404);
+        }
+        if ($lock && $row->archived_at !== null) {
+            throw new AuthenticationException('WORK_PACKAGE_ARCHIVED', 'Restore this Work Package before starting procurement.', 409);
+        }
+
+        return $this->effectivePackage($row);
     }
 
     /** A closed order releases its selection immediately, including while durable cleanup is queued. */
     public function effectivePackage(object $w): object
     {
-        if ($w->selected_arrangement_id === null && $w->selected_vendor_organization_id !== null && ! in_array($w->status, ['DRAFT', 'CANCELLED'], true)) {
+        if ($w->archived_at === null && $w->selected_arrangement_id === null && $w->selected_vendor_organization_id !== null && ! in_array($w->status, ['DRAFT', 'CANCELLED'], true)) {
             $order = $this->currentPackageOrder($w);
             if ($order !== null && in_array($order->order_state, OrderStates::CLOSED_BEFORE_FULFILLMENT, true)) {
                 $w = clone $w;
@@ -71,7 +79,7 @@ final class ProjectService
     /** @return array<string, mixed> */
     public function index(Request $request): array
     {
-        $page = DB::table('projects')->where('buyer_profile_id', $this->buyers->idFor($request))->orderByDesc('updated_at')->orderBy('id')->paginate(25);
+        $page = DB::table('projects')->where('buyer_profile_id', $this->buyers->idFor($request))->whereNull('archived_at')->whereNull('deleted_at')->orderByDesc('updated_at')->orderBy('id')->paginate(25);
 
         return ['items' => array_map(fn (object $p): array => $this->summary($p), $page->items()), 'page' => $page->currentPage(), 'has_more' => $page->hasMorePages()];
     }
@@ -80,7 +88,7 @@ final class ProjectService
     public function show(Request $request, string $id): array
     {
         $project = $this->project($request, $id);
-        $packages = DB::table('work_packages')->where('project_id', $id)->whereNull('deleted_at')->orderByDesc('updated_at')->orderBy('id')->paginate(25);
+        $packages = DB::table('work_packages')->where('project_id', $id)->whereNull('deleted_at')->when($project->status !== 'ARCHIVED', fn ($q) => $q->whereNull('archived_at'))->orderByDesc('updated_at')->orderBy('id')->paginate(25);
 
         return $this->summary($project) + ['sites' => DB::table('project_sites')->where('project_id', $id)->where('active', true)->orderBy('id')->get()->map(fn (object $s): array => $this->siteView($s))->all(),
             'packages' => ['items' => array_map(fn (object $w): array => $this->packageSummary($w), $packages->items()), 'page' => $packages->currentPage(), 'has_more' => $packages->hasMorePages()]];
@@ -90,7 +98,7 @@ final class ProjectService
     private function summary(object $p): array
     {
         return ['id' => $p->id, 'name' => $p->name, 'status' => $p->status, 'budget_centavos' => (int) $p->budget_centavos, 'starts_on' => $p->starts_on,
-            'ends_on' => $p->ends_on, 'lock_version' => (int) $p->lock_version, 'budget' => app(ProjectBudget::class)->metrics($p)];
+            'ends_on' => $p->ends_on, 'lock_version' => (int) $p->lock_version, 'budget' => app(ProjectBudget::class)->metrics($p)] + ProjectArchives::metadata($p, true);
     }
 
     /** @return array<string, mixed> */
@@ -123,7 +131,7 @@ final class ProjectService
         return ['id' => $w->id, 'project_id' => $w->project_id, 'name' => $w->name, 'status' => $status, 'budget_centavos' => (int) $w->budget_centavos,
             'lock_version' => (int) $w->lock_version, 'current_version_id' => $w->current_version_id, 'selected_vendor_id' => $this->hasActiveSelection($w, $order) ? $w->selected_vendor_organization_id : null, 'order_id' => $order?->id,
             'procurement_candidate_id' => $order !== null && ! in_array($order->order_state, OrderStates::CLOSED_BEFORE_FULFILLMENT, true) ? $order->compiled_estimate_vendor_id : null,
-            'selected_arrangement_id' => $w->selected_arrangement_id, 'vendor_orders' => $vendorOrders];
+            'selected_arrangement_id' => $w->selected_arrangement_id, 'vendor_orders' => $vendorOrders] + ProjectArchives::metadata($w, false);
     }
 
     private function arrangementComplete(object $w): bool
@@ -172,7 +180,7 @@ final class ProjectService
 
         return $this->packageSummary($w) + ['version' => $v === null ? null : $this->versionView($v),
             'has_order' => $hasOrder,
-            'can_delete' => ! $hasOrder && $this->project($request, $w->project_id)->status === 'ACTIVE',
+            'can_delete' => $w->archived_at === null && ! $hasOrder && $this->project($request, $w->project_id)->status === 'ACTIVE',
             'budget' => app(ProjectBudget::class)->metrics($this->project($request, $w->project_id), $w), 'missing_lines' => $missing,
             'project_status' => $this->project($request, $w->project_id)->status,
             'document' => ['status' => 'PHASE_15_PDF_PENDING', 'label' => 'Work Package PDF', 'version_id' => $v?->id, 'content_hash' => $v?->content_hash]];
@@ -241,6 +249,14 @@ final class ProjectService
     /** @param array<string, mixed> $input */
     public function update(Request $request, string $id, array $input): void
     {
+        if (($input['status'] ?? null) === 'ARCHIVED') {
+            if (array_diff(array_keys($input), ['status', 'lock_version']) !== []) {
+                throw new AuthenticationException('ARCHIVE_SEPARATE_ACTION', 'Save planning changes before archiving.', 422);
+            }
+            app(ProjectArchives::class)->change($request, $id, true, 'ARCHIVE', $input['lock_version']);
+
+            return;
+        }
         $key = $this->keys->requireIdempotencyKey($request);
         DB::transaction(function () use ($request, $id, $input, $key): void {
             $p = $this->project($request, $id, true);
@@ -248,7 +264,7 @@ final class ProjectService
                 return;
             }
             self::version($p, $input['lock_version']);
-            if ($p->status === 'ARCHIVED' || ($p->status === 'COMPLETED' && ($input['status'] ?? null) !== 'ARCHIVED')) {
+            if (in_array($p->status, ['ARCHIVED', 'COMPLETED'], true)) {
                 throw new AuthenticationException('PROJECT_CLOSED', 'This Project is read-only. Retain its planning and procurement history.', 409);
             }
             $history = DB::table('orders as o')->join('work_packages as w', 'w.id', '=', 'o.work_package_id')->where('w.project_id', $id)->exists();

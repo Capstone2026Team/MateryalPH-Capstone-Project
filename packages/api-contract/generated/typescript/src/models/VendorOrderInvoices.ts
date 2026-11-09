@@ -113,7 +113,7 @@ export interface VendorOrderInvoices {
      */
     billingDetails?: VendorInvoiceBillingDetails | null;
     /**
-     *
+     * Authorized to prepare a first copy or a linked correction of the latest sent invoice after a Buyer return, correction request or amount/VAT mismatch.
      */
     canUpload: boolean;
     /**

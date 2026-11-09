@@ -1,10 +1,18 @@
 import { PublicFinanceApi, ResponseError } from '@materyalph/api-client-ts'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 
 import App from './App'
 import * as authApi from './lib/auth-api'
 import { resetEnterpriseLoaderForTests } from './lib/recaptcha-enterprise'
+
+const routers: ReturnType<typeof createBrowserRouter>[] = []
+function renderApp() {
+  const router = createBrowserRouter([{ path: '*', element: <App /> }])
+  routers.push(router)
+  return render(<RouterProvider router={router} />)
+}
 
 vi.mock('./lib/auth-api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./lib/auth-api')>()
@@ -19,6 +27,7 @@ describe('Vendor public portal', () => {
   })
 
   afterEach(() => {
+    for (const router of routers.splice(0)) router.dispose()
     delete window.grecaptcha
     resetEnterpriseLoaderForTests()
     vi.unstubAllEnvs()
@@ -28,7 +37,7 @@ describe('Vendor public portal', () => {
 
   test('carries the Vendor sign-in email into the shared recovery choices', () => {
     window.history.replaceState({}, '', '/login')
-    render(<App />)
+    renderApp()
     fireEvent.change(screen.getByRole('textbox', { name: /Email address/ }), { target: { value: 'owner@example.test' } })
     fireEvent.click(screen.getByRole('link', { name: 'Forgot password?' }))
     expect(screen.getByRole('heading', { name: 'Recover your account' })).toBeVisible()
@@ -44,7 +53,7 @@ describe('Vendor public portal', () => {
       .mockResolvedValueOnce(validationError({ password: ['The password must contain at least one uppercase and one lowercase letter.'] }).response)
     vi.stubGlobal('fetch', fetchMock)
     window.history.replaceState({}, '', '/accept-invite?token=test-token')
-    render(<App />)
+    renderApp()
 
     await waitFor(() => expect(renderWidget).toHaveBeenCalledOnce())
     const parameters = renderWidget.mock.calls[0]?.[1] as Record<string, unknown>
@@ -66,7 +75,7 @@ describe('Vendor public portal', () => {
     const accept = vi.spyOn(authApi, 'acceptVendorStaffInvitation').mockResolvedValue({} as never)
     const renderWidget = installRecaptcha()
     window.history.replaceState({}, '', '/accept-invite?token=test-token')
-    render(<App />)
+    renderApp()
     await completeInvitationForm(renderWidget)
     fireEvent.click(screen.getByRole('button', { name: 'Accept invitation' }))
 
@@ -85,7 +94,7 @@ describe('Vendor public portal', () => {
     const verifyRisk = vi.spyOn(authApi, 'verifyRiskChallenge').mockResolvedValue({} as never)
     const renderWidget = installRecaptcha()
     window.history.replaceState({}, '', '/accept-invite?token=test-token')
-    render(<App />)
+    renderApp()
     await completeInvitationForm(renderWidget)
     fireEvent.click(screen.getByRole('button', { name: 'Use an email security check instead' }))
     fireEvent.click(screen.getByRole('button', { name: 'Accept invitation' }))
@@ -103,7 +112,7 @@ describe('Vendor public portal', () => {
     const accept = vi.spyOn(authApi, 'acceptVendorStaffInvitation')
     const renderWidget = installRecaptcha()
     window.history.replaceState({}, '', '/accept-invite?token=test-token')
-    render(<App />)
+    renderApp()
     await completeInvitationForm(renderWidget)
     const parameters = renderWidget.mock.calls[0]?.[1] as Record<string, unknown>
     act(() => (parameters['expired-callback'] as () => void)())
@@ -114,7 +123,7 @@ describe('Vendor public portal', () => {
 
   test('renders the approved opportunity, verification, and current fee disclosures', async () => {
     vi.spyOn(PublicFinanceApi.prototype, 'getPublicCommissionPolicy').mockResolvedValue({ data: { current: { id: 'policy-public', version: 2, commissionBasisPoints: 325, rateLabel: '3.25%', effectiveFrom: new Date(), status: 'CURRENT' } }, meta: {}, errors: [] })
-    render(<App />)
+    renderApp()
 
     expect(screen.getByRole('heading', { name: 'Build your store’s next chapter.' })).toBeVisible()
     fireEvent.click(screen.getByRole('tab', { name: 'Your store and Buyers' }))
@@ -128,7 +137,7 @@ describe('Vendor public portal', () => {
   })
 
   test('exposes operable navigation and FAQ controls', () => {
-    render(<App />)
+    renderApp()
 
     const menu = screen.getByRole('button', { name: 'Open navigation' })
     fireEvent.click(menu)
@@ -154,7 +163,7 @@ describe('Vendor public portal', () => {
   })
 
   test('serves a real registration route from the primary CTA', () => {
-    render(<App />)
+    renderApp()
     const registrationLink = screen.getAllByRole('link', { name: /register your store/i }).at(0)
     expect(registrationLink).toBeDefined()
     fireEvent.click(registrationLink!)
@@ -166,7 +175,7 @@ describe('Vendor public portal', () => {
 
   test.each(['/register', '/register/google'])('opens sign-up documents in a separate tab on %s', (path) => {
     window.history.replaceState({}, '', path)
-    render(<App />)
+    renderApp()
     for (const [name, href] of [
       ['Terms of Service', '/legal/terms-of-service'],
       ['Privacy Notice', '/legal/privacy-notice'],
@@ -180,7 +189,7 @@ describe('Vendor public portal', () => {
 
   test('shows a friendly portal-isolation error after a denied Google callback', () => {
     window.history.replaceState({}, '', '/auth/callback?status=error&code=PORTAL_ACCESS_DENIED')
-    render(<App />)
+    renderApp()
 
     expect(screen.getByRole('heading', { name: 'Google sign-in could not continue' })).toBeVisible()
     expect(screen.getByText(/belongs to a different MateryalPH account type/i)).toBeVisible()
@@ -190,7 +199,7 @@ describe('Vendor public portal', () => {
 
   test('password visibility does not clear the entered password', () => {
     window.history.replaceState({}, '', '/login')
-    render(<App />)
+    renderApp()
     const password = screen.getByLabelText(/^Password/i, { selector: 'input' })
     fireEvent.change(password, { target: { value: 'ExamplePassword123' } })
     fireEvent.click(screen.getByRole('button', { name: 'Show password' }))
@@ -202,7 +211,7 @@ describe('Vendor public portal', () => {
 
   test('registration shows each password requirement and marks it met as the Owner types', () => {
     window.history.replaceState({}, '', '/register')
-    render(<App />)
+    renderApp()
     const requirements = screen.getByRole('list', { name: 'Requirements for this password' })
     const status = () => Array.from(requirements.querySelectorAll('li')).map(item => item.textContent)
     expect(status()).toEqual([
@@ -226,7 +235,7 @@ describe('Vendor public portal', () => {
 
   test.each(['ACCOUNT_NOT_FOUND', 'OIDC_STATE_INVALID', 'OIDC_KEYS_UNAVAILABLE', 'access_denied', 'unknown-internal-detail'])('Google callback %s offers safe recovery actions', (code) => {
     window.history.replaceState({}, '', `/auth/callback?status=error&code=${code}`)
-    render(<App />)
+    renderApp()
     expect(screen.getByRole('link', { name: 'Back to Vendor sign in' })).toHaveAttribute('href', '/login')
     expect(screen.getByRole('link', { name: 'Register a Vendor account' })).toHaveAttribute('href', '/register')
     expect(screen.getByRole('button', { name: 'Use a different Google account' })).toBeEnabled()
@@ -243,7 +252,7 @@ describe('Vendor public portal', () => {
     const renderWidget = installRecaptcha()
 
     window.history.replaceState({}, '', '/login')
-    render(<App />)
+    renderApp()
     await waitFor(() => expect(renderWidget).toHaveBeenCalledOnce())
     const widgetParameters = renderWidget.mock.calls[0]?.[1] as Record<string, unknown>
     act(() => (widgetParameters.callback as (token: string) => void)('checkbox-token'))
@@ -275,7 +284,7 @@ describe('Vendor public portal', () => {
     const renderWidget = installRecaptcha()
 
     window.history.replaceState({}, '', '/register')
-    render(<App />)
+    renderApp()
     await completeRegistrationForm(renderWidget)
     fireEvent.click(screen.getByRole('button', { name: /create owner account/i }))
 
@@ -321,7 +330,7 @@ describe('Vendor public portal', () => {
     const renderWidget = installRecaptcha()
 
     window.history.replaceState({}, '', '/register')
-    render(<App />)
+    renderApp()
     await completeRegistrationForm(renderWidget)
     fireEvent.click(screen.getByRole('button', { name: /create owner account/i }))
 

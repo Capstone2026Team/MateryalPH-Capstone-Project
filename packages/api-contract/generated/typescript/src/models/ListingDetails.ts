@@ -155,6 +155,10 @@ export interface ListingDetails {
      */
     unitsSold: string;
     /**
+     * Distinct Buyers with COMPLETED orders for this listing across all variants and repeat purchases.
+     */
+    uniqueBuyers?: number;
+    /**
      *
      */
     isFavorite: boolean;
@@ -264,6 +268,7 @@ export function ListingDetailsFromJSONTyped(json: any, ignoreDiscriminator: bool
         'compliance': ListingComplianceFromJSON(json['compliance']),
         'productRating': ProductRatingSummaryFromJSON(json['product_rating']),
         'unitsSold': json['units_sold'],
+        'uniqueBuyers': json['unique_buyers'] == null ? undefined : json['unique_buyers'],
         'isFavorite': json['is_favorite'],
         'purchasable': json['purchasable'],
         'notPurchasableReason': json['not_purchasable_reason'],
@@ -304,6 +309,7 @@ export function ListingDetailsToJSONTyped(value?: ListingDetails | null, ignoreD
         'compliance': ListingComplianceToJSON(value['compliance']),
         'product_rating': ProductRatingSummaryToJSON(value['productRating']),
         'units_sold': value['unitsSold'],
+        'unique_buyers': value['uniqueBuyers'],
         'is_favorite': value['isFavorite'],
         'purchasable': value['purchasable'],
         'not_purchasable_reason': value['notPurchasableReason'],

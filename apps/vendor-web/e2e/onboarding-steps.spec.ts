@@ -1,11 +1,9 @@
 import { expect, test, type Page } from '@playwright/test'
 import { randomUUID } from 'node:crypto'
-import { mkdirSync } from 'node:fs'
-import { resolve } from 'node:path'
 
 test('Store Operation schedule stays readable at every viewport', async ({ page }, testInfo) => {
   await page.goto('/onboarding/setup')
-  await page.getByRole('button', { name: '5 Store Operation' }).click()
+  await page.getByRole('button', { name: '4 Store Operation' }).click()
   const schedule = page.getByRole('region', { name: 'Weekly operating schedule' })
   await expect(schedule).toBeVisible()
   await page.getByRole('combobox', { name: 'Monday status' }).selectOption('OPEN')
@@ -76,9 +74,7 @@ test('verification steps reflow and keep only the selected requirement area visi
   await expect(page.getByRole('radio', { name: 'One Person Corporation (OPC)' })).toBeVisible()
   await expect(page.getByRole('group', { name: 'Business and Compliance Evidence' })).toBeVisible()
   await assertStepperFits(page, 'Store Verification', 4)
-  const evidenceDirectory = resolve('../../docs/design/evidence/phase-3b-business-information')
-  mkdirSync(evidenceDirectory, { recursive: true })
-  await page.screenshot({ path: resolve(evidenceDirectory, `${testInfo.project.name}-header.png`) })
+  await page.screenshot({ path: testInfo.outputPath('verification-header.png') })
   const business = page.locator('#verification-draft')
   await expect(business.getByText('Verified', { exact: true })).toBeVisible()
   const email = business.getByRole('textbox', { name: 'Store email', exact: true })
@@ -88,9 +84,9 @@ test('verification steps reflow and keep only the selected requirement area visi
   await expect(business.getByRole('button', { name: 'Send Code' })).toHaveCount(0)
   await business.screenshot({ path: testInfo.outputPath('business-information.png') })
   await page.getByRole('textbox', { name: 'Registered Business Name', exact: true }).scrollIntoViewIfNeeded()
-  await page.screenshot({ path: resolve(evidenceDirectory, `${testInfo.project.name}-contact.png`) })
+  await page.screenshot({ path: testInfo.outputPath('verification-contact.png') })
   await page.getByRole('region', { name: 'Store contact information' }).scrollIntoViewIfNeeded()
-  await page.screenshot({ path: resolve(evidenceDirectory, `${testInfo.project.name}-email.png`) })
+  await page.screenshot({ path: testInfo.outputPath('verification-email.png') })
   const before = await email.boundingBox()
   if (page.viewportSize()!.width >= 768) {
     const registered = await business.getByRole('textbox', { name: 'Registered Business Name', exact: true }).boundingBox()
@@ -155,9 +151,9 @@ test('setup previews media and switches every operational section without page o
   expect(nameBox?.width).toBe(descriptionBox?.width)
   await expect(preview.getByRole('heading', { name: 'Updated Supply Store' })).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('setup-public-preview.png'), fullPage: true })
-  await assertStepperFits(page, 'Store Setup', 6)
+  await assertStepperFits(page, 'Store Setup', 5)
   await expect(page.getByLabel('Upload image')).toHaveCount(2)
-  const labels = ['Fulfillment Configuration', 'Xendit TEST Connection', 'Team Accounts', 'Store Operation', 'Review and Complete']
+  const labels = ['Fulfillment Configuration', 'Xendit TEST Connection', 'Store Operation', 'Review and Complete']
   for (const label of labels) {
     await page.getByRole('button', { name: 'Next', exact: true }).click()
     await expect(page.locator('#onboarding-section-title')).toHaveText(label)
@@ -338,9 +334,7 @@ test('Business Information email lifecycle, validation, guards and evidence stay
   await expect(stale).toBeVisible()
   await expect.poll(() => drafts.length).toBe(saves + 1)
   await assertStepperFits(page, 'Store Verification', 4)
-  const evidence = resolve('../../docs/design/evidence/phase-3b-business-information')
-  mkdirSync(evidence, { recursive: true })
-  await page.screenshot({ path: resolve(evidence, `${testInfo.project.name}.png`), fullPage: true })
+  await page.screenshot({ path: testInfo.outputPath('business-information-evidence.png'), fullPage: true })
 })
 
 
@@ -445,7 +439,7 @@ test('commission panel is above Privacy with explicit scroll-gated acceptance an
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('commission-panel.png'), fullPage: true })
   await page.goto('/onboarding/setup')
-  await expect(page.getByRole('navigation', { name: 'Store Setup steps' }).getByRole('button')).toHaveCount(6)
+  await expect(page.getByRole('navigation', { name: 'Store Setup steps' }).getByRole('button')).toHaveCount(5)
   await expect(page.getByRole('heading', { name: 'Commission Terms', exact: true })).toHaveCount(0)
 })
 
@@ -463,7 +457,7 @@ test('Xendit panel connects inline and preserves connection on reload', async ({
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('xendit-connection.png'), fullPage: true })
   await page.getByRole('button', { name: 'Next', exact: true }).click()
-  await expect(page.locator('#onboarding-section-title')).toHaveText('Team Accounts')
+  await expect(page.locator('#onboarding-section-title')).toHaveText('Store Operation')
   await page.reload()
   await page.getByRole('button', { name: '3 Xendit TEST Connection' }).click()
   await expect(panel.getByText('Xendit — Connected', { exact: true })).toBeVisible()
@@ -480,4 +474,48 @@ test('Xendit panel handles provider failure and retry', async ({ page }) => {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
   await panel.getByRole('button', { name: 'Connect Xendit' }).click()
   await expect(panel.getByText('Xendit — Connected', { exact: true })).toBeVisible()
+})
+
+test('browser history saves drafts, retains failed edits and resumes saved progress', async ({ page }, testInfo) => {
+  const saved = {
+    lock_version: 1, step_completion: [], requirements: [], drafts: [],
+    organization: { store_name: 'History Supply', lock_version: 1 }, welcome_required: false,
+    permissions: ['vendor.onboarding.manage', 'vendor.onboarding.submit'],
+    verification: { status: 'NOT_STARTED' },
+    setup: { status: 'IN_PROGRESS', profile: { public_store_name: 'History Supply', description: 'Original description' } },
+    activation: { status: 'NOT_READY', readiness: { ready: false, blockers: [] } }, sections: {},
+  }
+  let attempts = 0
+  await page.route(/\/api\/v1\/vendors?\/onboarding$/, route => route.fulfill({ json: { data: saved, meta: {}, errors: [] } }))
+  await page.route('**/api/v1/vendors/onboarding/setup', async route => {
+    attempts++
+    if (attempts === 1) {
+      await route.fulfill({ status: 503, json: { data: null, meta: {}, errors: [{ code: 'SERVICE_UNAVAILABLE', message: 'Draft saving is temporarily unavailable.' }] } })
+      return
+    }
+    const input = route.request().postDataJSON()
+    saved.setup.profile.description = input.description
+    saved.setup.profile.public_store_name = input.public_store_name
+    saved.organization.lock_version++
+    saved.lock_version++
+    await route.fulfill({ json: { data: saved, meta: {}, errors: [] } })
+  })
+  await page.goto('/dashboard')
+  await page.getByRole('link', { name: 'Continue Store Setup', exact: true }).click()
+  const description = page.getByRole('textbox', { name: 'Store description' })
+  await description.fill('Keep these edits through browser history')
+  await page.goBack()
+  await expect(page.getByText(/Draft saving is temporarily unavailable/)).toBeVisible()
+  await expect(description).toHaveValue('Keep these edits through browser history')
+  await page.getByRole('button', { name: 'Retry save' }).click()
+  await expect(page.getByText('Saved', { exact: true })).toBeVisible()
+  await page.goBack()
+  await expect(page.getByText('Limited-Access Vendor Dashboard')).toBeVisible()
+  await page.goForward()
+  await expect(description).toHaveValue('Keep these edits through browser history')
+  await page.reload()
+  await expect(description).toHaveValue('Keep these edits through browser history')
+  expect(attempts).toBe(2)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('resumed-setup.png'), fullPage: true })
 })

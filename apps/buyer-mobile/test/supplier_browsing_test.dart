@@ -369,6 +369,7 @@ void main() {
     (tester) async {
       await _pump(tester);
       expect(find.widgetWithText(ChoiceChip, 'All'), findsNothing);
+      expect(find.text(SupplierListView.verified.explanation), findsOneWidget);
       await tester.enterText(
         find.byKey(const ValueKey('supplier-name-search')),
         'Panda',
@@ -378,11 +379,16 @@ void main() {
       expect(find.text('Manila Building Supply'), findsNothing);
       await tester.tap(find.byKey(const ValueKey('supplier-view-directory')));
       await tester.pump();
+      expect(find.text(SupplierListView.directory.explanation), findsOneWidget);
+      expect(find.text(SupplierListView.verified.explanation), findsNothing);
       expect(find.text('Panda Construction Supply'), findsOneWidget);
       expect(find.text('Panda Hardware'), findsNothing);
       await tester.tap(find.byTooltip('Clear store search'));
       await tester.pump();
       expect(find.text('R Hidalgo Hardware'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('supplier-view-favorites')));
+      await tester.pump();
+      expect(find.text(SupplierListView.favorites.explanation), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
     },
   );

@@ -419,6 +419,9 @@ paths:
       description: One normal Buyer/store chat. The server uses the authorized store sales conversation
         for ordinary replies automatically, preserving order closure and original commercial
         permissions. Work Packages appear as message attachments; users never choose a reply subject.
+        Order-specific fulfillment messages and their read receipts remain in the fulfillment popup,
+        outside this sales timeline. A closed fulfillment thread never locks the normal chat.
+        Assigned Fulfillment Staff retain only the selected assigned order thread.
       security:
         - accessCookie: []
           webCsrf: []
@@ -575,9 +578,13 @@ paths:
       tags:
         - Messaging
       operationId: listConversations
-      description: Unified paginated inbox of authorized SALES inquiry threads, including Work Packages
-        directly. Fulfillment remains order-specific. Each inquiry preserves its own receipts and
-        personal archive.
+      description: Paginated inbox grouped by authorized Buyer/store sales chat before pagination,
+        including Work Package inquiries. Owner and Store Manager rows, previews and unread counts
+        exclude order-specific fulfillment messages; existing order-only relationships have a permanent
+        sales chat. Fulfillment conversations open inside that chat through the authorized order-list
+        popup and keep separate unread counts and read-only closure. Assigned Fulfillment Staff see
+        only their assigned order threads, listed separately per order. Buyer archive applies to the
+        normal sales chat together and preserves original history and receipts.
       security:
         - passportBearer: []
         - accessCookie: []
@@ -5238,6 +5245,11 @@ paths:
   /vendors/onboarding/verification/submit:
     post:
       operationId: submitVendorVerification
+      description: An unchanged successful request replays with the same
+        Idempotency-Key before revalidating transient map confirmation tokens.
+        Changed or expired idempotency requests return a conflict. First
+        submissions validate the current draft and atomically submit evidence
+        for manual review.
       tags: [ Vendor Onboarding ]
       security: [ { accessCookie: [], webCsrf: [] } ]
       parameters:
@@ -6384,39 +6396,43 @@ paths:
   /admin/vendor-verification/{organizationId}/restore:
     post:
       operationId: restoreVendorActivation
-      tags: [ Admin Vendor Verification ]
-      security: [ { accessCookie: [], webCsrf: [] } ]
+      tags:
+        - Admin Vendor Verification
+      security:
+        - accessCookie: []
+          webCsrf: []
       parameters:
-        - {
-            name: organizationId,
-            in: path,
-            required: true,
-            schema: { type: string, format: uuid }
-          }
-        - {
-            name: Idempotency-Key,
-            in: header,
-            required: true,
-            schema: { type: string, format: uuid }
-          }
+        - name: organizationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
       requestBody:
         required: true
         content:
-          {
-            application/json: { schema: { $ref: "#/components/schemas/VendorRestriction" } }
-          }
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VendorRestriction"
       responses:
         "200":
-          {
-            description: Administrative activation restoration recorded.,
-            content:
-              {
-                application/json: { schema: { $ref: "#/components/schemas/VendorRestrictionEnvelope" } }
-              }
-          }
-        "401": { $ref: "#/components/responses/ErrorResponse" }
-        "403": { $ref: "#/components/responses/ErrorResponse" }
-        "409": { $ref: "#/components/responses/ErrorResponse" }
+          description: Administrative activation restoration recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VendorRestrictionEnvelope"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/ErrorResponse"
+        "409":
+          $ref: "#/components/responses/ErrorResponse"
   /vendor-onboarding-files/{fileId}/content:
     get:
       operationId: downloadVendorOnboardingFile
@@ -8571,7 +8587,11 @@ paths:
         Item-Based search over MAT-02 eligible Tier 2 listings inside the
         radius; Directory Suppliers are never inventory. Browsing defaults to
         DISTANCE and a text query defaults to BEST_DEAL (SRS, a normalized
-        weighted sum with the Buyer's Item-Based weights). FAVORITES_FIRST is a
+        weighted sum with the Buyer's Item-Based weights). BEST_DEAL puts exact
+        product names first, then names containing every search token, then full
+        catalog/alias matches, then fuzzy alternatives ordered by similarity.
+        Within the same match level, the existing SRS and tie-breakers apply.
+        FAVORITES_FIRST is a
         separate explicit sort that never changes Best Deal. Best Price compares
         the MAT-03 normalized price of the same comparable group and canonical
         unit across in-stock offers in the radius and needs two Vendors. One
@@ -16234,8 +16254,11 @@ paths:
       "operationId": "listVendorInvoices"
       "tags":
         - "Vendor Invoices"
-      "description": "invoices.view. Open requests, orders without an invoice copy
-        yet, uploaded records and reconciliation items. Never Earnings or other
+      "description": "invoices.view. REQUESTS contains only requested first copies awaiting Send;
+        uploaded and downloaded requests are excluded. RECONCILIATION contains the latest sent
+        version per order with an amount/VAT mismatch (including explained differences),
+        a Buyer return or a pending correction request. Earlier versions remain in RECORDS.
+        Counts use these same rules before date filtering. Never Earnings or other
         protected finance. Every Vendor list row includes its authorized order_id
         for opening the order invoice details."
       "security":
@@ -16296,7 +16319,9 @@ paths:
       tags:
         - Vendor Invoices
       description: invoices.view. Customer Service sees status and metadata only; the full Buyer TIN only
-        for roles that upload.
+        for roles that upload. can_upload permits a private linked correction of the latest sent
+        version after a Buyer return, correction request or unresolved amount/VAT mismatch,
+        including an explained difference. Sent document fields and files remain immutable.
       security:
         - accessCookie: []
           webCsrf: []
@@ -16326,8 +16351,9 @@ paths:
         - Vendor Invoices
       description: invoices.upload. Save or replace the private invoice draft with optimistic concurrency
         and Idempotency-Key. Uploading never sends to the Buyer. After Send, preparation is locked
-        until the Buyer requests a correction or returns the latest copy. No accepted Buyer total
-        changes.
+        unless the Buyer requests a correction, returns the latest copy or the latest invoice has
+        an unresolved amount/VAT mismatch, including an explained difference. Corrections may retain
+        the current private attachment or upload a replacement. No accepted Buyer total changes.
       security:
         - accessCookie: []
           webCsrf: []
@@ -20966,12 +20992,10 @@ paths:
       tags:
         - Messaging
       operationId: archiveChatConversation
-      description: Hides the Buyer and Store sales group, including its item and
-        project inquiries, from this Buyer's inbox. It is idempotent, personal
-        and reversible; messages, quotations and orders are never changed or
-        deleted. Fulfillment threads stay with their order (409
-        CONVERSATION_NOT_ARCHIVABLE). New activity in any inquiry returns the
-        group to the inbox.
+      description: Hides the Buyer and Store sales group, including its item and project inquiries, from this Buyer's inbox.
+        It is idempotent, personal and reversible; messages, quotations and orders are never changed or deleted. Fulfillment
+        threads stay with their order (409 CONVERSATION_NOT_ARCHIVABLE). New activity in any inquiry returns the group to
+        the inbox.
       security:
         - passportBearer: []
       parameters:
@@ -21007,8 +21031,8 @@ paths:
       tags:
         - Messaging
       operationId: restoreChatConversation
-      description: Returns the archived Buyer and Store sales group to the Buyer's
-        inbox. Idempotent. Accepts any authorized sales inquiry in the group.
+      description: Returns the archived Buyer and Store sales group to the Buyer's inbox. Idempotent. Accepts any authorized
+        sales inquiry in the group.
       security:
         - passportBearer: []
       parameters:
@@ -23694,7 +23718,8 @@ paths:
         The Buyer email includes the exact uploaded invoice file and a summary of the sent invoice.
         Delivery rechecks current Buyer access, clean private storage and attachment integrity.
         Requires the current lock_version. No file means no send. A sent version cannot be edited or
-        resent with a new key until the Buyer returns it or requests a correction.
+        resent with a new key. A Buyer return, correction request or unresolved amount/VAT
+        mismatch (including an explained difference) permits a linked new correction draft.
       security:
         - accessCookie: []
           webCsrf: []
@@ -24039,6 +24064,355 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "422":
           $ref: "#/components/responses/ErrorResponse"
+  /buyers/archived-items:
+    get:
+      tags:
+        - Buyer Projects
+      operationId: listProjectArchives
+      description: Owned archives, paginated by type. Retention lasts exactly 720 hours; financial and transaction originals
+        remain retained after workspace removal.
+      security:
+        - passportBearer: []
+      parameters:
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - PROJECT
+              - WORK_PACKAGE
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+      responses:
+        "200":
+          description: Authorized procurement result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectArchivePageResponse"
+        "401":
+          description: Authentication required.
+        "403":
+          description: Buyer access required.
+        "404":
+          description: Owned item unavailable.
+        "409":
+          description: Ongoing orders, archived parent, expired retention or stale version. No mutation.
+        "422":
+          description: Invalid request.
+  /buyers/projects/{itemId}/archive:
+    post:
+      tags:
+        - Buyer Projects
+      operationId: archiveProject
+      description: Archive only after all related orders are terminal. The legacy Project status update uses this same guard.
+      security:
+        - passportBearer: []
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectVersionRequest"
+      responses:
+        "200":
+          description: Authorized procurement result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectArchiveMutationResponse"
+        "401":
+          description: Authentication required.
+        "403":
+          description: Buyer access required.
+        "404":
+          description: Owned item unavailable.
+        "409":
+          description: Ongoing orders, archived parent, expired retention or stale version. No mutation.
+        "422":
+          description: Invalid request.
+  /buyers/projects/{itemId}/restore:
+    post:
+      tags:
+        - Buyer Projects
+      operationId: restoreProject
+      description: Restore before expiry under the parent lock, clear both timestamps, and preserve cancelled orders. A Work
+        Package requires its parent Project restored first.
+      security:
+        - passportBearer: []
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectVersionRequest"
+      responses:
+        "200":
+          description: Authorized procurement result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectArchiveMutationResponse"
+        "401":
+          description: Authentication required.
+        "403":
+          description: Buyer access required.
+        "404":
+          description: Owned item unavailable.
+        "409":
+          description: Ongoing orders, archived parent, expired retention or stale version. No mutation.
+        "422":
+          description: Invalid request.
+  /buyers/projects/{itemId}/permanent-deletion:
+    post:
+      tags:
+        - Buyer Projects
+      operationId: permanentlyDeleteProject
+      description: Irreversibly remove an archived item from the Buyer workspace after rechecking ongoing orders. Retain
+        immutable commercial, financial and audit rows and references.
+      security:
+        - passportBearer: []
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectVersionRequest"
+      responses:
+        "200":
+          description: Authorized procurement result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectArchiveMutationResponse"
+        "401":
+          description: Authentication required.
+        "403":
+          description: Buyer access required.
+        "404":
+          description: Owned item unavailable.
+        "409":
+          description: Ongoing orders, archived parent, expired retention or stale version. No mutation.
+        "422":
+          description: Invalid request.
+  /buyers/work-packages/{itemId}/archive:
+    post:
+      tags:
+        - Buyer Projects
+      operationId: archiveWorkPackage
+      description: Archive only after all related orders are terminal. The legacy Project status update uses this same guard.
+      security:
+        - passportBearer: []
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectVersionRequest"
+      responses:
+        "200":
+          description: Authorized procurement result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectArchiveMutationResponse"
+        "401":
+          description: Authentication required.
+        "403":
+          description: Buyer access required.
+        "404":
+          description: Owned item unavailable.
+        "409":
+          description: Ongoing orders, archived parent, expired retention or stale version. No mutation.
+        "422":
+          description: Invalid request.
+  /buyers/work-packages/{itemId}/restore:
+    post:
+      tags:
+        - Buyer Projects
+      operationId: restoreWorkPackage
+      description: Restore before expiry under the parent lock, clear both timestamps, and preserve cancelled orders. A Work
+        Package requires its parent Project restored first.
+      security:
+        - passportBearer: []
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectVersionRequest"
+      responses:
+        "200":
+          description: Authorized procurement result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectArchiveMutationResponse"
+        "401":
+          description: Authentication required.
+        "403":
+          description: Buyer access required.
+        "404":
+          description: Owned item unavailable.
+        "409":
+          description: Ongoing orders, archived parent, expired retention or stale version. No mutation.
+        "422":
+          description: Invalid request.
+  /buyers/work-packages/{itemId}/permanent-deletion:
+    post:
+      tags:
+        - Buyer Projects
+      operationId: permanentlyDeleteWorkPackage
+      description: Irreversibly remove an archived item from the Buyer workspace after rechecking ongoing orders. Retain
+        immutable commercial, financial and audit rows and references.
+      security:
+        - passportBearer: []
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectVersionRequest"
+      responses:
+        "200":
+          description: Authorized procurement result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectArchiveMutationResponse"
+        "401":
+          description: Authentication required.
+        "403":
+          description: Buyer access required.
+        "404":
+          description: Owned item unavailable.
+        "409":
+          description: Ongoing orders, archived parent, expired retention or stale version. No mutation.
+        "422":
+          description: Invalid request.
+  /buyers/orders/{orderId}/rescan-suppliers:
+    post:
+      tags:
+        - Buyer Projects
+      operationId: rescanProjectOrderSuppliers
+      description: Authorize a cancelled order and return its unchanged Work Package for the existing supplier scan and
+        selection flow. Groups source only uncovered quantities; peers and cancelled history remain unchanged. Does not
+        create an order.
+      security:
+        - passportBearer: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectVersionRequest"
+      responses:
+        "200":
+          description: Authorized procurement result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkPackageViewResponse"
+        "401":
+          description: Authentication required.
+        "403":
+          description: Buyer access required.
+        "404":
+          description: Owned item unavailable.
+        "409":
+          description: Ongoing orders, archived parent, expired retention or stale version. No mutation.
+        "422":
+          description: Invalid request.
 components:
   securitySchemes:
     supportGuestCookie: { type: apiKey, in: cookie, name: mp_support }
@@ -26114,7 +26488,8 @@ components:
         stock_label: { type: string, enum: [ IN_STOCK, LIMITED_STOCK ] }
         stock_confirmed_at: { type: string, format: date-time }
         product_rating: { $ref: "#/components/schemas/ProductRatingSummary" }
-        units_sold: { type: string, description: Quantity on completed orders. }
+        units_sold: { type: string, description: Quantity on completed orders; used by TOP_SELLING. }
+        unique_buyers: { type: integer, minimum: 0, description: Distinct Buyers with COMPLETED orders for this listing across all variants and repeat purchases. }
         distance_meters:
           {
             type: integer,
@@ -26455,6 +26830,7 @@ components:
         compliance: { $ref: "#/components/schemas/ListingCompliance" }
         product_rating: { $ref: "#/components/schemas/ProductRatingSummary" }
         units_sold: { type: string }
+        unique_buyers: { type: integer, minimum: 0, description: Distinct Buyers with COMPLETED orders for this listing across all variants and repeat purchases. }
         is_favorite: { type: boolean }
         purchasable: { type: boolean }
         not_purchasable_reason:
@@ -26797,6 +27173,7 @@ components:
           }
     CartItemUpdate:
       type: object
+      description: Atomically edits an owned cart line. A listing_variant_id requires expected_price_version_id and must belong to the same listing. A duplicate option returns CART_VARIANT_ALREADY_EXISTS (409). fulfillment_method changes the entire Vendor group and retains all delivery eligibility checks. No stock is reserved.
       additionalProperties: false
       required: [ lock_version ]
       properties:
@@ -26804,6 +27181,9 @@ components:
         quantity: { type: string, pattern: '^\d{1,7}(\.\d{1,4})?$' }
         saved_for_later: { type: boolean }
         accept_current_price: { type: boolean }
+        listing_variant_id: { type: string, format: uuid }
+        expected_price_version_id: { type: string, format: uuid }
+        fulfillment_method: { type: string, enum: [ DELIVERY, PICKUP ] }
     CartFulfillmentUpdate:
       type: object
       additionalProperties: false
@@ -28139,9 +28519,10 @@ components:
             "email_masked":
               {
                 "type": "boolean",
-                "description": "Buyer email stays masked until recent identity verification."
+                "description": "False for the authenticated owner's full account email. Retained for client compatibility."
               },
-            "email": { "type": "string" },
+            "email": { "type": "string", "description": "Full account email, visible only to the authenticated account owner." },
+            "email_verified": { "type": "boolean", "description": "Whether the account email ownership has been verified; not a Buyer performance or business verification badge." },
             "account_type": { "type": "string" },
             "account_status": { "type": "string" },
             "lock_version": { "type": "integer" },
@@ -29976,7 +30357,12 @@ components:
             description: 'Last Asia/Manila day of the pause, inclusive; on or after
               vacation_starts_on. Procurement reopens at the next midnight.'
           }
-        public_store_name: { type: string, maxLength: 180 }
+        public_store_name:
+          type: [ string, 'null' ]
+          maxLength: 180
+          description: Empty or null saves an unfinished name as blank without
+            discarding other draft fields. A nonblank name is required for
+            Store Setup completion and activation.
         description: { type: [ string, 'null' ], maxLength: 3000 }
         bulk_capability: { type: boolean }
         fulfillment_method: { type: string, enum: [ SELF_PICKUP, VENDOR_DELIVERY, BOTH ] }
@@ -45068,6 +45454,8 @@ components:
             - type: "null"
         can_upload:
           type: boolean
+          description: Authorized to prepare a first copy or a linked correction of the latest
+            sent invoice after a Buyer return, correction request or amount/VAT mismatch.
         can_open_files:
           type: boolean
         issuer_name:
@@ -45140,6 +45528,7 @@ components:
           "type": "string"
         "state":
           "type": "string"
+          "description": "Request state; Vendor RECONCILIATION rows also include the pending Buyer correction state, REQUESTED or RETURNED_FOR_CORRECTION."
         "details":
           "type": "string"
           "nullable": true
@@ -45186,8 +45575,9 @@ components:
           "oneOf":
             - "$ref": "#/components/schemas/DisputeFileLink"
             - "type": "null"
-      "description": "One row of the selected view: an open request, an order without
-        an invoice copy yet, an uploaded record or a reconciliation item."
+      "description": "One row of the selected view. Vendor REQUESTS shows requested first copies awaiting Send;
+        RECONCILIATION shows the latest invoice per order with an unresolved amount/VAT mismatch,
+        Buyer return or correction request. RECORDS retains all sent versions. Admin log scope is unchanged."
     "InvoiceListMeta":
       "type": "object"
       "properties":
@@ -45335,15 +45725,15 @@ components:
         file:
           type: string
           format: binary
-          description: PDF, JPG or PNG, validated and scanned fail-closed. Required for a new draft; omit to
-            retain its current file.
+          description: PDF, JPG or PNG, validated and scanned fail-closed. Required for the first copy;
+            omit to retain the draft attachment, or the latest sent attachment for an authorized correction.
         lock_version:
           type: integer
           minimum: 0
           description: Current lock version; zero creates a new draft or preset.
       description: Saves a private, editable invoice draft. Never sends a copy or fulfills a Buyer
-        request. Sent versions remain immutable; a Buyer correction or return is required before
-        preparing a correction.
+        request. Sent versions remain immutable. A Buyer correction request, return or unresolved
+        amount/VAT mismatch permits preparation of a linked correction version.
     InvoicePresetInput:
       type: object
       required:
@@ -49350,6 +49740,19 @@ components:
         - "lock_version"
         - "budget"
       "properties":
+        archived_at:
+          type: string
+          format: date-time
+          nullable: true
+        delete_after:
+          type: string
+          format: date-time
+          nullable: true
+        can_archive:
+          type: boolean
+        archive_blocker:
+          type: string
+          nullable: true
         "id":
           "type": "string"
           "format": "uuid"
@@ -49383,6 +49786,19 @@ components:
         - "budget_centavos"
         - "lock_version"
       "properties":
+        archived_at:
+          type: string
+          format: date-time
+          nullable: true
+        delete_after:
+          type: string
+          format: date-time
+          nullable: true
+        can_archive:
+          type: boolean
+        archive_blocker:
+          type: string
+          nullable: true
         selected_arrangement_id:
           type:
             - string
@@ -49479,6 +49895,19 @@ components:
         - "sites"
         - "packages"
       "properties":
+        archived_at:
+          type: string
+          format: date-time
+          nullable: true
+        delete_after:
+          type: string
+          format: date-time
+          nullable: true
+        can_archive:
+          type: boolean
+        archive_blocker:
+          type: string
+          nullable: true
         "id":
           "type": "string"
           "format": "uuid"
@@ -49536,6 +49965,19 @@ components:
         - "missing_lines"
         - "document"
       "properties":
+        archived_at:
+          type: string
+          format: date-time
+          nullable: true
+        delete_after:
+          type: string
+          format: date-time
+          nullable: true
+        can_archive:
+          type: boolean
+        archive_blocker:
+          type: string
+          nullable: true
         selected_arrangement_id: { type: [ string, 'null' ], format: uuid }
         procurement_candidate_id: { type: [ string, 'null' ], format: uuid }
         vendor_orders:
@@ -52431,3 +52873,109 @@ components:
           "type": "array"
           "items":
             "$ref": "#/components/schemas/ApiError"
+    ProjectArchiveItem:
+      type: object
+      required:
+        - id
+        - type
+        - name
+        - budget_centavos
+        - lock_version
+        - project_id
+        - parent_archived
+        - archived_at
+        - delete_after
+        - remaining_days
+        - can_restore
+        - can_delete
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+            - PROJECT
+            - WORK_PACKAGE
+        name:
+          type: string
+        budget_centavos:
+          type: integer
+        lock_version:
+          type: integer
+        project_id:
+          type: string
+          format: uuid
+        project_name:
+          type: string
+          nullable: true
+        parent_archived:
+          type: boolean
+        archived_at:
+          type: string
+          format: date-time
+        delete_after:
+          type: string
+          format: date-time
+        remaining_days:
+          type: integer
+          minimum: 0
+        can_restore:
+          type: boolean
+        can_delete:
+          type: boolean
+    ProjectArchivePage:
+      type: object
+      required:
+        - items
+        - page
+        - has_more
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectArchiveItem"
+        page:
+          type: integer
+        has_more:
+          type: boolean
+    ProjectArchivePageResponse:
+      type: object
+      required:
+        - data
+        - meta
+        - errors
+      properties:
+        data:
+          $ref: "#/components/schemas/ProjectArchivePage"
+        meta:
+          type: object
+          additionalProperties: true
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiError"
+    ProjectArchiveMutation:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+    ProjectArchiveMutationResponse:
+      type: object
+      required:
+        - data
+        - meta
+        - errors
+      properties:
+        data:
+          $ref: "#/components/schemas/ProjectArchiveMutation"
+        meta:
+          type: object
+          additionalProperties: true
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiError"

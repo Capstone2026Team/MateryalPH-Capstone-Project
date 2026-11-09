@@ -18,6 +18,7 @@ use App\Domain\Payments\PayableAmounts;
 use App\Domain\Payments\PaymentPresenter;
 use App\Domain\Payments\PhysicalPaymentService;
 use App\Domain\Procurement\ListingPublicFacts;
+use App\Domain\Projects\ProjectArchives;
 use App\Domain\Projects\ProjectBudget;
 use App\Domain\Vendors\DeliveryVehicleProfile;
 use App\Support\PortalDateRange;
@@ -501,7 +502,14 @@ final class OrderQueries
             $version = DB::table('work_package_versions as v')->join('work_packages as w', 'w.id', '=', 'v.work_package_id')->join('projects as p', 'p.id', '=', 'w.project_id')
                 ->where('v.id', $order->work_package_version_id)->first(['v.id', 'v.version', 'v.content_hash', 'v.content', 'p.name as project_name']);
             if ($version !== null) {
+                $package = DB::table('work_packages')->where('id', $order->work_package_id)->first();
+                $project = DB::table('projects')->where('id', $package->project_id)->first();
                 $projectContext = ['version_id' => $version->id, 'version' => (int) $version->version, 'content_hash' => $version->content_hash, 'project_name' => $version->project_name,
+                    'work_package_id' => $package->id, 'project_id' => $project->id,
+                    'can_rescan_suppliers' => ! $forVendor && $order->order_state === 'CANCELLED' && $package->archived_at === null && $package->deleted_at === null
+                        && $project->status === 'ACTIVE' && $project->deleted_at === null && $package->current_version_id === $order->work_package_version_id
+                        && ! in_array($package->status, ['DRAFT', 'CANCELLED', 'COMPLETED'], true)
+                        && ($package->selected_arrangement_id !== null || ! ProjectArchives::ongoing($project->id, $package->id)),
                     'work_package' => json_decode($version->content, true), 'note' => $order->project_note, 'note_response_required' => false,
                     'budget' => $forVendor ? null : app(ProjectBudget::class)->metrics(DB::table('projects as p')->join('work_packages as w', 'w.project_id', '=', 'p.id')->where('w.id', $order->work_package_id)->first(['p.*']), DB::table('work_packages')->where('id', $order->work_package_id)->first()),
                     'document_status' => 'PHASE_15_PDF_PENDING'];

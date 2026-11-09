@@ -2663,7 +2663,7 @@ class VendorOnboardingApi {
   }
 
   /// submitVendorVerification
-  ///
+  /// An unchanged successful request replays with the same Idempotency-Key before revalidating transient map confirmation tokens. Changed or expired idempotency requests return a conflict. First submissions validate the current draft and atomically submit evidence for manual review.
   ///
   /// Parameters:
   /// * [idempotencyKey]

@@ -304,6 +304,7 @@ class BuyerIdentity extends StatelessWidget {
     this.photoUploadEnabled = true,
     this.onNotifications,
     this.onSearch,
+    this.rating,
   });
   final AccountProfile profile;
   final bool centered;
@@ -313,6 +314,7 @@ class BuyerIdentity extends StatelessWidget {
   final bool photoUploadEnabled;
   final VoidCallback? onNotifications;
   final VoidCallback? onSearch;
+  final Widget? rating;
 
   @override
   Widget build(BuildContext context) {
@@ -352,12 +354,31 @@ class BuyerIdentity extends StatelessWidget {
           ? CrossAxisAlignment.center
           : CrossAxisAlignment.start,
       children: [
-        Text(
-          profile.fullName,
-          textAlign: centered ? TextAlign.center : TextAlign.start,
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+        Wrap(
+          alignment: centered ? WrapAlignment.center : WrapAlignment.start,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 8,
+          runSpacing: 4,
+          children: [
+            Text(
+              profile.fullName,
+              textAlign: centered ? TextAlign.center : TextAlign.start,
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            if (!centered && profile.emailVerified == true)
+              const Tooltip(
+                message: 'Email verified',
+                child: Icon(
+                  LucideIcons.badgeCheck,
+                  size: 20,
+                  color: BuyerTheme.action,
+                  semanticLabel: 'Email verified',
+                ),
+              ),
+            ?rating,
+          ],
         ),
         const SizedBox(height: 6),
         Text(

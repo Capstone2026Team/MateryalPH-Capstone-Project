@@ -106,6 +106,7 @@ ListingCardView listingCard(
   String stock = 'IN_STOCK',
   int rank = 1,
   String sold = '0.0000',
+  int uniqueBuyers = 0,
   String? rating,
 }) => ListingCardView(
   listingId: id,
@@ -120,6 +121,7 @@ ListingCardView listingCard(
   ratingLabel: rating == null ? 'New' : '$rating of 5',
   ratingAverage: rating,
   unitsSold: sold,
+  uniqueBuyers: uniqueBuyers,
   distanceMeters: distance,
   badges: badges,
   isFavorite: favorite,
@@ -159,6 +161,7 @@ ListingDetailView listingDetail({
   bool purchasable = true,
   bool deliveryOffered = true,
   String? categoryId = 'cat-roof',
+  int uniqueBuyers = 0,
 }) => ListingDetailView(
   listingId: 'listing-1',
   displayName: 'Apo Longspan Roofing - Tilespan',
@@ -207,6 +210,7 @@ ListingDetailView listingDetail({
       'A PS/ICC badge means MateryalPH matched or reviewed the submitted evidence. It is not a new government certification.',
   ratingLabel: 'New',
   unitsSold: '0.0000',
+  uniqueBuyers: uniqueBuyers,
   isFavorite: false,
   purchasable: purchasable,
   notPurchasableReason: purchasable ? null : 'OUTSIDE_SELECTED_RADIUS',
@@ -556,6 +560,10 @@ class FakeProcurementRepository implements ProcurementRepository {
   final List<DestinationCall> destinations = [];
   final List<RankingWeights> savedWeights = [];
   final List<String> acceptedLines = [];
+  final List<
+    ({String lineId, String? variantId, String? quantity, String? fulfillment})
+  >
+  configuredLines = [];
   RankingPreferencesView preferencesView = const RankingPreferencesView(
     weights: RankingWeights.approvedDefault,
     defaults: RankingWeights.approvedDefault,
@@ -661,11 +669,20 @@ class FakeProcurementRepository implements ProcurementRepository {
     String? quantity,
     bool? savedForLater,
     bool acceptCurrentPrice = false,
+    String? variantId,
+    String? expectedPriceVersionId,
+    String? fulfillmentMethod,
   }) async {
     if (acceptCurrentPrice) {
       acceptedLines.add(line.id);
       return cartView = twoVendorCart(stalePrice: false, lockVersion: 4);
     }
+    configuredLines.add((
+      lineId: line.id,
+      variantId: variantId,
+      quantity: quantity,
+      fulfillment: fulfillmentMethod,
+    ));
     return cartView;
   }
 
