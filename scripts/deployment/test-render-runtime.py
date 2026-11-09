@@ -44,8 +44,14 @@ def main():
         "    echo implode(',', $result);\n"
         "} elseif (preg_match('#^/slow/([1-8])$#', $path, $match)) {\n"
         "    touch('/tmp/runtime-start-' . $match[1]);\n"
-        "    sleep(6);\n"
-        "    echo 'slow-ok';\n"
+        "    $deadline = microtime(true) + 20;\n"
+        "    do {\n"
+        "        clearstatcache();\n"
+        "        if (is_file('/tmp/runtime-release-workers')) { echo 'slow-ok'; return; }\n"
+        "        usleep(50000);\n"
+        "    } while (microtime(true) < $deadline);\n"
+        "    http_response_code(503);\n"
+        "    echo 'worker release timed out';\n"
         "} else { echo 'fast-ok'; }\n",
         encoding="utf-8",
     )
@@ -56,7 +62,7 @@ def main():
         r'''<?php
 function request(string $path, string $method = 'GET'): array {
     $context = stream_context_create(['http' => [
-        'method' => $method, 'timeout' => 12, 'ignore_errors' => true,
+        'method' => $method, 'timeout' => 25, 'ignore_errors' => true,
     ]]);
     $start = microtime(true);
     $body = @file_get_contents('http://127.0.0.1:10000'.$path, false, $context);
@@ -114,6 +120,7 @@ fclose($socket);
 verify(str_contains($oversizedStatus, ' 413 '), 'Nginx did not reject a request above 80 MiB');
 $children = [];
 $workerCount = (int) (getenv('RUNTIME_WORKERS') ?: 2);
+$deadline = microtime(true) + 10;
 foreach (range(1, $workerCount) as $number) {
     $pid = pcntl_fork();
     verify($pid !== -1, 'fork failed');
@@ -122,20 +129,22 @@ foreach (range(1, $workerCount) as $number) {
         exit($status === 200 && $body === 'slow-ok' ? 0 : 1);
     }
     $children[] = $pid;
+    // Give ondemand FPM a new accept event for each worker, then keep every
+    // request busy until the health checks finish. A simultaneous cold burst
+    // can queue behind one worker, and a fixed sleep can expire on a slow host.
+    do {
+        clearstatcache();
+        $started = is_file('/tmp/runtime-start-'.$number);
+        if (!$started) { usleep(50000); }
+    } while (!$started && microtime(true) < $deadline);
+    verify($started, 'ordinary request workers did not start concurrently');
 }
-$deadline = microtime(true) + 3;
-do {
-    clearstatcache();
-    $busy = true;
-    foreach (range(1, $workerCount) as $number) { $busy = $busy && is_file('/tmp/runtime-start-'.$number); }
-    if (!$busy) { usleep(50000); }
-} while (!$busy && microtime(true) < $deadline);
-verify($busy, 'ordinary request workers did not start concurrently');
 [$status, $body, $duration] = request('/up');
 verify($status === 200 && $body === 'ok', 'FPM ping failed while ordinary workers were busy');
 verify($duration < 1, 'FPM ping exceeded one second');
 [$headStatus, $headBody] = request('/up', 'HEAD');
 verify($headStatus === 200 && $headBody === '', 'HEAD health check failed');
+touch('/tmp/runtime-release-workers');
 foreach ($children as $pid) {
     pcntl_waitpid($pid, $result);
     verify(pcntl_wifexited($result) && pcntl_wexitstatus($result) === 0, 'slow request failed');

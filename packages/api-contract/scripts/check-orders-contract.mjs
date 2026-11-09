@@ -26,6 +26,11 @@ const actual = new Map(routes.flatMap(route => route.method.split('|').filter(me
 const has = (route, ...names) => names.some(name => route.middleware.includes(name))
 const normalize = path => path.replace(/\{[^}]+\}/g, '{}')
 const expected = new Set()
+// These POSTs return advisory data without creating or changing an order.
+const readOnlyPosts = new Set([
+  '/vendor/orders/{orderId}/delivery-recommendations',
+  '/buyers/orders/{orderId}/rescan-suppliers',
+])
 
 for (const [path, item] of Object.entries(spec.paths)) {
   for (const [method, operation] of Object.entries(item)) {
@@ -51,7 +56,7 @@ for (const [path, item] of Object.entries(spec.paths)) {
       }
     }
     assert.ok(operation.responses['401'] && operation.responses['403'], `${operation.operationId} must document unauthenticated and denied responses`)
-    if (method === 'post' && !path.endsWith('/delivery-recommendations')) {
+    if (method === 'post' && !readOnlyPosts.has(path)) {
       assert.ok((operation.parameters ?? []).some(parameter => parameter.name === 'Idempotency-Key' && parameter.required), `${operation.operationId} requires Idempotency-Key`)
       assert.ok(operation.responses['409'], `${operation.operationId} must document the conflict response`)
     }
