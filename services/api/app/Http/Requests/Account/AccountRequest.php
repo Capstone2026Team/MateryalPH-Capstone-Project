@@ -29,6 +29,7 @@ final class AccountRequest extends FormRequest
                 'lock_version' => ['required', 'integer', 'min:1'],
                 'buyer_type' => ['sometimes', Rule::in(['INDIVIDUAL', 'BUSINESS'])],
                 'company_name' => ['sometimes', 'nullable', 'string', 'max:180'],
+                'mobile_e164' => ['sometimes', 'required', 'string', 'regex:/^\+[1-9]\d{7,14}$/'],
             ],
             'reauthenticate' => ['password' => ['nullable', 'string', 'max:1024', 'required_without_all:email_code,code'], 'email_code' => ['nullable', 'digits:6', 'required_without_all:password,code'], 'code' => ['nullable', 'digits:6', 'required_without_all:password,email_code']],
             'changePassword' => ['password' => $password, 'password_confirmation' => ['required', 'string']],

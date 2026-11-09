@@ -9,13 +9,14 @@ import 'package:built_value/serializer.dart';
 
 part 'account_profile_update.g.dart';
 
-/// AccountProfileUpdate
+/// Updates the authenticated account owner's profile with optimistic concurrency. mobile_e164 is optional and Buyer-only; when supplied it must be a non-empty E.164 contact number. Omitting it preserves the current number. Phone changes do not change sign-in or require SMS verification.
 ///
 /// Properties:
 /// * [fullName]
 /// * [lockVersion]
 /// * [buyerType]
 /// * [companyName]
+/// * [mobileE164] - Buyer-only contact phone number in E.164 format.
 @BuiltValue()
 abstract class AccountProfileUpdate implements Built<AccountProfileUpdate, AccountProfileUpdateBuilder> {
   @BuiltValueField(wireName: r'full_name')
@@ -30,6 +31,10 @@ abstract class AccountProfileUpdate implements Built<AccountProfileUpdate, Accou
 
   @BuiltValueField(wireName: r'company_name')
   String? get companyName;
+
+  /// Buyer-only contact phone number in E.164 format.
+  @BuiltValueField(wireName: r'mobile_e164')
+  String? get mobileE164;
 
   AccountProfileUpdate._();
 
@@ -76,6 +81,13 @@ class _$AccountProfileUpdateSerializer implements PrimitiveSerializer<AccountPro
       yield serializers.serialize(
         object.companyName,
         specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.mobileE164 != null) {
+      yield r'mobile_e164';
+      yield serializers.serialize(
+        object.mobileE164,
+        specifiedType: const FullType(String),
       );
     }
   }
@@ -130,6 +142,14 @@ class _$AccountProfileUpdateSerializer implements PrimitiveSerializer<AccountPro
           ) as String?;
           if (valueDes == null) continue;
           result.companyName = valueDes;
+          break;
+        case r'mobile_e164':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.mobileE164 = valueDes;
           break;
         default:
           unhandled.add(key);

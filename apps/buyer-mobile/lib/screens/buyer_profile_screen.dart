@@ -12,6 +12,7 @@ import '../features/map_discovery/device_location.dart';
 import '../features/map_discovery/discovery_models.dart';
 import '../features/map_discovery/discovery_repository.dart';
 import '../design_system/components/procurement_components.dart';
+import '../design_system/components/request_notice.dart';
 import '../widgets/auth_content.dart';
 import '../widgets/buyer_account_widgets.dart';
 import 'buyer_account_screen.dart';
@@ -252,13 +253,11 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
           children: [
             if (_busy) const BuyerLoadingProgress(),
-            if (_error != null) ...[
-              AuthNotice(message: _error!, isError: true),
-              TextButton(
-                onPressed: _busy ? null : _load,
-                child: const Text('Retry'),
+            if (_error != null)
+              BuyerRequestNotice(
+                message: _error!,
+                onRetry: _busy ? null : _load,
               ),
-            ],
             if (_profile != null) ...[
               BuyerIdentity(
                 profile: _profile!,
@@ -338,11 +337,11 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                 },
               ),
               BuyerMenuRow(
-                label: 'Buyer rating',
+                label: 'Your rating',
                 icon: LucideIcons.star,
                 onTap: () {
                   final repository = widget.reviewsRepository;
-                  if (repository == null) return _unavailable('Buyer rating');
+                  if (repository == null) return _unavailable('Your rating');
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) =>

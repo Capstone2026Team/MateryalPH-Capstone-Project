@@ -270,9 +270,16 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Showing the last successful update'), findsOneWidget);
+        expect(find.text("You're offline"), findsOneWidget);
         expect(h.explore.summary?.verifiedVendors, 12);
         expect(find.text('Roofing Materials'), findsOneWidget);
         expect(find.text('Retry'), findsOneWidget);
+        repository.summaryFailure = null;
+        await tester.tap(find.text('Retry'));
+        await tester.pumpAndSettle();
+        expect(find.text("You're offline"), findsNothing);
+        expect(find.text('Showing the last successful update'), findsNothing);
+        expect(find.text('Roofing Materials'), findsOneWidget);
       },
     );
   });

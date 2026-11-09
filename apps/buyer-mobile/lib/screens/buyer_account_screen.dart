@@ -1,5 +1,6 @@
 import '../widgets/legal_content.dart';
 import '../widgets/buyer_account_widgets.dart';
+import '../widgets/phone_number_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart';
@@ -28,7 +29,7 @@ class BuyerAccountScreen extends StatefulWidget {
 }
 
 /// Where an action's result message appears, so it shows next to the control that caused it.
-enum _Scope { page, profile, identity, password, email }
+enum _Scope { page, profile, phone, identity, password, email }
 
 class _BuyerAccountScreenState extends State<BuyerAccountScreen> {
   /// The server keeps a fresh identity check on this session for 15 minutes.
@@ -54,6 +55,9 @@ class _BuyerAccountScreenState extends State<BuyerAccountScreen> {
   final _email = TextEditingController();
   final _code = TextEditingController();
   String _buyerType = 'INDIVIDUAL';
+  final _phoneForm = GlobalKey<FormState>();
+  bool _editingPhone = false;
+  String _mobile = '';
   int _page = 1;
   int _lastPage = 1;
 
@@ -244,6 +248,38 @@ class _BuyerAccountScreenState extends State<BuyerAccountScreen> {
     'Profile saved.',
     scope: _Scope.profile,
   );
+
+  Future<void> _savePhone() async {
+    if (!_phoneForm.currentState!.validate()) return;
+    await _act(
+      () async {
+        final response = await widget.repository.accountOperation(
+          (api) => api.updateAccountProfile(
+            accountPortal: 'buyers',
+            accountProfileUpdate: AccountProfileUpdate(
+              (b) => b
+                ..fullName = _profile!.fullName
+                ..lockVersion = _profile!.lockVersion
+                ..mobileE164 = _mobile,
+            ),
+          ),
+        );
+        final profile = response.data?.data;
+        if (profile == null) {
+          throw const BuyerAuthException('Could not save your phone number.');
+        }
+        if (mounted) {
+          setState(() {
+            _profile = profile;
+            _editingPhone = false;
+          });
+        }
+      },
+      'Phone number saved.',
+      reload: false,
+      scope: _Scope.phone,
+    );
+  }
 
   Future<void> _openSecurity() async {
     await Navigator.of(context).push(
@@ -604,9 +640,47 @@ class _BuyerAccountScreenState extends State<BuyerAccountScreen> {
                     ? phone!
                     : 'Phone number not added',
                 valueMuted: phone?.isNotEmpty != true,
+                trailing: _editingPhone
+                    ? null
+                    : TextButton(
+                        key: const ValueKey('edit-buyer-phone'),
+                        onPressed: _busy
+                            ? null
+                            : () => setState(() {
+                                _mobile = phone ?? '';
+                                _editingPhone = true;
+                                _message = null;
+                              }),
+                        child: Text(
+                          phone?.isNotEmpty == true ? 'Change' : 'Add',
+                        ),
+                      ),
               ),
             ],
           ),
+          if (_editingPhone) ...[
+            const SizedBox(height: 16),
+            Form(
+              key: _phoneForm,
+              child: PhoneNumberField(
+                initialValue: phone ?? '',
+                enabled: !_busy,
+                onChanged: (value) => setState(() => _mobile = value),
+              ),
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: _busy || _mobile == (phone ?? '') ? null : _savePhone,
+              child: const Text('Save phone number'),
+            ),
+            TextButton(
+              onPressed: _busy
+                  ? null
+                  : () => setState(() => _editingPhone = false),
+              child: const Text('Cancel'),
+            ),
+          ],
+          _notice(_Scope.phone),
           const SizedBox(height: 16),
           Row(
             children: [

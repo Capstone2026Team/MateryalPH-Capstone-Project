@@ -13,6 +13,17 @@ assert.match(profile.email.description, /authenticated account owner/)
 assert.equal(profile.email_verified.type, 'boolean')
 assert.match(profile.email_verified.description, /email ownership/)
 assert.match(profile.email_masked.description, /False/)
+const update = spec.components.schemas.AccountProfileUpdate
+assert.deepEqual(update.required, ['full_name', 'lock_version'])
+assert.equal(update.properties.mobile_e164.type, 'string')
+assert.equal(update.properties.mobile_e164.pattern, '^\\+[1-9]\\d{7,14}$')
+assert.match(update.properties.mobile_e164.description, /Buyer-only/)
+assert.match(update.description, /Omitting it preserves/)
+const generatedUpdate = readFileSync(resolve(root, 'generated/typescript/src/models/AccountProfileUpdate.ts'), 'utf8')
+assert.match(generatedUpdate, /mobileE164\?: string/)
+assert.match(generatedUpdate, /'mobile_e164': value\['mobileE164'\]/)
+const generatedDartUpdate = readFileSync(resolve(root, 'generated/dart/lib/src/model/account_profile_update.dart'), 'utf8')
+assert.match(generatedDartUpdate, /String\? get mobileE164/)
 let routes
 if (process.argv[2]) routes = JSON.parse(readFileSync(process.argv[2], 'utf8').replace(/^\uFEFF/, ''))
 else {

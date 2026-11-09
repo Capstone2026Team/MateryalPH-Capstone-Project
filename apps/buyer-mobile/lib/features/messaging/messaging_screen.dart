@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import '../../design_system/components/procurement_components.dart';
+import '../../design_system/components/request_notice.dart';
 import '../../widgets/buyer_account_widgets.dart';
 
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
@@ -144,6 +145,7 @@ class _MessagingScreenState extends State<MessagingScreen>
   Uint8List? _avatar;
 
   String? _error;
+  DiscoveryFailureKind? _errorKind;
 
   String? _notice;
 
@@ -562,6 +564,7 @@ class _MessagingScreenState extends State<MessagingScreen>
       if (mounted) {
         setState(() {
           _error = _message(e);
+          _errorKind = e is DiscoveryFailure ? e.kind : null;
           if (e is DiscoveryFailure &&
               [
                 DiscoveryFailureKind.forbidden,
@@ -698,13 +701,19 @@ class _MessagingScreenState extends State<MessagingScreen>
     setState(() {
       _busy = true;
       _error = null;
+      _errorKind = null;
     });
 
     try {
       await action();
       if (refresh) await _load();
     } catch (e) {
-      if (mounted) setState(() => _error = _message(e));
+      if (mounted) {
+        setState(() {
+          _error = _message(e);
+          _errorKind = e is DiscoveryFailure ? e.kind : null;
+        });
+      }
       if (rethrowErrors) rethrow;
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -989,7 +998,10 @@ class _MessagingScreenState extends State<MessagingScreen>
     final bytes = await file.xFile.readAsBytes();
     if (!mounted) return;
     if (bytes.length > 10 * 1024 * 1024 || bytes.isEmpty) {
-      setState(() => _error = 'Choose a JPG, PNG or PDF up to 10 MB.');
+      setState(() {
+        _error = 'Choose a JPG, PNG or PDF up to 10 MB.';
+        _errorKind = DiscoveryFailureKind.validation;
+      });
       return;
     }
     final key = newIdempotencyKey();
@@ -1104,21 +1116,18 @@ class _MessagingScreenState extends State<MessagingScreen>
               if (_error != null)
                 Flexible(
                   child: SingleChildScrollView(
-                    child: Material(
-                      color: Theme.of(context).colorScheme.errorContainer,
-                      child: ListTile(
-                        title: Text(_error!),
-                        trailing: TextButton(
-                          onPressed: () {
-                            setState(() {
-                              _error = null;
-                              _loading = _inbox == null && _detail == null;
-                            });
-                            unawaited(_load());
-                          },
-                          child: const Text('Retry'),
-                        ),
-                      ),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                    child: BuyerRequestNotice(
+                      kind: _errorKind,
+                      message: _error!,
+                      onRetry: () {
+                        setState(() {
+                          _error = null;
+                          _errorKind = null;
+                          _loading = _inbox == null && _detail == null;
+                        });
+                        unawaited(_load());
+                      },
                     ),
                   ),
                 ),

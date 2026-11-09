@@ -9,10 +9,12 @@ class PhoneNumberField extends StatefulWidget {
     super.key,
     required this.onChanged,
     this.enabled = true,
+    this.initialValue = '',
   });
 
   final ValueChanged<String> onChanged;
   final bool enabled;
+  final String initialValue;
 
   @override
   State<PhoneNumberField> createState() => _PhoneNumberFieldState();
@@ -22,6 +24,12 @@ class _PhoneNumberFieldState extends State<PhoneNumberField> {
   final _controller = TextEditingController();
   String _region = 'PH';
   bool _invalidInput = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _readNumber(widget.initialValue);
+  }
 
   @override
   void dispose() {
@@ -38,7 +46,7 @@ class _PhoneNumberFieldState extends State<PhoneNumberField> {
   String get _value =>
       _national.isEmpty || _invalidInput ? '' : '+$_code$_national';
 
-  void _update(String raw) {
+  void _readNumber(String raw) {
     _invalidInput =
         RegExp(r'[^0-9+\s().-]').hasMatch(raw) ||
         RegExp(r'.+\+').hasMatch(raw.trim());
@@ -67,7 +75,10 @@ class _PhoneNumberFieldState extends State<PhoneNumberField> {
         selection: TextSelection.collapsed(offset: digits.length),
       );
     }
-    setState(() {});
+  }
+
+  void _update(String raw) {
+    setState(() => _readNumber(raw));
     widget.onChanged(_value);
   }
 

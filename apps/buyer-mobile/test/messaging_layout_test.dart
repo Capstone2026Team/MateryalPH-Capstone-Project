@@ -7,6 +7,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:materyalph/design_system/components/messaging_components.dart';
 import 'package:materyalph/design_system/components/procurement_components.dart';
+import 'package:materyalph/design_system/components/request_notice.dart';
+import 'package:materyalph/features/map_discovery/discovery_models.dart';
 import 'package:materyalph/design_system/theme.dart';
 import 'package:materyalph/features/messaging/messaging_repository.dart';
 import 'package:materyalph/features/messaging/conversation_timeline.dart';
@@ -136,6 +138,7 @@ class LayoutMessagingRepository implements MessagingRepository {
   int inboxCalls = 0;
   bool failSend = false;
   bool failInbox = false;
+  DiscoveryFailure? inboxFailure;
   bool hasMore = false;
   bool paginateMessages = false;
   final requestedCursors = <String?>[];
@@ -206,6 +209,7 @@ class LayoutMessagingRepository implements MessagingRepository {
     bool archived = false,
   }) async {
     inboxCalls++;
+    if (inboxFailure != null) throw inboxFailure!;
     if (failInbox) throw StateError('fixture offline');
     final snapshot = api.ConversationPage(
       (b) => b
@@ -1248,6 +1252,52 @@ void main() {
     expect(find.text('Previous'), findsNothing);
     expect(find.text('Next'), findsNothing);
     expect(find.text('Retry'), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('offline inbox keeps messages and search while retry recovers', (
+    tester,
+  ) async {
+    final repository = LayoutMessagingRepository();
+    await mount(tester, repository, width: 320, scale: 2);
+    await tester.enterText(find.byType(TextField), 'Sampaloc');
+    repository.inboxFailure = const DiscoveryFailure(
+      DiscoveryFailureKind.offline,
+      'You appear to be offline. Check your connection and retry.',
+    );
+    repository.inboxChanged!();
+    await tester.pumpAndSettle();
+    expect(find.byType(BuyerRequestNotice), findsOneWidget);
+    expect(find.text("You're offline"), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Sampaloc Lumber Hardware'),
+      120,
+      scrollable: find
+          .descendant(
+            of: find.byType(RefreshIndicator),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Sampaloc Lumber Hardware'), findsOneWidget);
+    expect(find.text('L&D Hardware & Construction Supplies'), findsNothing);
+    final calls = repository.inboxCalls;
+    repository.inboxFailure = null;
+    await tester.ensureVisible(find.text('Retry'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+    expect(repository.inboxCalls, calls + 1);
+    expect(find.byType(BuyerRequestNotice), findsNothing);
+    expect(find.text('Sampaloc Lumber Hardware'), findsOneWidget);
+    await tester.drag(find.byType(ListView), const Offset(0, 500));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      'Sampaloc',
+    );
+    expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });
 

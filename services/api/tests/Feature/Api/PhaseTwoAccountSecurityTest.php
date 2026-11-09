@@ -9,6 +9,7 @@ use App\Domain\Authorization\FinancePolicy;
 use App\Domain\Authorization\MembershipPolicy;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\EmailOtpService;
+use App\Domain\Identity\ManageAccount;
 use App\Domain\Identity\OtpCodeGenerator;
 use App\Domain\Identity\ProfilePhotoScanner;
 use App\Domain\Identity\TokenSessionService;
@@ -19,6 +20,7 @@ use App\Models\VendorMembership;
 use App\Models\VendorOrganization;
 use Database\Seeders\SystemFoundationSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -46,6 +48,72 @@ final class PhaseTwoAccountSecurityTest extends TestCase
         $this->patchJson('/api/v1/buyers/account/profile', ['full_name' => 'Stale name', 'lock_version' => 1])->assertConflict();
         self::assertSame('BUYER', $user->refresh()->account_type);
         $this->assertDatabaseHas('audit_logs', ['action' => 'PROFILE_UPDATED', 'actor_user_id' => $user->getKey()]);
+    }
+
+    public function test_buyer_can_update_only_their_own_contact_number_and_omission_preserves_it(): void
+    {
+        $this->patchJson('/api/v1/buyers/account/profile', ['full_name' => 'Buyer', 'lock_version' => 1, 'mobile_e164' => '+639170000001'])->assertUnauthorized();
+        [$user, $session] = $this->buyer();
+        $other = User::factory()->create();
+        UserProfile::query()->create(['user_id' => $other->getKey(), 'full_name' => $other->name, 'mobile_e164' => '+639189999999']);
+        $email = $user->email;
+
+        $this->patchJson('/api/v1/buyers/account/profile?user_id='.$other->public_id, [
+            'full_name' => $user->name, 'lock_version' => 1, 'mobile_e164' => '+639170000001',
+        ])->assertUnprocessable();
+        $this->patchJson('/api/v1/buyers/account/profile', [
+            'full_name' => $user->name, 'lock_version' => 1, 'mobile_e164' => '+639170000001',
+        ])->assertOk()->assertJsonPath('data.id', $user->public_id)->assertJsonPath('data.mobile_e164', '+639170000001')->assertJsonPath('data.lock_version', 2);
+        $this->getJson('/api/v1/buyers/account/profile')->assertOk()->assertJsonPath('data.mobile_e164', '+639170000001');
+        $this->assertDatabaseHas('user_profiles', ['user_id' => $other->getKey(), 'mobile_e164' => '+639189999999']);
+        $audit = DB::table('audit_logs')->where('action', 'PROFILE_UPDATED')->where('actor_user_id', $user->getKey())->first();
+        self::assertContains('mobile_e164', json_decode($audit->after, true)['fields']);
+        self::assertStringNotContainsString('+639170000001', $audit->after);
+        self::assertSame($email, $user->refresh()->email);
+        self::assertNull($session->refresh()->revoked_at);
+
+        $this->patchJson('/api/v1/buyers/account/profile', ['full_name' => 'Renamed Buyer', 'lock_version' => 2])
+            ->assertOk()->assertJsonPath('data.mobile_e164', '+639170000001')->assertJsonPath('data.lock_version', 3);
+    }
+
+    public function test_buyer_phone_validation_and_version_conflicts_preserve_the_saved_profile(): void
+    {
+        [$user] = $this->buyer();
+        UserProfile::query()->create(['user_id' => $user->getKey(), 'full_name' => $user->name, 'mobile_e164' => '+639171234567']);
+        $originalName = $user->name;
+        foreach ([null, '', '09171234567', '+63917abc4567', '+1234567890123456'] as $invalid) {
+            $this->patchJson('/api/v1/buyers/account/profile', ['full_name' => 'Invalid change', 'lock_version' => 1, 'mobile_e164' => $invalid])
+                ->assertUnprocessable();
+        }
+        self::assertSame($originalName, $user->refresh()->name);
+        self::assertSame(1, $user->lock_version);
+        $this->assertDatabaseHas('user_profiles', ['user_id' => $user->getKey(), 'mobile_e164' => '+639171234567']);
+        $this->patchJson('/api/v1/buyers/account/profile', ['full_name' => $originalName, 'lock_version' => 1, 'mobile_e164' => '+14155550123'])->assertOk();
+        $this->patchJson('/api/v1/buyers/account/profile', ['full_name' => 'Stale change', 'lock_version' => 1, 'mobile_e164' => '+639170000002'])
+            ->assertConflict()->assertJsonPath('errors.0.code', 'RESOURCE_VERSION_CONFLICT');
+        self::assertSame($originalName, $user->refresh()->name);
+        self::assertSame(2, $user->lock_version);
+        $this->assertDatabaseHas('user_profiles', ['user_id' => $user->getKey(), 'mobile_e164' => '+14155550123']);
+        self::assertSame(1, DB::table('audit_logs')->where('action', 'PROFILE_UPDATED')->where('actor_user_id', $user->getKey())->count());
+    }
+
+    public function test_contact_number_updates_are_rejected_for_non_buyer_accounts(): void
+    {
+        foreach (['VENDOR', 'ADMIN'] as $accountType) {
+            $user = User::factory()->create(['account_type' => $accountType, 'account_status' => 'ACTIVE']);
+            $request = Request::create('/api/v1/'.strtolower($accountType).'/account/profile', 'PATCH');
+            $request->setUserResolver(fn () => $user);
+            try {
+                app(ManageAccount::class)->updateProfile($request, ['full_name' => 'Forbidden change', 'lock_version' => 1, 'mobile_e164' => '+639170000001']);
+                self::fail('Non-Buyer phone update should be rejected.');
+            } catch (AuthenticationException $exception) {
+                self::assertSame('PROFILE_FIELD_NOT_ALLOWED', $exception->errorCode);
+                self::assertSame(422, $exception->httpStatus);
+            }
+            self::assertSame(1, $user->refresh()->lock_version);
+            self::assertNotSame('Forbidden change', $user->name);
+            $this->assertDatabaseMissing('user_profiles', ['user_id' => $user->getKey()]);
+        }
     }
 
     public function test_navigation_batches_activity_writes_but_rechecks_revoked_sessions(): void

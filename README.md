@@ -178,13 +178,11 @@ The script checks SSH access before waiting for CI or building. If an upload fai
 Resume verifies the archive checksums and successful quality gates for the packaged commit, then uploads without rebuilding. For SSH timeouts, check that your current public IPv4 is allowed for TCP 22 in the Hostinger firewall and that your VPN/network permits SSH.
 
 Wait about 45–60 minutes. When it asks, type REOPEN to put the site back online.
+What the script does (the same steps I did manually today):
 
-### Signed Buyer APK (Hostinger)
-
-The build script is under the repository root. If your terminal is in `apps/buyer-mobile`, the `./scripts/...` path will not resolve. Start by selecting the repository root:
 
 ```powershell
-Set-Location -LiteralPath 'C:\Users\RJ\Downloads\Capstone Project System\Capstone_MateryalPH'
+# Deployement Command ( Application APK - VPS Connected)
 . C:\Users\RJ\materyalph-release-signing\use-signing.ps1
 ./scripts/deployment/build-buyer-staging.ps1 -Deployment Hostinger -Release -BuildName 1.0.1 -BuildNumber 4
 ```

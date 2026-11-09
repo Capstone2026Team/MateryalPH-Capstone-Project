@@ -11,6 +11,7 @@ import '../../design_system/components/work_package_attachment.dart';
 import '../../design_system/components/buyer_app_bar.dart';
 import '../../design_system/components/form_dialog.dart';
 import '../../design_system/components/procurement_components.dart';
+import '../../design_system/components/request_notice.dart';
 import '../../design_system/theme.dart';
 import 'project_editor.dart';
 import 'project_ranking_preferences_screen.dart';
@@ -80,6 +81,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   api.ProjectView? _project;
   api.WorkPackageView? _package;
   String? _error;
+  DiscoveryFailureKind? _errorKind;
   bool _busy = false;
   bool _showArchives = false;
   int _sequence = 0;
@@ -122,11 +124,17 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _errorKind = null;
     });
     try {
       await action();
     } on DiscoveryFailure catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (mounted) {
+        setState(() {
+          _error = e.message;
+          _errorKind = e.kind;
+        });
+      }
     } catch (_) {
       if (mounted) {
         setState(
@@ -520,14 +528,15 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
               children: [
                 if (_busy) const BuyerLoadingProgress(),
                 if (_error != null && (_page != null || _project != null))
-                  MaterialBanner(
-                    content: Text(_error!),
-                    actions: [
-                      TextButton(
-                        onPressed: _busy ? null : () => _run(_reload),
-                        child: const Text('Retry'),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                      child: BuyerRequestNotice(
+                        kind: _errorKind,
+                        message: _error!,
+                        onRetry: _busy ? null : () => _run(_reload),
                       ),
-                    ],
+                    ),
                   ),
                 Expanded(
                   child: _package != null
@@ -557,12 +566,11 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                 ],
               )
             : SingleChildScrollView(
-                child: StateMessage(
-                  kind: StateKind.error,
-                  title: 'Projects could not load',
+                padding: const EdgeInsets.all(16),
+                child: BuyerRequestNotice(
+                  kind: _errorKind,
                   message: _error ?? 'Please retry.',
-                  actionLabel: 'Retry',
-                  onAction: () => _run(_reload),
+                  onRetry: () => _run(_reload),
                 ),
               ))
       : ListView(

@@ -27,5 +27,11 @@ void main() {
       // TODO
     });
 
+    // Buyer-only contact phone number in E.164 format.
+    // String mobileE164
+    test('to test the property `mobileE164`', () async {
+      // TODO
+    });
+
   });
 }

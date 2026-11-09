@@ -28540,6 +28540,7 @@ components:
     "AccountProfileUpdate":
       {
         "type": "object",
+        "description": "Updates the authenticated account owner's profile with optimistic concurrency. mobile_e164 is optional and Buyer-only; when supplied it must be a non-empty E.164 contact number. Omitting it preserves the current number. Phone changes do not change sign-in or require SMS verification.",
         "additionalProperties": false,
         "required": [ "full_name", "lock_version" ],
         "properties":
@@ -28547,7 +28548,8 @@ components:
             "full_name": { "type": "string", "maxLength": 160 },
             "lock_version": { "type": "integer", "minimum": 1 },
             "buyer_type": { "type": "string", "enum": [ "INDIVIDUAL", "BUSINESS" ] },
-            "company_name": { "type": [ "string", "null" ] }
+            "company_name": { "type": [ "string", "null" ] },
+            "mobile_e164": { "type": "string", "pattern": "^\\+[1-9]\\d{7,14}$", "description": "Buyer-only contact phone number in E.164 format." }
           }
       }
     "AccountSession":

@@ -5,6 +5,43 @@ import 'package:materyalph/widgets/phone_number_field.dart';
 
 void main() {
   testWidgets(
+    'saved international contact initializes without reporting an edit',
+    (tester) async {
+      var changes = 0;
+      final form = GlobalKey<FormState>();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Form(
+              key: form,
+              child: PhoneNumberField(
+                initialValue: '+14155550123',
+                onChanged: (_) => changes++,
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(
+        tester
+            .widget<TextFormField>(find.byType(TextFormField))
+            .controller!
+            .text,
+        '4155550123',
+      );
+      expect(
+        tester
+            .widget<DropdownButtonFormField<String>>(
+              find.byType(DropdownButtonFormField<String>),
+            )
+            .initialValue,
+        'US',
+      );
+      expect(form.currentState!.validate(), isTrue);
+      expect(changes, 0);
+    },
+  );
+  testWidgets(
     'country code is separate, normalizes local input and follows pasted numbers',
     (tester) async {
       var value = '';

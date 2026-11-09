@@ -27,11 +27,15 @@ final class ManageAccount
             if ((int) $user->lock_version !== (int) $input['lock_version']) {
                 throw new AuthenticationException('RESOURCE_VERSION_CONFLICT', 'Your profile changed. Reload before saving.', 409);
             }
-            if ($user->account_type !== 'BUYER' && (isset($input['buyer_type']) || array_key_exists('company_name', $input))) {
+            if ($user->account_type !== 'BUYER' && (isset($input['buyer_type']) || array_key_exists('company_name', $input) || array_key_exists('mobile_e164', $input))) {
                 throw new AuthenticationException('PROFILE_FIELD_NOT_ALLOWED', 'These fields are not available for this account.', 422);
             }
             $user->forceFill(['name' => trim($input['full_name']), 'lock_version' => $user->lock_version + 1])->save();
-            UserProfile::query()->updateOrCreate(['user_id' => $user->getKey()], ['full_name' => $user->name]);
+            $profile = ['full_name' => $user->name];
+            if (array_key_exists('mobile_e164', $input)) {
+                $profile['mobile_e164'] = $input['mobile_e164'];
+            }
+            UserProfile::query()->updateOrCreate(['user_id' => $user->getKey()], $profile);
             $buyer = array_intersect_key($input, ['buyer_type' => true, 'company_name' => true]);
             if ($buyer !== []) {
                 DB::table('buyer_profiles')->where('user_id', $user->getKey())->update($buyer + ['updated_at' => now()]);

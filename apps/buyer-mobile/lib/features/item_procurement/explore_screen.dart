@@ -7,8 +7,8 @@ import '../../design_system/components/category_tile.dart';
 import '../../core/foreground_refresh.dart';
 import '../../design_system/components/discovery_controls.dart';
 import '../../design_system/components/procurement_components.dart';
+import '../../design_system/components/request_notice.dart';
 import '../../design_system/theme.dart';
-import '../map_discovery/discovery_models.dart';
 import '../notifications/buyer_notification_button.dart';
 import 'cart_controller.dart';
 import 'explore_controller.dart';
@@ -173,18 +173,13 @@ class _ExploreScreenState extends State<ExploreScreen>
     return [
       Padding(
         padding: const EdgeInsets.only(top: 12),
-        child: StatusBand(
-          tone: BandTone.warning,
-          title: _controller.summaryStale
+        child: BuyerRequestNotice(
+          kind: failure?.kind,
+          message: failure?.message ?? 'Catalog is unavailable. Please retry.',
+          detail: _controller.summaryStale
               ? 'Showing the last successful update'
-              : failure?.kind == DiscoveryFailureKind.offline
-              ? 'You are offline'
-              : 'Catalog is unavailable',
-          message: failure?.message,
-          action: TextButton(
-            onPressed: _controller.loadSummary,
-            child: const Text('Retry'),
-          ),
+              : null,
+          onRetry: _controller.loadSummary,
         ),
       ),
     ];

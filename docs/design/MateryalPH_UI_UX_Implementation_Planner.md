@@ -339,6 +339,8 @@ The five destinations are fixed:
 
 Use state restoration carefully: never restore a stale quotation acceptance, expired payment form, TOTP value, password, OTP, or sensitive evidence upload.
 
+**Buyer account follow-up — 2026-11-09.** Label the Profile received-rating row and its destination page Your rating, retaining placement immediately below Account Setting. Edit Account Details keeps phone Add/Change within Contact details. Reuse the country selector/mobile-number field, prefill an existing number, and show Save phone number and Cancel while editing. Validate before sending, preserve entered input after failure, and show a local success/error notice. Saving a phone keeps unsaved personal-information fields. Retain the authenticated-owner scope, profile-version check, audit event, email/security flow and private contact rules.
+
 ### 8.2 Buyer page inventory
 
 | Area | Required pages/states |

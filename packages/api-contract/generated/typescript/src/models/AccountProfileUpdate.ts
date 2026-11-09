@@ -14,7 +14,7 @@
 
 import { mapValues } from '../runtime';
 /**
- *
+ * Updates the authenticated account owner's profile with optimistic concurrency. mobile_e164 is optional and Buyer-only; when supplied it must be a non-empty E.164 contact number. Omitting it preserves the current number. Phone changes do not change sign-in or require SMS verification.
  * @export
  * @interface AccountProfileUpdate
  */
@@ -35,6 +35,10 @@ export interface AccountProfileUpdate {
      *
      */
     companyName?: string | null;
+    /**
+     * Buyer-only contact phone number in E.164 format.
+     */
+    mobileE164?: string;
 }
 
 
@@ -71,6 +75,7 @@ export function AccountProfileUpdateFromJSONTyped(json: any, ignoreDiscriminator
         'lockVersion': json['lock_version'],
         'buyerType': json['buyer_type'] == null ? undefined : json['buyer_type'],
         'companyName': json['company_name'] === undefined ? undefined : json['company_name'] === null ? null : json['company_name'],
+        'mobileE164': json['mobile_e164'] == null ? undefined : json['mobile_e164'],
     };
 }
 
@@ -89,6 +94,7 @@ export function AccountProfileUpdateToJSONTyped(value?: AccountProfileUpdate | n
         'lock_version': value['lockVersion'],
         'buyer_type': value['buyerType'],
         'company_name': value['companyName'],
+        'mobile_e164': value['mobileE164'],
     };
 }
 

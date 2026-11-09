@@ -75,6 +75,8 @@ class _$AccountProfileUpdate extends AccountProfileUpdate {
   final AccountProfileUpdateBuyerTypeEnum? buyerType;
   @override
   final String? companyName;
+  @override
+  final String? mobileE164;
 
   factory _$AccountProfileUpdate(
           [void Function(AccountProfileUpdateBuilder)? updates]) =>
@@ -84,7 +86,8 @@ class _$AccountProfileUpdate extends AccountProfileUpdate {
       {required this.fullName,
       required this.lockVersion,
       this.buyerType,
-      this.companyName})
+      this.companyName,
+      this.mobileE164})
       : super._();
   @override
   AccountProfileUpdate rebuild(
@@ -102,7 +105,8 @@ class _$AccountProfileUpdate extends AccountProfileUpdate {
         fullName == other.fullName &&
         lockVersion == other.lockVersion &&
         buyerType == other.buyerType &&
-        companyName == other.companyName;
+        companyName == other.companyName &&
+        mobileE164 == other.mobileE164;
   }
 
   @override
@@ -112,6 +116,7 @@ class _$AccountProfileUpdate extends AccountProfileUpdate {
     _$hash = $jc(_$hash, lockVersion.hashCode);
     _$hash = $jc(_$hash, buyerType.hashCode);
     _$hash = $jc(_$hash, companyName.hashCode);
+    _$hash = $jc(_$hash, mobileE164.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -122,7 +127,8 @@ class _$AccountProfileUpdate extends AccountProfileUpdate {
           ..add('fullName', fullName)
           ..add('lockVersion', lockVersion)
           ..add('buyerType', buyerType)
-          ..add('companyName', companyName))
+          ..add('companyName', companyName)
+          ..add('mobileE164', mobileE164))
         .toString();
   }
 }
@@ -148,6 +154,10 @@ class AccountProfileUpdateBuilder
   String? get companyName => _$this._companyName;
   set companyName(String? companyName) => _$this._companyName = companyName;
 
+  String? _mobileE164;
+  String? get mobileE164 => _$this._mobileE164;
+  set mobileE164(String? mobileE164) => _$this._mobileE164 = mobileE164;
+
   AccountProfileUpdateBuilder() {
     AccountProfileUpdate._defaults(this);
   }
@@ -159,6 +169,7 @@ class AccountProfileUpdateBuilder
       _lockVersion = $v.lockVersion;
       _buyerType = $v.buyerType;
       _companyName = $v.companyName;
+      _mobileE164 = $v.mobileE164;
       _$v = null;
     }
     return this;
@@ -186,6 +197,7 @@ class AccountProfileUpdateBuilder
               lockVersion, r'AccountProfileUpdate', 'lockVersion'),
           buyerType: buyerType,
           companyName: companyName,
+          mobileE164: mobileE164,
         );
     replace(_$result);
     return _$result;

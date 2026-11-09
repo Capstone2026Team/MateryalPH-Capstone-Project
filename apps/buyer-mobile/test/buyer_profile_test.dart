@@ -130,7 +130,7 @@ void main() {
   }
 
   testWidgets(
-    'Profile has an inline score and opens Buyer rating below Account Setting',
+    'Profile has an inline score and opens Your rating below Account Setting',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(390, 844));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -185,15 +185,16 @@ void main() {
         lessThan(16),
       );
       await captureProfile(tester, 'profile');
-      await reveal(tester, 'Buyer rating');
+      await reveal(tester, 'Your rating');
       final rows = tester
           .widgetList<BuyerMenuRow>(find.byType(BuyerMenuRow))
           .map((row) => row.label)
           .toList();
-      expect(rows.indexOf('Buyer rating'), rows.indexOf('Account Setting') + 1);
-      await tester.tap(find.text('Buyer rating'));
+      expect(rows.indexOf('Your rating'), rows.indexOf('Account Setting') + 1);
+      await tester.tap(find.text('Your rating'));
       await tester.pumpAndSettle();
       expect(find.byType(BuyerRatingsScreen), findsOneWidget);
+      expect(find.text('Your rating'), findsOneWidget);
       expect(find.text('4.25 / 5'), findsOneWidget);
       expect(find.text('Sample Supply'), findsOneWidget);
       await captureProfile(tester, 'buyer-rating');

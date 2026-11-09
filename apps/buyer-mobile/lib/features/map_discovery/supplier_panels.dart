@@ -8,6 +8,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../design_system/components/discovery_controls.dart';
 import '../../design_system/components/vendor_performance.dart';
 import '../../design_system/components/procurement_components.dart';
+import '../../design_system/components/request_notice.dart';
 import '../../design_system/generated/color_tokens.dart';
 import '../../design_system/theme.dart';
 import '../../widgets/auth_content.dart';
@@ -132,17 +133,14 @@ class SupplierListPanel extends StatelessWidget {
                 ),
               ] else if (controller.resultsStale) ...[
                 const SizedBox(height: 12),
-                AuthNotice(
+                BuyerRequestNotice(
+                  kind: controller.failure?.kind,
                   message:
-                      '${controller.failure?.message ?? 'Results could not be refreshed.'} Showing suppliers from ${_time(page?.currentAsOf)}; driving times are hidden until you refresh.',
-                  isError: true,
-                ),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton(
-                    onPressed: controller.refresh,
-                    child: const Text('Retry'),
-                  ),
+                      controller.failure?.message ??
+                      'Results could not be refreshed.',
+                  detail:
+                      'Showing suppliers from ${_time(page?.currentAsOf)}; driving times are hidden until you refresh.',
+                  onRetry: controller.refresh,
                 ),
               ],
               if (showDirectory &&
@@ -631,16 +629,12 @@ class _FailureState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final offline = failure?.kind == DiscoveryFailureKind.offline;
-    return StateMessage(
-      kind: offline ? StateKind.offline : StateKind.error,
-      title: offline ? "You're offline" : 'Unable to load suppliers',
+    return BuyerRequestNotice(
+      kind: failure?.kind,
       message: failure?.message ?? 'Suppliers could not be loaded.',
-      actionLabel: 'Retry',
-      onAction: onRetry,
+      onRetry: onRetry,
       secondaryLabel: 'Change location',
       onSecondary: onChangeLocation,
-      compact: true,
     );
   }
 }

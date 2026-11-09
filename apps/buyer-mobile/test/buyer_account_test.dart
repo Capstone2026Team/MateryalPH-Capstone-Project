@@ -81,7 +81,7 @@ void main() {
       await tester.pump();
       expect(save().onPressed, isNull);
       expect(find.text('Contact details'), findsOneWidget);
-      expect(find.widgetWithText(TextButton, 'Change'), findsOneWidget);
+      expect(find.widgetWithText(TextButton, 'Change'), findsNWidgets(2));
       expect(
         find.text('buyer.with.a.long.email.address@example.test'),
         findsOneWidget,
@@ -104,10 +104,141 @@ void main() {
       find.text('buyer.with.a.long.email.address@example.test'),
       findsOneWidget,
     );
-    await tester.tap(find.widgetWithText(TextButton, 'Change'));
+    await tester.tap(find.widgetWithText(TextButton, 'Change').first);
     await tester.pumpAndSettle();
     expect(find.text('Verify your identity'), findsOneWidget);
   });
+
+  testWidgets(
+    'phone change saves the normalized contact and preserves a name draft',
+    (tester) async {
+      final updates = <Map<String, dynamic>>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BuyerAccountScreen(
+            repository: repository(onProfileUpdate: updates.add),
+            onSignedOut: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Full name'),
+        'Unsaved name',
+      );
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('edit-buyer-phone')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('edit-buyer-phone')));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<TextFormField>(find.byType(TextFormField))
+            .controller!
+            .text,
+        '9171234567',
+      );
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.widgetWithText(FilledButton, 'Save phone number'),
+            )
+            .onPressed,
+        isNull,
+      );
+      await tester.enterText(find.byType(TextFormField), '0918 765 4321');
+      await tester.pump();
+      await tester.ensureVisible(find.text('Save phone number'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save phone number'));
+      await tester.pumpAndSettle();
+      expect(updates.single, {
+        'full_name': 'Buyer fixture',
+        'lock_version': 1,
+        'mobile_e164': '+639187654321',
+      });
+      expect(find.text('+639187654321'), findsOneWidget);
+      expect(find.text('Phone number saved.'), findsOneWidget);
+      expect(find.text('Unsaved name'), findsOneWidget);
+      expect(find.byType(TextFormField), findsNothing);
+
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('edit-buyer-phone')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('edit-buyer-phone')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), '9170000000');
+      await tester.ensureVisible(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(updates, hasLength(1));
+      expect(find.text('+639187654321'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'adding a phone validates input and retains it after a failed save for explicit retry',
+    (tester) async {
+      final updates = <Map<String, dynamic>>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BuyerAccountScreen(
+            repository: repository(
+              phone: null,
+              onProfileUpdate: updates.add,
+              profileUpdateFailures: 1,
+            ),
+            onSignedOut: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('edit-buyer-phone')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('edit-buyer-phone')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), '123');
+      await tester.pump();
+      await tester.ensureVisible(find.text('Save phone number'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save phone number'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Enter a valid mobile number for the selected country code.'),
+        findsOneWidget,
+      );
+      expect(updates, isEmpty);
+      await tester.enterText(find.byType(TextFormField), '0917 000 0001');
+      await tester.pump();
+      await tester.ensureVisible(find.text('Save phone number'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save phone number'));
+      await tester.pumpAndSettle();
+      expect(updates, hasLength(1));
+      expect(find.text('Phone number saved.'), findsNothing);
+      expect(
+        tester
+            .widget<TextFormField>(find.byType(TextFormField))
+            .controller!
+            .text,
+        '09170000001',
+      );
+      await tester.tap(find.text('Save phone number'));
+      await tester.pumpAndSettle();
+      expect(updates, hasLength(2));
+      expect(updates.last['mobile_e164'], '+639170000001');
+      expect(updates.last['lock_version'], 1);
+      expect(find.text('+639170000001'), findsOneWidget);
+      expect(find.text('Phone number saved.'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('security switches verification method and shows the window', (
     tester,
@@ -177,7 +308,10 @@ AuthRepository repository({
   bool emailVerified = true,
   String? phone = "+639171234567",
   String name = "Buyer fixture",
+  void Function(Map<String, dynamic>)? onProfileUpdate,
+  int profileUpdateFailures = 0,
 }) {
+  var lockVersion = 1;
   final client = MateryalphApiClient(
     dio: Dio(BaseOptions(baseUrl: 'https://api.example.test')),
     interceptors: [
@@ -196,6 +330,27 @@ AuthRepository repository({
             );
             return;
           }
+          if (options.path.endsWith('/profile') && options.method == 'PATCH') {
+            final input = Map<String, dynamic>.from(options.data as Map);
+            onProfileUpdate?.call(input);
+            if (profileUpdateFailures > 0) {
+              profileUpdateFailures--;
+              handler.reject(
+                DioException(
+                  requestOptions: options,
+                  response: Response<dynamic>(
+                    requestOptions: options,
+                    statusCode: 503,
+                  ),
+                  type: DioExceptionType.badResponse,
+                ),
+              );
+              return;
+            }
+            phone = input['mobile_e164'] as String? ?? phone;
+            name = input['full_name'] as String;
+            lockVersion++;
+          }
           final receivedRatings = options.path.endsWith('/buyers/ratings');
           final dynamic data = receivedRatings
               ? <dynamic>[]
@@ -211,7 +366,7 @@ AuthRepository repository({
                   'mobile_e164': phone,
                   'account_type': 'BUYER',
                   'account_status': 'ACTIVE',
-                  'lock_version': 1,
+                  'lock_version': lockVersion,
                   'created_at': '2026-09-01T00:00:00Z',
                   'buyer_type': 'INDIVIDUAL',
                   'company_name': null,

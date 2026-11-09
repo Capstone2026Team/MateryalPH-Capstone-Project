@@ -12,6 +12,7 @@ Name | Type | Description | Notes
 **lockVersion** | **int** |  |
 **buyerType** | **String** |  | [optional]
 **companyName** | **String** |  | [optional]
+**mobileE164** | **String** | Buyer-only contact phone number in E.164 format. | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

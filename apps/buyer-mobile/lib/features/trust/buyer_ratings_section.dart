@@ -16,7 +16,7 @@ class BuyerRatingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: buyerAccountBar(context, 'Buyer rating'),
+    appBar: buyerAccountBar(context, 'Your rating'),
     body: SafeArea(
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),

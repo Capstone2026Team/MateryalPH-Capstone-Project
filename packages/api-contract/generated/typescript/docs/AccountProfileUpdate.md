@@ -1,6 +1,7 @@
 
 # AccountProfileUpdate
 
+Updates the authenticated account owner\'s profile with optimistic concurrency. mobile_e164 is optional and Buyer-only; when supplied it must be a non-empty E.164 contact number. Omitting it preserves the current number. Phone changes do not change sign-in or require SMS verification.
 
 ## Properties
 
@@ -10,6 +11,7 @@ Name | Type
 `lockVersion` | number
 `buyerType` | string
 `companyName` | string
+`mobileE164` | string
 
 ## Example
 
@@ -22,6 +24,7 @@ const example = {
   "lockVersion": null,
   "buyerType": null,
   "companyName": null,
+  "mobileE164": null,
 } satisfies AccountProfileUpdate
 
 console.log(example)
